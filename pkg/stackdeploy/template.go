@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 var validFuncName = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)

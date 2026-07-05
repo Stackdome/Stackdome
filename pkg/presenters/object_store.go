@@ -1,8 +1,8 @@
 package presenters
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 // convertSecretReference converts API SecretReference to domain model

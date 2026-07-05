@@ -31,7 +31,7 @@ const serverStack = (image: string): Stack =>
     id: "st-1",
     name: "demo",
     spec: {
-      stack_resources: [{ id: "r-1", name: "web", image_spec: { image } }],
+      stack_resources: [{ id: "r-1", name: "web", source: { image: { ref: image } } }],
       volumes: [],
       connections: [],
     },
@@ -40,7 +40,7 @@ const serverStack = (image: string): Stack =>
 const webForm = (image: string) => ({
   name: "web",
   sourceType: "image" as const,
-  image_spec: { image },
+  source: { image: { ref: image } },
 });
 
 function setup(stack: Stack) {
@@ -135,7 +135,7 @@ describe("useDraftSync", () => {
     await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
     await act(() => Promise.resolve()); // flush batched React state
     expect(hook.result.current.sync.status).toBe(SYNC_STATUS.error);
-    expect(hook.result.current.session.draft.resources[0].image_spec?.image).toBe("nginx:2");
+    expect(hook.result.current.session.draft.resources[0].source?.image?.ref).toBe("nginx:2");
     // first backoff = RETRY_BASE_MS (1000ms); advance 1100ms to trigger retry
     await act(() => vi.advanceTimersByTimeAsync(1100));
     await act(() => Promise.resolve()); // flush batched React state

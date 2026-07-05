@@ -54,7 +54,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-// Helper to map API build_spec to form schema shape
+// Helper to map an API StackResource to the form schema shape
 
 function mapStackResourceToFormData(resource: StackResource): FormStackResourceData {
   // Remove read-only fields before converting to form data
@@ -551,19 +551,28 @@ export default function StackDetailPage() {
         let newNameError: string | undefined;
 
         for (const issue of validation.error.issues) {
-          const [scope0] = issue.path;
+          const [scope0, scope1, idx, ...fieldPath] = issue.path;
+          const field = fieldPath.join(".");
           if (scope0 === "name") {
             newNameError = issue.message;
+          } else if (scope0 === "spec" && scope1 === "stack_resources" && typeof idx === "number") {
+            const label = resources[idx]?.name?.trim() || `Resource ${idx + 1}`;
+            topLevelMessages.push(field ? `${label}: ${issue.message} (${field})` : `${label}: ${issue.message}`);
+          } else if (scope0 === "spec" && scope1 === "volumes" && typeof idx === "number") {
+            const vols = formStackData.spec.volumes as { name?: string }[] | undefined;
+            const label = vols?.[idx]?.name?.trim() || `Volume ${idx + 1}`;
+            topLevelMessages.push(field ? `${label}: ${issue.message} (${field})` : `${label}: ${issue.message}`);
           } else {
-            topLevelMessages.push(issue.message);
+            topLevelMessages.push(issue.path.length ? `${issue.path.join(".")}: ${issue.message}` : issue.message);
           }
         }
 
+        const uniqueMessages = [...new Set(topLevelMessages)];
         setNameError(newNameError);
         toast({
           title: "Validation error",
-          description: topLevelMessages.length > 0
-            ? topLevelMessages.join("; ")
+          description: uniqueMessages.length > 0
+            ? uniqueMessages.join("; ")
             : "Please fix the highlighted errors before saving.",
           variant: "destructive",
         });

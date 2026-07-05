@@ -5,14 +5,14 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 )
 
-//go:generate mockgen -destination=../mocks/mock_reference_service.go -package=mocks github.com/ashishmax31/stackdome-api-server/pkg/services ReferenceService
+//go:generate mockgen -destination=../mocks/mock_reference_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ReferenceService
 type ReferenceService interface {
 	ReprojectSpec(ctx context.Context, stackID string) *errors.ServiceError
 	ProjectRelease(ctx context.Context, release *models.StackRelease) *errors.ServiceError
@@ -110,15 +110,9 @@ func extractReferences(stack *models.Stack) []models.ResourceReference {
 	}
 
 	for _, r := range stack.StackResources {
-		if r.HasGitCredentials() {
-			add(models.ReferentSecret, r.BuildConfig.SourceContext.Git.GitSecretRef.SecretID, models.RelationGitCredential)
-		}
-		if r.HasImagePullSecrets() {
-			add(models.ReferentSecret, r.ImageConfig.PullSecretRef.SecretID, models.RelationImagePull)
-		}
-		if r.HasImagePushSecrets() {
-			add(models.ReferentSecret, r.BuildConfig.RegistrySecretRef.SecretID, models.RelationImagePush)
-		}
+		add(models.ReferentRegistryCredential, r.RegistryPullCredentialID(), models.RelationImagePull)
+		add(models.ReferentRegistryCredential, r.RegistryPushCredentialID(), models.RelationImagePush)
+		add(models.ReferentGitIntegration, r.GitIntegrationID(), models.RelationGitCredential)
 	}
 	return refs
 }

@@ -12,7 +12,7 @@ const baseResource = (extras: Record<string, unknown> = {}) => ({
   id: "r-1",
   stack_id: "s-1",
   name: "tooljet",
-  image_spec: { image: "tooljet/tooljet-ce:latest" },
+  source: { image: { ref: "tooljet/tooljet-ce:latest" } },
   execution_config: {
     args: ["npm", "run", "start:prod"],
     environment_variables: [],
@@ -43,7 +43,7 @@ describe("env round-trip", () => {
     const form = {
       name: "web",
       sourceType: "image" as const,
-      image_spec: { image: "nginx" },
+      source: { image: { ref: "nginx" } },
       execution_config: {
         environment_variables: [{ from: "stack" as const, name: "PORT", value: "80" }],
       },
@@ -62,7 +62,7 @@ describe("env round-trip", () => {
     const form = {
       name: "web",
       sourceType: "image" as const,
-      image_spec: { image: "nginx" },
+      source: { image: { ref: "nginx" } },
       execution_config: {
         environment_variables: [{ from: "self" as const, name: "URL", selfOutput: "public.http.url" }],
       },
@@ -81,7 +81,7 @@ describe("env round-trip", () => {
     const form = {
       name: "web",
       sourceType: "image" as const,
-      image_spec: { image: "nginx" },
+      source: { image: { ref: "nginx" } },
       execution_config: {
         environment_variables: [
           { from: "stack" as const, name: "A", value: "1" },
@@ -106,7 +106,7 @@ describe("convertFormStackToApiStack — spec.connections", () => {
           {
             name: "web",
             sourceType: "image" as const,
-            image_spec: { image: "nginx" },
+            source: { image: { ref: "nginx" } },
             execution_config: {
               environment_variables: [
                 { from: "stack" as const, name: "A", value: "1" },
@@ -132,7 +132,7 @@ describe("convertFormStackToApiStack — spec.connections", () => {
   it("omits spec.connections when there are no secret/addon/resource rows", () => {
     const form = {
       name: "s", labels: [],
-      spec: { stack_resources: [{ name: "web", sourceType: "image" as const, image_spec: { image: "nginx" },
+      spec: { stack_resources: [{ name: "web", sourceType: "image" as const, source: { image: { ref: "nginx" } },
         execution_config: { environment_variables: [{ from: "stack" as const, name: "A", value: "1" }] } }] },
     };
     const api = convertFormStackToApiStack(form as never);
@@ -210,9 +210,7 @@ describe("FormStackSchema — depends_on cross-validation", () => {
   const stackResource = (over: { name: string; depends_on?: string[] }) => ({
     name: over.name,
     sourceType: "image" as const,
-    useImageSecret: false,
-    useGitSecret: false,
-    image_spec: { image: "nginx:latest" },
+    source: { image: { ref: "nginx:latest" } },
     depends_on: over.depends_on,
   });
 

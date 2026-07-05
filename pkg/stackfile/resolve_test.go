@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"testing"
 
-	openapi "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
+	"k8s.io/utils/ptr"
 )
 
 type mockResolver struct {
@@ -27,54 +28,44 @@ func (m *mockResolver) ResolveAddonByName(_ context.Context, _, name string) (st
 	return "", fmt.Errorf("addon %q not found", name)
 }
 
-func TestResolveStack_GitSecretResolved(t *testing.T) {
+func TestResolveStack_SecretConnectionResolved(t *testing.T) {
 	stack := &openapi.Stack{
 		Spec: openapi.StackSpec{
-			StackResources: []openapi.StackResource{
+			Connections: []openapi.StackConnection{
 				{
-					Name: "api",
-					BuildSpec: &openapi.StackResourceBuildSpec{
-						SourceContext: openapi.BuildSourceContext{
-							GitRepo: &openapi.BuildSourceContextGitRepo{
-								RepoUrl:   "https://github.com/myorg/repo.git",
-								GitSecret: &openapi.SecretRef{SecretId: "my-git-token"},
-							},
-						},
-					},
+					Kind: "env",
+					From: openapi.TopologyNodeRef{Type: "secret", Name: ptr.To("app-config")},
+					To:   openapi.TopologyNodeRef{Type: "stack_resource", Name: ptr.To("api")},
 				},
 			},
 		},
 	}
 
 	resolver := &mockResolver{
-		secrets: map[string]string{"my-git-token": "secret-uuid-123"},
+		secrets: map[string]string{"app-config": "secret-uuid-123"},
 	}
 
-	err := ResolveStack(context.Background(), stack, resolver)
-	if err != nil {
+	if err := ResolveStack(context.Background(), stack, resolver); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	gitSecret := stack.Spec.StackResources[0].BuildSpec.SourceContext.GitRepo.GitSecret
-	if gitSecret.SecretId != "secret-uuid-123" {
-		t.Errorf("expected resolved ID 'secret-uuid-123', got %q", gitSecret.SecretId)
+	from := stack.Spec.Connections[0].From
+	if from.Id == nil || *from.Id != "secret-uuid-123" {
+		t.Errorf("expected resolved ID 'secret-uuid-123', got %v", from.Id)
+	}
+	if from.Name != nil {
+		t.Errorf("expected name to be cleared after resolution, got %v", from.Name)
 	}
 }
 
-func TestResolveStack_GitSecretNotFound(t *testing.T) {
+func TestResolveStack_SecretConnectionNotFound(t *testing.T) {
 	stack := &openapi.Stack{
 		Spec: openapi.StackSpec{
-			StackResources: []openapi.StackResource{
+			Connections: []openapi.StackConnection{
 				{
-					Name: "api",
-					BuildSpec: &openapi.StackResourceBuildSpec{
-						SourceContext: openapi.BuildSourceContext{
-							GitRepo: &openapi.BuildSourceContextGitRepo{
-								RepoUrl:   "https://github.com/myorg/repo.git",
-								GitSecret: &openapi.SecretRef{SecretId: "nonexistent"},
-							},
-						},
-					},
+					Kind: "env",
+					From: openapi.TopologyNodeRef{Type: "secret", Name: ptr.To("missing")},
+					To:   openapi.TopologyNodeRef{Type: "stack_resource", Name: ptr.To("api")},
 				},
 			},
 		},
@@ -82,35 +73,8 @@ func TestResolveStack_GitSecretNotFound(t *testing.T) {
 
 	resolver := &mockResolver{secrets: map[string]string{}}
 
-	err := ResolveStack(context.Background(), stack, resolver)
-	if err == nil {
-		t.Fatal("expected error for missing git secret")
-	}
-}
-
-func TestResolveStack_NoGitSecret(t *testing.T) {
-	stack := &openapi.Stack{
-		Spec: openapi.StackSpec{
-			StackResources: []openapi.StackResource{
-				{
-					Name: "api",
-					BuildSpec: &openapi.StackResourceBuildSpec{
-						SourceContext: openapi.BuildSourceContext{
-							GitRepo: &openapi.BuildSourceContextGitRepo{
-								RepoUrl: "https://github.com/myorg/public.git",
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	resolver := &mockResolver{secrets: map[string]string{}}
-
-	err := ResolveStack(context.Background(), stack, resolver)
-	if err != nil {
-		t.Fatalf("unexpected error for public repo: %v", err)
+	if err := ResolveStack(context.Background(), stack, resolver); err == nil {
+		t.Fatal("expected error for missing secret")
 	}
 }
 
@@ -119,8 +83,8 @@ func TestResolveStack_ImageResourceSkipped(t *testing.T) {
 		Spec: openapi.StackSpec{
 			StackResources: []openapi.StackResource{
 				{
-					Name:      "web",
-					ImageSpec: &openapi.ImageSpec{Image: "nginx:latest"},
+					Name:   "web",
+					Source: &openapi.SourceSpec{Image: openapi.NewImageSource("nginx:latest")},
 				},
 			},
 		},
@@ -128,8 +92,7 @@ func TestResolveStack_ImageResourceSkipped(t *testing.T) {
 
 	resolver := &mockResolver{secrets: map[string]string{}}
 
-	err := ResolveStack(context.Background(), stack, resolver)
-	if err != nil {
+	if err := ResolveStack(context.Background(), stack, resolver); err != nil {
 		t.Fatalf("unexpected error for image resource: %v", err)
 	}
 }

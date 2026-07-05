@@ -4,14 +4,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
@@ -45,6 +45,7 @@ type StackResourceServiceSpec struct {
 	ClusterRegistryService ImageRegistryService
 	StackDomainService     StackDomainsService
 	ReferenceService       ReferenceService
+	DefaultBranchResolver  DefaultBranchResolver
 }
 
 type stackResourceService struct {
@@ -59,6 +60,7 @@ type stackResourceService struct {
 	clusterRegistryService ImageRegistryService
 	domainNameService      StackDomainsService
 	referenceService       ReferenceService
+	branchResolver         DefaultBranchResolver
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -79,6 +81,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		clusterRegistryService: spec.ClusterRegistryService,
 		domainNameService:      spec.StackDomainService,
 		referenceService:       spec.ReferenceService,
+		branchResolver:         spec.DefaultBranchResolver,
 	}
 }
 
@@ -93,6 +96,12 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 	}
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
+	}
+
+	if s.branchResolver != nil {
+		if err := s.branchResolver.ResolveDefaultBranch(ctx, stack, resource); err != nil {
+			return nil, err
+		}
 	}
 
 	var created *models.StackResource
@@ -127,6 +136,12 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.StackID = stackID
 	resource.ID = existing.ID
 	resource.Name = resourceName
+
+	if s.branchResolver != nil {
+		if err := s.branchResolver.ResolveDefaultBranch(ctx, stack, resource); err != nil {
+			return nil, err
+		}
+	}
 
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
@@ -253,12 +268,16 @@ func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName
 		return err
 	}
 
-	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		if err := s.InternalDeleteWithTx(txCtx, existing.ID); err != nil {
 			return err
 		}
 		return s.referenceService.ReprojectSpec(txCtx, stackID)
-	})
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *stackResourceService) GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError) {

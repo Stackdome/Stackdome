@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	openapi "github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
 )
 
 type Resolver interface {
@@ -13,22 +13,6 @@ type Resolver interface {
 }
 
 func ResolveStack(ctx context.Context, stack *openapi.Stack, resolver Resolver) error {
-	for i := range stack.Spec.StackResources {
-		res := &stack.Spec.StackResources[i]
-		if res.BuildSpec == nil || res.BuildSpec.SourceContext.GitRepo == nil {
-			continue
-		}
-		gitSecret := res.BuildSpec.SourceContext.GitRepo.GitSecret
-		if gitSecret == nil || gitSecret.SecretId == "" {
-			continue
-		}
-		id, err := resolver.ResolveSecretByName(ctx, gitSecret.SecretId)
-		if err != nil {
-			return fmt.Errorf("git secret %q not found for resource %q", gitSecret.SecretId, res.Name)
-		}
-		gitSecret.SecretId = id
-	}
-
 	for i := range stack.Spec.Connections {
 		conn := &stack.Spec.Connections[i]
 

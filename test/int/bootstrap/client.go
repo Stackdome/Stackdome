@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/testutil"
-	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/testutil"
+	"github.com/Stackdome/stackdome/test/int/shared"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"

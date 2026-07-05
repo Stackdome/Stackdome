@@ -199,19 +199,13 @@ export function convertServiceToStackResource(
       // UI-specific fields
       gitRevisionType: undefined,
       gitRevisionValue: undefined,
-      useImageSecret: false,
-      selectedImageSecretId: undefined,
-      useGitSecret: false,
-      selectedGitSecretId: undefined,
     };
 
     // Handle image vs build specification
     if (service.build) {
-      resource.build_spec = convertBuildSpec(service.build, serviceName, warnings);
-      resource.image_spec = undefined;
+      resource.source = convertGitSource(service.build, serviceName, warnings);
     } else if (service.image) {
-      resource.image_spec = { image: service.image };
-      resource.build_spec = undefined;
+      resource.source = { image: { ref: service.image } };
     } else {
       errors.push({
         type: 'conversion',
@@ -650,53 +644,18 @@ function convertCommand(
 /**
  * Convert Docker Compose build specification
  */
-function convertBuildSpec(
+function convertGitSource(
   build: DockerComposeService['build'],
   serviceName: string,
   warnings: ConversionWarning[]
-): FormStackResourceData['build_spec'] {
+): FormStackResourceData['source'] {
   if (!build) return undefined;
 
   try {
-    if (typeof build === 'string') {
-      // Simple build context
-      return {
-        source_context: {
-          git_repo: {
-            repo_url: '', // User must provide
-          },
-        },
-        context_path_within_source: build || './',
-        dockerfile_path: 'Dockerfile',
-        image_repository: {
-          external_image_ref: '', // User must provide
-        },
-        insecure_registry: false,
-        source_revision: {
-          volume_source_revision: undefined,
-          git_repo_revision: undefined,
-        },
-      };
-    } else if (typeof build === 'object' && build !== null) {
-      // Object build specification
-      const buildSpec: FormStackResourceData['build_spec'] = {
-        source_context: {
-          git_repo: {
-            repo_url: '', // User must provide
-          },
-        },
-        context_path_within_source: build.context || './',
-        dockerfile_path: build.dockerfile || 'Dockerfile',
-        image_repository: {
-          external_image_ref: '', // User must provide
-        },
-        insecure_registry: false,
-        source_revision: {
-          volume_source_revision: undefined,
-          git_repo_revision: undefined,
-        },
-      };
+    const buildContext = typeof build === 'string' ? (build || '.') : (build.context || '.');
+    const dockerfile = typeof build === 'string' ? 'Dockerfile' : (build.dockerfile || 'Dockerfile');
 
+    if (typeof build === 'object' && build !== null) {
       // Handle build args
       if (build.args && Object.keys(build.args).length > 0) {
         warnings.push({
@@ -716,17 +675,22 @@ function convertBuildSpec(
           dockerComposeField: 'build.target',
         });
       }
-
-      warnings.push({
-        type: 'defaults',
-        message: 'Build specification imported with placeholders. You must configure the Git repository URL and image repository URL.',
-        service: serviceName,
-        dockerComposeField: 'build',
-      });
-
-      return buildSpec;
     }
 
+    warnings.push({
+      type: 'defaults',
+      message: 'Build specification imported with a placeholder. You must configure the Git repository URL.',
+      service: serviceName,
+      dockerComposeField: 'build',
+    });
+
+    return {
+      git: {
+        repo_url: '', // User must provide
+        dockerfile_path: dockerfile,
+        build_context: buildContext,
+      },
+    };
   } catch (error) {
     warnings.push({
       type: 'partial',

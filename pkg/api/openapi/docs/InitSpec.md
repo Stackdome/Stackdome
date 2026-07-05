@@ -4,7 +4,6 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**ImageSpec** | Pointer to [**ImageSpec**](ImageSpec.md) |  | [optional] 
 **Command** | Pointer to **[]string** |  | [optional] 
 **Args** | Pointer to **[]string** |  | [optional] 
 
@@ -26,31 +25,6 @@ will change when the set of required properties is changed
 NewInitSpecWithDefaults instantiates a new InitSpec object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
-
-### GetImageSpec
-
-`func (o *InitSpec) GetImageSpec() ImageSpec`
-
-GetImageSpec returns the ImageSpec field if non-nil, zero value otherwise.
-
-### GetImageSpecOk
-
-`func (o *InitSpec) GetImageSpecOk() (*ImageSpec, bool)`
-
-GetImageSpecOk returns a tuple with the ImageSpec field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetImageSpec
-
-`func (o *InitSpec) SetImageSpec(v ImageSpec)`
-
-SetImageSpec sets ImageSpec field to given value.
-
-### HasImageSpec
-
-`func (o *InitSpec) HasImageSpec() bool`
-
-HasImageSpec returns a boolean if a field has been set.
 
 ### GetCommand
 

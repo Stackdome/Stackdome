@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/config"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 type simulatorReconciler struct {

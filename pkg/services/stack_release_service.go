@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stackrelease"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stackrelease"
+	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
 type StackReleaseService interface {
@@ -37,29 +38,29 @@ type StackReleaseService interface {
 }
 
 type StackReleaseServiceSpec struct {
-	Store            stores.StackReleaseStore
-	StackService     StackService
-	SecretService    SecretService
-	Permissions      auth.PermissionService
-	ReferenceService ReferenceService
+	Store              stores.StackReleaseStore
+	StackService       StackService
+	CredentialResolver CredentialResolver
+	Permissions        auth.PermissionService
+	ReferenceService   ReferenceService
 }
 
 type stackReleaseService struct {
-	store            stores.StackReleaseStore
-	stackQuery       StackService
-	secretService    SecretService
-	permissions      auth.PermissionService
-	referenceService ReferenceService
+	store              stores.StackReleaseStore
+	stackQuery         StackService
+	credentialResolver CredentialResolver
+	permissions        auth.PermissionService
+	referenceService   ReferenceService
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 	return &stackReleaseService{
-		store:            spec.Store,
-		stackQuery:       spec.StackService,
-		secretService:    spec.SecretService,
-		permissions:      spec.Permissions,
-		referenceService: spec.ReferenceService,
+		store:              spec.Store,
+		stackQuery:         spec.StackService,
+		credentialResolver: spec.CredentialResolver,
+		permissions:        spec.Permissions,
+		referenceService:   spec.ReferenceService,
 	}
 }
 
@@ -330,7 +331,7 @@ func (s *stackReleaseService) resolvePins(ctx context.Context, stack *models.Sta
 			continue
 		}
 
-		rp, err := s.pinResource(ctx, res)
+		rp, err := s.pinResource(ctx, stack.OrganisationID, res)
 		if err != nil {
 			return pins, err
 		}
@@ -341,11 +342,11 @@ func (s *stackReleaseService) resolvePins(ctx context.Context, stack *models.Sta
 	return pins, nil
 }
 
-func (s *stackReleaseService) pinResource(ctx context.Context, res *models.StackResource) (*models.ResourcePins, *errors.ServiceError) {
+func (s *stackReleaseService) pinResource(ctx context.Context, orgID string, res *models.StackResource) (*models.ResourcePins, *errors.ServiceError) {
 	var rp models.ResourcePins
 
 	if rev := res.BuildConfig.SourceRevision.Git; rev != nil {
-		sha, err := s.resolveGitSHA(ctx, res, rev)
+		sha, err := s.resolveGitSHA(ctx, orgID, res, rev)
 		if err != nil {
 			return nil, err
 		}
@@ -362,13 +363,20 @@ func (s *stackReleaseService) pinResource(ctx context.Context, res *models.Stack
 	return &rp, nil
 }
 
-func (s *stackReleaseService) resolveGitSHA(ctx context.Context, res *models.StackResource, rev *models.GitRevision) (string, *errors.ServiceError) {
+func (s *stackReleaseService) resolveGitSHA(ctx context.Context, orgID string, res *models.StackResource, rev *models.GitRevision) (string, *errors.ServiceError) {
 	if rev.Commit != "" {
 		return rev.Commit, nil
 	}
 
-	repoURL := res.BuildConfig.SourceContext.Git.RepoURL
-	gitClient, err := s.gitClientForResource(ctx, res)
+	gitSource := res.BuildConfig.SourceContext.Git
+	repoURL := gitSource.RepoURL
+	resolved, serr := s.credentialResolver.GitCredentials(ctx, orgID, repoURL, credentials.GitAuthSelector{
+		IntegrationID: gitSource.IntegrationID,
+	})
+	if serr != nil {
+		return "", errors.GeneralError("resource '%s': failed to resolve git credentials: %v", res.Name, serr)
+	}
+	gitClient, err := gitclient.NewGitClientForRepo(repoURL, resolved.Credentials)
 	if err != nil {
 		return "", errors.GeneralError("resource '%s': %v", res.Name, err)
 	}
@@ -393,29 +401,6 @@ func (s *stackReleaseService) resolveGitSHA(ctx context.Context, res *models.Sta
 	}
 
 	return "", errors.GeneralError("resource '%s': git revision has no commit, tag, or branch", res.Name)
-}
-
-func (s *stackReleaseService) gitClientForResource(ctx context.Context, res *models.StackResource) (gitclient.GitClient, error) {
-	gitSource := res.BuildConfig.SourceContext.Git
-	if gitSource.GitSecretRef == nil {
-		return gitclient.NewGitClientForRepo(gitSource.RepoURL, gitclient.GitCredentials{})
-	}
-
-	secret, serr := s.secretService.InternalGetByID(ctx, gitSource.GitSecretRef.SecretID)
-	if serr != nil {
-		return nil, fmt.Errorf("git secret '%s': %w", gitSource.GitSecretRef.SecretID, serr)
-	}
-
-	if token, ok := secret.Data[models.TokenSecretKey]; ok {
-		return gitclient.NewGitClientForRepo(gitSource.RepoURL, gitclient.GitCredentials{Token: token})
-	}
-	return gitclient.NewGitClientForRepo(
-		gitSource.RepoURL,
-		gitclient.GitCredentials{
-			Username: secret.Data[models.UsernameSecretKey],
-			Password: secret.Data[models.PasswordSecretKey],
-		},
-	)
 }
 
 func applyPinsToSnapshot(snapshot *models.StackSnapshot, pins models.ReleasePins) {

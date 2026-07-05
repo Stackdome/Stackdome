@@ -17,7 +17,7 @@ function resourcesOf(snap: unknown): SnapResource[] {
 
 function configScalars(r: SnapResource): Record<string, string | undefined> {
   return {
-    "image": r.image_spec?.image,
+    "image": r.source?.image?.ref,
     "ports": (r.ports ?? []).map((p) => p.number).join(", ") || undefined,
     "command": (r.execution_config?.command ?? []).join(" ") || undefined,
     "args": (r.execution_config?.args ?? []).join(" ") || undefined,

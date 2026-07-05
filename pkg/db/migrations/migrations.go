@@ -65,4 +65,7 @@ var MigrationList = []*gormigrate.Migration{
 	createPreviewStacksTable(),
 	addWorkloadTypeColumns(),
 	dropRegistryRetentionColumns(),
+	createRegistryCredentialsTable(),
+	createGitIntegrationsTable(),
+	createGitInstallationsTable(),
 }

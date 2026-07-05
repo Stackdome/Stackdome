@@ -7,7 +7,7 @@ import (
 
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
 )
 
 const testServerPort = 8987

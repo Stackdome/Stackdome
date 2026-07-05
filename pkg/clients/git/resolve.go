@@ -3,8 +3,10 @@ package git
 import (
 	"context"
 	"fmt"
+	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/go-git/go-git/v5/plumbing/transport"
 )
 
 // ResolveGitRepoRevision ensures the revision has a resolved commit SHA.
@@ -38,4 +40,21 @@ func ResolveGitRepoRevision(ctx context.Context, client GitClient, repoURL strin
 	default:
 		return rev, fmt.Errorf("git revision has no commit, tag, or branch")
 	}
+}
+
+// RepoHost extracts the host (without port) from any git repository URL —
+// https, ssh://, or scp-style (git@host:org/repo) — falling back to the raw
+// URL when it cannot be parsed.
+func RepoHost(repoURL string) string {
+	ep, err := transport.NewEndpoint(repoURL)
+	if err != nil || ep.Host == "" {
+		return repoURL
+	}
+	// transport.Endpoint keeps the port separately, but strip defensively in
+	// case a raw host:port slips through.
+	host, _, found := strings.Cut(ep.Host, ":")
+	if found {
+		return host
+	}
+	return ep.Host
 }

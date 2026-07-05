@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 )

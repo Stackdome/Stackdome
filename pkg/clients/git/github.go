@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/transport"
-	"github.com/google/go-github/v50/github"
+	"github.com/google/go-github/v88/github"
 )
 
 // GitHubClient provides GitHub-specific API operations.
@@ -18,7 +18,9 @@ type gitHubClient struct {
 var _ GitClient = (*gitHubClient)(nil)
 
 func newGitHubClientWithToken(token string) *gitHubClient {
-	return &gitHubClient{client: github.NewTokenClient(context.Background(), token)}
+	// No URL option, so NewClient cannot error.
+	client, _ := github.NewClient(github.WithAuthToken(token))
+	return &gitHubClient{client: client}
 }
 
 func newGitHubClientWithBasicAuth(username, password string) *gitHubClient {
@@ -26,11 +28,13 @@ func newGitHubClientWithBasicAuth(username, password string) *gitHubClient {
 		Username: username,
 		Password: password,
 	}
-	return &gitHubClient{client: github.NewClient(transport.Client())}
+	client, _ := github.NewClient(github.WithHTTPClient(transport.Client()))
+	return &gitHubClient{client: client}
 }
 
 func newGitHubClientAnonymous() *gitHubClient {
-	return &gitHubClient{client: github.NewClient(&http.Client{})}
+	client, _ := github.NewClient()
+	return &gitHubClient{client: client}
 }
 
 func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, error) {
@@ -54,6 +58,32 @@ func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, e
 		return false, fmt.Errorf("failed to access git repo: %w", err)
 	}
 	return true, nil
+}
+
+func (g *gitHubClient) GetDefaultBranch(ctx context.Context, repoURL string) (string, error) {
+	owner, repo, ok := ParseGitHubRepoURL(repoURL)
+	if !ok {
+		return "", fmt.Errorf("not a GitHub repository URL: %s", repoURL)
+	}
+	repository, resp, err := g.client.Repositories.Get(ctx, owner, repo)
+	if err != nil {
+		if resp != nil {
+			if isRateLimited(resp) {
+				return "", fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+			}
+			switch resp.StatusCode {
+			case http.StatusNotFound:
+				return "", fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+			case http.StatusUnauthorized, http.StatusForbidden:
+				return "", fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+			}
+		}
+		return "", fmt.Errorf("failed to get repository: %w", err)
+	}
+	if repository.GetDefaultBranch() == "" {
+		return "", fmt.Errorf("repository has no default branch")
+	}
+	return repository.GetDefaultBranch(), nil
 }
 
 func (g *gitHubClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string, error) {
@@ -94,7 +124,7 @@ func (g *gitHubClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch str
 		return nil, fmt.Errorf("not a GitHub repository URL: %s", repoURL)
 	}
 
-	ref, resp, err := g.client.Repositories.GetBranch(ctx, owner, repo, branch, true)
+	ref, resp, err := g.client.Repositories.GetBranch(ctx, owner, repo, branch, 1)
 	if err != nil {
 		if resp != nil && resp.StatusCode == http.StatusNotFound {
 			return nil, fmt.Errorf("branch '%s' not found in repository: %w", branch, ErrNotFound)

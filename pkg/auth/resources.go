@@ -6,23 +6,25 @@ import (
 )
 
 const (
-	ResourceStacks          = "stacks"
-	ResourceSecrets         = "secrets"
-	ResourceVolumes         = "volumes"
-	ResourceAddonsPostgres  = "addons/postgres"
-	ResourceClusters        = "clusters"
-	ResourceImageRegistries = "image-registries"
-	ResourceOrgs            = "orgs"
-	ResourceTeams           = "teams"
-	ResourceObjectStores    = "object-stores"
-	ResourceUsers           = "users"
-	ResourceWorkspaceUsers  = "workspace-users"
-	ResourceImageBuilds     = "image-builds"
-	ResourceAddons          = "addons"
-	ResourceDomains         = "domains"
-	ResourceInvites         = "invites"
-	ResourcePreviewConfigs  = "preview-configs"
-	ResourcePreviewStacks   = "preview-stacks"
+	ResourceStacks              = "stacks"
+	ResourceSecrets             = "secrets"
+	ResourceRegistryCredentials = "registry-credentials"
+	ResourceGitIntegrations     = "git-integrations"
+	ResourceVolumes             = "volumes"
+	ResourceAddonsPostgres      = "addons/postgres"
+	ResourceClusters            = "clusters"
+	ResourceImageRegistries     = "image-registries"
+	ResourceOrgs                = "orgs"
+	ResourceTeams               = "teams"
+	ResourceObjectStores        = "object-stores"
+	ResourceUsers               = "users"
+	ResourceWorkspaceUsers      = "workspace-users"
+	ResourceImageBuilds         = "image-builds"
+	ResourceAddons              = "addons"
+	ResourceDomains             = "domains"
+	ResourceInvites             = "invites"
+	ResourcePreviewConfigs      = "preview-configs"
+	ResourcePreviewStacks       = "preview-stacks"
 )
 
 const (
@@ -46,6 +48,8 @@ type ResourceType struct {
 var ResourceTypes = []ResourceType{
 	{Name: ResourceStacks, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate, ActionLogs, ActionExec}},
 	{Name: ResourceSecrets, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
+	{Name: ResourceRegistryCredentials, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
+	{Name: ResourceGitIntegrations, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourceVolumes, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourceClusters, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourceImageRegistries, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},

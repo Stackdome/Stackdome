@@ -1,6 +1,6 @@
 package services
 
-import "github.com/ashishmax31/stackdome-api-server/pkg/models"
+import "github.com/Stackdome/stackdome/pkg/models"
 
 // stackShellFrom returns a stack spec with child resources and volumes stripped.
 // The stack row must exist before volumes or resources are persisted.

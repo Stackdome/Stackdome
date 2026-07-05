@@ -3,12 +3,13 @@ package imagebuild
 import (
 	"context"
 	"fmt"
+	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/controllers"
-	apperrors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/controllers"
+	apperrors "github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -25,26 +26,33 @@ const (
 )
 
 type ImageBuildReconciler struct {
-	Client              client.Client
-	DBImageBuildService services.ImageBuildService
-	DBResourceService   services.StackResourceService
-	DBVolumeService     services.VolumeService
-	Logger              logger.Logger
+	Client                client.Client
+	DBImageBuildService   services.ImageBuildService
+	DBResourceService     services.StackResourceService
+	DBVolumeService       services.VolumeService
+	GitIntegrationService services.GitIntegrationService
+	Logger                logger.Logger
+
+	// clock is injectable for tests; defaults to time.Now.
+	clock func() time.Time
 }
 
 type ImageBuildReconcilerSpec struct {
-	Client              client.Client
-	DBImageBuildService services.ImageBuildService
-	DBResourceService   services.StackResourceService
-	Log                 logger.Logger
+	Client                client.Client
+	DBImageBuildService   services.ImageBuildService
+	DBResourceService     services.StackResourceService
+	GitIntegrationService services.GitIntegrationService
+	Log                   logger.Logger
 }
 
 func NewImageBuildReconciler(spec ImageBuildReconcilerSpec) *ImageBuildReconciler {
 	return &ImageBuildReconciler{
-		Client:              spec.Client,
-		DBImageBuildService: spec.DBImageBuildService,
-		DBResourceService:   spec.DBResourceService,
-		Logger:              spec.Log,
+		Client:                spec.Client,
+		DBImageBuildService:   spec.DBImageBuildService,
+		DBResourceService:     spec.DBResourceService,
+		GitIntegrationService: spec.GitIntegrationService,
+		Logger:                spec.Log,
+		clock:                 time.Now,
 	}
 }
 
@@ -123,10 +131,12 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
 		}
-		return ctrl.Result{}, nil
 	}
 
-	return ctrl.Result{}, nil
+	// Keep minted GitHub App tokens fresh for in-flight builds. Watch events
+	// re-establish the requeue chain after hub restarts (the informer's
+	// initial list reconciles every build).
+	return r.reconcileGitTokenRefresh(ctx, imageBuild, dbResourceBuild)
 }
 
 func (r *ImageBuildReconciler) createImageBuildInDB(

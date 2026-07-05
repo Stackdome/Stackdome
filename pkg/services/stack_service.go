@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
-	stackvalidator "github.com/ashishmax31/stackdome-api-server/pkg/validator/stack"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/validator"
+	stackvalidator "github.com/Stackdome/stackdome/pkg/validator/stack"
 	"k8s.io/utils/ptr"
 )
 
@@ -56,18 +56,20 @@ type releaseServiceForStack interface {
 }
 
 type StackServiceSpec struct {
-	SessionFactory       db.SessionFactory
-	VolumeService        VolumeService
-	ClusterService       ClusterService
-	OrganisationService  OrganisationService
-	StackResourceService StackResourceService
-	NamespaceService     NamespaceService
-	SecretService        SecretService
-	PostgresAddonService PostgresAddonService
-	TeamService          TeamService
-	Permissions          auth.PermissionService
-	Logger               logger.Logger
-	ReferenceService     ReferenceService
+	SessionFactory        db.SessionFactory
+	VolumeService         VolumeService
+	ClusterService        ClusterService
+	OrganisationService   OrganisationService
+	StackResourceService  StackResourceService
+	NamespaceService      NamespaceService
+	SecretService         SecretService
+	PostgresAddonService  PostgresAddonService
+	TeamService           TeamService
+	Permissions           auth.PermissionService
+	Logger                logger.Logger
+	ReferenceService      ReferenceService
+	CredentialResolver    CredentialResolver
+	DefaultBranchResolver DefaultBranchResolver
 }
 
 type stackService struct {
@@ -86,6 +88,7 @@ type stackService struct {
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
+	branchResolver       DefaultBranchResolver
 	defaultingService    DefaultingService[*models.Stack]
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
@@ -109,6 +112,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 			DomainService:        organisationDomainService,
 			SecretService:        spec.SecretService,
 			PostgresAddonService: spec.PostgresAddonService,
+			CredentialResolver:   spec.CredentialResolver,
 		}),
 		stackResourceService: spec.StackResourceService,
 		namespaceService:     spec.NamespaceService,
@@ -117,6 +121,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		teamService:          spec.TeamService,
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
+		branchResolver:       spec.DefaultBranchResolver,
 		defaultingService:    NewStackDefaultingService(),
 	}
 }
@@ -137,6 +142,10 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
+	if err := s.resolveDefaultBranches(ctx, spec); err != nil {
+		return nil, err
+	}
+
 	s.logger.Infof("running validation for stack creation: %s", spec.Name)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
 		return nil, err
@@ -245,18 +254,23 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		return nil, err
 	}
 
-	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
-		return nil, err
-	}
-
-	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
-
 	// set namespace
+	spec.ID = existingStack.ID
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID
 	spec.OrganisationID = existingStack.OrganisationID
 	spec.TeamID = existingStack.TeamID
 	spec.UserID = existingStack.UserID
+
+	if err := s.resolveDefaultBranches(ctx, spec); err != nil {
+		return nil, err
+	}
+
+	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
+		return nil, err
+	}
+
+	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
 
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
@@ -655,6 +669,21 @@ func (s *stackService) UpdateStatus(ctx context.Context, ID string, status *mode
 func (s *stackService) UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError {
 	if err := s.stackStore.UpdateRevision(ctx, ID, revision); err != nil {
 		return err
+	}
+	return nil
+}
+
+// resolveDefaultBranches pins the default branch for every git-source resource
+// that specifies neither a branch nor a tag. It only mutates the in-memory
+// spec before validation and persistence, so it needs no rollback.
+func (s *stackService) resolveDefaultBranches(ctx context.Context, spec *models.Stack) *errors.ServiceError {
+	if s.branchResolver == nil {
+		return nil
+	}
+	for _, resource := range spec.StackResources {
+		if err := s.branchResolver.ResolveDefaultBranch(ctx, spec, resource); err != nil {
+			return err
+		}
 	}
 	return nil
 }

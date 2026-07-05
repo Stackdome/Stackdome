@@ -58,8 +58,9 @@ type Secret struct {
 	EncryptedData  string     `gorm:"type:text;not null"`
 	Keys           SecretKeys `gorm:"type:jsonb" json:"keys"`
 	DataHash       string     `gorm:"not null" ` // For change detection
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
 
 	// Transient field for API responses (not stored in DB)
 	Data    map[string]string  `gorm:"-" json:"data,omitempty"`

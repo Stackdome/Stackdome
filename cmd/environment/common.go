@@ -3,7 +3,7 @@ package environment
 import (
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/Stackdome/stackdome/config"
 	"github.com/golang/glog"
 )
 

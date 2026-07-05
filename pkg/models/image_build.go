@@ -21,13 +21,20 @@ type ImageBuild struct {
 	UpdatedAt         time.Time
 }
 
+const (
+	DefaultDockerfilePath = "Dockerfile"
+	DefaultBuildContext   = "."
+)
+
 type BuildConfigSpec struct {
 	SourceContext           BuildContextSource   `json:"source_context"`
 	ContextPathWithinSource string               `json:"context_path_within_source"`
 	DockerfilePath          string               `json:"dockerfile_path"`
 	SourceRevision          BuildSourceRevision  `json:"source_revision"`
 	BuildImageRepository    BuildImageRepository `json:"build_image_repository"`
-	RegistrySecretRef       *SecretReference     `json:"registry_secret_ref,omitempty"` // Push credentials
+	// PushRegistryCredentialID pins an org-level registry credential for the
+	// push target, overriding host auto-attach.
+	PushRegistryCredentialID string `json:"push_registry_credential_id,omitempty"`
 }
 
 type BuildImageRepository struct {
@@ -107,8 +114,10 @@ type VolumeBuildSource struct {
 }
 
 type GitBuildSource struct {
-	RepoURL      string           `json:"repo_url"`
-	GitSecretRef *SecretReference `json:"git_secret_ref,omitempty"` // Git credentials for private repositories
+	RepoURL string `json:"repo_url"`
+	// IntegrationID pins an org-level git integration for clone auth,
+	// overriding host auto-attach. Resolution lands with git integrations.
+	IntegrationID string `json:"integration_id,omitempty"`
 }
 
 type ImageBuildStatus struct {

@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 **Code** | Pointer to **string** |  | [optional] 
 **Reason** | Pointer to **string** |  | [optional] 
 **OperationId** | Pointer to **string** |  | [optional] 
+**Details** | Pointer to **map[string]interface{}** | Optional structured, machine-readable error context | [optional] 
 
 ## Methods
 
@@ -179,6 +180,31 @@ SetOperationId sets OperationId field to given value.
 `func (o *Error) HasOperationId() bool`
 
 HasOperationId returns a boolean if a field has been set.
+
+### GetDetails
+
+`func (o *Error) GetDetails() map[string]interface{}`
+
+GetDetails returns the Details field if non-nil, zero value otherwise.
+
+### GetDetailsOk
+
+`func (o *Error) GetDetailsOk() (*map[string]interface{}, bool)`
+
+GetDetailsOk returns a tuple with the Details field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetDetails
+
+`func (o *Error) SetDetails(v map[string]interface{})`
+
+SetDetails sets Details field to given value.
+
+### HasDetails
+
+`func (o *Error) HasDetails() bool`
+
+HasDetails returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

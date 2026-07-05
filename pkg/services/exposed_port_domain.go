@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 // AssignExposedPortFQDNs mutates ports in place, setting generated prefixes and FQDNs

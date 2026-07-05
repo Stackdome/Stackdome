@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
-	stores "github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
+	stores "github.com/Stackdome/stackdome/pkg/stores"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -130,4 +130,18 @@ func (m *MockStackPreviewConfigStore) Update(ctx context.Context, config *models
 func (mr *MockStackPreviewConfigStoreMockRecorder) Update(ctx, config any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).Update), ctx, config)
+}
+
+// WithTransaction mocks base method.
+func (m *MockStackPreviewConfigStore) WithTransaction(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "WithTransaction", ctx, fn)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// WithTransaction indicates an expected call of WithTransaction.
+func (mr *MockStackPreviewConfigStoreMockRecorder) WithTransaction(ctx, fn any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "WithTransaction", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).WithTransaction), ctx, fn)
 }

@@ -28,7 +28,10 @@ func loadFixture(t *testing.T, name string) *Stackfile {
 func TestFixture_BasicImage(t *testing.T) {
 	sf := loadFixture(t, "basic_image.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	if stack.Name != "basic-stack" {
 		t.Errorf("expected name 'basic-stack', got %q", stack.Name)
@@ -37,7 +40,7 @@ func TestFixture_BasicImage(t *testing.T) {
 		t.Fatalf("expected 1 resource, got %d", len(stack.Spec.StackResources))
 	}
 	res := stack.Spec.StackResources[0]
-	if res.ImageSpec == nil || res.ImageSpec.Image != "nginx:latest" {
+	if res.Source == nil || res.Source.Image == nil || res.Source.Image.Ref != "nginx:latest" {
 		t.Error("expected image nginx:latest")
 	}
 	if len(res.Ports) != 1 || !res.Ports[0].ExposedToPublic {
@@ -48,19 +51,22 @@ func TestFixture_BasicImage(t *testing.T) {
 func TestFixture_BuildFromSource(t *testing.T) {
 	sf := loadFixture(t, "build_from_source.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 	res := stack.Spec.StackResources[0]
 
-	if res.BuildSpec == nil {
+	if res.Source == nil || res.Source.Git == nil {
 		t.Fatal("expected build spec")
 	}
-	if res.BuildSpec.SourceContext.GitRepo.RepoUrl != "https://github.com/myorg/myapp.git" {
+	if res.Source.Git.RepoUrl != "https://github.com/myorg/myapp.git" {
 		t.Error("wrong repo url")
 	}
-	if res.BuildSpec.ContextPathWithinSource != "./backend" {
-		t.Errorf("expected context './backend', got %q", res.BuildSpec.ContextPathWithinSource)
+	if res.Source.Git.GetBuildContext() != "./backend" {
+		t.Errorf("expected context './backend', got %q", res.Source.Git.GetBuildContext())
 	}
-	if *res.BuildSpec.SourceRevision.GitRepoRevision.Branch != "develop" {
+	if res.Source.Git.GetBranch() != "develop" {
 		t.Error("expected branch develop")
 	}
 }
@@ -68,7 +74,10 @@ func TestFixture_BuildFromSource(t *testing.T) {
 func TestFixture_Infisical(t *testing.T) {
 	sf := loadFixture(t, "infisical.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	if stack.Name != "infisical" {
 		t.Errorf("expected name 'infisical', got %q", stack.Name)
@@ -117,7 +126,10 @@ func TestFixture_Infisical(t *testing.T) {
 func TestFixture_WithSecrets(t *testing.T) {
 	sf := loadFixture(t, "with_secrets.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	secretConns := 0
 	for _, conn := range stack.Spec.Connections {
@@ -136,7 +148,10 @@ func TestFixture_WithSecrets(t *testing.T) {
 func TestFixture_WithAddon(t *testing.T) {
 	sf := loadFixture(t, "with_addon.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	found := false
 	for _, conn := range stack.Spec.Connections {
@@ -174,7 +189,10 @@ func TestFixture_WithAddon(t *testing.T) {
 func TestFixture_WithAddonSuperuser(t *testing.T) {
 	sf := loadFixture(t, "with_addon_superuser.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	for _, conn := range stack.Spec.Connections {
 		if conn.From.Type != "addon/postgres" {
@@ -193,7 +211,10 @@ func TestFixture_WithAddonSuperuser(t *testing.T) {
 func TestFixture_KitchenSink(t *testing.T) {
 	sf := loadFixture(t, "kitchen_sink.yaml")
 
-	stack := sf.ToStack()
+	stack, err := sf.ToStack()
+	if err != nil {
+		t.Fatalf("ToStack failed: %v", err)
+	}
 
 	if len(stack.Spec.StackResources) != 3 {
 		t.Errorf("expected 3 resources, got %d", len(stack.Spec.StackResources))

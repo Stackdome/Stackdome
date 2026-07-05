@@ -463,6 +463,521 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  # Org-scoped registry credentials (auto-attached by registry host)
+  /api/v1/organizations/{org_id}/registry-credentials:
+    post:
+      summary: Create a registry credential for the organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistryCredential'
+      responses:
+        '201':
+          description: Registry credential created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredential'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: A credential for this host and purpose already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+    get:
+      summary: List registry credentials for the organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredentialList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/registry-credentials/{id}:
+    get:
+      summary: Get a registry credential
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredential'
+        '404':
+          description: Registry credential not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    put:
+      summary: Update a registry credential (username/password rotation)
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistryCredential'
+      responses:
+        '200':
+          description: Registry credential updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredential'
+        '400':
+          description: Invalid request payload
+        '404':
+          description: Registry credential not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete a registry credential
+      description: >-
+        Deletion is never blocked; the response lists stacks that were
+        implicitly resolving against this credential so rotations are visible.
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Registry credential deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredentialDeleteResponse'
+        '404':
+          description: Registry credential not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/registry-credentials/{id}/verify:
+    post:
+      summary: Verify a registry credential against a repository
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistryCredentialVerifyRequest'
+      responses:
+        '204':
+          description: Credential verified successfully
+        '400':
+          description: Verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Registry credential not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+
+  # Org-scoped git integrations (auto-attached by git host)
+  /api/v1/organizations/{org_id}/git-integrations/github/manifest:
+    post:
+      summary: Start the GitHub App manifest flow for the organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '201':
+          description: Manifest flow started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubAppManifestFlow'
+        '400':
+          description: The hub external URL is not configured
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: A GitHub App is already installed
+        '500':
+          description: Internal server error
+  /api/v1/git-integrations/github/manifest/callback:
+    get:
+      summary: GitHub App manifest redirect target (unauthenticated, state-validated)
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: state
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects the browser to the GitHub App install page
+        '400':
+          description: Invalid or expired state
+        '500':
+          description: Internal server error
+  /api/v1/webhooks/github:
+    post:
+      summary: GitHub webhook receiver (unauthenticated, HMAC-verified)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '202':
+          description: Delivery accepted
+        '403':
+          description: Signature verification failed
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations/{id}/installations:
+    get:
+      summary: List GitHub App installations
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+        - in: query
+          name: refresh
+          schema:
+            type: boolean
+            default: false
+          description: Re-list installations from GitHub before returning (covers missed webhooks)
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitInstallationList'
+        '404':
+          description: Git integration not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations/{id}/repositories:
+    get:
+      summary: List repositories visible to the GitHub App installation
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+        - in: query
+          name: query
+          schema:
+            type: string
+          description: Substring filter on the repository full name
+        - in: query
+          name: page
+          schema:
+            type: integer
+        - in: query
+          name: installation_id
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitRepositoryPage'
+        '404':
+          description: Git integration not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}:
+    get:
+      summary: Get repository details through the GitHub App installation
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+        - in: path
+          name: owner
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: repo
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitRepository'
+        '404':
+          description: Not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches:
+    get:
+      summary: List repository branches through the GitHub App installation
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+        - in: path
+          name: owner
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: repo
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitBranchList'
+        '404':
+          description: Not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations:
+    post:
+      summary: Create a git integration for the organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitIntegration'
+      responses:
+        '201':
+          description: Git integration created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegration'
+        '400':
+          description: Invalid request payload
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: An integration for this host already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+    get:
+      summary: List git integrations for the organization
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegrationList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations/{id}:
+    get:
+      summary: Get a git integration
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegration'
+        '404':
+          description: Git integration not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    put:
+      summary: Update a git integration (credential rotation)
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitIntegration'
+      responses:
+        '200':
+          description: Git integration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegration'
+        '400':
+          description: Invalid request payload
+        '404':
+          description: Git integration not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+    delete:
+      summary: Delete a git integration
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      responses:
+        '204':
+          description: Git integration deleted successfully
+        '404':
+          description: Git integration not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+  /api/v1/organizations/{org_id}/git-integrations/{id}/verify:
+    post:
+      summary: Verify a git integration against a repository
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitIntegrationVerifyRequest'
+      responses:
+        '204':
+          description: Integration verified successfully
+        '400':
+          description: Verification failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Git integration not found
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
+
   # Org-scoped object store listing (cross-team)
   /api/v1/organizations/{org_id}/object-stores:
     get:
@@ -4057,10 +4572,8 @@ components:
         revision:
           type: string
           readOnly: true
-        build_spec:
-          $ref: '#/components/schemas/StackResourceBuildSpec'
-        image_spec:
-          $ref: '#/components/schemas/ImageSpec'
+        source:
+          $ref: '#/components/schemas/SourceSpec'
         init_spec:
           $ref: '#/components/schemas/InitSpec'
         execution_config:
@@ -4549,6 +5062,250 @@ components:
         value:
           type: string
           description: The value for the secret data, base64 encoded if necessary
+    GitHubAppManifestFlow:
+      type: object
+      properties:
+        manifest:
+          type: object
+          additionalProperties: true
+          description: GitHub App manifest to POST to github_url as the manifest form field
+        github_url:
+          type: string
+        state:
+          type: string
+    GitInstallation:
+      type: object
+      properties:
+        id:
+          type: string
+          readOnly: true
+        installation_id:
+          type: integer
+          format: int64
+        account_login:
+          type: string
+        account_type:
+          type: string
+        repository_selection:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+    GitInstallationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitInstallation'
+        total:
+          type: integer
+    GitRepository:
+      type: object
+      properties:
+        full_name:
+          type: string
+        clone_url:
+          type: string
+        default_branch:
+          type: string
+        private:
+          type: boolean
+        pushed_at:
+          type: string
+          format: date-time
+        owner:
+          type: string
+    GitRepositoryPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitRepository'
+        page:
+          type: integer
+        total_count:
+          type: integer
+        has_next:
+          type: boolean
+    GitBranchList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+        total:
+          type: integer
+    GitIntegration:
+      type: object
+      additionalProperties: false
+      required:
+        - host
+      properties:
+        id:
+          type: string
+          readOnly: true
+        type:
+          $ref: '#/components/schemas/GitIntegrationType'
+        host:
+          type: string
+          description: Git host this integration covers, e.g. gitlab.example.com
+        status:
+          type: string
+          readOnly: true
+          enum:
+          - active
+          - pending_install
+          - installed
+        auth:
+          $ref: '#/components/schemas/GitIntegrationAuth'
+        credentials_configured:
+          type: boolean
+          readOnly: true
+        install_url:
+          type: string
+          readOnly: true
+          description: GitHub install page for adding the app to more accounts (github_app only)
+        organisation_id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    GitIntegrationType:
+      type: string
+      default: git_credentials
+      enum:
+      - git_credentials
+      - github_app
+      x-enum-varnames:
+      - GIT_INTEGRATION_TYPE_CREDENTIALS
+      - GIT_INTEGRATION_TYPE_GITHUB_APP
+    GitIntegrationAuth:
+      type: object
+      additionalProperties: false
+      description: Clone auth material; exactly one of token or basic. Never echoed in responses.
+      properties:
+        token:
+          type: string
+          format: password
+          writeOnly: true
+        basic:
+          $ref: '#/components/schemas/GitIntegrationBasicAuth'
+    GitIntegrationBasicAuth:
+      type: object
+      additionalProperties: false
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          type: string
+          format: password
+          writeOnly: true
+    GitIntegrationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/GitIntegration'
+        total:
+          type: integer
+    GitIntegrationVerifyRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - repo_url
+      properties:
+        repo_url:
+          type: string
+    RegistryCredential:
+      type: object
+      additionalProperties: false
+      required:
+        - host
+        - username
+      properties:
+        id:
+          type: string
+          readOnly: true
+        host:
+          type: string
+          description: Registry host; normalized on create (docker.io aliases become index.docker.io)
+        purpose:
+          $ref: '#/components/schemas/RegistryCredentialPurpose'
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+          writeOnly: true
+          description: Required on create; omit on update to keep the stored password
+        organisation_id:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    RegistryCredentialList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RegistryCredential'
+        total:
+          type: integer
+    RegistryCredentialPurpose:
+      type: string
+      default: both
+      enum:
+      - pull
+      - push
+      - both
+    RegistryCredentialVerifyRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - repository
+      properties:
+        repository:
+          type: string
+          description: Repository to verify against, e.g. ghcr.io/acme/app
+        purpose:
+          $ref: '#/components/schemas/RegistryCredentialPurpose'
+    RegistryCredentialDeleteResponse:
+      type: object
+      properties:
+        affected_stacks:
+          type: array
+          description: Stacks that were implicitly resolving against the deleted credential
+          items:
+            $ref: '#/components/schemas/AffectedStackRef'
+    AffectedStackRef:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
     ClusterImageRegistryList:
       type: object
       properties:
@@ -4760,38 +5517,87 @@ components:
           type: string
           format: date-time
 
-    StackResourceBuildSpec:
+    SourceSpec:
+      type: object
+      additionalProperties: false
+      description: Where a stack resource's runtime image comes from. Exactly one of git, image, or volume must be set (enforced server-side).
+      properties:
+        git:
+          $ref: '#/components/schemas/GitSource'
+        image:
+          $ref: '#/components/schemas/ImageSource'
+        volume:
+          $ref: '#/components/schemas/VolumeBuildSource'
+    GitSource:
       type: object
       additionalProperties: false
       required:
-        - source_context
-        - context_path_within_source
-        - dockerfile_path
-        - source_revision
-        - image_repository
+        - repo_url
       properties:
-        source_context:
-          $ref: '#/components/schemas/BuildSourceContext'
-        context_path_within_source:
+        repo_url:
           type: string
+        branch:
+          type: string
+          description: Defaults to the repository's default branch, resolved and stored at create time
+        tag:
+          type: string
+          description: Mutually exclusive with branch
+        commit:
+          type: string
+          description: Commit SHA pin; requires branch or tag
         dockerfile_path:
           type: string
-        source_revision:
-          $ref: '#/components/schemas/BuildSourceRevision'
-        image_repository:
-          $ref: '#/components/schemas/ImageRepository'
-          description: The image repository to push the built image to
-        registry_push_secret:
-          $ref: '#/components/schemas/SecretRef'
-    ImageRepository:
+          default: Dockerfile
+        build_context:
+          type: string
+          default: "."
+        integration_id:
+          type: string
+          description: Org-level git integration override for clone auth
+        push:
+          $ref: '#/components/schemas/PushTarget'
+          description: Omit to push to the internal cluster registry
+    PushTarget:
       type: object
-      description: The image repository to push the built image to
+      additionalProperties: false
+      required:
+        - repository
+      properties:
+        repository:
+          type: string
+          description: Push repository as host/path, without a tag
+        registry_credentials_id:
+          type: string
+          description: Org-level registry credential override for push auth
+    ImageSource:
+      type: object
+      additionalProperties: false
+      required:
+        - ref
+      properties:
+        ref:
+          type: string
+        registry_credentials_id:
+          type: string
+          description: Org-level registry credential override for pull auth
+    VolumeBuildSource:
+      type: object
       additionalProperties: false
       properties:
-        external_image_ref:
+        volume_id:
           type: string
-        use_internal_registry:
-          type: boolean
+        volume_name:
+          type: string
+          description: Name of a volume defined on the stack; either volume_id or volume_name is required
+        current_volume_hash:
+          type: string
+          description: Content hash of the volume used as the build source revision
+        dockerfile_path:
+          type: string
+          default: Dockerfile
+        build_context:
+          type: string
+          default: "."
     BuildSourceContext:
       type: object
       properties:
@@ -4811,8 +5617,6 @@ components:
           properties:
             repo_url:
               type: string
-            git_secret:
-              $ref: '#/components/schemas/SecretRef'
     BuildSourceRevision:
       type: object
       properties:
@@ -4826,32 +5630,10 @@ components:
         git_repo_revision:
           $ref: '#/components/schemas/GitRepoRevision'
 
-    ImageSpec:
-      type: object
-      additionalProperties: false
-      required:
-        - image
-      properties:
-        image:
-          type: string
-        pull_secret:
-          $ref: '#/components/schemas/SecretRef'
-
-    SecretRef:
-      type: object
-      additionalProperties: false
-      required:
-        - secret_id
-      properties:
-        secret_id:
-          type: string
-
     InitSpec:
       type: object
       additionalProperties: false
       properties:
-        image_spec:
-          $ref: '#/components/schemas/ImageSpec'
         command:
           type: array
           items:
@@ -4942,6 +5724,10 @@ components:
               type: string
             operation_id:
               type: string
+            details:
+              type: object
+              additionalProperties: true
+              description: Optional structured, machine-readable error context
     ErrorList:
       type: object
       properties:
@@ -6028,6 +6814,7 @@ components:
 
     PreviewGitRepository:
       type: object
+      additionalProperties: false
       required:
         - repo_url
       properties:
@@ -6035,8 +6822,9 @@ components:
           type: string
         base_branch:
           type: string
-        git_secret_ref:
+        integration_id:
           type: string
+          description: Org-level git integration override for clone auth
 
     StackPreviewConfig:
       type: object

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ashishmax31/stackdome-api-server/install"
+	"github.com/Stackdome/stackdome/install"
 )
 
 const defaultAPIServerImage = "quay.io/stackdome/stackdome:latest"

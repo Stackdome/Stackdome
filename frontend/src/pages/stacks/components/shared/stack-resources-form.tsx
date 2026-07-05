@@ -43,8 +43,7 @@ export function getDefaultResource(): Partial<FormStackResourceData> {
     ports: [],
     volume_mounts: [],
     execution_config: { environment_variables: [] },
-    build_spec: undefined,
-    image_spec: { image: "" },
+    source: { image: { ref: "" } },
   };
 }
 
@@ -87,7 +86,7 @@ export default function StackResourcesForm({
   );
 
   const isResourceFilled = (res: Partial<FormStackResourceData>) => {
-    return !!(res.name || res.ports?.length || res.volume_mounts?.length || res.labels?.length || res.depends_on?.length || res.execution_config?.environment_variables?.length || res.build_spec || (res.image_spec && res.image_spec.image));
+    return !!(res.name || res.ports?.length || res.volume_mounts?.length || res.labels?.length || res.depends_on?.length || res.execution_config?.environment_variables?.length || res.source?.git || res.source?.image?.ref);
   };
 
   // Use refs so handleRemove identity stays stable across keystrokes —

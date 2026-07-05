@@ -88,6 +88,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1AuthLoginPost**](docs/DefaultApi.md#apiv1authloginpost) | **Post** /api/v1/auth/login | User login
 *DefaultApi* | [**ApiV1AuthRefreshPost**](docs/DefaultApi.md#apiv1authrefreshpost) | **Post** /api/v1/auth/refresh | Refresh JWT token
 *DefaultApi* | [**ApiV1ConfigGet**](docs/DefaultApi.md#apiv1configget) | **Get** /api/v1/config | Get public application configuration
+*DefaultApi* | [**ApiV1GitIntegrationsGithubManifestCallbackGet**](docs/DefaultApi.md#apiv1gitintegrationsgithubmanifestcallbackget) | **Get** /api/v1/git-integrations/github/manifest/callback | GitHub App manifest redirect target (unauthenticated, state-validated)
 *DefaultApi* | [**ApiV1InvitesTokenInfoGet**](docs/DefaultApi.md#apiv1invitestokeninfoget) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization
@@ -102,12 +103,29 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidclustersiddelete) | **Delete** /api/v1/organizations/{org_id}/clusters/{id} | Delete a cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidclustersidget) | **Get** /api/v1/organizations/{org_id}/clusters/{id} | Get a specific cluster
 *DefaultApi* | [**ApiV1OrganizationsOrgIdClustersPost**](docs/DefaultApi.md#apiv1organizationsorgidclusterspost) | **Post** /api/v1/organizations/{org_id}/clusters | Add a new cluster
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsGet**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsget) | **Get** /api/v1/organizations/{org_id}/git-integrations | List git integrations for the organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsGithubManifestPost**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsgithubmanifestpost) | **Post** /api/v1/organizations/{org_id}/git-integrations/github/manifest | Start the GitHub App manifest flow for the organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsiddelete) | **Delete** /api/v1/organizations/{org_id}/git-integrations/{id} | Delete a git integration
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdGet**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidget) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id} | Get a git integration
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdInstallationsGet**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidinstallationsget) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/installations | List GitHub App installations
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdPut**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidput) | **Put** /api/v1/organizations/{org_id}/git-integrations/{id} | Update a git integration (credential rotation)
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidrepositoriesget) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories | List repositories visible to the GitHub App installation
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoBranchesGet**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidrepositoriesownerrepobranchesget) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches | List repository branches through the GitHub App installation
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidrepositoriesownerrepoget) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo} | Get repository details through the GitHub App installation
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationsidverifypost) | **Post** /api/v1/organizations/{org_id}/git-integrations/{id}/verify | Verify a git integration against a repository
+*DefaultApi* | [**ApiV1OrganizationsOrgIdGitIntegrationsPost**](docs/DefaultApi.md#apiv1organizationsorgidgitintegrationspost) | **Post** /api/v1/organizations/{org_id}/git-integrations | Create a git integration for the organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesGet**](docs/DefaultApi.md#apiv1organizationsorgidinvitesget) | **Get** /api/v1/organizations/{org_id}/invites | List invites for an organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidinvitesiddelete) | **Delete** /api/v1/organizations/{org_id}/invites/{id} | Revoke a pending invite
 *DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidinvitesidget) | **Get** /api/v1/organizations/{org_id}/invites/{id} | Get an invite by ID
 *DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesIdResendPost**](docs/DefaultApi.md#apiv1organizationsorgidinvitesidresendpost) | **Post** /api/v1/organizations/{org_id}/invites/{id}/resend | Re-queue invite email for delivery
 *DefaultApi* | [**ApiV1OrganizationsOrgIdInvitesPost**](docs/DefaultApi.md#apiv1organizationsorgidinvitespost) | **Post** /api/v1/organizations/{org_id}/invites | Create an invite to the organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdObjectStoresGet**](docs/DefaultApi.md#apiv1organizationsorgidobjectstoresget) | **Get** /api/v1/organizations/{org_id}/object-stores | List all object stores the user has access to across all teams
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsGet**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsget) | **Get** /api/v1/organizations/{org_id}/registry-credentials | List registry credentials for the organization
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsiddelete) | **Delete** /api/v1/organizations/{org_id}/registry-credentials/{id} | Delete a registry credential
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsIdGet**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsidget) | **Get** /api/v1/organizations/{org_id}/registry-credentials/{id} | Get a registry credential
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsIdPut**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsidput) | **Put** /api/v1/organizations/{org_id}/registry-credentials/{id} | Update a registry credential (username/password rotation)
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsIdVerifyPost**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsidverifypost) | **Post** /api/v1/organizations/{org_id}/registry-credentials/{id}/verify | Verify a registry credential against a repository
+*DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsPost**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialspost) | **Post** /api/v1/organizations/{org_id}/registry-credentials | Create a registry credential for the organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdSecretsGet**](docs/DefaultApi.md#apiv1organizationsorgidsecretsget) | **Get** /api/v1/organizations/{org_id}/secrets | List all secrets the user has access to across all teams
 *DefaultApi* | [**ApiV1OrganizationsOrgIdStacksGet**](docs/DefaultApi.md#apiv1organizationsorgidstacksget) | **Get** /api/v1/organizations/{org_id}/stacks | List all stacks the user has access to across all teams
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsget) | **Get** /api/v1/organizations/{org_id}/teams | List all teams in an organization
@@ -174,6 +192,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersCurrentGet**](docs/DefaultApi.md#apiv1userscurrentget) | **Get** /api/v1/users/current | Get the current authenticated user
 *DefaultApi* | [**ApiV1UsersCurrentTeamsGet**](docs/DefaultApi.md#apiv1userscurrentteamsget) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
+*DefaultApi* | [**ApiV1WebhooksGithubPost**](docs/DefaultApi.md#apiv1webhooksgithubpost) | **Post** /api/v1/webhooks/github | GitHub webhook receiver (unauthenticated, HMAC-verified)
 *PreviewConfigsApi* | [**CreatePreviewConfig**](docs/PreviewConfigsApi.md#createpreviewconfig) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs | Create a new preview config
 *PreviewConfigsApi* | [**DeletePreviewConfig**](docs/PreviewConfigsApi.md#deletepreviewconfig) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Delete a preview config
 *PreviewConfigsApi* | [**GetPreviewConfig**](docs/PreviewConfigsApi.md#getpreviewconfig) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Get a specific preview config
@@ -197,6 +216,7 @@ Class | Method | HTTP request | Description
  - [APITokenCreateResponse](docs/APITokenCreateResponse.md)
  - [APITokenList](docs/APITokenList.md)
  - [AddTeamMemberRequest](docs/AddTeamMemberRequest.md)
+ - [AffectedStackRef](docs/AffectedStackRef.md)
  - [Annotation](docs/Annotation.md)
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response.md)
  - [ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest](docs/ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest.md)
@@ -235,13 +255,25 @@ Class | Method | HTTP request | Description
  - [ErrorList](docs/ErrorList.md)
  - [ExecutionConfig](docs/ExecutionConfig.md)
  - [GCSCredentials](docs/GCSCredentials.md)
+ - [GitBranchList](docs/GitBranchList.md)
+ - [GitHubAppManifestFlow](docs/GitHubAppManifestFlow.md)
+ - [GitInstallation](docs/GitInstallation.md)
+ - [GitInstallationList](docs/GitInstallationList.md)
+ - [GitIntegration](docs/GitIntegration.md)
+ - [GitIntegrationAuth](docs/GitIntegrationAuth.md)
+ - [GitIntegrationBasicAuth](docs/GitIntegrationBasicAuth.md)
+ - [GitIntegrationList](docs/GitIntegrationList.md)
+ - [GitIntegrationType](docs/GitIntegrationType.md)
+ - [GitIntegrationVerifyRequest](docs/GitIntegrationVerifyRequest.md)
  - [GitRepoRevision](docs/GitRepoRevision.md)
  - [GitRepoSource](docs/GitRepoSource.md)
+ - [GitRepository](docs/GitRepository.md)
+ - [GitRepositoryPage](docs/GitRepositoryPage.md)
+ - [GitSource](docs/GitSource.md)
  - [ImageBuild](docs/ImageBuild.md)
  - [ImageBuildList](docs/ImageBuildList.md)
  - [ImageBuildStatus](docs/ImageBuildStatus.md)
- - [ImageRepository](docs/ImageRepository.md)
- - [ImageSpec](docs/ImageSpec.md)
+ - [ImageSource](docs/ImageSource.md)
  - [Ingress](docs/Ingress.md)
  - [InitSpec](docs/InitSpec.md)
  - [InviteStatus](docs/InviteStatus.md)
@@ -301,8 +333,14 @@ Class | Method | HTTP request | Description
  - [PreviewStackStatusOutputsUrlsInner](docs/PreviewStackStatusOutputsUrlsInner.md)
  - [PreviewStackSync](docs/PreviewStackSync.md)
  - [PromoteAdminRequest](docs/PromoteAdminRequest.md)
+ - [PushTarget](docs/PushTarget.md)
  - [RefreshTokenRequest](docs/RefreshTokenRequest.md)
  - [RefreshTokenResponse](docs/RefreshTokenResponse.md)
+ - [RegistryCredential](docs/RegistryCredential.md)
+ - [RegistryCredentialDeleteResponse](docs/RegistryCredentialDeleteResponse.md)
+ - [RegistryCredentialList](docs/RegistryCredentialList.md)
+ - [RegistryCredentialPurpose](docs/RegistryCredentialPurpose.md)
+ - [RegistryCredentialVerifyRequest](docs/RegistryCredentialVerifyRequest.md)
  - [ReleaseCause](docs/ReleaseCause.md)
  - [ReleaseCauseKind](docs/ReleaseCauseKind.md)
  - [ReleaseOutcome](docs/ReleaseOutcome.md)
@@ -319,9 +357,9 @@ Class | Method | HTTP request | Description
  - [Secret](docs/Secret.md)
  - [SecretData](docs/SecretData.md)
  - [SecretList](docs/SecretList.md)
- - [SecretRef](docs/SecretRef.md)
  - [SecretReference](docs/SecretReference.md)
  - [SecretType](docs/SecretType.md)
+ - [SourceSpec](docs/SourceSpec.md)
  - [Stack](docs/Stack.md)
  - [StackConnection](docs/StackConnection.md)
  - [StackConnectionConfig](docs/StackConnectionConfig.md)
@@ -340,7 +378,6 @@ Class | Method | HTTP request | Description
  - [StackReleaseSnapshotStack](docs/StackReleaseSnapshotStack.md)
  - [StackReleaseState](docs/StackReleaseState.md)
  - [StackResource](docs/StackResource.md)
- - [StackResourceBuildSpec](docs/StackResourceBuildSpec.md)
  - [StackResourceFailure](docs/StackResourceFailure.md)
  - [StackResourceList](docs/StackResourceList.md)
  - [StackResourceStatus](docs/StackResourceStatus.md)
@@ -370,6 +407,7 @@ Class | Method | HTTP request | Description
  - [ValueRef](docs/ValueRef.md)
  - [Volume](docs/Volume.md)
  - [VolumeAccessMode](docs/VolumeAccessMode.md)
+ - [VolumeBuildSource](docs/VolumeBuildSource.md)
  - [VolumeList](docs/VolumeList.md)
  - [VolumeMount](docs/VolumeMount.md)
  - [VolumeMountConfig](docs/VolumeMountConfig.md)

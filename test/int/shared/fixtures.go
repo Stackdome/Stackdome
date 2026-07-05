@@ -3,8 +3,8 @@ package shared
 import (
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 // Shared test image used across all stack fixtures
@@ -83,6 +83,12 @@ const (
 	BuildSourcePort         = 3000
 	BuildSourceResourceName = "todo-app"
 	BuildSourceSecretName   = "test-git-creds"
+
+	// BuildSourceGitHost is the git host the build-source fixtures clone from;
+	// an org git integration for this host provides private-clone auth.
+	BuildSourceGitHost = "github.com"
+	// BuildSourceGitUsername is the basic-auth username paired with a GitHub PAT.
+	BuildSourceGitUsername = "git"
 
 	// BrokenBuildResourceName is the resource name for the broken-build fixture.
 	// It points to a branch that contains a Dockerfile with an invalid command so the build fails.
@@ -332,8 +338,8 @@ func CreateObjectStoreWithRetention(name string, secretID string, retention stri
 // code, triggering CrashLoopBackOff so the cluster-agent populates LastFailureDetails.
 func CreateCrashingStack(name string) *openapi.Stack {
 	resource := openapi.NewStackResource(CrashResourceName)
-	imageSpec := openapi.NewImageSpec(CrashImage)
-	resource.SetImageSpec(*imageSpec)
+	imageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(CrashImage)}
+	resource.SetSource(imageSpecSource)
 	exec := openapi.NewExecutionConfig()
 	exec.SetCommand([]string{"sh", "-c", fmt.Sprintf("echo '%s'; exit 1", CrashMessage)})
 	resource.SetExecutionConfig(*exec)
@@ -344,8 +350,8 @@ func CreateCrashingStack(name string) *openapi.Stack {
 
 func CreateSimpleStack(name string) *openapi.Stack {
 	resource := openapi.NewStackResource("web")
-	imageSpec := openapi.NewImageSpec("nginx:1.25-alpine")
-	resource.SetImageSpec(*imageSpec)
+	imageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
+	resource.SetSource(imageSpecSource)
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 80, false),
 	})
@@ -356,8 +362,8 @@ func CreateSimpleStack(name string) *openapi.Stack {
 
 func CreateMultiResourceStack(name string) *openapi.Stack {
 	backend := openapi.NewStackResource(MultiResourceBackendName)
-	backendImage := openapi.NewImageSpec(TestImage)
-	backend.SetImageSpec(*backendImage)
+	backendImageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
+	backend.SetSource(backendImageSource)
 	backend.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", MultiResourceBackendPort, false),
 	})
@@ -372,8 +378,8 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	backend.SetExecutionConfig(*backendExec)
 
 	frontend := openapi.NewStackResource(MultiResourceFrontendName)
-	frontendImage := openapi.NewImageSpec(TestImage)
-	frontend.SetImageSpec(*frontendImage)
+	frontendImageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
+	frontend.SetSource(frontendImageSource)
 	frontend.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", MultiResourceFrontendPort, false),
 	})
@@ -396,15 +402,15 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 
 func CreateStackWithDependencies(name string) *openapi.Stack {
 	resourceA := openapi.NewStackResource("database")
-	imageA := openapi.NewImageSpec("nginx:1.25-alpine")
-	resourceA.SetImageSpec(*imageA)
+	imageASource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
+	resourceA.SetSource(imageASource)
 	resourceA.SetPorts([]openapi.Port{
 		*openapi.NewPort("postgres", 5432, false),
 	})
 
 	resourceB := openapi.NewStackResource("app")
-	imageB := openapi.NewImageSpec("nginx:1.25-alpine")
-	resourceB.SetImageSpec(*imageB)
+	imageBSource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
+	resourceB.SetSource(imageBSource)
 	resourceB.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 8080, false),
 	})
@@ -416,8 +422,8 @@ func CreateStackWithDependencies(name string) *openapi.Stack {
 
 func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 	resource := openapi.NewStackResource(EnvPortsResourceName)
-	image := openapi.NewImageSpec(TestImage)
-	resource.SetImageSpec(*image)
+	imageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
+	resource.SetSource(imageSource)
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", EnvPortsPort1, false),
 		*openapi.NewPort("metrics", EnvPortsPort2, false),
@@ -448,15 +454,13 @@ func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 
 func CreateStackWithInitContainer(name string) *openapi.Stack {
 	resource := openapi.NewStackResource("app")
-	image := openapi.NewImageSpec(TestImage)
-	resource.SetImageSpec(*image)
+	imageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
+	resource.SetSource(imageSource)
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 80, false),
 	})
 
 	initSpec := openapi.NewInitSpec()
-	initImage := openapi.NewImageSpec(InitImage)
-	initSpec.SetImageSpec(*initImage)
 	initSpec.Command = []string{"sh", "-c", InitCommand}
 	resource.SetInitSpec(*initSpec)
 
@@ -466,8 +470,8 @@ func CreateStackWithInitContainer(name string) *openapi.Stack {
 
 func CreateStackWithPostgresAddon(name string, addonID string, database string) *openapi.Stack {
 	resource := openapi.NewStackResource("app")
-	image := openapi.NewImageSpec("nginx:1.25-alpine")
-	resource.SetImageSpec(*image)
+	imageSource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
+	resource.SetSource(imageSource)
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 8080, false),
 	})
@@ -481,8 +485,8 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 
 func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi.Stack {
 	resource := openapi.NewStackResource("app")
-	image := openapi.NewImageSpec("nginx:1.25-alpine")
-	resource.SetImageSpec(*image)
+	imageSource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
+	resource.SetSource(imageSource)
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 8080, false),
 	})
@@ -533,16 +537,16 @@ func postgresEnvConnection(addonID, targetResource, database string, superuser b
 // and depends_on. This exercises all connection kinds and topology features.
 func CreateFullStack(name string, addonID string, database string, secretID string) *openapi.Stack {
 	api := openapi.NewStackResource(FullStackAPIName)
-	apiImage := openapi.NewImageSpec(TestImage)
-	api.SetImageSpec(*apiImage)
+	apiImageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
+	api.SetSource(apiImageSource)
 	api.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", int32(FullStackAPIPort), false),
 	})
 	api.SetDependsOn([]string{FullStackWorkerName})
 
 	worker := openapi.NewStackResource(FullStackWorkerName)
-	workerImage := openapi.NewImageSpec(TestImage)
-	worker.SetImageSpec(*workerImage)
+	workerImageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
+	worker.SetSource(workerImageSource)
 
 	volumeSpec := openapi.NewVolumeSpec("1Gi", false, openapi.READ_WRITE_ONCE)
 	volume := openapi.NewVolume(FullStackVolumeName, *volumeSpec)
@@ -621,33 +625,15 @@ func resourceToResourceEnvConnection(sourceResource, targetResource string) open
 
 // CreateStackWithBrokenBuildSource creates a stack pointing at a branch with a broken
 // Dockerfile so the kaniko build fails, triggering last_build_failure_detail.
-func CreateStackWithBrokenBuildSource(name string, repoURL string, secretID string) *openapi.Stack {
+func CreateStackWithBrokenBuildSource(name string, repoURL string) *openapi.Stack {
 	resource := openapi.NewStackResource(BrokenBuildResourceName)
 
-	gitRepo := openapi.NewBuildSourceContextGitRepo(repoURL)
-	gitSecret := openapi.NewSecretRef(secretID)
-	gitRepo.SetGitSecret(*gitSecret)
-
-	sourceContext := openapi.NewBuildSourceContext()
-	sourceContext.SetGitRepo(*gitRepo)
-
-	gitRepoRevision := openapi.NewGitRepoRevision()
-	gitRepoRevision.SetBranch(BrokenBuildSourceBranch)
-
-	sourceRevision := openapi.NewBuildSourceRevision()
-	sourceRevision.SetGitRepoRevision(*gitRepoRevision)
-
-	imageRepo := openapi.NewImageRepository()
-	imageRepo.SetUseInternalRegistry(true)
-
-	buildSpec := openapi.NewStackResourceBuildSpec(
-		*sourceContext,
-		BuildSourceContextPath,
-		BrokenBuildSourceDockerfile,
-		*sourceRevision,
-		*imageRepo,
-	)
-	resource.SetBuildSpec(*buildSpec)
+	gitSource := openapi.NewGitSource(repoURL)
+	gitSource.SetBranch(BrokenBuildSourceBranch)
+	gitSource.SetBuildContext(BuildSourceContextPath)
+	gitSource.SetDockerfilePath(BrokenBuildSourceDockerfile)
+	// push omitted: builds go to the internal cluster registry
+	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
 	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
@@ -735,20 +721,20 @@ func CreateSimulatedReleaseStackWithConnections(name string, resources []openapi
 
 func SimpleResource(name string) openapi.StackResource {
 	r := openapi.NewStackResource(name)
-	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)})
 	return *r
 }
 
 func ResourceWithPort(name string, port int32) openapi.StackResource {
 	r := openapi.NewStackResource(name)
-	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)})
 	r.SetPorts([]openapi.Port{*openapi.NewPort("http", port, false)})
 	return *r
 }
 
 func ResourceWithDependsOn(name string, deps []string) openapi.StackResource {
 	r := openapi.NewStackResource(name)
-	r.SetImageSpec(*openapi.NewImageSpec(TestImage))
+	r.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)})
 	r.SetDependsOn(deps)
 	return *r
 }
@@ -807,37 +793,15 @@ func HostMapping() openapi.ConnectionMapping {
 	return *openapi.NewConnectionMapping(*target, *value)
 }
 
-func CreateStackWithBuildSource(name string, repoURL string, secretID string) *openapi.Stack {
+func CreateStackWithBuildSource(name string, repoURL string) *openapi.Stack {
 	resource := openapi.NewStackResource(BuildSourceResourceName)
 
-	// Build source context — git repo with secret for private access
-	gitRepo := openapi.NewBuildSourceContextGitRepo(repoURL)
-	gitSecret := openapi.NewSecretRef(secretID)
-	gitRepo.SetGitSecret(*gitSecret)
-
-	sourceContext := openapi.NewBuildSourceContext()
-	sourceContext.SetGitRepo(*gitRepo)
-
-	// Source revision — branch
-	gitRepoRevision := openapi.NewGitRepoRevision()
-	gitRepoRevision.SetBranch(BuildSourceBranch)
-
-	sourceRevision := openapi.NewBuildSourceRevision()
-	sourceRevision.SetGitRepoRevision(*gitRepoRevision)
-
-	// Image repository — use internal (in-cluster Zot) registry
-	imageRepo := openapi.NewImageRepository()
-	imageRepo.SetUseInternalRegistry(true)
-
-	// Assemble build spec
-	buildSpec := openapi.NewStackResourceBuildSpec(
-		*sourceContext,
-		BuildSourceContextPath,
-		BuildSourceDockerfile,
-		*sourceRevision,
-		*imageRepo,
-	)
-	resource.SetBuildSpec(*buildSpec)
+	// push omitted so builds go to the internal (in-cluster Zot) registry.
+	gitSource := openapi.NewGitSource(repoURL)
+	gitSource.SetBranch(BuildSourceBranch)
+	gitSource.SetBuildContext(BuildSourceContextPath)
+	gitSource.SetDockerfilePath(BuildSourceDockerfile)
+	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
 	// Port 3000 exposed to public
 	resource.SetPorts([]openapi.Port{

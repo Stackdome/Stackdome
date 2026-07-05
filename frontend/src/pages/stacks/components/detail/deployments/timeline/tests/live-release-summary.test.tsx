@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
-vi.mock("@/api/releases", () => ({ getRelease: vi.fn().mockResolvedValue({ id: "r18", sequence: 18, outcome: { resources: {} }, snapshot: { resources: [{ name: "web", image_spec: { image: "nginx:1.25" } }] } }) }));
+vi.mock("@/api/releases", () => ({ getRelease: vi.fn().mockResolvedValue({ id: "r18", sequence: 18, outcome: { resources: {} }, snapshot: { resources: [{ name: "web", source: { image: { ref: "nginx:1.25" } } }] } }) }));
 import { LiveReleaseSummary } from "../live-release-summary";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";

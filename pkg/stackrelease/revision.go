@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/davecgh/go-spew/spew"
 	"k8s.io/apimachinery/pkg/util/rand"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"

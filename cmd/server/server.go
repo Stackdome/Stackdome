@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
-	"github.com/ashishmax31/stackdome-api-server/config/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	"github.com/Stackdome/stackdome/cmd/environment"
+	"github.com/Stackdome/stackdome/config/openapi"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	applogger "github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/golang/glog"
 	gorillahandlers "github.com/gorilla/handlers"
 )
@@ -101,6 +101,8 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 			"^/api/v1/auth",
 			"^/api/v1/config$",
 			"^/api/v1/invites/[^/]+/info$",
+			"^/api/v1/git-integrations/github/manifest/callback$",
+			"^/api/v1/webhooks/github$",
 			"^/health",
 		},
 		// Set JWT authentication as the default handler.

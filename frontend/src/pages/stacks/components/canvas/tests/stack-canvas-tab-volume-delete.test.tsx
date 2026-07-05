@@ -34,7 +34,7 @@ vi.mock("@/pages/addons/hooks/use-postgres-addons", () => ({
   usePostgresAddons: () => ({ addons: EMPTY_ADDONS }),
 }));
 vi.mock("@/pages/stacks/hooks/use-secrets", () => ({
-  useSecrets: () => ({ secrets: EMPTY_SECRETS, isLoading: false, dockerRegistrySecrets: EMPTY_SECRETS, gitSecrets: EMPTY_SECRETS }),
+  useSecrets: () => ({ secrets: EMPTY_SECRETS, isLoading: false }),
 }));
 vi.mock("@/pages/stacks/hooks/use-stack-topology", () => ({
   useStackTopology: () => NO_TOPOLOGY,

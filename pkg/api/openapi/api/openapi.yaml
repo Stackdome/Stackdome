@@ -525,6 +525,744 @@ paths:
       security:
       - Bearer: []
       summary: List all secrets the user has access to across all teams
+  /api/v1/organizations/{org_id}/registry-credentials:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredentialList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List registry credentials for the organization
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistryCredential'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredential'
+          description: Registry credential created successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: A credential for this host and purpose already exists
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a registry credential for the organization
+  /api/v1/organizations/{org_id}/registry-credentials/{id}:
+    delete:
+      description: Deletion is never blocked; the response lists stacks that were
+        implicitly resolving against this credential so rotations are visible.
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredentialDeleteResponse'
+          description: Registry credential deleted successfully
+        "404":
+          description: Registry credential not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a registry credential
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredential'
+          description: Successful operation
+        "404":
+          description: Registry credential not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a registry credential
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistryCredential'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistryCredential'
+          description: Registry credential updated successfully
+        "400":
+          description: Invalid request payload
+        "404":
+          description: Registry credential not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a registry credential (username/password rotation)
+  /api/v1/organizations/{org_id}/registry-credentials/{id}/verify:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegistryCredentialVerifyRequest'
+        required: true
+      responses:
+        "204":
+          description: Credential verified successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Verification failed
+        "404":
+          description: Registry credential not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Verify a registry credential against a repository
+  /api/v1/organizations/{org_id}/git-integrations/github/manifest:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitHubAppManifestFlow'
+          description: Manifest flow started
+        "400":
+          description: The hub external URL is not configured
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          description: A GitHub App is already installed
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Start the GitHub App manifest flow for the organization
+  /api/v1/git-integrations/github/manifest/callback:
+    get:
+      parameters:
+      - explode: true
+        in: query
+        name: code
+        required: true
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: state
+        required: true
+        schema:
+          type: string
+        style: form
+      responses:
+        "302":
+          description: Redirects the browser to the GitHub App install page
+        "400":
+          description: Invalid or expired state
+        "500":
+          description: Internal server error
+      summary: "GitHub App manifest redirect target (unauthenticated, state-validated)"
+  /api/v1/webhooks/github:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+        required: true
+      responses:
+        "202":
+          description: Delivery accepted
+        "403":
+          description: Signature verification failed
+        "500":
+          description: Internal server error
+      summary: "GitHub webhook receiver (unauthenticated, HMAC-verified)"
+  /api/v1/organizations/{org_id}/git-integrations/{id}/installations:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Re-list installations from GitHub before returning (covers missed
+          webhooks)
+        explode: true
+        in: query
+        name: refresh
+        required: false
+        schema:
+          default: false
+          type: boolean
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitInstallationList'
+          description: Successful operation
+        "404":
+          description: Git integration not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List GitHub App installations
+  /api/v1/organizations/{org_id}/git-integrations/{id}/repositories:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Substring filter on the repository full name
+        explode: true
+        in: query
+        name: query
+        required: false
+        schema:
+          type: string
+        style: form
+      - explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: installation_id
+        required: false
+        schema:
+          format: int64
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitRepositoryPage'
+          description: Successful operation
+        "404":
+          description: Git integration not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List repositories visible to the GitHub App installation
+  /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: owner
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: repo
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitRepository'
+          description: Successful operation
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get repository details through the GitHub App installation
+  /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: owner
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: repo
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitBranchList'
+          description: Successful operation
+        "404":
+          description: Not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List repository branches through the GitHub App installation
+  /api/v1/organizations/{org_id}/git-integrations:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegrationList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List git integrations for the organization
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitIntegration'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegration'
+          description: Git integration created successfully
+        "400":
+          description: Invalid request payload
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: An integration for this host already exists
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a git integration for the organization
+  /api/v1/organizations/{org_id}/git-integrations/{id}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Git integration deleted successfully
+        "404":
+          description: Git integration not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a git integration
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegration'
+          description: Successful operation
+        "404":
+          description: Git integration not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Get a git integration
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitIntegration'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GitIntegration'
+          description: Git integration updated successfully
+        "400":
+          description: Invalid request payload
+        "404":
+          description: Git integration not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a git integration (credential rotation)
+  /api/v1/organizations/{org_id}/git-integrations/{id}/verify:
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GitIntegrationVerifyRequest'
+        required: true
+      responses:
+        "204":
+          description: Integration verified successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Verification failed
+        "404":
+          description: Git integration not found
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Verify a git integration against a repository
   /api/v1/organizations/{org_id}/object-stores:
     get:
       description: Returns object stores from all teams the user belongs to. OrgAdmins
@@ -6196,10 +6934,6 @@ components:
               command:
               - command
               - command
-              image_spec:
-                image: image
-                pull_secret:
-                  secret_id: secret_id
             execution_config:
               args:
               - args
@@ -6225,6 +6959,27 @@ components:
               source_volume_type: null
               source_sub_path: source_sub_path
               target_path: target_path
+            source:
+              volume:
+                volume_id: volume_id
+                current_volume_hash: current_volume_hash
+                volume_name: volume_name
+                build_context: "."
+                dockerfile_path: Dockerfile
+              image:
+                ref: ref
+                registry_credentials_id: registry_credentials_id
+              git:
+                repo_url: repo_url
+                integration_id: integration_id
+                commit: commit
+                build_context: "."
+                tag: tag
+                dockerfile_path: Dockerfile
+                branch: branch
+                push:
+                  registry_credentials_id: registry_credentials_id
+                  repository: repository
             ports:
             - number: 0
               protocol: protocol
@@ -6248,34 +7003,7 @@ components:
             name: name
             lifecycle_config:
               restart_request_time: 2000-01-23T04:56:07.000+00:00
-            build_spec:
-              source_revision:
-                volume_source_revision:
-                  current_volume_hash: current_volume_hash
-                git_repo_revision:
-                  commit: commit
-                  tag: tag
-                  branch: branch
-              image_repository:
-                use_internal_registry: true
-                external_image_ref: external_image_ref
-              registry_push_secret:
-                secret_id: secret_id
-              context_path_within_source: context_path_within_source
-              dockerfile_path: dockerfile_path
-              source_context:
-                volume:
-                  name: name
-                  id: id
-                git_repo:
-                  repo_url: repo_url
-                  git_secret:
-                    secret_id: secret_id
             id: id
-            image_spec:
-              image: image
-              pull_secret:
-                secret_id: secret_id
             status:
               updated_replicas: 4
               last_run_succeeded: true
@@ -6347,10 +7075,6 @@ components:
               command:
               - command
               - command
-              image_spec:
-                image: image
-                pull_secret:
-                  secret_id: secret_id
             execution_config:
               args:
               - args
@@ -6376,6 +7100,27 @@ components:
               source_volume_type: null
               source_sub_path: source_sub_path
               target_path: target_path
+            source:
+              volume:
+                volume_id: volume_id
+                current_volume_hash: current_volume_hash
+                volume_name: volume_name
+                build_context: "."
+                dockerfile_path: Dockerfile
+              image:
+                ref: ref
+                registry_credentials_id: registry_credentials_id
+              git:
+                repo_url: repo_url
+                integration_id: integration_id
+                commit: commit
+                build_context: "."
+                tag: tag
+                dockerfile_path: Dockerfile
+                branch: branch
+                push:
+                  registry_credentials_id: registry_credentials_id
+                  repository: repository
             ports:
             - number: 0
               protocol: protocol
@@ -6399,34 +7144,7 @@ components:
             name: name
             lifecycle_config:
               restart_request_time: 2000-01-23T04:56:07.000+00:00
-            build_spec:
-              source_revision:
-                volume_source_revision:
-                  current_volume_hash: current_volume_hash
-                git_repo_revision:
-                  commit: commit
-                  tag: tag
-                  branch: branch
-              image_repository:
-                use_internal_registry: true
-                external_image_ref: external_image_ref
-              registry_push_secret:
-                secret_id: secret_id
-              context_path_within_source: context_path_within_source
-              dockerfile_path: dockerfile_path
-              source_context:
-                volume:
-                  name: name
-                  id: id
-                git_repo:
-                  repo_url: repo_url
-                  git_secret:
-                    secret_id: secret_id
             id: id
-            image_spec:
-              image: image
-              pull_secret:
-                secret_id: secret_id
             status:
               updated_replicas: 4
               last_run_succeeded: true
@@ -6821,10 +7539,6 @@ components:
                 command:
                 - command
                 - command
-                image_spec:
-                  image: image
-                  pull_secret:
-                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -6850,6 +7564,27 @@ components:
                 source_volume_type: null
                 source_sub_path: source_sub_path
                 target_path: target_path
+              source:
+                volume:
+                  volume_id: volume_id
+                  current_volume_hash: current_volume_hash
+                  volume_name: volume_name
+                  build_context: "."
+                  dockerfile_path: Dockerfile
+                image:
+                  ref: ref
+                  registry_credentials_id: registry_credentials_id
+                git:
+                  repo_url: repo_url
+                  integration_id: integration_id
+                  commit: commit
+                  build_context: "."
+                  tag: tag
+                  dockerfile_path: Dockerfile
+                  branch: branch
+                  push:
+                    registry_credentials_id: registry_credentials_id
+                    repository: repository
               ports:
               - number: 0
                 protocol: protocol
@@ -6873,34 +7608,7 @@ components:
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
-              build_spec:
-                source_revision:
-                  volume_source_revision:
-                    current_volume_hash: current_volume_hash
-                  git_repo_revision:
-                    commit: commit
-                    tag: tag
-                    branch: branch
-                image_repository:
-                  use_internal_registry: true
-                  external_image_ref: external_image_ref
-                registry_push_secret:
-                  secret_id: secret_id
-                context_path_within_source: context_path_within_source
-                dockerfile_path: dockerfile_path
-                source_context:
-                  volume:
-                    name: name
-                    id: id
-                  git_repo:
-                    repo_url: repo_url
-                    git_secret:
-                      secret_id: secret_id
               id: id
-              image_spec:
-                image: image
-                pull_secret:
-                  secret_id: secret_id
               status:
                 updated_replicas: 4
                 last_run_succeeded: true
@@ -6972,10 +7680,6 @@ components:
                 command:
                 - command
                 - command
-                image_spec:
-                  image: image
-                  pull_secret:
-                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -7001,6 +7705,27 @@ components:
                 source_volume_type: null
                 source_sub_path: source_sub_path
                 target_path: target_path
+              source:
+                volume:
+                  volume_id: volume_id
+                  current_volume_hash: current_volume_hash
+                  volume_name: volume_name
+                  build_context: "."
+                  dockerfile_path: Dockerfile
+                image:
+                  ref: ref
+                  registry_credentials_id: registry_credentials_id
+                git:
+                  repo_url: repo_url
+                  integration_id: integration_id
+                  commit: commit
+                  build_context: "."
+                  tag: tag
+                  dockerfile_path: Dockerfile
+                  branch: branch
+                  push:
+                    registry_credentials_id: registry_credentials_id
+                    repository: repository
               ports:
               - number: 0
                 protocol: protocol
@@ -7024,34 +7749,7 @@ components:
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
-              build_spec:
-                source_revision:
-                  volume_source_revision:
-                    current_volume_hash: current_volume_hash
-                  git_repo_revision:
-                    commit: commit
-                    tag: tag
-                    branch: branch
-                image_repository:
-                  use_internal_registry: true
-                  external_image_ref: external_image_ref
-                registry_push_secret:
-                  secret_id: secret_id
-                context_path_within_source: context_path_within_source
-                dockerfile_path: dockerfile_path
-                source_context:
-                  volume:
-                    name: name
-                    id: id
-                  git_repo:
-                    repo_url: repo_url
-                    git_secret:
-                      secret_id: secret_id
               id: id
-              image_spec:
-                image: image
-                pull_secret:
-                  secret_id: secret_id
               status:
                 updated_replicas: 4
                 last_run_succeeded: true
@@ -7375,10 +8073,6 @@ components:
                 command:
                 - command
                 - command
-                image_spec:
-                  image: image
-                  pull_secret:
-                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -7404,6 +8098,27 @@ components:
                 source_volume_type: null
                 source_sub_path: source_sub_path
                 target_path: target_path
+              source:
+                volume:
+                  volume_id: volume_id
+                  current_volume_hash: current_volume_hash
+                  volume_name: volume_name
+                  build_context: "."
+                  dockerfile_path: Dockerfile
+                image:
+                  ref: ref
+                  registry_credentials_id: registry_credentials_id
+                git:
+                  repo_url: repo_url
+                  integration_id: integration_id
+                  commit: commit
+                  build_context: "."
+                  tag: tag
+                  dockerfile_path: Dockerfile
+                  branch: branch
+                  push:
+                    registry_credentials_id: registry_credentials_id
+                    repository: repository
               ports:
               - number: 0
                 protocol: protocol
@@ -7427,34 +8142,7 @@ components:
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
-              build_spec:
-                source_revision:
-                  volume_source_revision:
-                    current_volume_hash: current_volume_hash
-                  git_repo_revision:
-                    commit: commit
-                    tag: tag
-                    branch: branch
-                image_repository:
-                  use_internal_registry: true
-                  external_image_ref: external_image_ref
-                registry_push_secret:
-                  secret_id: secret_id
-                context_path_within_source: context_path_within_source
-                dockerfile_path: dockerfile_path
-                source_context:
-                  volume:
-                    name: name
-                    id: id
-                  git_repo:
-                    repo_url: repo_url
-                    git_secret:
-                      secret_id: secret_id
               id: id
-              image_spec:
-                image: image
-                pull_secret:
-                  secret_id: secret_id
               status:
                 updated_replicas: 4
                 last_run_succeeded: true
@@ -7526,10 +8214,6 @@ components:
                 command:
                 - command
                 - command
-                image_spec:
-                  image: image
-                  pull_secret:
-                    secret_id: secret_id
               execution_config:
                 args:
                 - args
@@ -7555,6 +8239,27 @@ components:
                 source_volume_type: null
                 source_sub_path: source_sub_path
                 target_path: target_path
+              source:
+                volume:
+                  volume_id: volume_id
+                  current_volume_hash: current_volume_hash
+                  volume_name: volume_name
+                  build_context: "."
+                  dockerfile_path: Dockerfile
+                image:
+                  ref: ref
+                  registry_credentials_id: registry_credentials_id
+                git:
+                  repo_url: repo_url
+                  integration_id: integration_id
+                  commit: commit
+                  build_context: "."
+                  tag: tag
+                  dockerfile_path: Dockerfile
+                  branch: branch
+                  push:
+                    registry_credentials_id: registry_credentials_id
+                    repository: repository
               ports:
               - number: 0
                 protocol: protocol
@@ -7578,34 +8283,7 @@ components:
               name: name
               lifecycle_config:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
-              build_spec:
-                source_revision:
-                  volume_source_revision:
-                    current_volume_hash: current_volume_hash
-                  git_repo_revision:
-                    commit: commit
-                    tag: tag
-                    branch: branch
-                image_repository:
-                  use_internal_registry: true
-                  external_image_ref: external_image_ref
-                registry_push_secret:
-                  secret_id: secret_id
-                context_path_within_source: context_path_within_source
-                dockerfile_path: dockerfile_path
-                source_context:
-                  volume:
-                    name: name
-                    id: id
-                  git_repo:
-                    repo_url: repo_url
-                    git_secret:
-                      secret_id: secret_id
               id: id
-              image_spec:
-                image: image
-                pull_secret:
-                  secret_id: secret_id
               status:
                 updated_replicas: 4
                 last_run_succeeded: true
@@ -8003,10 +8681,6 @@ components:
             command:
             - command
             - command
-            image_spec:
-              image: image
-              pull_secret:
-                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -8032,6 +8706,27 @@ components:
             source_volume_type: null
             source_sub_path: source_sub_path
             target_path: target_path
+          source:
+            volume:
+              volume_id: volume_id
+              current_volume_hash: current_volume_hash
+              volume_name: volume_name
+              build_context: "."
+              dockerfile_path: Dockerfile
+            image:
+              ref: ref
+              registry_credentials_id: registry_credentials_id
+            git:
+              repo_url: repo_url
+              integration_id: integration_id
+              commit: commit
+              build_context: "."
+              tag: tag
+              dockerfile_path: Dockerfile
+              branch: branch
+              push:
+                registry_credentials_id: registry_credentials_id
+                repository: repository
           ports:
           - number: 0
             protocol: protocol
@@ -8055,34 +8750,7 @@ components:
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
-          build_spec:
-            source_revision:
-              volume_source_revision:
-                current_volume_hash: current_volume_hash
-              git_repo_revision:
-                commit: commit
-                tag: tag
-                branch: branch
-            image_repository:
-              use_internal_registry: true
-              external_image_ref: external_image_ref
-            registry_push_secret:
-              secret_id: secret_id
-            context_path_within_source: context_path_within_source
-            dockerfile_path: dockerfile_path
-            source_context:
-              volume:
-                name: name
-                id: id
-              git_repo:
-                repo_url: repo_url
-                git_secret:
-                  secret_id: secret_id
           id: id
-          image_spec:
-            image: image
-            pull_secret:
-              secret_id: secret_id
           status:
             updated_replicas: 4
             last_run_succeeded: true
@@ -8154,10 +8822,6 @@ components:
             command:
             - command
             - command
-            image_spec:
-              image: image
-              pull_secret:
-                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -8183,6 +8847,27 @@ components:
             source_volume_type: null
             source_sub_path: source_sub_path
             target_path: target_path
+          source:
+            volume:
+              volume_id: volume_id
+              current_volume_hash: current_volume_hash
+              volume_name: volume_name
+              build_context: "."
+              dockerfile_path: Dockerfile
+            image:
+              ref: ref
+              registry_credentials_id: registry_credentials_id
+            git:
+              repo_url: repo_url
+              integration_id: integration_id
+              commit: commit
+              build_context: "."
+              tag: tag
+              dockerfile_path: Dockerfile
+              branch: branch
+              push:
+                registry_credentials_id: registry_credentials_id
+                repository: repository
           ports:
           - number: 0
             protocol: protocol
@@ -8206,34 +8891,7 @@ components:
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
-          build_spec:
-            source_revision:
-              volume_source_revision:
-                current_volume_hash: current_volume_hash
-              git_repo_revision:
-                commit: commit
-                tag: tag
-                branch: branch
-            image_repository:
-              use_internal_registry: true
-              external_image_ref: external_image_ref
-            registry_push_secret:
-              secret_id: secret_id
-            context_path_within_source: context_path_within_source
-            dockerfile_path: dockerfile_path
-            source_context:
-              volume:
-                name: name
-                id: id
-              git_repo:
-                repo_url: repo_url
-                git_secret:
-                  secret_id: secret_id
           id: id
-          image_spec:
-            image: image
-            pull_secret:
-              secret_id: secret_id
           status:
             updated_replicas: 4
             last_run_succeeded: true
@@ -8571,10 +9229,6 @@ components:
           command:
           - command
           - command
-          image_spec:
-            image: image
-            pull_secret:
-              secret_id: secret_id
         execution_config:
           args:
           - args
@@ -8600,6 +9254,27 @@ components:
           source_volume_type: null
           source_sub_path: source_sub_path
           target_path: target_path
+        source:
+          volume:
+            volume_id: volume_id
+            current_volume_hash: current_volume_hash
+            volume_name: volume_name
+            build_context: "."
+            dockerfile_path: Dockerfile
+          image:
+            ref: ref
+            registry_credentials_id: registry_credentials_id
+          git:
+            repo_url: repo_url
+            integration_id: integration_id
+            commit: commit
+            build_context: "."
+            tag: tag
+            dockerfile_path: Dockerfile
+            branch: branch
+            push:
+              registry_credentials_id: registry_credentials_id
+              repository: repository
         ports:
         - number: 0
           protocol: protocol
@@ -8623,34 +9298,7 @@ components:
         name: name
         lifecycle_config:
           restart_request_time: 2000-01-23T04:56:07.000+00:00
-        build_spec:
-          source_revision:
-            volume_source_revision:
-              current_volume_hash: current_volume_hash
-            git_repo_revision:
-              commit: commit
-              tag: tag
-              branch: branch
-          image_repository:
-            use_internal_registry: true
-            external_image_ref: external_image_ref
-          registry_push_secret:
-            secret_id: secret_id
-          context_path_within_source: context_path_within_source
-          dockerfile_path: dockerfile_path
-          source_context:
-            volume:
-              name: name
-              id: id
-            git_repo:
-              repo_url: repo_url
-              git_secret:
-                secret_id: secret_id
         id: id
-        image_spec:
-          image: image
-          pull_secret:
-            secret_id: secret_id
         status:
           updated_replicas: 4
           last_run_succeeded: true
@@ -8719,10 +9367,8 @@ components:
         revision:
           readOnly: true
           type: string
-        build_spec:
-          $ref: '#/components/schemas/StackResourceBuildSpec'
-        image_spec:
-          $ref: '#/components/schemas/ImageSpec'
+        source:
+          $ref: '#/components/schemas/SourceSpec'
         init_spec:
           $ref: '#/components/schemas/InitSpec'
         execution_config:
@@ -8793,10 +9439,6 @@ components:
             command:
             - command
             - command
-            image_spec:
-              image: image
-              pull_secret:
-                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -8822,6 +9464,27 @@ components:
             source_volume_type: null
             source_sub_path: source_sub_path
             target_path: target_path
+          source:
+            volume:
+              volume_id: volume_id
+              current_volume_hash: current_volume_hash
+              volume_name: volume_name
+              build_context: "."
+              dockerfile_path: Dockerfile
+            image:
+              ref: ref
+              registry_credentials_id: registry_credentials_id
+            git:
+              repo_url: repo_url
+              integration_id: integration_id
+              commit: commit
+              build_context: "."
+              tag: tag
+              dockerfile_path: Dockerfile
+              branch: branch
+              push:
+                registry_credentials_id: registry_credentials_id
+                repository: repository
           ports:
           - number: 0
             protocol: protocol
@@ -8845,34 +9508,7 @@ components:
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
-          build_spec:
-            source_revision:
-              volume_source_revision:
-                current_volume_hash: current_volume_hash
-              git_repo_revision:
-                commit: commit
-                tag: tag
-                branch: branch
-            image_repository:
-              use_internal_registry: true
-              external_image_ref: external_image_ref
-            registry_push_secret:
-              secret_id: secret_id
-            context_path_within_source: context_path_within_source
-            dockerfile_path: dockerfile_path
-            source_context:
-              volume:
-                name: name
-                id: id
-              git_repo:
-                repo_url: repo_url
-                git_secret:
-                  secret_id: secret_id
           id: id
-          image_spec:
-            image: image
-            pull_secret:
-              secret_id: secret_id
           status:
             updated_replicas: 4
             last_run_succeeded: true
@@ -8944,10 +9580,6 @@ components:
             command:
             - command
             - command
-            image_spec:
-              image: image
-              pull_secret:
-                secret_id: secret_id
           execution_config:
             args:
             - args
@@ -8973,6 +9605,27 @@ components:
             source_volume_type: null
             source_sub_path: source_sub_path
             target_path: target_path
+          source:
+            volume:
+              volume_id: volume_id
+              current_volume_hash: current_volume_hash
+              volume_name: volume_name
+              build_context: "."
+              dockerfile_path: Dockerfile
+            image:
+              ref: ref
+              registry_credentials_id: registry_credentials_id
+            git:
+              repo_url: repo_url
+              integration_id: integration_id
+              commit: commit
+              build_context: "."
+              tag: tag
+              dockerfile_path: Dockerfile
+              branch: branch
+              push:
+                registry_credentials_id: registry_credentials_id
+                repository: repository
           ports:
           - number: 0
             protocol: protocol
@@ -8996,34 +9649,7 @@ components:
           name: name
           lifecycle_config:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
-          build_spec:
-            source_revision:
-              volume_source_revision:
-                current_volume_hash: current_volume_hash
-              git_repo_revision:
-                commit: commit
-                tag: tag
-                branch: branch
-            image_repository:
-              use_internal_registry: true
-              external_image_ref: external_image_ref
-            registry_push_secret:
-              secret_id: secret_id
-            context_path_within_source: context_path_within_source
-            dockerfile_path: dockerfile_path
-            source_context:
-              volume:
-                name: name
-                id: id
-              git_repo:
-                repo_url: repo_url
-                git_secret:
-                  secret_id: secret_id
           id: id
-          image_spec:
-            image: image
-            pull_secret:
-              secret_id: secret_id
           status:
             updated_replicas: 4
             last_run_succeeded: true
@@ -9570,8 +10196,6 @@ components:
             id: id
           git_repo:
             repo_url: repo_url
-            git_secret:
-              secret_id: secret_id
         id: id
         stack_resource_name: stack_resource_name
         status:
@@ -9688,8 +10312,6 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
-              git_secret:
-                secret_id: secret_id
           id: id
           stack_resource_name: stack_resource_name
           status:
@@ -9734,8 +10356,6 @@ components:
               id: id
             git_repo:
               repo_url: repo_url
-              git_secret:
-                secret_id: secret_id
           id: id
           stack_resource_name: stack_resource_name
           status:
@@ -9943,6 +10563,406 @@ components:
       required:
       - key
       - value
+      type: object
+    GitHubAppManifestFlow:
+      example:
+        github_url: github_url
+        manifest:
+          key: ""
+        state: state
+      properties:
+        manifest:
+          additionalProperties: true
+          description: GitHub App manifest to POST to github_url as the manifest form
+            field
+          type: object
+        github_url:
+          type: string
+        state:
+          type: string
+      type: object
+    GitInstallation:
+      example:
+        repository_selection: repository_selection
+        account_type: account_type
+        installation_id: 0
+        account_login: account_login
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+      properties:
+        id:
+          readOnly: true
+          type: string
+        installation_id:
+          format: int64
+          type: integer
+        account_login:
+          type: string
+        account_type:
+          type: string
+        repository_selection:
+          type: string
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+      type: object
+    GitInstallationList:
+      example:
+        total: 6
+        items:
+        - repository_selection: repository_selection
+          account_type: account_type
+          installation_id: 0
+          account_login: account_login
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+        - repository_selection: repository_selection
+          account_type: account_type
+          installation_id: 0
+          account_login: account_login
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/GitInstallation'
+          type: array
+        total:
+          type: integer
+      type: object
+    GitRepository:
+      example:
+        owner: owner
+        private: true
+        full_name: full_name
+        pushed_at: 2000-01-23T04:56:07.000+00:00
+        clone_url: clone_url
+        default_branch: default_branch
+      properties:
+        full_name:
+          type: string
+        clone_url:
+          type: string
+        default_branch:
+          type: string
+        private:
+          type: boolean
+        pushed_at:
+          format: date-time
+          type: string
+        owner:
+          type: string
+      type: object
+    GitRepositoryPage:
+      example:
+        total_count: 6
+        has_next: true
+        page: 0
+        items:
+        - owner: owner
+          private: true
+          full_name: full_name
+          pushed_at: 2000-01-23T04:56:07.000+00:00
+          clone_url: clone_url
+          default_branch: default_branch
+        - owner: owner
+          private: true
+          full_name: full_name
+          pushed_at: 2000-01-23T04:56:07.000+00:00
+          clone_url: clone_url
+          default_branch: default_branch
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/GitRepository'
+          type: array
+        page:
+          type: integer
+        total_count:
+          type: integer
+        has_next:
+          type: boolean
+      type: object
+    GitBranchList:
+      example:
+        total: 0
+        items:
+        - items
+        - items
+      properties:
+        items:
+          items:
+            type: string
+          type: array
+        total:
+          type: integer
+      type: object
+    GitIntegration:
+      additionalProperties: false
+      example:
+        organisation_id: organisation_id
+        install_url: install_url
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        auth:
+          basic:
+            password: password
+            username: username
+          token: token
+        host: host
+        credentials_configured: true
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        type: null
+        status: active
+      properties:
+        id:
+          readOnly: true
+          type: string
+        type:
+          $ref: '#/components/schemas/GitIntegrationType'
+        host:
+          description: "Git host this integration covers, e.g. gitlab.example.com"
+          type: string
+        status:
+          enum:
+          - active
+          - pending_install
+          - installed
+          readOnly: true
+          type: string
+        auth:
+          $ref: '#/components/schemas/GitIntegrationAuth'
+        credentials_configured:
+          readOnly: true
+          type: boolean
+        install_url:
+          description: GitHub install page for adding the app to more accounts (github_app
+            only)
+          readOnly: true
+          type: string
+        organisation_id:
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - host
+      type: object
+    GitIntegrationType:
+      default: git_credentials
+      enum:
+      - git_credentials
+      - github_app
+      type: string
+      x-enum-varnames:
+      - GIT_INTEGRATION_TYPE_CREDENTIALS
+      - GIT_INTEGRATION_TYPE_GITHUB_APP
+    GitIntegrationAuth:
+      additionalProperties: false
+      description: Clone auth material; exactly one of token or basic. Never echoed
+        in responses.
+      example:
+        basic:
+          password: password
+          username: username
+        token: token
+      properties:
+        token:
+          format: password
+          type: string
+          writeOnly: true
+        basic:
+          $ref: '#/components/schemas/GitIntegrationBasicAuth'
+      type: object
+    GitIntegrationBasicAuth:
+      additionalProperties: false
+      example:
+        password: password
+        username: username
+      properties:
+        username:
+          type: string
+          writeOnly: true
+        password:
+          format: password
+          type: string
+          writeOnly: true
+      required:
+      - password
+      - username
+      type: object
+    GitIntegrationList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          install_url: install_url
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          auth:
+            basic:
+              password: password
+              username: username
+            token: token
+          host: host
+          credentials_configured: true
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          type: null
+          status: active
+        - organisation_id: organisation_id
+          install_url: install_url
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          auth:
+            basic:
+              password: password
+              username: username
+            token: token
+          host: host
+          credentials_configured: true
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          type: null
+          status: active
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/GitIntegration'
+          type: array
+        total:
+          type: integer
+      type: object
+    GitIntegrationVerifyRequest:
+      additionalProperties: false
+      example:
+        repo_url: repo_url
+      properties:
+        repo_url:
+          type: string
+      required:
+      - repo_url
+      type: object
+    RegistryCredential:
+      additionalProperties: false
+      example:
+        organisation_id: organisation_id
+        password: password
+        updated_at: 2000-01-23T04:56:07.000+00:00
+        purpose: null
+        host: host
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        username: username
+      properties:
+        id:
+          readOnly: true
+          type: string
+        host:
+          description: Registry host; normalized on create (docker.io aliases become
+            index.docker.io)
+          type: string
+        purpose:
+          $ref: '#/components/schemas/RegistryCredentialPurpose'
+        username:
+          type: string
+        password:
+          description: Required on create; omit on update to keep the stored password
+          format: password
+          type: string
+          writeOnly: true
+        organisation_id:
+          readOnly: true
+          type: string
+        created_at:
+          format: date-time
+          readOnly: true
+          type: string
+        updated_at:
+          format: date-time
+          readOnly: true
+          type: string
+      required:
+      - host
+      - username
+      type: object
+    RegistryCredentialList:
+      example:
+        total: 0
+        items:
+        - organisation_id: organisation_id
+          password: password
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          purpose: null
+          host: host
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          username: username
+        - organisation_id: organisation_id
+          password: password
+          updated_at: 2000-01-23T04:56:07.000+00:00
+          purpose: null
+          host: host
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          username: username
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/RegistryCredential'
+          type: array
+        total:
+          type: integer
+      type: object
+    RegistryCredentialPurpose:
+      default: both
+      enum:
+      - pull
+      - push
+      - both
+      type: string
+    RegistryCredentialVerifyRequest:
+      additionalProperties: false
+      example:
+        purpose: null
+        repository: repository
+      properties:
+        repository:
+          description: "Repository to verify against, e.g. ghcr.io/acme/app"
+          type: string
+        purpose:
+          $ref: '#/components/schemas/RegistryCredentialPurpose'
+      required:
+      - repository
+      type: object
+    RegistryCredentialDeleteResponse:
+      example:
+        affected_stacks:
+        - name: name
+          id: id
+        - name: name
+          id: id
+      properties:
+        affected_stacks:
+          description: Stacks that were implicitly resolving against the deleted credential
+          items:
+            $ref: '#/components/schemas/AffectedStackRef'
+          type: array
+      type: object
+    AffectedStackRef:
+      example:
+        name: name
+        id: id
+      properties:
+        id:
+          type: string
+        name:
+          type: string
       type: object
     ClusterImageRegistryList:
       example:
@@ -10342,62 +11362,132 @@ components:
           format: date-time
           type: string
       type: object
-    StackResourceBuildSpec:
+    SourceSpec:
+      additionalProperties: false
+      description: "Where a stack resource's runtime image comes from. Exactly one\
+        \ of git, image, or volume must be set (enforced server-side)."
+      example:
+        volume:
+          volume_id: volume_id
+          current_volume_hash: current_volume_hash
+          volume_name: volume_name
+          build_context: "."
+          dockerfile_path: Dockerfile
+        image:
+          ref: ref
+          registry_credentials_id: registry_credentials_id
+        git:
+          repo_url: repo_url
+          integration_id: integration_id
+          commit: commit
+          build_context: "."
+          tag: tag
+          dockerfile_path: Dockerfile
+          branch: branch
+          push:
+            registry_credentials_id: registry_credentials_id
+            repository: repository
+      properties:
+        git:
+          $ref: '#/components/schemas/GitSource'
+        image:
+          $ref: '#/components/schemas/ImageSource'
+        volume:
+          $ref: '#/components/schemas/VolumeBuildSource'
+      type: object
+    GitSource:
       additionalProperties: false
       example:
-        source_revision:
-          volume_source_revision:
-            current_volume_hash: current_volume_hash
-          git_repo_revision:
-            commit: commit
-            tag: tag
-            branch: branch
-        image_repository:
-          use_internal_registry: true
-          external_image_ref: external_image_ref
-        registry_push_secret:
-          secret_id: secret_id
-        context_path_within_source: context_path_within_source
-        dockerfile_path: dockerfile_path
-        source_context:
-          volume:
-            name: name
-            id: id
-          git_repo:
-            repo_url: repo_url
-            git_secret:
-              secret_id: secret_id
+        repo_url: repo_url
+        integration_id: integration_id
+        commit: commit
+        build_context: "."
+        tag: tag
+        dockerfile_path: Dockerfile
+        branch: branch
+        push:
+          registry_credentials_id: registry_credentials_id
+          repository: repository
       properties:
-        source_context:
-          $ref: '#/components/schemas/BuildSourceContext'
-        context_path_within_source:
+        repo_url:
+          type: string
+        branch:
+          description: "Defaults to the repository's default branch, resolved and\
+            \ stored at create time"
+          type: string
+        tag:
+          description: Mutually exclusive with branch
+          type: string
+        commit:
+          description: Commit SHA pin; requires branch or tag
           type: string
         dockerfile_path:
+          default: Dockerfile
           type: string
-        source_revision:
-          $ref: '#/components/schemas/BuildSourceRevision'
-        image_repository:
-          $ref: '#/components/schemas/ImageRepository'
-        registry_push_secret:
-          $ref: '#/components/schemas/SecretRef'
+        build_context:
+          default: "."
+          type: string
+        integration_id:
+          description: Org-level git integration override for clone auth
+          type: string
+        push:
+          $ref: '#/components/schemas/PushTarget'
       required:
-      - context_path_within_source
-      - dockerfile_path
-      - image_repository
-      - source_context
-      - source_revision
+      - repo_url
       type: object
-    ImageRepository:
+    PushTarget:
       additionalProperties: false
-      description: The image repository to push the built image to
       example:
-        use_internal_registry: true
-        external_image_ref: external_image_ref
+        registry_credentials_id: registry_credentials_id
+        repository: repository
       properties:
-        external_image_ref:
+        repository:
+          description: "Push repository as host/path, without a tag"
           type: string
-        use_internal_registry:
-          type: boolean
+        registry_credentials_id:
+          description: Org-level registry credential override for push auth
+          type: string
+      required:
+      - repository
+      type: object
+    ImageSource:
+      additionalProperties: false
+      example:
+        ref: ref
+        registry_credentials_id: registry_credentials_id
+      properties:
+        ref:
+          type: string
+        registry_credentials_id:
+          description: Org-level registry credential override for pull auth
+          type: string
+      required:
+      - ref
+      type: object
+    VolumeBuildSource:
+      additionalProperties: false
+      example:
+        volume_id: volume_id
+        current_volume_hash: current_volume_hash
+        volume_name: volume_name
+        build_context: "."
+        dockerfile_path: Dockerfile
+      properties:
+        volume_id:
+          type: string
+        volume_name:
+          description: Name of a volume defined on the stack; either volume_id or
+            volume_name is required
+          type: string
+        current_volume_hash:
+          description: Content hash of the volume used as the build source revision
+          type: string
+        dockerfile_path:
+          default: Dockerfile
+          type: string
+        build_context:
+          default: "."
+          type: string
       type: object
     BuildSourceContext:
       example:
@@ -10406,8 +11496,6 @@ components:
           id: id
         git_repo:
           repo_url: repo_url
-          git_secret:
-            secret_id: secret_id
       properties:
         volume:
           $ref: '#/components/schemas/BuildSourceContext_volume'
@@ -10428,30 +11516,6 @@ components:
         git_repo_revision:
           $ref: '#/components/schemas/GitRepoRevision'
       type: object
-    ImageSpec:
-      additionalProperties: false
-      example:
-        image: image
-        pull_secret:
-          secret_id: secret_id
-      properties:
-        image:
-          type: string
-        pull_secret:
-          $ref: '#/components/schemas/SecretRef'
-      required:
-      - image
-      type: object
-    SecretRef:
-      additionalProperties: false
-      example:
-        secret_id: secret_id
-      properties:
-        secret_id:
-          type: string
-      required:
-      - secret_id
-      type: object
     InitSpec:
       additionalProperties: false
       example:
@@ -10461,13 +11525,7 @@ components:
         command:
         - command
         - command
-        image_spec:
-          image: image
-          pull_secret:
-            secret_id: secret_id
       properties:
-        image_spec:
-          $ref: '#/components/schemas/ImageSpec'
         command:
           items:
             type: string
@@ -12570,16 +13628,18 @@ components:
           type: string
       type: object
     PreviewGitRepository:
+      additionalProperties: false
       example:
         repo_url: repo_url
         base_branch: base_branch
-        git_secret_ref: git_secret_ref
+        integration_id: integration_id
       properties:
         repo_url:
           type: string
         base_branch:
           type: string
-        git_secret_ref:
+        integration_id:
+          description: Org-level git integration override for clone auth
           type: string
       required:
       - repo_url
@@ -12596,7 +13656,7 @@ components:
         git_repository:
           repo_url: repo_url
           base_branch: base_branch
-          git_secret_ref: git_secret_ref
+          integration_id: integration_id
         team_id: team_id
         labels:
         - value: value
@@ -12662,7 +13722,7 @@ components:
         git_repository:
           repo_url: repo_url
           base_branch: base_branch
-          git_secret_ref: git_secret_ref
+          integration_id: integration_id
         stackfile_path: stackfile_path
         max_active_previews: 0
         labels:
@@ -12704,7 +13764,7 @@ components:
         git_repository:
           repo_url: repo_url
           base_branch: base_branch
-          git_secret_ref: git_secret_ref
+          integration_id: integration_id
         stackfile_path: stackfile_path
         max_active_previews: 0
         labels:
@@ -12746,7 +13806,7 @@ components:
           git_repository:
             repo_url: repo_url
             base_branch: base_branch
-            git_secret_ref: git_secret_ref
+            integration_id: integration_id
           team_id: team_id
           labels:
           - value: value
@@ -12770,7 +13830,7 @@ components:
           git_repository:
             repo_url: repo_url
             base_branch: base_branch
-            git_secret_ref: git_secret_ref
+            integration_id: integration_id
           team_id: team_id
           labels:
           - value: value
@@ -13145,13 +14205,9 @@ components:
     BuildSourceContext_git_repo:
       example:
         repo_url: repo_url
-        git_secret:
-          secret_id: secret_id
       properties:
         repo_url:
           type: string
-        git_secret:
-          $ref: '#/components/schemas/SecretRef'
       required:
       - repo_url
       type: object
@@ -13172,6 +14228,10 @@ components:
           type: string
         operation_id:
           type: string
+        details:
+          additionalProperties: true
+          description: "Optional structured, machine-readable error context"
+          type: object
       type: object
     PostgresInstances_placement_tolerations_inner:
       example:

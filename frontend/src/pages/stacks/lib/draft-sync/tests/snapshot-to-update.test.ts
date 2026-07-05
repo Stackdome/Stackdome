@@ -4,7 +4,7 @@ import type { StackReleaseSnapshot } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 
 const snap = {
-  resources: [{ id: "r-1", stack_id: "st-1", revision: 2, status: {}, name: "web", image_spec: { image: "nginx:1" }, volume_mounts: [{ source_volume_name: "web-data", target_path: "/data", stack_resource_id: "r-1", source_volume_type: "pvc" }] }],
+  resources: [{ id: "r-1", stack_id: "st-1", revision: 2, status: {}, name: "web", source: { image: { ref: "nginx:1" } }, volume_mounts: [{ source_volume_name: "web-data", target_path: "/data", stack_resource_id: "r-1", source_volume_type: "pvc" }] }],
   volumes: [{ id: "v-1", status: {}, name: "web-data", spec: { size: "1Gi" } }],
   connections: [{ id: "c-1", kind: "env", from: { type: "secret", id: "s-1" }, to: { type: "stack_resource", name: "web" }, mappings: [] }],
 } as unknown as StackReleaseSnapshot;
@@ -28,7 +28,7 @@ describe("snapshotToUpdateRequest", () => {
 
   it("emits explicit empty arrays for execution_config fields when resource has no execution_config", () => {
     const snapNoExec = {
-      resources: [{ id: "r-2", stack_id: "st-1", revision: 1, status: {}, name: "api", image_spec: { image: "myapp:1" } }],
+      resources: [{ id: "r-2", stack_id: "st-1", revision: 1, status: {}, name: "api", source: { image: { ref: "myapp:1" } } }],
       volumes: [],
       connections: [],
     } as unknown as StackReleaseSnapshot;
@@ -43,7 +43,7 @@ describe("snapshotToUpdateRequest", () => {
 
   it("emits explicit empty arrays for volume_mounts and depends_on when resource has none", () => {
     const snapNoDeps = {
-      resources: [{ id: "r-3", stack_id: "st-1", revision: 1, status: {}, name: "worker", image_spec: { image: "worker:1" } }],
+      resources: [{ id: "r-3", stack_id: "st-1", revision: 1, status: {}, name: "worker", source: { image: { ref: "worker:1" } } }],
       volumes: [],
       connections: [],
     } as unknown as StackReleaseSnapshot;
@@ -58,7 +58,7 @@ describe("snapshotToUpdateRequest", () => {
     // a canvas edit that added a port). The PUT body must carry explicit []
     // so gorm's Updates() does not skip the column and leave the draft value.
     const snapNoPorts = {
-      resources: [{ id: "r-4", stack_id: "st-1", revision: 1, status: {}, name: "api", image_spec: { image: "api:1" } }],
+      resources: [{ id: "r-4", stack_id: "st-1", revision: 1, status: {}, name: "api", source: { image: { ref: "api:1" } } }],
       volumes: [],
       connections: [],
     } as unknown as StackReleaseSnapshot;

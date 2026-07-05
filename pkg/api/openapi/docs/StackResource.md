@@ -10,8 +10,7 @@ Name | Type | Description | Notes
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
 **Revision** | Pointer to **string** |  | [optional] [readonly] 
-**BuildSpec** | Pointer to [**StackResourceBuildSpec**](StackResourceBuildSpec.md) |  | [optional] 
-**ImageSpec** | Pointer to [**ImageSpec**](ImageSpec.md) |  | [optional] 
+**Source** | Pointer to [**SourceSpec**](SourceSpec.md) |  | [optional] 
 **InitSpec** | Pointer to [**InitSpec**](InitSpec.md) |  | [optional] 
 **ExecutionConfig** | Pointer to [**ExecutionConfig**](ExecutionConfig.md) |  | [optional] 
 **VolumeMounts** | Pointer to [**[]VolumeMount**](VolumeMount.md) |  | [optional] 
@@ -188,55 +187,30 @@ SetRevision sets Revision field to given value.
 
 HasRevision returns a boolean if a field has been set.
 
-### GetBuildSpec
+### GetSource
 
-`func (o *StackResource) GetBuildSpec() StackResourceBuildSpec`
+`func (o *StackResource) GetSource() SourceSpec`
 
-GetBuildSpec returns the BuildSpec field if non-nil, zero value otherwise.
+GetSource returns the Source field if non-nil, zero value otherwise.
 
-### GetBuildSpecOk
+### GetSourceOk
 
-`func (o *StackResource) GetBuildSpecOk() (*StackResourceBuildSpec, bool)`
+`func (o *StackResource) GetSourceOk() (*SourceSpec, bool)`
 
-GetBuildSpecOk returns a tuple with the BuildSpec field if it's non-nil, zero value otherwise
+GetSourceOk returns a tuple with the Source field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetBuildSpec
+### SetSource
 
-`func (o *StackResource) SetBuildSpec(v StackResourceBuildSpec)`
+`func (o *StackResource) SetSource(v SourceSpec)`
 
-SetBuildSpec sets BuildSpec field to given value.
+SetSource sets Source field to given value.
 
-### HasBuildSpec
+### HasSource
 
-`func (o *StackResource) HasBuildSpec() bool`
+`func (o *StackResource) HasSource() bool`
 
-HasBuildSpec returns a boolean if a field has been set.
-
-### GetImageSpec
-
-`func (o *StackResource) GetImageSpec() ImageSpec`
-
-GetImageSpec returns the ImageSpec field if non-nil, zero value otherwise.
-
-### GetImageSpecOk
-
-`func (o *StackResource) GetImageSpecOk() (*ImageSpec, bool)`
-
-GetImageSpecOk returns a tuple with the ImageSpec field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetImageSpec
-
-`func (o *StackResource) SetImageSpec(v ImageSpec)`
-
-SetImageSpec sets ImageSpec field to given value.
-
-### HasImageSpec
-
-`func (o *StackResource) HasImageSpec() bool`
-
-HasImageSpec returns a boolean if a field has been set.
+HasSource returns a boolean if a field has been set.
 
 ### GetInitSpec
 

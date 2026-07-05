@@ -8,10 +8,13 @@ var (
 	// GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are used for GitHub OAuth login
 	EnvGitHubClientID     = StringVar("GITHUB_CLIENT_ID", "GitHub OAuth app client ID", nil, false)
 	EnvGitHubClientSecret = StringVar("GITHUB_CLIENT_SECRET", "GitHub OAuth app client secret", nil, false)
-	EnvGitHubRedirectURI  = StringVar("GITHUB_REDIRECT_URI", "GitHub OAuth app redirect URI", nil, false)
+	EnvGitHubRedirectURI  = StringVar("GITHUB_REDIRECT_URI", "GitHub OAuth app redirect URI (optional; derived from SERVER_EXTERNAL_URL when unset)", nil, false)
 
 	// Server
 	EnvServerHostname    = StringVar("SERVER_HOSTNAME", "Server hostname/domain", nil, false)
+	EnvServerExternalURL = StringVar("SERVER_EXTERNAL_URL", "Externally reachable base URL of the hub (used for GitHub App callbacks and webhooks)", nil, false)
+	// GitHub API base URL override (httptest stubs / GHES)
+	EnvGitHubAPIBaseURL  = StringVar("GITHUB_API_BASE_URL", "GitHub API base URL", ptr("https://api.github.com"), false)
 	EnvServerBindAddress = StringVar("SERVER_BIND_ADDRESS", "Server bind address and port", ptr("0.0.0.0:8000"), false)
 
 	// Database

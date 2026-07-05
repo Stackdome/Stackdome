@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
-	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/presenters"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/gorilla/mux"
 )
 

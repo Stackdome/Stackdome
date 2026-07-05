@@ -2,13 +2,19 @@ package stack
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
+	"regexp"
+	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/clients"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
+	"github.com/Stackdome/stackdome/pkg/clients"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stackdeploy"
+	"github.com/Stackdome/stackdome/pkg/validator"
 	"github.com/robfig/cron/v3"
 )
 
@@ -18,8 +24,6 @@ type organisationDomainService interface {
 }
 
 type secretService interface {
-	ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
-	ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
 	InternalGetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError)
@@ -27,6 +31,33 @@ type secretService interface {
 
 type postgresAddonService interface {
 	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
+}
+
+// registryClientProvider builds registry clients from resolved credentials so
+// the image/push probes can be faked in tests.
+type registryClientProvider interface {
+	ClientFor(resolved *credentials.ResolvedRegistryCredential) (clients.RegistryClient, error)
+}
+
+type defaultRegistryClientProvider struct{}
+
+func (defaultRegistryClientProvider) ClientFor(resolved *credentials.ResolvedRegistryCredential) (clients.RegistryClient, error) {
+	if resolved != nil && resolved.Username != "" && resolved.Password != "" {
+		return clients.NewRegistryClientWithAuth(resolved.Username, resolved.Password)
+	}
+	return clients.NewRegistryClientAnonymous()
+}
+
+// gitClientProvider builds git clients from resolved credentials so the clone
+// probe can be faked in tests.
+type gitClientProvider interface {
+	ClientFor(repoURL string, creds gitclient.GitCredentials) (gitclient.GitClient, error)
+}
+
+type defaultGitClientProvider struct{}
+
+func (defaultGitClientProvider) ClientFor(repoURL string, creds gitclient.GitCredentials) (gitclient.GitClient, error) {
+	return gitclient.NewGitClientForRepo(repoURL, creds)
 }
 
 // Add only validations that take reasonable time to complete.
@@ -37,22 +68,43 @@ type stackValidator struct {
 	domainService          organisationDomainService
 	secretService          secretService
 	postgresAddonService   postgresAddonService
+	credentialResolver     credentials.Resolver
+	registryClients        registryClientProvider
+	gitClients             gitClientProvider
+	logger                 logger.Logger
 }
 
 type StackValidatorSpec struct {
 	DomainService        organisationDomainService
 	SecretService        secretService
 	PostgresAddonService postgresAddonService
+	CredentialResolver   credentials.Resolver
+	// RegistryClients is optional; it defaults to real registry clients.
+	RegistryClients registryClientProvider
+	// GitClients is optional; it defaults to real git clients.
+	GitClients gitClientProvider
 }
 
 func NewStackValidator(
 	spec StackValidatorSpec,
 ) validator.StackValidator {
+	registryClients := spec.RegistryClients
+	if registryClients == nil {
+		registryClients = defaultRegistryClientProvider{}
+	}
+	gitClients := spec.GitClients
+	if gitClients == nil {
+		gitClients = defaultGitClientProvider{}
+	}
 	return &stackValidator{
 		interpolationValidator: NewInterpolationValidation(),
 		domainService:          spec.DomainService,
 		secretService:          spec.SecretService,
 		postgresAddonService:   spec.PostgresAddonService,
+		credentialResolver:     spec.CredentialResolver,
+		registryClients:        registryClients,
+		gitClients:             gitClients,
+		logger:                 logger.NewLoggerWithPrefix(context.Background(), "stack-validator"),
 	}
 }
 
@@ -60,7 +112,8 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 	if err := v.validateUniqueResourceNames(spec); err != nil {
 		return err
 	}
-	if err := v.validateImageSource(spec); err != nil {
+	// On create every resource is new, so probe all sources.
+	if err := v.validateImageSource(ctx, nil, spec); err != nil {
 		return err
 	}
 	if err := v.validateStackEnvVars(spec); err != nil {
@@ -106,7 +159,9 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	if err := v.validateUniqueResourceNames(spec); err != nil {
 		return err
 	}
-	if err := v.validateImageSource(spec); err != nil {
+	// On update only re-probe resources whose source-relevant config changed;
+	// shape/XOR/static validation still runs for every resource.
+	if err := v.validateImageSource(ctx, existing, spec); err != nil {
 		return err
 	}
 	if err := v.validateStackEnvVars(spec); err != nil {
@@ -214,7 +269,14 @@ func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) *errors
 	return nil
 }
 
-func (v *stackValidator) validateImageSource(spec *models.Stack) *errors.ServiceError {
+// validateImageSource validates every resource's source config. Shape/XOR and
+// static credential checks run for all resources; the network probes
+// (image-pullable, push-access, git-clone) only run for resources whose
+// source-relevant config changed. On create, existing is nil and everything is
+// probed.
+func (v *stackValidator) validateImageSource(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError {
+	existingResources := resourcesByName(existing)
+
 	for i := range spec.StackResources {
 		currentResource := spec.StackResources[i]
 
@@ -223,21 +285,121 @@ func (v *stackValidator) validateImageSource(spec *models.Stack) *errors.Service
 			return err
 		}
 
+		probe := resourceNeedsSourceProbe(existingResources[currentResource.Name], currentResource)
+
 		// Validate image config if present
 		if currentResource.ImageConfig != nil {
-			if err := v.validateImageConfig(currentResource); err != nil {
+			if err := v.validateImageConfig(ctx, spec.OrganisationID, currentResource, probe); err != nil {
 				return err
 			}
 		}
 
 		// Validate build config if present
 		if currentResource.BuildConfig != nil {
-			if err := v.validateBuildConfig(currentResource); err != nil {
+			if err := v.validateBuildConfig(ctx, spec.OrganisationID, currentResource, probe); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// resourcesByName indexes a stack's resources by name; returns nil for a nil
+// stack (the create path).
+func resourcesByName(stack *models.Stack) map[string]*models.StackResource {
+	if stack == nil {
+		return nil
+	}
+	byName := make(map[string]*models.StackResource, len(stack.StackResources))
+	for i := range stack.StackResources {
+		byName[stack.StackResources[i].Name] = stack.StackResources[i]
+	}
+	return byName
+}
+
+// resourceNeedsSourceProbe reports whether the desired resource's registry/git
+// sources must be re-probed. A resource with no stored counterpart (new, or the
+// create path) is always probed. Otherwise the probe runs only when a
+// source-relevant field (image/repo ref, revision, push target, or credential
+// selector) changed.
+func resourceNeedsSourceProbe(existing, desired *models.StackResource) bool {
+	if existing == nil {
+		return true
+	}
+	return imageSourceOf(existing) != imageSourceOf(desired) ||
+		buildSourceOf(existing) != buildSourceOf(desired)
+}
+
+// imageSourceView is a flat, comparable projection of the pull-probe-relevant
+// fields of a resource's image config.
+type imageSourceView struct {
+	present              bool
+	image                string
+	registryCredentialID string
+}
+
+func imageSourceOf(r *models.StackResource) imageSourceView {
+	if r == nil || r.ImageConfig == nil {
+		return imageSourceView{}
+	}
+	return imageSourceView{
+		present:              true,
+		image:                r.ImageConfig.Image,
+		registryCredentialID: r.ImageConfig.RegistryCredentialID,
+	}
+}
+
+// buildSourceView is a flat, comparable projection of the push/git-probe-relevant
+// fields of a resource's build config.
+type buildSourceView struct {
+	present            bool
+	gitRepoURL         string
+	gitIntegrationID   string
+	volumeSourceName   string
+	revBranch          string
+	revTag             string
+	revCommit          string
+	revVolumeHash      string
+	dockerfilePath     string
+	contextPath        string
+	insecureRegistry   bool
+	useInClusterReg    bool
+	clusterRegName     string
+	externalImageRef   string
+	pushRegistryCredID string
+}
+
+func buildSourceOf(r *models.StackResource) buildSourceView {
+	if r == nil || r.BuildConfig == nil {
+		return buildSourceView{}
+	}
+	b := r.BuildConfig
+	view := buildSourceView{
+		present:            true,
+		dockerfilePath:     b.DockerfilePath,
+		contextPath:        b.ContextPathWithinSource,
+		insecureRegistry:   b.BuildImageRepository.InsecureRegistry,
+		useInClusterReg:    b.BuildImageRepository.UseInClusterRegistry,
+		clusterRegName:     b.BuildImageRepository.ClusterRegistryName,
+		externalImageRef:   b.BuildImageRepository.ExternalImageRef,
+		pushRegistryCredID: b.PushRegistryCredentialID,
+	}
+	if git := b.SourceContext.Git; git != nil {
+		view.gitRepoURL = git.RepoURL
+		view.gitIntegrationID = git.IntegrationID
+	}
+	if vol := b.SourceContext.Volume; vol != nil {
+		view.volumeSourceName = vol.SourceVolumeName
+	}
+	if rev := b.SourceRevision.Git; rev != nil {
+		view.revBranch = rev.Branch
+		view.revTag = rev.Tag
+		view.revCommit = rev.Commit
+	}
+	if rev := b.SourceRevision.Volume; rev != nil {
+		view.revVolumeHash = rev.CurrentVolumeHash
+	}
+	return view
 }
 
 func (v *stackValidator) validateResourceConfigType(resource *models.StackResource) *errors.ServiceError {
@@ -253,109 +415,192 @@ func (v *stackValidator) validateResourceConfigType(resource *models.StackResour
 	return nil
 }
 
-func (v *stackValidator) validateImageConfig(resource *models.StackResource) *errors.ServiceError {
+func (v *stackValidator) validateImageConfig(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
 	if err := resource.ImageConfig.Validate(); err != nil {
 		return errors.BadRequest("stack resource '%s' has invalid image config: %s", resource.Name, err.Error())
 	}
 
-	if resource.ImageConfig.PullSecretRef != nil {
-		if err := v.validateImageWithSecret(resource); err != nil {
-			return err
+	if !probe {
+		return nil
+	}
+	return v.validateImagePullable(ctx, orgID, resource)
+}
+
+func (v *stackValidator) validateImagePullable(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
+	imageRef := resource.ImageConfig.Image
+	if isClusterLocalRegistryRef(imageRef) {
+		// In-cluster registries aren't reachable from the hub.
+		return nil
+	}
+
+	resolved, serr := v.credentialResolver.RegistryCredentials(ctx, orgID, imageRef, credentials.RegistryPurposePull, credentials.RegistryAuthSelector{
+		RegistryCredentialID: resource.ImageConfig.RegistryCredentialID,
+	})
+	if serr != nil {
+		return errors.BadRequest("stack resource '%s' has invalid pull credentials: %s", resource.Name, serr.Error())
+	}
+
+	client, err := v.registryClients.ClientFor(resolved)
+	if err != nil {
+		return errors.GeneralError("failed to create registry client for stack resource '%s': %s", resource.Name, err.Error())
+	}
+
+	exists, err := client.CheckImage(ctx, imageRef)
+	if err != nil {
+		target := errors.CredentialErrorTarget{
+			Kind: errors.CredentialTargetKindImagePull,
+			Host: registryHostForRef(imageRef),
+			Ref:  imageRef,
+		}
+		switch {
+		case stderrors.Is(err, clients.ErrRateLimited) && resolved.Source == credentials.SourceAnonymous:
+			v.logger.Warnf("registry rate limited while checking image '%s' anonymously for stack resource '%s'; skipping existence check", imageRef, resource.Name)
+			return nil
+		case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
+			return errors.CredentialsRequired(target, "stack resource '%s': image '%s' requires registry credentials", resource.Name, imageRef)
+		case stderrors.Is(err, clients.ErrAuthFailed):
+			return errors.CredentialsInvalid(target, "stack resource '%s': configured registry credentials were rejected for image '%s'", resource.Name, imageRef)
+		default:
+			return errors.GeneralError("failed to check image for stack resource '%s': %s", resource.Name, err.Error())
 		}
 	}
-
-	return nil
-}
-
-func (v *stackValidator) validateImageWithSecret(resource *models.StackResource) *errors.ServiceError {
-	secretRef := resource.ImageConfig.PullSecretRef
-
-	if secretRef.SecretID == "" {
-		return errors.BadRequest("stack resource '%s' has empty pull secret ID", resource.Name)
-	}
-
-	if err := v.secretService.ValidateImageRegistrySecretForStackResource(context.Background(), secretRef.SecretID); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid pull secret: %s", resource.Name, err.Error())
-	}
-
-	return nil
-}
-
-func (v *stackValidator) validateImageAnonymously(resource *models.StackResource) *errors.ServiceError {
-	client, err := clients.NewRegistryClientAnonymous()
-	if err != nil {
-		return errors.GeneralError("failed to create anonymous registry client for stack resource '%s': %s", resource.Name, err.Error())
-	}
-
-	return v.checkImageExists(client, resource, "does not exist or is not pullable")
-}
-
-func (v *stackValidator) checkImageExists(client clients.RegistryClient, resource *models.StackResource, errorSuffix string) *errors.ServiceError {
-	exists, err := client.CheckImage(context.Background(), resource.ImageConfig.Image)
-	if err != nil {
-		return errors.GeneralError("failed to check image for stack resource '%s': %s", resource.Name, err.Error())
-	}
 	if !exists {
-		return errors.BadRequest("stack resource '%s' image '%s' %s", resource.Name, resource.ImageConfig.Image, errorSuffix)
+		return errors.BadRequest("stack resource '%s' image '%s' does not exist or is not pullable", resource.Name, imageRef)
 	}
 	return nil
 }
 
-func (v *stackValidator) validateBuildConfig(resource *models.StackResource) *errors.ServiceError {
+// gitCommitSHAPattern matches full or abbreviated lowercase-hex commit SHAs,
+// mirroring the CRD's CEL validation.
+var gitCommitSHAPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+
+func (v *stackValidator) validateBuildConfig(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
 	if err := resource.BuildConfig.Validate(); err != nil {
 		return errors.BadRequest("stack resource '%s' has invalid build config: %s", resource.Name, err.Error())
 	}
 
+	if rev := resource.BuildConfig.SourceRevision.Git; rev != nil && rev.Commit != "" {
+		if !gitCommitSHAPattern.MatchString(rev.Commit) {
+			return errors.BadRequest("stack resource '%s' has invalid commit SHA '%s': must be 7-40 lowercase hex characters", resource.Name, rev.Commit)
+		}
+	}
+
 	if resource.BuildConfig.SourceContext.Git != nil {
-		if err := v.validateGitSource(resource); err != nil {
+		if err := v.validateGitSource(ctx, orgID, resource, probe); err != nil {
 			return err
 		}
 	}
 
-	if resource.BuildConfig.RegistrySecretRef != nil {
-		if err := v.validatePushSecret(resource); err != nil {
-			return err
+	if !probe {
+		return nil
+	}
+	return v.validatePushAccess(ctx, orgID, resource)
+}
+
+func (v *stackValidator) validatePushAccess(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
+	repo := resource.BuildConfig.BuildImageRepository
+	// Push probes only make sense for external registries the hub can reach.
+	if repo.UseInClusterRegistry || repo.InsecureRegistry || repo.ExternalImageRef == "" ||
+		isClusterLocalRegistryRef(repo.ExternalImageRef) {
+		return nil
+	}
+
+	resolved, serr := v.credentialResolver.RegistryCredentials(ctx, orgID, repo.ExternalImageRef, credentials.RegistryPurposePush, credentials.RegistryAuthSelector{
+		RegistryCredentialID: resource.BuildConfig.PushRegistryCredentialID,
+	})
+	if serr != nil {
+		return errors.BadRequest("stack resource '%s' has invalid push credentials: %s", resource.Name, serr.Error())
+	}
+
+	client, err := v.registryClients.ClientFor(resolved)
+	if err != nil {
+		return errors.GeneralError("failed to create registry client for stack resource '%s': %s", resource.Name, err.Error())
+	}
+
+	if err := client.CheckPushAccess(ctx, repo.ExternalImageRef); err != nil {
+		host := registryHostForRef(repo.ExternalImageRef)
+		target := errors.CredentialErrorTarget{
+			Kind: errors.CredentialTargetKindImagePush,
+			Host: host,
+			Ref:  repo.ExternalImageRef,
+		}
+		switch {
+		case stderrors.Is(err, clients.ErrRateLimited) && resolved.Source == credentials.SourceAnonymous:
+			v.logger.Warnf("registry rate limited while checking push access to '%s' anonymously for stack resource '%s'; skipping probe", repo.ExternalImageRef, resource.Name)
+			return nil
+		case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
+			return errors.CredentialsRequired(target, "stack resource '%s': pushing to '%s' requires registry credentials", resource.Name, repo.ExternalImageRef)
+		case stderrors.Is(err, clients.ErrAuthFailed):
+			return errors.CredentialsInvalid(target, "stack resource '%s': configured registry credentials cannot push to '%s'", resource.Name, repo.ExternalImageRef)
+		default:
+			// Non-auth failures (DNS, connection refused, TLS, 5xx) surface as
+			// their own validation error naming the host and real cause rather
+			// than being masked as a credentials problem.
+			return errors.BadRequest("stack resource '%s' cannot push to registry '%s': %s", resource.Name, host, err.Error())
 		}
 	}
 
 	return nil
 }
 
-func (v *stackValidator) validatePushSecret(resource *models.StackResource) *errors.ServiceError {
-	secretRef := resource.BuildConfig.RegistrySecretRef
-
-	if secretRef.SecretID == "" {
-		return errors.BadRequest("stack resource '%s' has empty push secret ID", resource.Name)
+// registryHostForRef extracts the normalized registry host from an
+// image/repository ref, falling back to the raw ref when it can't be parsed.
+func registryHostForRef(ref string) string {
+	host, err := clients.NormalizeRegistryHost(ref)
+	if err != nil {
+		return ref
 	}
-
-	if err := v.secretService.ValidateImageRegistrySecretForStackResource(context.Background(), secretRef.SecretID); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid push secret: %s", resource.Name, err.Error())
-	}
-
-	return nil
+	return host
 }
 
-func (v *stackValidator) validateGitSource(resource *models.StackResource) *errors.ServiceError {
+func isClusterLocalRegistryRef(ref string) bool {
+	return strings.HasSuffix(registryHostForRef(ref), clients.ClusterLocalRegistrySuffix)
+}
+
+func (v *stackValidator) validateGitSource(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
+	if !probe {
+		return nil
+	}
+	return v.validateGitCloneAccess(ctx, orgID, resource)
+}
+
+func (v *stackValidator) validateGitCloneAccess(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
 	git := resource.BuildConfig.SourceContext.Git
 
-	if git.GitSecretRef != nil {
-		return v.validateGitWithSecret(resource)
+	resolved, serr := v.credentialResolver.GitCredentials(ctx, orgID, git.RepoURL, credentials.GitAuthSelector{
+		IntegrationID: git.IntegrationID,
+	})
+	if serr != nil {
+		return errors.BadRequest("stack resource '%s' has invalid git credentials: %s", resource.Name, serr.Error())
 	}
 
-	return nil
-}
-
-func (v *stackValidator) validateGitWithSecret(resource *models.StackResource) *errors.ServiceError {
-	secretRef := resource.BuildConfig.SourceContext.Git.GitSecretRef
-
-	if secretRef.SecretID == "" {
-		return errors.BadRequest("stack resource '%s' has empty git secret ID", resource.Name)
+	client, err := v.gitClients.ClientFor(git.RepoURL, resolved.Credentials)
+	if err != nil {
+		return errors.GeneralError("failed to create git client for stack resource '%s': %s", resource.Name, err.Error())
 	}
 
-	if err := v.secretService.ValidateGitSecretForStackResource(context.Background(), secretRef.SecretID); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid git secret: %s", resource.Name, err.Error())
+	if _, err := client.CheckAccess(ctx, git.RepoURL); err != nil {
+		target := errors.CredentialErrorTarget{
+			Kind: errors.CredentialTargetKindGitClone,
+			Host: gitclient.RepoHost(git.RepoURL),
+			Ref:  git.RepoURL,
+		}
+		anonymous := resolved.Source == credentials.SourceAnonymous
+		switch {
+		case stderrors.Is(err, gitclient.ErrRateLimited) && anonymous:
+			v.logger.Warnf("git host rate limited while checking repo '%s' anonymously for stack resource '%s'; skipping access check", git.RepoURL, resource.Name)
+			return nil
+		case anonymous && (stderrors.Is(err, gitclient.ErrAuthFailed) || stderrors.Is(err, gitclient.ErrNotFound)):
+			// Private repos often report not-found to anonymous callers.
+			return errors.CredentialsRequired(target, "stack resource '%s': repository '%s' was not found or requires credentials", resource.Name, git.RepoURL)
+		case stderrors.Is(err, gitclient.ErrAuthFailed):
+			return errors.CredentialsInvalid(target, "stack resource '%s': configured git credentials were rejected by '%s'", resource.Name, git.RepoURL)
+		case stderrors.Is(err, gitclient.ErrNotFound):
+			return errors.BadRequest("stack resource '%s': repository '%s' not found", resource.Name, git.RepoURL)
+		default:
+			return errors.GeneralError("failed to check git access for stack resource '%s': %s", resource.Name, err.Error())
+		}
 	}
-
 	return nil
 }
 

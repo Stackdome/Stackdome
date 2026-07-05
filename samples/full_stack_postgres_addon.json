@@ -1,0 +1,13 @@
+{
+    "name": "test-full-stack-pg",
+    "spec": {
+        "instances": {"count": 1},
+        "version": {"major": 17},
+        "storage": {"size": "1Gi", "storage_class": "local-path"},
+        "resources": {
+            "requests": {"cpu": "100m", "memory": "256Mi"},
+            "limits": {"cpu": "500m", "memory": "512Mi"}
+        },
+        "databases": [{"name": "testdb"}]
+    }
+}

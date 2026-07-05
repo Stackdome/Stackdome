@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **RepoUrl** | **string** |  | 
 **BaseBranch** | Pointer to **string** |  | [optional] 
-**GitSecretRef** | Pointer to **string** |  | [optional] 
+**IntegrationId** | Pointer to **string** | Org-level git integration override for clone auth | [optional] 
 
 ## Methods
 
@@ -72,30 +72,30 @@ SetBaseBranch sets BaseBranch field to given value.
 
 HasBaseBranch returns a boolean if a field has been set.
 
-### GetGitSecretRef
+### GetIntegrationId
 
-`func (o *PreviewGitRepository) GetGitSecretRef() string`
+`func (o *PreviewGitRepository) GetIntegrationId() string`
 
-GetGitSecretRef returns the GitSecretRef field if non-nil, zero value otherwise.
+GetIntegrationId returns the IntegrationId field if non-nil, zero value otherwise.
 
-### GetGitSecretRefOk
+### GetIntegrationIdOk
 
-`func (o *PreviewGitRepository) GetGitSecretRefOk() (*string, bool)`
+`func (o *PreviewGitRepository) GetIntegrationIdOk() (*string, bool)`
 
-GetGitSecretRefOk returns a tuple with the GitSecretRef field if it's non-nil, zero value otherwise
+GetIntegrationIdOk returns a tuple with the IntegrationId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetGitSecretRef
+### SetIntegrationId
 
-`func (o *PreviewGitRepository) SetGitSecretRef(v string)`
+`func (o *PreviewGitRepository) SetIntegrationId(v string)`
 
-SetGitSecretRef sets GitSecretRef field to given value.
+SetIntegrationId sets IntegrationId field to given value.
 
-### HasGitSecretRef
+### HasIntegrationId
 
-`func (o *PreviewGitRepository) HasGitSecretRef() bool`
+`func (o *PreviewGitRepository) HasIntegrationId() bool`
 
-HasGitSecretRef returns a boolean if a field has been set.
+HasIntegrationId returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

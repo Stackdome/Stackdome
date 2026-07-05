@@ -7,8 +7,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/config"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/db"
 	_ "github.com/lib/pq"
 )
 

@@ -3,8 +3,8 @@ package servecmd
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
-	"github.com/ashishmax31/stackdome-api-server/cmd/server"
+	"github.com/Stackdome/stackdome/cmd/environment"
+	"github.com/Stackdome/stackdome/cmd/server"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )

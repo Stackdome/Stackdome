@@ -1,8 +1,8 @@
 package presenters
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"k8s.io/utils/ptr"
 )
 
@@ -111,33 +111,70 @@ func presentStackResources(resources []*models.StackResource) []openapi.StackRes
 	return result
 }
 
-func presentBuildConfig(config *models.BuildConfigSpec) *openapi.StackResourceBuildSpec {
-	if config == nil {
-		return nil
+// presentSource reconstructs the intent-level source union from the internal
+// build/image specs. Credential material is never echoed.
+func presentSource(r *models.StackResource) *openapi.SourceSpec {
+	switch {
+	case r.ImageConfig != nil:
+		img := openapi.NewImageSource(r.ImageConfig.Image)
+		if r.ImageConfig.RegistryCredentialID != "" {
+			img.SetRegistryCredentialsId(r.ImageConfig.RegistryCredentialID)
+		}
+		return &openapi.SourceSpec{Image: img}
+	case r.BuildConfig != nil:
+		bc := r.BuildConfig
+		switch {
+		case bc.SourceContext.Git != nil:
+			git := openapi.NewGitSource(bc.SourceContext.Git.RepoURL)
+			if rev := bc.SourceRevision.Git; rev != nil {
+				if rev.Branch != "" {
+					git.SetBranch(rev.Branch)
+				}
+				if rev.Tag != "" {
+					git.SetTag(rev.Tag)
+				}
+				if rev.Commit != "" {
+					git.SetCommit(rev.Commit)
+				}
+			}
+			if bc.DockerfilePath != "" {
+				git.SetDockerfilePath(bc.DockerfilePath)
+			}
+			if bc.ContextPathWithinSource != "" {
+				git.SetBuildContext(bc.ContextPathWithinSource)
+			}
+			if bc.SourceContext.Git.IntegrationID != "" {
+				git.SetIntegrationId(bc.SourceContext.Git.IntegrationID)
+			}
+			if !bc.BuildImageRepository.UseInClusterRegistry && bc.BuildImageRepository.ExternalImageRef != "" {
+				push := openapi.NewPushTarget(bc.BuildImageRepository.ExternalImageRef)
+				if bc.PushRegistryCredentialID != "" {
+					push.SetRegistryCredentialsId(bc.PushRegistryCredentialID)
+				}
+				git.SetPush(*push)
+			}
+			return &openapi.SourceSpec{Git: git}
+		case bc.SourceContext.Volume != nil:
+			vol := openapi.NewVolumeBuildSource()
+			if bc.SourceContext.Volume.SourceVolumeID != "" {
+				vol.SetVolumeId(bc.SourceContext.Volume.SourceVolumeID)
+			}
+			if bc.SourceContext.Volume.SourceVolumeName != "" {
+				vol.SetVolumeName(bc.SourceContext.Volume.SourceVolumeName)
+			}
+			if bc.SourceRevision.Volume != nil && bc.SourceRevision.Volume.CurrentVolumeHash != "" {
+				vol.SetCurrentVolumeHash(bc.SourceRevision.Volume.CurrentVolumeHash)
+			}
+			if bc.DockerfilePath != "" {
+				vol.SetDockerfilePath(bc.DockerfilePath)
+			}
+			if bc.ContextPathWithinSource != "" {
+				vol.SetBuildContext(bc.ContextPathWithinSource)
+			}
+			return &openapi.SourceSpec{Volume: vol}
+		}
 	}
-	return &openapi.StackResourceBuildSpec{
-		ContextPathWithinSource: config.ContextPathWithinSource,
-		DockerfilePath:          config.DockerfilePath,
-		ImageRepository:         presentImageRepository(config),
-		SourceContext:           presentSourceContext(config.SourceContext),
-		SourceRevision:          presentSourceRevision(config.SourceRevision),
-		RegistryPushSecret:      presentSecretRef(config.RegistrySecretRef),
-	}
-}
-
-func presentImageRepository(in *models.BuildConfigSpec) openapi.ImageRepository {
-	if in == nil {
-		return openapi.ImageRepository{}
-	}
-	res := openapi.ImageRepository{}
-
-	if in.BuildImageRepository.UseInClusterRegistry {
-		res.UseInternalRegistry = openapi.PtrBool(true)
-	} else {
-		res.UseInternalRegistry = openapi.PtrBool(false)
-		res.ExternalImageRef = &in.BuildImageRepository.ExternalImageRef
-	}
-	return res
+	return nil
 }
 
 func presentSourceRevision(revision models.BuildSourceRevision) openapi.BuildSourceRevision {
@@ -181,29 +218,10 @@ func presentSourceContext(context models.BuildContextSource) openapi.BuildSource
 		}
 	case context.Git != nil:
 		res.GitRepo = &openapi.BuildSourceContextGitRepo{
-			RepoUrl:   context.Git.RepoURL,
-			GitSecret: presentSecretRef(context.Git.GitSecretRef),
+			RepoUrl: context.Git.RepoURL,
 		}
 	}
 	return res
-}
-
-func presentImageConfig(config *models.ImageConfigSpec) *openapi.ImageSpec {
-	if config == nil {
-		return nil
-	}
-	return &openapi.ImageSpec{
-		Image:      config.Image,
-		PullSecret: presentSecretRef(config.PullSecretRef),
-	}
-}
-func presentSecretRef(ref *models.SecretReference) *openapi.SecretRef {
-	if ref == nil {
-		return nil
-	}
-	return &openapi.SecretRef{
-		SecretId: ref.SecretID,
-	}
 }
 
 func presentInitConfig(config *models.InitConfig) *openapi.InitSpec {
@@ -452,12 +470,13 @@ func ConvertStackResource(r *openapi.StackResource) *models.StackResource {
 }
 
 func convertStackResource(r *openapi.StackResource) *models.StackResource {
+	buildConfig, imageConfig := convertSource(r.Source)
 	return &models.StackResource{
 		Name:            r.Name,
 		Labels:          convertLabels(r.Labels),
 		Annotations:     convertAnnotations(r.Annotations),
-		BuildConfig:     convertBuildConfig(r.BuildSpec),
-		ImageConfig:     convertImageConfig(r.ImageSpec),
+		BuildConfig:     buildConfig,
+		ImageConfig:     imageConfig,
 		Init:            convertInitConfig(r.InitSpec),
 		ExecutionConfig: convertExecutionConfig(r.ExecutionConfig),
 		VolumeMounts:    convertVolumeMounts(r.VolumeMounts),
@@ -470,95 +489,78 @@ func convertStackResource(r *openapi.StackResource) *models.StackResource {
 	}
 }
 
-func convertBuildConfig(config *openapi.StackResourceBuildSpec) *models.BuildConfigSpec {
-	if config == nil {
-		return nil
+// convertSource maps the intent-level source union onto the internal
+// build/image specs.
+func convertSource(src *openapi.SourceSpec) (*models.BuildConfigSpec, *models.ImageConfigSpec) {
+	if src == nil {
+		return nil, nil
 	}
-	res := &models.BuildConfigSpec{
-		ContextPathWithinSource: config.ContextPathWithinSource,
-		DockerfilePath:          config.DockerfilePath,
-		SourceContext:           convertSourceContext(config.SourceContext),
-		SourceRevision:          convertSourceRevision(config.SourceRevision),
-	}
-	if config.ImageRepository.GetUseInternalRegistry() {
-		res.BuildImageRepository = models.BuildImageRepository{
-			UseInClusterRegistry: true,
-			InsecureRegistry:     true,
-		}
-	} else {
-		res.BuildImageRepository.ExternalImageRef = config.ImageRepository.GetExternalImageRef()
-	}
-	res.RegistrySecretRef = convertSecretRef(config.RegistryPushSecret)
-	return res
-}
-
-func convertSourceContext(context openapi.BuildSourceContext) models.BuildContextSource {
-	res := models.BuildContextSource{}
 	switch {
-	case context.Volume != nil:
-		res.Volume = &models.VolumeBuildSource{
-			SourceVolumeID:   context.Volume.Id,
-			SourceVolumeName: context.Volume.GetName(),
+	case src.Image != nil:
+		return nil, &models.ImageConfigSpec{
+			Image:                src.Image.Ref,
+			RegistryCredentialID: src.Image.GetRegistryCredentialsId(),
 		}
-	case context.GitRepo != nil:
-		res.Git = &models.GitBuildSource{
-			RepoURL:      context.GitRepo.RepoUrl,
-			GitSecretRef: convertSecretRef(context.GitRepo.GitSecret),
+	case src.Git != nil:
+		git := src.Git
+		res := &models.BuildConfigSpec{
+			SourceContext: models.BuildContextSource{
+				Git: &models.GitBuildSource{
+					RepoURL:       git.RepoUrl,
+					IntegrationID: git.GetIntegrationId(),
+				},
+			},
+			SourceRevision: models.BuildSourceRevision{
+				Git: &models.GitRevision{
+					Branch: git.GetBranch(),
+					Tag:    git.GetTag(),
+					Commit: git.GetCommit(),
+				},
+			},
+			DockerfilePath:          buildPathOrDefault(git.GetDockerfilePath(), models.DefaultDockerfilePath),
+			ContextPathWithinSource: buildPathOrDefault(git.GetBuildContext(), models.DefaultBuildContext),
 		}
-	}
-	return res
-}
-
-func convertSourceRevision(revision openapi.BuildSourceRevision) models.BuildSourceRevision {
-	if revision.VolumeSourceRevision != nil {
-		return models.BuildSourceRevision{
-			Volume: &models.VolumeRevision{
-				CurrentVolumeHash: revision.VolumeSourceRevision.CurrentVolumeHash,
+		if git.Push == nil {
+			res.BuildImageRepository = models.BuildImageRepository{
+				UseInClusterRegistry: true,
+				InsecureRegistry:     true,
+			}
+		} else {
+			res.BuildImageRepository.ExternalImageRef = git.Push.Repository
+			res.PushRegistryCredentialID = git.Push.GetRegistryCredentialsId()
+		}
+		return res, nil
+	case src.Volume != nil:
+		vol := src.Volume
+		res := &models.BuildConfigSpec{
+			SourceContext: models.BuildContextSource{
+				Volume: &models.VolumeBuildSource{
+					SourceVolumeID:   vol.GetVolumeId(),
+					SourceVolumeName: vol.GetVolumeName(),
+				},
+			},
+			SourceRevision: models.BuildSourceRevision{
+				Volume: &models.VolumeRevision{
+					CurrentVolumeHash: vol.GetCurrentVolumeHash(),
+				},
+			},
+			DockerfilePath:          buildPathOrDefault(vol.GetDockerfilePath(), models.DefaultDockerfilePath),
+			ContextPathWithinSource: buildPathOrDefault(vol.GetBuildContext(), models.DefaultBuildContext),
+			BuildImageRepository: models.BuildImageRepository{
+				UseInClusterRegistry: true,
+				InsecureRegistry:     true,
 			},
 		}
-	} else if revision.GitRepoRevision != nil {
-		res := models.BuildSourceRevision{
-			Git: &models.GitRevision{},
-		}
-		switch {
-		case revision.GitRepoRevision.Branch != nil:
-			res.Git = &models.GitRevision{
-				Branch: revision.GitRepoRevision.GetBranch(),
-				Commit: revision.GitRepoRevision.GetCommit(),
-			}
-		case revision.GitRepoRevision.Tag != nil:
-			res.Git = &models.GitRevision{
-				Tag:    revision.GitRepoRevision.GetTag(),
-				Commit: revision.GitRepoRevision.GetCommit(),
-			}
-		case revision.GitRepoRevision.Commit != nil:
-			res.Git = &models.GitRevision{
-				Commit: revision.GitRepoRevision.GetCommit(),
-			}
-		}
-		return res
+		return res, nil
 	}
-	return models.BuildSourceRevision{}
+	return nil, nil
 }
 
-func convertImageConfig(config *openapi.ImageSpec) *models.ImageConfigSpec {
-	if config == nil {
-		return nil
+func buildPathOrDefault(value, fallback string) string {
+	if value == "" {
+		return fallback
 	}
-
-	return &models.ImageConfigSpec{
-		Image:         config.Image,
-		PullSecretRef: convertSecretRef(config.PullSecret),
-	}
-}
-
-func convertSecretRef(ref *openapi.SecretRef) *models.SecretReference {
-	if ref == nil {
-		return nil
-	}
-	return &models.SecretReference{
-		SecretID: ref.SecretId,
-	}
+	return value
 }
 
 func convertInitConfig(config *openapi.InitSpec) *models.InitConfig {

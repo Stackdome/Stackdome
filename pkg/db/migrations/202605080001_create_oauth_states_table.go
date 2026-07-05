@@ -3,7 +3,7 @@ package migrations
 import (
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/go-gormigrate/gormigrate/v2"
 	"gorm.io/gorm"
 )

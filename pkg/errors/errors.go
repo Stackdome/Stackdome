@@ -1,11 +1,12 @@
 package errors
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/golang/glog"
 )
 
@@ -72,21 +73,21 @@ func Find(code ServiceErrorCode) (bool, *ServiceError) {
 
 func Errors() ServiceErrors {
 	return ServiceErrors{
-		ServiceError{ErrorInvalidToken, "Invalid token provided", http.StatusForbidden},
-		ServiceError{ErrorForbidden, "Forbidden to perform this action", http.StatusForbidden},
-		ServiceError{ErrorConflict, "An entity with the specified unique values already exists", http.StatusConflict},
-		ServiceError{ErrorNotFound, "Resource not found", http.StatusNotFound},
-		ServiceError{ErrorValidation, "General validation failure", http.StatusBadRequest},
-		ServiceError{ErrorGeneral, "Unspecified error", http.StatusInternalServerError},
-		ServiceError{ErrorNotImplemented, "HTTP Method not implemented for this endpoint", http.StatusMethodNotAllowed},
-		ServiceError{ErrorUnauthorized, "Account is unauthorized to perform this action", http.StatusForbidden},
-		ServiceError{ErrorUnauthenticated, "Account authentication could not be verified", http.StatusUnauthorized},
-		ServiceError{ErrorMalformedRequest, "Unable to read request body", http.StatusBadRequest},
-		ServiceError{ErrorBadRequest, "Bad request", http.StatusBadRequest},
-		ServiceError{ErrorGone, "Access to the target resource is no longer available", http.StatusGone},
-		ServiceError{ErrorTooManyRequests, "Too many requests", http.StatusTooManyRequests},
-		ServiceError{ErrorUnprocessableEntity, "Unable to process request entity", http.StatusUnprocessableEntity},
-		ServiceError{ErrorInternalServerError, "Internal server error", http.StatusInternalServerError},
+		ServiceError{ErrorInvalidToken, "Invalid token provided", http.StatusForbidden, nil},
+		ServiceError{ErrorForbidden, "Forbidden to perform this action", http.StatusForbidden, nil},
+		ServiceError{ErrorConflict, "An entity with the specified unique values already exists", http.StatusConflict, nil},
+		ServiceError{ErrorNotFound, "Resource not found", http.StatusNotFound, nil},
+		ServiceError{ErrorValidation, "General validation failure", http.StatusBadRequest, nil},
+		ServiceError{ErrorGeneral, "Unspecified error", http.StatusInternalServerError, nil},
+		ServiceError{ErrorNotImplemented, "HTTP Method not implemented for this endpoint", http.StatusMethodNotAllowed, nil},
+		ServiceError{ErrorUnauthorized, "Account is unauthorized to perform this action", http.StatusForbidden, nil},
+		ServiceError{ErrorUnauthenticated, "Account authentication could not be verified", http.StatusUnauthorized, nil},
+		ServiceError{ErrorMalformedRequest, "Unable to read request body", http.StatusBadRequest, nil},
+		ServiceError{ErrorBadRequest, "Bad request", http.StatusBadRequest, nil},
+		ServiceError{ErrorGone, "Access to the target resource is no longer available", http.StatusGone, nil},
+		ServiceError{ErrorTooManyRequests, "Too many requests", http.StatusTooManyRequests, nil},
+		ServiceError{ErrorUnprocessableEntity, "Unable to process request entity", http.StatusUnprocessableEntity, nil},
+		ServiceError{ErrorInternalServerError, "Internal server error", http.StatusInternalServerError, nil},
 	}
 }
 
@@ -97,6 +98,59 @@ type ServiceError struct {
 	Reason string
 	// HttopCode is the HttpCode associated with the error when the error is returned as an API response
 	HttpCode int
+	// Details optionally carries structured, machine-readable error context
+	// that is serialized into the API error response.
+	Details any
+}
+
+// Structured error detail codes.
+const (
+	ErrorCodeCredentialsRequired = "credentials_required"
+	ErrorCodeCredentialsInvalid  = "credentials_invalid"
+)
+
+// Kinds of credential targets for structured credential errors.
+const (
+	CredentialTargetKindGitClone  = "git_clone"
+	CredentialTargetKindImagePull = "image_pull"
+	CredentialTargetKindImagePush = "image_push"
+)
+
+// CredentialErrorTarget identifies what a credential error is about.
+type CredentialErrorTarget struct {
+	Kind string `json:"kind"`
+	Host string `json:"host"`
+	Ref  string `json:"ref"`
+}
+
+// CredentialErrorDetails is the structured payload for credential errors.
+type CredentialErrorDetails struct {
+	Code   string                `json:"code"`
+	Target CredentialErrorTarget `json:"target"`
+}
+
+// WithDetails attaches structured details to the error.
+func (e *ServiceError) WithDetails(details any) *ServiceError {
+	e.Details = details
+	return e
+}
+
+// CredentialsRequired returns a 400 telling the client which target needs
+// credentials that were not supplied.
+func CredentialsRequired(target CredentialErrorTarget, reason string, values ...interface{}) *ServiceError {
+	return BadRequest(reason, values...).WithDetails(CredentialErrorDetails{
+		Code:   ErrorCodeCredentialsRequired,
+		Target: target,
+	})
+}
+
+// CredentialsInvalid returns a 400 telling the client the configured
+// credentials for a target failed.
+func CredentialsInvalid(target CredentialErrorTarget, reason string, values ...interface{}) *ServiceError {
+	return BadRequest(reason, values...).WithDetails(CredentialErrorDetails{
+		Code:   ErrorCodeCredentialsInvalid,
+		Target: target,
+	})
 }
 
 // Reason can be a string with format verbs, which will be replace by the specified values
@@ -106,7 +160,7 @@ func New(code ServiceErrorCode, reason string, values ...interface{}) *ServiceEr
 	exists, err := Find(code)
 	if !exists {
 		glog.Errorf("Undefined error code used: %d", code)
-		err = &ServiceError{ErrorGeneral, "Unspecified error", 500}
+		err = &ServiceError{ErrorGeneral, "Unspecified error", 500, nil}
 	}
 
 	// If the reason is unspecified, use the default
@@ -147,12 +201,30 @@ func (e *ServiceError) IsForbidden() bool {
 }
 
 func (e *ServiceError) AsOpenapiError() openapi.Error {
-	return openapi.Error{
+	res := openapi.Error{
 		Kind:   openapi.PtrString("Error"),
 		Id:     openapi.PtrString(strconv.Itoa(int(e.Code))),
 		Code:   openapi.PtrString(fmt.Sprintf("%d", e.Code)),
 		Reason: openapi.PtrString(e.Reason),
 	}
+	if e.Details != nil {
+		res.Details = detailsAsMap(e.Details)
+	}
+	return res
+}
+
+// detailsAsMap converts a structured details payload to the freeform map the
+// generated Error model carries.
+func detailsAsMap(details any) map[string]interface{} {
+	raw, err := json.Marshal(details)
+	if err != nil {
+		return nil
+	}
+	var out map[string]interface{}
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return nil
+	}
+	return out
 }
 
 func NotFound(reason string, values ...interface{}) *ServiceError {

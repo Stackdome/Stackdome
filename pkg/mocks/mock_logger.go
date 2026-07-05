@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	logger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
+	logger "github.com/Stackdome/stackdome/pkg/logger"
 	logrus "github.com/sirupsen/logrus"
 	gomock "go.uber.org/mock/gomock"
 )

@@ -58,7 +58,12 @@ const ObjectReference = z
   .passthrough();
 const Error = ObjectReference.and(
   z
-    .object({ code: z.string(), reason: z.string(), operation_id: z.string() })
+    .object({
+      code: z.string(),
+      reason: z.string(),
+      operation_id: z.string(),
+      details: z.object({}).partial().passthrough(),
+    })
     .partial()
     .passthrough()
 );
@@ -193,6 +198,105 @@ const SecretList = z
   .object({ items: z.array(Secret), total: z.number().int() })
   .partial()
   .passthrough();
+const RegistryCredentialPurpose = z.enum(["pull", "push", "both"]);
+const RegistryCredential = z.object({
+  id: z.string().optional(),
+  host: z.string(),
+  purpose: RegistryCredentialPurpose.optional().default("both"),
+  username: z.string(),
+  password: z.string().optional(),
+  organisation_id: z.string().optional(),
+  created_at: z.string().datetime({ offset: true }).optional(),
+  updated_at: z.string().datetime({ offset: true }).optional(),
+});
+const RegistryCredentialList = z
+  .object({ items: z.array(RegistryCredential), total: z.number().int() })
+  .partial()
+  .passthrough();
+const AffectedStackRef = z
+  .object({ id: z.string(), name: z.string() })
+  .partial()
+  .passthrough();
+const RegistryCredentialDeleteResponse = z
+  .object({ affected_stacks: z.array(AffectedStackRef) })
+  .partial()
+  .passthrough();
+const RegistryCredentialVerifyRequest = z.object({
+  repository: z.string(),
+  purpose: RegistryCredentialPurpose.optional().default("both"),
+});
+const GitHubAppManifestFlow = z
+  .object({
+    manifest: z.object({}).partial().passthrough(),
+    github_url: z.string(),
+    state: z.string(),
+  })
+  .partial()
+  .passthrough();
+const GitInstallation = z
+  .object({
+    id: z.string(),
+    installation_id: z.number().int(),
+    account_login: z.string(),
+    account_type: z.string(),
+    repository_selection: z.string(),
+    created_at: z.string().datetime({ offset: true }),
+  })
+  .partial()
+  .passthrough();
+const GitInstallationList = z
+  .object({ items: z.array(GitInstallation), total: z.number().int() })
+  .partial()
+  .passthrough();
+const GitRepository = z
+  .object({
+    full_name: z.string(),
+    clone_url: z.string(),
+    default_branch: z.string(),
+    private: z.boolean(),
+    pushed_at: z.string().datetime({ offset: true }),
+    owner: z.string(),
+  })
+  .partial()
+  .passthrough();
+const GitRepositoryPage = z
+  .object({
+    items: z.array(GitRepository),
+    page: z.number().int(),
+    total_count: z.number().int(),
+    has_next: z.boolean(),
+  })
+  .partial()
+  .passthrough();
+const GitBranchList = z
+  .object({ items: z.array(z.string()), total: z.number().int() })
+  .partial()
+  .passthrough();
+const GitIntegrationType = z.enum(["git_credentials", "github_app"]);
+const GitIntegrationBasicAuth = z.object({
+  username: z.string(),
+  password: z.string(),
+});
+const GitIntegrationAuth = z
+  .object({ token: z.string(), basic: GitIntegrationBasicAuth })
+  .partial();
+const GitIntegration = z.object({
+  id: z.string().optional(),
+  type: GitIntegrationType.optional().default("git_credentials"),
+  host: z.string(),
+  status: z.enum(["active", "pending_install", "installed"]).optional(),
+  auth: GitIntegrationAuth.optional(),
+  credentials_configured: z.boolean().optional(),
+  install_url: z.string().optional(),
+  organisation_id: z.string().optional(),
+  created_at: z.string().datetime({ offset: true }).optional(),
+  updated_at: z.string().datetime({ offset: true }).optional(),
+});
+const GitIntegrationList = z
+  .object({ items: z.array(GitIntegration), total: z.number().int() })
+  .partial()
+  .passthrough();
+const GitIntegrationVerifyRequest = z.object({ repo_url: z.string() });
 const SecretReference = z
   .object({ secret_id: z.string().uuid(), key: z.string() })
   .passthrough();
@@ -256,55 +360,38 @@ const Label = z.object({ key: z.string(), value: z.string() });
 const Annotation = z
   .object({ key: z.string(), value: z.string() })
   .passthrough();
-const SecretRef = z.object({ secret_id: z.string() });
-const BuildSourceContext = z
+const PushTarget = z.object({
+  repository: z.string(),
+  registry_credentials_id: z.string().optional(),
+});
+const GitSource = z.object({
+  repo_url: z.string(),
+  branch: z.string().optional(),
+  tag: z.string().optional(),
+  commit: z.string().optional(),
+  dockerfile_path: z.string().optional().default("Dockerfile"),
+  build_context: z.string().optional().default("."),
+  integration_id: z.string().optional(),
+  push: PushTarget.optional(),
+});
+const ImageSource = z.object({
+  ref: z.string(),
+  registry_credentials_id: z.string().optional(),
+});
+const VolumeBuildSource = z
   .object({
-    volume: z
-      .object({ id: z.string(), name: z.string().optional() })
-      .passthrough(),
-    git_repo: z
-      .object({ repo_url: z.string(), git_secret: SecretRef.optional() })
-      .passthrough(),
-  })
-  .partial()
-  .passthrough();
-const GitRepoRevision = z
-  .object({ branch: z.string(), tag: z.string(), commit: z.string() })
-  .partial()
-  .passthrough();
-const BuildSourceRevision = z
-  .object({
-    volume_source_revision: z
-      .object({ current_volume_hash: z.string() })
-      .passthrough(),
-    git_repo_revision: GitRepoRevision,
-  })
-  .partial()
-  .passthrough();
-const ImageRepository = z
-  .object({
-    external_image_ref: z.string(),
-    use_internal_registry: z.boolean(),
+    volume_id: z.string(),
+    volume_name: z.string(),
+    current_volume_hash: z.string(),
+    dockerfile_path: z.string().default("Dockerfile"),
+    build_context: z.string().default("."),
   })
   .partial();
-const StackResourceBuildSpec = z.object({
-  source_context: BuildSourceContext,
-  context_path_within_source: z.string(),
-  dockerfile_path: z.string(),
-  source_revision: BuildSourceRevision,
-  image_repository: ImageRepository,
-  registry_push_secret: SecretRef.optional(),
-});
-const ImageSpec = z.object({
-  image: z.string(),
-  pull_secret: SecretRef.optional(),
-});
+const SourceSpec = z
+  .object({ git: GitSource, image: ImageSource, volume: VolumeBuildSource })
+  .partial();
 const InitSpec = z
-  .object({
-    image_spec: ImageSpec,
-    command: z.array(z.string()),
-    args: z.array(z.string()),
-  })
+  .object({ command: z.array(z.string()), args: z.array(z.string()) })
   .partial();
 const EnvVar = z.object({
   name: z.string(),
@@ -427,8 +514,7 @@ const StackResource = z
     labels: z.array(Label).optional(),
     annotations: z.array(Annotation).optional(),
     revision: z.string().optional(),
-    build_spec: StackResourceBuildSpec.optional(),
-    image_spec: ImageSpec.optional(),
+    source: SourceSpec.optional(),
     init_spec: InitSpec.optional(),
     execution_config: ExecutionConfig.optional(),
     volume_mounts: z.array(VolumeMount).optional(),
@@ -450,6 +536,10 @@ const VolumeAccessMode = z.enum([
   "ReadWriteMany",
   "ReadOnlyMany",
 ]);
+const GitRepoRevision = z
+  .object({ branch: z.string(), tag: z.string(), commit: z.string() })
+  .partial()
+  .passthrough();
 const GitRepoSource = z
   .object({ repo_url: z.string(), revision: GitRepoRevision })
   .passthrough();
@@ -741,6 +831,24 @@ const ResourceMetrics = z
   .passthrough();
 const StackResourceList = z
   .object({ items: z.array(StackResource), total: z.number().int() })
+  .partial()
+  .passthrough();
+const BuildSourceRevision = z
+  .object({
+    volume_source_revision: z
+      .object({ current_volume_hash: z.string() })
+      .passthrough(),
+    git_repo_revision: GitRepoRevision,
+  })
+  .partial()
+  .passthrough();
+const BuildSourceContext = z
+  .object({
+    volume: z
+      .object({ id: z.string(), name: z.string().optional() })
+      .passthrough(),
+    git_repo: z.object({ repo_url: z.string() }).passthrough(),
+  })
   .partial()
   .passthrough();
 const ImageBuildStatus = z
@@ -1221,13 +1329,11 @@ const OrgInviteInfo = z
   })
   .partial()
   .passthrough();
-const PreviewGitRepository = z
-  .object({
-    repo_url: z.string(),
-    base_branch: z.string().optional(),
-    git_secret_ref: z.string().optional(),
-  })
-  .passthrough();
+const PreviewGitRepository = z.object({
+  repo_url: z.string(),
+  base_branch: z.string().optional(),
+  integration_id: z.string().optional(),
+});
 const StackPreviewConfigCreate = z
   .object({
     name: z.string(),
@@ -1403,6 +1509,24 @@ export const schemas = {
   OutputDescriptor,
   Secret,
   SecretList,
+  RegistryCredentialPurpose,
+  RegistryCredential,
+  RegistryCredentialList,
+  AffectedStackRef,
+  RegistryCredentialDeleteResponse,
+  RegistryCredentialVerifyRequest,
+  GitHubAppManifestFlow,
+  GitInstallation,
+  GitInstallationList,
+  GitRepository,
+  GitRepositoryPage,
+  GitBranchList,
+  GitIntegrationType,
+  GitIntegrationBasicAuth,
+  GitIntegrationAuth,
+  GitIntegration,
+  GitIntegrationList,
+  GitIntegrationVerifyRequest,
   SecretReference,
   S3Credentials,
   AzureCredentials,
@@ -1414,13 +1538,11 @@ export const schemas = {
   ObjectStoreList,
   Label,
   Annotation,
-  SecretRef,
-  BuildSourceContext,
-  GitRepoRevision,
-  BuildSourceRevision,
-  ImageRepository,
-  StackResourceBuildSpec,
-  ImageSpec,
+  PushTarget,
+  GitSource,
+  ImageSource,
+  VolumeBuildSource,
+  SourceSpec,
   InitSpec,
   EnvVar,
   ExecutionConfig,
@@ -1436,6 +1558,7 @@ export const schemas = {
   StackResourceStatus,
   StackResource,
   VolumeAccessMode,
+  GitRepoRevision,
   GitRepoSource,
   VolumeSourceTypes,
   RemoteSource,
@@ -1481,6 +1604,8 @@ export const schemas = {
   DemoteAdminRequest,
   ResourceMetrics,
   StackResourceList,
+  BuildSourceRevision,
+  BuildSourceContext,
   ImageBuildStatus,
   ImageBuild,
   ImageBuildList,
@@ -1747,6 +1872,42 @@ const endpoints = makeApi([
         status: 500,
         description: `Internal server error`,
         schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/git-integrations/github/manifest/callback",
+    alias: "getApiv1gitIntegrationsgithubmanifestcallback",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "code",
+        type: "Query",
+        schema: z.string(),
+      },
+      {
+        name: "state",
+        type: "Query",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 302,
+        description: `Redirects the browser to the GitHub App install page`,
+        schema: z.void(),
+      },
+      {
+        status: 400,
+        description: `Invalid or expired state`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
       },
     ],
   },
@@ -2292,6 +2453,513 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/v1/organizations/:org_id/git-integrations",
+    alias: "postApiv1organizationsOrg_idgitIntegrations",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: GitIntegration,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitIntegration,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `An integration for this host already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/git-integrations",
+    alias: "getApiv1organizationsOrg_idgitIntegrations",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitIntegrationList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id",
+    alias: "getApiv1organizationsOrg_idgitIntegrationsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitIntegration,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Git integration not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id",
+    alias: "putApiv1organizationsOrg_idgitIntegrationsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: GitIntegration,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitIntegration,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Git integration not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id",
+    alias: "deleteApiv1organizationsOrg_idgitIntegrationsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Git integration not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id/installations",
+    alias: "getApiv1organizationsOrg_idgitIntegrationsIdinstallations",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "refresh",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+    ],
+    response: GitInstallationList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Git integration not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id/repositories",
+    alias: "getApiv1organizationsOrg_idgitIntegrationsIdrepositories",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "query",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "installation_id",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: GitRepositoryPage,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Git integration not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id/repositories/:owner/:repo",
+    alias: "getApiv1organizationsOrg_idgitIntegrationsIdrepositoriesOwnerRepo",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "owner",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "repo",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitRepository,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id/repositories/:owner/:repo/branches",
+    alias:
+      "getApiv1organizationsOrg_idgitIntegrationsIdrepositoriesOwnerRepobranches",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "owner",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "repo",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitBranchList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/git-integrations/:id/verify",
+    alias: "postApiv1organizationsOrg_idgitIntegrationsIdverify",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ repo_url: z.string() }),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Verification failed`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Git integration not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/git-integrations/github/manifest",
+    alias: "postApiv1organizationsOrg_idgitIntegrationsgithubmanifest",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: GitHubAppManifestFlow,
+    errors: [
+      {
+        status: 400,
+        description: `The hub external URL is not configured`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `A GitHub App is already installed`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
     path: "/api/v1/organizations/:org_id/invites",
     alias: "postApiv1organizationsOrg_idinvites",
     requestFormat: "json",
@@ -2504,6 +3172,268 @@ const endpoints = makeApi([
         status: 500,
         description: `Internal server error`,
         schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/registry-credentials",
+    alias: "postApiv1organizationsOrg_idregistryCredentials",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RegistryCredential,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: RegistryCredential,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `A credential for this host and purpose already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/registry-credentials",
+    alias: "getApiv1organizationsOrg_idregistryCredentials",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: RegistryCredentialList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/registry-credentials/:id",
+    alias: "getApiv1organizationsOrg_idregistryCredentialsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: RegistryCredential,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Registry credential not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/registry-credentials/:id",
+    alias: "putApiv1organizationsOrg_idregistryCredentialsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RegistryCredential,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: RegistryCredential,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Registry credential not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/registry-credentials/:id",
+    alias: "deleteApiv1organizationsOrg_idregistryCredentialsId",
+    description: `Deletion is never blocked; the response lists stacks that were implicitly resolving against this credential so rotations are visible.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: RegistryCredentialDeleteResponse,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Registry credential not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/registry-credentials/:id/verify",
+    alias: "postApiv1organizationsOrg_idregistryCredentialsIdverify",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: RegistryCredentialVerifyRequest,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Verification failed`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Registry credential not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
       },
     ],
   },
@@ -6010,6 +6940,32 @@ const endpoints = makeApi([
         status: 500,
         description: `Internal server error`,
         schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/webhooks/github",
+    alias: "postApiv1webhooksgithub",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({}).partial().passthrough(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 403,
+        description: `Signature verification failed`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
       },
     ],
   },

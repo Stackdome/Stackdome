@@ -1,7 +1,7 @@
 package controllers
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 

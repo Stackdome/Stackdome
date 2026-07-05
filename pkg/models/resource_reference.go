@@ -5,9 +5,11 @@ import "time"
 type ReferentType string
 
 const (
-	ReferentSecret        ReferentType = "secret"
-	ReferentVolume        ReferentType = "volume"
-	ReferentPostgresAddon ReferentType = "postgres_addon"
+	ReferentSecret             ReferentType = "secret"
+	ReferentVolume             ReferentType = "volume"
+	ReferentPostgresAddon      ReferentType = "postgres_addon"
+	ReferentRegistryCredential ReferentType = "registry_credential"
+	ReferentGitIntegration     ReferentType = "git_integration"
 )
 
 type RelationKind string

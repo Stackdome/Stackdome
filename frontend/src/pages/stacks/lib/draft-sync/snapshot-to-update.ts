@@ -18,10 +18,10 @@ function cleanVolume(v: Volume) {
  * changes" revert cannot leave a post-deploy canvas edit (e.g. an added port)
  * stranded in the DB.
  *
- * KNOWN LIMITATION: struct-pointer fields (build_spec, image_spec,
- * lifecycle_config) cannot be cleared from the frontend — JSON null still
- * unmarshals to a nil pointer that gorm's Updates() skips. A post-deploy
- * source-type flip (image ↔ git) is therefore not fully reverted by a discard.
+ * KNOWN LIMITATION: struct-pointer fields (source, lifecycle_config) cannot be
+ * cleared (set to nil) from the frontend — JSON null still unmarshals to a nil
+ * pointer that gorm's Updates() skips. Clearing an optional nested field (e.g.
+ * dropping source.git.push) is therefore not fully reverted by a discard.
  * Fixing this requires a backend change (dedicated PATCH endpoint or explicit
  * NULL handling in the store). Tracked as a follow-up.
  */

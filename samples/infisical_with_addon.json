@@ -1,65 +1,139 @@
 {
-    "name": "infisical",
-    "labels": [
-        { "key": "app", "value": "infisical" }
-    ],
-    "spec": {
-        "stack_resources": [
-            {
-                "name": "infisical",
-                "image_spec": { "image": "infisical/infisical:latest" },
-                "ports": [
-                    { "name": "http", "number": 8080, "exposed_to_public": true, "subdomain_prefix": "infisical", "protocol": "HTTP" }
-                ],
-                "execution_config": {
-                    "environment_variables": [
-                        { "name": "NODE_ENV", "value": "production" },
-                        { "name": "ENCRYPTION_KEY", "value": "6c1fe4e407b8911c104518103505b218" },
-                        { "name": "AUTH_SECRET", "value": "5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE=" },
-                        { "name": "ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT", "value": "true" },
-                        { "name": "NODE_TLS_REJECT_UNAUTHORIZED", "value": "0" },
-                        { "name": "SITE_URL", "self_output": "public.http.url" }
-                    ]
-                },
-                "depends_on": ["redis"]
-            },
-            {
-                "name": "redis",
-                "image_spec": { "image": "redis:latest" },
-                "ports": [
-                    { "name": "redis", "number": 6379, "exposed_to_public": false, "protocol": "TCP" }
-                ],
-                "execution_config": {
-                    "environment_variables": [
-                        { "name": "ALLOW_EMPTY_PASSWORD", "value": "yes" }
-                    ]
-                }
-            }
-        ],
-        "connections": [
-            {
-                "kind": "env",
-                "from": { "type": "addon/postgres", "id": "<POSTGRES_ADDON_ID>" },
-                "to": { "type": "stack_resource", "name": "infisical" },
-                "config": { "database": "infisical" },
-                "mappings": [
-                    { "target": { "type": "env", "name": "DB_CONNECTION_URI" }, "value": { "output": "url" } }
-                ]
-            },
-            {
-                "kind": "env",
-                "from": { "type": "stack_resource", "name": "redis" },
-                "to": { "type": "stack_resource", "name": "infisical" },
-                "mappings": [
-                    {
-                        "target": { "type": "env", "name": "REDIS_URL" },
-                        "value": {
-                            "template": "redis://{{ host }}:6379",
-                            "values": { "host": { "output": "host" } }
-                        }
-                    }
-                ]
-            }
-        ]
+  "name": "infisical",
+  "labels": [
+    {
+      "key": "app",
+      "value": "infisical"
     }
+  ],
+  "spec": {
+    "stack_resources": [
+      {
+        "name": "infisical",
+        "ports": [
+          {
+            "name": "http",
+            "number": 8080,
+            "exposed_to_public": true,
+            "subdomain_prefix": "infisical",
+            "protocol": "HTTP"
+          }
+        ],
+        "execution_config": {
+          "environment_variables": [
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "ENCRYPTION_KEY",
+              "value": "6c1fe4e407b8911c104518103505b218"
+            },
+            {
+              "name": "AUTH_SECRET",
+              "value": "5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE="
+            },
+            {
+              "name": "ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT",
+              "value": "true"
+            },
+            {
+              "name": "NODE_TLS_REJECT_UNAUTHORIZED",
+              "value": "0"
+            },
+            {
+              "name": "SITE_URL",
+              "self_output": "public.http.url"
+            }
+          ]
+        },
+        "depends_on": [
+          "redis"
+        ],
+        "source": {
+          "image": {
+            "ref": "infisical/infisical:latest"
+          }
+        }
+      },
+      {
+        "name": "redis",
+        "ports": [
+          {
+            "name": "redis",
+            "number": 6379,
+            "exposed_to_public": false,
+            "protocol": "TCP"
+          }
+        ],
+        "execution_config": {
+          "environment_variables": [
+            {
+              "name": "ALLOW_EMPTY_PASSWORD",
+              "value": "yes"
+            }
+          ]
+        },
+        "source": {
+          "image": {
+            "ref": "redis:latest"
+          }
+        }
+      }
+    ],
+    "connections": [
+      {
+        "kind": "env",
+        "from": {
+          "type": "addon/postgres",
+          "id": "<POSTGRES_ADDON_ID>"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "infisical"
+        },
+        "config": {
+          "database": "infisical"
+        },
+        "mappings": [
+          {
+            "target": {
+              "type": "env",
+              "name": "DB_CONNECTION_URI"
+            },
+            "value": {
+              "output": "url"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "env",
+        "from": {
+          "type": "stack_resource",
+          "name": "redis"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "infisical"
+        },
+        "mappings": [
+          {
+            "target": {
+              "type": "env",
+              "name": "REDIS_URL"
+            },
+            "value": {
+              "template": "redis://{{ host }}:6379",
+              "values": {
+                "host": {
+                  "output": "host"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
 }
