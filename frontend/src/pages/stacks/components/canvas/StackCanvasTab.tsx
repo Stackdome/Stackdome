@@ -53,6 +53,7 @@ import {
   entryKey,
   type DrawerEntry,
 } from "@/pages/stacks/lib/canvas/drawer-stack";
+import { computeDrawerInset } from "@/pages/stacks/lib/canvas/drawer-inset";
 import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./nodes/node-glyph";
 import { HardDrive } from "lucide-react";
@@ -145,8 +146,22 @@ function StackCanvasFlow({
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
   const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
   const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
-  const { fitView, getIntersectingNodes } = useReactFlow();
+  const { fitView, getIntersectingNodes, getViewport, setViewport } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
+
+  // When the drawer claims/releases horizontal space, the canvas container is
+  // squeezed from the right. Pan the viewport by half that delta so the point
+  // that was at the visible center stays centered — nodes glide left with the
+  // drawer instead of sitting still while the container shrinks around them.
+  const prevDrawerInsetRef = useRef(0);
+  useEffect(() => {
+    const inset = computeDrawerInset(drawerStack.length, window.innerWidth);
+    const delta = inset - prevDrawerInsetRef.current;
+    prevDrawerInsetRef.current = inset;
+    if (delta === 0) return;
+    const vp = getViewport();
+    void setViewport({ ...vp, x: vp.x - delta / 2 }, { duration: 260 });
+  }, [drawerStack.length, getViewport, setViewport]);
 
   const isFloatingVolume = (node: CanvasFlowNode) =>
     node.type === "attachment" && (node.data as AttachmentNodeData).kind === NODE_KIND.volume;

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { Activity, ChevronDown, ChevronRight, FileDiff, History, LayoutGrid, Loader2, MoreHorizontal, Pencil, Rocket, ScrollText, Trash2, Undo2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AutosaveStatus } from "./AutosaveStatus";
+import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 import { PublicEndpointRow, type PublicEndpoint } from "./PublicEndpointRow";
 
@@ -122,6 +123,12 @@ export function CanvasEditorShell({
   logs,
   metrics,
 }: CanvasEditorShellProps) {
+  // Horizontal space (px from the viewport's right edge) claimed by the
+  // floating drawer stack; header rows and the canvas shift left by this much
+  // so the drawer pushes content instead of covering it.
+  const [drawerInset, setDrawerInset] = useState(0);
+  const drawerInsetCtx = useMemo(() => ({ setInset: setDrawerInset }), []);
+
   const collapseKey = `${COLLAPSE_KEY_PREFIX}${stackId ?? DRAFT_COLLAPSE_ID}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
@@ -242,7 +249,10 @@ export function CanvasEditorShell({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {collapsed && (
-        <div className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 animate-in fade-in slide-in-from-top-1 duration-300">
+        <div
+          className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+          style={{ marginRight: drawerInset }}
+        >
           <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
           {statusState && (
             <span
@@ -284,7 +294,10 @@ export function CanvasEditorShell({
       {!collapsed && (
         <>
           {/* Stack-title header — identity only (fade/translate on expand per design sd-fade) */}
-          <div className="flex-none px-7 pt-6 animate-in fade-in slide-in-from-top-1 duration-300">
+          <div
+            className="flex-none px-7 pt-6 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+            style={{ marginRight: drawerInset }}
+          >
             {/* Chevron sits at the row's right so the title stays flush-left with
                 the subtitle + endpoints below it (no collapse-toggle indent). */}
             <div className="flex items-center gap-3.5">
@@ -327,7 +340,10 @@ export function CanvasEditorShell({
           </div>
 
           {/* Tab + action rail */}
-          <div className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] animate-in fade-in slide-in-from-top-1 duration-300">
+          <div
+            className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+            style={{ marginRight: drawerInset }}
+          >
             {EDITOR_TABS.map(({ id, label, Icon }) => {
               const active = activeTab === id;
               return (
@@ -363,7 +379,9 @@ export function CanvasEditorShell({
       {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
           ops views overlay it. Ops views own their own max-width + padding. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="absolute inset-0">{architecture}</div>
+        <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: drawerInset }}>
+          <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
+        </div>
         {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
       </div>
     </div>
