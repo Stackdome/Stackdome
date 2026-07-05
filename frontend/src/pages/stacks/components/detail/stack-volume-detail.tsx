@@ -32,9 +32,9 @@ export default function StackVolumeDetail({
   onEdit,
   onDiscard,
 }: StackVolumeDetailProps) {
-  // Determine status color based on volume.status.phase
+  // Status label text; the dot color derives from volumeDotClass.
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
-  const status = statusObj.phase?.toLowerCase() || 'pending';
+  const status = statusObj.phase?.toLowerCase() || 'unknown';
   const statusColor = volumeDotClass(statusObj.phase);
 
   // Helper to find resources that mount this volume

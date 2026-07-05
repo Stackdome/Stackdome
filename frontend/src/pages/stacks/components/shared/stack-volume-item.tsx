@@ -33,7 +33,7 @@ export default function StackVolumeItem({
   allStackResources = [],
 }: StackVolumeItemProps) {
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
-  const status = statusObj.phase?.toLowerCase() || 'pending';
+  const status = statusObj.phase?.toLowerCase() || 'unknown';
   const statusColor = volumeDotClass(statusObj.phase);
 
   const mountingInfo = volumeMountingInfo(volume, allStackResources);
