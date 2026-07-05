@@ -48,17 +48,16 @@ export function WizardChooser({
 }: WizardChooserProps) {
   const alts: AltStart[] = [
     {
+      icon: Grid3x3,
+      label: "Build from blocks",
+      desc: "Assemble web, Postgres, Redis, and workers — fully configured.",
+      onClick: onPickBlocks,
+    },
+    {
       icon: LayoutTemplate,
       label: "From template",
       desc: "Curated self-hosted apps, ready to deploy.",
       onClick: onPickTemplate,
-    },
-    {
-      icon: GitBranch,
-      label: "GitHub repo",
-      desc: "Auto-detect build & start.",
-      disabled: true,
-      soon: true,
     },
     {
       glyph: DockerGlyph,
@@ -71,6 +70,13 @@ export function WizardChooser({
       label: "Blank slate",
       desc: "Build it up yourself.",
       onClick: onPickBlank,
+    },
+    {
+      icon: GitBranch,
+      label: "GitHub repo",
+      desc: "Auto-detect build & start.",
+      disabled: true,
+      soon: true,
     },
   ];
 
@@ -85,44 +91,6 @@ export function WizardChooser({
             Let&apos;s get something running. Pick a starting point. You can
             change anything later.
           </p>
-        </div>
-
-        {/* Primary tile */}
-        <button
-          type="button"
-          onClick={onPickBlocks}
-          className="mb-6 flex w-full items-center gap-4 rounded-lg border border-primary bg-card p-5 text-left transition-colors hover:bg-card/80"
-        >
-          <span className="flex h-[54px] w-[54px] flex-none items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Grid3x3 className="h-7 w-7" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="mb-0.5 flex items-center gap-2">
-              <span className="text-base font-medium text-foreground">
-                Build from blocks
-              </span>
-              <span className="rounded-full border border-primary px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-primary">
-                Recommended
-              </span>
-            </span>
-            <span className="block text-sm text-muted-foreground">
-              Assemble from recognizable building blocks like web, Postgres,
-              Redis, and workers. Known software lands fully configured.
-            </span>
-          </span>
-          {/*
-            Rendered as a <span> (not <Button>) to avoid a nested <button> inside
-            this <button> tile, which is invalid HTML. The outer button already
-            has the accessible name "Compose blocks" via its text content, so the
-            test's getByRole("button", { name: /Compose blocks/i }) still matches.
-          */}
-          <span className="inline-flex flex-none cursor-default items-center gap-1.5 rounded-sm bg-primary px-3 py-2 text-sm font-medium text-primary-foreground">
-            Compose blocks <ArrowRight className="h-4 w-4" />
-          </span>
-        </button>
-
-        <div className="mb-4 text-center font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-          OR START FROM
         </div>
 
         <div className="grid grid-cols-2 gap-2.5">

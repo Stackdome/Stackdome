@@ -9,7 +9,7 @@ afterEach(cleanup);
 
 const base = {
   statusState: null, subtitle: "0 services · 0 volumes",
-  activeTab: "configuration", onTabChange: () => {},
+  activeTab: "architecture", onTabChange: () => {},
   isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
   onViewChanges: () => {},
   syncStatus: SYNC_STATUS.idle,
@@ -17,7 +17,7 @@ const base = {
   onDraftDeploy: () => {}, draftDeploying: false,
   onDeploy: () => {}, onDelete: () => {},
   canDiscardDraft: false, canDeleteStack: true,
-  configuration: <div />, deployments: <div />, logs: <div />, metrics: <div />,
+  architecture: <div />, deployments: <div />, logs: <div />, metrics: <div />,
 };
 
 describe("CanvasEditorShell header", () => {

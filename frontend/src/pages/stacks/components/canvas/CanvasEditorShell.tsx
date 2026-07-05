@@ -20,7 +20,7 @@ const DRAFT_COLLAPSE_ID = "draft";
 
 /** The four editor modes, in display order. Icons per the design bundle. */
 const EDITOR_TABS = [
-  { id: "configuration", label: "Configuration", Icon: LayoutGrid },
+  { id: "architecture", label: "Architecture", Icon: LayoutGrid },
   { id: "deployments", label: "Deployments", Icon: History },
   { id: "logs", label: "Logs", Icon: ScrollText },
   { id: "metrics", label: "Metrics", Icon: Activity },
@@ -75,7 +75,7 @@ export interface CanvasEditorShellProps {
   publicEndpoints?: PublicEndpoint[];
 
   // ── mode bodies (rendered by active tab) ──
-  configuration: ReactNode;
+  architecture: ReactNode;
   deployments: ReactNode;
   logs: ReactNode;
   metrics: ReactNode;
@@ -117,7 +117,7 @@ export function CanvasEditorShell({
   onDelete,
   canDeleteStack,
   publicEndpoints,
-  configuration,
+  architecture,
   deployments,
   logs,
   metrics,
@@ -344,7 +344,7 @@ export function CanvasEditorShell({
                 >
                   <Icon className="size-[15px]" />
                   {label}
-                  {id === "configuration" && dirtyResourceCount > 0 && (
+                  {id === "architecture" && dirtyResourceCount > 0 && (
                     <span className="ml-0.5 rounded-full bg-brand-bg px-1.5 py-px font-mono text-[9.5px] font-medium text-brand">
                       {dirtyResourceCount}
                     </span>
@@ -363,7 +363,7 @@ export function CanvasEditorShell({
       {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
           ops views overlay it. Ops views own their own max-width + padding. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="absolute inset-0">{configuration}</div>
+        <div className="absolute inset-0">{architecture}</div>
         {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
       </div>
     </div>

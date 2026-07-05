@@ -133,7 +133,7 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const [activeTab, setActiveTab] = useState("configuration");
+  const [activeTab, setActiveTab] = useState("architecture");
   const [draftDeploying, setDraftDeploying] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
 
@@ -790,7 +790,7 @@ export default function StackDetailPage() {
         canDeleteStack={canWriteStack}
         onDelete={() => setDeleteConfirmOpen(true)}
         publicEndpoints={publicEndpoints}
-        configuration={
+        architecture={
           <StackCanvasTab
             session={session}
             baselineResources={baselineResources}
