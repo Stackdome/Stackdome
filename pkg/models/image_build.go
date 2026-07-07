@@ -70,9 +70,8 @@ func (b *BuildConfigSpec) Validate() error {
 		}
 	}
 	if rev.Git != nil {
-		if rev.Git.Branch == "" && rev.Git.Tag == "" {
-			return errors.New("source_revision.git: a branch or tag is required (the commit SHA is resolved at release time)")
-		}
+		// Branch and tag may both be empty: the repository's default branch
+		// is resolved at release time.
 		if rev.Git.Branch != "" && rev.Git.Tag != "" {
 			return errors.New("source_revision.git: branch and tag cannot both be set")
 		}

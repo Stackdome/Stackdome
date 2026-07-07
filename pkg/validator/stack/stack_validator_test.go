@@ -970,7 +970,7 @@ func TestValidateForCreateRejectsReplicasOnJobCronJob(t *testing.T) {
 	}
 }
 
-func TestBuildConfigSpecValidateRejectsCommitOnly(t *testing.T) {
+func TestBuildConfigSpecValidateAcceptsCommitOnly(t *testing.T) {
 	cfg := models.BuildConfigSpec{
 		SourceContext: models.BuildContextSource{
 			Volume: &models.VolumeBuildSource{SourceVolumeName: "src"},
@@ -981,14 +981,8 @@ func TestBuildConfigSpecValidateRejectsCommitOnly(t *testing.T) {
 		BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
 	}
 	err := cfg.Validate()
-	if err == nil {
-		t.Fatal("expected commit-only git revision to be rejected")
-	}
-	if got, want := err.Error(), "a branch or tag is required"; got != want {
-		// The error message may include a prefix; check containment
-		if got != want && !containsSubstr(got, want) {
-			t.Fatalf("unexpected error: got %q want it to contain %q", got, want)
-		}
+	if err != nil {
+		t.Fatalf("expected commit-only git revision to validate, got %v", err)
 	}
 }
 
