@@ -660,9 +660,10 @@ const StackConnection = z
 const StackSpec = z
   .object({
     stack_resources: z.array(StackResource),
-    volumes: z.array(Volume).optional(),
-    connections: z.array(StackConnection).optional(),
+    volumes: z.array(Volume),
+    connections: z.array(StackConnection),
   })
+  .partial()
   .passthrough();
 const StackSettings = z
   .object({
@@ -5335,6 +5336,10 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/v1/organizations/:org_id/teams/:team_name/stacks",
     alias: "postApiv1organizationsOrg_idteamsTeam_namestacks",
+    description: `Creates a thin stack shell (name, labels, annotations, settings). Any inline
+&#x60;stack_resources&#x60;, &#x60;volumes&#x60;, or &#x60;connections&#x60; in the body are ignored — add
+children via &#x60;PUT /stacks/{id}/apply&#x60; or the individual sub-resource endpoints.
+`,
     requestFormat: "json",
     parameters: [
       {
@@ -5458,6 +5463,10 @@ const endpoints = makeApi([
     method: "put",
     path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id",
     alias: "putApiv1organizationsOrg_idteamsTeam_namestacksId",
+    description: `Updates only shell fields (name, labels, annotations, settings). &#x60;namespace&#x60; is
+immutable. Child collections (&#x60;stack_resources&#x60;, &#x60;volumes&#x60;, &#x60;connections&#x60;) in the
+body are ignored — use &#x60;PUT /stacks/{id}/apply&#x60; for a full reconcile.
+`,
     requestFormat: "json",
     parameters: [
       {
@@ -5524,6 +5533,57 @@ const endpoints = makeApi([
     ],
     response: Stack,
     errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/apply",
+    alias: "applyStack",
+    description: `Declarative whole-document apply. Reconciles the stack against the supplied
+document: resources and connections not present in the body are deleted, while
+volumes are add-only and are never deleted. This is the only endpoint that
+accepts a full stack document.
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Stack,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
       {
         status: 401,
         description: `Unauthorized`,
@@ -6088,6 +6148,62 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources",
+    alias: "createStackResource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackResource,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Stack resource already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
     method: "get",
     path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
     alias:
@@ -6120,6 +6236,108 @@ const endpoints = makeApi([
       {
         status: 401,
         description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
+    alias: "updateStackResource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackResource,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or resource not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
+    alias: "deleteStackResource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or resource not found`,
         schema: z.void(),
       },
       {

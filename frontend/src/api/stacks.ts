@@ -58,6 +58,13 @@ export async function updateStack(orgId: string, teamName: string, stackId: stri
   return response.data;
 }
 
+// Declarative reconcile: the only endpoint that accepts a full stack document
+// (resources/volumes/connections inline). POST/PUT stacks ignore inline children.
+export async function applyStack(orgId: string, teamName: string, stackId: string, input: StackUpdateRequest): Promise<Stack> {
+  const response = await api.put<Stack>(`/organizations/${orgId}/teams/${teamName}/stacks/${stackId}/apply`, input);
+  return response.data;
+}
+
 export async function deleteStack(orgId: string, teamName: string, stackId: string): Promise<void> {
   await api.delete(`/organizations/${orgId}/teams/${teamName}/stacks/${stackId}`);
 }
