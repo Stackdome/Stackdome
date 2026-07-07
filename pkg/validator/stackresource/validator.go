@@ -83,9 +83,3 @@ func (v *validator) Validate(ctx context.Context, stack *models.Stack, resource 
 	errs = append(errs, validateSiblingRules(resource, siblings)...)
 	return errs, nil
 }
-
-// validateSiblingRules is a placeholder until Task 5 lands cross-resource
-// checks within the same stack (duplicate names, dependency cycles, etc).
-func validateSiblingRules(resource *models.StackResource, siblings []*models.StackResource) []errors.FieldError {
-	return nil
-}
