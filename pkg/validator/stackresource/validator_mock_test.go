@@ -43,11 +43,12 @@ func (m *MockValidator) EXPECT() *MockValidatorMockRecorder {
 }
 
 // Validate mocks base method.
-func (m *MockValidator) Validate(ctx context.Context, stack *models.Stack, resource *models.StackResource, siblings []*models.StackResource) []errors.FieldError {
+func (m *MockValidator) Validate(ctx context.Context, stack *models.Stack, resource *models.StackResource, siblings []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Validate", ctx, stack, resource, siblings)
 	ret0, _ := ret[0].([]errors.FieldError)
-	return ret0
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
 }
 
 // Validate indicates an expected call of Validate.
@@ -171,4 +172,43 @@ func (m *MockdomainLister) ListByOrganisationID(ctx context.Context, organisatio
 func (mr *MockdomainListerMockRecorder) ListByOrganisationID(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganisationID", reflect.TypeOf((*MockdomainLister)(nil).ListByOrganisationID), ctx, organisationID)
+}
+
+// MockgitIntegrationGetter is a mock of gitIntegrationGetter interface.
+type MockgitIntegrationGetter struct {
+	ctrl     *gomock.Controller
+	recorder *MockgitIntegrationGetterMockRecorder
+	isgomock struct{}
+}
+
+// MockgitIntegrationGetterMockRecorder is the mock recorder for MockgitIntegrationGetter.
+type MockgitIntegrationGetterMockRecorder struct {
+	mock *MockgitIntegrationGetter
+}
+
+// NewMockgitIntegrationGetter creates a new mock instance.
+func NewMockgitIntegrationGetter(ctrl *gomock.Controller) *MockgitIntegrationGetter {
+	mock := &MockgitIntegrationGetter{ctrl: ctrl}
+	mock.recorder = &MockgitIntegrationGetterMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockgitIntegrationGetter) EXPECT() *MockgitIntegrationGetterMockRecorder {
+	return m.recorder
+}
+
+// InternalGetByID mocks base method.
+func (m *MockgitIntegrationGetter) InternalGetByID(ctx context.Context, ID string) (*models.GitIntegration, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetByID", ctx, ID)
+	ret0, _ := ret[0].(*models.GitIntegration)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetByID indicates an expected call of InternalGetByID.
+func (mr *MockgitIntegrationGetterMockRecorder) InternalGetByID(ctx, ID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetByID", reflect.TypeOf((*MockgitIntegrationGetter)(nil).InternalGetByID), ctx, ID)
 }

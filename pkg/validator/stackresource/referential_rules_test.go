@@ -39,10 +39,27 @@ var _ = Describe("validateReferences", func() {
 		r := validImageResource()
 		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "data", TargetPath: "/data"}}
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrVolumeNotFound))
 		Expect(fields(errs)).To(HaveKey("volume_mounts[0].source_volume"))
+	})
+
+	It("propagates a non-404 volume lookup error instead of masking it as not-found", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByVolumeNameAndNamespace(gomock.Any(), "data", "ns-1").
+			Return(nil, errors.GeneralError("db unavailable"))
+
+		v := &validator{volumes: volumes}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "data", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).NotTo(BeNil())
+		Expect(errs).To(BeEmpty())
 	})
 
 	It("reports a missing env secret", func() {
@@ -57,10 +74,29 @@ var _ = Describe("validateReferences", func() {
 			Name: "KEY", SecretKeyRef: &models.EnvSecretRef{SecretName: "api-secrets", Key: "k"},
 		}}}
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrSecretNotFound))
 		Expect(fields(errs)).To(HaveKey("execution_config.env[0].secret_key_ref.secret_name"))
+	})
+
+	It("propagates a non-404 secret lookup error instead of masking it as not-found", func() {
+		secrets := NewMocksecretGetter(ctrl)
+		secrets.EXPECT().
+			GetByName(gomock.Any(), "org-1", "api-secrets").
+			Return(nil, errors.GeneralError("db unavailable"))
+
+		v := &validator{secrets: secrets}
+		r := validImageResource()
+		r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{{
+			Name: "KEY", SecretKeyRef: &models.EnvSecretRef{SecretName: "api-secrets", Key: "k"},
+		}}}
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).NotTo(BeNil())
+		Expect(errs).To(BeEmpty())
 	})
 
 	It("reports a public port with no organisation domain configured", func() {
@@ -73,10 +109,27 @@ var _ = Describe("validateReferences", func() {
 		r := validImageResource()
 		r.Ports[0].ExposedToPublic = true
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrDomainNotConfigured))
 		Expect(fields(errs)).To(HaveKey("ports[0]"))
+	})
+
+	It("propagates a non-404 domain lookup error instead of masking it as not-found", func() {
+		domains := NewMockdomainLister(ctrl)
+		domains.EXPECT().
+			ListByOrganisationID(gomock.Any(), "org-1").
+			Return(nil, errors.GeneralError("db unavailable"))
+
+		v := &validator{domains: domains}
+		r := validImageResource()
+		r.Ports[0].ExposedToPublic = true
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).NotTo(BeNil())
+		Expect(errs).To(BeEmpty())
 	})
 
 	It("reports a missing pull registry credential", func() {
@@ -90,10 +143,28 @@ var _ = Describe("validateReferences", func() {
 		r := validImageResource()
 		r.ImageConfig.RegistryCredentialID = "cred-1"
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrRegistryCredentialNotFound))
 		Expect(fields(errs)).To(HaveKey("source.image.registry_credentials_id"))
+	})
+
+	It("propagates a non-404 pull registry credential lookup error instead of masking it as not-found", func() {
+		mockCreds := mocks.NewMockCredentialResolver(ctrl)
+		mockCreds.EXPECT().
+			RegistryCredentials(gomock.Any(), "org-1", "nginx:latest", credentials.RegistryPurposePull,
+				credentials.RegistryAuthSelector{RegistryCredentialID: "cred-1"}).
+			Return(nil, errors.GeneralError("db unavailable"))
+
+		v := &validator{credentials: mockCreds}
+		r := validImageResource()
+		r.ImageConfig.RegistryCredentialID = "cred-1"
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).NotTo(BeNil())
+		Expect(errs).To(BeEmpty())
 	})
 
 	It("reports a missing push registry credential", func() {
@@ -108,27 +179,61 @@ var _ = Describe("validateReferences", func() {
 		r.BuildConfig.PushRegistryCredentialID = "cred-2"
 		r.BuildConfig.BuildImageRepository.ExternalImageRef = "registry.example.com/app"
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrRegistryCredentialNotFound))
 		Expect(fields(errs)).To(HaveKey("source.git.push.registry_credentials_id"))
 	})
 
 	It("reports a missing git integration", func() {
-		mockCreds := mocks.NewMockCredentialResolver(ctrl)
-		mockCreds.EXPECT().
-			GitCredentials(gomock.Any(), "org-1", "https://github.com/example/repo.git",
-				credentials.GitAuthSelector{IntegrationID: "gi-1"}).
+		gitIntegrations := NewMockgitIntegrationGetter(ctrl)
+		gitIntegrations.EXPECT().
+			InternalGetByID(gomock.Any(), "gi-1").
 			Return(nil, errors.NotFound("git integration not found"))
 
-		v := &validator{credentials: mockCreds}
+		v := &validator{gitIntegrations: gitIntegrations}
 		r := validBuildResource()
 		r.BuildConfig.SourceContext.Git.IntegrationID = "gi-1"
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrGitIntegrationNotFound))
 		Expect(fields(errs)).To(HaveKey("source.git.integration_id"))
+	})
+
+	It("reports a git integration that belongs to a different organisation as not found", func() {
+		gitIntegrations := NewMockgitIntegrationGetter(ctrl)
+		gitIntegrations.EXPECT().
+			InternalGetByID(gomock.Any(), "gi-1").
+			Return(&models.GitIntegration{ID: "gi-1", OrganisationID: "org-other"}, nil)
+
+		v := &validator{gitIntegrations: gitIntegrations}
+		r := validBuildResource()
+		r.BuildConfig.SourceContext.Git.IntegrationID = "gi-1"
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).To(BeNil())
+		Expect(codes(errs)).To(HaveKey(errors.VErrGitIntegrationNotFound))
+		Expect(fields(errs)).To(HaveKey("source.git.integration_id"))
+	})
+
+	It("propagates a non-404 git integration lookup error instead of masking it as not-found", func() {
+		gitIntegrations := NewMockgitIntegrationGetter(ctrl)
+		gitIntegrations.EXPECT().
+			InternalGetByID(gomock.Any(), "gi-1").
+			Return(nil, errors.GeneralError("db unavailable"))
+
+		v := &validator{gitIntegrations: gitIntegrations}
+		r := validBuildResource()
+		r.BuildConfig.SourceContext.Git.IntegrationID = "gi-1"
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).NotTo(BeNil())
+		Expect(errs).To(BeEmpty())
 	})
 
 	It("reports a missing build-context volume", func() {
@@ -141,8 +246,9 @@ var _ = Describe("validateReferences", func() {
 		r := validBuildResourceWithVolumeSource()
 		r.BuildConfig.SourceContext.Volume.SourceVolumeName = "build-src"
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(codes(errs)).To(HaveKey(errors.VErrVolumeNotFound))
 		Expect(fields(errs)).To(HaveKey("source.volume"))
 	})
@@ -178,8 +284,9 @@ var _ = Describe("validateReferences", func() {
 			Name: "KEY", SecretKeyRef: &models.EnvSecretRef{SecretName: "api-secrets", Key: "k"},
 		}}}
 
-		errs := v.validateReferences(context.Background(), testStack(), r)
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 
+		Expect(serr).To(BeNil())
 		Expect(errs).To(BeEmpty())
 	})
 })

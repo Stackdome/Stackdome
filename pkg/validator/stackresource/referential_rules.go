@@ -11,19 +11,42 @@ import (
 
 // validateReferences checks that everything the resource points at outside
 // itself actually exists: volumes, secrets, credentials, org domains.
-// DB lookups only — never the network.
-func (v *validator) validateReferences(ctx context.Context, stack *models.Stack, resource *models.StackResource) []errors.FieldError {
+// DB lookups only - never the network. A non-nil ServiceError means a
+// lookup failed for a reason other than not-found and validation was
+// aborted.
+func (v *validator) validateReferences(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	var errs []errors.FieldError
-	errs = append(errs, v.validateMountedVolumes(ctx, stack, resource)...)
-	errs = append(errs, v.validateEnvSecrets(ctx, stack, resource)...)
-	errs = append(errs, v.validateCredentialRefs(ctx, stack, resource)...)
-	errs = append(errs, v.validateExposedPortDomain(ctx, stack, resource)...)
-	return errs
+
+	volumeErrs, serr := v.validateMountedVolumes(ctx, stack, resource)
+	if serr != nil {
+		return nil, serr
+	}
+	errs = append(errs, volumeErrs...)
+
+	secretErrs, serr := v.validateEnvSecrets(ctx, stack, resource)
+	if serr != nil {
+		return nil, serr
+	}
+	errs = append(errs, secretErrs...)
+
+	credErrs, serr := v.validateCredentialRefs(ctx, stack, resource)
+	if serr != nil {
+		return nil, serr
+	}
+	errs = append(errs, credErrs...)
+
+	domainErrs, serr := v.validateExposedPortDomain(ctx, stack, resource)
+	if serr != nil {
+		return nil, serr
+	}
+	errs = append(errs, domainErrs...)
+
+	return errs, nil
 }
 
-func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.Stack, resource *models.StackResource) []errors.FieldError {
+func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	if v.volumes == nil {
-		return nil
+		return nil, nil
 	}
 	var errs []errors.FieldError
 	for i, m := range resource.VolumeMounts {
@@ -31,6 +54,9 @@ func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.St
 			continue // shape error already reported by input rules
 		}
 		if _, serr := v.volumes.GetByVolumeNameAndNamespace(ctx, m.SourceVolumeName, stack.Namespace); serr != nil {
+			if !serr.Is404() {
+				return nil, serr
+			}
 			errs = append(errs, fieldErr(fmt.Sprintf("volume_mounts[%d].source_volume", i), errors.VErrVolumeNotFound,
 				"volume '%s' does not exist", m.SourceVolumeName))
 		}
@@ -39,17 +65,20 @@ func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.St
 		name := resource.BuildConfig.SourceContext.Volume.SourceVolumeName
 		if name != "" {
 			if _, serr := v.volumes.GetByVolumeNameAndNamespace(ctx, name, stack.Namespace); serr != nil {
+				if !serr.Is404() {
+					return nil, serr
+				}
 				errs = append(errs, fieldErr("source.volume", errors.VErrVolumeNotFound,
 					"build source volume '%s' does not exist", name))
 			}
 		}
 	}
-	return errs
+	return errs, nil
 }
 
-func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack, resource *models.StackResource) []errors.FieldError {
+func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	if v.secrets == nil || resource.ExecutionConfig == nil {
-		return nil
+		return nil, nil
 	}
 	var errs []errors.FieldError
 	checked := map[string]bool{}
@@ -60,48 +89,62 @@ func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack,
 		}
 		checked[ref.SecretName] = true
 		if _, serr := v.secrets.GetByName(ctx, stack.OrganisationID, ref.SecretName); serr != nil {
+			if !serr.Is404() {
+				return nil, serr
+			}
 			errs = append(errs, fieldErr(fmt.Sprintf("execution_config.env[%d].secret_key_ref.secret_name", i),
 				errors.VErrSecretNotFound, "secret '%s' does not exist", ref.SecretName))
 		}
 	}
-	return errs
+	return errs, nil
 }
 
-func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.Stack, resource *models.StackResource) []errors.FieldError {
-	if v.credentials == nil {
-		return nil
-	}
+func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	var errs []errors.FieldError
 
-	if id := resource.RegistryPullCredentialID(); id != "" {
-		if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID, resource.ImageConfig.Image,
-			credentials.RegistryPurposePull, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
-			errs = append(errs, fieldErr("source.image.registry_credentials_id",
-				errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
+	if v.credentials != nil {
+		if id := resource.RegistryPullCredentialID(); id != "" {
+			if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID, resource.ImageConfig.Image,
+				credentials.RegistryPurposePull, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
+				if !serr.Is404() {
+					return nil, serr
+				}
+				errs = append(errs, fieldErr("source.image.registry_credentials_id",
+					errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
+			}
+		}
+		if id := resource.RegistryPushCredentialID(); id != "" {
+			if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID,
+				resource.BuildConfig.BuildImageRepository.ExternalImageRef,
+				credentials.RegistryPurposePush, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
+				if !serr.Is404() {
+					return nil, serr
+				}
+				errs = append(errs, fieldErr("source.git.push.registry_credentials_id",
+					errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
+			}
 		}
 	}
-	if id := resource.RegistryPushCredentialID(); id != "" {
-		if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID,
-			resource.BuildConfig.BuildImageRepository.ExternalImageRef,
-			credentials.RegistryPurposePush, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
-			errs = append(errs, fieldErr("source.git.push.registry_credentials_id",
-				errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
+
+	// Existence check only - deliberately bypasses credentials.Resolver here.
+	// The resolver's GitCredentials mints a GitHub App installation token
+	// over the network for github_app integrations; this seam is DB-only.
+	if id := resource.GitIntegrationID(); id != "" && v.gitIntegrations != nil {
+		integration, serr := v.gitIntegrations.InternalGetByID(ctx, id)
+		if serr != nil && !serr.Is404() {
+			return nil, serr
 		}
-	}
-	if id := resource.GitIntegrationID(); id != "" {
-		if _, serr := v.credentials.GitCredentials(ctx, stack.OrganisationID,
-			resource.BuildConfig.SourceContext.Git.RepoURL,
-			credentials.GitAuthSelector{IntegrationID: id}); serr != nil {
+		if serr != nil || integration.OrganisationID != stack.OrganisationID {
 			errs = append(errs, fieldErr("source.git.integration_id",
 				errors.VErrGitIntegrationNotFound, "git integration '%s' does not exist", id))
 		}
 	}
-	return errs
+	return errs, nil
 }
 
-func (v *validator) validateExposedPortDomain(ctx context.Context, stack *models.Stack, resource *models.StackResource) []errors.FieldError {
+func (v *validator) validateExposedPortDomain(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	if v.domains == nil {
-		return nil
+		return nil, nil
 	}
 	exposedIdx := -1
 	for i, p := range resource.Ports {
@@ -111,12 +154,15 @@ func (v *validator) validateExposedPortDomain(ctx context.Context, stack *models
 		}
 	}
 	if exposedIdx == -1 {
-		return nil
+		return nil, nil
 	}
 	domains, serr := v.domains.ListByOrganisationID(ctx, stack.OrganisationID)
-	if serr != nil || len(domains) == 0 {
-		return []errors.FieldError{fieldErr(fmt.Sprintf("ports[%d]", exposedIdx), errors.VErrDomainNotConfigured,
-			"organisation has no domain configured; cannot expose ports to public")}
+	if serr != nil && !serr.Is404() {
+		return nil, serr
 	}
-	return nil
+	if len(domains) == 0 {
+		return []errors.FieldError{fieldErr(fmt.Sprintf("ports[%d]", exposedIdx), errors.VErrDomainNotConfigured,
+			"organisation has no domain configured; cannot expose ports to public")}, nil
+	}
+	return nil, nil
 }
