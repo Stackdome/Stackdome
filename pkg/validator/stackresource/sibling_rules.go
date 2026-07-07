@@ -46,15 +46,15 @@ func validateSiblingRules(resource *models.StackResource, siblings []*models.Sta
 // candidate resource. A cycle means the resources gate on each other forever
 // in the cluster.
 func hasDependencyCycle(resource *models.StackResource, siblings []*models.StackResource) bool {
-	graph := map[string][]string{resource.Name: resource.DependsOn}
+	graph := make(map[string][]string, len(siblings)+1)
 	for _, s := range siblings {
 		graph[s.Name] = s.DependsOn
 	}
+	graph[resource.Name] = resource.DependsOn
 
 	const (
-		unvisited = 0
-		inStack   = 1
-		done      = 2
+		inStack = 1
+		done    = 2
 	)
 	state := map[string]int{}
 	var visit func(name string) bool
