@@ -112,7 +112,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 			updatedImageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(shared.TestImage)}
 			updatedResource.SetSource(updatedImageSpecSource)
 			updatedResource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
-			updatedSpec := openapi.NewStackSpec([]openapi.StackResource{*updatedResource})
+			updatedSpec := openapi.NewStackSpec()
+			updatedSpec.SetStackResources([]openapi.StackResource{*updatedResource})
 			updatedStack := openapi.NewStack("test-release-ref", *updatedSpec)
 			updatedStack.SetAnnotations([]openapi.Annotation{
 				*openapi.NewAnnotation(shared.SkipProvisioningAnnotationKey, "true"),
@@ -178,7 +179,8 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 			updatedImageSpecSource := openapi.SourceSpec{Image: openapi.NewImageSource(shared.TestImage)}
 			updatedResource.SetSource(updatedImageSpecSource)
 			updatedResource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, false)})
-			updatedSpec := openapi.NewStackSpec([]openapi.StackResource{*updatedResource})
+			updatedSpec := openapi.NewStackSpec()
+			updatedSpec.SetStackResources([]openapi.StackResource{*updatedResource})
 			updatedStack := openapi.NewStack("test-failed-ref", *updatedSpec)
 			updatedStack.SetAnnotations([]openapi.Annotation{
 				*openapi.NewAnnotation(shared.SkipProvisioningAnnotationKey, "true"),
