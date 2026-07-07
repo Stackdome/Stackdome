@@ -38,6 +38,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
@@ -482,6 +483,18 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ReferenceService: referenceService,
 	})
 
+	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
+		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
+		Domains:         organisationDomainService,
+		Credentials:     credentialResolver,
+		GitIntegrations: gitIntegrationService,
+	})
+
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
 		SessionFactory:         d.DBSession,
 		Logger:                 d.Logger,
@@ -491,7 +504,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		ClusterRegistryService: imageRegistryService,
 		StackDomainService:     stackDomainService,
 		ReferenceService:       referenceService,
-		DefaultBranchResolver:  defaultBranchResolver,
+		ResourceValidator:      resourceValidator,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{

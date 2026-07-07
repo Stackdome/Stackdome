@@ -15,6 +15,8 @@ import (
 // network. A non-nil ServiceError means a lookup failed for reasons other
 // than not-found (e.g. a DB outage) and validation was aborted; the caller
 // should turn it into a 500 rather than trusting the (nil) FieldError slice.
+//
+//go:generate mockgen -destination=../../mocks/mock_stack_resource_validator.go -package=mocks github.com/Stackdome/stackdome/pkg/validator/stackresource Validator
 type Validator interface {
 	Validate(ctx context.Context, stack *models.Stack, resource *models.StackResource, siblings []*models.StackResource) ([]errors.FieldError, *errors.ServiceError)
 }

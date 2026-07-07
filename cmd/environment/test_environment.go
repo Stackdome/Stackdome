@@ -28,6 +28,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	inviteworker "github.com/Stackdome/stackdome/pkg/worker/invite"
 	postgresaddonworker "github.com/Stackdome/stackdome/pkg/worker/postgresaddon"
 	previewworker "github.com/Stackdome/stackdome/pkg/worker/preview"
@@ -367,6 +368,18 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ReferenceService: referenceService,
 	})
 
+	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
+		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
+		Domains:         organisationDomainService,
+		Credentials:     credentialResolver,
+		GitIntegrations: gitIntegrationService,
+	})
+
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
 		SessionFactory:         te.DBSession,
 		Logger:                 te.Logger,
@@ -376,7 +389,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ClusterRegistryService: imageRegistryService,
 		StackDomainService:     stackDomainService,
 		ReferenceService:       referenceService,
-		DefaultBranchResolver:  defaultBranchResolver,
+		ResourceValidator:      resourceValidator,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
