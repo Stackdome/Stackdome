@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**StackResources** | [**[]StackResource**](StackResource.md) |  | 
+**StackResources** | Pointer to [**[]StackResource**](StackResource.md) |  | [optional] 
 **Volumes** | Pointer to [**[]Volume**](Volume.md) |  | [optional] 
 **Connections** | Pointer to [**[]StackConnection**](StackConnection.md) |  | [optional] 
 
@@ -12,7 +12,7 @@ Name | Type | Description | Notes
 
 ### NewStackSpec
 
-`func NewStackSpec(stackResources []StackResource, ) *StackSpec`
+`func NewStackSpec() *StackSpec`
 
 NewStackSpec instantiates a new StackSpec object
 This constructor will assign default values to properties that have it defined,
@@ -46,6 +46,11 @@ and a boolean to check if the value has been set.
 
 SetStackResources sets StackResources field to given value.
 
+### HasStackResources
+
+`func (o *StackSpec) HasStackResources() bool`
+
+HasStackResources returns a boolean if a field has been set.
 
 ### GetVolumes
 

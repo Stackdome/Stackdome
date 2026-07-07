@@ -5,6 +5,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/handlers/validation"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/services"
@@ -40,6 +41,9 @@ func (h *stackResourceHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var resource openapi.StackResource
 	cfg := &handlerConfig{
 		MarshalInto: &resource,
+		Validate: func() *errors.ServiceError {
+			return validation.ValidateStackResource(&resource, nil)
+		},
 		Action: func() (interface{}, *errors.ServiceError) {
 			stackID := mux.Vars(r)["id"]
 			modelResource := presenters.ConvertStackResource(&resource)
@@ -58,6 +62,9 @@ func (h *stackResourceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var resource openapi.StackResource
 	cfg := &handlerConfig{
 		MarshalInto: &resource,
+		Validate: func() *errors.ServiceError {
+			return validation.ValidateStackResource(&resource, nil)
+		},
 		Action: func() (interface{}, *errors.ServiceError) {
 			stackID := mux.Vars(r)["id"]
 			resourceName := mux.Vars(r)["resource_name"]

@@ -193,6 +193,10 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersCurrentTeamsGet**](docs/DefaultApi.md#apiv1userscurrentteamsget) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1WebhooksGithubPost**](docs/DefaultApi.md#apiv1webhooksgithubpost) | **Post** /api/v1/webhooks/github | GitHub webhook receiver (unauthenticated, HMAC-verified)
+*DefaultApi* | [**ApplyStack**](docs/DefaultApi.md#applystack) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply | Apply a full stack document (declarative reconcile)
+*DefaultApi* | [**CreateStackResource**](docs/DefaultApi.md#createstackresource) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | Create a stack resource
+*DefaultApi* | [**DeleteStackResource**](docs/DefaultApi.md#deletestackresource) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Delete a stack resource
+*DefaultApi* | [**UpdateStackResource**](docs/DefaultApi.md#updatestackresource) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Update a stack resource
 *PreviewConfigsApi* | [**CreatePreviewConfig**](docs/PreviewConfigsApi.md#createpreviewconfig) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs | Create a new preview config
 *PreviewConfigsApi* | [**DeletePreviewConfig**](docs/PreviewConfigsApi.md#deletepreviewconfig) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Delete a preview config
 *PreviewConfigsApi* | [**GetPreviewConfig**](docs/PreviewConfigsApi.md#getpreviewconfig) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Get a specific preview config
