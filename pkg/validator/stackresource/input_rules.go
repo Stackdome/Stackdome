@@ -167,10 +167,6 @@ func validateWorkloadType(resource *models.StackResource) []errors.FieldError {
 		if *resource.Replicas < 0 {
 			errs = append(errs, fieldErr("replicas", errors.VErrReplicasInvalid, "replicas cannot be negative"))
 		}
-		if wt == models.WorkloadTypeStatefulService && *resource.Replicas > 1 {
-			errs = append(errs, fieldErr("replicas", errors.VErrReplicasInvalid,
-				"StatefulService is pinned to 1 replica by the cluster agent"))
-		}
 	}
 	return errs
 }

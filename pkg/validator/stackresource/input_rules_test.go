@@ -137,12 +137,6 @@ var _ = Describe("validateInputRules", func() {
 				r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{{Value: "1"}}}
 			},
 			errors.VErrEnvNameRequired, "execution_config.env[0].name"),
-		Entry("stateful service with replicas > 1",
-			func(r *models.StackResource) {
-				r.WorkloadType = models.WorkloadTypeStatefulService
-				r.Replicas = int32Ptr(3)
-			},
-			errors.VErrReplicasInvalid, "replicas"),
 		Entry("volume mount missing target path",
 			func(r *models.StackResource) {
 				r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "data"}}
