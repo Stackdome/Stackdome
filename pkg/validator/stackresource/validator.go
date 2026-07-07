@@ -62,12 +62,6 @@ func (v *validator) Validate(ctx context.Context, stack *models.Stack, resource 
 	return errs
 }
 
-// validateReferences is a placeholder until Task 4 lands DB-only reference
-// checks (volumes, secrets, domains, credentials).
-func (v *validator) validateReferences(ctx context.Context, stack *models.Stack, resource *models.StackResource) []errors.FieldError {
-	return nil
-}
-
 // validateSiblingRules is a placeholder until Task 5 lands cross-resource
 // checks within the same stack (duplicate names, dependency cycles, etc).
 func validateSiblingRules(resource *models.StackResource, siblings []*models.StackResource) []errors.FieldError {
