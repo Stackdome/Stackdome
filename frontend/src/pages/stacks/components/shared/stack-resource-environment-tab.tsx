@@ -355,6 +355,10 @@ function StackResourceEnvironmentTabImpl({
               if ((dirty || errPath("credField")) && !r.credField) out.credField = "Pick a field";
             }
             if ((dirty || errPath("name")) && !r.name) out.name = "Required";
+            // Server-reported value error (e.g. a backend validation reason pinned
+            // to this env var by the autosave engine); always surfaced when present.
+            const valueErr = errPath("value");
+            if (valueErr) out.value = valueErr;
             return Object.keys(out).length === 0 ? undefined : out;
           };
 

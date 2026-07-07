@@ -2,8 +2,13 @@ import dagre from "dagre";
 import type { CanvasGraph } from "./graph-from-connections";
 
 /** Card dimensions dagre reserves per node (matches ResourceNode's box). */
-const NODE_WIDTH = 216;
-const NODE_HEIGHT = 88;
+export const NODE_WIDTH = 216;
+export const NODE_HEIGHT = 88;
+
+/** Horizontal pitch between consecutive freshly-added nodes so they don't stack. */
+export const NEW_NODE_GAP_X = NODE_WIDTH + NODE_HEIGHT;
+/** Vertical drop below the preserved layout where new nodes are parked. */
+export const NEW_NODE_OFFSET_Y = NODE_HEIGHT * 2;
 
 export interface LayoutOptions {
   direction?: "LR" | "TB";
