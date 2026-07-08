@@ -56,6 +56,7 @@ const (
 	// volume mounts
 	VErrVolumeMountInvalid = "volume_mount_invalid"
 	VErrVolumeNotFound     = "volume_not_found"
+	VErrVolumeHashMissing  = "volume_hash_missing"
 
 	// referenced entities
 	VErrSecretNotFound             = "secret_not_found"

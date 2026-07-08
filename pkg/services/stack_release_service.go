@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"time"
 
@@ -13,6 +14,20 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stackrelease"
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
+
+//go:generate mockgen -source=stack_release_service.go -destination=stack_release_service_mock_test.go -package=services -exclude_interfaces StackReleaseService
+
+// sourceGitClientProvider builds git clients so resolvePins's git resolution
+// can be faked in tests.
+type sourceGitClientProvider interface {
+	ClientFor(repoURL string, creds gitclient.GitCredentials) (gitclient.GitClient, error)
+}
+
+type defaultSourceGitClientProvider struct{}
+
+func (defaultSourceGitClientProvider) ClientFor(repoURL string, creds gitclient.GitCredentials) (gitclient.GitClient, error) {
+	return gitclient.NewGitClientForRepo(repoURL, creds)
+}
 
 type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
@@ -44,6 +59,8 @@ type StackReleaseServiceSpec struct {
 	CredentialResolver CredentialResolver
 	Permissions        auth.PermissionService
 	ReferenceService   ReferenceService
+	// GitClients is optional; it defaults to real git clients.
+	GitClients sourceGitClientProvider
 }
 
 type stackReleaseService struct {
@@ -52,16 +69,22 @@ type stackReleaseService struct {
 	credentialResolver CredentialResolver
 	permissions        auth.PermissionService
 	referenceService   ReferenceService
+	gitClients         sourceGitClientProvider
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
+	gitClients := spec.GitClients
+	if gitClients == nil {
+		gitClients = defaultSourceGitClientProvider{}
+	}
 	return &stackReleaseService{
 		store:              spec.Store,
 		stackQuery:         spec.StackService,
 		credentialResolver: spec.CredentialResolver,
 		permissions:        spec.Permissions,
 		referenceService:   spec.ReferenceService,
+		gitClients:         gitClients,
 	}
 }
 
@@ -351,16 +374,21 @@ func (s *stackReleaseService) pinResource(ctx context.Context, orgID string, res
 	var rp models.ResourcePins
 
 	if rev := res.BuildConfig.SourceRevision.Git; rev != nil {
-		sha, err := s.resolveGitSHA(ctx, orgID, res, rev)
+		sha, branch, err := s.resolveGitSHA(ctx, orgID, res, rev)
 		if err != nil {
 			return nil, err
 		}
 		rp.GitSHA = sha
+		rp.Branch = branch
 	}
 
 	if res.BuildConfig.SourceRevision.Volume != nil {
 		if res.BuildConfig.SourceRevision.Volume.CurrentVolumeHash == "" {
-			return nil, errors.GeneralError("resource '%s': current volume revision is empty", res.Name)
+			return nil, errors.ValidationFailed([]errors.FieldError{{
+				Field:   fmt.Sprintf("resources[%s].source.volume.current_volume_hash", res.Name),
+				Code:    errors.VErrVolumeHashMissing,
+				Message: fmt.Sprintf("resource '%s': current volume revision is empty", res.Name),
+			}})
 		}
 		rp.VolumeHash = res.BuildConfig.SourceRevision.Volume.CurrentVolumeHash
 	}
@@ -368,44 +396,83 @@ func (s *stackReleaseService) pinResource(ctx context.Context, orgID string, res
 	return &rp, nil
 }
 
-func (s *stackReleaseService) resolveGitSHA(ctx context.Context, orgID string, res *models.StackResource, rev *models.GitRevision) (string, *errors.ServiceError) {
+// resolveGitSHA resolves a git revision to a commit SHA. When the revision
+// specifies neither branch nor tag, it also resolves and returns the
+// repository's default branch so the pin (and the snapshot) can record it —
+// the CRD requires branch-or-tag on git revisions.
+func (s *stackReleaseService) resolveGitSHA(ctx context.Context, orgID string, res *models.StackResource, rev *models.GitRevision) (string, string, *errors.ServiceError) {
 	if rev.Commit != "" {
-		return rev.Commit, nil
+		return rev.Commit, "", nil
 	}
 
 	gitSource := res.BuildConfig.SourceContext.Git
 	repoURL := gitSource.RepoURL
+	field := fmt.Sprintf("resources[%s].source.git", res.Name)
+
 	resolved, serr := s.credentialResolver.GitCredentials(ctx, orgID, repoURL, credentials.GitAuthSelector{
 		IntegrationID: gitSource.IntegrationID,
 	})
 	if serr != nil {
-		return "", errors.GeneralError("resource '%s': failed to resolve git credentials: %v", res.Name, serr)
+		return "", "", errors.ValidationFailed([]errors.FieldError{{
+			Field:   field + ".integration_id",
+			Code:    errors.VErrGitIntegrationNotFound,
+			Message: fmt.Sprintf("resource '%s': failed to resolve git credentials: %v", res.Name, serr),
+		}})
 	}
-	gitClient, err := gitclient.NewGitClientForRepo(repoURL, resolved.Credentials)
+	gitClient, err := s.gitClients.ClientFor(repoURL, resolved.Credentials)
 	if err != nil {
-		return "", errors.GeneralError("resource '%s': %v", res.Name, err)
+		return "", "", errors.ValidationFailed([]errors.FieldError{{
+			Field:   field + ".repo_url",
+			Code:    errors.VErrGitRepoUnreachable,
+			Message: fmt.Sprintf("resource '%s': %v", res.Name, err),
+		}})
 	}
 
 	if rev.Tag != "" {
 		sha, err := gitClient.GetTagSHA(ctx, repoURL, rev.Tag)
 		if err != nil {
-			return "", errors.GeneralError("resource '%s': cannot resolve tag '%s': %v", res.Name, rev.Tag, err)
+			return "", "", gitFieldError(res.Name, field+".tag", errors.VErrGitTagNotFound,
+				fmt.Sprintf("cannot resolve tag '%s'", rev.Tag), err)
 		}
-		return sha, nil
+		return sha, "", nil
 	}
 
-	if rev.Branch != "" {
-		if rev.Commit != "" && rev.Commit != "HEAD" {
-			return rev.Commit, nil
-		}
-		result, err := gitClient.GetBranchHeadSHA(ctx, repoURL, rev.Branch)
+	branch := rev.Branch
+	resolvedDefault := ""
+	if branch == "" {
+		// No branch or tag: pin the repository's default branch at release time.
+		defaultBranch, err := gitClient.GetDefaultBranch(ctx, repoURL)
 		if err != nil {
-			return "", errors.GeneralError("resource '%s': cannot resolve branch '%s': %v", res.Name, rev.Branch, err)
+			return "", "", gitFieldError(res.Name, field+".repo_url", errors.VErrGitRepoUnreachable,
+				"cannot resolve default branch", err)
 		}
-		return result.HeadSHA, nil
+		branch = defaultBranch
+		resolvedDefault = defaultBranch
 	}
 
-	return "", errors.GeneralError("resource '%s': git revision has no commit, tag, or branch", res.Name)
+	result, err := gitClient.GetBranchHeadSHA(ctx, repoURL, branch)
+	if err != nil {
+		return "", "", gitFieldError(res.Name, field+".branch", errors.VErrGitBranchNotFound,
+			fmt.Sprintf("cannot resolve branch '%s'", branch), err)
+	}
+	return result.HeadSHA, resolvedDefault, nil
+}
+
+// gitFieldError maps a git client error onto a structured release validation
+// failure, distinguishing auth and rate-limit failures from missing refs.
+func gitFieldError(resourceName, field, notFoundCode string, action string, err error) *errors.ServiceError {
+	code := notFoundCode
+	switch {
+	case stderrors.Is(err, gitclient.ErrAuthFailed):
+		code = errors.VErrGitAuthFailed
+	case stderrors.Is(err, gitclient.ErrRateLimited):
+		code = errors.VErrGitRateLimited
+	}
+	return errors.ValidationFailed([]errors.FieldError{{
+		Field:   field,
+		Code:    code,
+		Message: fmt.Sprintf("resource '%s': %s: %v", resourceName, action, err),
+	}})
 }
 
 func applyPinsToSnapshot(snapshot *models.StackSnapshot, pins models.ReleasePins) {
@@ -418,6 +485,9 @@ func applyPinsToSnapshot(snapshot *models.StackSnapshot, pins models.ReleasePins
 			resource.BuildConfig != nil &&
 			resource.BuildConfig.SourceRevision.Git != nil {
 			resource.BuildConfig.SourceRevision.Git.Commit = rp.GitSHA
+			if rp.Branch != "" && resource.BuildConfig.SourceRevision.Git.Branch == "" {
+				resource.BuildConfig.SourceRevision.Git.Branch = rp.Branch
+			}
 		}
 	}
 }

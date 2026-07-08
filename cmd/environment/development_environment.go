@@ -433,10 +433,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		GitIntegrationService:     gitIntegrationService,
 	})
 
-	defaultBranchResolver := services.NewDefaultBranchResolver(services.DefaultBranchResolverSpec{
-		CredentialResolver: credentialResolver,
-	})
-
 	d.RefreshTokenStore = pgstore.NewRefreshTokenStore(pgstore.RefreshTokenStoreSpec{
 		SessionFactory: d.DBSession,
 	})
@@ -567,7 +563,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Permissions:           d.PermissionService,
 		ReferenceService:      referenceService,
 		CredentialResolver:    credentialResolver,
-		DefaultBranchResolver: defaultBranchResolver,
 		GitIntegrationService: gitIntegrationService,
 	})
 

@@ -70,7 +70,6 @@ type StackServiceSpec struct {
 	Logger                logger.Logger
 	ReferenceService      ReferenceService
 	CredentialResolver    CredentialResolver
-	DefaultBranchResolver DefaultBranchResolver
 	GitIntegrationService GitIntegrationService
 }
 
@@ -90,7 +89,6 @@ type stackService struct {
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
-	branchResolver       DefaultBranchResolver
 	defaultingService    DefaultingService[*models.Stack]
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
@@ -135,7 +133,6 @@ func NewStackService(spec StackServiceSpec) StackService {
 		teamService:          spec.TeamService,
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
-		branchResolver:       spec.DefaultBranchResolver,
 		defaultingService:    NewStackDefaultingService(),
 	}
 }

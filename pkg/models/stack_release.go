@@ -272,7 +272,10 @@ type ReleasePins struct {
 
 // ResourcePins holds the pinned artifact identifiers for a single resource.
 type ResourcePins struct {
-	GitSHA      string `json:"git_sha,omitempty"`
+	GitSHA string `json:"git_sha,omitempty"`
+	// Branch records the branch a default-branch resolution landed on, so the
+	// snapshot can carry it (the CRD requires branch-or-tag on git revisions).
+	Branch      string `json:"branch,omitempty"`
 	VolumeHash  string `json:"volume_hash,omitempty"`
 	ImageDigest string `json:"image_digest,omitempty"`
 }
