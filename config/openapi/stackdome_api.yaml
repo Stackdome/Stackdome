@@ -1838,6 +1838,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+    post:
+      summary: Add a new resource to a stack
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackResource'
+      responses:
+        '201':
+          description: Stack resource created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+        '400':
+          description: Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
     get:
       summary: Get a specific stack resource by name
@@ -1855,6 +1890,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/StackResource'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update a stack resource
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackResource'
+      responses:
+        '200':
+          description: Stack resource updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+        '400':
+          description: Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a stack resource
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/resource_name'
+      responses:
+        '200':
+          description: Stack resource deleted successfully
         '401':
           description: Unauthorized
         '500':
@@ -5728,6 +5819,25 @@ components:
               type: object
               additionalProperties: true
               description: Optional structured, machine-readable error context
+    ValidationErrorDetail:
+      description: Structured payload carried in Error.details for aggregated validation failures.
+      type: object
+      properties:
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldValidationError'
+    FieldValidationError:
+      type: object
+      properties:
+        field:
+          description: JSON path of the offending request field, e.g. "ports[0].protocol".
+          type: string
+        code:
+          description: Machine-readable validation code, e.g. "public_port_not_http".
+          type: string
+        message:
+          type: string
     ErrorList:
       type: object
       properties:
@@ -6604,11 +6714,12 @@ components:
 
     ReleaseCauseKind:
       type: string
-      enum: [manual, rollback, webhook_push]
+      enum: [manual, rollback, webhook_push, preview_sync]
       x-enum-varnames:
         - RELEASE_CAUSE_MANUAL
         - RELEASE_CAUSE_ROLLBACK
         - RELEASE_CAUSE_WEBHOOK_PUSH
+        - RELEASE_CAUSE_PREVIEW_SYNC
 
     CreateReleaseRequest:
       type: object
@@ -6656,6 +6767,11 @@ components:
         completed_at:
           type: string
           format: date-time
+        validation_errors:
+          type: array
+          readOnly: true
+          items:
+            $ref: '#/components/schemas/ReleaseValidationError'
 
     StackReleaseDetail:
       allOf:
@@ -6737,6 +6853,18 @@ components:
         kind:
           $ref: '#/components/schemas/ReleaseCauseKind'
         detail:
+          type: string
+
+    ReleaseValidationError:
+      type: object
+      properties:
+        resource_name:
+          type: string
+        field:
+          type: string
+        code:
+          type: string
+        message:
           type: string
 
     ReleasePins:

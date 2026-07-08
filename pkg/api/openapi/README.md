@@ -170,11 +170,14 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidmetricsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics | Get metrics for a stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id} | Update a stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | List all stack resources under a stack
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcespost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | Add a new resource to a stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameActionsRestartPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenameactionsrestartpost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/actions/restart | Restart a stack resource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameBuildsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamebuildsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds | List all builds for a stack resource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameDelete**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamedelete) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Delete a stack resource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenameget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Get a specific stack resource by name
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameLogsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamelogsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameMetricsGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenamemetricsget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
+*DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNamePut**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidresourcesresourcenameput) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Update a stack resource
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidtopologyget) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology | Get stack topology
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdVolumesPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestacksidvolumespost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/volumes | Create a volume and associate it with the stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost**](docs/DefaultApi.md#apiv1organizationsorgidteamsteamnamestackspost) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks | Create a new stack
@@ -254,6 +257,7 @@ Class | Method | HTTP request | Description
  - [ErrorAllOf](docs/ErrorAllOf.md)
  - [ErrorList](docs/ErrorList.md)
  - [ExecutionConfig](docs/ExecutionConfig.md)
+ - [FieldValidationError](docs/FieldValidationError.md)
  - [GCSCredentials](docs/GCSCredentials.md)
  - [GitBranchList](docs/GitBranchList.md)
  - [GitHubAppManifestFlow](docs/GitHubAppManifestFlow.md)
@@ -345,6 +349,7 @@ Class | Method | HTTP request | Description
  - [ReleaseCauseKind](docs/ReleaseCauseKind.md)
  - [ReleaseOutcome](docs/ReleaseOutcome.md)
  - [ReleasePins](docs/ReleasePins.md)
+ - [ReleaseValidationError](docs/ReleaseValidationError.md)
  - [RemoteSource](docs/RemoteSource.md)
  - [ResourceMetrics](docs/ResourceMetrics.md)
  - [ResourceMetricsNodeCapacitiesInner](docs/ResourceMetricsNodeCapacitiesInner.md)
@@ -404,6 +409,7 @@ Class | Method | HTTP request | Description
  - [UserSignupRequest](docs/UserSignupRequest.md)
  - [UserSignupResponse](docs/UserSignupResponse.md)
  - [UserTeamMembership](docs/UserTeamMembership.md)
+ - [ValidationErrorDetail](docs/ValidationErrorDetail.md)
  - [ValueRef](docs/ValueRef.md)
  - [Volume](docs/Volume.md)
  - [VolumeAccessMode](docs/VolumeAccessMode.md)

@@ -2557,7 +2557,112 @@ paths:
       security:
       - Bearer: []
       summary: List all stack resources under a stack
+    post:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackResource'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+          description: Stack resource created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data. `details` carries a `ValidationErrorDetail`
+            payload when the failure is an aggregated field validation error.
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Add a new resource to a stack
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
+    delete:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          description: Stack resource deleted successfully
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a stack resource
     get:
       parameters:
       - description: The ID of the organization
@@ -2610,6 +2715,71 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific stack resource by name
+    put:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackResource'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+          description: Stack resource updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data. `details` carries a `ValidationErrorDetail`
+            payload when the failure is an aggregated field validation error.
+        "401":
+          description: Unauthorized
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a stack resource
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs:
     get:
       parameters:
@@ -11638,6 +11808,28 @@ components:
       allOf:
       - $ref: '#/components/schemas/ObjectReference'
       - $ref: '#/components/schemas/Error_allOf'
+    ValidationErrorDetail:
+      description: Structured payload carried in Error.details for aggregated validation
+        failures.
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/FieldValidationError'
+          type: array
+      type: object
+    FieldValidationError:
+      properties:
+        field:
+          description: "JSON path of the offending request field, e.g. \"ports[0].protocol\"\
+            ."
+          type: string
+        code:
+          description: "Machine-readable validation code, e.g. \"public_port_not_http\"\
+            ."
+          type: string
+        message:
+          type: string
+      type: object
     ErrorList:
       allOf:
       - $ref: '#/components/schemas/List'
@@ -13320,11 +13512,13 @@ components:
       - manual
       - rollback
       - webhook_push
+      - preview_sync
       type: string
       x-enum-varnames:
       - RELEASE_CAUSE_MANUAL
       - RELEASE_CAUSE_ROLLBACK
       - RELEASE_CAUSE_WEBHOOK_PUSH
+      - RELEASE_CAUSE_PREVIEW_SYNC
     CreateReleaseRequest:
       example:
         from_release_id: from_release_id
@@ -13356,6 +13550,15 @@ components:
         stack_id: stack_id
         rendered_at: 2000-01-23T04:56:07.000+00:00
         renderer_version: renderer_version
+        validation_errors:
+        - code: code
+          field: field
+          resource_name: resource_name
+          message: message
+        - code: code
+          field: field
+          resource_name: resource_name
+          message: message
         id: id
         state: null
         outcome:
@@ -13403,6 +13606,11 @@ components:
         completed_at:
           format: date-time
           type: string
+        validation_errors:
+          items:
+            $ref: '#/components/schemas/ReleaseValidationError'
+          readOnly: true
+          type: array
       type: object
     StackReleaseDetail:
       allOf:
@@ -13454,6 +13662,15 @@ components:
           stack_id: stack_id
           rendered_at: 2000-01-23T04:56:07.000+00:00
           renderer_version: renderer_version
+          validation_errors:
+          - code: code
+            field: field
+            resource_name: resource_name
+            message: message
+          - code: code
+            field: field
+            resource_name: resource_name
+            message: message
           id: id
           state: null
           outcome:
@@ -13484,6 +13701,15 @@ components:
           stack_id: stack_id
           rendered_at: 2000-01-23T04:56:07.000+00:00
           renderer_version: renderer_version
+          validation_errors:
+          - code: code
+            field: field
+            resource_name: resource_name
+            message: message
+          - code: code
+            field: field
+            resource_name: resource_name
+            message: message
           id: id
           state: null
           outcome:
@@ -13521,6 +13747,22 @@ components:
         kind:
           $ref: '#/components/schemas/ReleaseCauseKind'
         detail:
+          type: string
+      type: object
+    ReleaseValidationError:
+      example:
+        code: code
+        field: field
+        resource_name: resource_name
+        message: message
+      properties:
+        resource_name:
+          type: string
+        field:
+          type: string
+        code:
+          type: string
+        message:
           type: string
       type: object
     ReleasePins:

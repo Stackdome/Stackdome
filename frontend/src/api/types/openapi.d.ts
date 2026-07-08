@@ -4057,7 +4057,63 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Add a new resource to a stack */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StackResource"];
+                };
+            };
+            responses: {
+                /** @description Stack resource created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackResource"];
+                    };
+                };
+                /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -4117,9 +4173,110 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        /** Update a stack resource */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["StackResource"];
+                };
+            };
+            responses: {
+                /** @description Stack resource updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StackResource"];
+                    };
+                };
+                /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         post?: never;
-        delete?: never;
+        /** Delete a stack resource */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the team */
+                    team_name: components["parameters"]["team_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The name of the stack resource */
+                    resource_name: components["parameters"]["resource_name"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stack resource deleted successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -8234,6 +8391,17 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** @description Structured payload carried in Error.details for aggregated validation failures. */
+        ValidationErrorDetail: {
+            errors?: components["schemas"]["FieldValidationError"][];
+        };
+        FieldValidationError: {
+            /** @description JSON path of the offending request field, e.g. "ports[0].protocol". */
+            field?: string;
+            /** @description Machine-readable validation code, e.g. "public_port_not_http". */
+            code?: string;
+            message?: string;
+        };
         ErrorList: {
             items?: components["schemas"]["Error"][];
         } & components["schemas"]["List"];
@@ -8698,7 +8866,7 @@ export interface components {
         /** @enum {string} */
         StackReleaseState: "Pending" | "InProgress" | "Released" | "Failed" | "Superseded" | "Cancelled";
         /** @enum {string} */
-        ReleaseCauseKind: "manual" | "rollback" | "webhook_push";
+        ReleaseCauseKind: "manual" | "rollback" | "webhook_push" | "preview_sync";
         CreateReleaseRequest: {
             /** @description If set, creates a rollback release copying this release's manifest */
             from_release_id?: string;
@@ -8724,6 +8892,7 @@ export interface components {
             rendered_at?: string;
             /** Format: date-time */
             completed_at?: string;
+            readonly validation_errors?: components["schemas"]["ReleaseValidationError"][];
         };
         StackReleaseDetail: components["schemas"]["StackRelease"] & {
             snapshot?: components["schemas"]["StackReleaseSnapshot"];
@@ -8765,6 +8934,12 @@ export interface components {
         ReleaseCause: {
             kind?: components["schemas"]["ReleaseCauseKind"];
             detail?: string;
+        };
+        ReleaseValidationError: {
+            resource_name?: string;
+            field?: string;
+            code?: string;
+            message?: string;
         };
         ReleasePins: {
             resources?: {

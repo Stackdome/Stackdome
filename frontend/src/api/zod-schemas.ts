@@ -923,7 +923,12 @@ const StackReleaseState = z.enum([
   "Superseded",
   "Cancelled",
 ]);
-const ReleaseCauseKind = z.enum(["manual", "rollback", "webhook_push"]);
+const ReleaseCauseKind = z.enum([
+  "manual",
+  "rollback",
+  "webhook_push",
+  "preview_sync",
+]);
 const ReleaseCause = z
   .object({ kind: ReleaseCauseKind, detail: z.string() })
   .partial()
@@ -953,6 +958,15 @@ const ReleaseOutcome = z
   .object({ resources: z.record(ResourceOutcome), duration: z.string() })
   .partial()
   .passthrough();
+const ReleaseValidationError = z
+  .object({
+    resource_name: z.string(),
+    field: z.string(),
+    code: z.string(),
+    message: z.string(),
+  })
+  .partial()
+  .passthrough();
 const StackRelease = z
   .object({
     id: z.string(),
@@ -971,6 +985,7 @@ const StackRelease = z
     updated_at: z.string().datetime({ offset: true }),
     rendered_at: z.string().datetime({ offset: true }),
     completed_at: z.string().datetime({ offset: true }),
+    validation_errors: z.array(ReleaseValidationError),
   })
   .partial()
   .passthrough();
@@ -1466,6 +1481,14 @@ const VolumeList = z
   .partial()
   .passthrough();
 const SSHConfig = z.object({ public_key: z.string() });
+const FieldValidationError = z
+  .object({ field: z.string(), code: z.string(), message: z.string() })
+  .partial()
+  .passthrough();
+const ValidationErrorDetail = z
+  .object({ errors: z.array(FieldValidationError) })
+  .partial()
+  .passthrough();
 const List = z
   .object({
     kind: z.string(),
@@ -1621,6 +1644,7 @@ export const schemas = {
   ReleasePins,
   ResourceOutcome,
   ReleaseOutcome,
+  ReleaseValidationError,
   StackRelease,
   StackReleaseList,
   StackReleaseSnapshot,
@@ -1663,6 +1687,8 @@ export const schemas = {
   PreviewStackSync,
   VolumeList,
   SSHConfig,
+  FieldValidationError,
+  ValidationErrorDetail,
   List,
   ErrorList,
   WALConfiguration,
@@ -6088,6 +6114,52 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources",
+    alias: "postApiv1organizationsOrg_idteamsTeam_namestacksIdresources",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackResource,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
     method: "get",
     path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
     alias:
@@ -6116,6 +6188,100 @@ const endpoints = makeApi([
       },
     ],
     response: StackResource,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
+    alias:
+      "putApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_name",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackResource,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
+    alias:
+      "deleteApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_name",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
     errors: [
       {
         status: 401,
