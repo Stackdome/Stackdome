@@ -9041,7 +9041,7 @@ export interface operations {
                     "application/json": components["schemas"]["Stack"];
                 };
             };
-            /** @description Invalid request data */
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -262,7 +262,7 @@ var _ = Describe("Stack", func() {
 			})
 
 			resource := openapi.NewStackResource("bad")
-			shared.AddStackResourceExpectError(client, orgID, teamName, stackID, resource, http.StatusBadRequest)
+			shared.CreateStackResourceExpectError(client, orgID, teamName, stackID, resource, http.StatusBadRequest)
 		})
 	})
 })

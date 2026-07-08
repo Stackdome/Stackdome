@@ -5717,7 +5717,7 @@ accepts a full stack document.
     errors: [
       {
         status: 400,
-        description: `Invalid request data`,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
         schema: Error,
       },
       {

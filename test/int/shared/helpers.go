@@ -485,16 +485,6 @@ func ApplyStackExpectError(client *openapi.APIClient, orgID, teamName, stackID s
 
 // Thin stack sub-resource operations for Ginkgo tests
 
-func AddStackResource(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource) *openapi.StackResource {
-	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.CreateStackResource(ctx, orgID, teamName, stackID).StackResource(*resource).Execute()
-	Expect(err).NotTo(HaveOccurred(), "failed to create stack resource")
-	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
-	Expect(resp).NotTo(BeNil(), "expected stack resource response")
-
-	return resp
-}
-
 func UpdateStackResourceH(client *openapi.APIClient, orgID, teamName, stackID, resourceName string, resource *openapi.StackResource) *openapi.StackResource {
 	ctx := context.Background()
 	resp, httpResp, err := client.DefaultApi.UpdateStackResource(ctx, orgID, teamName, stackID, resourceName).StackResource(*resource).Execute()
@@ -510,18 +500,6 @@ func DeleteStackResourceH(client *openapi.APIClient, orgID, teamName, stackID, r
 	httpResp, err := client.DefaultApi.DeleteStackResource(ctx, orgID, teamName, stackID, resourceName).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete stack resource")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
-}
-
-func AddStackResourceExpectError(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource, expectedStatus int) *openapi.GenericOpenAPIError {
-	ctx := context.Background()
-	_, httpResp, err := client.DefaultApi.CreateStackResource(ctx, orgID, teamName, stackID).StackResource(*resource).Execute()
-	Expect(err).To(HaveOccurred(), "expected error")
-	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
-
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
-	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
-
-	return apiErr
 }
 
 func CreateStackConnectionExpectError(client *openapi.APIClient, orgID, teamName, stackID string, connection *openapi.StackConnection, expectedStatus int) *openapi.GenericOpenAPIError {
