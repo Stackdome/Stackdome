@@ -233,17 +233,26 @@ func (k staticKeychain) Resolve(authn.Resource) (authn.Authenticator, error) {
 	return k.auth, nil
 }
 
-// Helper function to check if error is authentication related
+// Helper function to check if error is authentication related. Uses the
+// typed transport.Error rather than matching error text, for the same reason
+// as isRateLimitedError/isNotFoundError: a token endpoint denial (e.g. GHCR
+// rejecting an anonymous token request for a nonexistent repo with 403
+// DENIED) must be classified as auth failure rather than a transient error,
+// regardless of message wording.
 func isAuthError(err error) bool {
-	if err == nil {
+	var transportErr *transport.Error
+	if !errors.As(err, &transportErr) {
 		return false
 	}
-	errStr := strings.ToLower(err.Error())
-	return strings.Contains(errStr, "unauthorized") ||
-		strings.Contains(errStr, "authentication") ||
-		strings.Contains(errStr, "401") ||
-		strings.Contains(errStr, "forbidden") ||
-		strings.Contains(errStr, "403")
+	if transportErr.StatusCode == http.StatusUnauthorized || transportErr.StatusCode == http.StatusForbidden {
+		return true
+	}
+	for _, diag := range transportErr.Errors {
+		if diag.Code == transport.UnauthorizedErrorCode || diag.Code == transport.DeniedErrorCode {
+			return true
+		}
+	}
+	return false
 }
 
 // Helper function to check if error is rate-limit related. Uses the typed

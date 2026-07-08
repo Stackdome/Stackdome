@@ -20,9 +20,13 @@ const (
 	// that cannot be pulled. Fat stack create must not probe it.
 	validationUnpullableImageRef = "docker.io/stackdome-e2e/definitely-not-a-real-image:v1"
 
-	// validationMissingImageRef 404s anonymously on GHCR without hitting
-	// Docker Hub's anonymous-pull rate limit.
-	validationMissingImageRef = "ghcr.io/stackdome/e2e-missing:v1"
+	// validationMissingImageRef must 404 anonymously without a preceding
+	// token-request denial. GHCR rejects the anonymous token request itself
+	// (403 DENIED) for a repo that doesn't exist, which is an auth failure,
+	// not a "missing image" — Docker Hub's anonymous token request succeeds
+	// unconditionally and only the manifest HEAD 404s for an unknown tag, so
+	// a nonexistent tag on a real, public repo is used instead.
+	validationMissingImageRef = "docker.io/library/alpine:nonexistent-e2e-validation"
 
 	// validationDefaultBranchRepoURL is a small public repo already used by
 	// other build-from-source fixtures in this suite (see samples/build_from_source.json).
