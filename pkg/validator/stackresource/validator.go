@@ -24,6 +24,7 @@ type Validator interface {
 // Narrow read-only seams so the validator does not depend on pkg/services.
 type volumeGetter interface {
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
+	GetByID(ctx context.Context, id string) (*models.Volume, *errors.ServiceError)
 }
 
 type secretGetter interface {

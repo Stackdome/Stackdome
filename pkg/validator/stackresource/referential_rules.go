@@ -50,30 +50,63 @@ func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.St
 	}
 	var errs []errors.FieldError
 	for i, m := range resource.VolumeMounts {
-		if m.SourceVolumeName == "" {
+		if m.SourceVolumeName == "" && m.SourceVolumeID == "" {
 			continue // shape error already reported by input rules
 		}
-		if _, serr := v.volumes.GetByVolumeNameAndNamespace(ctx, m.SourceVolumeName, stack.Namespace); serr != nil {
-			if !serr.Is404() {
-				return nil, serr
-			}
+		ok, serr := v.volumeExists(ctx, stack.Namespace, m.SourceVolumeName, m.SourceVolumeID)
+		if serr != nil {
+			return nil, serr
+		}
+		if !ok {
 			errs = append(errs, fieldErr(fmt.Sprintf("volume_mounts[%d].source_volume", i), errors.VErrVolumeNotFound,
-				"volume '%s' does not exist", m.SourceVolumeName))
+				"volume '%s' does not exist", volumeRef(m.SourceVolumeName, m.SourceVolumeID)))
 		}
 	}
 	if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Volume != nil {
-		name := resource.BuildConfig.SourceContext.Volume.SourceVolumeName
-		if name != "" {
-			if _, serr := v.volumes.GetByVolumeNameAndNamespace(ctx, name, stack.Namespace); serr != nil {
-				if !serr.Is404() {
-					return nil, serr
-				}
+		src := resource.BuildConfig.SourceContext.Volume
+		if src.SourceVolumeName != "" || src.SourceVolumeID != "" {
+			ok, serr := v.volumeExists(ctx, stack.Namespace, src.SourceVolumeName, src.SourceVolumeID)
+			if serr != nil {
+				return nil, serr
+			}
+			if !ok {
 				errs = append(errs, fieldErr("source.volume", errors.VErrVolumeNotFound,
-					"build source volume '%s' does not exist", name))
+					"build source volume '%s' does not exist", volumeRef(src.SourceVolumeName, src.SourceVolumeID)))
 			}
 		}
 	}
 	return errs, nil
+}
+
+// volumeExists resolves a volume by name (preferred) or, when the name is
+// empty, by ID. Returns false (no error) on a 404 from either lookup path;
+// any other error is propagated so the caller aborts validation.
+func (v *validator) volumeExists(ctx context.Context, namespace, name, id string) (bool, *errors.ServiceError) {
+	if name != "" {
+		if _, serr := v.volumes.GetByVolumeNameAndNamespace(ctx, name, namespace); serr != nil {
+			if serr.Is404() {
+				return false, nil
+			}
+			return false, serr
+		}
+		return true, nil
+	}
+	if _, serr := v.volumes.GetByID(ctx, id); serr != nil {
+		if serr.Is404() {
+			return false, nil
+		}
+		return false, serr
+	}
+	return true, nil
+}
+
+// volumeRef returns the identifier to surface in a not-found message,
+// preferring the human-readable name when present.
+func volumeRef(name, id string) string {
+	if name != "" {
+		return name
+	}
+	return id
 }
 
 func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {

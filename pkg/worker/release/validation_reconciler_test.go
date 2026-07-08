@@ -2,6 +2,7 @@ package release
 
 import (
 	"context"
+	stderrors "errors"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/clients"
@@ -389,5 +390,115 @@ func TestValidationReconciler_ClusterLocalImage_Skipped(t *testing.T) {
 	}
 	if !result.resultNil {
 		t.Fatalf("expected resultNil, got %+v", result)
+	}
+}
+
+// 11. In-cluster registry push ref -> skipped (no probe).
+func TestValidationReconciler_ClusterLocalPushRef_Skipped(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := buildResourceWithPush("worker", "registry.stackdome-system.svc.cluster.local/worker:v1")
+	release := validationTestRelease(res)
+
+	// No mock expectations: resolver/records/registryClients must not be called.
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatalf("expected resultNil, got %+v", result)
+	}
+}
+
+//  12. CheckPushAccess returns a non-auth, non-rate-limit error -> treated as
+//     transient: reconcile returns the error, MarkFailedWithValidationErrors
+//     is never called.
+func TestValidationReconciler_PushAccess_TransientError_ReturnsErrorNoMarkFailed(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := buildResourceWithPush("worker", "example.com/worker:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
+		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).
+		Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "worker", models.ValidationCheckPushAccess).
+		Return(nil, errors.NotFound("no record"))
+
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckPushAccess(gomock.Any(), "example.com/worker:v1").
+		Return(stderrors.New("connection reset by peer"))
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err == nil {
+		t.Fatalf("expected error, got nil (result: %+v)", result)
+	}
+}
+
+// 13. Pull credential resolver returns a 404 -> field error VErrRegistryCredentialNotFound (existing behavior).
+func TestValidationReconciler_PullCredential_ResolveNotFound_FieldError(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).
+		Return(nil, errors.NotFound("registry credential not found"))
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), "release-1", gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+			if len(verrs) != 1 || verrs[0].Code != errors.VErrRegistryCredentialNotFound {
+				t.Fatalf("expected VErrRegistryCredentialNotFound, got %+v", verrs)
+			}
+			return true, nil
+		})
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatalf("expected resultStop, got %+v", result)
+	}
+}
+
+//  14. Pull credential resolver returns a non-404 error -> reconcile returns the
+//     error (worker retry); MarkFailedWithValidationErrors never called.
+func TestValidationReconciler_PullCredential_ResolveNonNotFoundError_ReturnsError(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).
+		Return(nil, errors.InternalServerError("credential store unavailable"))
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err == nil {
+		t.Fatalf("expected error, got nil (result: %+v)", result)
+	}
+}
+
+//  15. Push credential resolver returns a non-404 error -> reconcile returns the
+//     error (worker retry); MarkFailedWithValidationErrors never called.
+func TestValidationReconciler_PushCredential_ResolveNonNotFoundError_ReturnsError(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := buildResourceWithPush("worker", "example.com/worker:v1")
+	release := validationTestRelease(res)
+
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
+		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).
+		Return(nil, errors.InternalServerError("credential store unavailable"))
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err == nil {
+		t.Fatalf("expected error, got nil (result: %+v)", result)
 	}
 }

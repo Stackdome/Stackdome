@@ -236,6 +236,55 @@ var _ = Describe("validateReferences", func() {
 		Expect(errs).To(BeEmpty())
 	})
 
+	It("reports a mounted volume referenced by ID that does not exist", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByID(gomock.Any(), "vol-bogus").
+			Return(nil, errors.NotFound("volume not found"))
+
+		v := &validator{volumes: volumes}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-bogus", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).To(BeNil())
+		Expect(codes(errs)).To(HaveKey(errors.VErrVolumeNotFound))
+		Expect(fields(errs)).To(HaveKey("volume_mounts[0].source_volume"))
+	})
+
+	It("resolves a mounted volume referenced by ID with no error", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByID(gomock.Any(), "vol-1").
+			Return(&models.Volume{}, nil)
+
+		v := &validator{volumes: volumes}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-1", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).To(BeNil())
+		Expect(errs).To(BeEmpty())
+	})
+
+	It("propagates a non-404 error resolving a mounted volume by ID", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByID(gomock.Any(), "vol-1").
+			Return(nil, errors.GeneralError("db unavailable"))
+
+		v := &validator{volumes: volumes}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-1", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).NotTo(BeNil())
+		Expect(errs).To(BeEmpty())
+	})
+
 	It("reports a missing build-context volume", func() {
 		volumes := NewMockvolumeGetter(ctrl)
 		volumes.EXPECT().
@@ -245,6 +294,24 @@ var _ = Describe("validateReferences", func() {
 		v := &validator{volumes: volumes}
 		r := validBuildResourceWithVolumeSource()
 		r.BuildConfig.SourceContext.Volume.SourceVolumeName = "build-src"
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).To(BeNil())
+		Expect(codes(errs)).To(HaveKey(errors.VErrVolumeNotFound))
+		Expect(fields(errs)).To(HaveKey("source.volume"))
+	})
+
+	It("reports a missing build-context volume referenced by ID", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByID(gomock.Any(), "vol-bogus").
+			Return(nil, errors.NotFound("volume not found"))
+
+		v := &validator{volumes: volumes}
+		r := validBuildResourceWithVolumeSource()
+		r.BuildConfig.SourceContext.Volume.SourceVolumeName = ""
+		r.BuildConfig.SourceContext.Volume.SourceVolumeID = "vol-bogus"
 
 		errs, serr := v.validateReferences(context.Background(), testStack(), r)
 

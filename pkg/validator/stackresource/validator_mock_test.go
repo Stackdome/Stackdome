@@ -81,6 +81,21 @@ func (m *MockvolumeGetter) EXPECT() *MockvolumeGetterMockRecorder {
 	return m.recorder
 }
 
+// GetByID mocks base method.
+func (m *MockvolumeGetter) GetByID(ctx context.Context, id string) (*models.Volume, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret0, _ := ret[0].(*models.Volume)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetByID indicates an expected call of GetByID.
+func (mr *MockvolumeGetterMockRecorder) GetByID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockvolumeGetter)(nil).GetByID), ctx, id)
+}
+
 // GetByVolumeNameAndNamespace mocks base method.
 func (m *MockvolumeGetter) GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError) {
 	m.ctrl.T.Helper()

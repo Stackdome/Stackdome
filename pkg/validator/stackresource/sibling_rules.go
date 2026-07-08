@@ -19,8 +19,12 @@ func validateSiblingRules(resource *models.StackResource, siblings []*models.Sta
 	}
 
 	if _, exists := siblingNames[resource.Name]; exists {
+		// Message text intentionally matches stack.stackValidator's
+		// validateUniqueResourceNames so the fat path's cross-rule
+		// de-duplication (by field+code+message) can collapse the two
+		// mechanisms' reports for the same offending resource into one.
 		errs = append(errs, fieldErr("name", errors.VErrResourceNameDuplicate,
-			"a resource named '%s' already exists in this stack", resource.Name))
+			"duplicate stack resource name '%s'", resource.Name))
 	}
 
 	for i, dep := range resource.DependsOn {

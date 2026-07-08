@@ -472,6 +472,66 @@ func TestValidateForCreateAcceptsNilSettings(t *testing.T) {
 	}
 }
 
+// TestValidateForCreateDedupesDuplicateNameErrors exercises the fat path's
+// two independent duplicate-name detectors: stackValidator's own
+// validateUniqueResourceNames, and the per-resource sibling rule that the
+// (mocked) ResourceValidator would run in production. Both report the same
+// offending resource with matching field/code/message text; the aggregated
+// result must collapse that overlap to exactly one error per offending
+// resource index rather than surfacing 2-3 copies.
+func TestValidateForCreateDedupesDuplicateNameErrors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *models.Stack, resource *models.StackResource, siblings []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+			// Mirrors stackresource.validateSiblingRules' name-dup check.
+			for _, s := range siblings {
+				if s.Name == resource.Name {
+					return []errors.FieldError{{
+						Field:   "name",
+						Code:    errors.VErrResourceNameDuplicate,
+						Message: fmt.Sprintf("duplicate stack resource name '%s'", resource.Name),
+					}}, nil
+				}
+			}
+			return nil, nil
+		}).
+		AnyTimes()
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"}},
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"}},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	errs := fieldErrors(t, err)
+
+	dupErrs := map[string]int{}
+	for _, fe := range errs {
+		if fe.Code == errors.VErrResourceNameDuplicate {
+			dupErrs[fe.Field]++
+		}
+	}
+	if len(dupErrs) != 2 {
+		t.Fatalf("expected duplicate-name errors on exactly 2 resource indices, got %v (all errors: %#v)", dupErrs, errs)
+	}
+	for field, count := range dupErrs {
+		if count != 1 {
+			t.Fatalf("expected exactly 1 duplicate-name error for field %q, got %d (all errors: %#v)", field, count, errs)
+		}
+	}
+}
+
 // newTestValidatorSpec returns a spec with a permissive ResourceValidator
 // stub: every call to Validate succeeds with no field errors, so tests can
 // focus on stack-level behavior (connections, settings) without needing to

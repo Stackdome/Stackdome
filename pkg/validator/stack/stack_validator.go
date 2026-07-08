@@ -67,6 +67,7 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 	ferrs = append(ferrs, v.validateConnections(ctx, nil, spec)...)
 	ferrs = append(ferrs, v.validateInterpolations(spec)...)
 
+	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
 		return errors.ValidationFailed(ferrs)
 	}
@@ -100,6 +101,7 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	ferrs = append(ferrs, v.validateConnections(ctx, existing, spec)...)
 	ferrs = append(ferrs, v.validateInterpolations(spec)...)
 
+	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
 		return errors.ValidationFailed(ferrs)
 	}
@@ -167,6 +169,32 @@ func validateStackSettings(spec *models.Stack) []errors.FieldError {
 		})
 	}
 	return errs
+}
+
+// dedupeFieldErrors collapses field errors that are identical in field, code,
+// and message. Different validation rules on the fat path (e.g. whole-stack
+// name uniqueness and per-resource sibling rules) can independently detect
+// the same underlying problem and report it with matching text; this keeps
+// the first occurrence and drops later exact repeats without needing to know
+// which rule produced which error.
+func dedupeFieldErrors(ferrs []errors.FieldError) []errors.FieldError {
+	if len(ferrs) < 2 {
+		return ferrs
+	}
+	type key struct {
+		field, code, message string
+	}
+	seen := make(map[key]struct{}, len(ferrs))
+	out := make([]errors.FieldError, 0, len(ferrs))
+	for _, fe := range ferrs {
+		k := key{fe.Field, fe.Code, fe.Message}
+		if _, exists := seen[k]; exists {
+			continue
+		}
+		seen[k] = struct{}{}
+		out = append(out, fe)
+	}
+	return out
 }
 
 func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) []errors.FieldError {

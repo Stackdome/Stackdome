@@ -95,7 +95,7 @@ func (r *validationReconciler) validateResource(ctx context.Context, release *mo
 
 	if res.BuildConfig != nil {
 		repo := res.BuildConfig.BuildImageRepository
-		if repo.ExternalImageRef != "" && !repo.InsecureRegistry {
+		if repo.ExternalImageRef != "" && !repo.InsecureRegistry && !isClusterLocalRegistryRef(repo.ExternalImageRef) {
 			errsHere, limited, err := r.checkPushAccess(ctx, release, res)
 			if err != nil {
 				return nil, false, err
@@ -114,10 +114,13 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 	resolved, serr := r.credentialResolver.RegistryCredentials(ctx, release.Snapshot.Stack.OrganisationID, imageRef,
 		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{RegistryCredentialID: credID})
 	if serr != nil {
-		return models.ReleaseValidationErrors{{
-			ResourceName: res.Name, Field: "source.image.registry_credentials_id",
-			Code: errors.VErrRegistryCredentialNotFound, Message: serr.Reason,
-		}}, false, nil
+		if serr.Is404() {
+			return models.ReleaseValidationErrors{{
+				ResourceName: res.Name, Field: "source.image.registry_credentials_id",
+				Code: errors.VErrRegistryCredentialNotFound, Message: "registry credential not found",
+			}}, false, nil
+		}
+		return nil, false, fmt.Errorf("resource %s: resolve pull credentials: %w", res.Name, serr)
 	}
 
 	fp := checkFingerprint(imageRef, credID, resolved.DataHash)
@@ -162,10 +165,13 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 	resolved, serr := r.credentialResolver.RegistryCredentials(ctx, release.Snapshot.Stack.OrganisationID, pushRef,
 		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{RegistryCredentialID: credID})
 	if serr != nil {
-		return models.ReleaseValidationErrors{{
-			ResourceName: res.Name, Field: "source.git.push.registry_credentials_id",
-			Code: errors.VErrRegistryCredentialNotFound, Message: serr.Reason,
-		}}, false, nil
+		if serr.Is404() {
+			return models.ReleaseValidationErrors{{
+				ResourceName: res.Name, Field: "source.git.push.registry_credentials_id",
+				Code: errors.VErrRegistryCredentialNotFound, Message: "registry credential not found",
+			}}, false, nil
+		}
+		return nil, false, fmt.Errorf("resource %s: resolve push credentials: %w", res.Name, serr)
 	}
 
 	fp := checkFingerprint(pushRef, credID, resolved.DataHash)
@@ -182,12 +188,15 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 	switch {
 	case stderrors.Is(err, clients.ErrRateLimited):
 		return nil, true, nil
-	case err != nil:
+	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.git.push.repository",
 			Code:    errors.VErrPushAccessDenied,
-			Message: fmt.Sprintf("cannot push to '%s': %v", pushRef, err),
+			Message: fmt.Sprintf("cannot push to '%s': registry rejected credentials", pushRef),
 		}}, false, nil
+	case err != nil:
+		// transient network problem: let the worker retry the whole reconcile
+		return nil, false, fmt.Errorf("resource %s: push probe: %w", res.Name, err)
 	}
 
 	r.rememberSuccess(ctx, release.StackID, res.Name, models.ValidationCheckPushAccess, fp)
