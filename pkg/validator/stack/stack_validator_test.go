@@ -472,6 +472,46 @@ func TestValidateForCreateAcceptsNilSettings(t *testing.T) {
 	}
 }
 
+// TestValidateForCreateAcceptsEmptyStackResources exercises the thin
+// stack-shell create path: the handler zeroes out StackResources, Volumes,
+// and Connections before calling CreateStack, so the fat validator must run
+// clean over a stack with no children rather than panicking or erroring.
+func TestValidateForCreateAcceptsEmptyStackResources(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name:           "shell-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected empty stack resources to pass, got %v", err)
+	}
+}
+
+// TestValidateForUpdateAcceptsEmptyStackResources mirrors the shell-update
+// path (PUT /stacks/{id}): existing and desired specs both carry no
+// resources/volumes/connections.
+func TestValidateForUpdateAcceptsEmptyStackResources(t *testing.T) {
+	v := newTestValidator(t)
+	existing := &models.Stack{
+		Name:           "shell-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+	desired := &models.Stack{
+		Name:           "shell-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+
+	err := v.ValidateForUpdate(context.Background(), existing, desired)
+	if err != nil {
+		t.Fatalf("expected empty stack resources to pass, got %v", err)
+	}
+}
+
 // TestValidateForCreateDedupesDuplicateNameErrors exercises the fat path's
 // two independent duplicate-name detectors: stackValidator's own
 // validateUniqueResourceNames, and the per-resource sibling rule that the

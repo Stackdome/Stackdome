@@ -3646,7 +3646,13 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a new stack */
+        /**
+         * Create a new stack
+         * @description Creates a thin stack shell (name, labels, annotations, settings). Any inline
+         *     `stack_resources`, `volumes`, or `connections` in the body are ignored — add
+         *     children via `PUT /stacks/{id}/apply` or the individual sub-resource endpoints.
+         *
+         */
         post: {
             parameters: {
                 query?: never;
@@ -3767,7 +3773,13 @@ export interface paths {
                 };
             };
         };
-        /** Update a stack */
+        /**
+         * Update a stack
+         * @description Updates only shell fields (name, labels, annotations, settings). `namespace` is
+         *     immutable. Child collections (`stack_resources`, `volumes`, `connections`) in the
+         *     body are ignored — use `PUT /stacks/{id}/apply` for a full reconcile.
+         *
+         */
         put: {
             parameters: {
                 query?: never;
@@ -3869,6 +3881,30 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apply a full stack document (declarative reconcile)
+         * @description Declarative whole-document apply. Reconciles the stack against the supplied
+         *     document: resources and connections not present in the body are deleted, while
+         *     volumes are add-only and are never deleted. This is the only endpoint that
+         *     accepts a full stack document.
+         *
+         */
+        put: operations["applyStack"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4057,63 +4093,8 @@ export interface paths {
             };
         };
         put?: never;
-        /** Add a new resource to a stack */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["StackResource"];
-                };
-            };
-            responses: {
-                /** @description Stack resource created successfully */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StackResource"];
-                    };
-                };
-                /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        /** Create a stack resource */
+        post: operations["createStackResource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4174,109 +4155,10 @@ export interface paths {
             };
         };
         /** Update a stack resource */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
-                    /** @description The name of the stack resource */
-                    resource_name: components["parameters"]["resource_name"];
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": components["schemas"]["StackResource"];
-                };
-            };
-            responses: {
-                /** @description Stack resource updated successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StackResource"];
-                    };
-                };
-                /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        put: operations["updateStackResource"];
         post?: never;
         /** Delete a stack resource */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description The ID of the organization */
-                    org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
-                    /** @description The id of record */
-                    id: components["parameters"]["id"];
-                    /** @description The name of the stack resource */
-                    resource_name: components["parameters"]["resource_name"];
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Stack resource deleted successfully */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Unauthorized */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Internal server error */
-                500: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        delete: operations["deleteStackResource"];
         options?: never;
         head?: never;
         patch?: never;
@@ -7822,7 +7704,7 @@ export interface components {
             total?: number;
         };
         StackSpec: {
-            stack_resources: components["schemas"]["StackResource"][];
+            stack_resources?: components["schemas"]["StackResource"][];
             volumes?: components["schemas"]["Volume"][];
             connections?: components["schemas"]["StackConnection"][];
         };
@@ -9130,6 +9012,249 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    applyStack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Stack"];
+            };
+        };
+        responses: {
+            /** @description Stack updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stack"];
+                };
+            };
+            /** @description Invalid request data */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createStackResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StackResource"];
+            };
+        };
+        responses: {
+            /** @description Stack resource created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackResource"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack resource already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updateStackResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                /** @description The name of the stack resource */
+                resource_name: components["parameters"]["resource_name"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StackResource"];
+            };
+        };
+        responses: {
+            /** @description Stack resource updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackResource"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack or resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteStackResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                /** @description The name of the stack resource */
+                resource_name: components["parameters"]["resource_name"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stack resource deleted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack or resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listReleases: {
         parameters: {
             query?: {

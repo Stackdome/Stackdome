@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import type { Stack } from "@/api/stacks";
-import { getStackById, updateStack } from "@/api/stacks";
+import { getStackById, applyStack } from "@/api/stacks";
 import { deleteVolume } from "@/api/volumes";
 import type { StackReleaseSnapshot } from "@/api/releases";
 import { snapshotToUpdateRequest, volumesToDelete } from "@/pages/stacks/lib/draft-sync/snapshot-to-update";
@@ -22,7 +22,7 @@ export function useStackRevert({ ids, stack, liveSnapshot, onReverted }: UseStac
     setReverting(true);
     try {
       const req = snapshotToUpdateRequest(liveSnapshot, { name: stack.name, labels: stack.labels });
-      await updateStack(ids.orgId, ids.teamName, ids.stackId, req);
+      await applyStack(ids.orgId, ids.teamName, ids.stackId, req);
       // Draft-only volumes are unmounted after the PUT; remove them (destroys
       // the cluster volume — the confirm dialog carries that warning).
       for (const v of volumesToDelete(stack, liveSnapshot)) {

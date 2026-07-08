@@ -10,7 +10,8 @@ import (
 
 func convertSingleResource(t *testing.T, source *openapi.SourceSpec) *models.StackResource {
 	t.Helper()
-	spec := openapi.NewStackSpec([]openapi.StackResource{{Name: "web", Source: source}})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{{Name: "web", Source: source}})
 	converted := presenters.ConvertStack(openapi.NewStack("demo", *spec))
 	if len(converted.StackResources) != 1 {
 		t.Fatalf("expected one resource, got %d", len(converted.StackResources))

@@ -1582,6 +1582,10 @@ paths:
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks:
     post:
       summary: Create a new stack
+      description: |
+        Creates a thin stack shell (name, labels, annotations, settings). Any inline
+        `stack_resources`, `volumes`, or `connections` in the body are ignored — add
+        children via `PUT /stacks/{id}/apply` or the individual sub-resource endpoints.
       security:
         - Bearer: []
       parameters:
@@ -1678,6 +1682,10 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Update a stack
+      description: |
+        Updates only shell fields (name, labels, annotations, settings). `namespace` is
+        immutable. Child collections (`stack_resources`, `volumes`, `connections`) in the
+        body are ignored — use `PUT /stacks/{id}/apply` for a full reconcile.
       security:
         - Bearer: []
       parameters:
@@ -1728,6 +1736,48 @@ paths:
                 $ref: '#/components/schemas/Stack'
         '401':
           description: Unauthorized
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply:
+    put:
+      summary: Apply a full stack document (declarative reconcile)
+      description: |
+        Declarative whole-document apply. Reconciles the stack against the supplied
+        document: resources and connections not present in the body are deleted, while
+        volumes are add-only and are never deleted. This is the only endpoint that
+        accepts a full stack document.
+      operationId: applyStack
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Stack'
+      responses:
+        '200':
+          description: Stack updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stack'
+        '401':
+          description: Unauthorized
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1839,7 +1889,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     post:
-      summary: Add a new resource to a stack
+      summary: Create a stack resource
+      operationId: createStackResource
       security:
         - Bearer: []
       parameters:
@@ -1867,6 +1918,14 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
+        '404':
+          description: Stack not found
+        '409':
+          description: Stack resource already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '500':
           description: Internal server error
           content:
@@ -1900,6 +1959,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     put:
       summary: Update a stack resource
+      operationId: updateStackResource
       security:
         - Bearer: []
       parameters:
@@ -1928,6 +1988,8 @@ paths:
                 $ref: '#/components/schemas/Error'
         '401':
           description: Unauthorized
+        '404':
+          description: Stack or resource not found
         '500':
           description: Internal server error
           content:
@@ -1936,6 +1998,7 @@ paths:
                 $ref: '#/components/schemas/Error'
     delete:
       summary: Delete a stack resource
+      operationId: deleteStackResource
       security:
         - Bearer: []
       parameters:
@@ -1948,6 +2011,8 @@ paths:
           description: Stack resource deleted successfully
         '401':
           description: Unauthorized
+        '404':
+          description: Stack or resource not found
         '500':
           description: Internal server error
           content:
@@ -4603,8 +4668,6 @@ components:
 
     StackSpec:
       type: object
-      required:
-        - stack_resources
       properties:
         stack_resources:
           type: array

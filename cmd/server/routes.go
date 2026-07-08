@@ -258,6 +258,7 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.UpdateConnection).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.DeleteConnection).Methods(http.MethodDelete)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Update).Methods(http.MethodPut)
+	teamResourceRouter.HandleFunc("/stacks/{id}/apply", stackHandler.Apply).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
 	teamResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)

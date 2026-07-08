@@ -329,6 +329,22 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 	return w.GetByID(ctx, id)
 }
 
+func (w *stackStore) UpdateShellWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	_, err := w.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return nil, errors.GeneralError("transaction not found in context")
+	}
+	spec.Status = nil
+	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
+		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
+	}
+	return w.GetByID(ctx, id)
+}
+
 func (w *stackStore) UpdateStatus(ctx context.Context, id string, status *models.StackStatus) *errors.ServiceError {
 	if err := w.sessionFactory.New(ctx).Model(&models.Stack{}).Where("id = ?", id).UpdateColumn("status", status).Error; err != nil {
 		return errors.GeneralError("failed to update stack status: %s", err.Error())

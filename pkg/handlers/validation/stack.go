@@ -18,13 +18,25 @@ func ValidateStack(in *openapi.Stack) Validate {
 	})
 }
 
+// ValidateStackShell validates only the stack's own (shell) fields, without
+// validating any child stack resources. Use this on thin create/update paths
+// where child resources are managed separately.
+func ValidateStackShell(in *openapi.Stack) Validate {
+	return ValidateAll([]Validate{
+		validateEmpty(in, "Id", "id"),
+		validateEmpty(in, "OrganisationId", "organisation_id"),
+		validateEmpty(in, "Status", "status"),
+		validateLabels(&in.Labels),
+		validateAnnotations(&in.Annotations),
+		validateNotEmpty(in, "Name", "name"),
+		validateEmpty(in, "Namespace", "namespace"),
+	})
+}
+
 func validateStackSpec(in *openapi.Stack) Validate {
 	return func() *errors.ServiceError {
-		if len(in.Spec.StackResources) == 0 {
-			return errors.BadRequest("spec.stack_resources: %s", "spec.resources is required")
-		}
 		for _, wr := range in.Spec.StackResources {
-			if err := validateStackResource(&wr, in); err != nil {
+			if err := ValidateStackResource(&wr, in); err != nil {
 				return err
 			}
 		}
@@ -32,7 +44,10 @@ func validateStackSpec(in *openapi.Stack) Validate {
 	}
 }
 
-func validateStackResource(in *openapi.StackResource, stack *openapi.Stack) *errors.ServiceError {
+// ValidateStackResource validates a single stack resource. When stack is nil,
+// the depends_on check is skipped since peer resources cannot be resolved
+// without the surrounding stack.
+func ValidateStackResource(in *openapi.StackResource, stack *openapi.Stack) *errors.ServiceError {
 	if err := validateEmpty(in, "Id", "id")(); err != nil {
 		return err
 	}
@@ -69,7 +84,7 @@ func validateStackResource(in *openapi.StackResource, stack *openapi.Stack) *err
 		}
 	}
 
-	if len(in.DependsOn) != 0 {
+	if stack != nil && len(in.DependsOn) != 0 {
 		if err := validateDependencies(in, stack); err != nil {
 			return err
 		}

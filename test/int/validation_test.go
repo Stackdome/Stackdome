@@ -92,7 +92,8 @@ var _ = Describe("Stack validation", func() {
 	It("accepts a fat stack create with an unpullable image (no network probes)", func() {
 		resource := openapi.NewStackResource("app")
 		resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource(validationUnpullableImageRef)})
-		spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+		spec := openapi.NewStackSpec()
+		spec.SetStackResources([]openapi.StackResource{*resource})
 		stack := openapi.NewStack("test-validation-unpullable", *spec)
 
 		By("Creating the stack — should succeed without probing the registry")
@@ -111,7 +112,8 @@ var _ = Describe("Stack validation", func() {
 		resourceName := "missing-image-app"
 		resource := openapi.NewStackResource(resourceName)
 		resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource(validationMissingImageRef)})
-		spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+		spec := openapi.NewStackSpec()
+		spec.SetStackResources([]openapi.StackResource{*resource})
 		stack := openapi.NewStack("test-validation-missing-image", *spec)
 
 		By("Creating the stack (fat create — no probing at create time)")
@@ -142,7 +144,8 @@ var _ = Describe("Stack validation", func() {
 		resource := openapi.NewStackResource(resourceName)
 		gitSource := openapi.NewGitSource(validationDefaultBranchRepoURL)
 		resource.SetSource(openapi.SourceSpec{Git: gitSource})
-		spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+		spec := openapi.NewStackSpec()
+		spec.SetStackResources([]openapi.StackResource{*resource})
 		stack := openapi.NewStack("test-validation-default-branch", *spec)
 
 		By("Creating the stack (create succeeds without any git call)")
@@ -187,7 +190,8 @@ var _ = Describe("Stack validation", func() {
 		gitSource := openapi.NewGitSource(validationDefaultBranchRepoURL)
 		gitSource.SetBranch(validationBadBranchName)
 		resource.SetSource(openapi.SourceSpec{Git: gitSource})
-		spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+		spec := openapi.NewStackSpec()
+		spec.SetStackResources([]openapi.StackResource{*resource})
 		stack := openapi.NewStack("test-validation-bad-branch", *spec)
 
 		created := shared.CreateStack(client, orgID, teamName, stack)

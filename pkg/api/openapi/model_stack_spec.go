@@ -16,7 +16,7 @@ import (
 
 // StackSpec struct for StackSpec
 type StackSpec struct {
-	StackResources []StackResource   `json:"stack_resources"`
+	StackResources []StackResource   `json:"stack_resources,omitempty"`
 	Volumes        []Volume          `json:"volumes,omitempty"`
 	Connections    []StackConnection `json:"connections,omitempty"`
 }
@@ -25,9 +25,8 @@ type StackSpec struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewStackSpec(stackResources []StackResource) *StackSpec {
+func NewStackSpec() *StackSpec {
 	this := StackSpec{}
-	this.StackResources = stackResources
 	return &this
 }
 
@@ -39,26 +38,34 @@ func NewStackSpecWithDefaults() *StackSpec {
 	return &this
 }
 
-// GetStackResources returns the StackResources field value
+// GetStackResources returns the StackResources field value if set, zero value otherwise.
 func (o *StackSpec) GetStackResources() []StackResource {
-	if o == nil {
+	if o == nil || o.StackResources == nil {
 		var ret []StackResource
 		return ret
 	}
-
 	return o.StackResources
 }
 
-// GetStackResourcesOk returns a tuple with the StackResources field value
+// GetStackResourcesOk returns a tuple with the StackResources field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *StackSpec) GetStackResourcesOk() ([]StackResource, bool) {
-	if o == nil {
+	if o == nil || o.StackResources == nil {
 		return nil, false
 	}
 	return o.StackResources, true
 }
 
-// SetStackResources sets field value
+// HasStackResources returns a boolean if a field has been set.
+func (o *StackSpec) HasStackResources() bool {
+	if o != nil && o.StackResources != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetStackResources gets a reference to the given []StackResource and assigns it to the StackResources field.
 func (o *StackSpec) SetStackResources(v []StackResource) {
 	o.StackResources = v
 }
@@ -129,7 +136,7 @@ func (o *StackSpec) SetConnections(v []StackConnection) {
 
 func (o StackSpec) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if true {
+	if o.StackResources != nil {
 		toSerialize["stack_resources"] = o.StackResources
 	}
 	if o.Volumes != nil {

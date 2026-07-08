@@ -91,7 +91,7 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 		},
 	})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{})
+	spec := openapi.NewStackSpec()
 	spec.SetConnections([]openapi.StackConnection{*conn})
 	stack := openapi.NewStack("demo", *spec)
 
@@ -172,7 +172,8 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 		t.Fatalf("expected presented self_output, got %q", presentedEnv.GetSelfOutput())
 	}
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{
 		{
 			Name:   "web",
 			Source: &openapi.SourceSpec{Image: openapi.NewImageSource("nginx:latest")},
