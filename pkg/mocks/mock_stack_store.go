@@ -326,6 +326,21 @@ func (mr *MockStackStoreMockRecorder) UpdateRevision(ctx, id, revision any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRevision", reflect.TypeOf((*MockStackStore)(nil).UpdateRevision), ctx, id, revision)
 }
 
+// UpdateShellWithTx mocks base method.
+func (m *MockStackStore) UpdateShellWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateShellWithTx", ctx, id, spec)
+	ret0, _ := ret[0].(*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// UpdateShellWithTx indicates an expected call of UpdateShellWithTx.
+func (mr *MockStackStoreMockRecorder) UpdateShellWithTx(ctx, id, spec any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateShellWithTx", reflect.TypeOf((*MockStackStore)(nil).UpdateShellWithTx), ctx, id, spec)
+}
+
 // UpdateStatus mocks base method.
 func (m *MockStackStore) UpdateStatus(ctx context.Context, id string, status *models.StackStatus) *errors.ServiceError {
 	m.ctrl.T.Helper()

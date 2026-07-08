@@ -119,6 +119,10 @@ Method | HTTP request | Description
 [**ApiV1UsersCurrentTeamsGet**](DefaultApi.md#ApiV1UsersCurrentTeamsGet) | **Get** /api/v1/users/current/teams | List teams for the current authenticated user
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
 [**ApiV1WebhooksGithubPost**](DefaultApi.md#ApiV1WebhooksGithubPost) | **Post** /api/v1/webhooks/github | GitHub webhook receiver (unauthenticated, HMAC-verified)
+[**ApplyStack**](DefaultApi.md#ApplyStack) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply | Apply a full stack document (declarative reconcile)
+[**CreateStackResource**](DefaultApi.md#CreateStackResource) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | Create a stack resource
+[**DeleteStackResource**](DefaultApi.md#DeleteStackResource) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Delete a stack resource
+[**UpdateStackResource**](DefaultApi.md#UpdateStackResource) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Update a stack resource
 
 
 
@@ -6564,6 +6568,8 @@ Name | Type | Description  | Notes
 
 Update a stack
 
+
+
 ### Example
 
 ```go
@@ -6580,7 +6586,7 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
     id := "id_example" // string | The id of record
-    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec()) // Stack | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -7261,6 +7267,8 @@ Name | Type | Description  | Notes
 
 Create a new stack
 
+
+
 ### Example
 
 ```go
@@ -7276,7 +7284,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     teamName := "teamName_example" // string | The name of the team
-    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec([]openapiclient.StackResource{*openapiclient.NewStackResource("Name_example")})) // Stack | 
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec()) // Stack | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -8356,6 +8364,314 @@ No authorization required
 
 - **Content-Type**: application/json
 - **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApplyStack
+
+> Stack ApplyStack(ctx, orgId, teamName, id).Stack(stack).Execute()
+
+Apply a full stack document (declarative reconcile)
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec()) // Stack | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApplyStack(context.Background(), orgId, teamName, id).Stack(stack).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApplyStack``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApplyStack`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApplyStack`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApplyStackRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **stack** | [**Stack**](Stack.md) |  | 
+
+### Return type
+
+[**Stack**](Stack.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## CreateStackResource
+
+> StackResource CreateStackResource(ctx, orgId, teamName, id).StackResource(stackResource).Execute()
+
+Create a stack resource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    stackResource := *openapiclient.NewStackResource("Name_example") // StackResource | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.CreateStackResource(context.Background(), orgId, teamName, id).StackResource(stackResource).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.CreateStackResource``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `CreateStackResource`: StackResource
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.CreateStackResource`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiCreateStackResourceRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+ **stackResource** | [**StackResource**](StackResource.md) |  | 
+
+### Return type
+
+[**StackResource**](StackResource.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## DeleteStackResource
+
+> DeleteStackResource(ctx, orgId, teamName, id, resourceName).Execute()
+
+Delete a stack resource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    resourceName := "resourceName_example" // string | The name of the stack resource
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.DeleteStackResource(context.Background(), orgId, teamName, id, resourceName).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.DeleteStackResource``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**resourceName** | **string** | The name of the stack resource | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiDeleteStackResourceRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## UpdateStackResource
+
+> StackResource UpdateStackResource(ctx, orgId, teamName, id, resourceName).StackResource(stackResource).Execute()
+
+Update a stack resource
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    id := "id_example" // string | The id of record
+    resourceName := "resourceName_example" // string | The name of the stack resource
+    stackResource := *openapiclient.NewStackResource("Name_example") // StackResource | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.UpdateStackResource(context.Background(), orgId, teamName, id, resourceName).StackResource(stackResource).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.UpdateStackResource``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `UpdateStackResource`: StackResource
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.UpdateStackResource`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+**id** | **string** | The id of record | 
+**resourceName** | **string** | The name of the stack resource | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiUpdateStackResourceRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+ **stackResource** | [**StackResource**](StackResource.md) |  | 
+
+### Return type
+
+[**StackResource**](StackResource.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)

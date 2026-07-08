@@ -2184,6 +2184,10 @@ paths:
       - Bearer: []
       summary: List all stacks for a team
     post:
+      description: "Creates a thin stack shell (name, labels, annotations, settings).\
+        \ Any inline\n`stack_resources`, `volumes`, or `connections` in the body are\
+        \ ignored — add\nchildren via `PUT /stacks/{id}/apply` or the individual sub-resource\
+        \ endpoints.\n"
       parameters:
       - description: The ID of the organization
         explode: false
@@ -2327,6 +2331,10 @@ paths:
       - Bearer: []
       summary: Get a specific stack
     put:
+      description: "Updates only shell fields (name, labels, annotations, settings).\
+        \ `namespace` is\nimmutable. Child collections (`stack_resources`, `volumes`,\
+        \ `connections`) in the\nbody are ignored — use `PUT /stacks/{id}/apply` for\
+        \ a full reconcile.\n"
       parameters:
       - description: The ID of the organization
         explode: false
@@ -2382,6 +2390,68 @@ paths:
       security:
       - Bearer: []
       summary: Update a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply:
+    put:
+      description: "Declarative whole-document apply. Reconciles the stack against\
+        \ the supplied\ndocument: resources and connections not present in the body\
+        \ are deleted, while\nvolumes are add-only and are never deleted. This is\
+        \ the only endpoint that\naccepts a full stack document.\n"
+      operationId: applyStack
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Stack'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stack'
+          description: Stack updated successfully
+        "401":
+          description: Unauthorized
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Apply a full stack document (declarative reconcile)
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs:
     get:
       parameters:
@@ -2557,7 +2627,123 @@ paths:
       security:
       - Bearer: []
       summary: List all stack resources under a stack
+    post:
+      operationId: createStackResource
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackResource'
+        required: true
+      responses:
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+          description: Stack resource created successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "404":
+          description: Stack not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Stack resource already exists
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Create a stack resource
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
+    delete:
+      operationId: deleteStackResource
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "204":
+          description: Stack resource deleted successfully
+        "401":
+          description: Unauthorized
+        "404":
+          description: Stack or resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Delete a stack resource
     get:
       parameters:
       - description: The ID of the organization
@@ -2610,6 +2796,73 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific stack resource by name
+    put:
+      operationId: updateStackResource
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the stack resource
+        explode: false
+        in: path
+        name: resource_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StackResource'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StackResource'
+          description: Stack resource updated successfully
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data
+        "401":
+          description: Unauthorized
+        "404":
+          description: Stack or resource not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Update a stack resource
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs:
     get:
       parameters:
@@ -9139,8 +9392,6 @@ components:
           items:
             $ref: '#/components/schemas/StackConnection'
           type: array
-      required:
-      - stack_resources
       type: object
     StackStatus:
       example:

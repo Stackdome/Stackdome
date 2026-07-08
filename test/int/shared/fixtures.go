@@ -344,7 +344,8 @@ func CreateCrashingStack(name string) *openapi.Stack {
 	exec.SetCommand([]string{"sh", "-c", fmt.Sprintf("echo '%s'; exit 1", CrashMessage)})
 	resource.SetExecutionConfig(*exec)
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -356,7 +357,8 @@ func CreateSimpleStack(name string) *openapi.Stack {
 		*openapi.NewPort("http", 80, false),
 	})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -395,7 +397,8 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 	value.SetOutput("host")
 	conn.SetMappings([]openapi.ConnectionMapping{*openapi.NewConnectionMapping(*target, *value)})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*backend, *frontend})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*backend, *frontend})
 	spec.SetConnections([]openapi.StackConnection{*conn})
 	return openapi.NewStack(name, *spec)
 }
@@ -416,7 +419,8 @@ func CreateStackWithDependencies(name string) *openapi.Stack {
 	})
 	resourceB.SetDependsOn([]string{"database"})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resourceA, *resourceB})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resourceA, *resourceB})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -448,7 +452,8 @@ func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 	})
 	resource.SetExecutionConfig(*exec)
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -464,7 +469,8 @@ func CreateStackWithInitContainer(name string) *openapi.Stack {
 	initSpec.Command = []string{"sh", "-c", InitCommand}
 	resource.SetInitSpec(*initSpec)
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -476,7 +482,8 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 		*openapi.NewPort("http", 8080, false),
 	})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	spec.SetConnections([]openapi.StackConnection{
 		postgresEnvConnection(addonID, "app", database, false),
 	})
@@ -491,7 +498,8 @@ func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi
 		*openapi.NewPort("http", 8080, false),
 	})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	spec.SetConnections([]openapi.StackConnection{
 		postgresEnvConnection(addonID, "app", "", true),
 	})
@@ -559,7 +567,8 @@ func CreateFullStack(name string, addonID string, database string, secretID stri
 		resourceToResourceEnvConnection(FullStackAPIName, FullStackWorkerName),
 	}
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*api, *worker})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*api, *worker})
 	spec.SetVolumes([]openapi.Volume{*volume})
 	spec.SetConnections(connections)
 	return openapi.NewStack(name, *spec)
@@ -635,7 +644,8 @@ func CreateStackWithBrokenBuildSource(name string, repoURL string) *openapi.Stac
 	// push omitted: builds go to the internal cluster registry
 	resource.SetSource(openapi.SourceSpec{Git: gitSource})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
 }
 
@@ -650,14 +660,16 @@ func skipProvisioningAnnotation() []openapi.Annotation {
 }
 
 func CreateSkipProvisioningStack(name string, resources []openapi.StackResource) *openapi.Stack {
-	spec := openapi.NewStackSpec(resources)
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources(resources)
 	stack := openapi.NewStack(name, *spec)
 	stack.SetAnnotations(skipProvisioningAnnotation())
 	return stack
 }
 
 func CreateSkipProvisioningStackWithVolumes(name string, resources []openapi.StackResource, volumes []openapi.Volume) *openapi.Stack {
-	spec := openapi.NewStackSpec(resources)
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources(resources)
 	spec.SetVolumes(volumes)
 	stack := openapi.NewStack(name, *spec)
 	stack.SetAnnotations(skipProvisioningAnnotation())
@@ -665,7 +677,8 @@ func CreateSkipProvisioningStackWithVolumes(name string, resources []openapi.Sta
 }
 
 func CreateSkipProvisioningStackWithConnections(name string, resources []openapi.StackResource, connections []openapi.StackConnection) *openapi.Stack {
-	spec := openapi.NewStackSpec(resources)
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources(resources)
 	spec.SetConnections(connections)
 	stack := openapi.NewStack(name, *spec)
 	stack.SetAnnotations(skipProvisioningAnnotation())
@@ -673,7 +686,8 @@ func CreateSkipProvisioningStackWithConnections(name string, resources []openapi
 }
 
 func CreateSkipProvisioningStackFull(name string, resources []openapi.StackResource, volumes []openapi.Volume, connections []openapi.StackConnection) *openapi.Stack {
-	spec := openapi.NewStackSpec(resources)
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources(resources)
 	spec.SetVolumes(volumes)
 	spec.SetConnections(connections)
 	stack := openapi.NewStack(name, *spec)
@@ -705,14 +719,16 @@ func SecretEnvConnection(secretID, targetResource, envName, outputKey string) op
 }
 
 func CreateSimulatedReleaseStack(name string, resources []openapi.StackResource, state string) *openapi.Stack {
-	spec := openapi.NewStackSpec(resources)
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources(resources)
 	stack := openapi.NewStack(name, *spec)
 	stack.SetAnnotations(simulateReleaseAnnotations(state))
 	return stack
 }
 
 func CreateSimulatedReleaseStackWithConnections(name string, resources []openapi.StackResource, connections []openapi.StackConnection, state string) *openapi.Stack {
-	spec := openapi.NewStackSpec(resources)
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources(resources)
 	spec.SetConnections(connections)
 	stack := openapi.NewStack(name, *spec)
 	stack.SetAnnotations(simulateReleaseAnnotations(state))
@@ -808,6 +824,7 @@ func CreateStackWithBuildSource(name string, repoURL string) *openapi.Stack {
 		*openapi.NewPort("http", int32(BuildSourcePort), true),
 	})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
 	return openapi.NewStack(name, *spec)
 }

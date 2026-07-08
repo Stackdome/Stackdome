@@ -309,8 +309,26 @@ func ExpectPostgresAddonEqual(expected, actual *openapi.PostgresAddon) {
 
 func CreateStack(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack) *openapi.Stack {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
+
+	// Thin create: server creates a shell, ignoring inline children.
+	postResp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to create stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(postResp).NotTo(BeNil(), "expected stack response")
+
+	// Fat apply: submit the same full stack so children are declared.
+	applied, httpResp, err := client.DefaultApi.ApplyStack(ctx, orgID, teamName, postResp.GetId()).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to apply stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(applied).NotTo(BeNil(), "expected applied stack response")
+
+	return applied
+}
+
+func CreateShellStack(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create shell stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
 
@@ -394,8 +412,21 @@ func ListStacks(client *openapi.APIClient, orgID, teamName string) *openapi.Stac
 
 func UpdateStack(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack) *openapi.Stack {
 	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApplyStack(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to apply stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack response")
+
+	return resp
+}
+
+// UpdateStackShellH updates a stack via the shell-only PUT endpoint. The server
+// updates shell fields (name, labels, etc.) and ignores any inline children, so
+// existing resources/connections are preserved.
+func UpdateStackShellH(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack) *openapi.Stack {
+	ctx := context.Background()
 	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
-	Expect(err).NotTo(HaveOccurred(), "failed to update stack")
+	Expect(err).NotTo(HaveOccurred(), "failed to update stack shell")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
 
@@ -430,6 +461,59 @@ func CreateStackExpectError(client *openapi.APIClient, orgID, teamName string, s
 func UpdateStackExpectError(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
 	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+func ApplyStackExpectError(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApplyStack(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+// Thin stack sub-resource operations for Ginkgo tests
+
+func AddStackResource(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource) *openapi.StackResource {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.CreateStackResource(ctx, orgID, teamName, stackID).StackResource(*resource).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack resource response")
+
+	return resp
+}
+
+func UpdateStackResourceH(client *openapi.APIClient, orgID, teamName, stackID, resourceName string, resource *openapi.StackResource) *openapi.StackResource {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.UpdateStackResource(ctx, orgID, teamName, stackID, resourceName).StackResource(*resource).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to update stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack resource response")
+
+	return resp
+}
+
+func DeleteStackResourceH(client *openapi.APIClient, orgID, teamName, stackID, resourceName string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.DeleteStackResource(ctx, orgID, teamName, stackID, resourceName).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent), "unexpected status code")
+}
+
+func AddStackResourceExpectError(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.CreateStackResource(ctx, orgID, teamName, stackID).StackResource(*resource).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 

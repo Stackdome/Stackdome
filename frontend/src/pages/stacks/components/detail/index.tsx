@@ -17,7 +17,7 @@ import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, F
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft } from "@/pages/stacks/lib/stack-diff";
-import { createStack, getStackById, deleteStack } from "@/api/stacks";
+import { createStack, applyStack, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
@@ -592,7 +592,13 @@ export default function StackDetailPage() {
       }
 
       const apiData = convertFormStackToApiStack(formStackData);
+      // POST creates the shell only (inline children are ignored by the thin API);
+      // the declarative apply populates resources/volumes/connections.
       const created = await createStack(orgId, teamName, apiData);
+      if (!created.id) {
+        throw new Error("Created stack is missing an id");
+      }
+      await applyStack(orgId, teamName, created.id, apiData);
       session.discard();
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {

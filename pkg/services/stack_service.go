@@ -20,6 +20,7 @@ import (
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError)
 	CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
 	CreateStackVolume(ctx context.Context, stackID string, volume *models.Volume) (*models.Volume, *errors.ServiceError)
@@ -208,17 +209,15 @@ func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.St
 		return nil, createErr
 	}
 
+	var createdVolumes []*models.Volume
 	for _, volume := range desiredVolumes {
-		if _, err := s.volumeService.InternalCreateWithTx(ctx, createdStack, volume); err != nil {
+		createdVolume, err := s.volumeService.InternalCreateWithTx(ctx, createdStack, volume)
+		if err != nil {
 			return nil, err
 		}
+		createdVolumes = append(createdVolumes, createdVolume)
 	}
-
-	volumesForStack, err := s.volumeService.ListVolumesUsedByStack(ctx, createdStack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to list volumes for stack '%s': %s", createdStack.ID, err.Error())
-	}
-	createdStack.Volumes = volumesForStack
+	createdStack.Volumes = createdVolumes
 
 	for _, resource := range desiredResources {
 		if _, err := s.stackResourceService.InternalCreateWithTx(ctx, createdStack, resource); err != nil {
@@ -226,6 +225,7 @@ func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.St
 		}
 	}
 
+	// This is makes sure that we track all the explicit resources we use in the stack.
 	if err := s.referenceService.ReprojectSpec(ctx, createdStack.ID); err != nil {
 		return nil, err
 	}
@@ -297,6 +297,60 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		}
 	}
 
+	return updatedStack, nil
+}
+
+func (s *stackService) UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	existingStack, err := s.GetStack(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+	return s.InternalUpdateShellStack(ctx, ID, spec)
+}
+
+func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	existingStack, err := s.InternalGetStack(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// set namespace
+	spec.ID = existingStack.ID
+	spec.Namespace = existingStack.Namespace
+	spec.ClusterID = existingStack.ClusterID
+	spec.OrganisationID = existingStack.OrganisationID
+	spec.TeamID = existingStack.TeamID
+	spec.UserID = existingStack.UserID
+
+	// Strip children so only the stack's own columns are updated; connections
+	// must NOT be replaced.
+	spec.StackResources = nil
+	spec.Volumes = nil
+	spec.Connections = nil
+
+	var updatedStack *models.Stack
+	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		updatedStack, err = s.InternalUpdateShellWithTx(ctx, spec, existingStack)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedStack, nil
+}
+
+func (s *stackService) InternalUpdateShellWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+	updatedStack, updateErr := s.stackStore.UpdateShellWithTx(ctx, existingStack.ID, spec)
+	if updateErr != nil {
+		return nil, updateErr
+	}
 	return updatedStack, nil
 }
 
