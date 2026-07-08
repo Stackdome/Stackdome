@@ -22,10 +22,11 @@ type postgresAddonService interface {
 	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 }
 
-// stackValidator runs the cheap, network-free validations for whole-stack
-// create/update: uniqueness, settings, connections, interpolations, and
-// (via resourceValidator) every per-resource rule. Release-time probes
-// (image pull, push access, git clone) run later, in the release worker.
+// stackValidator is network-free by construction: it runs only cheap,
+// in-memory checks for whole-stack create/update — uniqueness, settings,
+// connections, interpolations, and (via resourceValidator) every per-resource
+// rule. Expensive checks (image pull, push access, git clone) run later, in
+// the release worker's validation reconciler.
 type stackValidator struct {
 	interpolationValidator validator.InterpolationValidation
 	secretService          secretService

@@ -34,6 +34,13 @@ var _ = Describe("sibling rules", func() {
 		Expect(codes(errs)).To(HaveKey(errors.VErrDependencyCycle))
 	})
 
+	It("self dependency is not also reported as a cycle", func() {
+		r := validImageResource()
+		r.DependsOn = models.Dependencies{r.Name}
+		errs := validateSiblingRules(r, nil)
+		Expect(codes(errs)).NotTo(HaveKey(errors.VErrDependencyCycle))
+	})
+
 	It("duplicate subdomain prefix across stack", func() {
 		r := validImageResource()
 		r.Ports[0].SubdomainPrefix = "app"

@@ -1,4 +1,3 @@
-// pkg/errors/validation_test.go
 package errors
 
 import (

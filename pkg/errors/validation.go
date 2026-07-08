@@ -1,4 +1,3 @@
-// pkg/errors/validation.go
 package errors
 
 // FieldError is one machine-readable validation failure, addressed to a field

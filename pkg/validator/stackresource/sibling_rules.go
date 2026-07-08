@@ -48,9 +48,9 @@ func validateSiblingRules(resource *models.StackResource, siblings []*models.Sta
 func hasDependencyCycle(resource *models.StackResource, siblings []*models.StackResource) bool {
 	graph := make(map[string][]string, len(siblings)+1)
 	for _, s := range siblings {
-		graph[s.Name] = s.DependsOn
+		graph[s.Name] = withoutSelfEdge(s.Name, s.DependsOn)
 	}
-	graph[resource.Name] = resource.DependsOn
+	graph[resource.Name] = withoutSelfEdge(resource.Name, resource.DependsOn)
 
 	const (
 		inStack = 1
@@ -83,6 +83,19 @@ func hasDependencyCycle(resource *models.StackResource, siblings []*models.Stack
 		}
 	}
 	return false
+}
+
+// withoutSelfEdge drops a self-reference from deps. Self-dependencies are
+// already reported by input rules as VErrDependencySelf and must not also
+// surface here as a cycle.
+func withoutSelfEdge(name string, deps []string) []string {
+	out := make([]string, 0, len(deps))
+	for _, d := range deps {
+		if d != name {
+			out = append(out, d)
+		}
+	}
+	return out
 }
 
 func validateSubdomainUniqueness(resource *models.StackResource, siblings []*models.StackResource) []errors.FieldError {

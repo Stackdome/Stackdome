@@ -8,8 +8,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
-func int32Ptr(i int32) *int32 { return &i }
-
 // validImageResource returns a minimal resource that passes all input rules.
 func validImageResource() *models.StackResource {
 	return &models.StackResource{

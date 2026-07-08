@@ -67,8 +67,7 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 
 	if rateLimited && len(verrs) == 0 {
 		r.logger.Infof("release %s: registry rate limited, requeueing", release.ID)
-		delay := rateLimitRequeueDelay
-		return subReconcilerResult{resultRequeueAfter: &delay}, nil
+		return resultRequeueAfter(rateLimitRequeueDelay), nil
 	}
 
 	if len(verrs) > 0 {
