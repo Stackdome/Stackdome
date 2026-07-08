@@ -249,6 +249,28 @@ func (s *stackReleaseStore) MarkFailed(ctx context.Context, id string, message s
 	return result.RowsAffected > 0, nil
 }
 
+// MarkFailedWithValidationErrors transitions InProgress -> Failed, attaching
+// structured validation errors alongside the failure message.
+func (s *stackReleaseStore) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	now := time.Now().UTC()
+
+	result := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
+		Updates(map[string]interface{}{
+			"state":             models.ReleaseStateFailed,
+			"message":           message,
+			"validation_errors": verrs,
+			"completed_at":      now,
+			"updated_at":        now,
+		})
+
+	if result.Error != nil {
+		return false, errors.GeneralError("failed to mark failed with validation errors: %s", result.Error.Error())
+	}
+	return result.RowsAffected > 0, nil
+}
+
 // Cancel transitions Pending -> Cancelled (user-initiated).
 func (s *stackReleaseStore) Cancel(ctx context.Context, id string) (bool, *errors.ServiceError) {
 	now := time.Now().UTC()

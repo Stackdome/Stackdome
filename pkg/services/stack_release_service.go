@@ -32,6 +32,7 @@ type StackReleaseService interface {
 	MarkCancelled(ctx context.Context, id string, reasons string) (bool, *errors.ServiceError)
 	MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
+	MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError)
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
 
 	BackgroundJobEnqueuerInjectable
@@ -316,6 +317,10 @@ func (s *stackReleaseService) MarkReleased(ctx context.Context, id string, outco
 
 func (s *stackReleaseService) MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError) {
 	return s.store.MarkFailed(ctx, id, message, outcome)
+}
+
+func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	return s.store.MarkFailedWithValidationErrors(ctx, id, message, verrs)
 }
 
 func (s *stackReleaseService) AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError {

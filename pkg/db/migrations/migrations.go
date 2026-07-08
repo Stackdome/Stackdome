@@ -68,4 +68,6 @@ var MigrationList = []*gormigrate.Migration{
 	createRegistryCredentialsTable(),
 	createGitIntegrationsTable(),
 	createGitInstallationsTable(),
+	addReleaseValidationErrors(),
+	createResourceValidationRecords(),
 }
