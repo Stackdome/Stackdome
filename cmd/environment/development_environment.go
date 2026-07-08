@@ -128,6 +128,9 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 			PostgresAddonService: d.Services.PostgresAddonService,
 			SecretService:        d.Services.SecretService,
 		}),
+		ValidationRecords: pgstore.NewResourceValidationRecordStore(pgstore.ResourceValidationRecordStoreSpec{
+			SessionFactory: d.DBSession,
+		}),
 		ReleaseWorkerEnqueuer: d.WorkerManager,
 		Env:                   d.Env.Name,
 	})

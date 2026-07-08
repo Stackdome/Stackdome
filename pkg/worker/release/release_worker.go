@@ -10,6 +10,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker"
 	"github.com/Stackdome/stackdome/pkg/worker/releasegc"
 	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
@@ -32,6 +33,8 @@ type ReleaseWorkerSpec struct {
 	VolumeService         volumeService
 	Resolver              *stackdeploy.Resolver
 	ReleaseWorkerEnqueuer workermanager.BackgroundJobEnqueuer
+	ValidationRecords     stores.ResourceValidationRecordStore
+	RegistryClients       registryClientProvider
 	Env                   string
 }
 
@@ -51,6 +54,7 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 		subReconcilers: []subReconciler{
 			newGatekeeperReconciler(spec),
 			newSimulatorReconciler(spec),
+			newValidationReconciler(spec),
 			newRenderReconciler(spec),
 			newApplyReconciler(spec),
 			newConvergeReconciler(spec),

@@ -169,6 +169,21 @@ func (mr *MockreleaseServiceMockRecorder) MarkFailed(ctx, id, message, outcome a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailed", reflect.TypeOf((*MockreleaseService)(nil).MarkFailed), ctx, id, message, outcome)
 }
 
+// MarkFailedWithValidationErrors mocks base method.
+func (m *MockreleaseService) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkFailedWithValidationErrors", ctx, id, message, verrs)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// MarkFailedWithValidationErrors indicates an expected call of MarkFailedWithValidationErrors.
+func (mr *MockreleaseServiceMockRecorder) MarkFailedWithValidationErrors(ctx, id, message, verrs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailedWithValidationErrors", reflect.TypeOf((*MockreleaseService)(nil).MarkFailedWithValidationErrors), ctx, id, message, verrs)
+}
+
 // MarkInProgress mocks base method.
 func (m *MockreleaseService) MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError) {
 	m.ctrl.T.Helper()

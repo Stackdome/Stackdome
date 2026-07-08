@@ -688,6 +688,9 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 			PostgresAddonService: te.Services.PostgresAddonService,
 			SecretService:        te.Services.SecretService,
 		}),
+		ValidationRecords: pgstore.NewResourceValidationRecordStore(pgstore.ResourceValidationRecordStoreSpec{
+			SessionFactory: te.DBSession,
+		}),
 		ReleaseWorkerEnqueuer: te.WorkerManager,
 		Env:                   te.Env.Name,
 	})
