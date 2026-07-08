@@ -22,6 +22,10 @@ interface ResourceDrawerProps {
   resourceIndex: number;
   session: UseStackEditSession;
   baselineResources: Partial<FormStackResourceData>[];
+  /** Server-computed resource outputs keyed by resource name. The draft copy of a
+   *  newly-added resource has no outputs, so the env-var output pickers read from
+   *  this server-truth map (matched by name) instead. */
+  serverOutputsByName?: ReadonlyMap<string, string[]>;
   /** Addon ids linked to the stack — filters the addon picker + drives bindings. */
   connectionAddonIds: ReadonlySet<string>;
   errors: { [field: string]: string | undefined };
@@ -43,6 +47,7 @@ export function ResourceDrawer({
   resourceIndex,
   session,
   baselineResources,
+  serverOutputsByName,
   connectionAddonIds,
   errors,
   onClose,
@@ -68,14 +73,19 @@ export function ResourceDrawer({
       ),
     [allAddons],
   );
+  // Keep the draft's resource name/index/order (preserves unsaved edits &
+  // ordering) but source outputs from the server-truth map by name — a
+  // resource added on the canvas has none in its draft copy until saved.
   const allResources = useMemo(
     () =>
       session.draft.resources.map((r, i) => ({
         name: r.name || `Resource ${i + 1}`,
         index: i,
-        outputs: (r.outputs ?? []).map((o: { name: string }) => o.name),
+        outputs:
+          serverOutputsByName?.get(r.name ?? "") ??
+          (r.outputs ?? []).map((o: { name: string }) => o.name),
       })),
-    [session.draft.resources],
+    [session.draft.resources, serverOutputsByName],
   );
 
   // Replace just this resource in the draft.
@@ -99,6 +109,7 @@ export function ResourceDrawer({
         // cycle advances the baseline.
         volumes: session.draft.volumes,
         allResources,
+        serverOutputsByName,
         secrets,
         addons,
         addonNameById,

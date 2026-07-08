@@ -246,6 +246,21 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
+  // Server-computed outputs (host, port.<n>, url.<n>, public.<n>.*) keyed by
+  // resource name. The working draft never computes outputs, so a resource added
+  // on the canvas carries none until it is saved. The env-var OUTPUT pickers read
+  // from this server-truth map (matched by name) instead of the draft copy, and
+  // it refreshes with stackToShow after every autosave — no page reload needed.
+  const serverOutputsByName = useMemo<Map<string, string[]>>(
+    () =>
+      new Map(
+        (stackToShow?.spec?.stack_resources ?? [])
+          .filter((r): r is StackResource & { name: string } => !!r.name)
+          .map((r) => [r.name, (r.outputs ?? []).map((o) => o.name)] as [string, string[]]),
+      ),
+    [stackToShow?.spec?.stack_resources],
+  );
+
   // Diff baseline: the deployed snapshot when one exists, so autosaved edits stay
   // visibly dirty/revertable until deployed. Never-deployed stacks fall back to
   // the server state (everything reads as staged for the first deploy).
@@ -368,6 +383,21 @@ export default function StackDetailPage() {
     [stackToShow?.spec?.volumes],
   );
 
+  // Backend validation errors from a failed autosave, mapped onto the offending
+  // env-var field so the row shows them inline. Keyed by resource NAME → env-var
+  // name → message (NOT by index): the resource may be reordered/removed before
+  // the user fixes it, so the current index + env index are resolved at render
+  // time when merging into the index-keyed errors prop.
+  const [serverFieldErrors, setServerFieldErrors] = useState<{
+    [resourceName: string]: { [envName: string]: string };
+  }>({});
+
+  // Dedupe for autosave-failure toasts: the backoff retry loop and re-edits after
+  // a terminal 400 re-run the same ops and would re-toast the same reason every
+  // cycle. Remember the last-shown message and only toast when it changes; cleared
+  // on a successful sync so a later distinct failure still toasts.
+  const lastSyncErrorMsgRef = useRef<string | null>(null);
+
   // Autosave engine: debounces draft changes and syncs thin per-resource ops to
   // the server. Disabled for drafts (nothing exists server-side to sync yet).
   const draftSync = useDraftSync({
@@ -381,7 +411,39 @@ export default function StackDetailPage() {
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       setTopologyRefreshKey((k) => k + 1);
     },
+    onSyncError: ({ message, op }) => {
+      // No op → the save actually landed and only the post-save refetch failed;
+      // don't alarm the user with a "Save failed" toast or field error.
+      if (!op) return;
+      // Dedupe: skip if this exact reason is already on screen (retry/re-edit).
+      if (lastSyncErrorMsgRef.current === message) return;
+      lastSyncErrorMsgRef.current = message;
+      toast({ title: "Save failed", description: message, variant: "destructive" });
+      // Only resource create/update ops carry env vars; others just toast.
+      if (op.kind !== "createResource" && op.kind !== "updateResource") return;
+      const resourceName = op.resource.name;
+      if (!resourceName) return;
+      // The backend reason names the offending var: `env var '<NAME>'`.
+      const envName = message.match(/env var '([^']+)'/)?.[1];
+      if (!envName) return;
+      // Key by resource + env-var NAME; the current row indices are resolved at
+      // render time so a reorder/removal can't misattach the inline error.
+      setServerFieldErrors((prev) => ({
+        ...prev,
+        [resourceName]: { ...(prev[resourceName] ?? {}), [envName]: message },
+      }));
+    },
   });
+
+  // A successful sync clears any stale server-side field errors (the draft that
+  // failed has since been fixed and persisted) and the toast-dedupe memory so a
+  // later, distinct failure toasts again.
+  useEffect(() => {
+    if (draftSync.status === SYNC_STATUS.saved) {
+      lastSyncErrorMsgRef.current = null;
+      setServerFieldErrors((prev) => (Object.keys(prev).length === 0 ? prev : {}));
+    }
+  }, [draftSync.status]);
 
   // Live drawer validation: compute desired state from draft and expose zod issues
   // per resource index. Issue paths are relative to the resource root (no
@@ -399,6 +461,30 @@ export default function StackDetailPage() {
     });
     return { resources, volumes: {} };
   }, [desiredState.resourceIssues]);
+
+  // Merge live zod validation (index-keyed) with backend field errors from a
+  // failed autosave (name-keyed). Resolve each server error's resource NAME and
+  // env-var NAME to their CURRENT indices here so the merged map stays index-keyed
+  // for consumers but survives a reorder/removal since the error was captured.
+  const mergedResourceErrors = useMemo(() => {
+    const merged: { [index: number]: { [field: string]: string | undefined } } = {};
+    for (const [k, v] of Object.entries(validationErrors.resources)) {
+      merged[Number(k)] = { ...v };
+    }
+    for (const [resourceName, envErrors] of Object.entries(serverFieldErrors)) {
+      const idx = session.draft.resources.findIndex((r) => r.name === resourceName);
+      if (idx < 0) continue;
+      const draftEnv = (session.draft.resources[idx]?.execution_config
+        ?.environment_variables ?? []) as FormEnvVarData[];
+      for (const [envName, message] of Object.entries(envErrors)) {
+        const envIdx = draftEnv.findIndex((e) => e.name === envName);
+        if (envIdx < 0) continue;
+        const fieldKey = `execution_config.environment_variables.${envIdx}.value`;
+        merged[idx] = { ...(merged[idx] ?? {}), [fieldKey]: message };
+      }
+    }
+    return merged;
+  }, [validationErrors.resources, serverFieldErrors, session.draft.resources]);
 
   const lifecycle = useDeployLifecycle({
     stack: stackToShow ?? undefined,
@@ -737,18 +823,25 @@ export default function StackDetailPage() {
   const dirtyTotal =
     session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
 
-  // "View changes" badge + modal count must agree with the modal's BODY, which
-  // renders lifecycle.stagedDiff (saved spec vs release). Session dirt can
-  // diverge from it — e.g. a mount added and disconnected after the deploy nets
-  // to zero staged changes while the session still reads dirty. Once a staged
-  // diff exists, count its rows; fall back to session dirt only while an edit
-  // is still syncing (stagedDiff undefined).
+  // "View changes" badge + modal count must agree with the modal's BODY. The body
+  // renders lifecycle.stagedDiff (saved spec vs release), which only sees SAVED
+  // content. When a sync is in flight or has errored (e.g. a fresh resource whose
+  // autosave 400s), the unsaved edit is absent from the staged diff — so the diff
+  // can be empty while real session dirt exists. In that unsettled state, never let
+  // the (stale) staged count hide the dirt: take the larger of the two. Once the
+  // sync settles, the staged diff is authoritative (session dirt can overcount,
+  // e.g. a mount added then removed nets to zero staged while the session still
+  // reads dirty), so trust it and fall back to dirt only until the diff resolves.
   const stagedCount = lifecycle.stagedDiff
     ? lifecycle.stagedDiff.resources.length +
       lifecycle.stagedDiff.volumes.length +
       lifecycle.stagedDiff.connections.length
     : null;
-  const changeCount = stagedCount ?? dirtyTotal;
+  const syncUnsettled =
+    draftSync.status === SYNC_STATUS.saving || draftSync.status === SYNC_STATUS.error;
+  const changeCount = syncUnsettled
+    ? Math.max(stagedCount ?? 0, dirtyTotal)
+    : stagedCount ?? dirtyTotal;
 
   return (
     <>
@@ -786,9 +879,10 @@ export default function StackDetailPage() {
             baselineVolumes={baselineVolumes}
             draftResources={draftResources}
             draftVolumes={draftVolumes}
+            serverOutputsByName={serverOutputsByName}
             connectionAddonIds={connectionAddonIds}
             addonNameById={addonNameById}
-            errors={validationErrors.resources}
+            errors={mergedResourceErrors}
             onViewLogs={() => setActiveTab("logs")}
             topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
             topologyRefreshKey={topologyRefreshKey}
@@ -806,6 +900,8 @@ export default function StackDetailPage() {
         onOpenChange={setViewChangesOpen}
         diff={lifecycle.stagedDiff}
         count={changeCount}
+        errored={draftSync.status === SYNC_STATUS.error}
+        dirty={dirtyTotal > 0}
         stackName={effectiveStack?.name ?? ""}
         onDiscardResource={discardResourceByName}
         onDiscardVolume={discardVolumeByName}

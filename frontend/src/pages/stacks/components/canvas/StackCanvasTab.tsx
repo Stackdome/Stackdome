@@ -18,7 +18,7 @@ import type { EditSessionDraft, UseStackEditSession } from "@/pages/stacks/hooks
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
-import { layoutGraph } from "@/pages/stacks/lib/canvas/layout-graph";
+import { layoutGraph, NEW_NODE_GAP_X, NEW_NODE_OFFSET_Y } from "@/pages/stacks/lib/canvas/layout-graph";
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./CanvasEditor";
@@ -68,6 +68,9 @@ interface StackCanvasTabProps {
    *  and what a lazily-started session's working draft seeds from. */
   draftResources: Partial<FormStackResourceData>[];
   draftVolumes: Partial<VolumeFormData>[];
+  /** Server-computed resource outputs keyed by resource name — used to populate
+   *  the env-var output pickers for resources whose draft copy has no outputs. */
+  serverOutputsByName?: ReadonlyMap<string, string[]>;
   connectionAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
   errors: { [index: number]: { [field: string]: string | undefined } };
@@ -92,6 +95,7 @@ function StackCanvasFlow({
   baselineVolumes,
   draftResources,
   draftVolumes,
+  serverOutputsByName,
   connectionAddonIds,
   addonNameById,
   errors,
@@ -229,7 +233,34 @@ function StackCanvasFlow({
     const laid = layoutGraph(mergedGraph);
     setNodes((prev) => {
       const posById = new Map(prev.map((n) => [n.id, n.position]));
-      return laid.nodes.map((n) => ({ ...n, position: posById.get(n.id) ?? n.position })) as CanvasFlowNode[];
+      // Empty canvas (no preserved nodes): use the fresh dagre layout as-is.
+      if (posById.size === 0) return laid.nodes as CanvasFlowNode[];
+      // Bounding box of the PRESERVED nodes — new nodes land below-left of it so
+      // they never overlap the frozen layout (their fresh dagre coords belong to a
+      // different frame and would collide).
+      const preserved = [...posById.values()];
+      const minX = Math.min(...preserved.map((p) => p.x));
+      const maxY = Math.max(...preserved.map((p) => p.y));
+      let newCount = 0;
+      const next = laid.nodes.map((n) => {
+        const kept = posById.get(n.id);
+        if (kept) return { ...n, position: kept } as CanvasFlowNode;
+        // Stagger multiple new nodes in one pass so they don't stack on each other.
+        const position = {
+          x: minX + newCount * NEW_NODE_GAP_X,
+          y: maxY + NEW_NODE_OFFSET_Y,
+        };
+        newCount += 1;
+        return { ...n, position } as CanvasFlowNode;
+      });
+      // TODO: a genuinely-new node parks below-left of the frozen layout and can
+      // land outside the current viewport (the user never sees it appear). A blind
+      // fitView here would work but is unsafe: this effect also re-runs on server
+      // topology refreshes (autosave), so it would reset the user's pan/zoom
+      // mid-edit and could jump the board during a drag. A clean "ensure-visible"
+      // (pan only when the new node is off-screen, no zoom reset) needs viewport
+      // math that risks disrupting drag UX, so it's deferred over forcing a fit.
+      return next;
     });
     setEdges(mergedGraph.edges as Edge[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on topology only
@@ -520,6 +551,7 @@ function StackCanvasFlow({
         resourceIndex={frontEntry.index}
         session={session}
         baselineResources={baselineResources}
+        serverOutputsByName={serverOutputsByName}
         connectionAddonIds={connectionAddonIds}
         errors={errors[frontEntry.index] ?? {}}
         onClose={popDrawer}
