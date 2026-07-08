@@ -14,6 +14,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	"github.com/Stackdome/stackdome/pkg/validator"
 	stackvalidator "github.com/Stackdome/stackdome/pkg/validator/stack"
+	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	"k8s.io/utils/ptr"
 )
 
@@ -70,6 +71,7 @@ type StackServiceSpec struct {
 	ReferenceService      ReferenceService
 	CredentialResolver    CredentialResolver
 	DefaultBranchResolver DefaultBranchResolver
+	GitIntegrationService GitIntegrationService
 }
 
 type stackService struct {
@@ -99,6 +101,19 @@ func NewStackService(spec StackServiceSpec) StackService {
 		SessionFactory: spec.SessionFactory,
 		Logger:         spec.Logger,
 	})
+	// The whole-stack path gets its own resourceValidator instance (rather
+	// than reusing the one wired into StackResourceService) with Volumes left
+	// unset: on create the stack's namespace doesn't exist yet, and volumes
+	// bundled in the same request aren't persisted until after validation
+	// succeeds, so a namespace-scoped DB lookup would always report them
+	// missing. validateVolumeReferences in the stack validator checks bundled
+	// volumes against the request payload instead.
+	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
+		Secrets:         spec.SecretService,
+		Domains:         organisationDomainService,
+		Credentials:     spec.CredentialResolver,
+		GitIntegrations: spec.GitIntegrationService,
+	})
 	return &stackService{
 		stackStore: pgstore.NewStackStore(&pgstore.StackStoreSpec{
 			SessionFactory: spec.SessionFactory,
@@ -109,10 +124,9 @@ func NewStackService(spec StackServiceSpec) StackService {
 		logger:              spec.Logger,
 		sessionFactory:      spec.SessionFactory,
 		stackValidator: stackvalidator.NewStackValidator(stackvalidator.StackValidatorSpec{
-			DomainService:        organisationDomainService,
 			SecretService:        spec.SecretService,
 			PostgresAddonService: spec.PostgresAddonService,
-			CredentialResolver:   spec.CredentialResolver,
+			ResourceValidator:    resourceValidator,
 		}),
 		stackResourceService: spec.StackResourceService,
 		namespaceService:     spec.NamespaceService,
@@ -141,9 +155,6 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	existingStack, _ := s.stackStore.GetByName(ctx, spec.Name, spec.UserID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
-	}
-	if err := s.resolveDefaultBranches(ctx, spec); err != nil {
-		return nil, err
 	}
 
 	s.logger.Infof("running validation for stack creation: %s", spec.Name)
@@ -261,10 +272,6 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	spec.OrganisationID = existingStack.OrganisationID
 	spec.TeamID = existingStack.TeamID
 	spec.UserID = existingStack.UserID
-
-	if err := s.resolveDefaultBranches(ctx, spec); err != nil {
-		return nil, err
-	}
 
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
 		return nil, err
@@ -669,21 +676,6 @@ func (s *stackService) UpdateStatus(ctx context.Context, ID string, status *mode
 func (s *stackService) UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError {
 	if err := s.stackStore.UpdateRevision(ctx, ID, revision); err != nil {
 		return err
-	}
-	return nil
-}
-
-// resolveDefaultBranches pins the default branch for every git-source resource
-// that specifies neither a branch nor a tag. It only mutates the in-memory
-// spec before validation and persistence, so it needs no rollback.
-func (s *stackService) resolveDefaultBranches(ctx context.Context, spec *models.Stack) *errors.ServiceError {
-	if s.branchResolver == nil {
-		return nil
-	}
-	for _, resource := range spec.StackResources {
-		if err := s.branchResolver.ResolveDefaultBranch(ctx, spec, resource); err != nil {
-			return err
-		}
 	}
 	return nil
 }

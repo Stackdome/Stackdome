@@ -454,6 +454,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		ReferenceService:      referenceService,
 		CredentialResolver:    credentialResolver,
 		DefaultBranchResolver: defaultBranchResolver,
+		GitIntegrationService: gitIntegrationService,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{

@@ -87,4 +87,9 @@ const (
 	VErrImageNotFound      = "image_not_found"
 	VErrRegistryAuthFailed = "registry_auth_failed"
 	VErrPushAccessDenied   = "push_access_denied"
+
+	// stack-level (settings, connections, interpolations)
+	VErrStackSettingsInvalid = "stack_settings_invalid"
+	VErrConnectionInvalid    = "connection_invalid"
+	VErrInterpolationInvalid = "interpolation_invalid"
 )
