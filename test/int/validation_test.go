@@ -214,8 +214,7 @@ var _ = Describe("Stack validation", func() {
 		})
 
 		By("Waiting for the first release to converge (generous timeout: anonymous pulls can be rate-limited and requeued)")
-		shared.WaitForReleaseState(client, orgID, teamName, stackID, release1.GetId(),
-			string(models.ReleaseStateReleased), 3*time.Minute)
+		shared.WaitForReleaseReleased(client, orgID, teamName, stackID, release1.GetId(), 5*time.Minute)
 
 		By("Reading the validation record written by the first release's image probe")
 		rec1, err := testEnv.Database.GetResourceValidationRecord(context.Background(), stackID,
@@ -226,8 +225,7 @@ var _ = Describe("Stack validation", func() {
 
 		By("Creating a second release for the same, unchanged image")
 		release2 := shared.CreateRelease(client, orgID, teamName, stackID)
-		shared.WaitForReleaseState(client, orgID, teamName, stackID, release2.GetId(),
-			string(models.ReleaseStateReleased), 3*time.Minute)
+		shared.WaitForReleaseReleased(client, orgID, teamName, stackID, release2.GetId(), 5*time.Minute)
 
 		By("Verifying the validation record's validated_at is unchanged — the probe was skipped")
 		rec2, err := testEnv.Database.GetResourceValidationRecord(context.Background(), stackID,
