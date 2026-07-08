@@ -9,6 +9,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/models"
 	_ "github.com/lib/pq"
 )
 
@@ -168,6 +169,19 @@ func (dm *DatabaseManager) ClearData(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// GetResourceValidationRecord reads a single resource_validation_records row
+// directly, so e2e specs can assert the release worker's probe-skip
+// fingerprint cache (validated_at unchanged across releases means the probe
+// was skipped) without a dedicated API surface for it.
+func (dm *DatabaseManager) GetResourceValidationRecord(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind) (*models.ResourceValidationRecord, error) {
+	session := dm.sessionFactory.New(ctx)
+	var rec models.ResourceValidationRecord
+	if err := session.Where("stack_id = ? AND resource_name = ? AND check_kind = ?", stackID, resourceName, kind).First(&rec).Error; err != nil {
+		return nil, err
+	}
+	return &rec, nil
 }
 
 func (dm *DatabaseManager) Cleanup(ctx context.Context) error {

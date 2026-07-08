@@ -2,6 +2,7 @@ package shared
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -474,6 +475,34 @@ func DeleteStackConnectionExpectError(client *openapi.APIClient, orgID, teamName
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 }
 
+// CreateStackResource adds a resource to an existing stack via the thin
+// resource-create endpoint (POST /stacks/{id}/resources).
+func CreateStackResource(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource) *openapi.StackResource {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesPost(ctx, orgID, teamName, stackID).
+		StackResource(*resource).
+		Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack resource response")
+
+	return resp
+}
+
+func CreateStackResourceExpectError(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesPost(ctx, orgID, teamName, stackID).
+		StackResource(*resource).
+		Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
 func GetStackTopologyExpectError(client *openapi.APIClient, orgID, teamName, stackID string, expectedStatus int) {
 	ctx := context.Background()
 	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdTopologyGet(ctx, orgID, teamName, stackID).Execute()
@@ -522,6 +551,45 @@ func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID s
 	).Execute()
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to get release, status: %d", httpResp.StatusCode)
 	return release
+}
+
+// CreateReleaseExpectError creates a release expecting the request to be rejected
+// (e.g. sync validation failures surfaced as 400 from resolvePins).
+func CreateReleaseExpectError(client *openapi.APIClient, orgID, teamName, stackID string, expectedStatus int) *openapi.GenericOpenAPIError {
+	_, httpResp, err := client.ReleasesApi.CreateRelease(
+		context.Background(), orgID, teamName, stackID,
+	).CreateReleaseRequest(openapi.CreateReleaseRequest{}).Execute()
+	ExpectWithOffset(1, err).To(HaveOccurred(), "expected error creating release")
+	ExpectWithOffset(1, httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	ExpectWithOffset(1, ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+// ErrorValidationCodes decodes an aggregated validation error's body and
+// returns the codes carried in details.errors[].code. Works for any endpoint
+// that returns errors.ValidationFailed (details: {"errors": [{field, code, message}]}),
+// whether or not the generated client populated apiErr.Model() for the route.
+func ErrorValidationCodes(apiErr *openapi.GenericOpenAPIError) []string {
+	var errObj openapi.Error
+	ExpectWithOffset(1, json.Unmarshal(apiErr.Body(), &errObj)).To(Succeed(), "failed to decode error response body")
+
+	raw, ok := errObj.Details["errors"]
+	ExpectWithOffset(1, ok).To(BeTrue(), "expected details.errors in error response, got: %+v", errObj.Details)
+
+	entries, ok := raw.([]interface{})
+	ExpectWithOffset(1, ok).To(BeTrue(), "expected details.errors to be an array")
+
+	codes := make([]string, 0, len(entries))
+	for _, e := range entries {
+		m, ok := e.(map[string]interface{})
+		ExpectWithOffset(1, ok).To(BeTrue(), "expected each details.errors entry to be an object")
+		code, _ := m["code"].(string)
+		codes = append(codes, code)
+	}
+	return codes
 }
 
 func CancelRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) {
