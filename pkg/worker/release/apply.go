@@ -6,6 +6,8 @@ import (
 	stderrors "errors"
 	"fmt"
 	"net"
+	"sort"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
@@ -135,8 +137,13 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultNil, fmt.Errorf("failed to sync generic secrets: %w", err)
 	}
 
-	ready, err := r.volumesReady(ctx, release.StackID)
+	ready, err := r.volumesReady(ctx, release)
 	if err != nil {
+		var missing *missingVolumesError
+		if stderrors.As(err, &missing) {
+			failRelease(ctx, r.releaseService, r.logger, release, err.Error())
+			return resultStop, nil
+		}
 		return resultNil, fmt.Errorf("failed to check volume readiness: %w", err)
 	}
 	if !ready {
@@ -325,15 +332,129 @@ func (r *applyReconciler) pruneStackResources(ctx context.Context, clusterClient
 	return nil
 }
 
-func (r *applyReconciler) volumesReady(ctx context.Context, stackID string) (bool, error) {
-	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, stackID)
+// missingVolumesError signals that the release snapshot references a volume
+// that no longer exists in the stack's live volume set. Applying stack/resource
+// CRs against a missing volume would leave the cluster agent stalled trying to
+// mount a PVC that will never appear, so the release is failed outright rather
+// than requeued.
+type missingVolumesError struct {
+	refs []string
+}
+
+func (e *missingVolumesError) Error() string {
+	return fmt.Sprintf("release references volume(s) that no longer exist: %s", strings.Join(e.refs, ", "))
+}
+
+// volumesReady gates release application on the readiness of only the volumes
+// the release snapshot actually references — not every live volume on the
+// stack. An unreferenced volume (e.g. one belonging to a resource dropped from
+// this release, or a broken volume nobody mounts) must never block a release.
+// Status is still read live from the DB (that's the correct, current cluster
+// state); it's the SET of volumes being waited on that must come from the
+// immutable snapshot, so a volume created after this release was cut can't
+// gate it either.
+func (r *applyReconciler) volumesReady(ctx context.Context, release *models.StackRelease) (bool, error) {
+	byID, byName := referencedVolumeRefs(&release.Snapshot)
+	if len(byID) == 0 && len(byName) == 0 {
+		return true, nil
+	}
+
+	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, release.StackID)
 	if serr != nil {
 		return false, serr
 	}
+
+	foundByID := make(map[string]struct{}, len(byID))
+	foundByName := make(map[string]struct{}, len(byName))
+	ready := true
 	for _, v := range volumes {
-		if v.Status == nil || v.Status.Phase != "Ready" {
-			return false, nil
+		_, wantID := byID[v.ID]
+		_, wantName := byName[v.Name]
+		if !wantID && !wantName {
+			continue
+		}
+		if wantID {
+			foundByID[v.ID] = struct{}{}
+		}
+		if wantName {
+			foundByName[v.Name] = struct{}{}
+		}
+		if v.Status == nil || v.Status.Phase != models.VolumePhaseReady {
+			ready = false
 		}
 	}
-	return true, nil
+
+	var missing []string
+	for id := range byID {
+		if _, ok := foundByID[id]; !ok {
+			missing = append(missing, id)
+		}
+	}
+	for name := range byName {
+		if _, ok := foundByName[name]; !ok {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return false, &missingVolumesError{refs: missing}
+	}
+
+	return ready, nil
+}
+
+// referencedVolumeRefs computes the set of volumes referenced by a release
+// snapshot: each resource's direct VolumeMounts and build-context volume
+// source, plus volume_mount connections.
+//
+// Connections need separate handling because the stackdeploy Resolver
+// (pkg/stackdeploy/volume.go) only materializes volume_mount connections into
+// resource.VolumeMounts at render time, on a throwaway Stack rebuilt from the
+// snapshot (release.Snapshot.ToStack()) — that mutation never gets written
+// back into the persisted snapshot. So resource.VolumeMounts, as stored in
+// release.Snapshot.Resources, does NOT reflect connection-driven mounts; the
+// connections themselves must be walked directly to recover them.
+//
+// build_artifact_source connections are deliberately excluded: they point
+// FROM a stack resource TO a volume (the resource's build output is copied
+// into that volume by the volume controller), so the volume is never
+// referenced by the Stack/StackResource CRs this reconciler applies — it's
+// managed entirely by the separate volume worker/controller.
+func referencedVolumeRefs(snapshot *models.StackSnapshot) (byID, byName map[string]struct{}) {
+	byID = make(map[string]struct{})
+	byName = make(map[string]struct{})
+
+	addRef := func(id, name string) {
+		switch {
+		case id != "":
+			byID[id] = struct{}{}
+		case name != "":
+			byName[name] = struct{}{}
+		}
+	}
+
+	for _, resource := range snapshot.Resources {
+		if resource == nil {
+			continue
+		}
+		for _, vm := range resource.VolumeMounts {
+			if vm == nil {
+				continue
+			}
+			addRef(vm.SourceVolumeID, vm.SourceVolumeName)
+		}
+		if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Volume != nil {
+			vol := resource.BuildConfig.SourceContext.Volume
+			addRef(vol.SourceVolumeID, vol.SourceVolumeName)
+		}
+	}
+
+	for _, conn := range snapshot.Connections {
+		if conn.Kind != models.ConnectionKindVolumeMount {
+			continue
+		}
+		addRef(conn.From.Id, conn.From.Name)
+	}
+
+	return byID, byName
 }

@@ -152,6 +152,10 @@ func (b *BuildArtifactSources) Scan(value interface{}) error {
 	return json.Unmarshal(v, &b)
 }
 
+// VolumePhaseReady is the terminal status phase reported by the cluster
+// agent once a volume's PVC (and any source sync) is ready for use.
+const VolumePhaseReady = "Ready"
+
 type VolumeStatus struct {
 	ObservedGeneration     int64                   `json:"observed_generation"`
 	Conditions             []Condition             `json:"conditions"`
