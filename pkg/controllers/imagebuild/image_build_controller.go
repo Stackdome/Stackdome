@@ -25,6 +25,31 @@ const (
 	controllerName = "image-build-controller"
 )
 
+//go:generate mockgen -source=image_build_controller.go -destination=image_build_controller_mock_test.go -package=imagebuild
+
+// releaseActiveChecker is a narrow interface to check for an active release
+// without importing the full StackReleaseService (mirrors the same seam the
+// stack controller uses).
+type releaseActiveChecker interface {
+	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
+}
+
+// buildEventRecorder records release lifecycle events for builds. It is declared
+// locally (rather than reusing services.ReleaseEventRecorder) so the tests can
+// mock it in-package: the services gomock mock lives in the services test
+// package, and depending on it from here would create an import cycle.
+type buildEventRecorder interface {
+	RecordBuildEvent(
+		ctx context.Context,
+		release *models.StackRelease,
+		resourceName string,
+		eventType models.ReleaseEventType,
+		buildID string,
+		attribution string,
+		reason string,
+	) *apperrors.ServiceError
+}
+
 type ImageBuildReconciler struct {
 	Client                client.Client
 	DBImageBuildService   services.ImageBuildService
@@ -32,6 +57,8 @@ type ImageBuildReconciler struct {
 	DBVolumeService       services.VolumeService
 	GitIntegrationService services.GitIntegrationService
 	Logger                logger.Logger
+	releaseChecker        releaseActiveChecker
+	eventRecorder         buildEventRecorder
 
 	// clock is injectable for tests; defaults to time.Now.
 	clock func() time.Time
@@ -43,15 +70,25 @@ type ImageBuildReconcilerSpec struct {
 	DBResourceService     services.StackResourceService
 	GitIntegrationService services.GitIntegrationService
 	Log                   logger.Logger
+	ReleaseChecker        releaseActiveChecker
+	EventRecorder         buildEventRecorder
 }
 
 func NewImageBuildReconciler(spec ImageBuildReconcilerSpec) *ImageBuildReconciler {
+	if spec.ReleaseChecker == nil {
+		panic("imagebuild: ReleaseChecker is required")
+	}
+	if spec.EventRecorder == nil {
+		panic("imagebuild: EventRecorder is required")
+	}
 	return &ImageBuildReconciler{
 		Client:                spec.Client,
 		DBImageBuildService:   spec.DBImageBuildService,
 		DBResourceService:     spec.DBResourceService,
 		GitIntegrationService: spec.GitIntegrationService,
 		Logger:                spec.Log,
+		releaseChecker:        spec.ReleaseChecker,
+		eventRecorder:         spec.EventRecorder,
 		clock:                 time.Now,
 	}
 }
@@ -124,13 +161,19 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if dbResourceBuild.Status == nil || dbResourceBuild.Status.LastObservedStatusHash != imageBuild.Status.StatusHash {
+		// Propagate before persisting the build status: the hash guard above
+		// means this block never re-runs for the same build status, so a
+		// propagation failure must abort the reconcile before the new hash is
+		// recorded — otherwise the requeued retry would skip this block and
+		// the failure would be dropped for good.
+		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
+		}
 		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
 		if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %v", serr)
 		}
-		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
-		}
+		r.recordBuildEvent(ctx, stackID, imageBuild, dbResourceBuild)
 	}
 
 	// Keep minted GitHub App tokens fresh for in-flight builds. Watch events
@@ -249,6 +292,91 @@ func mapClusterStatusToServerStatus(clusterStatus buildsv1alpha1.ImageBuildStatu
 	}
 }
 
+// recordBuildEvent emits a release event for an observed build phase transition.
+// It is best-effort: recorder failures and a missing active release window are
+// logged and swallowed so they never fail the reconcile.
+func (r *ImageBuildReconciler) recordBuildEvent(
+	ctx context.Context,
+	stackID string,
+	cr *buildsv1alpha1.ImageBuild,
+	build *models.ImageBuild,
+) {
+	var eventType models.ReleaseEventType
+	var reason string
+	switch cr.Status.Phase {
+	case buildsv1alpha1.BuildPhasePending:
+		eventType = models.ReleaseEventTypeBuildStarted
+	case buildsv1alpha1.BuildPhaseSuccess:
+		eventType = models.ReleaseEventTypeBuildSucceeded
+	case buildsv1alpha1.BuildPhaseFailed:
+		eventType = models.ReleaseEventTypeBuildFailed
+		reason = buildFailureReason(cr.Status)
+	default:
+		// Cancelled and unknown phases emit nothing.
+		return
+	}
+
+	active, serr := r.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
+	if serr != nil {
+		r.Logger.Debugf("no active release lookup for stack %s: %v", stackID, serr)
+		return
+	}
+	if active == nil {
+		r.Logger.Debugf("no active release for stack %s; skipping build event", stackID)
+		return
+	}
+
+	attribution := models.ReleaseEventAttributionActiveRelease
+	if buildMatchesReleasePins(active, cr.Spec.ResourceName, build.Spec.SourceRevision) {
+		// The active release's pins deterministically identify this build, so no
+		// best-effort attribution marker is needed.
+		attribution = ""
+	}
+
+	if recErr := r.eventRecorder.RecordBuildEvent(
+		ctx, active, cr.Spec.ResourceName, eventType, build.ID, attribution, reason,
+	); recErr != nil {
+		r.Logger.Errorf("failed to record build event for build %s: %v", build.ID, recErr)
+	}
+}
+
+// buildFailureReason extracts a human-readable failure reason from the build
+// status the controller already observes.
+func buildFailureReason(status buildsv1alpha1.ImageBuildStatus) string {
+	d := status.LastBuildFailureDetail
+	if d == nil {
+		return ""
+	}
+	if d.LastTerminationMessage != "" {
+		return d.LastTerminationMessage
+	}
+	return d.LastTerminationReason
+}
+
+// buildMatchesReleasePins reports whether the active release's pins
+// deterministically identify this build's source revision for the resource. It
+// only returns true when the pins carry a matching per-resource revision;
+// absent per-resource revision data it returns false so the caller falls back
+// to best-effort active-release attribution.
+func buildMatchesReleasePins(
+	active *models.StackRelease,
+	resourceName string,
+	rev models.BuildSourceRevision,
+) bool {
+	pins, ok := active.Pins.Resources[resourceName]
+	if !ok {
+		return false
+	}
+	switch {
+	case rev.Git != nil && rev.Git.Commit != "":
+		return pins.GitSHA != "" && pins.GitSHA == rev.Git.Commit
+	case rev.Volume != nil && rev.Volume.CurrentVolumeHash != "":
+		return pins.VolumeHash != "" && pins.VolumeHash == rev.Volume.CurrentVolumeHash
+	default:
+		return false
+	}
+}
+
 func buildStackResourceFailureFromBuild(d *corev1alpha1.LastFailureDetail) *models.StackResourceFailure {
 	if d == nil {
 		return nil
@@ -287,7 +415,16 @@ func (r *ImageBuildReconciler) propagateBuildFailureToStackResource(
 	clusterBuildStatus buildsv1alpha1.ImageBuildStatus,
 ) error {
 	if dbStackResource.Status == nil {
-		return nil
+		// The stack resource has no status row yet (its CR status hasn't been
+		// observed). Nothing to clear in that case, but a build failure must
+		// not be silently dropped: return an error so the reconcile requeues
+		// and propagation retries once the first status write lands. The
+		// caller runs this before recording the new build status hash, so the
+		// retry re-enters the propagation path.
+		if clusterBuildStatus.LastBuildFailureDetail == nil {
+			return nil
+		}
+		return fmt.Errorf("stack resource '%s' has no status yet; requeueing build failure propagation", dbStackResource.ID)
 	}
 	newStatus, changed := computeStackResourceStatusAfterBuild(*dbStackResource.Status, clusterBuildStatus)
 	if !changed {
