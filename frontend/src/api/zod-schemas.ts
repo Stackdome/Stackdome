@@ -987,6 +987,7 @@ const ReleaseValidationError = z
       "env_name_duplicate",
       "env_value_missing",
       "env_value_conflict",
+      "env_self_output_unknown",
       "volume_mount_invalid",
       "volume_not_found",
       "volume_hash_missing",
@@ -1012,6 +1013,7 @@ const ReleaseValidationError = z
       "git_tag_not_found",
       "git_rate_limited",
       "image_not_found",
+      "registry_credentials_required",
       "registry_auth_failed",
       "push_access_denied",
       "stack_settings_invalid",
@@ -1562,6 +1564,7 @@ const FieldValidationError = z
       "env_name_duplicate",
       "env_value_missing",
       "env_value_conflict",
+      "env_self_output_unknown",
       "volume_mount_invalid",
       "volume_not_found",
       "volume_hash_missing",
@@ -1587,6 +1590,7 @@ const FieldValidationError = z
       "git_tag_not_found",
       "git_rate_limited",
       "image_not_found",
+      "registry_credentials_required",
       "registry_auth_failed",
       "push_access_denied",
       "stack_settings_invalid",
@@ -6783,6 +6787,55 @@ accepts a full stack document.
         status: 500,
         description: `Internal server error`,
         schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/apply",
+    alias: "applyStackByName",
+    description: `Name-addressed declarative whole-document apply. Stack identity is the
+&#x60;name&#x60; in the request body (unique per team). If a stack with that name
+exists in the team it is reconciled exactly like the id-addressed apply
+(resources and connections not present in the body are deleted, volumes
+are add-only); otherwise the stack and its children are created
+atomically after full validation. Idempotent — clients need not know
+whether the stack already exists.
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Stack,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
       },
     ],
   },

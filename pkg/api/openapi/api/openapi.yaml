@@ -2390,6 +2390,70 @@ paths:
       security:
       - Bearer: []
       summary: Update a stack
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply:
+    put:
+      description: "Name-addressed declarative whole-document apply. Stack identity\
+        \ is the\n`name` in the request body (unique per team). If a stack with that\
+        \ name\nexists in the team it is reconciled exactly like the id-addressed\
+        \ apply\n(resources and connections not present in the body are deleted, volumes\n\
+        are add-only); otherwise the stack and its children are created\natomically\
+        \ after full validation. Idempotent — clients need not know\nwhether the stack\
+        \ already exists.\n"
+      operationId: applyStackByName
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Stack'
+        required: true
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stack'
+          description: Stack updated successfully
+        "201":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Stack'
+          description: Stack created successfully
+        "401":
+          description: Unauthorized
+        "400":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Invalid request data. `details` carries a `ValidationErrorDetail`
+            payload when the failure is an aggregated field validation error.
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: Apply a full stack document by name (declarative upsert)
   /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply:
     put:
       description: "Declarative whole-document apply. Reconciles the stack against\
@@ -11934,6 +11998,7 @@ components:
           - env_name_duplicate
           - env_value_missing
           - env_value_conflict
+          - env_self_output_unknown
           - volume_mount_invalid
           - volume_not_found
           - volume_hash_missing
@@ -11959,6 +12024,7 @@ components:
           - git_tag_not_found
           - git_rate_limited
           - image_not_found
+          - registry_credentials_required
           - registry_auth_failed
           - push_access_denied
           - stack_settings_invalid
@@ -13922,6 +13988,7 @@ components:
           - env_name_duplicate
           - env_value_missing
           - env_value_conflict
+          - env_self_output_unknown
           - volume_mount_invalid
           - volume_not_found
           - volume_hash_missing
@@ -13947,6 +14014,7 @@ components:
           - git_tag_not_found
           - git_rate_limited
           - image_not_found
+          - registry_credentials_required
           - registry_auth_failed
           - push_access_denied
           - stack_settings_invalid

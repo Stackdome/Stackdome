@@ -120,6 +120,7 @@ Method | HTTP request | Description
 [**ApiV1UsersIdGet**](DefaultApi.md#ApiV1UsersIdGet) | **Get** /api/v1/users/{id} | Get a user
 [**ApiV1WebhooksGithubPost**](DefaultApi.md#ApiV1WebhooksGithubPost) | **Post** /api/v1/webhooks/github | GitHub webhook receiver (unauthenticated, HMAC-verified)
 [**ApplyStack**](DefaultApi.md#ApplyStack) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply | Apply a full stack document (declarative reconcile)
+[**ApplyStackByName**](DefaultApi.md#ApplyStackByName) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply | Apply a full stack document by name (declarative upsert)
 [**CreateStackResource**](DefaultApi.md#CreateStackResource) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | Create a stack resource
 [**DeleteStackResource**](DefaultApi.md#DeleteStackResource) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Delete a stack resource
 [**UpdateStackResource**](DefaultApi.md#UpdateStackResource) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Update a stack resource
@@ -8426,6 +8427,81 @@ Other parameters are passed through a pointer to a apiApplyStackRequest struct v
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
+
+
+ **stack** | [**Stack**](Stack.md) |  | 
+
+### Return type
+
+[**Stack**](Stack.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApplyStackByName
+
+> Stack ApplyStackByName(ctx, orgId, teamName).Stack(stack).Execute()
+
+Apply a full stack document by name (declarative upsert)
+
+
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    teamName := "teamName_example" // string | The name of the team
+    stack := *openapiclient.NewStack("Name_example", *openapiclient.NewStackSpec()) // Stack | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApplyStackByName(context.Background(), orgId, teamName).Stack(stack).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApplyStackByName``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApplyStackByName`: Stack
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApplyStackByName`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**teamName** | **string** | The name of the team | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApplyStackByNameRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
 
 
  **stack** | [**Stack**](Stack.md) |  | 
