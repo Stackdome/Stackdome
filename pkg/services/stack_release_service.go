@@ -401,23 +401,35 @@ func (s *stackReleaseService) pinResource(ctx context.Context, orgID string, res
 // repository's default branch so the pin (and the snapshot) can record it —
 // the CRD requires branch-or-tag on git revisions.
 func (s *stackReleaseService) resolveGitSHA(ctx context.Context, orgID string, res *models.StackResource, rev *models.GitRevision) (string, string, *errors.ServiceError) {
+	field := fmt.Sprintf("resources[%s].source.git", res.Name)
+
 	if rev.Commit != "" {
+		if rev.Branch == "" && rev.Tag == "" {
+			return "", "", errors.ValidationFailed([]errors.FieldError{{
+				Field:   field,
+				Code:    errors.VErrGitCommitRequiresRef,
+				Message: fmt.Sprintf("resource '%s': a commit pin requires a branch or tag (the cluster needs a fetchable ref)", res.Name),
+			}})
+		}
 		return rev.Commit, "", nil
 	}
 
 	gitSource := res.BuildConfig.SourceContext.Git
 	repoURL := gitSource.RepoURL
-	field := fmt.Sprintf("resources[%s].source.git", res.Name)
 
 	resolved, serr := s.credentialResolver.GitCredentials(ctx, orgID, repoURL, credentials.GitAuthSelector{
+		// This can be empty if not explicitly set in the stack resource. In that case, the git integration will be used based on the host.
 		IntegrationID: gitSource.IntegrationID,
 	})
 	if serr != nil {
-		return "", "", errors.ValidationFailed([]errors.FieldError{{
-			Field:   field + ".integration_id",
-			Code:    errors.VErrGitIntegrationNotFound,
-			Message: fmt.Sprintf("resource '%s': failed to resolve git credentials: %v", res.Name, serr),
-		}})
+		if serr.Is404() {
+			return "", "", errors.ValidationFailed([]errors.FieldError{{
+				Field:   field + ".integration_id",
+				Code:    errors.VErrGitIntegrationNotFound,
+				Message: fmt.Sprintf("resource '%s': failed to resolve git credentials: %v", res.Name, serr),
+			}})
+		}
+		return "", "", serr
 	}
 	gitClient, err := s.gitClients.ClientFor(repoURL, resolved.Credentials)
 	if err != nil {

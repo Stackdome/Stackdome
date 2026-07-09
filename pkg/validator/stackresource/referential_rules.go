@@ -91,11 +91,19 @@ func (v *validator) volumeExists(ctx context.Context, namespace, name, id string
 		}
 		return true, nil
 	}
-	if _, serr := v.volumes.GetByID(ctx, id); serr != nil {
+	var (
+		vol  *models.Volume
+		serr *errors.ServiceError
+	)
+	if vol, serr = v.volumes.GetByID(ctx, id); serr != nil {
 		if serr.Is404() {
 			return false, nil
 		}
 		return false, serr
+	}
+	if vol.Namespace != namespace {
+		// If the volume is not in the same namespace as the resource, it is not valid.
+		return false, nil
 	}
 	return true, nil
 }
@@ -134,28 +142,25 @@ func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack,
 
 func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	var errs []errors.FieldError
-
-	if v.credentials != nil {
-		if id := resource.RegistryPullCredentialID(); id != "" {
-			if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID, resource.ImageConfig.Image,
-				credentials.RegistryPurposePull, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
-				if !serr.Is404() {
-					return nil, serr
-				}
-				errs = append(errs, fieldErr("source.image.registry_credentials_id",
-					errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
+	if id := resource.RegistryPullCredentialID(); id != "" && v.credentials != nil {
+		if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID, resource.ImageConfig.Image,
+			credentials.RegistryPurposePull, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
+			if !serr.Is404() {
+				return nil, serr
 			}
+			errs = append(errs, fieldErr("source.image.registry_credentials_id",
+				errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
 		}
-		if id := resource.RegistryPushCredentialID(); id != "" {
-			if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID,
-				resource.BuildConfig.BuildImageRepository.ExternalImageRef,
-				credentials.RegistryPurposePush, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
-				if !serr.Is404() {
-					return nil, serr
-				}
-				errs = append(errs, fieldErr("source.git.push.registry_credentials_id",
-					errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
+	}
+	if id := resource.RegistryPushCredentialID(); id != "" && v.credentials != nil {
+		if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID,
+			resource.BuildConfig.BuildImageRepository.ExternalImageRef,
+			credentials.RegistryPurposePush, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
+			if !serr.Is404() {
+				return nil, serr
 			}
+			errs = append(errs, fieldErr("source.git.push.registry_credentials_id",
+				errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
 		}
 	}
 

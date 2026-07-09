@@ -1,6 +1,8 @@
 package stackresource
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -45,6 +47,15 @@ var _ = Describe("validateInputRules", func() {
 			}
 			Expect(found).To(BeTrue(), "expected field %s for code %s, got %v", wantField, wantCode, errs)
 		},
+		Entry("empty name",
+			func(r *models.StackResource) { r.Name = "" },
+			errors.VErrResourceNameRequired, "name"),
+		Entry("invalid name pattern",
+			func(r *models.StackResource) { r.Name = "Bad_Name" },
+			errors.VErrResourceNameInvalid, "name"),
+		Entry("name too long",
+			func(r *models.StackResource) { r.Name = strings.Repeat("a", maxResourceNameLength+1) },
+			errors.VErrResourceNameInvalid, "name"),
 		Entry("no source",
 			func(r *models.StackResource) { r.ImageConfig = nil },
 			errors.VErrSourceRequired, "source"),
@@ -180,6 +191,16 @@ var _ = Describe("validateInputRules", func() {
 				}
 			},
 			errors.VErrGitCommitInvalid, "source.git.commit"),
+		Entry("commit pin without branch or tag",
+			func(r *models.StackResource) {
+				r.ImageConfig = nil
+				r.BuildConfig = &models.BuildConfigSpec{
+					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/o/r"}},
+					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Commit: "abc1234"}},
+					BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
+				}
+			},
+			errors.VErrGitCommitRequiresRef, "source.git"),
 		Entry("push target both in-cluster and external",
 			func(r *models.StackResource) {
 				r.ImageConfig = nil

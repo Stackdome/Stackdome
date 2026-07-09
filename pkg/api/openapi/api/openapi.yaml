@@ -11947,6 +11947,7 @@ components:
           - git_repo_url_required
           - git_branch_tag_conflict
           - git_commit_invalid
+          - git_commit_requires_ref
           - image_ref_required
           - image_ref_invalid
           - push_target_required
@@ -13935,6 +13936,7 @@ components:
           - git_repo_url_required
           - git_branch_tag_conflict
           - git_commit_invalid
+          - git_commit_requires_ref
           - image_ref_required
           - image_ref_invalid
           - push_target_required

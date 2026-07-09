@@ -257,7 +257,7 @@ var _ = Describe("validateReferences", func() {
 		volumes := NewMockvolumeGetter(ctrl)
 		volumes.EXPECT().
 			GetByID(gomock.Any(), "vol-1").
-			Return(&models.Volume{}, nil)
+			Return(&models.Volume{Namespace: "ns-1"}, nil)
 
 		v := &validator{volumes: volumes}
 		r := validImageResource()
@@ -267,6 +267,22 @@ var _ = Describe("validateReferences", func() {
 
 		Expect(serr).To(BeNil())
 		Expect(errs).To(BeEmpty())
+	})
+
+	It("reports a mounted volume referenced by ID from another namespace", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByID(gomock.Any(), "vol-1").
+			Return(&models.Volume{Namespace: "other-ns"}, nil)
+
+		v := &validator{volumes: volumes}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-1", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), testStack(), r)
+
+		Expect(serr).To(BeNil())
+		Expect(codes(errs)).To(HaveKey(errors.VErrVolumeNotFound))
 	})
 
 	It("propagates a non-404 error resolving a mounted volume by ID", func() {

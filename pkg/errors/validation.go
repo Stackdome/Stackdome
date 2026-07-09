@@ -72,6 +72,7 @@ const (
 	VErrGitRepoURLRequired   = "git_repo_url_required"
 	VErrGitBranchTagConflict = "git_branch_tag_conflict"
 	VErrGitCommitInvalid     = "git_commit_invalid"
+	VErrGitCommitRequiresRef = "git_commit_requires_ref"
 	VErrImageRefRequired     = "image_ref_required"
 	VErrImageRefInvalid      = "image_ref_invalid"
 	VErrPushTargetRequired   = "push_target_required"

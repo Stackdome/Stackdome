@@ -18,7 +18,10 @@ var (
 	cronParser          = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 )
 
-const maxPortNameLength = 15
+const (
+	maxPortNameLength     = 15
+	maxResourceNameLength = 63 // Kubernetes DNS label limit
+)
 
 func fieldErr(field, code, message string, args ...any) errors.FieldError {
 	return errors.FieldError{Field: field, Code: code, Message: fmt.Sprintf(message, args...)}
@@ -43,9 +46,10 @@ func validateName(resource *models.StackResource) []errors.FieldError {
 	if resource.Name == "" {
 		return []errors.FieldError{fieldErr("name", errors.VErrResourceNameRequired, "resource name is required")}
 	}
-	if !resourceNamePattern.MatchString(resource.Name) {
+	if !resourceNamePattern.MatchString(resource.Name) || len(resource.Name) > maxResourceNameLength {
 		return []errors.FieldError{fieldErr("name", errors.VErrResourceNameInvalid,
-			"resource name '%s' must match %s", resource.Name, resourceNamePattern.String())}
+			"resource name '%s' must match %s and be at most %d characters",
+			resource.Name, resourceNamePattern.String(), maxResourceNameLength)}
 	}
 	return nil
 }
@@ -100,6 +104,10 @@ func validateBuildShape(build *models.BuildConfigSpec) []errors.FieldError {
 			if rev.Commit != "" && !gitCommitSHAPattern.MatchString(rev.Commit) {
 				errs = append(errs, fieldErr("source.git.commit", errors.VErrGitCommitInvalid,
 					"commit '%s' is not a valid git SHA", rev.Commit))
+			}
+			if rev.Commit != "" && rev.Branch == "" && rev.Tag == "" {
+				errs = append(errs, fieldErr("source.git", errors.VErrGitCommitRequiresRef,
+					"a commit pin requires a branch or tag (the cluster needs a fetchable ref)"))
 			}
 		}
 	}

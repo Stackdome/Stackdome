@@ -99,18 +99,16 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 		return nil, permErr
 	}
 
-	if s.resourceValidator != nil {
-		siblings, sErr := s.stackResourceStore.GetByStackID(ctx, resource.StackID)
-		if sErr != nil {
-			return nil, sErr
-		}
-		ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
-		if vErr != nil {
-			return nil, vErr
-		}
-		if len(ferrs) > 0 {
-			return nil, errors.ValidationFailed(ferrs)
-		}
+	siblings, sErr := s.stackResourceStore.GetByStackID(ctx, resource.StackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if len(ferrs) > 0 {
+		return nil, errors.ValidationFailed(ferrs)
 	}
 
 	var created *models.StackResource
@@ -146,24 +144,22 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.ID = existing.ID
 	resource.Name = resourceName
 
-	if s.resourceValidator != nil {
-		all, sErr := s.stackResourceStore.GetByStackID(ctx, stackID)
-		if sErr != nil {
-			return nil, sErr
+	all, sErr := s.stackResourceStore.GetByStackID(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	siblings := make([]*models.StackResource, 0, len(all))
+	for _, r := range all {
+		if r.Name != resourceName {
+			siblings = append(siblings, r)
 		}
-		siblings := make([]*models.StackResource, 0, len(all))
-		for _, r := range all {
-			if r.Name != resourceName {
-				siblings = append(siblings, r)
-			}
-		}
-		ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
-		if vErr != nil {
-			return nil, vErr
-		}
-		if len(ferrs) > 0 {
-			return nil, errors.ValidationFailed(ferrs)
-		}
+	}
+	ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if len(ferrs) > 0 {
+		return nil, errors.ValidationFailed(ferrs)
 	}
 
 	var updated *models.StackResource
