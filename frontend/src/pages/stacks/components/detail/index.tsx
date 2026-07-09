@@ -17,7 +17,7 @@ import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPl
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
-import { alignBaselineToDraft } from "@/pages/stacks/lib/stack-diff";
+import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
 import { createStack, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
@@ -274,15 +274,15 @@ export default function StackDetailPage() {
   const baselineResources = useMemo<FormStackResourceData[]>(
     () =>
       (snapshotResources
-        ? alignBaselineToDraft(snapshotResources, alignResources)
-        : alignBaselineToDraft(draftResources, alignResources)) as FormStackResourceData[],
+        ? alignBaselineToDraft(snapshotResources, alignResources, renameFingerprint)
+        : alignBaselineToDraft(draftResources, alignResources, renameFingerprint)) as FormStackResourceData[],
     [snapshotResources, draftResources, alignResources],
   );
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () =>
       (snapshotVolumes
-        ? alignBaselineToDraft(snapshotVolumes, alignVolumes)
-        : alignBaselineToDraft(draftVolumes, alignVolumes)) as VolumeFormData[],
+        ? alignBaselineToDraft(snapshotVolumes, alignVolumes, renameFingerprint)
+        : alignBaselineToDraft(draftVolumes, alignVolumes, renameFingerprint)) as VolumeFormData[],
     [snapshotVolumes, draftVolumes, alignVolumes],
   );
 

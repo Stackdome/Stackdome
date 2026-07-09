@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { alignBaselineToDraft, cloneJson, dirtyTabsForResource, getAddonLinkCount, isPathDirty, isResourceDirty, revertResource } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, diffStack, dirtyTabsForResource, getAddonLinkCount, isPathDirty, isResourceDirty, pairByFingerprint, renameFingerprint, revertResource } from "../stack-diff";
 import type { ResourceArr } from "../stack-diff";
 
 describe("cloneJson", () => {
@@ -169,6 +169,69 @@ describe("alignBaselineToDraft", () => {
   it("is the identity when baseline and draft share order", () => {
     const baseline = [{ name: "a" }, { name: "b" }];
     expect(alignBaselineToDraft(baseline, baseline).map((r) => r?.name)).toEqual(["a", "b"]);
+  });
+
+  it("pairs a renamed entry with its content-identical baseline when given a fingerprint", () => {
+    const baseline = [
+      { name: "mysql", image_spec: { image: "mysql:8" }, status: { state: "Ready" } },
+      { name: "postgres", image_spec: { image: "postgres:16" } },
+    ];
+    const draft = [
+      { name: "mysqla", image_spec: { image: "mysql:8" }, status: { state: "Pending" } },
+      { name: "postgres", image_spec: { image: "postgres:16" } },
+    ];
+    const aligned = alignBaselineToDraft(baseline, draft, renameFingerprint);
+    // The renamed baseline slots into the draft's position instead of leaving a
+    // hole + an appended deletion — so positional diffing reads ONE change.
+    expect(aligned.map((r) => r?.name)).toEqual(["mysql", "postgres"]);
+    expect(aligned).toHaveLength(2);
+  });
+
+  it("does not pair when content also changed (stays add + remove)", () => {
+    const baseline = [{ name: "mysql", image_spec: { image: "mysql:8" } }];
+    const draft = [{ name: "mysqla", image_spec: { image: "mysql:9" } }];
+    const aligned = alignBaselineToDraft(baseline, draft, renameFingerprint);
+    expect(aligned[0]).toBeUndefined();
+    expect(aligned[1]?.name).toBe("mysql");
+  });
+
+  it("without a fingerprint keeps the old hole + append behavior", () => {
+    const baseline = [{ name: "mysql", image_spec: { image: "mysql:8" } }];
+    const draft = [{ name: "mysqla", image_spec: { image: "mysql:8" } }];
+    const aligned = alignBaselineToDraft(baseline, draft);
+    expect(aligned[0]).toBeUndefined();
+    expect(aligned[1]?.name).toBe("mysql");
+  });
+});
+
+describe("diffStack counts a rename as one dirty resource when aligned with a fingerprint", () => {
+  it("rename-only session shows a single dirty index at the renamed position", () => {
+    const server = [
+      { name: "mysql", image_spec: { image: "mysql:8" } },
+      { name: "postgres", image_spec: { image: "postgres:16" } },
+    ];
+    const draft = [
+      { name: "mysqla", image_spec: { image: "mysql:8" } },
+      { name: "postgres", image_spec: { image: "postgres:16" } },
+    ];
+    const baseline = alignBaselineToDraft(server, draft, renameFingerprint);
+    const diff = diffStack(
+      { resources: draft as ResourceArr, volumes: [] },
+      { resources: baseline as ResourceArr, volumes: [] },
+    );
+    expect([...diff.dirtyResourceIdx]).toEqual([0]);
+  });
+});
+
+describe("pairByFingerprint", () => {
+  const fp = (s: { v: string }) => s.v;
+  it("greedily pairs matching fingerprints, each entry used once", () => {
+    const pairs = pairByFingerprint([{ v: "x" }, { v: "y" }], [{ v: "y" }, { v: "x" }, { v: "x" }], fp, fp);
+    expect(pairs).toHaveLength(2);
+    expect(pairs.map(([a, b]) => [a.v, b.v])).toEqual([["x", "x"], ["y", "y"]]);
+  });
+  it("leaves non-matching entries unpaired", () => {
+    expect(pairByFingerprint([{ v: "x" }], [{ v: "z" }], fp, fp)).toEqual([]);
   });
 });
 
