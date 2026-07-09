@@ -33,12 +33,13 @@ var _ = Describe("releaseEventStreamer", func() {
 		eventStore = mocks.NewMockReleaseEventStore(ctrl)
 		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
 		streamer = &releaseEventStreamer{
-			events:       eventStore,
-			releases:     releaseStore,
-			releaseID:    streamReleaseID,
-			afterSeq:     0,
-			pollInterval: 10 * time.Millisecond,
-			presentEvent: defaultPresentReleaseEvent,
+			events:        eventStore,
+			releases:      releaseStore,
+			releaseID:     streamReleaseID,
+			afterSeq:      0,
+			pollInterval:  10 * time.Millisecond,
+			graceInterval: 2 * time.Millisecond,
+			presentEvent:  defaultPresentReleaseEvent,
 		}
 	})
 
@@ -77,15 +78,19 @@ var _ = Describe("releaseEventStreamer", func() {
 			eventStore.EXPECT().
 				ListByReleaseID(ctx, streamReleaseID, 2, releaseEventsMaxLimit).
 				Return([]*models.ReleaseEvent{ev3, ev4}, nil),
-			// Next poll advances to the last emitted sequence and drains empty.
+			// Subsequent polls advance to the last emitted sequence and drain
+			// empty. Terminal-and-empty triggers one grace re-poll, so this is
+			// hit twice before the stream closes.
 			eventStore.EXPECT().
 				ListByReleaseID(ctx, streamReleaseID, 4, releaseEventsMaxLimit).
-				Return(nil, nil),
+				Return(nil, nil).
+				MinTimes(2),
 		)
-		// Empty poll checks release state; terminal → close.
+		// Empty polls check release state; terminal → close after the grace round.
 		releaseStore.EXPECT().
 			GetByID(ctx, streamReleaseID).
-			Return(&models.StackRelease{ID: streamReleaseID, State: models.ReleaseStateReleased}, nil)
+			Return(&models.StackRelease{ID: streamReleaseID, State: models.ReleaseStateReleased}, nil).
+			MinTimes(2)
 
 		ch, err := streamer.Stream(ctx)
 		Expect(err).ToNot(HaveOccurred())
@@ -108,15 +113,90 @@ var _ = Describe("releaseEventStreamer", func() {
 		}
 	})
 
-	It("closes the channel once the release is terminal and a poll returns no new events", func() {
+	It("closes the channel once the release is terminal and polls return no new events", func() {
 		ctx := context.Background()
 
+		// Terminal with genuinely no events: the first empty+terminal poll grace
+		// re-polls, the second closes. Two empty polls, two state checks.
 		eventStore.EXPECT().
 			ListByReleaseID(ctx, streamReleaseID, 0, releaseEventsMaxLimit).
-			Return(nil, nil)
+			Return(nil, nil).
+			MinTimes(2)
 		releaseStore.EXPECT().
 			GetByID(ctx, streamReleaseID).
-			Return(&models.StackRelease{ID: streamReleaseID, State: models.ReleaseStateFailed}, nil)
+			Return(&models.StackRelease{ID: streamReleaseID, State: models.ReleaseStateFailed}, nil).
+			MinTimes(2)
+
+		ch, err := streamer.Stream(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(collect(ch)).To(BeEmpty())
+	})
+
+	It("flushes the terminal event that lands after the state CAS, then closes (the race)", func() {
+		ctx := context.Background()
+
+		// The producer CAS'd the release to terminal but has not yet inserted the
+		// terminal event. The first poll therefore sees an empty event list while
+		// GetByID already reports terminal. The streamer must NOT close here: it
+		// grace re-polls, the terminal event lands, gets flushed, and only then
+		// does the stream close. Against a streamer that closes on the first
+		// empty+terminal poll, this event is dropped and the assertion fails.
+		terminalEvent := &models.ReleaseEvent{
+			ID:        "e1",
+			ReleaseID: streamReleaseID,
+			StackID:   "stack-1",
+			Sequence:  1,
+			Type:      models.ReleaseEventTypeReleaseReleased,
+			Message:   "released",
+		}
+
+		gomock.InOrder(
+			// Race poll: empty list while the release is already terminal.
+			eventStore.EXPECT().
+				ListByReleaseID(ctx, streamReleaseID, 0, releaseEventsMaxLimit).
+				Return(nil, nil),
+			// Grace re-poll: the terminal event insert has now landed.
+			eventStore.EXPECT().
+				ListByReleaseID(ctx, streamReleaseID, 0, releaseEventsMaxLimit).
+				Return([]*models.ReleaseEvent{terminalEvent}, nil),
+			// After flushing, drains empty again and closes after the grace round.
+			eventStore.EXPECT().
+				ListByReleaseID(ctx, streamReleaseID, 1, releaseEventsMaxLimit).
+				Return(nil, nil).
+				MinTimes(2),
+		)
+		releaseStore.EXPECT().
+			GetByID(ctx, streamReleaseID).
+			Return(&models.StackRelease{ID: streamReleaseID, State: models.ReleaseStateReleased}, nil).
+			MinTimes(3)
+
+		ch, err := streamer.Stream(ctx)
+		Expect(err).ToNot(HaveOccurred())
+
+		got := collect(ch)
+		Expect(got).To(HaveLen(1), "the terminal event must be flushed before close")
+		Expect(got[0].Error()).ToNot(HaveOccurred())
+		withID, ok := got[0].(interfaces.StreamObjectWithID)
+		Expect(ok).To(BeTrue())
+		Expect(withID.ID()).To(Equal(strconv.Itoa(terminalEvent.Sequence)))
+	})
+
+	It("closes (bounded) when the release is terminal but its terminal event never lands (producer crash)", func() {
+		ctx := context.Background()
+
+		// Degenerate case: the producer crashed between the state CAS and the
+		// terminal event insert, so polls stay empty forever while the release
+		// reports terminal. The grace re-poll approach still closes after the
+		// grace round rather than hanging the stream.
+		eventStore.EXPECT().
+			ListByReleaseID(ctx, streamReleaseID, 0, releaseEventsMaxLimit).
+			Return(nil, nil).
+			AnyTimes()
+		releaseStore.EXPECT().
+			GetByID(ctx, streamReleaseID).
+			Return(&models.StackRelease{ID: streamReleaseID, State: models.ReleaseStateFailed}, nil).
+			AnyTimes()
 
 		ch, err := streamer.Stream(ctx)
 		Expect(err).ToNot(HaveOccurred())

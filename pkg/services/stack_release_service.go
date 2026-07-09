@@ -373,12 +373,13 @@ func (s *stackReleaseService) StreamReleaseEvents(ctx context.Context, stackID, 
 	}
 
 	return &releaseEventStreamer{
-		events:       s.eventStore,
-		releases:     s.store,
-		releaseID:    releaseID,
-		afterSeq:     afterSequence,
-		pollInterval: releaseEventStreamPollInterval,
-		presentEvent: defaultPresentReleaseEvent,
+		events:        s.eventStore,
+		releases:      s.store,
+		releaseID:     releaseID,
+		afterSeq:      afterSequence,
+		pollInterval:  releaseEventStreamPollInterval,
+		graceInterval: releaseEventStreamTerminalGraceInterval,
+		presentEvent:  defaultPresentReleaseEvent,
 	}, nil
 }
 
