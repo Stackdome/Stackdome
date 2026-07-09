@@ -17,8 +17,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
-const rateLimitRequeueDelay = time.Minute
-
 // validationReconciler runs the expensive checks (image existence, registry
 // pull/push auth) once a release is InProgress, before render. Successful
 // probes are remembered by fingerprint so unchanged targets are skipped.
@@ -65,20 +63,13 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 	}
 
 	var verrs models.ReleaseValidationErrors
-	rateLimited := false
 
 	for _, res := range release.Snapshot.Resources {
-		resErrs, limited, err := r.validateResource(ctx, release, res)
+		resErrs, err := r.validateResource(ctx, release, res)
 		if err != nil {
 			return resultNil, err
 		}
-		rateLimited = rateLimited || limited
 		verrs = append(verrs, resErrs...)
-	}
-
-	if rateLimited && len(verrs) == 0 {
-		r.logger.Infof("release %s: registry rate limited, requeueing", release.ID)
-		return resultRequeueAfter(rateLimitRequeueDelay), nil
 	}
 
 	if len(verrs) > 0 {
@@ -91,34 +82,31 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 	return resultNil, nil
 }
 
-func (r *validationReconciler) validateResource(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {
+func (r *validationReconciler) validateResource(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, error) {
 	var verrs models.ReleaseValidationErrors
-	rateLimited := false
 
 	if res.ImageConfig != nil && res.ImageConfig.Image != "" && !isClusterLocalRegistryRef(res.ImageConfig.Image) {
-		errsHere, limited, err := r.checkImagePull(ctx, release, res)
+		errsHere, err := r.checkImagePull(ctx, release, res)
 		if err != nil {
-			return nil, false, err
+			return nil, err
 		}
-		rateLimited = rateLimited || limited
 		verrs = append(verrs, errsHere...)
 	}
 
 	if res.BuildConfig != nil {
 		repo := res.BuildConfig.BuildImageRepository
 		if repo.ExternalImageRef != "" && !repo.InsecureRegistry && !isClusterLocalRegistryRef(repo.ExternalImageRef) {
-			errsHere, limited, err := r.checkPushAccess(ctx, release, res)
+			errsHere, err := r.checkPushAccess(ctx, release, res)
 			if err != nil {
-				return nil, false, err
+				return nil, err
 			}
-			rateLimited = rateLimited || limited
 			verrs = append(verrs, errsHere...)
 		}
 	}
-	return verrs, rateLimited, nil
+	return verrs, nil
 }
 
-func (r *validationReconciler) checkImagePull(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {
+func (r *validationReconciler) checkImagePull(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, error) {
 	imageRef := res.ImageConfig.Image
 	credID := res.RegistryPullCredentialID()
 
@@ -129,47 +117,53 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 			return models.ReleaseValidationErrors{{
 				ResourceName: res.Name, Field: "source.image.registry_credentials_id",
 				Code: errors.VErrRegistryCredentialNotFound, Message: "registry credential not found",
-			}}, false, nil
+			}}, nil
 		}
-		return nil, false, fmt.Errorf("resource %s: resolve pull credentials: %w", res.Name, serr)
+		return nil, fmt.Errorf("resource %s: resolve pull credentials: %w", res.Name, serr)
 	}
 
 	fp := checkFingerprint(imageRef, credID, resolved.DataHash)
 	if r.probeCached(ctx, release.StackID, res.Name, models.ValidationCheckImagePull, fp) {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	client, err := r.registryClients.ClientFor(resolved)
 	if err != nil {
-		return nil, false, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
+		return nil, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
 	}
 
 	exists, err := client.CheckImage(ctx, imageRef)
 	switch {
 	case stderrors.Is(err, clients.ErrRateLimited):
-		return nil, true, nil
+		// Registry rate limits can persist for hours; requeueing would hang
+		// the release until the deploy timeout even though the image would
+		// most likely deploy fine. Warn and skip the check so the release
+		// proceeds; no success fingerprint is recorded since nothing was
+		// verified.
+		r.logger.Warnf("release %s: resource %s: registry rate limited while checking image '%s'; skipping check", release.ID, res.Name, imageRef)
+		return nil, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.image.ref",
 			Code:    errors.VErrRegistryAuthFailed,
 			Message: fmt.Sprintf("registry rejected credentials for image '%s'", imageRef),
-		}}, false, nil
+		}}, nil
 	case err != nil:
 		// transient network problem: let the worker retry the whole reconcile
-		return nil, false, fmt.Errorf("resource %s: image probe: %w", res.Name, err)
+		return nil, fmt.Errorf("resource %s: image probe: %w", res.Name, err)
 	case !exists:
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.image.ref",
 			Code:    errors.VErrImageNotFound,
 			Message: fmt.Sprintf("image '%s' does not exist or is not accessible", imageRef),
-		}}, false, nil
+		}}, nil
 	}
 
 	r.rememberSuccess(ctx, release.StackID, res.Name, models.ValidationCheckImagePull, fp)
-	return nil, false, nil
+	return nil, nil
 }
 
-func (r *validationReconciler) checkPushAccess(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {
+func (r *validationReconciler) checkPushAccess(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, error) {
 	pushRef := res.BuildConfig.BuildImageRepository.ExternalImageRef
 	credID := res.RegistryPushCredentialID()
 
@@ -180,38 +174,41 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 			return models.ReleaseValidationErrors{{
 				ResourceName: res.Name, Field: "source.git.push.registry_credentials_id",
 				Code: errors.VErrRegistryCredentialNotFound, Message: "registry credential not found",
-			}}, false, nil
+			}}, nil
 		}
-		return nil, false, fmt.Errorf("resource %s: resolve push credentials: %w", res.Name, serr)
+		return nil, fmt.Errorf("resource %s: resolve push credentials: %w", res.Name, serr)
 	}
 
 	fp := checkFingerprint(pushRef, credID, resolved.DataHash)
 	if r.probeCached(ctx, release.StackID, res.Name, models.ValidationCheckPushAccess, fp) {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	client, err := r.registryClients.ClientFor(resolved)
 	if err != nil {
-		return nil, false, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
+		return nil, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
 	}
 
 	err = client.CheckPushAccess(ctx, pushRef)
 	switch {
 	case stderrors.Is(err, clients.ErrRateLimited):
-		return nil, true, nil
+		// Same rationale as checkImagePull: skip instead of requeueing so a
+		// registry rate limit cannot hang the release to deploy timeout.
+		r.logger.Warnf("release %s: resource %s: registry rate limited while checking push access to '%s'; skipping check", release.ID, res.Name, pushRef)
+		return nil, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.git.push.repository",
 			Code:    errors.VErrPushAccessDenied,
 			Message: fmt.Sprintf("cannot push to '%s': registry rejected credentials", pushRef),
-		}}, false, nil
+		}}, nil
 	case err != nil:
 		// transient network problem: let the worker retry the whole reconcile
-		return nil, false, fmt.Errorf("resource %s: push probe: %w", res.Name, err)
+		return nil, fmt.Errorf("resource %s: push probe: %w", res.Name, err)
 	}
 
 	r.rememberSuccess(ctx, release.StackID, res.Name, models.ValidationCheckPushAccess, fp)
-	return nil, false, nil
+	return nil, nil
 }
 
 func (r *validationReconciler) probeCached(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind, fingerprint string) bool {

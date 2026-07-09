@@ -245,8 +245,10 @@ func TestValidationReconciler_ImagePull_AuthFailed(t *testing.T) {
 	}
 }
 
-// 6. CheckImage returns clients.ErrRateLimited -> NO fail; resultRequeueAfter ~1min.
-func TestValidationReconciler_ImagePull_RateLimited(t *testing.T) {
+//  6. CheckImage returns clients.ErrRateLimited -> check skipped with a
+//     warning: no fail, no requeue, no success fingerprint recorded; the
+//     release proceeds (resultNil).
+func TestValidationReconciler_ImagePull_RateLimited_SkipsCheck(t *testing.T) {
 	f := newValidationReconcilerFixture(t)
 	res := imageResource("web", "example.com/app:v1")
 	release := validationTestRelease(res)
@@ -262,18 +264,94 @@ func TestValidationReconciler_ImagePull_RateLimited(t *testing.T) {
 	client.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, clients.ErrRateLimited)
 	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
 
-	// No fail call expected.
+	// No fail call, and no success fingerprint recorded (nothing was verified).
 	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	f.records.EXPECT().Upsert(gomock.Any(), gomock.Any()).Times(0)
 
 	result, err := f.reconciler.Reconcile(context.Background(), release)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.resultRequeueAfter == nil {
-		t.Fatalf("expected resultRequeueAfter, got %+v", result)
+	if !result.resultNil {
+		t.Fatalf("expected resultNil, got %+v", result)
 	}
-	if *result.resultRequeueAfter != rateLimitRequeueDelay {
-		t.Fatalf("expected requeue delay of %v, got %v", rateLimitRequeueDelay, *result.resultRequeueAfter)
+}
+
+// 6b. CheckPushAccess returns clients.ErrRateLimited -> same skip semantics
+//
+//	as the pull check: no fail, no requeue, no fingerprint, resultNil.
+func TestValidationReconciler_PushAccess_RateLimited_SkipsCheck(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := buildResourceWithPush("worker", "example.com/worker:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
+		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).
+		Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "worker", models.ValidationCheckPushAccess).
+		Return(nil, errors.NotFound("no record"))
+
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckPushAccess(gomock.Any(), "example.com/worker:v1").Return(clients.ErrRateLimited)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	f.records.EXPECT().Upsert(gomock.Any(), gomock.Any()).Times(0)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatalf("expected resultNil, got %+v", result)
+	}
+}
+
+// 6c. One resource rate limited, another resource genuinely failing -> the
+//
+//	rate-limited check is skipped but the real failure still fails the
+//	release (resultStop with only the real error).
+func TestValidationReconciler_RateLimited_DoesNotMaskOtherFailures(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res1 := imageResource("web", "example.com/app:v1")
+	res2 := imageResource("api", "example.com/api:v1")
+	release := validationTestRelease(res1, res2)
+
+	resolved1 := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).
+		Return(resolved1, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	client1 := mocks.NewMockRegistryClient(f.ctrl)
+	client1.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, clients.ErrRateLimited)
+	f.registryClients.EXPECT().ClientFor(resolved1).Return(client1, nil)
+
+	resolved2 := &credentials.ResolvedRegistryCredential{DataHash: "hash-2"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/api:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).
+		Return(resolved2, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "api", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	client2 := mocks.NewMockRegistryClient(f.ctrl)
+	client2.EXPECT().CheckImage(gomock.Any(), "example.com/api:v1").Return(false, nil)
+	f.registryClients.EXPECT().ClientFor(resolved2).Return(client2, nil)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), "release-1", gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+			if len(verrs) != 1 || verrs[0].Code != errors.VErrImageNotFound || verrs[0].ResourceName != "api" {
+				t.Fatalf("expected single VErrImageNotFound for 'api', got %+v", verrs)
+			}
+			return true, nil
+		})
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatalf("expected resultStop, got %+v", result)
 	}
 }
 
