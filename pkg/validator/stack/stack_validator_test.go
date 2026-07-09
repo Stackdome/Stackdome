@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -1311,4 +1312,106 @@ func TestValidateConnectionsIgnoresUnrelatedResourceInvalidity(t *testing.T) {
 	if err := v.ValidateConnections(context.Background(), spec); err != nil {
 		t.Fatalf("expected ValidateConnections to ignore unrelated resource invalidity, got %v", err)
 	}
+}
+
+func shellStack(name string) *models.Stack {
+	return &models.Stack{
+		Name:           name,
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+}
+
+// requireStackNameInvalid asserts err carries exactly one field error
+// addressed to "name" with code VErrStackNameInvalid, and returns it.
+func requireStackNameInvalid(t *testing.T, err *errors.ServiceError) errors.FieldError {
+	t.Helper()
+	fe := requireSingleFieldError(t, err)
+	if fe.Field != "name" {
+		t.Fatalf("unexpected field: got %q want %q", fe.Field, "name")
+	}
+	if fe.Code != errors.VErrStackNameInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackNameInvalid)
+	}
+	return fe
+}
+
+func TestValidateForCreateAcceptsStackNameAtNamespaceBudget(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength))
+
+	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
+		t.Fatalf("expected %d-character stack name to pass, got %v", models.MaxStackNameLength, err)
+	}
+}
+
+func TestValidateForCreateRejectsStackNameOverNamespaceBudget(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength+1))
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	requireStackNameInvalid(t, err)
+}
+
+func TestValidateForCreateRejectsEmptyStackName(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack("")
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireStackNameInvalid(t, err)
+	if got, want := fe.Message, "stack name is required"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsNonDNSLabelStackNames(t *testing.T) {
+	cases := map[string]string{
+		"uppercase":       "MyStack",
+		"underscore":      "my_stack",
+		"leading hyphen":  "-stack",
+		"trailing hyphen": "stack-",
+		"dot":             "my.stack",
+		"space":           "my stack",
+	}
+	for label, name := range cases {
+		t.Run(label, func(t *testing.T) {
+			v := newTestValidator(t)
+			err := v.ValidateForCreate(context.Background(), shellStack(name))
+			requireStackNameInvalid(t, err)
+		})
+	}
+}
+
+func TestValidateShellAcceptsStackNameAtNamespaceBudget(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength))
+
+	if err := v.ValidateShell(context.Background(), spec); err != nil {
+		t.Fatalf("expected %d-character stack name to pass, got %v", models.MaxStackNameLength, err)
+	}
+}
+
+// TestValidateShellRejectsStackNameOverNamespaceBudget covers the rename
+// path: shell update (PUT /stacks/{id}) allows changing the name, so a
+// rename to a name too long for the namespace budget must fail there too.
+func TestValidateShellRejectsStackNameOverNamespaceBudget(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength+1))
+
+	err := v.ValidateShell(context.Background(), spec)
+	requireStackNameInvalid(t, err)
+}
+
+func TestValidateShellRejectsNonDNSLabelStackName(t *testing.T) {
+	v := newTestValidator(t)
+
+	err := v.ValidateShell(context.Background(), shellStack("My_Stack"))
+	requireStackNameInvalid(t, err)
+}
+
+func TestValidateShellRejectsEmptyStackName(t *testing.T) {
+	v := newTestValidator(t)
+
+	err := v.ValidateShell(context.Background(), shellStack(""))
+	requireStackNameInvalid(t, err)
 }

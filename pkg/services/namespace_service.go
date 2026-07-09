@@ -52,7 +52,11 @@ func NewNamespaceService(spec NamespaceServiceSpec) NamespaceService {
 }
 
 func (s *namespaceService) PrepareNamespaceForStack(ctx context.Context, stack *models.Stack) (*models.Namespace, *errors.ServiceError) {
-	// Generate a unique namespace for the stack
+	// Generate a unique namespace for the stack. The result must be a valid
+	// RFC 1123 DNS label (at most models.KubernetesDNSLabelMaxLength
+	// characters); the stack validator caps names at
+	// models.MaxStackNameLength so the "-<uuid>" suffix
+	// (models.NamespaceUUIDSuffixLength) always fits.
 	namespace := &models.Namespace{
 		Name:           fmt.Sprintf("%s-%s", stack.Name, uuid.New().String()),
 		OrganisationID: stack.OrganisationID,

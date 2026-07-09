@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -55,6 +56,7 @@ func NewStackValidator(
 func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError {
 	var ferrs []errors.FieldError
 
+	ferrs = append(ferrs, validateStackName(spec)...)
 	ferrs = append(ferrs, v.validateUniqueResourceNames(spec)...)
 
 	resourceErrs, serr := v.validateResources(ctx, spec)
@@ -121,13 +123,16 @@ func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.S
 }
 
 // ValidateShell runs only the rules scoped to the stack's own columns
-// (currently validateStackSettings), skipping validateResources,
+// (validateStackName and validateStackSettings), skipping validateResources,
 // validateUniqueResourceNames, and connection validation entirely. It backs
 // thin shell create/update (POST /stacks, PUT /stacks/{id}), which never
-// carry children, so out-of-range settings are rejected there with the same
-// limits the fat paths enforce.
+// carry children, so invalid names and out-of-range settings are rejected
+// there with the same limits the fat paths enforce. Shell update allows
+// renames, so the name rules must run here too.
 func (v *stackValidator) ValidateShell(_ context.Context, spec *models.Stack) *errors.ServiceError {
-	ferrs := dedupeFieldErrors(validateStackSettings(spec))
+	ferrs := validateStackName(spec)
+	ferrs = append(ferrs, validateStackSettings(spec)...)
+	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
 		return errors.ValidationFailed(ferrs)
 	}
@@ -158,6 +163,43 @@ func (v *stackValidator) validateResources(ctx context.Context, spec *models.Sta
 		}
 	}
 	return ferrs, nil
+}
+
+// stackNamePattern is the RFC 1123 DNS-label charset: lowercase
+// alphanumerics and '-', starting and ending with an alphanumeric. The stack
+// name is embedded verbatim in the generated Kubernetes namespace name
+// ("<stack-name>-<uuid>"), so anything outside this charset — or longer than
+// models.MaxStackNameLength — would make the namespace invalid and stall
+// reconciliation at apply time instead of failing the request here.
+var stackNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+func validateStackName(spec *models.Stack) []errors.FieldError {
+	if spec.Name == "" {
+		return []errors.FieldError{{
+			Field:   "name",
+			Code:    errors.VErrStackNameInvalid,
+			Message: "stack name is required",
+		}}
+	}
+	if len(spec.Name) > models.MaxStackNameLength {
+		return []errors.FieldError{{
+			Field: "name",
+			Code:  errors.VErrStackNameInvalid,
+			Message: fmt.Sprintf(
+				"stack name '%s' must be at most %d characters so the generated namespace '<name>-<uuid>' fits the %d-character Kubernetes limit",
+				spec.Name, models.MaxStackNameLength, models.KubernetesDNSLabelMaxLength),
+		}}
+	}
+	if !stackNamePattern.MatchString(spec.Name) {
+		return []errors.FieldError{{
+			Field: "name",
+			Code:  errors.VErrStackNameInvalid,
+			Message: fmt.Sprintf(
+				"stack name '%s' must be a lowercase RFC 1123 DNS label matching %s",
+				spec.Name, stackNamePattern.String()),
+		}}
+	}
+	return nil
 }
 
 func validateStackSettings(spec *models.Stack) []errors.FieldError {
