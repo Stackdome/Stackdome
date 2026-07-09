@@ -1,6 +1,7 @@
 package imagebuild
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -164,5 +165,37 @@ func TestComputeStackResourceStatusAfterBuild_inProgressNoOp(t *testing.T) {
 
 	if changed {
 		t.Error("expected changed=false for in-progress build")
+	}
+}
+
+func TestPropagateBuildFailure_nilStatusWithFailureReturnsError(t *testing.T) {
+	r := &ImageBuildReconciler{}
+	resource := &models.StackResource{ID: "res-1"}
+	buildStatus := buildsv1alpha1.ImageBuildStatus{
+		Phase: buildsv1alpha1.BuildPhaseFailed,
+		LastBuildFailureDetail: &corev1alpha1.LastFailureDetail{
+			LastTerminationReason:   "Error",
+			LastTerminationExitCode: ptr.To(int32(1)),
+		},
+	}
+
+	err := r.propagateBuildFailureToStackResource(context.Background(), resource, buildStatus)
+
+	if err == nil {
+		t.Fatal("expected an error so the reconcile requeues instead of dropping the build failure")
+	}
+}
+
+func TestPropagateBuildFailure_nilStatusWithoutFailureIsNoOp(t *testing.T) {
+	r := &ImageBuildReconciler{}
+	resource := &models.StackResource{ID: "res-1"}
+	buildStatus := buildsv1alpha1.ImageBuildStatus{
+		Phase: buildsv1alpha1.BuildPhaseSuccess,
+	}
+
+	err := r.propagateBuildFailureToStackResource(context.Background(), resource, buildStatus)
+
+	if err != nil {
+		t.Fatalf("expected no error when there is no failure to propagate, got %v", err)
 	}
 }

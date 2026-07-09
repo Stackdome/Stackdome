@@ -124,12 +124,17 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	}
 
 	if dbResourceBuild.Status == nil || dbResourceBuild.Status.LastObservedStatusHash != imageBuild.Status.StatusHash {
+		// Propagate before persisting the build status: the hash guard above
+		// means this block never re-runs for the same build status, so a
+		// propagation failure must abort the reconcile before the new hash is
+		// recorded — otherwise the requeued retry would skip this block and
+		// the failure would be dropped for good.
+		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
+		}
 		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
 		if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %v", serr)
-		}
-		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
 		}
 	}
 
@@ -287,7 +292,16 @@ func (r *ImageBuildReconciler) propagateBuildFailureToStackResource(
 	clusterBuildStatus buildsv1alpha1.ImageBuildStatus,
 ) error {
 	if dbStackResource.Status == nil {
-		return nil
+		// The stack resource has no status row yet (its CR status hasn't been
+		// observed). Nothing to clear in that case, but a build failure must
+		// not be silently dropped: return an error so the reconcile requeues
+		// and propagation retries once the first status write lands. The
+		// caller runs this before recording the new build status hash, so the
+		// retry re-enters the propagation path.
+		if clusterBuildStatus.LastBuildFailureDetail == nil {
+			return nil
+		}
+		return fmt.Errorf("stack resource '%s' has no status yet; requeueing build failure propagation", dbStackResource.ID)
 	}
 	newStatus, changed := computeStackResourceStatusAfterBuild(*dbStackResource.Status, clusterBuildStatus)
 	if !changed {
