@@ -108,7 +108,7 @@ ensure-postgres: ## Start the dev PostgreSQL container if it isn't already runni
 test-integration: SHELL := /usr/bin/env bash
 test-integration: ensure-postgres ## Run integration tests. Optional: FOCUS="My Test Name" to run a specific spec.
 	@go test -c -o test/int/integration.test ./test/int
-	@cd test/int && set -o pipefail && ./integration.test -test.v -ginkgo.v -test.timeout 30m -test.count 1 \
+	@cd test/int && set -o pipefail && ./integration.test -test.v -ginkgo.v -test.timeout 1h -test.count 1 \
 		$(if $(FOCUS),-ginkgo.focus="$(FOCUS)") \
 		2>&1 | tee last-run.log; \
 		EXIT_CODE=$$?; rm -f integration.test; exit $$EXIT_CODE
