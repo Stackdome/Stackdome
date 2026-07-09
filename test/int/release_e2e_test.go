@@ -122,12 +122,22 @@ var _ = Describe("Release E2E", Ordered, func() {
 				"expected exactly one release_released event")
 
 			By("Asserting release_created opens and release_released closes the lifecycle")
-			// The gatekeeper reconciler marks the release InProgress (release_started)
-			// before the validation reconciler records release_checks_passed, so the two
-			// mid-lifecycle events have no fixed relative order. What is guaranteed is that
-			// release_created bookends the start and release_released the successful end.
+			// The release worker runs its sub-reconcilers in a fixed sequence
+			// (gatekeeper -> simulator -> validation -> ...). The gatekeeper marks the
+			// release InProgress and records release_started; the later validation stage
+			// records release_checks_started/release_checks_passed. That fixed ordering
+			// means release_started ALWAYS precedes the validation events, and
+			// release_created / release_released bookend the timeline.
 			Expect(indexOf[string(models.ReleaseEventTypeReleaseCreated)]).To(Equal(0),
 				"release_created must be the first event")
+			Expect(indexOf[string(models.ReleaseEventTypeReleaseStarted)]).To(
+				BeNumerically("<", indexOf[string(models.ReleaseEventTypeReleaseChecksPassed)]),
+				"release_started (gatekeeper) must precede release_checks_passed (validation)")
+			if checksStartedIdx, ok := indexOf[string(models.ReleaseEventTypeReleaseChecksStarted)]; ok {
+				Expect(indexOf[string(models.ReleaseEventTypeReleaseStarted)]).To(
+					BeNumerically("<", checksStartedIdx),
+					"release_started (gatekeeper) must precede release_checks_started (validation)")
+			}
 			Expect(indexOf[string(models.ReleaseEventTypeReleaseReleased)]).To(
 				BeNumerically(">", indexOf[string(models.ReleaseEventTypeReleaseStarted)]),
 				"release_released must come after release_started")
