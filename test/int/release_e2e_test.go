@@ -64,6 +64,76 @@ var _ = Describe("Release E2E", Ordered, func() {
 			By("Listing releases — should have exactly 1")
 			list := shared.ListReleases(client, orgID, teamName, stackID)
 			Expect(list.GetItems()).To(HaveLen(1))
+
+			By("Fetching the release event timeline")
+			events := shared.ListReleaseEvents(client, orgID, teamName, stackID, release.GetId()).GetItems()
+			Expect(events).NotTo(BeEmpty(), "expected a non-empty release event timeline")
+
+			By("Asserting the first event is release_created with sequence 1")
+			Expect(events[0].GetType()).To(Equal(string(models.ReleaseEventTypeReleaseCreated)))
+			Expect(events[0].GetSequence()).To(Equal(int32(1)))
+
+			By("Asserting sequences are strictly ascending (gaps allowed)")
+			for i := 1; i < len(events); i++ {
+				Expect(events[i].GetSequence()).To(BeNumerically(">", events[i-1].GetSequence()),
+					"event %d sequence %d must be strictly greater than previous %d",
+					i, events[i].GetSequence(), events[i-1].GetSequence())
+			}
+
+			By("Asserting every event type is within the known 17-constant vocabulary")
+			vocabulary := map[string]struct{}{
+				string(models.ReleaseEventTypeReleaseCreated):       {},
+				string(models.ReleaseEventTypeReleaseChecksStarted): {},
+				string(models.ReleaseEventTypeReleaseCheckFailed):   {},
+				string(models.ReleaseEventTypeReleaseChecksPassed):  {},
+				string(models.ReleaseEventTypeReleaseStarted):       {},
+				string(models.ReleaseEventTypeBuildQueued):          {},
+				string(models.ReleaseEventTypeBuildStarted):         {},
+				string(models.ReleaseEventTypeBuildSucceeded):       {},
+				string(models.ReleaseEventTypeBuildFailed):          {},
+				string(models.ReleaseEventTypeResourceWaiting):      {},
+				string(models.ReleaseEventTypeResourceDeploying):    {},
+				string(models.ReleaseEventTypeResourceReady):        {},
+				string(models.ReleaseEventTypeResourceFailed):       {},
+				string(models.ReleaseEventTypeReleaseReleased):      {},
+				string(models.ReleaseEventTypeReleaseFailed):        {},
+				string(models.ReleaseEventTypeReleaseSuperseded):    {},
+				string(models.ReleaseEventTypeReleaseCancelled):     {},
+			}
+			Expect(vocabulary).To(HaveLen(17), "the release event vocabulary must contain exactly 17 types")
+
+			counts := map[string]int{}
+			indexOf := map[string]int{}
+			for i, ev := range events {
+				Expect(vocabulary).To(HaveKey(ev.GetType()),
+					"event type %q at index %d is outside the known vocabulary", ev.GetType(), i)
+				counts[ev.GetType()]++
+				if _, seen := indexOf[ev.GetType()]; !seen {
+					indexOf[ev.GetType()] = i
+				}
+			}
+
+			By("Asserting checks_passed, started, and released each appear exactly once")
+			Expect(counts[string(models.ReleaseEventTypeReleaseChecksPassed)]).To(Equal(1),
+				"expected exactly one release_checks_passed event")
+			Expect(counts[string(models.ReleaseEventTypeReleaseStarted)]).To(Equal(1),
+				"expected exactly one release_started event")
+			Expect(counts[string(models.ReleaseEventTypeReleaseReleased)]).To(Equal(1),
+				"expected exactly one release_released event")
+
+			By("Asserting release_created opens and release_released closes the lifecycle")
+			// The gatekeeper reconciler marks the release InProgress (release_started)
+			// before the validation reconciler records release_checks_passed, so the two
+			// mid-lifecycle events have no fixed relative order. What is guaranteed is that
+			// release_created bookends the start and release_released the successful end.
+			Expect(indexOf[string(models.ReleaseEventTypeReleaseCreated)]).To(Equal(0),
+				"release_created must be the first event")
+			Expect(indexOf[string(models.ReleaseEventTypeReleaseReleased)]).To(
+				BeNumerically(">", indexOf[string(models.ReleaseEventTypeReleaseStarted)]),
+				"release_released must come after release_started")
+			Expect(indexOf[string(models.ReleaseEventTypeReleaseReleased)]).To(
+				BeNumerically(">", indexOf[string(models.ReleaseEventTypeReleaseChecksPassed)]),
+				"release_released must come after release_checks_passed")
 		})
 
 		It("should deploy a second release with updated image", func() {
