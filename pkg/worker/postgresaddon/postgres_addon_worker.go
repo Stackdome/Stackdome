@@ -96,7 +96,7 @@ func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.Postg
 
 func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	addons, err := w.postgresAddonService.InternalList(ctx,
-		"status->>'state' IN ?",
+		"status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
 		[]string{
 			string(models.PostgresAddonStatePending),
 			string(models.PostgresAddonStateError),

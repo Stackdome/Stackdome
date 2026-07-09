@@ -17,6 +17,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/validator/postgresaddon"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -420,6 +421,11 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 	}
 
 	// Mark for deletion
+	postgresAddon.DeletionTimestamp = ptr.To(time.Now().UTC())
+	if err := s.postgresAddonStore.UpdateDeletionTimestamp(ctx, id, postgresAddon.DeletionTimestamp); err != nil {
+		return nil, errors.GeneralError("failed to mark PostgreSQL addon for deletion: %s", err.Error())
+	}
+
 	postgresAddon.Status.State = models.PostgresAddonStateDeleting
 	postgresAddon.Status.Message = "PostgreSQL addon is being deleted"
 

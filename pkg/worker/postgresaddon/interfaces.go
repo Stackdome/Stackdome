@@ -1,3 +1,4 @@
+//go:generate mockgen -source=interfaces.go -destination=interfaces_mock_test.go -package=postgresaddon
 package postgresaddon
 
 import (
@@ -5,7 +6,12 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+type clusterClientGetter interface {
+	GetClient(clusterID string) (client.Client, error)
+}
 
 type postgresAddonService interface {
 	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)

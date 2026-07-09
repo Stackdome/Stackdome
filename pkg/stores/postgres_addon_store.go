@@ -29,6 +29,7 @@ type PostgresAddonStore interface {
 	// Status and lifecycle management
 	UpdateStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
 	UpdateBackupRequestedAt(ctx context.Context, id string, timestamp *time.Time) *errors.ServiceError
+	UpdateDeletionTimestamp(ctx context.Context, id string, timestamp *time.Time) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
 
 	// Transaction support
