@@ -394,11 +394,16 @@ func TestApplyReconciler_Reconcile_MissingVolume_FailsRelease(t *testing.T) {
 		gomock.Nil(),
 	).Return(true, nil)
 
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateFailed, gomock.Any()).
+		Return(nil)
+
 	r := &applyReconciler{
 		releaseService: relSvc,
 		stackService:   stackSvc,
 		clusterManager: clusterMgr,
 		volumeService:  volSvc,
+		eventRecorder:  rec,
 		logger:         testLogger(),
 	}
 

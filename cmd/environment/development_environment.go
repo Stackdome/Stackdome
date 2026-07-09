@@ -113,6 +113,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       d.Services.StackReleaseService,
+		EventRecorder:        d.Services.ReleaseEventRecorder,
 		StackService:         d.Services.StackService,
 		ClusterManager:       d.ClusterManager,
 		SecretService:        d.Services.SecretService,
@@ -703,6 +704,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
+		ReleaseEventRecorder:        releaseEventRecorder,
 		ReferenceService:            referenceService,
 		StackPreviewConfigService:   stackPreviewConfigService,
 		PreviewStackService:         previewStackService,

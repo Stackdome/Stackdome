@@ -23,6 +23,7 @@ const (
 
 type ReleaseWorkerSpec struct {
 	ReleaseService        releaseService
+	EventRecorder         eventRecorder
 	StackService          stackService
 	ClusterManager        clustermanager.ClusterManager
 	CRBuilder             builders.ClusterResourceBuilder
@@ -48,6 +49,9 @@ type releaseWorker struct {
 var _ worker.Worker = (*releaseWorker)(nil)
 
 func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
+	if spec.EventRecorder == nil {
+		panic("ReleaseWorker requires an EventRecorder")
+	}
 	return &releaseWorker{
 		releaseService:        spec.ReleaseService,
 		releaseWorkerEnqueuer: spec.ReleaseWorkerEnqueuer,

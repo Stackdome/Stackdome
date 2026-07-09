@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -13,6 +14,15 @@ import (
 
 func testLogger() logger.Logger {
 	return logger.NewLoggerWithPrefix(context.Background(), "release-test")
+}
+
+func TestNewReleaseWorker_PanicsWithoutEventRecorder(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic when EventRecorder is nil")
+		}
+	}()
+	_ = NewReleaseWorker(ReleaseWorkerSpec{})
 }
 
 func TestGatekeeperReconciler_OlderSequence(t *testing.T) {
@@ -24,7 +34,11 @@ func TestGatekeeperReconciler_OlderSequence(t *testing.T) {
 	svc.EXPECT().MarkSuperseded(gomock.Any(), "older", gomock.Any()).
 		Return(true, nil)
 
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(), models.ReleaseStateSuperseded,
+		"Release superseded by release #2").Return(nil)
+
+	r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
 
 	release := &models.StackRelease{ID: "older", StackID: "stack-1", Sequence: 1, State: models.ReleaseStateInProgress}
 	result, err := r.Reconcile(context.Background(), release)
@@ -45,7 +59,9 @@ func TestGatekeeperReconciler_LatestSequence(t *testing.T) {
 	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 		Return(release, nil)
 
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
+	rec := NewMockeventRecorder(ctrl)
+
+	r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
 
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {
@@ -67,7 +83,10 @@ func TestGatekeeperReconciler_PendingCASWon(t *testing.T) {
 	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 		Return(true, nil)
 
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseStarted(gomock.Any(), release).Return(nil)
+
+	r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
 
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {
@@ -78,6 +97,32 @@ func TestGatekeeperReconciler_PendingCASWon(t *testing.T) {
 	}
 	if release.State != models.ReleaseStateInProgress {
 		t.Fatalf("expected InProgress, got %s", release.State)
+	}
+}
+
+func TestGatekeeperReconciler_PendingCASWon_RecorderErrorIsLogOnly(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
+
+	svc := NewMockreleaseService(ctrl)
+	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+		Return(release, nil)
+	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
+		Return(true, nil)
+
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseStarted(gomock.Any(), release).
+		Return(errors.GeneralError("event insert failed"))
+
+	r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
+
+	result, err := r.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("recorder error must not fail the reconciler, got: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatal("expected resultNil")
 	}
 }
 
@@ -92,7 +137,10 @@ func TestGatekeeperReconciler_PendingCASLost(t *testing.T) {
 	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 		Return(false, nil)
 
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
+	// CAS lost: recorder must never be called.
+	rec := NewMockeventRecorder(ctrl)
+
+	r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
 
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {
@@ -146,9 +194,14 @@ func TestConvergeReconciler_MatchesLastConverged(t *testing.T) {
 			},
 		}, nil)
 
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateReleased, "Release is live").
+		Return(nil)
+
 	r := &convergeReconciler{
 		releaseService: relSvc,
 		stackService:   stackSvc,
+		eventRecorder:  rec,
 		logger:         testLogger(),
 	}
 
@@ -189,9 +242,13 @@ func TestConvergeReconciler_MarkReleasedCASFails(t *testing.T) {
 			},
 		}, nil)
 
+	// CAS lost: recorder must never be called.
+	rec := NewMockeventRecorder(ctrl)
+
 	r := &convergeReconciler{
 		releaseService: relSvc,
 		stackService:   stackSvc,
+		eventRecorder:  rec,
 		logger:         testLogger(),
 	}
 
@@ -224,9 +281,14 @@ func TestConvergeReconciler_Timeout(t *testing.T) {
 	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
 		Return(&models.Stack{ID: "stack-1"}, nil)
 
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateFailed, gomock.Any()).
+		Return(nil)
+
 	r := &convergeReconciler{
 		releaseService: relSvc,
 		stackService:   stackSvc,
+		eventRecorder:  rec,
 		logger:         testLogger(),
 	}
 
@@ -258,6 +320,7 @@ func TestConvergeReconciler_NotYet(t *testing.T) {
 	r := &convergeReconciler{
 		releaseService: NewMockreleaseService(ctrl),
 		stackService:   stackSvc,
+		eventRecorder:  NewMockeventRecorder(ctrl),
 		logger:         testLogger(),
 	}
 
@@ -356,9 +419,14 @@ func TestApplyReconciler_StackDeletedFails(t *testing.T) {
 			DeletionTimestamp: &now,
 		}, nil)
 
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(), models.ReleaseStateFailed, gomock.Any()).
+		Return(nil)
+
 	r := &applyReconciler{
 		releaseService: relSvc,
 		stackService:   stackSvc,
+		eventRecorder:  rec,
 		logger:         testLogger(),
 	}
 

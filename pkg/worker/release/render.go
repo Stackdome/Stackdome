@@ -16,6 +16,7 @@ import (
 type renderReconciler struct {
 	releaseService releaseService
 	stackService   stackService
+	eventRecorder  eventRecorder
 	crBuilder      builders.ClusterResourceBuilder
 	resolver       *stackdeploy.Resolver
 	logger         logger.Logger
@@ -25,6 +26,7 @@ func newRenderReconciler(spec ReleaseWorkerSpec) *renderReconciler {
 	return &renderReconciler{
 		releaseService: spec.ReleaseService,
 		stackService:   spec.StackService,
+		eventRecorder:  spec.EventRecorder,
 		crBuilder:      spec.CRBuilder,
 		resolver:       spec.Resolver,
 		logger:         logger.NewLoggerWithPrefix(context.Background(), "release-render"),
@@ -47,19 +49,19 @@ func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackR
 			r.logger.Infof("release %s: dependency not ready, requeueing: %s", release.ID, depErr.Message)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("render failed: %v", err))
+		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("render failed: %v", err))
 		return resultStop, nil
 	}
 
 	stackCR, err := r.crBuilder.BuildStackCR(effective)
 	if err != nil {
-		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to build stack CR: %v", err))
+		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to build stack CR: %v", err))
 		return resultStop, nil
 	}
 
 	stackCRBytes, err := json.Marshal(stackCR)
 	if err != nil {
-		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to marshal stack CR: %v", err))
+		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to marshal stack CR: %v", err))
 		return resultStop, nil
 	}
 
@@ -70,13 +72,13 @@ func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackR
 	for _, sr := range effective.StackResources {
 		srCR, buildErr := r.crBuilder.BuildStackResourceCR(sr, effective.Name, effective.OrganisationID)
 		if buildErr != nil {
-			failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to build CR for resource '%s': %v", sr.Name, buildErr))
+			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to build CR for resource '%s': %v", sr.Name, buildErr))
 			return resultStop, nil
 		}
 
 		srBytes, marshalErr := json.Marshal(srCR)
 		if marshalErr != nil {
-			failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to marshal CR for resource '%s': %v", sr.Name, marshalErr))
+			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to marshal CR for resource '%s': %v", sr.Name, marshalErr))
 			return resultStop, nil
 		}
 

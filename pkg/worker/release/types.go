@@ -43,6 +43,15 @@ type releaseService interface {
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
 }
 
+// eventRecorder is the narrow slice of services.ReleaseEventRecorder the
+// release worker needs. It is declared locally (the worker never imports
+// pkg/services) so the concrete recorder is injected structurally and mocked
+// in-package alongside the other reconciler dependencies.
+type eventRecorder interface {
+	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
+	RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError
+}
+
 type stackService interface {
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError

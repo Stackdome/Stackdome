@@ -570,6 +570,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
+		ReleaseEventRecorder:        releaseEventRecorder,
 		ReferenceService:            referenceService,
 		StackPreviewConfigService:   stackPreviewConfigService,
 		PreviewStackService:         previewStackService,
@@ -682,6 +683,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       te.Services.StackReleaseService,
+		EventRecorder:        te.Services.ReleaseEventRecorder,
 		StackService:         te.Services.StackService,
 		ClusterManager:       te.ClusterManager,
 		SecretService:        te.Services.SecretService,

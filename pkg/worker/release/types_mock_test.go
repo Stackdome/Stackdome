@@ -244,6 +244,58 @@ func (mr *MockreleaseServiceMockRecorder) SaveManifest(ctx, id, m, rev, pins, re
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveManifest", reflect.TypeOf((*MockreleaseService)(nil).SaveManifest), ctx, id, m, rev, pins, rendererVersion)
 }
 
+// MockeventRecorder is a mock of eventRecorder interface.
+type MockeventRecorder struct {
+	ctrl     *gomock.Controller
+	recorder *MockeventRecorderMockRecorder
+	isgomock struct{}
+}
+
+// MockeventRecorderMockRecorder is the mock recorder for MockeventRecorder.
+type MockeventRecorderMockRecorder struct {
+	mock *MockeventRecorder
+}
+
+// NewMockeventRecorder creates a new mock instance.
+func NewMockeventRecorder(ctrl *gomock.Controller) *MockeventRecorder {
+	mock := &MockeventRecorder{ctrl: ctrl}
+	mock.recorder = &MockeventRecorderMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockeventRecorder) EXPECT() *MockeventRecorderMockRecorder {
+	return m.recorder
+}
+
+// RecordReleaseStarted mocks base method.
+func (m *MockeventRecorder) RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordReleaseStarted", ctx, release)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// RecordReleaseStarted indicates an expected call of RecordReleaseStarted.
+func (mr *MockeventRecorderMockRecorder) RecordReleaseStarted(ctx, release any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseStarted", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseStarted), ctx, release)
+}
+
+// RecordReleaseTerminal mocks base method.
+func (m *MockeventRecorder) RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordReleaseTerminal", ctx, release, state, message)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// RecordReleaseTerminal indicates an expected call of RecordReleaseTerminal.
+func (mr *MockeventRecorderMockRecorder) RecordReleaseTerminal(ctx, release, state, message any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseTerminal", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseTerminal), ctx, release, state, message)
+}
+
 // MockstackService is a mock of stackService interface.
 type MockstackService struct {
 	ctrl     *gomock.Controller

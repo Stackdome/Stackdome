@@ -11,6 +11,7 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -298,6 +299,83 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			Expect(serr).To(BeNil())
 			Expect(got).To(Equal(created))
 		})
+	})
+})
+
+var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", func() {
+	const (
+		cancelStackID   = "stack-1"
+		cancelReleaseID = "rel-1"
+		cancelTeamID    = "team-1"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		stackSvc     *MockStackService
+		perms        *mocks.MockPermissionService
+		recorder     *MockReleaseEventRecorder
+		svc          *stackReleaseService
+		ctx          context.Context
+		rel          *models.StackRelease
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		stackSvc = NewMockStackService(ctrl)
+		perms = mocks.NewMockPermissionService(ctrl)
+		recorder = NewMockReleaseEventRecorder(ctrl)
+		svc = &stackReleaseService{
+			store:         releaseStore,
+			stackQuery:    stackSvc,
+			permissions:   perms,
+			eventRecorder: recorder,
+			logger:        logger.NewLoggerWithPrefix(context.Background(), "stack-release-service-test"),
+		}
+		ctx = context.Background()
+		rel = &models.StackRelease{ID: cancelReleaseID, StackID: cancelStackID, Sequence: 3, State: models.ReleaseStatePending}
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	// expectLookupAndPermission stubs the release lookup, stack lookup, and a
+	// passing write-permission check that CancelRelease performs up front.
+	expectLookupAndPermission := func() {
+		releaseStore.EXPECT().GetByID(ctx, cancelReleaseID).Return(rel, nil)
+		stackSvc.EXPECT().GetStack(ctx, cancelStackID).Return(&models.Stack{ID: cancelStackID, TeamID: cancelTeamID}, nil)
+		perms.EXPECT().Check(ctx, cancelTeamID, auth.ResourceStacks, cancelStackID, auth.ActionWrite).Return(nil)
+	}
+
+	It("records release_cancelled when the cancel CAS is won", func() {
+		expectLookupAndPermission()
+		releaseStore.EXPECT().Cancel(ctx, cancelReleaseID).Return(true, nil)
+		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, "Release cancelled").Return(nil)
+
+		serr := svc.CancelRelease(ctx, cancelReleaseID)
+		Expect(serr).To(BeNil())
+	})
+
+	It("records nothing when the cancel CAS is lost", func() {
+		expectLookupAndPermission()
+		releaseStore.EXPECT().Cancel(ctx, cancelReleaseID).Return(false, nil)
+		// recorder must never be called: no EXPECT registered.
+
+		serr := svc.CancelRelease(ctx, cancelReleaseID)
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorConflict))
+	})
+
+	It("does not fail the cancel when recording the event errors (log-only)", func() {
+		expectLookupAndPermission()
+		releaseStore.EXPECT().Cancel(ctx, cancelReleaseID).Return(true, nil)
+		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, "Release cancelled").
+			Return(errors.GeneralError("event insert failed"))
+
+		serr := svc.CancelRelease(ctx, cancelReleaseID)
+		Expect(serr).To(BeNil())
 	})
 })
 

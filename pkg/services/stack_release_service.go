@@ -10,6 +10,7 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stackrelease"
 	"github.com/Stackdome/stackdome/pkg/stores"
@@ -75,6 +76,7 @@ type stackReleaseService struct {
 	eventStore         stores.ReleaseEventStore
 	eventRecorder      ReleaseEventRecorder
 	gitClients         sourceGitClientProvider
+	logger             logger.Logger
 	BackgroundJobEnqueuerDep
 }
 
@@ -98,6 +100,7 @@ func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 		eventStore:         spec.EventStore,
 		eventRecorder:      spec.EventRecorder,
 		gitClients:         gitClients,
+		logger:             logger.NewLoggerWithPrefix(context.Background(), "stack-release-service"),
 	}
 }
 
@@ -296,6 +299,10 @@ const (
 	releaseEventsMaxLimit     = 500
 )
 
+// releaseCancelledMessage is the user-facing message recorded on the
+// release_cancelled terminal event.
+const releaseCancelledMessage = "Release cancelled"
+
 // ReleaseEventPage is a sequence-cursor page of release events.
 type ReleaseEventPage struct {
 	Events            []*models.ReleaseEvent
@@ -369,6 +376,11 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 	}
 	if !won {
 		return errors.Conflict("release #%d is no longer pending (it may have already started processing)", rel.Sequence)
+	}
+	// The CAS win already persisted the cancellation; recording is best-effort.
+	rel.State = models.ReleaseStateCancelled
+	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, releaseCancelledMessage); recErr != nil {
+		s.logger.Errorf("release %s: failed to record release_cancelled event: %v", rel.ID, recErr)
 	}
 	return nil
 }

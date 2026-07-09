@@ -62,6 +62,7 @@ func isTransientClusterError(err error) bool {
 type applyReconciler struct {
 	releaseService       releaseService
 	stackService         stackService
+	eventRecorder        eventRecorder
 	clusterManager       clustermanager.ClusterManager
 	secretBuilder        builders.SecretBuilder
 	secretService        secretService
@@ -75,6 +76,7 @@ func newApplyReconciler(spec ReleaseWorkerSpec) *applyReconciler {
 	return &applyReconciler{
 		releaseService:       spec.ReleaseService,
 		stackService:         spec.StackService,
+		eventRecorder:        spec.EventRecorder,
 		clusterManager:       spec.ClusterManager,
 		secretBuilder:        spec.SecretBuilder,
 		secretService:        spec.SecretService,
@@ -95,14 +97,14 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 	stack, serr := r.stackService.InternalGetStack(ctx, release.StackID)
 	if serr != nil {
 		if serr.Is404() {
-			failRelease(ctx, r.releaseService, r.logger, release, "stack not found")
+			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, "stack not found")
 			return resultStop, nil
 		}
 		return resultNil, fmt.Errorf("failed to get stack: %w", serr)
 	}
 
 	if stack.DeletionTimestamp != nil {
-		failRelease(ctx, r.releaseService, r.logger, release, "stack is being deleted")
+		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, "stack is being deleted")
 		return resultStop, nil
 	}
 
@@ -141,7 +143,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 	if err != nil {
 		var missing *missingVolumesError
 		if stderrors.As(err, &missing) {
-			failRelease(ctx, r.releaseService, r.logger, release, err.Error())
+			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, err.Error())
 			return resultStop, nil
 		}
 		return resultNil, fmt.Errorf("failed to check volume readiness: %w", err)
@@ -160,7 +162,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 			r.logger.Warnf("release %s: transient error applying stack CR, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
+		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
 		return resultStop, nil
 	}
 	if err := r.applyStackResourceCRs(ctx, clusterClient, release, stackCR); err != nil {
@@ -168,7 +170,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 			r.logger.Warnf("release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
+		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
 		return resultStop, nil
 	}
 
