@@ -150,6 +150,53 @@ func presentStackReleaseSnapshot(s *models.StackSnapshot) *openapi.StackReleaseS
 	return snap
 }
 
+func PresentReleaseEvent(e *models.ReleaseEvent) openapi.ReleaseEvent {
+	result := openapi.ReleaseEvent{
+		Id:           &e.ID,
+		ReleaseId:    &e.ReleaseID,
+		StackId:      &e.StackID,
+		Sequence:     ptr.To(int32(e.Sequence)),
+		OccurredAt:   &e.OccurredAt,
+		Source:       ptr.To(string(e.Source)),
+		Scope:        ptr.To(string(e.Scope)),
+		ResourceName: e.ResourceName,
+		Type:         ptr.To(string(e.Type)),
+		Level:        ptr.To(string(e.Level)),
+		Message:      &e.Message,
+	}
+
+	if len(e.Links) > 0 {
+		links := make([]openapi.ReleaseEventLink, len(e.Links))
+		for i, l := range e.Links {
+			links[i] = openapi.ReleaseEventLink{
+				Kind:   ptr.To(l.Kind),
+				Label:  ptr.To(l.Label),
+				Target: ptr.To(map[string]string(l.Target)),
+			}
+		}
+		result.Links = links
+	}
+
+	if len(e.Metadata) > 0 {
+		result.Metadata = ptr.To(map[string]string(e.Metadata))
+	}
+
+	return result
+}
+
+// PresentReleaseEventList takes the raw page fields (not a services type) to
+// avoid a presenters -> services import cycle.
+func PresentReleaseEventList(events []*models.ReleaseEvent, nextAfterSequence int) openapi.ReleaseEventList {
+	items := make([]openapi.ReleaseEvent, len(events))
+	for i, e := range events {
+		items[i] = PresentReleaseEvent(e)
+	}
+	return openapi.ReleaseEventList{
+		Items:             items,
+		NextAfterSequence: ptr.To(int32(nextAfterSequence)),
+	}
+}
+
 func PresentStackReleaseList(result *stores.PaginatedResult[*models.StackRelease]) openapi.StackReleaseList {
 	items := make([]openapi.StackRelease, len(result.Items))
 	for i, r := range result.Items {

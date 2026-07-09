@@ -34,6 +34,7 @@ type StackReleaseService interface {
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
 	GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 	ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError)
+	ListReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence, limit int) (*ReleaseEventPage, *errors.ServiceError)
 	CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError
 
 	// Internal methods are called by workers and controllers; no permission checks.
@@ -59,6 +60,8 @@ type StackReleaseServiceSpec struct {
 	CredentialResolver CredentialResolver
 	Permissions        auth.PermissionService
 	ReferenceService   ReferenceService
+	EventStore         stores.ReleaseEventStore
+	EventRecorder      ReleaseEventRecorder
 	// GitClients is optional; it defaults to real git clients.
 	GitClients sourceGitClientProvider
 }
@@ -69,11 +72,19 @@ type stackReleaseService struct {
 	credentialResolver CredentialResolver
 	permissions        auth.PermissionService
 	referenceService   ReferenceService
+	eventStore         stores.ReleaseEventStore
+	eventRecorder      ReleaseEventRecorder
 	gitClients         sourceGitClientProvider
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
+	if spec.EventStore == nil {
+		panic("StackReleaseService requires a ReleaseEventStore")
+	}
+	if spec.EventRecorder == nil {
+		panic("StackReleaseService requires a ReleaseEventRecorder")
+	}
 	gitClients := spec.GitClients
 	if gitClients == nil {
 		gitClients = defaultSourceGitClientProvider{}
@@ -84,6 +95,8 @@ func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 		credentialResolver: spec.CredentialResolver,
 		permissions:        spec.Permissions,
 		referenceService:   spec.ReferenceService,
+		eventStore:         spec.EventStore,
+		eventRecorder:      spec.EventRecorder,
 		gitClients:         gitClients,
 	}
 }
@@ -270,6 +283,56 @@ func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, 
 	}
 
 	return s.store.ListByStackID(ctx, stackID, params)
+}
+
+const (
+	releaseEventsDefaultLimit = 100
+	releaseEventsMaxLimit     = 500
+)
+
+// ReleaseEventPage is a sequence-cursor page of release events.
+type ReleaseEventPage struct {
+	Events            []*models.ReleaseEvent
+	NextAfterSequence int
+}
+
+func (s *stackReleaseService) ListReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence, limit int) (*ReleaseEventPage, *errors.ServiceError) {
+	release, sErr := s.store.GetByID(ctx, releaseID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if release.StackID != stackID {
+		return nil, errors.NotFound("release '%s' does not belong to stack '%s'", releaseID, stackID)
+	}
+
+	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+
+	if limit <= 0 {
+		limit = releaseEventsDefaultLimit
+	}
+	if limit > releaseEventsMaxLimit {
+		limit = releaseEventsMaxLimit
+	}
+
+	events, sErr := s.eventStore.ListByReleaseID(ctx, releaseID, afterSequence, limit)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	next := afterSequence
+	if len(events) > 0 {
+		next = events[len(events)-1].Sequence
+	}
+
+	return &ReleaseEventPage{Events: events, NextAfterSequence: next}, nil
 }
 
 func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError {

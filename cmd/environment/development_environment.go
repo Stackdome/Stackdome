@@ -631,12 +631,21 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: d.DBSession,
 	})
 
+	releaseEventStore := pgstore.NewReleaseEventStore(pgstore.ReleaseEventStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	releaseEventRecorder := services.NewReleaseEventRecorder(services.ReleaseEventRecorderSpec{
+		Store: releaseEventStore,
+	})
+
 	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
 		Store:              stackReleaseStore,
 		StackService:       stackService,
 		CredentialResolver: credentialResolver,
 		Permissions:        d.PermissionService,
 		ReferenceService:   referenceService,
+		EventStore:         releaseEventStore,
+		EventRecorder:      releaseEventRecorder,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)

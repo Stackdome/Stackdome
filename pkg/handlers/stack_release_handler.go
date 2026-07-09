@@ -88,6 +88,31 @@ func (h *stackReleaseHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	handleGet(w, r, cfg)
 }
 
+func (h *stackReleaseHandler) ListEvents(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			releaseID := mux.Vars(r)["release_id"]
+
+			afterSequence, err := parseOptionalIntQuery(r, "after_sequence", 0)
+			if err != nil {
+				return nil, errors.MalformedRequest("invalid after_sequence")
+			}
+			limit, err := parseOptionalIntQuery(r, "limit", 0)
+			if err != nil {
+				return nil, errors.MalformedRequest("invalid limit")
+			}
+
+			page, serr := h.releaseService.ListReleaseEvents(r.Context(), stackID, releaseID, afterSequence, limit)
+			if serr != nil {
+				return nil, serr
+			}
+			return presenters.PresentReleaseEventList(page.Events, page.NextAfterSequence), nil
+		},
+	}
+	handleList(w, r, cfg)
+}
+
 func (h *stackReleaseHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

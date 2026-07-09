@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/Stackdome/stackdome/pkg/auth"
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -180,5 +181,118 @@ var _ = Describe("stackReleaseService.resolvePins", func() {
 		details := serr.Details.(errors.ValidationErrorDetails)
 		Expect(details.Errors[0].Code).To(Equal(errors.VErrGitTagNotFound))
 		Expect(details.Errors[0].Field).To(Equal("resources[web].source.git.tag"))
+	})
+})
+
+var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
+	const (
+		listEventsStackID   = "stack-1"
+		listEventsReleaseID = "rel-1"
+		listEventsTeamID    = "team-1"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		stackSvc     *MockStackService
+		perms        *mocks.MockPermissionService
+		eventStore   *mocks.MockReleaseEventStore
+		svc          *stackReleaseService
+		ctx          context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		stackSvc = NewMockStackService(ctrl)
+		perms = mocks.NewMockPermissionService(ctrl)
+		eventStore = mocks.NewMockReleaseEventStore(ctrl)
+		svc = &stackReleaseService{
+			store:       releaseStore,
+			stackQuery:  stackSvc,
+			permissions: perms,
+			eventStore:  eventStore,
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	// expectOwnershipAndReadPermission stubs a release owned by listEventsStackID
+	// and a passing read-permission check on that stack's team.
+	expectOwnershipAndReadPermission := func() {
+		releaseStore.EXPECT().
+			GetByID(ctx, listEventsReleaseID).
+			Return(&models.StackRelease{ID: listEventsReleaseID, StackID: listEventsStackID}, nil)
+		stackSvc.EXPECT().
+			GetStack(ctx, listEventsStackID).
+			Return(&models.Stack{ID: listEventsStackID, TeamID: listEventsTeamID}, nil)
+		perms.EXPECT().
+			Check(ctx, listEventsTeamID, auth.ResourceStacks, listEventsStackID, auth.ActionRead).
+			Return(nil)
+	}
+
+	It("returns NotFound and never touches the stack or event store when the release belongs to another stack", func() {
+		releaseStore.EXPECT().
+			GetByID(ctx, listEventsReleaseID).
+			Return(&models.StackRelease{ID: listEventsReleaseID, StackID: "other-stack"}, nil)
+
+		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 0, 0)
+		Expect(page).To(BeNil())
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+	})
+
+	It("checks read permission on the owning stack's team and stops on denial", func() {
+		releaseStore.EXPECT().
+			GetByID(ctx, listEventsReleaseID).
+			Return(&models.StackRelease{ID: listEventsReleaseID, StackID: listEventsStackID}, nil)
+		stackSvc.EXPECT().
+			GetStack(ctx, listEventsStackID).
+			Return(&models.Stack{ID: listEventsStackID, TeamID: listEventsTeamID}, nil)
+		perms.EXPECT().
+			Check(ctx, listEventsTeamID, auth.ResourceStacks, listEventsStackID, auth.ActionRead).
+			Return(errors.Forbidden("nope"))
+
+		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 0, 0)
+		Expect(page).To(BeNil())
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorForbidden))
+	})
+
+	It("clamps a zero limit to the default and derives the cursor from the last event", func() {
+		expectOwnershipAndReadPermission()
+		eventStore.EXPECT().
+			ListByReleaseID(ctx, listEventsReleaseID, 0, releaseEventsDefaultLimit).
+			Return([]*models.ReleaseEvent{{Sequence: 3}, {Sequence: 4}}, nil)
+
+		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 0, 0)
+		Expect(serr).To(BeNil())
+		Expect(page.Events).To(HaveLen(2))
+		Expect(page.NextAfterSequence).To(Equal(4))
+	})
+
+	It("clamps an oversized limit to the maximum", func() {
+		expectOwnershipAndReadPermission()
+		eventStore.EXPECT().
+			ListByReleaseID(ctx, listEventsReleaseID, 0, releaseEventsMaxLimit).
+			Return(nil, nil)
+
+		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 0, 9999)
+		Expect(serr).To(BeNil())
+		Expect(page.NextAfterSequence).To(Equal(0))
+	})
+
+	It("keeps the requested afterSequence as the cursor when the page is empty", func() {
+		expectOwnershipAndReadPermission()
+		eventStore.EXPECT().
+			ListByReleaseID(ctx, listEventsReleaseID, 12, releaseEventsDefaultLimit).
+			Return([]*models.ReleaseEvent{}, nil)
+
+		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 12, 0)
+		Expect(serr).To(BeNil())
+		Expect(page.NextAfterSequence).To(Equal(12))
 	})
 })

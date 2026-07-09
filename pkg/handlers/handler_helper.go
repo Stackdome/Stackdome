@@ -268,6 +268,16 @@ func parseListParams(r *http.Request, allowedFilters []string) stores.ListParams
 	return params
 }
 
+// parseOptionalIntQuery reads an integer query parameter, returning def when the
+// parameter is absent. A present-but-unparseable value is an error.
+func parseOptionalIntQuery(r *http.Request, name string, def int) (int, error) {
+	raw := r.URL.Query().Get(name)
+	if raw == "" {
+		return def, nil
+	}
+	return strconv.Atoi(raw)
+}
+
 func resolveTeamID(r *http.Request, teamService services.TeamService) (string, *errors.ServiceError) {
 	orgID := mux.Vars(r)["org_id"]
 	teamName := mux.Vars(r)["team_name"]
