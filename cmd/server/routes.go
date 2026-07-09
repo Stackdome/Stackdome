@@ -287,6 +287,7 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}", stackReleaseHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/cancel", stackReleaseHandler.Cancel).Methods(http.MethodPost)
 	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events", stackReleaseHandler.ListEvents).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events/stream", stackReleaseHandler.StreamEvents).Methods(http.MethodGet)
 
 	// Secrets (team-scoped)
 	teamResourceRouter.HandleFunc("/secrets", secretHandler.Create).Methods(http.MethodPost)

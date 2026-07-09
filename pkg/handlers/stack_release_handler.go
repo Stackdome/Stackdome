@@ -113,6 +113,23 @@ func (h *stackReleaseHandler) ListEvents(w http.ResponseWriter, r *http.Request)
 	handleList(w, r, cfg)
 }
 
+func (h *stackReleaseHandler) StreamEvents(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			stackID := mux.Vars(r)["id"]
+			releaseID := mux.Vars(r)["release_id"]
+
+			afterSequence, err := parseOptionalIntQuery(r, "after_sequence", 0)
+			if err != nil {
+				return nil, errors.MalformedRequest("invalid after_sequence")
+			}
+
+			return h.releaseService.StreamReleaseEvents(r.Context(), stackID, releaseID, afterSequence)
+		},
+	}
+	handleServerSideStream(w, r, cfg)
+}
+
 func (h *stackReleaseHandler) Cancel(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

@@ -491,3 +491,84 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 		Expect(page.NextAfterSequence).To(Equal(12))
 	})
 })
+
+var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
+	const (
+		streamStackID   = "stack-1"
+		streamReleaseID = "rel-1"
+		streamTeamID    = "team-1"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		stackSvc     *MockStackService
+		perms        *mocks.MockPermissionService
+		eventStore   *mocks.MockReleaseEventStore
+		svc          *stackReleaseService
+		ctx          context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		stackSvc = NewMockStackService(ctrl)
+		perms = mocks.NewMockPermissionService(ctrl)
+		eventStore = mocks.NewMockReleaseEventStore(ctrl)
+		svc = &stackReleaseService{
+			store:       releaseStore,
+			stackQuery:  stackSvc,
+			permissions: perms,
+			eventStore:  eventStore,
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("returns NotFound and never touches the stack when the release belongs to another stack", func() {
+		releaseStore.EXPECT().
+			GetByID(ctx, streamReleaseID).
+			Return(&models.StackRelease{ID: streamReleaseID, StackID: "other-stack"}, nil)
+
+		streamable, serr := svc.StreamReleaseEvents(ctx, streamStackID, streamReleaseID, 0)
+		Expect(streamable).To(BeNil())
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+	})
+
+	It("checks read permission on the owning stack's team and stops on denial", func() {
+		releaseStore.EXPECT().
+			GetByID(ctx, streamReleaseID).
+			Return(&models.StackRelease{ID: streamReleaseID, StackID: streamStackID}, nil)
+		stackSvc.EXPECT().
+			GetStack(ctx, streamStackID).
+			Return(&models.Stack{ID: streamStackID, TeamID: streamTeamID}, nil)
+		perms.EXPECT().
+			Check(ctx, streamTeamID, auth.ResourceStacks, streamStackID, auth.ActionRead).
+			Return(errors.Forbidden("nope"))
+
+		streamable, serr := svc.StreamReleaseEvents(ctx, streamStackID, streamReleaseID, 0)
+		Expect(streamable).To(BeNil())
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorForbidden))
+	})
+
+	It("returns a streamer once ownership and read permission pass", func() {
+		releaseStore.EXPECT().
+			GetByID(ctx, streamReleaseID).
+			Return(&models.StackRelease{ID: streamReleaseID, StackID: streamStackID}, nil)
+		stackSvc.EXPECT().
+			GetStack(ctx, streamStackID).
+			Return(&models.Stack{ID: streamStackID, TeamID: streamTeamID}, nil)
+		perms.EXPECT().
+			Check(ctx, streamTeamID, auth.ResourceStacks, streamStackID, auth.ActionRead).
+			Return(nil)
+
+		streamable, serr := svc.StreamReleaseEvents(ctx, streamStackID, streamReleaseID, 7)
+		Expect(serr).To(BeNil())
+		Expect(streamable).ToNot(BeNil())
+	})
+})

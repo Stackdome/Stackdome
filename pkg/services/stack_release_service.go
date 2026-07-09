@@ -10,6 +10,7 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/interfaces"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stackrelease"
@@ -36,6 +37,7 @@ type StackReleaseService interface {
 	GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 	ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError)
 	ListReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence, limit int) (*ReleaseEventPage, *errors.ServiceError)
+	StreamReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence int) (interfaces.ServerSideStreamable, *errors.ServiceError)
 	CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError
 
 	// Internal methods are called by workers and controllers; no permission checks.
@@ -346,6 +348,38 @@ func (s *stackReleaseService) ListReleaseEvents(ctx context.Context, stackID, re
 	}
 
 	return &ReleaseEventPage{Events: events, NextAfterSequence: next}, nil
+}
+
+// StreamReleaseEvents returns a live SSE stream of release events after
+// afterSequence. It enforces the exact same ownership and read-permission
+// checks as ListReleaseEvents before handing back the streamer.
+func (s *stackReleaseService) StreamReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence int) (interfaces.ServerSideStreamable, *errors.ServiceError) {
+	release, sErr := s.store.GetByID(ctx, releaseID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if release.StackID != stackID {
+		return nil, errors.NotFound("release '%s' does not belong to stack '%s'", releaseID, stackID)
+	}
+
+	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+
+	return &releaseEventStreamer{
+		events:       s.eventStore,
+		releases:     s.store,
+		releaseID:    releaseID,
+		afterSeq:     afterSequence,
+		pollInterval: releaseEventStreamPollInterval,
+		presentEvent: defaultPresentReleaseEvent,
+	}, nil
 }
 
 func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError {

@@ -189,6 +189,9 @@ func internalStreamHandler(w http.ResponseWriter, r *http.Request, streamable in
 			}
 			data := streamObject.Data()
 			if data != "" {
+				if withID, ok := streamObject.(interfaces.StreamObjectWithID); ok {
+					fmt.Fprintf(w, "id: %s\n", withID.ID())
+				}
 				fmt.Fprintf(w, "data: %s\n\n", data)
 				flusher.Flush()
 			}
