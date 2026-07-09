@@ -978,3 +978,58 @@ func TestValidateForUpdateDelegatesToResourceValidatorWithPrefix(t *testing.T) {
 		t.Fatalf("unexpected field: got %q want %q", got, want)
 	}
 }
+
+// TestValidateForCreateReportsMissingMountedVolumeFromResourceValidator
+// covers the fat-path behavior the (now removed) stackValidator-local
+// validateVolumeReferences used to provide on its own: a mount referencing
+// a volume the request doesn't declare must still surface as a 400 with
+// VErrVolumeNotFound, prefixed to the offending resource's index. That
+// detection now happens solely inside the delegated
+// stackresource.Validator - production's real Validate checks the
+// request's own bundled volumes first, then falls back to a
+// namespace-scoped DB lookup that would 404 for a name the payload never
+// declared. Here the mock stands in for that whole (payload-first + DB
+// fallback) rule and returns the not-found error directly; what this test
+// verifies is that stackValidator.validateResources still prefixes and
+// surfaces it correctly now that it's the only source of this error.
+func TestValidateForCreateReportsMissingMountedVolumeFromResourceValidator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]errors.FieldError{
+			{
+				Field:   "volume_mounts[0].source_volume",
+				Code:    errors.VErrVolumeNotFound,
+				Message: "volume 'missing-volume' does not exist",
+			},
+		}, nil)
+
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:        "web",
+				ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"},
+				VolumeMounts: []*models.VolumeMount{
+					{SourceVolumeName: "missing-volume", TargetPath: "/data"},
+				},
+			},
+		},
+	}
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Field, "spec.stack_resources[0].volume_mounts[0].source_volume"; got != want {
+		t.Fatalf("unexpected field: got %q want %q", got, want)
+	}
+	if got, want := fe.Code, errors.VErrVolumeNotFound; got != want {
+		t.Fatalf("unexpected code: got %q want %q", got, want)
+	}
+}

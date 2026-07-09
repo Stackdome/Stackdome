@@ -65,7 +65,6 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 	}
 	ferrs = append(ferrs, resourceErrs...)
 
-	ferrs = append(ferrs, validateVolumeReferences(spec)...)
 	ferrs = append(ferrs, validateStackSettings(spec)...)
 	ferrs = append(ferrs, v.validateConnections(ctx, nil, spec)...)
 	ferrs = append(ferrs, v.validateInterpolations(spec)...)
@@ -99,7 +98,6 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	}
 	ferrs = append(ferrs, resourceErrs...)
 
-	ferrs = append(ferrs, validateVolumeReferences(spec)...)
 	ferrs = append(ferrs, validateStackSettings(spec)...)
 	ferrs = append(ferrs, v.validateConnections(ctx, existing, spec)...)
 	ferrs = append(ferrs, v.validateInterpolations(spec)...)
@@ -212,42 +210,6 @@ func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) []error
 			})
 		}
 		seen[r.Name] = struct{}{}
-	}
-	return errs
-}
-
-// validateVolumeReferences checks that every volume_mount and build-source
-// volume reference names a volume declared in this request's own
-// spec.Volumes. This deliberately does not delegate to the shared per-resource
-// validator's (DB-backed) volume check: on create the stack's namespace
-// doesn't exist yet, and volumes bundled in the same request aren't persisted
-// until after validation succeeds, so a namespace-scoped DB lookup would
-// always report them as missing. Checking against the request payload itself
-// is correct on both create and update, since callers resend the full desired
-// volume list either way.
-func validateVolumeReferences(spec *models.Stack) []errors.FieldError {
-	definedVolumes := spec.VolumesMap()
-	var errs []errors.FieldError
-	for i, resource := range spec.StackResources {
-		for j, mount := range resource.VolumeMounts {
-			if _, found := definedVolumes[mount.SourceVolumeName]; !found {
-				errs = append(errs, errors.FieldError{
-					Field:   fmt.Sprintf("spec.stack_resources[%d].volume_mounts[%d].source_volume", i, j),
-					Code:    errors.VErrVolumeNotFound,
-					Message: fmt.Sprintf("volume '%s' does not exist", mount.SourceVolumeName),
-				})
-			}
-		}
-		if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Volume != nil {
-			name := resource.BuildConfig.SourceContext.Volume.SourceVolumeName
-			if _, found := definedVolumes[name]; !found {
-				errs = append(errs, errors.FieldError{
-					Field:   fmt.Sprintf("spec.stack_resources[%d].source.volume", i),
-					Code:    errors.VErrVolumeNotFound,
-					Message: fmt.Sprintf("build source volume '%s' does not exist", name),
-				})
-			}
-		}
 	}
 	return errs
 }

@@ -107,9 +107,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 	// consulting this seam, so volumes bundled in the same (unpersisted)
 	// request still resolve correctly; the seam only gets used as a
 	// fallback for names/IDs the payload doesn't declare, where a
-	// namespace-scoped DB lookup is exactly what we want (see also
-	// validateVolumeReferences in the stack validator, which independently
-	// checks bundled volumes by name against the request payload).
+	// namespace-scoped DB lookup is exactly what we want.
 	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
 		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
