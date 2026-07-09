@@ -200,10 +200,18 @@ func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *c
 	}
 
 	reason := fmt.Sprintf("superseded by release #%d already applied to cluster", appliedRelease.Sequence)
-	if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
+	won, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason)
+	if err != nil {
 		return false, fmt.Errorf("failed to mark release superseded: %w", err)
 	}
 	r.logger.Infof("release %s: %s", release.ID, reason)
+	if won {
+		release.State = models.ReleaseStateSuperseded
+		message := fmt.Sprintf(supersededEventMessageFmt, appliedRelease.Sequence)
+		if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateSuperseded, message); recErr != nil {
+			r.logger.Errorf("release %s: failed to record release_superseded event: %v", release.ID, recErr)
+		}
+	}
 	return true, nil
 }
 

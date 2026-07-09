@@ -50,6 +50,32 @@ func TestGatekeeperReconciler_OlderSequence(t *testing.T) {
 	}
 }
 
+func TestGatekeeperReconciler_OlderSequence_RecorderErrorIsLogOnly(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	svc := NewMockreleaseService(ctrl)
+	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+		Return(&models.StackRelease{ID: "newer", Sequence: 2}, nil)
+	svc.EXPECT().MarkSuperseded(gomock.Any(), "older", gomock.Any()).
+		Return(true, nil)
+
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(), models.ReleaseStateSuperseded,
+		"Release superseded by release #2").
+		Return(errors.GeneralError("event insert failed"))
+
+	r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
+
+	release := &models.StackRelease{ID: "older", StackID: "stack-1", Sequence: 1, State: models.ReleaseStateInProgress}
+	result, err := r.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("recorder error must not fail the reconciler, got: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatal("expected resultStop")
+	}
+}
+
 func TestGatekeeperReconciler_LatestSequence(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
@@ -195,7 +221,7 @@ func TestConvergeReconciler_MatchesLastConverged(t *testing.T) {
 		}, nil)
 
 	rec := NewMockeventRecorder(ctrl)
-	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateReleased, "Release is live").
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateReleased, releaseLiveMessage).
 		Return(nil)
 
 	r := &convergeReconciler{
@@ -208,6 +234,54 @@ func TestConvergeReconciler_MatchesLastConverged(t *testing.T) {
 	result, err := r.Reconcile(context.Background(), release)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatal("expected resultStop")
+	}
+}
+
+func TestConvergeReconciler_MarkReleasedCASWon_RecorderErrorIsLogOnly(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	now := time.Now().UTC()
+
+	release := &models.StackRelease{
+		ID:               "rel-1",
+		StackID:          "stack-1",
+		ManifestRevision: "rev-1",
+		RenderedAt:       &now,
+		Manifest:         &models.ReleaseManifest{},
+	}
+
+	relSvc := NewMockreleaseService(ctrl)
+	relSvc.EXPECT().MarkReleased(gomock.Any(), "rel-1", gomock.Any()).
+		Return(true, nil)
+
+	stackSvc := NewMockstackService(ctrl)
+	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+		Return(&models.Stack{
+			ID: "stack-1",
+			Status: &models.StackStatus{
+				LastConverged: &models.StackConvergenceRecord{
+					ReleaseID: "rel-1",
+					Revision:  "rev-1",
+				},
+			},
+		}, nil)
+
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateReleased, releaseLiveMessage).
+		Return(errors.GeneralError("event insert failed"))
+
+	r := &convergeReconciler{
+		releaseService: relSvc,
+		stackService:   stackSvc,
+		eventRecorder:  rec,
+		logger:         testLogger(),
+	}
+
+	result, err := r.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("recorder error must not fail the reconciler, got: %v", err)
 	}
 	if !result.resultStop {
 		t.Fatal("expected resultStop")
@@ -334,6 +408,59 @@ func TestConvergeReconciler_NotYet(t *testing.T) {
 }
 
 func TestApplyReconciler_SupersededByClusterCR(t *testing.T) {
+	// The apply-time cluster-CR supersede path mirrors the gatekeeper supersede
+	// invariant: a CAS win records exactly one terminal event, a CAS loss records
+	// none. In both cases supersededByClusterCR reports the release as superseded.
+	tests := []struct {
+		name        string
+		casWon      bool
+		expectEvent bool
+	}{
+		{name: "CAS win records superseded event", casWon: true, expectEvent: true},
+		{name: "CAS loss records no event", casWon: false, expectEvent: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+
+			relSvc := NewMockreleaseService(ctrl)
+			relSvc.EXPECT().InternalGet(gomock.Any(), "higher-release").
+				Return(&models.StackRelease{ID: "higher-release", Sequence: 5}, nil)
+			relSvc.EXPECT().MarkSuperseded(gomock.Any(), "self", gomock.Any()).
+				Return(tt.casWon, nil)
+
+			rec := NewMockeventRecorder(ctrl)
+			if tt.expectEvent {
+				rec.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(),
+					models.ReleaseStateSuperseded, "Release superseded by release #5").Return(nil)
+			}
+
+			r := &applyReconciler{
+				releaseService: relSvc,
+				eventRecorder:  rec,
+				logger:         testLogger(),
+			}
+
+			existing := &corev1alpha1.Stack{}
+			existing.SetAnnotations(map[string]string{
+				corev1alpha1.ReleaseIDAnnotation: "higher-release",
+			})
+
+			release := &models.StackRelease{ID: "self", Sequence: 3}
+
+			superseded, err := r.supersededByClusterCR(context.Background(), existing, release)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !superseded {
+				t.Fatal("expected release to be superseded")
+			}
+		})
+	}
+}
+
+func TestApplyReconciler_SupersededByClusterCR_RecorderErrorIsLogOnly(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	relSvc := NewMockreleaseService(ctrl)
@@ -342,8 +469,14 @@ func TestApplyReconciler_SupersededByClusterCR(t *testing.T) {
 	relSvc.EXPECT().MarkSuperseded(gomock.Any(), "self", gomock.Any()).
 		Return(true, nil)
 
+	rec := NewMockeventRecorder(ctrl)
+	rec.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(),
+		models.ReleaseStateSuperseded, "Release superseded by release #5").
+		Return(errors.GeneralError("event insert failed"))
+
 	r := &applyReconciler{
 		releaseService: relSvc,
+		eventRecorder:  rec,
 		logger:         testLogger(),
 	}
 
@@ -356,7 +489,7 @@ func TestApplyReconciler_SupersededByClusterCR(t *testing.T) {
 
 	superseded, err := r.supersededByClusterCR(context.Background(), existing, release)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("recorder error must not fail supersede, got: %v", err)
 	}
 	if !superseded {
 		t.Fatal("expected release to be superseded")

@@ -352,7 +352,7 @@ var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", 
 	It("records release_cancelled when the cancel CAS is won", func() {
 		expectLookupAndPermission()
 		releaseStore.EXPECT().Cancel(ctx, cancelReleaseID).Return(true, nil)
-		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, "Release cancelled").Return(nil)
+		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, releaseCancelledMessage).Return(nil)
 
 		serr := svc.CancelRelease(ctx, cancelReleaseID)
 		Expect(serr).To(BeNil())
@@ -371,7 +371,7 @@ var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", 
 	It("does not fail the cancel when recording the event errors (log-only)", func() {
 		expectLookupAndPermission()
 		releaseStore.EXPECT().Cancel(ctx, cancelReleaseID).Return(true, nil)
-		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, "Release cancelled").
+		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, releaseCancelledMessage).
 			Return(errors.GeneralError("event insert failed"))
 
 		serr := svc.CancelRelease(ctx, cancelReleaseID)
