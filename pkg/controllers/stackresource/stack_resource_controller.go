@@ -134,7 +134,7 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 	if resource.Status == nil {
 		return
 	}
-	eventType, reason, emit := resourceEventForState(resource.Status.State, resource.Status.Conditions, resource.Status.Message)
+	eventType, reason, emit := resourceEventForState(resource.Status.State, resource.Status.Conditions, lastFailureReason(resource.Status.LastFailure))
 	if !emit {
 		return
 	}
@@ -148,11 +148,44 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 	}
 }
 
+// lastFailureReason extracts the most user-meaningful reason from a resource's
+// last failure. It prefers the human-readable Message and falls back to the
+// shorter Reason code, checking the main container first, then the init
+// container, then a build failure. Returns "" when no failure detail carries a
+// reason (a truthful empty reason).
+func lastFailureReason(f *models.StackResourceFailure) string {
+	if f == nil {
+		return ""
+	}
+	for _, d := range []*models.ContainerFailureDetail{f.Container, f.InitContainer} {
+		if d == nil {
+			continue
+		}
+		if d.Message != "" {
+			return d.Message
+		}
+		if d.Reason != "" {
+			return d.Reason
+		}
+	}
+	if f.Build != nil {
+		if f.Build.Message != "" {
+			return f.Build.Message
+		}
+		if f.Build.Reason != "" {
+			return f.Build.Reason
+		}
+	}
+	return ""
+}
+
 // resourceEventForState maps an observed resource state and the cluster-agent
 // conditions on it to a release timeline event. emit is false when no resource
 // event should be recorded: a build in progress (the imagebuild controller's
-// build events cover it) or an unmapped state.
-func resourceEventForState(state models.StackResourceState, conditions []models.Condition, statusReason string) (eventType models.ReleaseEventType, reason string, emit bool) {
+// build events cover it) or an unmapped state. failureReason is the reason
+// derived from the resource's last failure, used on the failed path unless a
+// Stalled=True condition supplies a more specific message.
+func resourceEventForState(state models.StackResourceState, conditions []models.Condition, failureReason string) (eventType models.ReleaseEventType, reason string, emit bool) {
 	switch state {
 	case models.StackResourcePhasePending:
 		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceDependenciesReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
@@ -166,7 +199,7 @@ func resourceEventForState(state models.StackResourceState, conditions []models.
 	case models.StackResourcePhaseReady:
 		return models.ReleaseEventTypeResourceReady, "", true
 	case models.StackResourcePhaseFailed, models.StackResourcePhaseUnknown:
-		reason = statusReason
+		reason = failureReason
 		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) && cond.Message != "" {
 			reason = cond.Message
 		}

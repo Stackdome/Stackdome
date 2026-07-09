@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
@@ -218,6 +219,80 @@ func TestReconcile_recorderErrorDoesNotFailReconcile(t *testing.T) {
 
 	if _, err := r.Reconcile(context.Background(), reconcileRequest()); err != nil {
 		t.Fatalf("expected recorder error to be swallowed, got %v", err)
+	}
+}
+
+// failedStackResourceCR builds a Failed CR whose LastFailureDetails map to a
+// runtime-crash LastFailure, optionally carrying extra status conditions.
+func failedStackResourceCR(hash string, conditions []metav1.Condition) *corev1alpha1.StackResource {
+	return &corev1alpha1.StackResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "web",
+			Namespace: "ns-1",
+			Labels:    map[string]string{corev1alpha1.LabelStackID: "stack-1"},
+		},
+		Status: corev1alpha1.StackResourceStatus{
+			Phase:      corev1alpha1.StackResourcePhaseFailed,
+			StatusHash: hash,
+			Conditions: conditions,
+			LastFailureDetails: []corev1alpha1.LastFailureDetail{
+				{
+					ContainerName:           "web",
+					RestartCount:            3,
+					LastTerminationReason:   "CrashLoopBackOff",
+					LastTerminationMessage:  "back-off restarting failed container",
+					LastTerminationExitCode: ptr.To(int32(1)),
+				},
+			},
+		},
+	}
+}
+
+// A failed resource records resource_failed with the reason derived from its
+// LastFailure (the human-readable termination message), not the never-populated
+// Status.Message.
+func TestReconcile_failedRecordsLastFailureReason(t *testing.T) {
+	cr := failedStackResourceCR("h-fail", nil)
+	r, svc, checker, recorder := newReconcilerForTest(t, cr)
+
+	release := &models.StackRelease{ID: "rel-1"}
+	db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+	svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+	svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+	checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
+	recorder.EXPECT().
+		RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "back-off restarting failed container").
+		Return(nil)
+
+	if _, err := r.Reconcile(context.Background(), reconcileRequest()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// A Stalled=True condition with a message overrides the LastFailure-derived
+// reason on the failed path.
+func TestReconcile_failedStalledConditionOverridesLastFailureReason(t *testing.T) {
+	cr := failedStackResourceCR("h-stalled", []metav1.Condition{
+		{
+			Type:    string(corev1alpha1.StackResourceStalled),
+			Status:  metav1.ConditionTrue,
+			Reason:  "ImagePullBackOff",
+			Message: "image pull backoff",
+		},
+	})
+	r, svc, checker, recorder := newReconcilerForTest(t, cr)
+
+	release := &models.StackRelease{ID: "rel-1"}
+	db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+	svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+	svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+	checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
+	recorder.EXPECT().
+		RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "image pull backoff").
+		Return(nil)
+
+	if _, err := r.Reconcile(context.Background(), reconcileRequest()); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

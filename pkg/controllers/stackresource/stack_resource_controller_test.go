@@ -96,6 +96,66 @@ func TestMapClusterStatusToServerStatus_noFailure(t *testing.T) {
 	}
 }
 
+func TestComputeStatusRewrite_carriesOverBuildFailureWhenCRHasNone(t *testing.T) {
+	current := &models.StackResourceStatus{
+		LastFailure: &models.StackResourceFailure{
+			Type:  models.FailureTypeBuildFailure,
+			Build: &models.BuildFailureDetail{FailureType: "exit_error", Reason: "Error", Message: "build step failed"},
+		},
+	}
+	cr := &corev1alpha1.StackResource{}
+	cr.Name = "web"
+	cr.Status = corev1alpha1.StackResourceStatus{
+		Phase:      corev1alpha1.StackResourcePhaseReady,
+		StatusHash: "jkl012",
+	}
+
+	got := computeStatusRewrite(current, cr)
+
+	if got.LastFailure == nil {
+		t.Fatal("expected the existing build failure to be carried over")
+	}
+	if got.LastFailure != current.LastFailure {
+		t.Errorf("expected the carried-over build failure, got %+v", got.LastFailure)
+	}
+}
+
+func TestComputeStatusRewrite_crFailureWinsOverExistingBuildFailure(t *testing.T) {
+	current := &models.StackResourceStatus{
+		LastFailure: &models.StackResourceFailure{
+			Type:  models.FailureTypeBuildFailure,
+			Build: &models.BuildFailureDetail{FailureType: "exit_error", Reason: "Error", Message: "build step failed"},
+		},
+	}
+	cr := &corev1alpha1.StackResource{}
+	cr.Name = "web"
+	cr.Status = corev1alpha1.StackResourceStatus{
+		Phase:      corev1alpha1.StackResourcePhaseFailed,
+		StatusHash: "mno345",
+		LastFailureDetails: []corev1alpha1.LastFailureDetail{
+			{
+				ContainerName:           "web",
+				RestartCount:            2,
+				LastTerminationReason:   "CrashLoopBackOff",
+				LastTerminationMessage:  "back-off restarting",
+				LastTerminationExitCode: ptr.To(int32(1)),
+			},
+		},
+	}
+
+	got := computeStatusRewrite(current, cr)
+
+	if got.LastFailure == nil {
+		t.Fatal("expected the CR-derived runtime failure to win")
+	}
+	if got.LastFailure.Type != models.FailureTypeRuntimeCrash {
+		t.Errorf("Type = %q, want runtime_crash", got.LastFailure.Type)
+	}
+	if got.LastFailure.Build != nil {
+		t.Error("expected the build failure to be replaced, not merged")
+	}
+}
+
 func TestMapClusterStatusToServerStatus_lastRestartTime(t *testing.T) {
 	now := metav1.NewTime(time.Now())
 	cr := &corev1alpha1.StackResource{}
