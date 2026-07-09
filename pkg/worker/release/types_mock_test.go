@@ -268,6 +268,48 @@ func (m *MockeventRecorder) EXPECT() *MockeventRecorderMockRecorder {
 	return m.recorder
 }
 
+// RecordReleaseCheckFailed mocks base method.
+func (m *MockeventRecorder) RecordReleaseCheckFailed(ctx context.Context, release *models.StackRelease, resourceName, check, reason string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordReleaseCheckFailed", ctx, release, resourceName, check, reason)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// RecordReleaseCheckFailed indicates an expected call of RecordReleaseCheckFailed.
+func (mr *MockeventRecorderMockRecorder) RecordReleaseCheckFailed(ctx, release, resourceName, check, reason any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseCheckFailed", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseCheckFailed), ctx, release, resourceName, check, reason)
+}
+
+// RecordReleaseChecksPassed mocks base method.
+func (m *MockeventRecorder) RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordReleaseChecksPassed", ctx, release)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// RecordReleaseChecksPassed indicates an expected call of RecordReleaseChecksPassed.
+func (mr *MockeventRecorderMockRecorder) RecordReleaseChecksPassed(ctx, release any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseChecksPassed", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseChecksPassed), ctx, release)
+}
+
+// RecordReleaseChecksStarted mocks base method.
+func (m *MockeventRecorder) RecordReleaseChecksStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RecordReleaseChecksStarted", ctx, release)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// RecordReleaseChecksStarted indicates an expected call of RecordReleaseChecksStarted.
+func (mr *MockeventRecorderMockRecorder) RecordReleaseChecksStarted(ctx, release any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseChecksStarted", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseChecksStarted), ctx, release)
+}
+
 // RecordReleaseStarted mocks base method.
 func (m *MockeventRecorder) RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError {
 	m.ctrl.T.Helper()

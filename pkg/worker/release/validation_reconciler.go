@@ -25,6 +25,7 @@ type validationReconciler struct {
 	credentialResolver credentials.Resolver
 	registryClients    registryClientProvider
 	validationRecords  stores.ResourceValidationRecordStore
+	eventRecorder      eventRecorder
 	logger             logger.Logger
 }
 
@@ -38,6 +39,9 @@ func newValidationReconciler(spec ReleaseWorkerSpec) *validationReconciler {
 	if spec.ValidationRecords == nil {
 		panic("release.newValidationReconciler: ValidationRecords is required")
 	}
+	if spec.EventRecorder == nil {
+		panic("release.newValidationReconciler: EventRecorder is required")
+	}
 	// RegistryClients is optional: nil substitutes the real (network)
 	// registry client provider.
 	registryClients := spec.RegistryClients
@@ -49,6 +53,7 @@ func newValidationReconciler(spec ReleaseWorkerSpec) *validationReconciler {
 		credentialResolver: spec.CredentialResolver,
 		registryClients:    registryClients,
 		validationRecords:  spec.ValidationRecords,
+		eventRecorder:      spec.EventRecorder,
 		logger:             logger.NewLoggerWithPrefix(context.Background(), "release-validation"),
 	}
 }
@@ -58,55 +63,101 @@ func (r *validationReconciler) Name() string { return "validation" }
 func (r *validationReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
 	if release.Manifest != nil {
 		// Rollbacks carry a pre-rendered manifest; their pins were already
-		// validated when the source release went out.
+		// validated when the source release went out. No check events are
+		// emitted for the rollback path.
 		return resultNil, nil
 	}
 
+	// checks_started is dedupe-keyed server-side (release:checks_started), so a
+	// requeue that re-enters here re-calls harmlessly. Log-only on error: the
+	// validation outcome is authoritative, not the event trail.
+	if recErr := r.eventRecorder.RecordReleaseChecksStarted(ctx, release); recErr != nil {
+		r.logger.Errorf("release %s: failed to record release_checks_started event: %v", release.ID, recErr)
+	}
+
 	var verrs models.ReleaseValidationErrors
+	var anyRateLimited bool
 
 	for _, res := range release.Snapshot.Resources {
-		resErrs, err := r.validateResource(ctx, release, res)
+		resErrs, rateLimited, err := r.validateResource(ctx, release, res)
 		if err != nil {
 			return resultNil, err
 		}
 		verrs = append(verrs, resErrs...)
+		anyRateLimited = anyRateLimited || rateLimited
 	}
 
 	if len(verrs) > 0 {
 		msg := fmt.Sprintf("release validation failed: %d error(s)", len(verrs))
-		if _, serr := r.releaseService.MarkFailedWithValidationErrors(ctx, release.ID, msg, verrs); serr != nil {
+		for _, verr := range verrs {
+			if recErr := r.eventRecorder.RecordReleaseCheckFailed(ctx, release, verr.ResourceName, validationCheckKey(verr), verr.Message); recErr != nil {
+				r.logger.Errorf("release %s: failed to record release_check_failed event: %v", release.ID, recErr)
+			}
+		}
+		won, serr := r.releaseService.MarkFailedWithValidationErrors(ctx, release.ID, msg, verrs)
+		if serr != nil {
 			return resultNil, fmt.Errorf("failed to mark release failed: %v", serr)
 		}
+		// Only the winner of the terminal CAS records the terminal event, so a
+		// requeue that lost the race does not double-emit release_failed.
+		if won {
+			release.State = models.ReleaseStateFailed
+			if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateFailed, msg); recErr != nil {
+				r.logger.Errorf("release %s: failed to record release_failed event: %v", release.ID, recErr)
+			}
+		}
 		return resultStop, nil
+	}
+
+	// checks_passed asserts every check genuinely passed. A rate-limited check
+	// is skipped (not verified), so the release still proceeds but we withhold
+	// checks_passed until a later re-entry verifies it.
+	if !anyRateLimited {
+		if recErr := r.eventRecorder.RecordReleaseChecksPassed(ctx, release); recErr != nil {
+			r.logger.Errorf("release %s: failed to record release_checks_passed event: %v", release.ID, recErr)
+		}
 	}
 	return resultNil, nil
 }
 
-func (r *validationReconciler) validateResource(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, error) {
+// validationCheckKey identifies a check failure for event dedupe. The error
+// Code alone can collide across the pull and push checks of one resource
+// (both can yield registry_credential_not_found / registry_credentials_required
+// for the same resource name), so Field — which encodes the check surface
+// (source.image.* vs source.git.push.*) — is prefixed to keep the dedupe key
+// unique per (resource, check).
+func validationCheckKey(verr models.ReleaseValidationError) string {
+	return fmt.Sprintf("%s:%s", verr.Field, verr.Code)
+}
+
+func (r *validationReconciler) validateResource(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {
 	var verrs models.ReleaseValidationErrors
+	var rateLimited bool
 
 	if res.ImageConfig != nil && res.ImageConfig.Image != "" && !isClusterLocalRegistryRef(res.ImageConfig.Image) {
-		errsHere, err := r.checkImagePull(ctx, release, res)
+		errsHere, rl, err := r.checkImagePull(ctx, release, res)
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		verrs = append(verrs, errsHere...)
+		rateLimited = rateLimited || rl
 	}
 
 	if res.BuildConfig != nil {
 		repo := res.BuildConfig.BuildImageRepository
 		if repo.ExternalImageRef != "" && !repo.InsecureRegistry && !isClusterLocalRegistryRef(repo.ExternalImageRef) {
-			errsHere, err := r.checkPushAccess(ctx, release, res)
+			errsHere, rl, err := r.checkPushAccess(ctx, release, res)
 			if err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			verrs = append(verrs, errsHere...)
+			rateLimited = rateLimited || rl
 		}
 	}
-	return verrs, nil
+	return verrs, rateLimited, nil
 }
 
-func (r *validationReconciler) checkImagePull(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, error) {
+func (r *validationReconciler) checkImagePull(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {
 	imageRef := res.ImageConfig.Image
 	credID := res.RegistryPullCredentialID()
 
@@ -117,19 +168,19 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 			return models.ReleaseValidationErrors{{
 				ResourceName: res.Name, Field: "source.image.registry_credentials_id",
 				Code: errors.VErrRegistryCredentialNotFound, Message: "registry credential not found",
-			}}, nil
+			}}, false, nil
 		}
-		return nil, fmt.Errorf("resource %s: resolve pull credentials: %w", res.Name, serr)
+		return nil, false, fmt.Errorf("resource %s: resolve pull credentials: %w", res.Name, serr)
 	}
 
 	fp := checkFingerprint(imageRef, credID, resolved.DataHash)
 	if r.probeCached(ctx, release.StackID, res.Name, models.ValidationCheckImagePull, fp) {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	client, err := r.registryClients.ClientFor(resolved)
 	if err != nil {
-		return nil, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
+		return nil, false, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
 	}
 
 	exists, err := client.CheckImage(ctx, imageRef)
@@ -139,9 +190,9 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 		// the release until the deploy timeout even though the image would
 		// most likely deploy fine. Warn and skip the check so the release
 		// proceeds; no success fingerprint is recorded since nothing was
-		// verified.
+		// verified. The skip is reported so checks_passed is withheld.
 		r.logger.Warnf("release %s: resource %s: registry rate limited while checking image '%s'; skipping check", release.ID, res.Name, imageRef)
-		return nil, nil
+		return nil, true, nil
 	case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
 		// No credentials were resolved for this registry and it rejects
 		// anonymous access: the user needs to ADD credentials, which is a
@@ -150,29 +201,29 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 			ResourceName: res.Name, Field: "source.image.ref",
 			Code:    errors.VErrRegistryCredentialsRequired,
 			Message: fmt.Sprintf("image '%s' requires credentials for registry '%s', but none are configured", imageRef, registryHostForRef(imageRef)),
-		}}, nil
+		}}, false, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.image.ref",
 			Code:    errors.VErrRegistryAuthFailed,
 			Message: fmt.Sprintf("registry '%s' rejected the configured credentials for image '%s'", registryHostForRef(imageRef), imageRef),
-		}}, nil
+		}}, false, nil
 	case err != nil:
 		// transient network problem: let the worker retry the whole reconcile
-		return nil, fmt.Errorf("resource %s: image probe: %w", res.Name, err)
+		return nil, false, fmt.Errorf("resource %s: image probe: %w", res.Name, err)
 	case !exists:
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.image.ref",
 			Code:    errors.VErrImageNotFound,
 			Message: fmt.Sprintf("image '%s' does not exist or is not accessible", imageRef),
-		}}, nil
+		}}, false, nil
 	}
 
 	r.rememberSuccess(ctx, release.StackID, res.Name, models.ValidationCheckImagePull, fp)
-	return nil, nil
+	return nil, false, nil
 }
 
-func (r *validationReconciler) checkPushAccess(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, error) {
+func (r *validationReconciler) checkPushAccess(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {
 	pushRef := res.BuildConfig.BuildImageRepository.ExternalImageRef
 	credID := res.RegistryPushCredentialID()
 
@@ -183,28 +234,29 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 			return models.ReleaseValidationErrors{{
 				ResourceName: res.Name, Field: "source.git.push.registry_credentials_id",
 				Code: errors.VErrRegistryCredentialNotFound, Message: "registry credential not found",
-			}}, nil
+			}}, false, nil
 		}
-		return nil, fmt.Errorf("resource %s: resolve push credentials: %w", res.Name, serr)
+		return nil, false, fmt.Errorf("resource %s: resolve push credentials: %w", res.Name, serr)
 	}
 
 	fp := checkFingerprint(pushRef, credID, resolved.DataHash)
 	if r.probeCached(ctx, release.StackID, res.Name, models.ValidationCheckPushAccess, fp) {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	client, err := r.registryClients.ClientFor(resolved)
 	if err != nil {
-		return nil, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
+		return nil, false, fmt.Errorf("resource %s: build registry client: %w", res.Name, err)
 	}
 
 	err = client.CheckPushAccess(ctx, pushRef)
 	switch {
 	case stderrors.Is(err, clients.ErrRateLimited):
 		// Same rationale as checkImagePull: skip instead of requeueing so a
-		// registry rate limit cannot hang the release to deploy timeout.
+		// registry rate limit cannot hang the release to deploy timeout. The
+		// skip is reported so checks_passed is withheld.
 		r.logger.Warnf("release %s: resource %s: registry rate limited while checking push access to '%s'; skipping check", release.ID, res.Name, pushRef)
-		return nil, nil
+		return nil, true, nil
 	case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
 		// Same distinction as checkImagePull: pushing without any resolved
 		// credentials means the user must add push credentials, not fix
@@ -213,20 +265,20 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 			ResourceName: res.Name, Field: "source.git.push.repository",
 			Code:    errors.VErrRegistryCredentialsRequired,
 			Message: fmt.Sprintf("pushing to '%s' requires credentials for registry '%s', but none are configured", pushRef, registryHostForRef(pushRef)),
-		}}, nil
+		}}, false, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.git.push.repository",
 			Code:    errors.VErrPushAccessDenied,
 			Message: fmt.Sprintf("cannot push to '%s': registry rejected the configured credentials", pushRef),
-		}}, nil
+		}}, false, nil
 	case err != nil:
 		// transient network problem: let the worker retry the whole reconcile
-		return nil, fmt.Errorf("resource %s: push probe: %w", res.Name, err)
+		return nil, false, fmt.Errorf("resource %s: push probe: %w", res.Name, err)
 	}
 
 	r.rememberSuccess(ctx, release.StackID, res.Name, models.ValidationCheckPushAccess, fp)
-	return nil, nil
+	return nil, false, nil
 }
 
 func (r *validationReconciler) probeCached(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind, fingerprint string) bool {

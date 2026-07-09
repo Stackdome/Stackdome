@@ -58,16 +58,21 @@ type validationReconcilerFixture struct {
 	resolver        *mocks.MockCredentialResolver
 	registryClients *MockregistryClientProvider
 	records         *mocks.MockResourceValidationRecordStore
+	events          *MockeventRecorder
 	reconciler      *validationReconciler
 }
 
-func newValidationReconcilerFixture(t *testing.T) *validationReconcilerFixture {
+// newValidationReconcilerFixtureBare wires all dependencies but sets NO event
+// recorder expectations, so tests that assert exact check-event calls have a
+// clean slate.
+func newValidationReconcilerFixtureBare(t *testing.T) *validationReconcilerFixture {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	svc := NewMockreleaseService(ctrl)
 	resolver := mocks.NewMockCredentialResolver(ctrl)
 	registryClients := NewMockregistryClientProvider(ctrl)
 	records := mocks.NewMockResourceValidationRecordStore(ctrl)
+	events := NewMockeventRecorder(ctrl)
 
 	return &validationReconcilerFixture{
 		ctrl:            ctrl,
@@ -75,14 +80,29 @@ func newValidationReconcilerFixture(t *testing.T) *validationReconcilerFixture {
 		resolver:        resolver,
 		registryClients: registryClients,
 		records:         records,
+		events:          events,
 		reconciler: &validationReconciler{
 			releaseService:     svc,
 			credentialResolver: resolver,
 			registryClients:    registryClients,
 			validationRecords:  records,
+			eventRecorder:      events,
 			logger:             testLogger(),
 		},
 	}
+}
+
+// newValidationReconcilerFixture is the default fixture for tests that focus on
+// validation behavior rather than events: it permits (but does not assert) any
+// check-event recorder calls so those tests need no event bookkeeping.
+func newValidationReconcilerFixture(t *testing.T) *validationReconcilerFixture {
+	t.Helper()
+	f := newValidationReconcilerFixtureBare(t)
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	f.events.EXPECT().RecordReleaseChecksPassed(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	f.events.EXPECT().RecordReleaseCheckFailed(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	f.events.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+	return f
 }
 
 // 1. Image resource, no record: CheckImage true -> record upserted, resultNil (chain continues).
@@ -672,5 +692,197 @@ func TestValidationReconciler_PushCredential_ResolveNonNotFoundError_ReturnsErro
 	result, err := f.reconciler.Reconcile(context.Background(), release)
 	if err == nil {
 		t.Fatalf("expected error, got nil (result: %+v)", result)
+	}
+}
+
+// --- Check-event production (Task 8) ---
+
+// E1. Fresh release, all checks pass -> checks_started and checks_passed each
+// recorded once; reconciler returns resultNil.
+func TestValidationReconciler_Events_AllChecksPass_StartedAndPassed(t *testing.T) {
+	f := newValidationReconcilerFixtureBare(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(true, nil)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+	f.records.EXPECT().Upsert(gomock.Any(), gomock.Any()).Return(nil)
+
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), release).Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseChecksPassed(gomock.Any(), release).Return(nil).Times(1)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatalf("expected resultNil, got %+v", result)
+	}
+}
+
+// E2. Two validation errors -> checks_started once, one check_failed per error
+// with matching resource/check/reason, and a terminal Failed event because the
+// MarkFailedWithValidationErrors CAS reports a win.
+func TestValidationReconciler_Events_TwoErrors_CheckFailedAndTerminalOnWin(t *testing.T) {
+	f := newValidationReconcilerFixtureBare(t)
+	res1 := imageResource("web", "example.com/app:v1")
+	res2 := buildResourceWithPush("worker", "example.com/worker:v1")
+	release := validationTestRelease(res1, res2)
+
+	resolvedPull := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).Return(resolvedPull, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	pullClient := mocks.NewMockRegistryClient(f.ctrl)
+	pullClient.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, nil)
+	f.registryClients.EXPECT().ClientFor(resolvedPull).Return(pullClient, nil)
+
+	resolvedPush := &credentials.ResolvedRegistryCredential{Source: credentials.SourceIntegration, DataHash: "hash-2"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
+		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).Return(resolvedPush, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "worker", models.ValidationCheckPushAccess).
+		Return(nil, errors.NotFound("no record"))
+	pushClient := mocks.NewMockRegistryClient(f.ctrl)
+	pushClient.EXPECT().CheckPushAccess(gomock.Any(), "example.com/worker:v1").Return(clients.ErrAuthFailed)
+	f.registryClients.EXPECT().ClientFor(resolvedPush).Return(pushClient, nil)
+
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), release).Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseCheckFailed(gomock.Any(), release, "web",
+		"source.image.ref:"+errors.VErrImageNotFound,
+		"image 'example.com/app:v1' does not exist or is not accessible").Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseCheckFailed(gomock.Any(), release, "worker",
+		"source.git.push.repository:"+errors.VErrPushAccessDenied,
+		"cannot push to 'example.com/worker:v1': registry rejected the configured credentials").Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseTerminal(gomock.Any(), release, models.ReleaseStateFailed, gomock.Any()).Return(nil).Times(1)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), "release-1", gomock.Any(), gomock.Any()).
+		Return(true, nil)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatalf("expected resultStop, got %+v", result)
+	}
+}
+
+// E3. Validation error but the terminal CAS is lost (a concurrent reconcile
+// already moved the release) -> check_failed still recorded, but NO terminal
+// event, because only the CAS winner emits release_failed.
+func TestValidationReconciler_Events_CASLost_NoTerminal(t *testing.T) {
+	f := newValidationReconcilerFixtureBare(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, nil)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), release).Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseCheckFailed(gomock.Any(), release, "web",
+		"source.image.ref:"+errors.VErrImageNotFound, gomock.Any()).Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), "release-1", gomock.Any(), gomock.Any()).
+		Return(false, nil)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatalf("expected resultStop, got %+v", result)
+	}
+}
+
+// E4. Rollback (release.Manifest != nil) -> zero recorder calls of any kind.
+func TestValidationReconciler_Events_Rollback_NoRecorderCalls(t *testing.T) {
+	f := newValidationReconcilerFixtureBare(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+	release.Manifest = &models.ReleaseManifest{}
+
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), gomock.Any()).Times(0)
+	f.events.EXPECT().RecordReleaseChecksPassed(gomock.Any(), gomock.Any()).Times(0)
+	f.events.EXPECT().RecordReleaseCheckFailed(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+	f.events.EXPECT().RecordReleaseTerminal(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Times(0)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatalf("expected resultNil, got %+v", result)
+	}
+}
+
+// E5. Rate-limited check -> checks_started recorded, checks_passed NOT recorded
+// (the skipped check was never verified), release still proceeds (resultNil).
+func TestValidationReconciler_Events_RateLimited_StartedNotPassed(t *testing.T) {
+	f := newValidationReconcilerFixtureBare(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, clients.ErrRateLimited)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), release).Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseChecksPassed(gomock.Any(), gomock.Any()).Times(0)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatalf("expected resultNil, got %+v", result)
+	}
+}
+
+// E6. A recorder error is log-only: checks_passed returning an error does not
+// change the reconciler's (successful) outcome.
+func TestValidationReconciler_Events_RecorderError_LogOnly(t *testing.T) {
+	f := newValidationReconcilerFixtureBare(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(true, nil)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+	f.records.EXPECT().Upsert(gomock.Any(), gomock.Any()).Return(nil)
+
+	f.events.EXPECT().RecordReleaseChecksStarted(gomock.Any(), release).Return(nil).Times(1)
+	f.events.EXPECT().RecordReleaseChecksPassed(gomock.Any(), release).
+		Return(errors.InternalServerError("recorder unavailable")).Times(1)
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultNil {
+		t.Fatalf("expected resultNil despite recorder error, got %+v", result)
 	}
 }

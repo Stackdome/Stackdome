@@ -50,6 +50,9 @@ type releaseService interface {
 type eventRecorder interface {
 	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 	RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError
+	RecordReleaseChecksStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
+	RecordReleaseCheckFailed(ctx context.Context, release *models.StackRelease, resourceName, check, reason string) *errors.ServiceError
+	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 }
 
 type stackService interface {
