@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
 import { templateToFormData } from "@/data/templates/template-to-form";
-import { summarizeWarnings } from "@/pages/stacks/hooks/use-docker-compose-import";
+import { formatImportWarnings } from "@/pages/stacks/lib/import-warnings-toast";
 import type { Template } from "@/data/templates/types";
 
 export interface TemplateImportState {
@@ -39,9 +39,12 @@ export function useTemplateImport(): TemplateImportState & TemplateImportActions
       },
     });
     if (warnings.length > 0) {
+      const { count, description } = formatImportWarnings(warnings.map((w) => w.message));
       toast({
-        title: `Template imported with ${warnings.length} warning${warnings.length === 1 ? "" : "s"}`,
-        description: summarizeWarnings(warnings.map((w) => w.message)),
+        title: `Template imported with ${count} warning${count === 1 ? "" : "s"}`,
+        description,
+        // Give the reader time — these carry follow-up actions.
+        duration: 15000,
       });
     }
   };

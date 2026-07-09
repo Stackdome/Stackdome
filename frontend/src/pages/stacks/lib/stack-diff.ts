@@ -333,6 +333,7 @@ export function revertResource(
 export function alignBaselineToDraft<T extends { name?: string }>(
   baseline: T[],
   draft: Array<{ name?: string }>,
+  fingerprint?: (entry: unknown) => string,
 ): (T | undefined)[] {
   const byName = new Map<string, T>();
   for (const b of baseline) {
@@ -346,10 +347,58 @@ export function alignBaselineToDraft<T extends { name?: string }>(
     if (match) used.add(d.name);
     return match;
   });
+  // Rename pass: a draft entry with no name match paired with a leftover
+  // baseline entry of identical content is the same entity renamed. Slot the
+  // baseline into the draft's position so positional diffing reads one changed
+  // field (the name) instead of an addition plus a deletion.
+  if (fingerprint) {
+    const holes = aligned.flatMap((a, i) => (a === undefined && draft[i]?.name ? [i] : []));
+    const leftovers = baseline.filter((b) => b?.name && !used.has(b.name));
+    const pairs = pairByFingerprint(holes, leftovers, (i) => fingerprint(draft[i]), fingerprint);
+    for (const [i, b] of pairs) {
+      aligned[i] = b;
+      used.add(b.name as string);
+    }
+  }
   for (const b of baseline) {
     if (!b?.name || !used.has(b.name)) aligned.push(b);
   }
   return aligned;
+}
+
+/**
+ * Greedily pair entries from two lists whose fingerprints match; each entry is
+ * used at most once. Rename detection: a removed entry and an added entry with
+ * the same content fingerprint are one renamed entity, not two changes.
+ */
+export function pairByFingerprint<A, B>(
+  as: A[],
+  bs: B[],
+  fpA: (a: A) => string,
+  fpB: (b: B) => string,
+): Array<[A, B]> {
+  const pairs: Array<[A, B]> = [];
+  const usedB = new Set<number>();
+  for (const a of as) {
+    const fp = fpA(a);
+    const idx = bs.findIndex((b, i) => !usedB.has(i) && fpB(b) === fp);
+    if (idx >= 0) {
+      usedB.add(idx);
+      pairs.push([a, bs[idx]]);
+    }
+  }
+  return pairs;
+}
+
+/**
+ * Content identity for rename detection: everything except the entry's `name`
+ * and its live `status` telemetry (status drifts between the deploy-time
+ * baseline and the live draft and is never dirt — see diffOneResource).
+ */
+export function renameFingerprint(entry: unknown): string {
+  if (entry == null || typeof entry !== "object") return JSON.stringify(entry ?? null);
+  const { name: _name, status: _status, ...rest } = entry as Record<string, unknown>;
+  return JSON.stringify(rest);
 }
 
 /**

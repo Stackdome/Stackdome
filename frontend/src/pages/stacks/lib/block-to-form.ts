@@ -1,5 +1,6 @@
 import type { BlockPreset } from "@/pages/stacks/data/blocks/types";
-import { BlockId } from "@/pages/stacks/data/blocks/types";
+import { BlockId, DATA_BLOCK_CATEGORIES } from "@/pages/stacks/data/blocks/types";
+import { PLACEHOLDER_PASSWORDS } from "@/pages/stacks/data/blocks/registry";
 import { parseAndValidateDockerCompose } from "@/lib/docker-compose-parser";
 import { convertDockerComposeToStackData } from "@/lib/docker-compose-converter";
 import type {
@@ -15,38 +16,66 @@ export function emptyStack(): WorkingStack {
   return { name: "", labels: [], spec: { stack_resources: [], volumes: [] } };
 }
 
-/** Generic blocks have no compose snippet — produce a minimal resource skeleton. */
+/** Generic blocks have no compose snippet — produce a minimal resource skeleton.
+ *  Web gets the conventional public HTTP port 80; Custom starts portless. */
 function genericResource(block: BlockPreset): FormStackResourceData {
   const base = {
     name: block.id,
     sourceType: "image" as const,
     source: { image: { ref: "" } },
-    ports: block.id === BlockId.Web ? [{ container_port: 8080, protocol: "TCP" }] : [],
+    ports:
+      block.id === BlockId.Web
+        ? [{ name: "http-80", number: 80, protocol: "http", exposed_to_public: true }]
+        : [],
   };
   return base as unknown as FormStackResourceData;
 }
 
-/**
- * Datastore presets ship a compose snippet purely as a convenient way to
- * describe the image/ports/volume — they are never public HTTP endpoints.
- * The shared compose converter defaults ports to public http (correct for the
- * real docker-compose import flow), so for "data" blocks we override every
- * derived port back to a private tcp port after conversion.
- */
-function asPrivateTcpPorts(
-  resources: FormStackResourceData[]
-): FormStackResourceData[] {
-  return resources.map((resource) => {
-    if (!resource.ports?.length) return resource;
-    return {
-      ...resource,
-      ports: resource.ports.map((port) => ({
-        ...port,
-        protocol: "tcp",
-        exposed_to_public: false,
-      })),
-    };
-  });
+/** Random secret for data-store blocks whose images refuse to boot with an
+ *  empty password (postgres/mysql/mariadb/mssql/couchdb). Alphanumeric with a
+ *  guaranteed upper+lower+digit mix so even MSSQL's complexity check passes. */
+function generatedPassword(): string {
+  const charset = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint32Array(17);
+  crypto.getRandomValues(bytes);
+  const body = Array.from(bytes, (b) => charset[b % charset.length]).join("");
+  return `Sd1${body}`;
+}
+
+type FormPort = { name?: string; number?: number; protocol?: string; exposed_to_public?: boolean };
+
+/** Data stores are internal dependencies: their ports must never be published
+ *  as public HTTP ingresses (the compose converter defaults every published
+ *  port to http/public — right for web services, wrong for databases). */
+function internalizePorts(resource: FormStackResourceData): FormStackResourceData {
+  const ports = (resource.ports ?? []) as FormPort[];
+  if (ports.length === 0) return resource;
+  return {
+    ...resource,
+    ports: ports.map((p) => ({
+      ...p,
+      name: `tcp-${p.number}`,
+      protocol: "tcp",
+      exposed_to_public: false,
+    })),
+  } as FormStackResourceData;
+}
+
+/** Swap the registry's placeholder passwords (and any empty env value) for a
+ *  generated secret so the container actually boots on first deploy. */
+function fillPlaceholderPasswords(resource: FormStackResourceData): FormStackResourceData {
+  const isPlaceholder = (v: string | undefined) => v === "" || (v !== undefined && PLACEHOLDER_PASSWORDS.has(v));
+  const env = resource.execution_config?.environment_variables as
+    | { name?: string; value?: string; from?: string }[]
+    | undefined;
+  if (!env?.some((r) => isPlaceholder(r.value))) return resource;
+  return {
+    ...resource,
+    execution_config: {
+      ...resource.execution_config,
+      environment_variables: env.map((r) => (isPlaceholder(r.value) ? { ...r, value: generatedPassword() } : r)),
+    },
+  } as FormStackResourceData;
 }
 
 export function blockToResources(block: BlockPreset): {
@@ -63,10 +92,11 @@ export function blockToResources(block: BlockPreset): {
       `Block "${block.id}" failed to convert: ${result.errors?.[0]?.message ?? "unknown"}`
     );
   }
-  const resources = result.data.spec.stack_resources ?? [];
+  const resources = (result.data.spec.stack_resources ?? []).map((r) =>
+    DATA_BLOCK_CATEGORIES.has(block.category) ? fillPlaceholderPasswords(internalizePorts(r)) : r,
+  );
   return {
-    resources:
-      block.category === "data" ? asPrivateTcpPorts(resources) : resources,
+    resources,
     volumes: (result.data.spec.volumes ?? []) as FormVolumeData[],
   };
 }

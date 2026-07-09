@@ -1,9 +1,13 @@
 import { useEffect, type ReactNode } from "react";
 import { entryKey, type DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-stack";
+import {
+  computeDrawerInset,
+  DRAWER_BASE_INSET_PX as BASE_INSET_PX,
+  DRAWER_STAGGER_X_PX as STAGGER_X_PX,
+  useDrawerInset,
+} from "@/pages/stacks/lib/canvas/drawer-inset";
 
-const BASE_INSET_PX = 12;
 const STAGGER_Y_PX = 10;
-const STAGGER_X_PX = 16;
 /**
  * Front panel z-index. Constraint: panels must sit BELOW the shared Radix
  * portal layer (z-50 in ui/select|popover|dropdown-menu|tooltip) so
@@ -36,6 +40,22 @@ interface DrawerStackProps {
  */
 export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: DrawerStackProps) {
   const open = panels.length > 0;
+  const { setInset } = useDrawerInset();
+
+  // Report the occupied width (front panel + back-panel stagger, clamped like
+  // max-w-[calc(100vw-24px)]) so the shell can push canvas + rail actions left.
+  useEffect(() => {
+    if (!open) {
+      setInset(0);
+      return;
+    }
+    const report = () => setInset(computeDrawerInset(panels.length, window.innerWidth));
+    report();
+    window.addEventListener("resize", report);
+    return () => window.removeEventListener("resize", report);
+  }, [open, panels.length, setInset]);
+
+  useEffect(() => () => setInset(0), [setInset]);
 
   useEffect(() => {
     if (!open) return;

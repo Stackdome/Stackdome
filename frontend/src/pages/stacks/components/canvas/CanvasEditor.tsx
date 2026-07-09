@@ -10,12 +10,14 @@ import {
   type OnNodeDrag,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useCallback, useState } from "react";
 import { Move } from "lucide-react";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
 import { AttachmentNode, type AttachmentFlowNode } from "./nodes/AttachmentNode";
 import { ConnectionEdge } from "./edges/ConnectionEdge";
 import { CanvasControls } from "./CanvasControls";
-import { AddResourcePopover } from "./AddResourcePopover";
+import { AddResourcePopover, AddResourcePanel } from "./AddResourcePopover";
 import { FIT_OPTIONS } from "./fit-options";
 
 /** Workload nodes (service/addon) plus the compact attachment nodes (secret/volume/object store). */
@@ -78,6 +80,14 @@ export function CanvasEditor({
   canAddVolume,
   onAddVolume,
 }: CanvasEditorProps) {
+  // Right-clicking empty canvas opens the same add-resource picker at the
+  // cursor (anchored via an invisible fixed-position point).
+  const [paneMenuAt, setPaneMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
+    event.preventDefault();
+    setPaneMenuAt({ x: event.clientX, y: event.clientY });
+  }, []);
+
   return (
     <div className="relative h-full w-full" data-testid="stack-canvas">
       <ReactFlow
@@ -93,6 +103,7 @@ export function CanvasEditor({
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        onPaneContextMenu={onPaneContextMenu}
         fitView
         fitViewOptions={FIT_OPTIONS}
         colorMode="system"
@@ -126,6 +137,28 @@ export function CanvasEditor({
           </Panel>
         )}
       </ReactFlow>
+      {paneMenuAt && (
+        <Popover open onOpenChange={(o) => !o && setPaneMenuAt(null)}>
+          <PopoverAnchor asChild>
+            <span
+              aria-hidden
+              style={{ position: "fixed", left: paneMenuAt.x, top: paneMenuAt.y, width: 0, height: 0 }}
+            />
+          </PopoverAnchor>
+          <PopoverContent align="start" side="bottom" className="w-[560px] p-0">
+            <AddResourcePanel
+              addedIds={addedBlockIds}
+              onAdd={onAddBlock}
+              addons={addons}
+              linkedAddonIds={linkedAddonIds}
+              onLinkAddon={onLinkAddon}
+              canAddVolume={canAddVolume}
+              onAddVolume={onAddVolume}
+              onRequestClose={() => setPaneMenuAt(null)}
+            />
+          </PopoverContent>
+        </Popover>
+      )}
       {nodes.length === 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center text-center">
           <p className="text-sm font-medium text-foreground">No resources yet</p>

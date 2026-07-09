@@ -1,7 +1,9 @@
 /**
  * Pure presentation mapper: turns a resource's raw config (image, ports, build)
  * into the display fields a canvas node card shows — a role/tech kind label, a
- * glyph, a status-dot colour, and a rich one-line summary.
+ * glyph, and a rich one-line summary. The status dot is computed live from
+ * runtime state (see `graph-from-connections.ts`'s use of `statusVariant`),
+ * not derived here.
  *
  * No React imports; unit-testable in isolation. Heuristic, not authoritative —
  * the backend has no "kind" field, so we infer one from the image + ports.
@@ -9,9 +11,6 @@
 
 /** Glyph identifiers a node card can render (mapped to icons by `node-glyph`). */
 export type GlyphKind = "web" | "postgres" | "redis" | "database" | "object" | "worker" | "service";
-
-/** Status-dot colour buckets (semantic tokens: ok=green, warn=amber, err=red). */
-export type DotState = "ok" | "warn" | "err";
 
 export interface PresentationPort {
   number?: number;
@@ -32,21 +31,20 @@ export interface PresentationInput {
 export interface NodePresentation {
   kindLabel: string;
   glyph: GlyphKind;
-  dotState: DotState;
   summary: string;
 }
 
 /** Internal kind keys → their display metadata. */
 type KindKey = "web" | "postgres" | "redis" | "mysql" | "mongo" | "object" | "service";
 
-const KIND_META: Record<KindKey, { label: string; glyph: GlyphKind; dot: DotState }> = {
-  web: { label: "Web", glyph: "web", dot: "ok" },
-  postgres: { label: "Postgres", glyph: "postgres", dot: "ok" },
-  redis: { label: "Redis", glyph: "redis", dot: "ok" },
-  mysql: { label: "MySQL", glyph: "database", dot: "ok" },
-  mongo: { label: "Mongo", glyph: "database", dot: "ok" },
-  object: { label: "Object", glyph: "object", dot: "warn" },
-  service: { label: "Service", glyph: "service", dot: "ok" },
+const KIND_META: Record<KindKey, { label: string; glyph: GlyphKind }> = {
+  web: { label: "Web", glyph: "web" },
+  postgres: { label: "Postgres", glyph: "postgres" },
+  redis: { label: "Redis", glyph: "redis" },
+  mysql: { label: "MySQL", glyph: "database" },
+  mongo: { label: "Mongo", glyph: "database" },
+  object: { label: "Object", glyph: "object" },
+  service: { label: "Service", glyph: "service" },
 };
 
 /** Image-substring → kind. First match wins; order matters little (disjoint). */
@@ -103,7 +101,7 @@ function buildSummary(
 
 export function nodePresentation(input: PresentationInput): NodePresentation {
   if (input.isAddon) {
-    return { kindLabel: "Postgres", glyph: "postgres", dotState: "ok", summary: "managed postgres" };
+    return { kindLabel: "Postgres", glyph: "postgres", summary: "managed postgres" };
   }
   const image = (input.image ?? "").trim();
   const port = primaryPort(input.ports);
@@ -113,7 +111,6 @@ export function nodePresentation(input: PresentationInput): NodePresentation {
   return {
     kindLabel: meta.label,
     glyph: meta.glyph,
-    dotState: meta.dot,
     summary: buildSummary(kind, image, input.hasBuild, port),
   };
 }

@@ -3,14 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { convertDockerComposeToStackData } from '@/lib/docker-compose-converter';
 import { parseAndValidateDockerCompose } from '@/lib/docker-compose-parser';
+import { formatImportWarnings } from '@/pages/stacks/lib/import-warnings-toast';
 import type { DockerComposeFile } from '@/types/docker-compose';
-
-/** First few warning messages joined for a toast body; the rest summarized as a count. */
-export function summarizeWarnings(messages: string[], max = 3): string {
-  const shown = messages.slice(0, max).join(' · ');
-  const rest = messages.length - max;
-  return rest > 0 ? `${shown} · and ${rest} more` : shown;
-}
 
 export interface ImportState {
   isLoading: boolean;
@@ -84,9 +78,12 @@ export function useDockerComposeImport(): ImportState & ImportActions {
 
       const warnings = conversionResult.warnings ?? [];
       if (warnings.length > 0) {
+        const { count, description } = formatImportWarnings(warnings.map((w) => w.message));
         toast({
-          title: `Imported with ${warnings.length} warning${warnings.length === 1 ? '' : 's'}`,
-          description: summarizeWarnings(warnings.map((w) => w.message)),
+          title: `Imported with ${count} warning${count === 1 ? '' : 's'}`,
+          description,
+          // Give the reader time — these carry follow-up actions.
+          duration: 15000,
         });
       } else {
         toast({

@@ -124,4 +124,44 @@ describe("diffSnapshots connections", () => {
     expect(out.connections[0]).toMatchObject({ name: "volume_mount · data → api", change: "removed" });
     expect(out.connections[0].note).toMatch(/removed/i);
   });
+
+  it("does not report phantom connection changes when a resource endpoint was only renamed", () => {
+    const mount = (resource: string) => ({
+      kind: "volume_mount",
+      from: { type: "volume", name: "mysql-data" },
+      to: { type: "stack_resource", name: resource },
+    });
+    const prev = mk({ resources: [web({ name: "mysql" })], connections: [mount("mysql")] });
+    const cur = mk({ resources: [web({ name: "mysqla" })], connections: [mount("mysqla")] });
+    const out = diffSnapshots(prev, cur);
+    expect(out.resources).toEqual([{ name: "mysqla", fromName: "mysql", change: "renamed", sections: [] }]);
+    expect(out.connections).toEqual([]);
+  });
+
+  it("still surfaces a real mapping change on a renamed resource's connection, under the new name", () => {
+    const prev = mk({
+      resources: [web({ name: "api" })],
+      connections: [{ ...conn("DATABASE_URL", "url"), to: { type: "stack_resource", name: "api" } }],
+    });
+    const cur = mk({
+      resources: [web({ name: "api2" })],
+      connections: [{ ...conn("DATABASE_URL", "public.url"), to: { type: "stack_resource", name: "api2" } }],
+    });
+    const out = diffSnapshots(prev, cur);
+    expect(out.connections).toEqual([
+      { name: "env · db → api2", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public.url", kind: "changed" }] },
+    ]);
+  });
+
+  it("leaves connections to non-resource endpoints with a colliding name untouched by the rename map", () => {
+    const volMount = {
+      kind: "volume_mount",
+      from: { type: "volume", name: "web" }, // volume named like the renamed resource
+      to: { type: "stack_resource", name: "api" },
+    };
+    const prev = mk({ resources: [web({ name: "web" }), web({ name: "api", image_spec: { image: "api:1" } })], connections: [volMount] });
+    const cur = mk({ resources: [web({ name: "web2" }), web({ name: "api", image_spec: { image: "api:1" } })], connections: [volMount] });
+    const out = diffSnapshots(prev, cur);
+    expect(out.connections).toEqual([]);
+  });
 });

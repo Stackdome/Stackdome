@@ -18,7 +18,8 @@ import {
 } from "@/components/ui/dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { PageHeader, Panel, FieldShell, StatusPill, variantFromState } from "@/components/branded";
+import { PageHeader, Panel, FieldShell, StatusPill } from "@/components/branded";
+import { statusVariant } from "@/components/branded/status-variant";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -177,7 +178,7 @@ export default function ClusterDetailPage() {
                   <div>
                     <Label className="text-[13px] font-medium text-foreground">Registry Status</Label>
                     <div className="mt-1.5">
-                      <StatusPill variant={variantFromState(registryLabel)}>{registryLabel}</StatusPill>
+                      <StatusPill variant={statusVariant("registry", registryLabel)}>{registryLabel}</StatusPill>
                     </div>
                   </div>
                 </div>

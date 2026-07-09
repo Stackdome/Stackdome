@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
+import { statusVariant, type StatusVariant } from "./status-variant";
 
-export type StatusVariant = "ready" | "pending" | "error" | "info" | "neutral";
+export type { StatusVariant };
 
 interface StatusPillProps extends React.HTMLAttributes<HTMLSpanElement> {
   variant?: StatusVariant;
@@ -42,14 +43,9 @@ const styles: Record<StatusVariant, { wrap: string; dot: string; pulse: boolean 
   },
 };
 
+/** @deprecated Use statusVariant(domain, state) with an explicit domain. */
 export function variantFromState(state?: string | null): StatusVariant {
-  const s = (state ?? "").toLowerCase();
-  if (["ready", "running", "active", "succeeded", "exposed", "released"].includes(s)) return "ready";
-  if (["pending", "deploying", "creating", "updating", "provisioning", "inprogress"].includes(s)) return "pending";
-  if (["error", "failed", "crash", "crashloopbackoff", "unhealthy"].includes(s)) return "error";
-  if (["superseded", "cancelled"].includes(s)) return "neutral";
-  if (!s) return "neutral";
-  return "info";
+  return statusVariant("generic", state);
 }
 
 export function StatusPill({

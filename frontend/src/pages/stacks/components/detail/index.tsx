@@ -1,4 +1,5 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
+import { getErrorMessage } from "@/api/client";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -16,7 +17,7 @@ import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPl
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
-import { alignBaselineToDraft } from "@/pages/stacks/lib/stack-diff";
+import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
 import { applyStackByName, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
@@ -132,8 +133,8 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const [activeTab, setActiveTab] = useState("configuration");
-  const [isCreating, setIsCreating] = useState(false);
+  const [activeTab, setActiveTab] = useState("architecture");
+  const [draftDeploying, setDraftDeploying] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
@@ -288,15 +289,15 @@ export default function StackDetailPage() {
   const baselineResources = useMemo<FormStackResourceData[]>(
     () =>
       (snapshotResources
-        ? alignBaselineToDraft(snapshotResources, alignResources)
-        : alignBaselineToDraft(draftResources, alignResources)) as FormStackResourceData[],
+        ? alignBaselineToDraft(snapshotResources, alignResources, renameFingerprint)
+        : alignBaselineToDraft(draftResources, alignResources, renameFingerprint)) as FormStackResourceData[],
     [snapshotResources, draftResources, alignResources],
   );
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () =>
       (snapshotVolumes
-        ? alignBaselineToDraft(snapshotVolumes, alignVolumes)
-        : alignBaselineToDraft(draftVolumes, alignVolumes)) as VolumeFormData[],
+        ? alignBaselineToDraft(snapshotVolumes, alignVolumes, renameFingerprint)
+        : alignBaselineToDraft(draftVolumes, alignVolumes, renameFingerprint)) as VolumeFormData[],
     [snapshotVolumes, draftVolumes, alignVolumes],
   );
 
@@ -322,6 +323,16 @@ export default function StackDetailPage() {
         allAddons
           .filter((a: PostgresAddon) => a.id && a.name)
           .map((a: PostgresAddon) => [a.id!, a.name!] as [string, string]),
+      ),
+    [allAddons],
+  );
+  // addonId → live state, for canvas addon node dots.
+  const addonStateById = useMemo(
+    () =>
+      new Map(
+        allAddons
+          .filter((a: PostgresAddon) => a.id)
+          .map((a: PostgresAddon) => [a.id!, a.status?.state ?? ""] as [string, string]),
       ),
     [allAddons],
   );
@@ -599,10 +610,12 @@ export default function StackDetailPage() {
     toast({ title: "Release ID copied" });
   }, [toast]);
 
-  // Draft create: validates name, creates the stack, and navigates to the new page.
-  const performCreate = async () => {
+  // Draft deploy: validates name, creates the stack, starts the first release,
+  // and navigates to the new page. There is no separate "create" step — the
+  // draft stays local until the user deploys.
+  const performDraftDeploy = async () => {
     if (!isDraft) return;
-    setIsCreating(true);
+    setDraftDeploying(true);
     setNameError(undefined);
 
     // A draft needs a name before it can be created. The stack name field is not
@@ -610,10 +623,10 @@ export default function StackDetailPage() {
     // the API), so guard it here to surface the error inline on the title input.
     if (!draftName.trim()) {
       setNameError("Required");
-      setIsCreating(false);
+      setDraftDeploying(false);
       toast({
         title: "Name your stack",
-        description: "Give the stack a name before saving.",
+        description: "Give the stack a name before deploying.",
         variant: "destructive",
       });
       return;
@@ -662,7 +675,7 @@ export default function StackDetailPage() {
             : "Please fix the highlighted errors before saving.",
           variant: "destructive",
         });
-        setIsCreating(false);
+        setDraftDeploying(false);
         return;
       }
 
@@ -673,7 +686,7 @@ export default function StackDetailPage() {
           description: "Could not resolve a team to save into.",
           variant: "destructive",
         });
-        setIsCreating(false);
+        setDraftDeploying(false);
         return;
       }
 
@@ -687,16 +700,28 @@ export default function StackDetailPage() {
         throw new Error("Created stack is missing an id");
       }
       session.discard();
+      // The stack exists from here on — the show page is the source of truth,
+      // so navigate regardless of whether the first release starts cleanly.
+      try {
+        await createRelease(orgId, teamName, created.id);
+        toast({ title: "Deploy started", variant: "success" });
+      } catch (releaseErr) {
+        toast({
+          title: "Stack created, but deploy failed",
+          description: getErrorMessage(releaseErr),
+          variant: "destructive",
+        });
+      }
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
       toast({
         title: "Failed to create stack",
-        description: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
+        description: getErrorMessage(err),
         variant: "destructive"
       });
     } finally {
-      setIsCreating(false);
+      setDraftDeploying(false);
     }
   };
 
@@ -865,15 +890,16 @@ export default function StackDetailPage() {
         syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
         deployBusy={deployBusy}
         canWrite={canWriteStack}
-        onCreate={() => void performCreate()}
-        isCreating={isCreating}
+        hasResources={(session.isActive ? session.draft.resources : draftResources).length > 0}
+        onDraftDeploy={() => void performDraftDeploy()}
+        draftDeploying={draftDeploying}
         onDeploy={onDeploy}
         canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
         onDiscardDraft={() => setRevertConfirmOpen(true)}
         canDeleteStack={canWriteStack}
         onDelete={() => setDeleteConfirmOpen(true)}
         publicEndpoints={publicEndpoints}
-        configuration={
+        architecture={
           <StackCanvasTab
             session={session}
             baselineResources={baselineResources}
@@ -883,6 +909,7 @@ export default function StackDetailPage() {
             serverOutputsByName={serverOutputsByName}
             connectionAddonIds={connectionAddonIds}
             addonNameById={addonNameById}
+            addonStateById={addonStateById}
             errors={mergedResourceErrors}
             onViewLogs={() => setActiveTab("logs")}
             topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
@@ -890,6 +917,7 @@ export default function StackDetailPage() {
             onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
             deletingVolume={volumeDelete.deleting}
             persistedVolumeNames={persistedVolumeNames}
+            releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
           />
         }
         deployments={deploymentsBody}

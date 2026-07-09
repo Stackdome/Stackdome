@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData   } from "@/pages/stacks/schemas/form-schema";
 import type { z } from "zod";
 import { ApiVolumeStatusSchema } from "@/pages/stacks/schemas/api-schema";
+import { volumeDotClass } from "@/pages/stacks/lib/volume-status";
 
 interface StackVolumeDetailProps {
   volume: Partial<VolumeFormData>;
@@ -31,16 +32,10 @@ export default function StackVolumeDetail({
   onEdit,
   onDiscard,
 }: StackVolumeDetailProps) {
-  // Determine status color based on volume.status.phase
+  // Status label text; the dot color derives from volumeDotClass.
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
-  const status = statusObj.phase?.toLowerCase() || 'pending';
-  let statusColor = 'bg-warn';
-
-  if (status === 'ready' || status === 'running') {
-    statusColor = 'bg-success';
-  } else if (status === 'failed') {
-    statusColor = 'bg-danger';
-  }
+  const status = statusObj.phase?.toLowerCase() || 'unknown';
+  const statusColor = volumeDotClass(statusObj.phase);
 
   // Helper to find resources that mount this volume
   const mountingInfo = volume.name

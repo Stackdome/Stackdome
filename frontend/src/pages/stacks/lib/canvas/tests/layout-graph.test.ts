@@ -7,13 +7,13 @@ const graph: CanvasGraph = {
     {
       id: "resource:web",
       type: "resource",
-      data: { kind: "service", name: "web", kindLabel: "Web", glyph: "web", dotState: "ok", summary: "", volumes: [] },
+      data: { kind: "service", name: "web", kindLabel: "Web", glyph: "web", summary: "", volumes: [] },
       position: { x: 0, y: 0 },
     },
     {
       id: "addon:a1",
       type: "resource",
-      data: { kind: "addon", name: "db", kindLabel: "Postgres", glyph: "postgres", dotState: "ok", summary: "", volumes: [] },
+      data: { kind: "addon", name: "db", kindLabel: "Postgres", glyph: "postgres", summary: "", volumes: [] },
       position: { x: 0, y: 0 },
     },
   ],

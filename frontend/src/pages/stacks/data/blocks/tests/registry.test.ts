@@ -27,9 +27,9 @@ describe("block registry", () => {
     expect(getBlockById(BlockId.Custom)?.compose).toBeUndefined();
   });
 
-  it("only uses the two v1 categories", () => {
+  it("only uses the declared categories, in display order", () => {
     const cats = new Set(blockCatalog.map((b) => b.category));
-    expect([...cats].sort()).toEqual(["data", "services"]);
-    expect(BLOCK_CATEGORY_META.map((c) => c.id)).toEqual(["services", "data"]);
+    expect([...cats].sort()).toEqual(["analytics", "databases", "services"]);
+    expect(BLOCK_CATEGORY_META.map((c) => c.id)).toEqual(["services", "databases", "analytics"]);
   });
 });

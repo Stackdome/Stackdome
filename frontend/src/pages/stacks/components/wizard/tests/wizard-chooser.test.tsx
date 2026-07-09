@@ -24,7 +24,7 @@ describe("WizardChooser", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Compose blocks/i }));
+    await user.click(screen.getByRole("button", { name: /Build from blocks/i }));
     await user.click(screen.getByRole("button", { name: /From template/i }));
     await user.click(screen.getByRole("button", { name: /Docker compose/i }));
     await user.click(screen.getByRole("button", { name: /blank slate/i }));
