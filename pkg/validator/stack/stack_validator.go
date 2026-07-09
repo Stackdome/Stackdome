@@ -2,27 +2,16 @@ package stack
 
 import (
 	"context"
-	stderrors "errors"
 	"fmt"
-	"regexp"
-	"strings"
 
-	"github.com/Stackdome/stackdome/pkg/clients"
-	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
-	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
-	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
 	"github.com/Stackdome/stackdome/pkg/validator"
-	"github.com/robfig/cron/v3"
+	"github.com/Stackdome/stackdome/pkg/validator/stackresource"
 )
 
 //go:generate mockgen -source=stack_validator.go -destination=../../mocks/mock_stack_validator_dependencies.go -package=mocks
-type organisationDomainService interface {
-	ListByOrganisationID(ctx context.Context, orgID string) ([]*models.OrganisationDomain, *errors.ServiceError)
-}
-
 type secretService interface {
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)
@@ -33,114 +22,54 @@ type postgresAddonService interface {
 	GetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 }
 
-// registryClientProvider builds registry clients from resolved credentials so
-// the image/push probes can be faked in tests.
-type registryClientProvider interface {
-	ClientFor(resolved *credentials.ResolvedRegistryCredential) (clients.RegistryClient, error)
-}
-
-type defaultRegistryClientProvider struct{}
-
-func (defaultRegistryClientProvider) ClientFor(resolved *credentials.ResolvedRegistryCredential) (clients.RegistryClient, error) {
-	if resolved != nil && resolved.Username != "" && resolved.Password != "" {
-		return clients.NewRegistryClientWithAuth(resolved.Username, resolved.Password)
-	}
-	return clients.NewRegistryClientAnonymous()
-}
-
-// gitClientProvider builds git clients from resolved credentials so the clone
-// probe can be faked in tests.
-type gitClientProvider interface {
-	ClientFor(repoURL string, creds gitclient.GitCredentials) (gitclient.GitClient, error)
-}
-
-type defaultGitClientProvider struct{}
-
-func (defaultGitClientProvider) ClientFor(repoURL string, creds gitclient.GitCredentials) (gitclient.GitClient, error) {
-	return gitclient.NewGitClientForRepo(repoURL, creds)
-}
-
-// Add only validations that take reasonable time to complete.
-// Avoid validations that require network calls or long-running operations.
-// Long running validations should be handled in the stack worker.
+// stackValidator is network-free by construction: it runs only cheap,
+// in-memory checks for whole-stack create/update — uniqueness, settings,
+// connections, interpolations, and (via resourceValidator) every per-resource
+// rule. Expensive checks (image pull, push access, git clone) run later, in
+// the release worker's validation reconciler.
 type stackValidator struct {
-	interpolationValidator validator.InterpolationValidation
-	domainService          organisationDomainService
-	secretService          secretService
-	postgresAddonService   postgresAddonService
-	credentialResolver     credentials.Resolver
-	registryClients        registryClientProvider
-	gitClients             gitClientProvider
-	logger                 logger.Logger
+	secretService        secretService
+	postgresAddonService postgresAddonService
+	resourceValidator    stackresource.Validator
 }
 
 type StackValidatorSpec struct {
-	DomainService        organisationDomainService
 	SecretService        secretService
 	PostgresAddonService postgresAddonService
-	CredentialResolver   credentials.Resolver
-	// RegistryClients is optional; it defaults to real registry clients.
-	RegistryClients registryClientProvider
-	// GitClients is optional; it defaults to real git clients.
-	GitClients gitClientProvider
+	ResourceValidator    stackresource.Validator
 }
 
 func NewStackValidator(
 	spec StackValidatorSpec,
 ) validator.StackValidator {
-	registryClients := spec.RegistryClients
-	if registryClients == nil {
-		registryClients = defaultRegistryClientProvider{}
-	}
-	gitClients := spec.GitClients
-	if gitClients == nil {
-		gitClients = defaultGitClientProvider{}
+	if spec.ResourceValidator == nil {
+		panic("stack.NewStackValidator: ResourceValidator is required")
 	}
 	return &stackValidator{
-		interpolationValidator: NewInterpolationValidation(),
-		domainService:          spec.DomainService,
-		secretService:          spec.SecretService,
-		postgresAddonService:   spec.PostgresAddonService,
-		credentialResolver:     spec.CredentialResolver,
-		registryClients:        registryClients,
-		gitClients:             gitClients,
-		logger:                 logger.NewLoggerWithPrefix(context.Background(), "stack-validator"),
+		secretService:        spec.SecretService,
+		postgresAddonService: spec.PostgresAddonService,
+		resourceValidator:    spec.ResourceValidator,
 	}
 }
 
 func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError {
-	if err := v.validateUniqueResourceNames(spec); err != nil {
-		return err
-	}
-	// On create every resource is new, so probe all sources.
-	if err := v.validateImageSource(ctx, nil, spec); err != nil {
-		return err
-	}
-	if err := v.validateStackEnvVars(spec); err != nil {
-		return err
-	}
-	if err := v.validateStackPorts(spec); err != nil {
-		return err
-	}
-	if err := validateWorkloadTypes(spec); err != nil {
-		return err
-	}
-	if err := v.validateVolumeMounts(spec); err != nil {
-		return err
-	}
-	if err := v.validateDomainExistence(ctx, spec); err != nil {
-		return err
-	}
-	if err := v.validateBuildSourceVolumes(spec); err != nil {
-		return err
-	}
-	if err := v.validateConnections(ctx, nil, spec); err != nil {
-		return err
-	}
-	if err := validateStackSettings(spec); err != nil {
-		return err
-	}
+	var ferrs []errors.FieldError
 
+	ferrs = append(ferrs, v.validateUniqueResourceNames(spec)...)
+
+	resourceErrs, serr := v.validateResources(ctx, spec)
+	if serr != nil {
+		return serr
+	}
+	ferrs = append(ferrs, resourceErrs...)
+
+	ferrs = append(ferrs, validateStackSettings(spec)...)
+	ferrs = append(ferrs, v.validateConnections(ctx, nil, spec)...)
+
+	ferrs = dedupeFieldErrors(ferrs)
+	if len(ferrs) > 0 {
+		return errors.ValidationFailed(ferrs)
+	}
 	return nil
 }
 
@@ -156,541 +85,152 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 		return errors.BadRequest("stack organisation cannot be updated")
 	}
 
-	if err := v.validateUniqueResourceNames(spec); err != nil {
-		return err
+	var ferrs []errors.FieldError
+
+	ferrs = append(ferrs, v.validateUniqueResourceNames(spec)...)
+
+	resourceErrs, serr := v.validateResources(ctx, spec)
+	if serr != nil {
+		return serr
 	}
-	// On update only re-probe resources whose source-relevant config changed;
-	// shape/XOR/static validation still runs for every resource.
-	if err := v.validateImageSource(ctx, existing, spec); err != nil {
-		return err
-	}
-	if err := v.validateStackEnvVars(spec); err != nil {
-		return err
-	}
-	if err := v.validateStackPorts(spec); err != nil {
-		return err
-	}
-	if err := validateWorkloadTypes(spec); err != nil {
-		return err
-	}
-	if err := v.validateVolumeMounts(spec); err != nil {
-		return err
-	}
-	if err := v.validateDomainExistence(ctx, spec); err != nil {
-		return err
-	}
-	if err := v.validateBuildSourceVolumes(spec); err != nil {
-		return err
-	}
-	if err := v.validateConnections(ctx, existing, spec); err != nil {
-		return err
-	}
-	if err := validateStackSettings(spec); err != nil {
-		return err
+	ferrs = append(ferrs, resourceErrs...)
+
+	ferrs = append(ferrs, validateStackSettings(spec)...)
+	ferrs = append(ferrs, v.validateConnections(ctx, existing, spec)...)
+
+	ferrs = dedupeFieldErrors(ferrs)
+	if len(ferrs) > 0 {
+		return errors.ValidationFailed(ferrs)
 	}
 	return nil
 }
 
-func validateStackSettings(spec *models.Stack) *errors.ServiceError {
+// ValidateConnections runs only the connection-scoped rules over the full
+// stack context (resource/volume/secret/postgres-addon lookups needed to
+// validate a connection's endpoints), skipping validateResources,
+// validateUniqueResourceNames, and validateStackSettings entirely. It backs
+// connection-only mutations (create/update/delete a single connection) so a
+// pre-existing, unrelated invalidity elsewhere in the stack can't block an
+// edit the user has no way to fix from the connection form.
+func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.Stack) *errors.ServiceError {
+	ferrs := dedupeFieldErrors(v.validateConnections(ctx, nil, spec))
+	if len(ferrs) > 0 {
+		return errors.ValidationFailed(ferrs)
+	}
+	return nil
+}
+
+// validateResources runs the shared per-resource validator (input shape,
+// referential existence, sibling rules) over every resource in the stack,
+// prefixing each field error with its resource's index. A non-nil
+// ServiceError means a lookup failed for a reason other than not-found and
+// validation was aborted.
+func (v *stackValidator) validateResources(ctx context.Context, spec *models.Stack) ([]errors.FieldError, *errors.ServiceError) {
+	var ferrs []errors.FieldError
+	for i, resource := range spec.StackResources {
+		siblings := make([]*models.StackResource, 0, len(spec.StackResources)-1)
+		for j, other := range spec.StackResources {
+			if i != j {
+				siblings = append(siblings, other)
+			}
+		}
+		resErrs, serr := v.resourceValidator.Validate(ctx, spec, resource, siblings)
+		if serr != nil {
+			return nil, serr
+		}
+		for _, fe := range resErrs {
+			fe.Field = fmt.Sprintf("spec.stack_resources[%d].%s", i, fe.Field)
+			ferrs = append(ferrs, fe)
+		}
+	}
+	return ferrs, nil
+}
+
+func validateStackSettings(spec *models.Stack) []errors.FieldError {
 	if spec.Settings == nil {
 		return nil
 	}
 	s := spec.Settings
+	var errs []errors.FieldError
 	if s.ReleaseRetentionLimit > models.MaxReleaseRetentionLimit {
-		return errors.BadRequest("release_retention_limit must be at most %d", models.MaxReleaseRetentionLimit)
+		errs = append(errs, errors.FieldError{
+			Field:   "spec.settings",
+			Code:    errors.VErrStackSettingsInvalid,
+			Message: fmt.Sprintf("release_retention_limit must be at most %d", models.MaxReleaseRetentionLimit),
+		})
 	}
 	if s.MinSuccessfulReleases > models.MaxMinSuccessfulReleases {
-		return errors.BadRequest("min_successful_releases must be at most %d", models.MaxMinSuccessfulReleases)
+		errs = append(errs, errors.FieldError{
+			Field:   "spec.settings",
+			Code:    errors.VErrStackSettingsInvalid,
+			Message: fmt.Sprintf("min_successful_releases must be at most %d", models.MaxMinSuccessfulReleases),
+		})
 	}
 	if s.DeployTimeoutMinutes > models.MaxDeployTimeoutMinutes {
-		return errors.BadRequest("deploy_timeout_minutes must be at most %d", models.MaxDeployTimeoutMinutes)
+		errs = append(errs, errors.FieldError{
+			Field:   "spec.settings",
+			Code:    errors.VErrStackSettingsInvalid,
+			Message: fmt.Sprintf("deploy_timeout_minutes must be at most %d", models.MaxDeployTimeoutMinutes),
+		})
 	}
 	if s.MinSuccessfulReleases > 0 && s.ReleaseRetentionLimit > 0 && s.MinSuccessfulReleases > s.ReleaseRetentionLimit {
-		return errors.BadRequest("min_successful_releases (%d) must not exceed release_retention_limit (%d)", s.MinSuccessfulReleases, s.ReleaseRetentionLimit)
+		errs = append(errs, errors.FieldError{
+			Field:   "spec.settings",
+			Code:    errors.VErrStackSettingsInvalid,
+			Message: fmt.Sprintf("min_successful_releases (%d) must not exceed release_retention_limit (%d)", s.MinSuccessfulReleases, s.ReleaseRetentionLimit),
+		})
 	}
-	return nil
+	return errs
 }
 
-var cronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
-
-func validateWorkloadTypes(spec *models.Stack) *errors.ServiceError {
-	for _, r := range spec.StackResources {
-		wt := r.WorkloadType
-		if wt == "" {
-			wt = models.WorkloadTypeService
-		}
-
-		switch wt {
-		case models.WorkloadTypeService, models.WorkloadTypeStatefulService, models.WorkloadTypeWorker, models.WorkloadTypeJob, models.WorkloadTypeCronJob:
-		default:
-			return errors.BadRequest("stack resource '%s' has unsupported workload_type '%s'", r.Name, wt)
-		}
-
-		if wt == models.WorkloadTypeCronJob {
-			if r.Schedule == "" {
-				return errors.BadRequest("stack resource '%s' requires schedule for workload_type '%s'", r.Name, wt)
-			}
-			if _, err := cronParser.Parse(r.Schedule); err != nil {
-				return errors.BadRequest("stack resource '%s' has invalid cron schedule '%s': %s", r.Name, r.Schedule, err.Error())
-			}
-		} else if r.Schedule != "" {
-			return errors.BadRequest("stack resource '%s' cannot set schedule for workload_type '%s'", r.Name, wt)
-		}
-
-		switch wt {
-		case models.WorkloadTypeWorker, models.WorkloadTypeJob, models.WorkloadTypeCronJob:
-			if len(r.Ports) > 0 {
-				return errors.BadRequest("stack resource '%s' with workload_type '%s' cannot declare ports", r.Name, wt)
-			}
-		}
-
-		if r.Replicas != nil && *r.Replicas < 0 {
-			return errors.BadRequest("stack resource '%s' replicas cannot be negative", r.Name)
-		}
-
-		switch wt {
-		case models.WorkloadTypeJob, models.WorkloadTypeCronJob:
-			if r.Replicas != nil {
-				return errors.BadRequest("stack resource '%s' with workload_type '%s' cannot set replicas", r.Name, wt)
-			}
-		}
+// dedupeFieldErrors collapses field errors that are identical in field, code,
+// and message. Different validation rules on the fat path (e.g. whole-stack
+// name uniqueness and per-resource sibling rules) can independently detect
+// the same underlying problem and report it with matching text; this keeps
+// the first occurrence and drops later exact repeats without needing to know
+// which rule produced which error.
+func dedupeFieldErrors(ferrs []errors.FieldError) []errors.FieldError {
+	if len(ferrs) < 2 {
+		return ferrs
 	}
-	return nil
+	type key struct {
+		field, code, message string
+	}
+	seen := make(map[key]struct{}, len(ferrs))
+	out := make([]errors.FieldError, 0, len(ferrs))
+	for _, fe := range ferrs {
+		k := key{fe.Field, fe.Code, fe.Message}
+		if _, exists := seen[k]; exists {
+			continue
+		}
+		seen[k] = struct{}{}
+		out = append(out, fe)
+	}
+	return out
 }
 
-func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) *errors.ServiceError {
+func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) []errors.FieldError {
+	var errs []errors.FieldError
 	seen := make(map[string]struct{}, len(spec.StackResources))
-	for _, r := range spec.StackResources {
+	for i, r := range spec.StackResources {
 		if _, exists := seen[r.Name]; exists {
-			return errors.BadRequest("duplicate stack resource name '%s'", r.Name)
+			errs = append(errs, errors.FieldError{
+				Field:   fmt.Sprintf("spec.stack_resources[%d].name", i),
+				Code:    errors.VErrResourceNameDuplicate,
+				Message: fmt.Sprintf("duplicate stack resource name '%s'", r.Name),
+			})
 		}
 		seen[r.Name] = struct{}{}
 	}
-	return nil
+	return errs
 }
 
-// validateImageSource validates every resource's source config. Shape/XOR and
-// static credential checks run for all resources; the network probes
-// (image-pullable, push-access, git-clone) only run for resources whose
-// source-relevant config changed. On create, existing is nil and everything is
-// probed.
-func (v *stackValidator) validateImageSource(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError {
-	existingResources := resourcesByName(existing)
-
-	for i := range spec.StackResources {
-		currentResource := spec.StackResources[i]
-
-		// Validate that resource has exactly one config type
-		if err := v.validateResourceConfigType(currentResource); err != nil {
-			return err
-		}
-
-		probe := resourceNeedsSourceProbe(existingResources[currentResource.Name], currentResource)
-
-		// Validate image config if present
-		if currentResource.ImageConfig != nil {
-			if err := v.validateImageConfig(ctx, spec.OrganisationID, currentResource, probe); err != nil {
-				return err
-			}
-		}
-
-		// Validate build config if present
-		if currentResource.BuildConfig != nil {
-			if err := v.validateBuildConfig(ctx, spec.OrganisationID, currentResource, probe); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// resourcesByName indexes a stack's resources by name; returns nil for a nil
-// stack (the create path).
-func resourcesByName(stack *models.Stack) map[string]*models.StackResource {
-	if stack == nil {
-		return nil
-	}
-	byName := make(map[string]*models.StackResource, len(stack.StackResources))
-	for i := range stack.StackResources {
-		byName[stack.StackResources[i].Name] = stack.StackResources[i]
-	}
-	return byName
-}
-
-// resourceNeedsSourceProbe reports whether the desired resource's registry/git
-// sources must be re-probed. A resource with no stored counterpart (new, or the
-// create path) is always probed. Otherwise the probe runs only when a
-// source-relevant field (image/repo ref, revision, push target, or credential
-// selector) changed.
-func resourceNeedsSourceProbe(existing, desired *models.StackResource) bool {
-	if existing == nil {
-		return true
-	}
-	return imageSourceOf(existing) != imageSourceOf(desired) ||
-		buildSourceOf(existing) != buildSourceOf(desired)
-}
-
-// imageSourceView is a flat, comparable projection of the pull-probe-relevant
-// fields of a resource's image config.
-type imageSourceView struct {
-	present              bool
-	image                string
-	registryCredentialID string
-}
-
-func imageSourceOf(r *models.StackResource) imageSourceView {
-	if r == nil || r.ImageConfig == nil {
-		return imageSourceView{}
-	}
-	return imageSourceView{
-		present:              true,
-		image:                r.ImageConfig.Image,
-		registryCredentialID: r.ImageConfig.RegistryCredentialID,
-	}
-}
-
-// buildSourceView is a flat, comparable projection of the push/git-probe-relevant
-// fields of a resource's build config.
-type buildSourceView struct {
-	present            bool
-	gitRepoURL         string
-	gitIntegrationID   string
-	volumeSourceName   string
-	revBranch          string
-	revTag             string
-	revCommit          string
-	revVolumeHash      string
-	dockerfilePath     string
-	contextPath        string
-	insecureRegistry   bool
-	useInClusterReg    bool
-	clusterRegName     string
-	externalImageRef   string
-	pushRegistryCredID string
-}
-
-func buildSourceOf(r *models.StackResource) buildSourceView {
-	if r == nil || r.BuildConfig == nil {
-		return buildSourceView{}
-	}
-	b := r.BuildConfig
-	view := buildSourceView{
-		present:            true,
-		dockerfilePath:     b.DockerfilePath,
-		contextPath:        b.ContextPathWithinSource,
-		insecureRegistry:   b.BuildImageRepository.InsecureRegistry,
-		useInClusterReg:    b.BuildImageRepository.UseInClusterRegistry,
-		clusterRegName:     b.BuildImageRepository.ClusterRegistryName,
-		externalImageRef:   b.BuildImageRepository.ExternalImageRef,
-		pushRegistryCredID: b.PushRegistryCredentialID,
-	}
-	if git := b.SourceContext.Git; git != nil {
-		view.gitRepoURL = git.RepoURL
-		view.gitIntegrationID = git.IntegrationID
-	}
-	if vol := b.SourceContext.Volume; vol != nil {
-		view.volumeSourceName = vol.SourceVolumeName
-	}
-	if rev := b.SourceRevision.Git; rev != nil {
-		view.revBranch = rev.Branch
-		view.revTag = rev.Tag
-		view.revCommit = rev.Commit
-	}
-	if rev := b.SourceRevision.Volume; rev != nil {
-		view.revVolumeHash = rev.CurrentVolumeHash
-	}
-	return view
-}
-
-func (v *stackValidator) validateResourceConfigType(resource *models.StackResource) *errors.ServiceError {
-	hasBuild := resource.BuildConfig != nil
-	hasImage := resource.ImageConfig != nil
-
-	if hasBuild && hasImage {
-		return errors.BadRequest("stack resource '%s' cannot have both build and image config", resource.Name)
-	}
-	if !hasBuild && !hasImage {
-		return errors.BadRequest("stack resource '%s' must have either build or image config", resource.Name)
-	}
-	return nil
-}
-
-func (v *stackValidator) validateImageConfig(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
-	if err := resource.ImageConfig.Validate(); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid image config: %s", resource.Name, err.Error())
-	}
-
-	if !probe {
-		return nil
-	}
-	return v.validateImagePullable(ctx, orgID, resource)
-}
-
-func (v *stackValidator) validateImagePullable(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
-	imageRef := resource.ImageConfig.Image
-	if isClusterLocalRegistryRef(imageRef) {
-		// In-cluster registries aren't reachable from the hub.
-		return nil
-	}
-
-	resolved, serr := v.credentialResolver.RegistryCredentials(ctx, orgID, imageRef, credentials.RegistryPurposePull, credentials.RegistryAuthSelector{
-		RegistryCredentialID: resource.ImageConfig.RegistryCredentialID,
-	})
-	if serr != nil {
-		return errors.BadRequest("stack resource '%s' has invalid pull credentials: %s", resource.Name, serr.Error())
-	}
-
-	client, err := v.registryClients.ClientFor(resolved)
-	if err != nil {
-		return errors.GeneralError("failed to create registry client for stack resource '%s': %s", resource.Name, err.Error())
-	}
-
-	exists, err := client.CheckImage(ctx, imageRef)
-	if err != nil {
-		target := errors.CredentialErrorTarget{
-			Kind: errors.CredentialTargetKindImagePull,
-			Host: registryHostForRef(imageRef),
-			Ref:  imageRef,
-		}
-		switch {
-		case stderrors.Is(err, clients.ErrRateLimited) && resolved.Source == credentials.SourceAnonymous:
-			v.logger.Warnf("registry rate limited while checking image '%s' anonymously for stack resource '%s'; skipping existence check", imageRef, resource.Name)
-			return nil
-		case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
-			return errors.CredentialsRequired(target, "stack resource '%s': image '%s' requires registry credentials", resource.Name, imageRef)
-		case stderrors.Is(err, clients.ErrAuthFailed):
-			return errors.CredentialsInvalid(target, "stack resource '%s': configured registry credentials were rejected for image '%s'", resource.Name, imageRef)
-		default:
-			return errors.GeneralError("failed to check image for stack resource '%s': %s", resource.Name, err.Error())
-		}
-	}
-	if !exists {
-		return errors.BadRequest("stack resource '%s' image '%s' does not exist or is not pullable", resource.Name, imageRef)
-	}
-	return nil
-}
-
-// gitCommitSHAPattern matches full or abbreviated lowercase-hex commit SHAs,
-// mirroring the CRD's CEL validation.
-var gitCommitSHAPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
-
-func (v *stackValidator) validateBuildConfig(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
-	if err := resource.BuildConfig.Validate(); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid build config: %s", resource.Name, err.Error())
-	}
-
-	if rev := resource.BuildConfig.SourceRevision.Git; rev != nil && rev.Commit != "" {
-		if !gitCommitSHAPattern.MatchString(rev.Commit) {
-			return errors.BadRequest("stack resource '%s' has invalid commit SHA '%s': must be 7-40 lowercase hex characters", resource.Name, rev.Commit)
-		}
-	}
-
-	if resource.BuildConfig.SourceContext.Git != nil {
-		if err := v.validateGitSource(ctx, orgID, resource, probe); err != nil {
-			return err
-		}
-	}
-
-	if !probe {
-		return nil
-	}
-	return v.validatePushAccess(ctx, orgID, resource)
-}
-
-func (v *stackValidator) validatePushAccess(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
-	repo := resource.BuildConfig.BuildImageRepository
-	// Push probes only make sense for external registries the hub can reach.
-	if repo.UseInClusterRegistry || repo.InsecureRegistry || repo.ExternalImageRef == "" ||
-		isClusterLocalRegistryRef(repo.ExternalImageRef) {
-		return nil
-	}
-
-	resolved, serr := v.credentialResolver.RegistryCredentials(ctx, orgID, repo.ExternalImageRef, credentials.RegistryPurposePush, credentials.RegistryAuthSelector{
-		RegistryCredentialID: resource.BuildConfig.PushRegistryCredentialID,
-	})
-	if serr != nil {
-		return errors.BadRequest("stack resource '%s' has invalid push credentials: %s", resource.Name, serr.Error())
-	}
-
-	client, err := v.registryClients.ClientFor(resolved)
-	if err != nil {
-		return errors.GeneralError("failed to create registry client for stack resource '%s': %s", resource.Name, err.Error())
-	}
-
-	if err := client.CheckPushAccess(ctx, repo.ExternalImageRef); err != nil {
-		host := registryHostForRef(repo.ExternalImageRef)
-		target := errors.CredentialErrorTarget{
-			Kind: errors.CredentialTargetKindImagePush,
-			Host: host,
-			Ref:  repo.ExternalImageRef,
-		}
-		switch {
-		case stderrors.Is(err, clients.ErrRateLimited) && resolved.Source == credentials.SourceAnonymous:
-			v.logger.Warnf("registry rate limited while checking push access to '%s' anonymously for stack resource '%s'; skipping probe", repo.ExternalImageRef, resource.Name)
-			return nil
-		case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
-			return errors.CredentialsRequired(target, "stack resource '%s': pushing to '%s' requires registry credentials", resource.Name, repo.ExternalImageRef)
-		case stderrors.Is(err, clients.ErrAuthFailed):
-			return errors.CredentialsInvalid(target, "stack resource '%s': configured registry credentials cannot push to '%s'", resource.Name, repo.ExternalImageRef)
-		default:
-			// Non-auth failures (DNS, connection refused, TLS, 5xx) surface as
-			// their own validation error naming the host and real cause rather
-			// than being masked as a credentials problem.
-			return errors.BadRequest("stack resource '%s' cannot push to registry '%s': %s", resource.Name, host, err.Error())
-		}
-	}
-
-	return nil
-}
-
-// registryHostForRef extracts the normalized registry host from an
-// image/repository ref, falling back to the raw ref when it can't be parsed.
-func registryHostForRef(ref string) string {
-	host, err := clients.NormalizeRegistryHost(ref)
-	if err != nil {
-		return ref
-	}
-	return host
-}
-
-func isClusterLocalRegistryRef(ref string) bool {
-	return strings.HasSuffix(registryHostForRef(ref), clients.ClusterLocalRegistrySuffix)
-}
-
-func (v *stackValidator) validateGitSource(ctx context.Context, orgID string, resource *models.StackResource, probe bool) *errors.ServiceError {
-	if !probe {
-		return nil
-	}
-	return v.validateGitCloneAccess(ctx, orgID, resource)
-}
-
-func (v *stackValidator) validateGitCloneAccess(ctx context.Context, orgID string, resource *models.StackResource) *errors.ServiceError {
-	git := resource.BuildConfig.SourceContext.Git
-
-	resolved, serr := v.credentialResolver.GitCredentials(ctx, orgID, git.RepoURL, credentials.GitAuthSelector{
-		IntegrationID: git.IntegrationID,
-	})
-	if serr != nil {
-		return errors.BadRequest("stack resource '%s' has invalid git credentials: %s", resource.Name, serr.Error())
-	}
-
-	client, err := v.gitClients.ClientFor(git.RepoURL, resolved.Credentials)
-	if err != nil {
-		return errors.GeneralError("failed to create git client for stack resource '%s': %s", resource.Name, err.Error())
-	}
-
-	if _, err := client.CheckAccess(ctx, git.RepoURL); err != nil {
-		target := errors.CredentialErrorTarget{
-			Kind: errors.CredentialTargetKindGitClone,
-			Host: gitclient.RepoHost(git.RepoURL),
-			Ref:  git.RepoURL,
-		}
-		anonymous := resolved.Source == credentials.SourceAnonymous
-		switch {
-		case stderrors.Is(err, gitclient.ErrRateLimited) && anonymous:
-			v.logger.Warnf("git host rate limited while checking repo '%s' anonymously for stack resource '%s'; skipping access check", git.RepoURL, resource.Name)
-			return nil
-		case anonymous && (stderrors.Is(err, gitclient.ErrAuthFailed) || stderrors.Is(err, gitclient.ErrNotFound)):
-			// Private repos often report not-found to anonymous callers.
-			return errors.CredentialsRequired(target, "stack resource '%s': repository '%s' was not found or requires credentials", resource.Name, git.RepoURL)
-		case stderrors.Is(err, gitclient.ErrAuthFailed):
-			return errors.CredentialsInvalid(target, "stack resource '%s': configured git credentials were rejected by '%s'", resource.Name, git.RepoURL)
-		case stderrors.Is(err, gitclient.ErrNotFound):
-			return errors.BadRequest("stack resource '%s': repository '%s' not found", resource.Name, git.RepoURL)
-		default:
-			return errors.GeneralError("failed to check git access for stack resource '%s': %s", resource.Name, err.Error())
-		}
-	}
-	return nil
-}
-
-func (v *stackValidator) validateBuildSourceVolumes(spec *models.Stack) *errors.ServiceError {
-	// Populate the volume mounts with the source volume names.
-	definedVolumesMap := spec.VolumesMap()
-	for i := range spec.StackResources {
-		spec.StackResources[i].UserID = spec.UserID
-		if spec.StackResources[i].BuildConfig != nil {
-			buildConfig := spec.StackResources[i].BuildConfig
-			if buildConfig.SourceContext.Volume != nil {
-				volume, found := definedVolumesMap[buildConfig.SourceContext.Volume.SourceVolumeName]
-				if !found {
-					return errors.BadRequest("volume '%s' does not exist", buildConfig.SourceContext.Volume.SourceVolumeName)
-				}
-				buildConfig.SourceContext.Volume.SourceVolumeName = volume.Name
-			}
-		}
-	}
-	return nil
-}
-
-func (v *stackValidator) validateVolumeMounts(spec *models.Stack) *errors.ServiceError {
-	if len(spec.Volumes) == 0 && spec.HasVolumeMounts() {
-		return errors.BadRequest("stack '%s' has volume mounts but no volumes defined", spec.Name)
-	}
-	if !spec.HasVolumeMounts() {
-		return nil
-	}
-
-	definedVolumes := spec.Volumes
-	definedVolumesMap := make(map[string]*models.Volume)
-	for i := range definedVolumes {
-		definedVolumesMap[definedVolumes[i].Name] = definedVolumes[i]
-	}
-
-	for i := range spec.StackResources {
-		currentResource := spec.StackResources[i]
-		for j := range spec.StackResources[i].VolumeMounts {
-			currentVolumeMount := currentResource.VolumeMounts[j]
-			if _, found := definedVolumesMap[currentVolumeMount.SourceVolumeName]; !found {
-				return errors.BadRequest("volume '%s' does not exist", currentVolumeMount.SourceVolumeName)
-			}
-		}
-	}
-	return nil
-}
-
-func (v *stackValidator) validateStackEnvVars(spec *models.Stack) *errors.ServiceError {
-	for i := range spec.StackResources {
-		currentResource := spec.StackResources[i]
-		if currentResource.ExecutionConfig == nil || currentResource.ExecutionConfig.Env == nil {
-			continue
-		}
-		currentEnvVars := currentResource.ExecutionConfig.Env
-		allowedSelfOutputs := make(map[string]struct{}, len(currentResource.EnsureDeclaredOutputs()))
-		for _, output := range currentResource.EnsureDeclaredOutputs() {
-			allowedSelfOutputs[output.Name] = struct{}{}
-		}
-		keys := make(map[string]struct{})
-		for _, envVar := range currentEnvVars {
-			if len(envVar.Name) == 0 {
-				return errors.BadRequest("stack resource '%s' has empty env var name", currentResource.Name)
-			}
-			hasValue := len(envVar.Value) > 0
-			hasSelfOutput := len(envVar.SelfOutput) > 0
-			if hasValue == hasSelfOutput {
-				return errors.BadRequest("stack resource '%s' env var '%s' must set exactly one of value or self_output", currentResource.Name, envVar.Name)
-			}
-			if hasSelfOutput {
-				if _, ok := allowedSelfOutputs[envVar.SelfOutput]; !ok {
-					return errors.BadRequest("stack resource '%s' env var '%s' references unsupported self_output '%s'", currentResource.Name, envVar.Name, envVar.SelfOutput)
-				}
-			}
-			if _, exists := keys[envVar.Name]; exists {
-				return errors.BadRequest("stack resource '%s' has duplicate env var name '%s'", currentResource.Name, envVar.Name)
-			}
-			keys[envVar.Name] = struct{}{}
-		}
-
-	}
-
-	if err := v.interpolationValidator.ValidateStackInterpolations(spec); err != nil {
-		return errors.BadRequest("stack resource '%s' has invalid interpolation: %s", spec.Name, err.Error())
-	}
-
-	return nil
-}
-
-func (v *stackValidator) validateConnections(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError {
+// validateConnections checks every stack connection, collecting one field
+// error per invalid connection rather than stopping at the first. existing is
+// nil on create; on update it supplies the volumes already persisted for the
+// stack so connections may reference either a pre-existing or a
+// newly-bundled volume.
+func (v *stackValidator) validateConnections(ctx context.Context, existing *models.Stack, spec *models.Stack) []errors.FieldError {
 	if len(spec.Connections) == 0 {
 		return nil
 	}
@@ -698,23 +238,41 @@ func (v *stackValidator) validateConnections(ctx context.Context, existing *mode
 	resourceMap := spec.ResourcesMap()
 	volumeMap := connectionVolumeMap(existing, spec)
 
+	var errs []errors.FieldError
 	for i, connection := range spec.Connections {
 		label := connectionLabel(connection, i)
+		if serr := v.validateSingleConnection(ctx, resourceMap, volumeMap, label, connection); serr != nil {
+			errs = append(errs, errors.FieldError{
+				Field:   fmt.Sprintf("spec.connections[%d]", i),
+				Code:    errors.VErrConnectionInvalid,
+				Message: serr.Reason,
+			})
+		}
+	}
 
-		if err := validateConnectionKind(label, connection.Kind); err != nil {
-			return err
-		}
-		if err := validateConnectionTargetResource(resourceMap, label, connection.To); err != nil {
-			return err
-		}
+	return errs
+}
 
-		sourceOutputs, err := v.validateConnectionSource(ctx, resourceMap, volumeMap, label, connection)
-		if err != nil {
-			return err
-		}
-		if err := validateConnectionMappings(label, connection, sourceOutputs); err != nil {
-			return err
-		}
+func (v *stackValidator) validateSingleConnection(
+	ctx context.Context,
+	resourceMap map[string]*models.StackResource,
+	volumeMap map[string]*models.Volume,
+	label string,
+	connection models.StackConnection,
+) *errors.ServiceError {
+	if err := validateConnectionKind(label, connection.Kind); err != nil {
+		return err
+	}
+	if err := validateConnectionTargetResource(resourceMap, label, connection.To); err != nil {
+		return err
+	}
+
+	sourceOutputs, err := v.validateConnectionSource(ctx, resourceMap, volumeMap, label, connection)
+	if err != nil {
+		return err
+	}
+	if err := validateConnectionMappings(label, connection, sourceOutputs); err != nil {
+		return err
 	}
 
 	return nil
@@ -1052,78 +610,4 @@ func connectionLabel(connection models.StackConnection, index int) string {
 		return connection.ID
 	}
 	return fmt.Sprintf("#%d", index)
-}
-
-func (v *stackValidator) validateDomainExistence(ctx context.Context, spec *models.Stack) *errors.ServiceError {
-	if !spec.HasExposedPorts() {
-		return nil
-	}
-
-	orgDomains, err := v.domainService.ListByOrganisationID(ctx, spec.OrganisationID)
-	if err != nil {
-		return errors.GeneralError("failed to list domains for organisation '%s': %s", spec.OrganisationID, err.Error())
-	}
-
-	if len(orgDomains) == 0 {
-		return errors.BadRequest("stack '%s' has publicly exposed ports but no domains defined for organisation '%s'", spec.Name, spec.OrganisationID)
-	}
-	return nil
-}
-
-func (v *stackValidator) validateStackPorts(spec *models.Stack) *errors.ServiceError {
-	subdomainPrefixes := make(map[string]string)
-	for i := range spec.StackResources {
-		currentResource := spec.StackResources[i]
-		if len(currentResource.Ports) == 0 {
-			continue
-		}
-		currentPorts := currentResource.Ports
-		portNames := make(map[string]struct{}, len(currentPorts))
-		portNumbers := make(map[int]struct{}, len(currentPorts))
-
-		for _, port := range currentPorts {
-			if port.Number <= 0 {
-				return errors.BadRequest("stack resource '%s' has invalid port number", currentResource.Name)
-			}
-			if port.Name == "" {
-				return errors.BadRequest("stack resource '%s' has port %d missing name", currentResource.Name, port.Number)
-			}
-			if _, exists := portNames[port.Name]; exists {
-				return errors.BadRequest("stack resource '%s' has duplicate port name '%s'", currentResource.Name, port.Name)
-			}
-			portNames[port.Name] = struct{}{}
-			if _, exists := portNumbers[port.Number]; exists {
-				return errors.BadRequest("stack resource '%s' has duplicate port number %d", currentResource.Name, port.Number)
-			}
-			portNumbers[port.Number] = struct{}{}
-			if err := validatePortName(port.Name); err != nil {
-				return errors.BadRequest("stack resource '%s' has invalid port name '%s': %s", currentResource.Name, port.Name, err.Error())
-			}
-			if port.ExposedToPublic && port.SubdomainPrefix != "" {
-				if owner, exists := subdomainPrefixes[port.SubdomainPrefix]; exists {
-					return errors.BadRequest(
-						"duplicate subdomain prefix '%s': used by both resource '%s' and '%s'",
-						port.SubdomainPrefix, owner, currentResource.Name)
-				}
-				subdomainPrefixes[port.SubdomainPrefix] = currentResource.Name
-			}
-		}
-	}
-	return nil
-}
-
-func validatePortName(name string) error {
-	for i, r := range name {
-		valid := (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-'
-		if !valid {
-			return fmt.Errorf("must contain only lowercase letters, numbers, and hyphens")
-		}
-		if i == 0 && r == '-' {
-			return fmt.Errorf("must start with a lowercase letter or number")
-		}
-	}
-	if name[len(name)-1] == '-' {
-		return fmt.Errorf("must end with a lowercase letter or number")
-	}
-	return nil
 }

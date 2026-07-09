@@ -17,23 +17,24 @@ import (
 
 // StackReleaseDetail struct for StackReleaseDetail
 type StackReleaseDetail struct {
-	Id               *string               `json:"id,omitempty"`
-	StackId          *string               `json:"stack_id,omitempty"`
-	Sequence         *int32                `json:"sequence,omitempty"`
-	State            *StackReleaseState    `json:"state,omitempty"`
-	Message          *string               `json:"message,omitempty"`
-	Cause            *ReleaseCause         `json:"cause,omitempty"`
-	SnapshotRevision *string               `json:"snapshot_revision,omitempty"`
-	ManifestRevision *string               `json:"manifest_revision,omitempty"`
-	RendererVersion  *string               `json:"renderer_version,omitempty"`
-	Pins             *ReleasePins          `json:"pins,omitempty"`
-	Outcome          *ReleaseOutcome       `json:"outcome,omitempty"`
-	CreatedBy        *string               `json:"created_by,omitempty"`
-	CreatedAt        *time.Time            `json:"created_at,omitempty"`
-	UpdatedAt        *time.Time            `json:"updated_at,omitempty"`
-	RenderedAt       *time.Time            `json:"rendered_at,omitempty"`
-	CompletedAt      *time.Time            `json:"completed_at,omitempty"`
-	Snapshot         *StackReleaseSnapshot `json:"snapshot,omitempty"`
+	Id               *string                  `json:"id,omitempty"`
+	StackId          *string                  `json:"stack_id,omitempty"`
+	Sequence         *int32                   `json:"sequence,omitempty"`
+	State            *StackReleaseState       `json:"state,omitempty"`
+	Message          *string                  `json:"message,omitempty"`
+	Cause            *ReleaseCause            `json:"cause,omitempty"`
+	SnapshotRevision *string                  `json:"snapshot_revision,omitempty"`
+	ManifestRevision *string                  `json:"manifest_revision,omitempty"`
+	RendererVersion  *string                  `json:"renderer_version,omitempty"`
+	Pins             *ReleasePins             `json:"pins,omitempty"`
+	Outcome          *ReleaseOutcome          `json:"outcome,omitempty"`
+	CreatedBy        *string                  `json:"created_by,omitempty"`
+	CreatedAt        *time.Time               `json:"created_at,omitempty"`
+	UpdatedAt        *time.Time               `json:"updated_at,omitempty"`
+	RenderedAt       *time.Time               `json:"rendered_at,omitempty"`
+	CompletedAt      *time.Time               `json:"completed_at,omitempty"`
+	ValidationErrors []ReleaseValidationError `json:"validation_errors,omitempty"`
+	Snapshot         *StackReleaseSnapshot    `json:"snapshot,omitempty"`
 }
 
 // NewStackReleaseDetail instantiates a new StackReleaseDetail object
@@ -565,6 +566,38 @@ func (o *StackReleaseDetail) SetCompletedAt(v time.Time) {
 	o.CompletedAt = &v
 }
 
+// GetValidationErrors returns the ValidationErrors field value if set, zero value otherwise.
+func (o *StackReleaseDetail) GetValidationErrors() []ReleaseValidationError {
+	if o == nil || o.ValidationErrors == nil {
+		var ret []ReleaseValidationError
+		return ret
+	}
+	return o.ValidationErrors
+}
+
+// GetValidationErrorsOk returns a tuple with the ValidationErrors field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackReleaseDetail) GetValidationErrorsOk() ([]ReleaseValidationError, bool) {
+	if o == nil || o.ValidationErrors == nil {
+		return nil, false
+	}
+	return o.ValidationErrors, true
+}
+
+// HasValidationErrors returns a boolean if a field has been set.
+func (o *StackReleaseDetail) HasValidationErrors() bool {
+	if o != nil && o.ValidationErrors != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetValidationErrors gets a reference to the given []ReleaseValidationError and assigns it to the ValidationErrors field.
+func (o *StackReleaseDetail) SetValidationErrors(v []ReleaseValidationError) {
+	o.ValidationErrors = v
+}
+
 // GetSnapshot returns the Snapshot field value if set, zero value otherwise.
 func (o *StackReleaseDetail) GetSnapshot() StackReleaseSnapshot {
 	if o == nil || o.Snapshot == nil {
@@ -646,6 +679,9 @@ func (o StackReleaseDetail) MarshalJSON() ([]byte, error) {
 	}
 	if o.CompletedAt != nil {
 		toSerialize["completed_at"] = o.CompletedAt
+	}
+	if o.ValidationErrors != nil {
+		toSerialize["validation_errors"] = o.ValidationErrors
 	}
 	if o.Snapshot != nil {
 		toSerialize["snapshot"] = o.Snapshot

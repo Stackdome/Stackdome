@@ -924,7 +924,12 @@ const StackReleaseState = z.enum([
   "Superseded",
   "Cancelled",
 ]);
-const ReleaseCauseKind = z.enum(["manual", "rollback", "webhook_push"]);
+const ReleaseCauseKind = z.enum([
+  "manual",
+  "rollback",
+  "webhook_push",
+  "preview_sync",
+]);
 const ReleaseCause = z
   .object({ kind: ReleaseCauseKind, detail: z.string() })
   .partial()
@@ -954,6 +959,68 @@ const ReleaseOutcome = z
   .object({ resources: z.record(ResourceOutcome), duration: z.string() })
   .partial()
   .passthrough();
+const ReleaseValidationError = z
+  .object({
+    resource_name: z.string(),
+    field: z.string(),
+    code: z.enum([
+      "resource_name_required",
+      "resource_name_invalid",
+      "resource_name_duplicate",
+      "source_required",
+      "source_conflict",
+      "workload_type_invalid",
+      "schedule_required",
+      "schedule_not_allowed",
+      "schedule_invalid",
+      "replicas_invalid",
+      "ports_not_allowed",
+      "public_port_not_http",
+      "port_protocol_invalid",
+      "port_name_invalid",
+      "port_number_invalid",
+      "port_name_duplicate",
+      "port_number_duplicate",
+      "subdomain_duplicate",
+      "domain_not_configured",
+      "env_name_required",
+      "env_name_duplicate",
+      "env_value_missing",
+      "env_value_conflict",
+      "volume_mount_invalid",
+      "volume_not_found",
+      "volume_hash_missing",
+      "secret_not_found",
+      "git_integration_not_found",
+      "registry_credential_not_found",
+      "self_dependency",
+      "duplicate_dependency",
+      "unknown_dependency",
+      "dependency_cycle",
+      "git_repo_url_required",
+      "git_branch_tag_conflict",
+      "git_commit_invalid",
+      "git_commit_requires_ref",
+      "image_ref_required",
+      "image_ref_invalid",
+      "push_target_required",
+      "push_target_conflict",
+      "push_ref_invalid",
+      "git_repo_unreachable",
+      "git_auth_failed",
+      "git_branch_not_found",
+      "git_tag_not_found",
+      "git_rate_limited",
+      "image_not_found",
+      "registry_auth_failed",
+      "push_access_denied",
+      "stack_settings_invalid",
+      "connection_invalid",
+    ]),
+    message: z.string(),
+  })
+  .partial()
+  .passthrough();
 const StackRelease = z
   .object({
     id: z.string(),
@@ -972,6 +1039,7 @@ const StackRelease = z
     updated_at: z.string().datetime({ offset: true }),
     rendered_at: z.string().datetime({ offset: true }),
     completed_at: z.string().datetime({ offset: true }),
+    validation_errors: z.array(ReleaseValidationError),
   })
   .partial()
   .passthrough();
@@ -1467,6 +1535,71 @@ const VolumeList = z
   .partial()
   .passthrough();
 const SSHConfig = z.object({ public_key: z.string() });
+const FieldValidationError = z
+  .object({
+    field: z.string(),
+    code: z.enum([
+      "resource_name_required",
+      "resource_name_invalid",
+      "resource_name_duplicate",
+      "source_required",
+      "source_conflict",
+      "workload_type_invalid",
+      "schedule_required",
+      "schedule_not_allowed",
+      "schedule_invalid",
+      "replicas_invalid",
+      "ports_not_allowed",
+      "public_port_not_http",
+      "port_protocol_invalid",
+      "port_name_invalid",
+      "port_number_invalid",
+      "port_name_duplicate",
+      "port_number_duplicate",
+      "subdomain_duplicate",
+      "domain_not_configured",
+      "env_name_required",
+      "env_name_duplicate",
+      "env_value_missing",
+      "env_value_conflict",
+      "volume_mount_invalid",
+      "volume_not_found",
+      "volume_hash_missing",
+      "secret_not_found",
+      "git_integration_not_found",
+      "registry_credential_not_found",
+      "self_dependency",
+      "duplicate_dependency",
+      "unknown_dependency",
+      "dependency_cycle",
+      "git_repo_url_required",
+      "git_branch_tag_conflict",
+      "git_commit_invalid",
+      "git_commit_requires_ref",
+      "image_ref_required",
+      "image_ref_invalid",
+      "push_target_required",
+      "push_target_conflict",
+      "push_ref_invalid",
+      "git_repo_unreachable",
+      "git_auth_failed",
+      "git_branch_not_found",
+      "git_tag_not_found",
+      "git_rate_limited",
+      "image_not_found",
+      "registry_auth_failed",
+      "push_access_denied",
+      "stack_settings_invalid",
+      "connection_invalid",
+    ]),
+    message: z.string(),
+  })
+  .partial()
+  .passthrough();
+const ValidationErrorDetail = z
+  .object({ errors: z.array(FieldValidationError) })
+  .partial()
+  .passthrough();
 const List = z
   .object({
     kind: z.string(),
@@ -1622,6 +1755,7 @@ export const schemas = {
   ReleasePins,
   ResourceOutcome,
   ReleaseOutcome,
+  ReleaseValidationError,
   StackRelease,
   StackReleaseList,
   StackReleaseSnapshot,
@@ -1664,6 +1798,8 @@ export const schemas = {
   PreviewStackSync,
   VolumeList,
   SSHConfig,
+  FieldValidationError,
+  ValidationErrorDetail,
   List,
   ErrorList,
   WALConfiguration,
@@ -5581,7 +5717,7 @@ accepts a full stack document.
     errors: [
       {
         status: 400,
-        description: `Invalid request data`,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
         schema: Error,
       },
       {
@@ -6178,7 +6314,7 @@ accepts a full stack document.
     errors: [
       {
         status: 400,
-        description: `Invalid request data`,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
         schema: Error,
       },
       {
@@ -6281,7 +6417,7 @@ accepts a full stack document.
     errors: [
       {
         status: 400,
-        description: `Invalid request data`,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
         schema: Error,
       },
       {

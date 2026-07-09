@@ -39,6 +39,7 @@ type releaseService interface {
 	MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)
 	MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError)
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
+	MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError)
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
 }
 

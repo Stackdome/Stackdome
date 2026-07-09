@@ -8273,6 +8273,20 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** @description Structured payload carried in Error.details for aggregated validation failures. */
+        ValidationErrorDetail: {
+            errors?: components["schemas"]["FieldValidationError"][];
+        };
+        FieldValidationError: {
+            /** @description JSON path of the offending request field, e.g. "ports[0].protocol". */
+            field?: string;
+            /**
+             * @description Machine-readable validation code, e.g. "public_port_not_http".
+             * @enum {string}
+             */
+            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
+            message?: string;
+        };
         ErrorList: {
             items?: components["schemas"]["Error"][];
         } & components["schemas"]["List"];
@@ -8737,7 +8751,7 @@ export interface components {
         /** @enum {string} */
         StackReleaseState: "Pending" | "InProgress" | "Released" | "Failed" | "Superseded" | "Cancelled";
         /** @enum {string} */
-        ReleaseCauseKind: "manual" | "rollback" | "webhook_push";
+        ReleaseCauseKind: "manual" | "rollback" | "webhook_push" | "preview_sync";
         CreateReleaseRequest: {
             /** @description If set, creates a rollback release copying this release's manifest */
             from_release_id?: string;
@@ -8763,6 +8777,7 @@ export interface components {
             rendered_at?: string;
             /** Format: date-time */
             completed_at?: string;
+            readonly validation_errors?: components["schemas"]["ReleaseValidationError"][];
         };
         StackReleaseDetail: components["schemas"]["StackRelease"] & {
             snapshot?: components["schemas"]["StackReleaseSnapshot"];
@@ -8804,6 +8819,13 @@ export interface components {
         ReleaseCause: {
             kind?: components["schemas"]["ReleaseCauseKind"];
             detail?: string;
+        };
+        ReleaseValidationError: {
+            resource_name?: string;
+            field?: string;
+            /** @enum {string} */
+            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
+            message?: string;
         };
         ReleasePins: {
             resources?: {
@@ -9019,7 +9041,7 @@ export interface operations {
                     "application/json": components["schemas"]["Stack"];
                 };
             };
-            /** @description Invalid request data */
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9075,7 +9097,7 @@ export interface operations {
                     "application/json": components["schemas"]["StackResource"];
                 };
             };
-            /** @description Invalid request data */
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9149,7 +9171,7 @@ export interface operations {
                     "application/json": components["schemas"]["StackResource"];
                 };
             };
-            /** @description Invalid request data */
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -9202,7 +9224,7 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Stack resource deleted successfully */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

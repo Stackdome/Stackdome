@@ -109,6 +109,46 @@ func TestCheckImage_RateLimited(t *testing.T) {
 	require.True(t, errors.Is(err, clients.ErrRateLimited), "expected errors.Is(err, ErrRateLimited); got %v", err)
 }
 
+// TestCheckImage_TokenDeniedIsAuthFailed reproduces the GHCR token-request
+// denial (403 DENIED) that a registry returns for a nonexistent-repo token
+// scope when unauthenticated. It must be classified as ErrAuthFailed rather
+// than a generic transient error, so the release worker can fail fast
+// instead of requeueing indefinitely.
+func TestCheckImage_TokenDeniedIsAuthFailed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = fmt.Fprint(w, `{"errors":[{"code":"DENIED","message":"requested access to the resource is denied"}]}`)
+	}))
+	defer srv.Close()
+
+	client, err := clients.NewRegistryClientAnonymous()
+	require.NoError(t, err)
+
+	imageRef := repoRefFor(t, srv, "some/repo") + ":latest"
+	_, err = client.CheckImage(context.Background(), imageRef)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, clients.ErrAuthFailed), "expected errors.Is(err, ErrAuthFailed); got %v", err)
+}
+
+// TestCheckImage_UnauthorizedIsAuthFailed covers the plain 401 case.
+func TestCheckImage_UnauthorizedIsAuthFailed(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = fmt.Fprint(w, `{"errors":[{"code":"UNAUTHORIZED","message":"authentication required"}]}`)
+	}))
+	defer srv.Close()
+
+	client, err := clients.NewRegistryClientAnonymous()
+	require.NoError(t, err)
+
+	imageRef := repoRefFor(t, srv, "some/repo") + ":latest"
+	_, err = client.CheckImage(context.Background(), imageRef)
+	require.Error(t, err)
+	require.True(t, errors.Is(err, clients.ErrAuthFailed), "expected errors.Is(err, ErrAuthFailed); got %v", err)
+}
+
 func TestNormalizeRegistryHost(t *testing.T) {
 	cases := []struct {
 		ref  string

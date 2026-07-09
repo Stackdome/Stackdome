@@ -23,6 +23,7 @@ const (
 	RELEASE_CAUSE_MANUAL       ReleaseCauseKind = "manual"
 	RELEASE_CAUSE_ROLLBACK     ReleaseCauseKind = "rollback"
 	RELEASE_CAUSE_WEBHOOK_PUSH ReleaseCauseKind = "webhook_push"
+	RELEASE_CAUSE_PREVIEW_SYNC ReleaseCauseKind = "preview_sync"
 )
 
 // All allowed values of ReleaseCauseKind enum
@@ -30,6 +31,7 @@ var AllowedReleaseCauseKindEnumValues = []ReleaseCauseKind{
 	"manual",
 	"rollback",
 	"webhook_push",
+	"preview_sync",
 }
 
 func (v *ReleaseCauseKind) UnmarshalJSON(src []byte) error {

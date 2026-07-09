@@ -40,7 +40,7 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		// Resources must exist before connections that reference them.
 		for i := range fat.Spec.StackResources {
 			res := fat.Spec.StackResources[i]
-			shared.AddStackResource(client, orgID, teamName, shell.GetId(), &res)
+			shared.CreateStackResource(client, orgID, teamName, shell.GetId(), &res)
 		}
 		for i := range fat.Spec.Connections {
 			conn := fat.Spec.Connections[i]

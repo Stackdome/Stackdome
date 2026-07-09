@@ -12,6 +12,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
@@ -45,7 +46,7 @@ type StackResourceServiceSpec struct {
 	ClusterRegistryService ImageRegistryService
 	StackDomainService     StackDomainsService
 	ReferenceService       ReferenceService
-	DefaultBranchResolver  DefaultBranchResolver
+	ResourceValidator      stackresourcevalidator.Validator
 }
 
 type stackResourceService struct {
@@ -60,10 +61,13 @@ type stackResourceService struct {
 	clusterRegistryService ImageRegistryService
 	domainNameService      StackDomainsService
 	referenceService       ReferenceService
-	branchResolver         DefaultBranchResolver
+	resourceValidator      stackresourcevalidator.Validator
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
+	if spec.ResourceValidator == nil {
+		panic("services.NewStackResourceService: ResourceValidator is required")
+	}
 	stackResourceStore := spec.StackResourceStore
 	if stackResourceStore == nil {
 		stackResourceStore = pgstore.NewStackResourceStore(pgstore.StackResourceStoreSpec{
@@ -81,7 +85,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		clusterRegistryService: spec.ClusterRegistryService,
 		domainNameService:      spec.StackDomainService,
 		referenceService:       spec.ReferenceService,
-		branchResolver:         spec.DefaultBranchResolver,
+		resourceValidator:      spec.ResourceValidator,
 	}
 }
 
@@ -98,10 +102,16 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 		return nil, permErr
 	}
 
-	if s.branchResolver != nil {
-		if err := s.branchResolver.ResolveDefaultBranch(ctx, stack, resource); err != nil {
-			return nil, err
-		}
+	siblings, sErr := s.stackResourceStore.GetByStackID(ctx, resource.StackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if len(ferrs) > 0 {
+		return nil, errors.ValidationFailed(ferrs)
 	}
 
 	var created *models.StackResource
@@ -137,10 +147,22 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.ID = existing.ID
 	resource.Name = resourceName
 
-	if s.branchResolver != nil {
-		if err := s.branchResolver.ResolveDefaultBranch(ctx, stack, resource); err != nil {
-			return nil, err
+	all, sErr := s.stackResourceStore.GetByStackID(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	siblings := make([]*models.StackResource, 0, len(all))
+	for _, r := range all {
+		if r.Name != resourceName {
+			siblings = append(siblings, r)
 		}
+	}
+	ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if len(ferrs) > 0 {
+		return nil, errors.ValidationFailed(ferrs)
 	}
 
 	var updated *models.StackResource

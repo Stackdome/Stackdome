@@ -53,6 +53,7 @@ docs/Error.md
 docs/ErrorAllOf.md
 docs/ErrorList.md
 docs/ExecutionConfig.md
+docs/FieldValidationError.md
 docs/GCSCredentials.md
 docs/GitBranchList.md
 docs/GitHubAppManifestFlow.md
@@ -146,6 +147,7 @@ docs/ReleaseCause.md
 docs/ReleaseCauseKind.md
 docs/ReleaseOutcome.md
 docs/ReleasePins.md
+docs/ReleaseValidationError.md
 docs/ReleasesApi.md
 docs/RemoteSource.md
 docs/ResourceMetrics.md
@@ -206,6 +208,7 @@ docs/UserRole.md
 docs/UserSignupRequest.md
 docs/UserSignupResponse.md
 docs/UserTeamMembership.md
+docs/ValidationErrorDetail.md
 docs/ValueRef.md
 docs/Volume.md
 docs/VolumeAccessMode.md
@@ -269,6 +272,7 @@ model_error.go
 model_error_all_of.go
 model_error_list.go
 model_execution_config.go
+model_field_validation_error.go
 model_gcs_credentials.go
 model_git_branch_list.go
 model_git_hub_app_manifest_flow.go
@@ -360,6 +364,7 @@ model_release_cause.go
 model_release_cause_kind.go
 model_release_outcome.go
 model_release_pins.go
+model_release_validation_error.go
 model_remote_source.go
 model_resource_metrics.go
 model_resource_metrics_node_capacities_inner.go
@@ -419,6 +424,7 @@ model_user_role.go
 model_user_signup_request.go
 model_user_signup_response.go
 model_user_team_membership.go
+model_validation_error_detail.go
 model_value_ref.go
 model_volume.go
 model_volume_access_mode.go

@@ -221,6 +221,21 @@ func (mr *MockStackReleaseStoreMockRecorder) MarkFailed(ctx, id, message, outcom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailed", reflect.TypeOf((*MockStackReleaseStore)(nil).MarkFailed), ctx, id, message, outcome)
 }
 
+// MarkFailedWithValidationErrors mocks base method.
+func (m *MockStackReleaseStore) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkFailedWithValidationErrors", ctx, id, message, verrs)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// MarkFailedWithValidationErrors indicates an expected call of MarkFailedWithValidationErrors.
+func (mr *MockStackReleaseStoreMockRecorder) MarkFailedWithValidationErrors(ctx, id, message, verrs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailedWithValidationErrors", reflect.TypeOf((*MockStackReleaseStore)(nil).MarkFailedWithValidationErrors), ctx, id, message, verrs)
+}
+
 // MarkInProgress mocks base method.
 func (m *MockStackReleaseStore) MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError) {
 	m.ctrl.T.Helper()

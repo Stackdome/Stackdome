@@ -42,6 +42,20 @@ func (m *MockStackValidator) EXPECT() *MockStackValidatorMockRecorder {
 	return m.recorder
 }
 
+// ValidateConnections mocks base method.
+func (m *MockStackValidator) ValidateConnections(ctx context.Context, spec *models.Stack) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateConnections", ctx, spec)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// ValidateConnections indicates an expected call of ValidateConnections.
+func (mr *MockStackValidatorMockRecorder) ValidateConnections(ctx, spec any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateConnections", reflect.TypeOf((*MockStackValidator)(nil).ValidateConnections), ctx, spec)
+}
+
 // ValidateForCreate mocks base method.
 func (m *MockStackValidator) ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError {
 	m.ctrl.T.Helper()

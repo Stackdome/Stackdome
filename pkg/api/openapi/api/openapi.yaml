@@ -2442,7 +2442,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Invalid request data
+          description: Invalid request data. `details` carries a `ValidationErrorDetail`
+            payload when the failure is an aggregated field validation error.
         "500":
           content:
             application/json:
@@ -2672,7 +2673,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Invalid request data
+          description: Invalid request data. `details` carries a `ValidationErrorDetail`
+            payload when the failure is an aggregated field validation error.
         "401":
           description: Unauthorized
         "404":
@@ -2729,7 +2731,7 @@ paths:
           type: string
         style: simple
       responses:
-        "204":
+        "200":
           description: Stack resource deleted successfully
         "401":
           description: Unauthorized
@@ -2849,7 +2851,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-          description: Invalid request data
+          description: Invalid request data. `details` carries a `ValidationErrorDetail`
+            payload when the failure is an aggregated field validation error.
         "401":
           description: Unauthorized
         "404":
@@ -11889,6 +11892,81 @@ components:
       allOf:
       - $ref: '#/components/schemas/ObjectReference'
       - $ref: '#/components/schemas/Error_allOf'
+    ValidationErrorDetail:
+      description: Structured payload carried in Error.details for aggregated validation
+        failures.
+      properties:
+        errors:
+          items:
+            $ref: '#/components/schemas/FieldValidationError'
+          type: array
+      type: object
+    FieldValidationError:
+      properties:
+        field:
+          description: "JSON path of the offending request field, e.g. \"ports[0].protocol\"\
+            ."
+          type: string
+        code:
+          description: "Machine-readable validation code, e.g. \"public_port_not_http\"\
+            ."
+          enum:
+          - resource_name_required
+          - resource_name_invalid
+          - resource_name_duplicate
+          - source_required
+          - source_conflict
+          - workload_type_invalid
+          - schedule_required
+          - schedule_not_allowed
+          - schedule_invalid
+          - replicas_invalid
+          - ports_not_allowed
+          - public_port_not_http
+          - port_protocol_invalid
+          - port_name_invalid
+          - port_number_invalid
+          - port_name_duplicate
+          - port_number_duplicate
+          - subdomain_duplicate
+          - domain_not_configured
+          - env_name_required
+          - env_name_duplicate
+          - env_value_missing
+          - env_value_conflict
+          - volume_mount_invalid
+          - volume_not_found
+          - volume_hash_missing
+          - secret_not_found
+          - git_integration_not_found
+          - registry_credential_not_found
+          - self_dependency
+          - duplicate_dependency
+          - unknown_dependency
+          - dependency_cycle
+          - git_repo_url_required
+          - git_branch_tag_conflict
+          - git_commit_invalid
+          - git_commit_requires_ref
+          - image_ref_required
+          - image_ref_invalid
+          - push_target_required
+          - push_target_conflict
+          - push_ref_invalid
+          - git_repo_unreachable
+          - git_auth_failed
+          - git_branch_not_found
+          - git_tag_not_found
+          - git_rate_limited
+          - image_not_found
+          - registry_auth_failed
+          - push_access_denied
+          - stack_settings_invalid
+          - connection_invalid
+          type: string
+        message:
+          type: string
+      type: object
     ErrorList:
       allOf:
       - $ref: '#/components/schemas/List'
@@ -13571,11 +13649,13 @@ components:
       - manual
       - rollback
       - webhook_push
+      - preview_sync
       type: string
       x-enum-varnames:
       - RELEASE_CAUSE_MANUAL
       - RELEASE_CAUSE_ROLLBACK
       - RELEASE_CAUSE_WEBHOOK_PUSH
+      - RELEASE_CAUSE_PREVIEW_SYNC
     CreateReleaseRequest:
       example:
         from_release_id: from_release_id
@@ -13607,6 +13687,15 @@ components:
         stack_id: stack_id
         rendered_at: 2000-01-23T04:56:07.000+00:00
         renderer_version: renderer_version
+        validation_errors:
+        - code: resource_name_required
+          field: field
+          resource_name: resource_name
+          message: message
+        - code: resource_name_required
+          field: field
+          resource_name: resource_name
+          message: message
         id: id
         state: null
         outcome:
@@ -13654,6 +13743,11 @@ components:
         completed_at:
           format: date-time
           type: string
+        validation_errors:
+          items:
+            $ref: '#/components/schemas/ReleaseValidationError'
+          readOnly: true
+          type: array
       type: object
     StackReleaseDetail:
       allOf:
@@ -13705,6 +13799,15 @@ components:
           stack_id: stack_id
           rendered_at: 2000-01-23T04:56:07.000+00:00
           renderer_version: renderer_version
+          validation_errors:
+          - code: resource_name_required
+            field: field
+            resource_name: resource_name
+            message: message
+          - code: resource_name_required
+            field: field
+            resource_name: resource_name
+            message: message
           id: id
           state: null
           outcome:
@@ -13735,6 +13838,15 @@ components:
           stack_id: stack_id
           rendered_at: 2000-01-23T04:56:07.000+00:00
           renderer_version: renderer_version
+          validation_errors:
+          - code: resource_name_required
+            field: field
+            resource_name: resource_name
+            message: message
+          - code: resource_name_required
+            field: field
+            resource_name: resource_name
+            message: message
           id: id
           state: null
           outcome:
@@ -13772,6 +13884,75 @@ components:
         kind:
           $ref: '#/components/schemas/ReleaseCauseKind'
         detail:
+          type: string
+      type: object
+    ReleaseValidationError:
+      example:
+        code: resource_name_required
+        field: field
+        resource_name: resource_name
+        message: message
+      properties:
+        resource_name:
+          type: string
+        field:
+          type: string
+        code:
+          enum:
+          - resource_name_required
+          - resource_name_invalid
+          - resource_name_duplicate
+          - source_required
+          - source_conflict
+          - workload_type_invalid
+          - schedule_required
+          - schedule_not_allowed
+          - schedule_invalid
+          - replicas_invalid
+          - ports_not_allowed
+          - public_port_not_http
+          - port_protocol_invalid
+          - port_name_invalid
+          - port_number_invalid
+          - port_name_duplicate
+          - port_number_duplicate
+          - subdomain_duplicate
+          - domain_not_configured
+          - env_name_required
+          - env_name_duplicate
+          - env_value_missing
+          - env_value_conflict
+          - volume_mount_invalid
+          - volume_not_found
+          - volume_hash_missing
+          - secret_not_found
+          - git_integration_not_found
+          - registry_credential_not_found
+          - self_dependency
+          - duplicate_dependency
+          - unknown_dependency
+          - dependency_cycle
+          - git_repo_url_required
+          - git_branch_tag_conflict
+          - git_commit_invalid
+          - git_commit_requires_ref
+          - image_ref_required
+          - image_ref_invalid
+          - push_target_required
+          - push_target_conflict
+          - push_ref_invalid
+          - git_repo_unreachable
+          - git_auth_failed
+          - git_branch_not_found
+          - git_tag_not_found
+          - git_rate_limited
+          - image_not_found
+          - registry_auth_failed
+          - push_access_denied
+          - stack_settings_invalid
+          - connection_invalid
+          type: string
+        message:
           type: string
       type: object
     ReleasePins:
