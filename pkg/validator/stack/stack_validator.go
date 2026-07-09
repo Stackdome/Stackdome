@@ -123,15 +123,14 @@ func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.S
 }
 
 // ValidateShell runs only the rules scoped to the stack's own columns
-// (validateStackName and validateStackSettings), skipping validateResources,
+// (validateStackSettings), skipping validateResources,
 // validateUniqueResourceNames, and connection validation entirely. It backs
-// thin shell create/update (POST /stacks, PUT /stacks/{id}), which never
-// carry children, so invalid names and out-of-range settings are rejected
-// there with the same limits the fat paths enforce. Shell update allows
-// renames, so the name rules must run here too.
+// thin shell update (PUT /stacks/{id}), which never carries children. Name
+// rules are create-only (ValidateForCreate): the name is immutable on every
+// update path, so re-validating it here would only brick updates of stacks
+// created before the current name rules.
 func (v *stackValidator) ValidateShell(_ context.Context, spec *models.Stack) *errors.ServiceError {
-	ferrs := validateStackName(spec)
-	ferrs = append(ferrs, validateStackSettings(spec)...)
+	ferrs := validateStackSettings(spec)
 	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
 		return errors.ValidationFailed(ferrs)

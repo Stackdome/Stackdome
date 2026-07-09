@@ -1381,37 +1381,3 @@ func TestValidateForCreateRejectsNonDNSLabelStackNames(t *testing.T) {
 		})
 	}
 }
-
-func TestValidateShellAcceptsStackNameAtNamespaceBudget(t *testing.T) {
-	v := newTestValidator(t)
-	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength))
-
-	if err := v.ValidateShell(context.Background(), spec); err != nil {
-		t.Fatalf("expected %d-character stack name to pass, got %v", models.MaxStackNameLength, err)
-	}
-}
-
-// TestValidateShellRejectsStackNameOverNamespaceBudget covers the rename
-// path: shell update (PUT /stacks/{id}) allows changing the name, so a
-// rename to a name too long for the namespace budget must fail there too.
-func TestValidateShellRejectsStackNameOverNamespaceBudget(t *testing.T) {
-	v := newTestValidator(t)
-	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength+1))
-
-	err := v.ValidateShell(context.Background(), spec)
-	requireStackNameInvalid(t, err)
-}
-
-func TestValidateShellRejectsNonDNSLabelStackName(t *testing.T) {
-	v := newTestValidator(t)
-
-	err := v.ValidateShell(context.Background(), shellStack("My_Stack"))
-	requireStackNameInvalid(t, err)
-}
-
-func TestValidateShellRejectsEmptyStackName(t *testing.T) {
-	v := newTestValidator(t)
-
-	err := v.ValidateShell(context.Background(), shellStack(""))
-	requireStackNameInvalid(t, err)
-}
