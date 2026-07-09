@@ -2,99 +2,48 @@ package stack
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/mocks"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/mocks"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/validator"
 	"go.uber.org/mock/gomock"
 )
 
-func TestValidateForCreateRequiresNamedPorts(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := stackWithPorts(models.Port{
-		Number:          8080,
-		Protocol:        "http",
-		ExposedToPublic: false,
-	})
-
-	err := v.ValidateForCreate(context.Background(), spec)
+// requireSingleFieldError extracts the sole aggregated field error from a
+// ValidationFailed ServiceError, failing the test if err is nil, isn't a
+// validation error, or carries anything other than exactly one field error.
+func requireSingleFieldError(t *testing.T, err *errors.ServiceError) errors.FieldError {
+	t.Helper()
 	if err == nil {
-		t.Fatalf("expected unnamed port to be rejected")
+		t.Fatal("expected a validation error, got nil")
 	}
-	if got, want := err.Error(), "error: stack resource 'web' has port 8080 missing name"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	details, ok := err.Details.(errors.ValidationErrorDetails)
+	if !ok {
+		t.Fatalf("expected errors.ValidationErrorDetails, got %#v", err.Details)
 	}
+	if len(details.Errors) != 1 {
+		t.Fatalf("expected exactly 1 field error, got %d: %#v", len(details.Errors), details.Errors)
+	}
+	return details.Errors[0]
 }
 
-func TestValidateForCreateRejectsDuplicatePortNames(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := stackWithPorts(
-		models.Port{Name: "http", Number: 8080, Protocol: "http"},
-		models.Port{Name: "http", Number: 9090, Protocol: "http"},
-	)
-
-	err := v.ValidateForCreate(context.Background(), spec)
+func fieldErrors(t *testing.T, err *errors.ServiceError) []errors.FieldError {
+	t.Helper()
 	if err == nil {
-		t.Fatalf("expected duplicate port names to be rejected")
+		t.Fatal("expected a validation error, got nil")
 	}
-	if got, want := err.Error(), "error: stack resource 'web' has duplicate port name 'http'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	details, ok := err.Details.(errors.ValidationErrorDetails)
+	if !ok {
+		t.Fatalf("expected errors.ValidationErrorDetails, got %#v", err.Details)
 	}
-}
-
-func TestValidateForCreateRejectsDuplicatePortNumbers(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := stackWithPorts(
-		models.Port{Name: "http", Number: 8080, Protocol: "http"},
-		models.Port{Name: "metrics", Number: 8080, Protocol: "http"},
-	)
-
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected duplicate port numbers to be rejected")
-	}
-	if got, want := err.Error(), "error: stack resource 'web' has duplicate port number 8080"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
-	}
-}
-
-func TestValidateForCreateAllowsSelfOutputEnvVar(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
-	spec.StackResources[0].ExecutionConfig = &models.ExecutionConfig{
-		Env: []models.EnvVar{
-			{Name: "INTERNAL_URL", SelfOutput: "url.http"},
-		},
-	}
-
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err != nil {
-		t.Fatalf("expected self_output env var to validate, got %v", err)
-	}
-}
-
-func TestValidateForCreateRejectsEnvVarWithBothValueAndSelfOutput(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
-	spec.StackResources[0].ExecutionConfig = &models.ExecutionConfig{
-		Env: []models.EnvVar{
-			{Name: "PUBLIC_URL", Value: "https://example.com", SelfOutput: "url.http"},
-		},
-	}
-
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected env var with both value and self_output to be rejected")
-	}
-	if got, want := err.Error(), "error: stack resource 'web' env var 'PUBLIC_URL' must set exactly one of value or self_output"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
-	}
+	return details.Errors
 }
 
 func TestValidateForCreateRejectsSecretMountConnectionKind(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithConnections(models.StackConnection{
 		ID:   "secret-files",
 		Kind: models.ConnectionKind("secret_mount"),
@@ -109,11 +58,12 @@ func TestValidateForCreateRejectsSecretMountConnectionKind(t *testing.T) {
 	})
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected secret_mount connection to be rejected")
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "connection 'secret-files' has unsupported kind 'secret_mount'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
-	if got, want := err.Error(), "error: connection 'secret-files' has unsupported kind 'secret_mount'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	if fe.Code != errors.VErrConnectionInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrConnectionInvalid)
 	}
 }
 
@@ -194,11 +144,9 @@ func TestValidateForCreateRejectsPostgresConnectionConfigWithoutDatabase(t *test
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{ID: "pg-1"}, nil)
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected postgres owner connection without database to be rejected")
-	}
-	if got, want := err.Error(), "error: connection 'pg-env' requires config.database when postgres credential scope is owner"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "connection 'pg-env' requires config.database when postgres credential scope is owner"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
@@ -222,16 +170,14 @@ func TestValidateForCreateRejectsUnknownPostgresConnectionConfigKey(t *testing.T
 	})
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected unknown postgres config key to be rejected")
-	}
-	if got, want := err.Error(), "error: connection 'pg-env' has unsupported postgres config key 'oops'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "connection 'pg-env' has unsupported postgres config key 'oops'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
 func TestValidateForCreateAllowsVolumeMountConnectionConfig(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithConnections(models.StackConnection{
 		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
@@ -260,7 +206,7 @@ func TestValidateForCreateAllowsVolumeMountConnectionConfig(t *testing.T) {
 }
 
 func TestValidateForCreateRejectsVolumeMountConnectionWithoutMountPath(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithConnections(models.StackConnection{
 		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
@@ -278,16 +224,14 @@ func TestValidateForCreateRejectsVolumeMountConnectionWithoutMountPath(t *testin
 	}
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected volume mount without mount_path to be rejected")
-	}
-	if got, want := err.Error(), "error: connection 'volume-mount' requires config.mount_path for volume mounts"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "connection 'volume-mount' requires config.mount_path for volume mounts"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
 func TestValidateForCreateRejectsVolumeMountConnectionWithInvalidReadOnlyType(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithConnections(models.StackConnection{
 		ID:   "volume-mount",
 		Kind: models.ConnectionKindVolumeMount,
@@ -309,16 +253,14 @@ func TestValidateForCreateRejectsVolumeMountConnectionWithInvalidReadOnlyType(t 
 	}
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected non-bool read_only to be rejected")
-	}
-	if got, want := err.Error(), "error: connection 'volume-mount' config.read_only must be a boolean"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "connection 'volume-mount' config.read_only must be a boolean"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
 func TestValidateForCreateAllowsStackResourceEnvConnectionUsingDeclaredOutput(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithConnections(models.StackConnection{
 		ID:   "internal-api",
 		Kind: models.ConnectionKindEnv,
@@ -350,7 +292,7 @@ func TestValidateForCreateAllowsStackResourceEnvConnectionUsingDeclaredOutput(t 
 }
 
 func TestValidateForCreateRejectsUnknownStackResourceConnectionOutput(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithConnections(models.StackConnection{
 		ID:   "internal-api",
 		Kind: models.ConnectionKindEnv,
@@ -376,11 +318,9 @@ func TestValidateForCreateRejectsUnknownStackResourceConnectionOutput(t *testing
 	})
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected unknown stack resource output to be rejected")
-	}
-	if got, want := err.Error(), "error: connection 'internal-api' references unsupported output 'url.grpc' for source 'stack_resource:web'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "connection 'internal-api' references unsupported output 'url.grpc' for source 'stack_resource:web'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
@@ -410,8 +350,9 @@ func TestValidateForCreateAllowsSecretConnectionUsingBracketAccessor(t *testing.
 		},
 	})
 	secrets.EXPECT().InternalGetByID(gomock.Any(), "sec-1").Return(&models.Secret{
-		ID:   "sec-1",
-		Keys: []string{"tls.crt"},
+		ID:             "sec-1",
+		OrganisationID: "org-1",
+		Keys:           []string{"tls.crt"},
 	}, nil)
 
 	err := v.ValidateForCreate(context.Background(), spec)
@@ -420,8 +361,53 @@ func TestValidateForCreateAllowsSecretConnectionUsingBracketAccessor(t *testing.
 	}
 }
 
+// TestValidateForCreateRejectsSecretConnectionFromAnotherOrganisation asserts
+// the connection-source secret lookup is org-scoped: a secret that exists but
+// belongs to a different organisation behaves exactly like a missing one, so
+// cross-org secret existence never leaks through connection validation.
+func TestValidateForCreateRejectsSecretConnectionFromAnotherOrganisation(t *testing.T) {
+	v, secrets := newValidatorWithMockedSecretService(t)
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "tls-cert",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeSecret,
+			Id:   "sec-1",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{
+					Type: models.ConnectionTargetTypeEnv,
+					Name: "TLS_CERT",
+				},
+				Value: models.ValueRef{
+					Output: "tls.crt",
+				},
+			},
+		},
+	})
+	secrets.EXPECT().InternalGetByID(gomock.Any(), "sec-1").Return(&models.Secret{
+		ID:             "sec-1",
+		OrganisationID: "org-other",
+		Keys:           []string{"tls.crt"},
+	}, nil)
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrConnectionInvalid {
+		t.Fatalf("expected %s, got %s", errors.VErrConnectionInvalid, fe.Code)
+	}
+	if got, want := fe.Message, "connection 'tls-cert' references non-existent secret 'sec-1'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
 func TestValidateForUpdateAllowsVolumeMountConnectionUsingExistingDBVolume(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	existing := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	existing.Volumes = []*models.Volume{
 		{Name: "uploads"},
@@ -453,49 +439,46 @@ func TestValidateForUpdateAllowsVolumeMountConnectionUsingExistingDBVolume(t *te
 }
 
 func TestValidateForCreateRejectsRetentionLimitAboveMax(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.Settings = &models.StackSettings{ReleaseRetentionLimit: models.MaxReleaseRetentionLimit + 1}
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected retention limit above max to be rejected")
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "release_retention_limit must be at most 50"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
-	if got, want := err.Error(), "error: release_retention_limit must be at most 50"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	if fe.Code != errors.VErrStackSettingsInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackSettingsInvalid)
 	}
 }
 
 func TestValidateForCreateRejectsMinSuccessfulAboveMax(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.Settings = &models.StackSettings{MinSuccessfulReleases: models.MaxMinSuccessfulReleases + 1}
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected min_successful_releases above max to be rejected")
-	}
-	if got, want := err.Error(), "error: min_successful_releases must be at most 20"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "min_successful_releases must be at most 20"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
 func TestValidateForCreateRejectsDeployTimeoutAboveMax(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.Settings = &models.StackSettings{DeployTimeoutMinutes: models.MaxDeployTimeoutMinutes + 1}
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected deploy_timeout_minutes above max to be rejected")
-	}
-	if got, want := err.Error(), "error: deploy_timeout_minutes must be at most 120"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "deploy_timeout_minutes must be at most 120"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
 func TestValidateForCreateRejectsMinSuccessfulExceedingRetention(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.Settings = &models.StackSettings{
 		ReleaseRetentionLimit: 5,
@@ -503,16 +486,84 @@ func TestValidateForCreateRejectsMinSuccessfulExceedingRetention(t *testing.T) {
 	}
 
 	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected min_successful_releases > release_retention_limit to be rejected")
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "min_successful_releases (10) must not exceed release_retention_limit (5)"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
-	if got, want := err.Error(), "error: min_successful_releases (10) must not exceed release_retention_limit (5)"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
+}
+
+func TestValidateShellRejectsRetentionLimitAboveMax(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name:     "demo",
+		Settings: &models.StackSettings{ReleaseRetentionLimit: models.MaxReleaseRetentionLimit + 1},
+	}
+
+	err := v.ValidateShell(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrStackSettingsInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackSettingsInvalid)
+	}
+}
+
+func TestValidateShellRejectsDeployTimeoutAboveMax(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name:     "demo",
+		Settings: &models.StackSettings{DeployTimeoutMinutes: models.MaxDeployTimeoutMinutes + 1},
+	}
+
+	err := v.ValidateShell(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrStackSettingsInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackSettingsInvalid)
+	}
+}
+
+func TestValidateShellRejectsMinSuccessfulExceedingRetention(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name: "demo",
+		Settings: &models.StackSettings{
+			ReleaseRetentionLimit: 5,
+			MinSuccessfulReleases: 10,
+		},
+	}
+
+	err := v.ValidateShell(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "min_successful_releases (10) must not exceed release_retention_limit (5)"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateShellAcceptsValidSettings(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name: "demo",
+		Settings: &models.StackSettings{
+			ReleaseRetentionLimit: 20,
+			MinSuccessfulReleases: 10,
+			DeployTimeoutMinutes:  30,
+		},
+	}
+
+	if err := v.ValidateShell(context.Background(), spec); err != nil {
+		t.Fatalf("expected valid settings to pass, got %v", err)
+	}
+}
+
+func TestValidateShellAcceptsNilSettings(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{Name: "demo"}
+
+	if err := v.ValidateShell(context.Background(), spec); err != nil {
+		t.Fatalf("expected nil settings to pass, got %v", err)
 	}
 }
 
 func TestValidateForCreateAcceptsValidSettings(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.Settings = &models.StackSettings{
 		ReleaseRetentionLimit: 20,
@@ -527,7 +578,7 @@ func TestValidateForCreateAcceptsValidSettings(t *testing.T) {
 }
 
 func TestValidateForCreateAcceptsNilSettings(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.Settings = nil
 
@@ -535,6 +586,131 @@ func TestValidateForCreateAcceptsNilSettings(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected nil settings to pass, got %v", err)
 	}
+}
+
+// TestValidateForCreateAcceptsEmptyStackResources exercises the thin
+// stack-shell create path: the handler zeroes out StackResources, Volumes,
+// and Connections before calling CreateStack, so the fat validator must run
+// clean over a stack with no children rather than panicking or erroring.
+func TestValidateForCreateAcceptsEmptyStackResources(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name:           "shell-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != nil {
+		t.Fatalf("expected empty stack resources to pass, got %v", err)
+	}
+}
+
+// TestValidateForUpdateAcceptsEmptyStackResources mirrors the shell-update
+// path (PUT /stacks/{id}): existing and desired specs both carry no
+// resources/volumes/connections.
+func TestValidateForUpdateAcceptsEmptyStackResources(t *testing.T) {
+	v := newTestValidator(t)
+	existing := &models.Stack{
+		Name:           "shell-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+	desired := &models.Stack{
+		Name:           "shell-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+
+	err := v.ValidateForUpdate(context.Background(), existing, desired)
+	if err != nil {
+		t.Fatalf("expected empty stack resources to pass, got %v", err)
+	}
+}
+
+// TestValidateForCreateDedupesDuplicateNameErrors exercises the fat path's
+// two independent duplicate-name detectors: stackValidator's own
+// validateUniqueResourceNames, and the per-resource sibling rule that the
+// (mocked) ResourceValidator would run in production. Both report the same
+// offending resource with matching field/code/message text; the aggregated
+// result must collapse that overlap to exactly one error per offending
+// resource index rather than surfacing 2-3 copies.
+func TestValidateForCreateDedupesDuplicateNameErrors(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *models.Stack, resource *models.StackResource, siblings []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+			// Mirrors stackresource.validateSiblingRules' name-dup check.
+			for _, s := range siblings {
+				if s.Name == resource.Name {
+					return []errors.FieldError{{
+						Field:   "name",
+						Code:    errors.VErrResourceNameDuplicate,
+						Message: fmt.Sprintf("duplicate stack resource name '%s'", resource.Name),
+					}}, nil
+				}
+			}
+			return nil, nil
+		}).
+		AnyTimes()
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"}},
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"}},
+		},
+	}
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	errs := fieldErrors(t, err)
+
+	dupErrs := map[string]int{}
+	for _, fe := range errs {
+		if fe.Code == errors.VErrResourceNameDuplicate {
+			dupErrs[fe.Field]++
+		}
+	}
+	if len(dupErrs) != 2 {
+		t.Fatalf("expected duplicate-name errors on exactly 2 resource indices, got %v (all errors: %#v)", dupErrs, errs)
+	}
+	for field, count := range dupErrs {
+		if count != 1 {
+			t.Fatalf("expected exactly 1 duplicate-name error for field %q, got %d (all errors: %#v)", field, count, errs)
+		}
+	}
+}
+
+// newTestValidatorSpec returns a spec with a permissive ResourceValidator
+// stub: every call to Validate succeeds with no field errors, so tests can
+// focus on stack-level behavior (connections, settings) without needing to
+// wire the full stackresource.Validator dependency graph.
+func newTestValidatorSpec(t *testing.T) StackValidatorSpec {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, nil).
+		AnyTimes()
+
+	return StackValidatorSpec{
+		ResourceValidator: resourceValidator,
+	}
+}
+
+func newTestValidator(t *testing.T) validator.StackValidator {
+	t.Helper()
+	return NewStackValidator(newTestValidatorSpec(t))
 }
 
 func stackWithPorts(ports ...models.Port) *models.Stack {
@@ -564,13 +740,24 @@ func newValidatorWithMockedPostgresAddonService(t *testing.T) (validator.StackVa
 	t.Cleanup(ctrl.Finish)
 
 	postgresAddons := mocks.NewMockpostgresAddonService(ctrl)
-	return NewStackValidator(StackValidatorSpec{
-		PostgresAddonService: postgresAddons,
-	}), postgresAddons
+	spec := newTestValidatorSpec(t)
+	spec.PostgresAddonService = postgresAddons
+	return NewStackValidator(spec), postgresAddons
+}
+
+func newValidatorWithMockedSecretService(t *testing.T) (validator.StackValidator, *mocks.MocksecretService) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	secrets := mocks.NewMocksecretService(ctrl)
+	spec := newTestValidatorSpec(t)
+	spec.SecretService = secrets
+	return NewStackValidator(spec), secrets
 }
 
 func TestValidateForCreateAllowsBuildArtifactSourceConnection(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.StackResources = append(spec.StackResources, &models.StackResource{
 		Name: "builder",
@@ -605,7 +792,7 @@ func TestValidateForCreateAllowsBuildArtifactSourceConnection(t *testing.T) {
 }
 
 func TestValidateForCreateRejectsBuildArtifactSourceWithoutSourcePath(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
 	spec.Volumes = []*models.Volume{{Name: "assets"}}
@@ -628,7 +815,7 @@ func TestValidateForCreateRejectsBuildArtifactSourceWithoutSourcePath(t *testing
 }
 
 func TestValidateForCreateRejectsBuildArtifactSourceTargetingNonVolume(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
 	spec.Connections = models.StackConnections{
@@ -650,7 +837,7 @@ func TestValidateForCreateRejectsBuildArtifactSourceTargetingNonVolume(t *testin
 }
 
 func TestValidateForCreateRejectsBuildArtifactSourceWithUnknownVolume(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
+	v := newTestValidator(t)
 	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
 	spec.StackResources[0].BuildConfig = &models.BuildConfigSpec{}
 	spec.Connections = models.StackConnections{
@@ -755,175 +942,7 @@ func TestValidateForCreateRejectsValueRefWithNeitherOutputNorTemplate(t *testing
 	}
 }
 
-func TestValidateForCreateAcceptsValidWorkloadTypes(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	for _, wt := range []models.WorkloadType{
-		models.WorkloadTypeService,
-		models.WorkloadTypeStatefulService,
-		models.WorkloadTypeWorker,
-		models.WorkloadTypeJob,
-		models.WorkloadTypeCronJob,
-	} {
-		t.Run(string(wt), func(t *testing.T) {
-			sr := &models.StackResource{
-				Name:         "app",
-				WorkloadType: wt,
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-			}
-			if wt == models.WorkloadTypeCronJob {
-				sr.Schedule = "*/5 * * * *"
-			}
-			if wt == models.WorkloadTypeService || wt == models.WorkloadTypeStatefulService {
-				sr.Ports = []models.Port{{Name: "http", Number: 8080, Protocol: "http"}}
-			}
-			spec := &models.Stack{
-				Name:           "test-stack",
-				OrganisationID: "org-1",
-				UserID:         "user-1",
-				StackResources: []*models.StackResource{sr},
-			}
-			err := v.ValidateForCreate(context.Background(), spec)
-			if err != nil {
-				t.Fatalf("expected workload type %s to be accepted, got %v", wt, err)
-			}
-		})
-	}
-}
-
-func TestValidateForCreateRejectsInvalidWorkloadType(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := &models.Stack{
-		Name:           "test-stack",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name:         "app",
-				WorkloadType: models.WorkloadType("InvalidType"),
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-			},
-		},
-	}
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected invalid workload type to be rejected")
-	}
-	if got, want := err.Error(), "error: stack resource 'app' has unsupported workload_type 'InvalidType'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
-	}
-}
-
-func TestValidateForCreateCronJobRequiresSchedule(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := &models.Stack{
-		Name:           "test-stack",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name:         "cron",
-				WorkloadType: models.WorkloadTypeCronJob,
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-			},
-		},
-	}
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected CronJob without schedule to be rejected")
-	}
-	if got, want := err.Error(), "error: stack resource 'cron' requires schedule for workload_type 'CronJob'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
-	}
-}
-
-func TestValidateForCreateRejectsScheduleForNonCronJob(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := &models.Stack{
-		Name:           "test-stack",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name:         "web",
-				WorkloadType: models.WorkloadTypeService,
-				Schedule:     "* * * * *",
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-				Ports:        []models.Port{{Name: "http", Number: 8080, Protocol: "http"}},
-			},
-		},
-	}
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatal("expected schedule on non-CronJob to be rejected")
-	}
-	if got, want := err.Error(), "error: stack resource 'web' cannot set schedule for workload_type 'Service'"; got != want {
-		t.Fatalf("unexpected error: got %q want %q", got, want)
-	}
-}
-
-func TestValidateForCreateRejectsPortsOnWorkerJobCronJob(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	for _, wt := range []models.WorkloadType{
-		models.WorkloadTypeWorker,
-		models.WorkloadTypeJob,
-		models.WorkloadTypeCronJob,
-	} {
-		t.Run(string(wt), func(t *testing.T) {
-			sr := &models.StackResource{
-				Name:         "app",
-				WorkloadType: wt,
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-				Ports:        []models.Port{{Name: "http", Number: 8080, Protocol: "http"}},
-			}
-			if wt == models.WorkloadTypeCronJob {
-				sr.Schedule = "*/5 * * * *"
-			}
-			spec := &models.Stack{
-				Name:           "test-stack",
-				OrganisationID: "org-1",
-				UserID:         "user-1",
-				StackResources: []*models.StackResource{sr},
-			}
-			err := v.ValidateForCreate(context.Background(), spec)
-			if err == nil {
-				t.Fatalf("expected ports on %s to be rejected", wt)
-			}
-		})
-	}
-}
-
-func TestValidateForCreateRejectsReplicasOnJobCronJob(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	replicas := int32(3)
-	for _, wt := range []models.WorkloadType{
-		models.WorkloadTypeJob,
-		models.WorkloadTypeCronJob,
-	} {
-		t.Run(string(wt), func(t *testing.T) {
-			sr := &models.StackResource{
-				Name:         "app",
-				WorkloadType: wt,
-				Replicas:     &replicas,
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-			}
-			if wt == models.WorkloadTypeCronJob {
-				sr.Schedule = "*/5 * * * *"
-			}
-			spec := &models.Stack{
-				Name:           "test-stack",
-				OrganisationID: "org-1",
-				UserID:         "user-1",
-				StackResources: []*models.StackResource{sr},
-			}
-			err := v.ValidateForCreate(context.Background(), spec)
-			if err == nil {
-				t.Fatalf("expected replicas on %s to be rejected", wt)
-			}
-		})
-	}
-}
-
-func TestBuildConfigSpecValidateRejectsCommitOnly(t *testing.T) {
+func TestBuildConfigSpecValidateAcceptsCommitOnly(t *testing.T) {
 	cfg := models.BuildConfigSpec{
 		SourceContext: models.BuildContextSource{
 			Volume: &models.VolumeBuildSource{SourceVolumeName: "src"},
@@ -934,14 +953,8 @@ func TestBuildConfigSpecValidateRejectsCommitOnly(t *testing.T) {
 		BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
 	}
 	err := cfg.Validate()
-	if err == nil {
-		t.Fatal("expected commit-only git revision to be rejected")
-	}
-	if got, want := err.Error(), "a branch or tag is required"; got != want {
-		// The error message may include a prefix; check containment
-		if got != want && !containsSubstr(got, want) {
-			t.Fatalf("unexpected error: got %q want it to contain %q", got, want)
-		}
+	if err != nil {
+		t.Fatalf("expected commit-only git revision to validate, got %v", err)
 	}
 }
 
@@ -973,129 +986,6 @@ func containsSubstr(s, sub string) bool {
 	return false
 }
 
-func TestValidateForCreatePushSecretHappyPath(t *testing.T) {
-	v, secrets := newValidatorWithMockedSecretService(t)
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "push-secret-1").Return(nil)
-
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name: "api",
-				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-					RegistrySecretRef:    &models.SecretReference{SecretID: "push-secret-1"},
-				},
-			},
-		},
-	}
-	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
-		t.Fatalf("expected push secret validation to pass, got %v", err)
-	}
-}
-
-func TestValidateForCreatePushSecretWrongType(t *testing.T) {
-	v, secrets := newValidatorWithMockedSecretService(t)
-	secrets.EXPECT().ValidateImageRegistrySecretForStackResource(gomock.Any(), "bad-secret").
-		Return(errors.BadRequest("secret type mismatch"))
-
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name: "api",
-				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-					RegistrySecretRef:    &models.SecretReference{SecretID: "bad-secret"},
-				},
-			},
-		},
-	}
-	if err := v.ValidateForCreate(context.Background(), spec); err == nil {
-		t.Fatalf("expected push secret with wrong type to be rejected")
-	}
-}
-
-func TestValidateForCreatePushSecretEmptyID(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name: "api",
-				BuildConfig: &models.BuildConfigSpec{
-					SourceContext:        models.BuildContextSource{Git: &models.GitBuildSource{RepoURL: "https://github.com/example/repo"}},
-					SourceRevision:       models.BuildSourceRevision{Git: &models.GitRevision{Branch: "main"}},
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "myregistry.io/org/repo"},
-					RegistrySecretRef:    &models.SecretReference{SecretID: ""},
-				},
-			},
-		},
-	}
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected empty push secret ID to be rejected")
-	}
-	if !containsSubstr(err.Error(), "empty push secret ID") {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-}
-
-func TestValidateForCreateRejectsNegativeReplicas(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	neg := int32(-1)
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name:         "api",
-				WorkloadType: models.WorkloadTypeService,
-				Replicas:     &neg,
-				ImageConfig:  &models.ImageConfigSpec{Image: "nginx:latest"},
-			},
-		},
-	}
-	err := v.ValidateForCreate(context.Background(), spec)
-	if err == nil {
-		t.Fatalf("expected negative replicas to be rejected")
-	}
-	if !containsSubstr(err.Error(), "cannot be negative") {
-		t.Fatalf("unexpected error: %s", err.Error())
-	}
-}
-
-func TestValidateForCreateAcceptsCronDescriptorSchedule(t *testing.T) {
-	v := NewStackValidator(StackValidatorSpec{})
-	spec := &models.Stack{
-		Name:           "test",
-		OrganisationID: "org-1",
-		UserID:         "user-1",
-		StackResources: []*models.StackResource{
-			{
-				Name:         "cleanup",
-				WorkloadType: models.WorkloadTypeCronJob,
-				Schedule:     "@daily",
-				ImageConfig:  &models.ImageConfigSpec{Image: "busybox:latest"},
-			},
-		},
-	}
-	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
-		t.Fatalf("expected @daily schedule to be accepted, got %v", err)
-	}
-}
-
 func TestBuildConfigSpecValidateRejectsBranchAndTag(t *testing.T) {
 	cfg := models.BuildConfigSpec{
 		SourceContext: models.BuildContextSource{
@@ -1118,13 +1008,264 @@ func TestBuildConfigSpecValidateRejectsBranchAndTag(t *testing.T) {
 	}
 }
 
-func newValidatorWithMockedSecretService(t *testing.T) (validator.StackValidator, *mocks.MocksecretService) {
-	t.Helper()
+// --- delegation / aggregation tests ---
+
+func TestValidateForCreateAggregatesFieldErrorsAcrossResources(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
 
-	secrets := mocks.NewMocksecretService(ctrl)
-	return NewStackValidator(StackValidatorSpec{
-		SecretService: secrets,
-	}), secrets
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *models.Stack, resource *models.StackResource, _ []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+			return []errors.FieldError{
+				{Field: "name", Code: errors.VErrResourceNameInvalid, Message: fmt.Sprintf("bad resource '%s'", resource.Name)},
+			}, nil
+		}).
+		Times(2)
+
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{Name: "web", ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"}},
+			{Name: "worker", ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"}},
+		},
+	}
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	errs := fieldErrors(t, err)
+	if len(errs) != 2 {
+		t.Fatalf("expected 2 aggregated field errors, got %d: %#v", len(errs), errs)
+	}
+	seen := map[string]bool{}
+	for _, fe := range errs {
+		seen[fe.Field] = true
+	}
+	if !seen["spec.stack_resources[0].name"] || !seen["spec.stack_resources[1].name"] {
+		t.Fatalf("expected prefixed fields for both resources, got %#v", errs)
+	}
+}
+
+func TestValidateForCreatePropagatesResourceValidatorServiceError(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	infraErr := errors.GeneralError("db unreachable")
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(nil, infraErr)
+
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	if err != infraErr {
+		t.Fatalf("expected infra ServiceError to propagate unchanged, got %v", err)
+	}
+}
+
+func TestValidateForUpdateDelegatesToResourceValidatorWithPrefix(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]errors.FieldError{
+			{Field: "name", Code: errors.VErrResourceNameInvalid, Message: "bad"},
+		}, nil)
+
+	existing := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	desired := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	desired.Name = existing.Name
+	desired.UserID = existing.UserID
+	desired.OrganisationID = existing.OrganisationID
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	err := v.ValidateForUpdate(context.Background(), existing, desired)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Field, "spec.stack_resources[0].name"; got != want {
+		t.Fatalf("unexpected field: got %q want %q", got, want)
+	}
+}
+
+// TestValidateForCreateReportsMissingMountedVolumeFromResourceValidator
+// covers the fat-path behavior the (now removed) stackValidator-local
+// validateVolumeReferences used to provide on its own: a mount referencing
+// a volume the request doesn't declare must still surface as a 400 with
+// VErrVolumeNotFound, prefixed to the offending resource's index. That
+// detection now happens solely inside the delegated
+// stackresource.Validator - production's real Validate checks the
+// request's own bundled volumes first, then falls back to a
+// namespace-scoped DB lookup that would 404 for a name the payload never
+// declared. Here the mock stands in for that whole (payload-first + DB
+// fallback) rule and returns the not-found error directly; what this test
+// verifies is that stackValidator.validateResources still prefixes and
+// surfaces it correctly now that it's the only source of this error.
+func TestValidateForCreateReportsMissingMountedVolumeFromResourceValidator(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return([]errors.FieldError{
+			{
+				Field:   "volume_mounts[0].source_volume",
+				Code:    errors.VErrVolumeNotFound,
+				Message: "volume 'missing-volume' does not exist",
+			},
+		}, nil)
+
+	spec := &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{
+			{
+				Name:        "web",
+				ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"},
+				VolumeMounts: []*models.VolumeMount{
+					{SourceVolumeName: "missing-volume", TargetPath: "/data"},
+				},
+			},
+		},
+	}
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Field, "spec.stack_resources[0].volume_mounts[0].source_volume"; got != want {
+		t.Fatalf("unexpected field: got %q want %q", got, want)
+	}
+	if got, want := fe.Code, errors.VErrVolumeNotFound; got != want {
+		t.Fatalf("unexpected code: got %q want %q", got, want)
+	}
+}
+
+func TestValidateConnectionsRejectsUnknownTargetResource(t *testing.T) {
+	// No expectations set on the resource validator mock: ValidateConnections
+	// must not invoke per-resource validation at all.
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "internal-api",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "phantom"},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "WEB_URL"},
+				Value:  models.ValueRef{Output: "url.http"},
+			},
+		},
+	})
+
+	err := v.ValidateConnections(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Field, "spec.connections[0]"; got != want {
+		t.Fatalf("unexpected field: got %q want %q", got, want)
+	}
+	if got, want := fe.Code, errors.VErrConnectionInvalid; got != want {
+		t.Fatalf("unexpected code: got %q want %q", got, want)
+	}
+	if got, want := fe.Message, "connection 'internal-api' references unknown stack resource 'phantom'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateConnectionsAcceptsValidConnection(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "internal-api",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "SELF_URL"},
+				Value:  models.ValueRef{Output: "url.http"},
+			},
+		},
+	})
+
+	if err := v.ValidateConnections(context.Background(), spec); err != nil {
+		t.Fatalf("expected valid connection to pass, got %v", err)
+	}
+}
+
+// TestValidateConnectionsIgnoresUnrelatedResourceInvalidity is the point of
+// the narrow gate: a connection-only mutation must not be blocked by a
+// pre-existing, unrelated invalidity elsewhere in the stack (e.g. a bad port
+// on a resource the connection doesn't touch) that the connection form gives
+// the user no way to fix. ValidateForUpdate's full per-resource pass would
+// surface it; ValidateConnections must not even invoke the per-resource
+// validator.
+func TestValidateConnectionsIgnoresUnrelatedResourceInvalidity(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *models.Stack, resource *models.StackResource, _ []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+			if resource.Name == "worker" {
+				return []errors.FieldError{
+					{
+						Field:   "ports[0].number",
+						Code:    errors.VErrPortNumberInvalid,
+						Message: "port number is invalid",
+					},
+				}, nil
+			}
+			return nil, nil
+		}).
+		AnyTimes()
+
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources = append(spec.StackResources, &models.StackResource{
+		Name:  "worker",
+		Ports: []models.Port{{Name: "bad", Number: -1, Protocol: "http"}},
+	})
+	spec.Connections = models.StackConnections{
+		{
+			ID:   "internal-api",
+			Kind: models.ConnectionKindEnv,
+			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "worker"},
+			Mappings: []models.ConnectionMapping{
+				{
+					Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "WEB_URL"},
+					Value:  models.ValueRef{Output: "url.http"},
+				},
+			},
+		},
+	}
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	// Sanity check: the full-stack path does surface the unrelated resource's
+	// invalid port.
+	if err := v.ValidateForUpdate(context.Background(), spec, spec); err == nil {
+		t.Fatal("expected ValidateForUpdate to surface the unrelated resource's invalid port")
+	}
+
+	// The connection-scoped gate must ignore it.
+	if err := v.ValidateConnections(context.Background(), spec); err != nil {
+		t.Fatalf("expected ValidateConnections to ignore unrelated resource invalidity, got %v", err)
+	}
 }

@@ -43,8 +43,8 @@ function inferStackIcon(stack: Stack) {
   // Pick an icon based on the first resource's source type
   const first = stack.spec?.stack_resources?.[0];
   if (!first) return Layers;
-  if (first.build_spec) return GitBranch;
-  if (first.image_spec) return Box;
+  if (first.source?.git) return GitBranch;
+  if (first.source?.image) return Box;
   return Layers;
 }
 

@@ -3,9 +3,9 @@ package presenters_test
 import (
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/presenters"
 )
 
 func TestPresentStackIncludesConnections(t *testing.T) {
@@ -91,7 +91,7 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 		},
 	})
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{})
+	spec := openapi.NewStackSpec()
 	spec.SetConnections([]openapi.StackConnection{*conn})
 	stack := openapi.NewStack("demo", *spec)
 
@@ -172,10 +172,11 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 		t.Fatalf("expected presented self_output, got %q", presentedEnv.GetSelfOutput())
 	}
 
-	spec := openapi.NewStackSpec([]openapi.StackResource{
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{
 		{
-			Name:      "web",
-			ImageSpec: &openapi.ImageSpec{Image: "nginx:latest"},
+			Name:   "web",
+			Source: &openapi.SourceSpec{Image: openapi.NewImageSource("nginx:latest")},
 			Ports: []openapi.Port{
 				{Name: "http", Number: 8080, Protocol: openapi.PtrString("http"), ExposedToPublic: true},
 			},

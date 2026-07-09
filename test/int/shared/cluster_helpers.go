@@ -19,8 +19,8 @@ import (
 	"k8s.io/client-go/transport/spdy"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 	addonsv1alpha1 "stackdome.io/cluster-agent/api/addons/v1alpha1"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
@@ -549,12 +549,12 @@ func VerifyGitCredentialsSecretExists(ctx context.Context, clusterClient client.
 
 	found := false
 	for _, secret := range secretList.Items {
-		if strings.HasPrefix(secret.Name, "git-credentials-") {
+		if strings.HasPrefix(secret.Name, "git-integration-") {
 			found = true
 			break
 		}
 	}
-	Expect(found).To(BeTrue(), "expected a git-credentials secret with stack ID label in namespace %s", namespace)
+	Expect(found).To(BeTrue(), "expected a git-integration credential secret with stack ID label in namespace %s", namespace)
 }
 
 func GetIngressForStackResource(ctx context.Context, clusterClient client.Client, namespace, resourceName string) (*networkingv1.Ingress, error) {

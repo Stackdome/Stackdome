@@ -13,7 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
 	gomock "go.uber.org/mock/gomock"
 )
 

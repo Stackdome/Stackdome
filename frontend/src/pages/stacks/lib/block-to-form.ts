@@ -1,5 +1,6 @@
 import type { BlockPreset } from "@/pages/stacks/data/blocks/types";
 import { BlockId, DATA_BLOCK_CATEGORIES } from "@/pages/stacks/data/blocks/types";
+import { PLACEHOLDER_PASSWORDS } from "@/pages/stacks/data/blocks/registry";
 import { parseAndValidateDockerCompose } from "@/lib/docker-compose-parser";
 import { convertDockerComposeToStackData } from "@/lib/docker-compose-converter";
 import type {
@@ -21,7 +22,7 @@ function genericResource(block: BlockPreset): FormStackResourceData {
   const base = {
     name: block.id,
     sourceType: "image" as const,
-    image_spec: { image: "" },
+    source: { image: { ref: "" } },
     ports:
       block.id === BlockId.Web
         ? [{ name: "http-80", number: 80, protocol: "http", exposed_to_public: true }]
@@ -60,18 +61,19 @@ function internalizePorts(resource: FormStackResourceData): FormStackResourceDat
   } as FormStackResourceData;
 }
 
-/** Fill empty env values (the registry's password placeholders) with a
+/** Swap the registry's placeholder passwords (and any empty env value) for a
  *  generated secret so the container actually boots on first deploy. */
 function fillEmptyEnvValues(resource: FormStackResourceData): FormStackResourceData {
+  const isPlaceholder = (v: string | undefined) => v === "" || (v !== undefined && PLACEHOLDER_PASSWORDS.has(v));
   const env = resource.execution_config?.environment_variables as
     | { name?: string; value?: string; from?: string }[]
     | undefined;
-  if (!env?.some((r) => r.value === "")) return resource;
+  if (!env?.some((r) => isPlaceholder(r.value))) return resource;
   return {
     ...resource,
     execution_config: {
       ...resource.execution_config,
-      environment_variables: env.map((r) => (r.value === "" ? { ...r, value: generatedPassword() } : r)),
+      environment_variables: env.map((r) => (isPlaceholder(r.value) ? { ...r, value: generatedPassword() } : r)),
     },
   } as FormStackResourceData;
 }

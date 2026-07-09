@@ -2,11 +2,12 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -44,6 +45,9 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 	ctx = db.CtxWithTransaction(ctx, tx)
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Create(spec).Error; err != nil {
 		tx.Rollback()
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
+		}
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
@@ -94,6 +98,9 @@ func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*mod
 	}
 
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Create(spec).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
+		}
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
@@ -252,9 +259,9 @@ func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceErr
 	return nil
 }
 
-func (w *stackStore) GetByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
+func (w *stackStore) GetByNameAndTeamID(ctx context.Context, name string, teamID string) (*models.Stack, *errors.ServiceError) {
 	var stack models.Stack
-	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND user_id = ?", name, userID).Error; err != nil {
+	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND team_id = ?", name, teamID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, errors.NotFound("stack with name %s not found", name)
 		}
@@ -325,6 +332,22 @@ func (w *stackStore) UpdateWithTx(ctx context.Context, id string, spec *models.S
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, id, spec.Connections); err != nil {
 		return nil, errors.GeneralError("failed to update stack connections: %v", err)
+	}
+	return w.GetByID(ctx, id)
+}
+
+func (w *stackStore) UpdateShellWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	_, err := w.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return nil, errors.GeneralError("transaction not found in context")
+	}
+	spec.Status = nil
+	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Where("id = ?", id).Updates(spec).Error; err != nil {
+		return nil, errors.GeneralError("failed to update stack: %s", err.Error())
 	}
 	return w.GetByID(ctx, id)
 }

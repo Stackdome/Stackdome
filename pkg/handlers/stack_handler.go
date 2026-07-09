@@ -3,13 +3,13 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/handlers/validation"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/presenters"
-	"github.com/ashishmax31/stackdome-api-server/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/handlers/validation"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/presenters"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/gorilla/mux"
 	"k8s.io/utils/ptr"
 )
@@ -95,6 +95,9 @@ func (h *stackHandler) CreateConnection(w http.ResponseWriter, r *http.Request) 
 	var connection openapi.StackConnection
 	cfg := &handlerConfig{
 		MarshalInto: &connection,
+		Validate: func() *errors.ServiceError {
+			return validation.ValidateStackConnection(&connection)
+		},
 		Action: func() (interface{}, *errors.ServiceError) {
 			id := mux.Vars(r)["id"]
 			obj, err := h.stackService.CreateStackConnection(r.Context(), id, presenters.ConvertStackConnection(&connection))
@@ -130,6 +133,9 @@ func (h *stackHandler) UpdateConnection(w http.ResponseWriter, r *http.Request) 
 	var connection openapi.StackConnection
 	cfg := &handlerConfig{
 		MarshalInto: &connection,
+		Validate: func() *errors.ServiceError {
+			return validation.ValidateStackConnection(&connection)
+		},
 		Action: func() (interface{}, *errors.ServiceError) {
 			stackID := mux.Vars(r)["id"]
 			connectionID := mux.Vars(r)["connection_id"]
@@ -256,7 +262,7 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var ws openapi.Stack
 	cfg := &handlerConfig{
 		&ws,
-		validation.ValidateStack(&ws),
+		validation.ValidateStackShell(&ws),
 		func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			teamID, serr := resolveTeamID(r, h.teamService)
@@ -272,6 +278,9 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 			convertedObject.OrganisationID = orgID
 			convertedObject.TeamID = teamID
 			convertedObject.UserID = identity.UserID
+			convertedObject.StackResources = nil
+			convertedObject.Volumes = nil
+			convertedObject.Connections = nil
 
 			obj, serr := h.stackService.CreateStack(ctx, convertedObject)
 			if serr != nil {
@@ -286,6 +295,44 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
+	var ws openapi.Stack
+	cfg := &handlerConfig{
+		&ws,
+		validation.ValidateStackShell(&ws),
+		func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			id := mux.Vars(r)["id"]
+			identity := auth.GetIdentityFromCtx(ctx)
+			if identity == nil {
+				return nil, errors.Unauthorized("failed to fetch user")
+			}
+
+			teamID, serr := resolveTeamID(r, h.teamService)
+			if serr != nil {
+				return nil, serr
+			}
+
+			convertedObject := presenters.ConvertStack(&ws)
+			orgID := mux.Vars(r)["org_id"]
+			convertedObject.OrganisationID = orgID
+			convertedObject.TeamID = teamID
+			convertedObject.UserID = identity.UserID
+			convertedObject.StackResources = nil
+			convertedObject.Volumes = nil
+			convertedObject.Connections = nil
+
+			obj, serr := h.stackService.UpdateStackShell(ctx, id, convertedObject)
+			if serr != nil {
+				return nil, serr
+			}
+			return presenters.PresentStack(obj), nil
+		},
+		handleError,
+	}
+	handle(w, r, cfg, http.StatusOK)
+}
+
+func (h *stackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	var ws openapi.Stack
 	cfg := &handlerConfig{
 		&ws,
@@ -309,6 +356,7 @@ func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
 			convertedObject.TeamID = teamID
 			convertedObject.UserID = identity.UserID
 
+			// Full object update including children resources.
 			obj, serr := h.stackService.UpdateStack(ctx, id, convertedObject)
 			if serr != nil {
 				return nil, serr
@@ -318,6 +366,50 @@ func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
 		handleError,
 	}
 	handle(w, r, cfg, http.StatusOK)
+}
+
+// ApplyByName is the name-addressed variant of Apply (kubectl-style upsert):
+// stack identity comes from the body's name (unique per team), not the URL.
+// Responds 201 when the stack was created, 200 when it was updated.
+func (h *stackHandler) ApplyByName(w http.ResponseWriter, r *http.Request) {
+	var ws openapi.Stack
+	created := false
+	cfg := &handlerConfig{
+		&ws,
+		validation.ValidateStack(&ws),
+		func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			identity := auth.GetIdentityFromCtx(ctx)
+			if identity == nil {
+				return nil, errors.Unauthorized("failed to fetch user")
+			}
+
+			teamID, serr := resolveTeamID(r, h.teamService)
+			if serr != nil {
+				return nil, serr
+			}
+
+			convertedObject := presenters.ConvertStack(&ws)
+			orgID := mux.Vars(r)["org_id"]
+			convertedObject.OrganisationID = orgID
+			convertedObject.TeamID = teamID
+			convertedObject.UserID = identity.UserID
+
+			obj, wasCreated, serr := h.stackService.ApplyStack(ctx, convertedObject)
+			if serr != nil {
+				return nil, serr
+			}
+			created = wasCreated
+			return presenters.PresentStack(obj), nil
+		},
+		handleError,
+	}
+	handleWithDynamicStatus(w, r, cfg, func() int {
+		if created {
+			return http.StatusCreated
+		}
+		return http.StatusOK
+	})
 }
 
 func (h *stackHandler) Delete(w http.ResponseWriter, r *http.Request) {

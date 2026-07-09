@@ -4,14 +4,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/releasegc"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
+	"github.com/Stackdome/stackdome/pkg/builders"
+	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stackdeploy"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/worker"
+	"github.com/Stackdome/stackdome/pkg/worker/releasegc"
+	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 )
 
 const (
@@ -26,10 +28,13 @@ type ReleaseWorkerSpec struct {
 	CRBuilder             builders.ClusterResourceBuilder
 	SecretBuilder         builders.SecretBuilder
 	SecretService         secretService
+	CredentialResolver    credentials.Resolver
 	PostgresAddonService  postgresAddonService
 	VolumeService         volumeService
 	Resolver              *stackdeploy.Resolver
 	ReleaseWorkerEnqueuer workermanager.BackgroundJobEnqueuer
+	ValidationRecords     stores.ResourceValidationRecordStore
+	RegistryClients       registryClientProvider
 	Env                   string
 }
 
@@ -49,6 +54,7 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 		subReconcilers: []subReconciler{
 			newGatekeeperReconciler(spec),
 			newSimulatorReconciler(spec),
+			newValidationReconciler(spec),
 			newRenderReconciler(spec),
 			newApplyReconciler(spec),
 			newConvergeReconciler(spec),

@@ -16,9 +16,11 @@ const (
 
 // PreviewGitRepository holds the git configuration for a preview environment.
 type PreviewGitRepository struct {
-	RepoURL     string  `json:"repo_url"`
-	BaseBranch  string  `json:"base_branch"`
-	GitSecretID *string `json:"git_secret_id,omitempty"`
+	RepoURL    string `json:"repo_url"`
+	BaseBranch string `json:"base_branch"`
+	// IntegrationID pins an org-level git integration for clone auth;
+	// otherwise clone auth follows host auto-match, then anonymous.
+	IntegrationID string `json:"integration_id,omitempty"`
 }
 
 func (r PreviewGitRepository) Value() (driver.Value, error) {
@@ -60,14 +62,6 @@ func (s *StackPreviewConfig) GitRepoURL() string {
 
 func (s *StackPreviewConfig) GitBaseBranch() string {
 	return s.GitRepository.BaseBranch
-}
-
-func (s *StackPreviewConfig) UsesGitSecret() bool {
-	return s.GitRepository.GitSecretID != nil && *s.GitRepository.GitSecretID != ""
-}
-
-func (s *StackPreviewConfig) GitSecretID() *string {
-	return s.GitRepository.GitSecretID
 }
 
 func (StackPreviewConfig) TableName() string {

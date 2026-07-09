@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -167,6 +167,21 @@ func (m *MockreleaseService) MarkFailed(ctx context.Context, id, message string,
 func (mr *MockreleaseServiceMockRecorder) MarkFailed(ctx, id, message, outcome any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailed", reflect.TypeOf((*MockreleaseService)(nil).MarkFailed), ctx, id, message, outcome)
+}
+
+// MarkFailedWithValidationErrors mocks base method.
+func (m *MockreleaseService) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkFailedWithValidationErrors", ctx, id, message, verrs)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// MarkFailedWithValidationErrors indicates an expected call of MarkFailedWithValidationErrors.
+func (mr *MockreleaseServiceMockRecorder) MarkFailedWithValidationErrors(ctx, id, message, verrs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailedWithValidationErrors", reflect.TypeOf((*MockreleaseService)(nil).MarkFailedWithValidationErrors), ctx, id, message, verrs)
 }
 
 // MarkInProgress mocks base method.

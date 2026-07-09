@@ -40,6 +40,25 @@ function diffIsEmpty(d: SnapshotDiff): boolean {
   return d.resources.length === 0 && d.volumes.length === 0 && d.connections.length === 0;
 }
 
+/** Baseline for a stack that has never converged: every saved resource reads as "added". */
+const EMPTY_SNAPSHOT: StackReleaseSnapshot = { resources: [], volumes: [], connections: [] };
+
+/**
+ * Baseline snapshot the saved/draft spec is diffed against, mirroring the phase rules:
+ * the in-flight release while one is deploying, otherwise the live release, and an empty
+ * baseline when the stack has never converged (first deploy). Undefined when a live release
+ * exists but its snapshot hasn't loaded yet — no honest baseline is available, so no diff
+ * is derivable (the drift heuristic covers phase in that transient window).
+ */
+function baselineSnapshot(args: DeriveDeployLifecycleArgs): StackReleaseSnapshot | undefined {
+  const { stack, activeRelease, activeSnapshot, liveSnapshot } = args;
+  const deploying = !!activeRelease && !isTerminal(activeRelease.state);
+  if (deploying) return activeSnapshot;
+  if (liveSnapshot) return liveSnapshot;
+  if (!stack?.status?.last_converged?.release_id) return EMPTY_SNAPSHOT;
+  return undefined;
+}
+
 /**
  * Pure lifecycle derivation. Mutually-exclusive phases, in priority:
  *   editing   — unsaved edits in the session.
@@ -57,7 +76,16 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
   if (!stack) return { phase: "clean", nextSeq };
 
   if (unsaved) {
-    return { phase: "editing", nextSeq };
+    // Keep the "editing" phase, but surface a diff so the changes panel lists the
+    // saved-so-far changes instead of a placeholder. Baseline follows the same rules
+    // as the staged path; undefined only while a live snapshot is still loading.
+    const base = baselineSnapshot(args);
+    const stagedDiff = base ? diffSnapshots(base, specToSnapshot(stack)) : undefined;
+    // Mirror the staged path's "vs #N" anchor so the label doesn't vanish while an
+    // edit is still autosaving: the in-flight release when deploying, else live.
+    const deploying = !!activeRelease && !isTerminal(activeRelease.state);
+    const vsSeq = deploying ? activeRelease!.sequence : liveSeq;
+    return { phase: "editing", stagedDiff, vsSeq, nextSeq };
   }
 
   const spec = specToSnapshot(stack);
@@ -83,14 +111,20 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
 
   const liveReleaseId = stack.status?.last_converged?.release_id;
   if (!liveReleaseId) {
-    // Never converged a release — any saved resources are staged for the first deploy.
-    const hasSpec = (stack.spec?.stack_resources?.length ?? 0) > 0;
-    return { phase: hasSpec ? "staged" : "clean", vsSeq: liveSeq, nextSeq };
+    // Never converged a release — the whole saved spec is staged for the first deploy,
+    // so diff against an empty baseline (every resource/volume/connection reads as added).
+    const d = diffSnapshots(EMPTY_SNAPSHOT, spec);
+    return diffIsEmpty(d)
+      ? { phase: "clean", vsSeq: liveSeq, nextSeq }
+      : { phase: "staged", stagedDiff: d, vsSeq: liveSeq, nextSeq };
   }
 
   // Live snapshot not loaded yet: fall back to a timestamp drift heuristic (else stay clean,
-  // not a false "staged"). Known false-positive: a metadata-only update or clock skew reads as
-  // drift — accepted, since it self-corrects once the live snapshot loads and the real diff runs.
+  // not a false "staged"). No stagedDiff here on purpose — a live release exists but its
+  // snapshot is missing, so there is no honest baseline to diff against (an empty baseline
+  // would mislabel already-deployed resources as added). The panel body shows its "saving"
+  // hint for this transient window; it self-corrects once the live snapshot loads and the
+  // real diff runs. Known false-positive: a metadata-only update or clock skew reads as drift.
   if (liveRelease) {
     const drift = !!stack.updated_at && !!liveRelease.completed_at
       && new Date(stack.updated_at) > new Date(liveRelease.completed_at);

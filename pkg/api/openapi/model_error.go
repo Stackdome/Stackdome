@@ -22,6 +22,8 @@ type Error struct {
 	Code        *string `json:"code,omitempty"`
 	Reason      *string `json:"reason,omitempty"`
 	OperationId *string `json:"operation_id,omitempty"`
+	// Optional structured, machine-readable error context
+	Details map[string]interface{} `json:"details,omitempty"`
 }
 
 // NewError instantiates a new Error object
@@ -233,6 +235,38 @@ func (o *Error) SetOperationId(v string) {
 	o.OperationId = &v
 }
 
+// GetDetails returns the Details field value if set, zero value otherwise.
+func (o *Error) GetDetails() map[string]interface{} {
+	if o == nil || o.Details == nil {
+		var ret map[string]interface{}
+		return ret
+	}
+	return o.Details
+}
+
+// GetDetailsOk returns a tuple with the Details field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Error) GetDetailsOk() (map[string]interface{}, bool) {
+	if o == nil || o.Details == nil {
+		return nil, false
+	}
+	return o.Details, true
+}
+
+// HasDetails returns a boolean if a field has been set.
+func (o *Error) HasDetails() bool {
+	if o != nil && o.Details != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetDetails gets a reference to the given map[string]interface{} and assigns it to the Details field.
+func (o *Error) SetDetails(v map[string]interface{}) {
+	o.Details = v
+}
+
 func (o Error) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
@@ -252,6 +286,9 @@ func (o Error) MarshalJSON() ([]byte, error) {
 	}
 	if o.OperationId != nil {
 		toSerialize["operation_id"] = o.OperationId
+	}
+	if o.Details != nil {
+		toSerialize["details"] = o.Details
 	}
 	return json.Marshal(toSerialize)
 }

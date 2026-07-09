@@ -3,8 +3,8 @@ package migratecmd
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/cmd/environment"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
+	"github.com/Stackdome/stackdome/cmd/environment"
+	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/golang/glog"
 	"github.com/spf13/cobra"
 )

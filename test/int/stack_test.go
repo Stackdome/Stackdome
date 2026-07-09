@@ -6,9 +6,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/test/int/shared"
 )
 
 var _ = Describe("Stack", func() {
@@ -52,15 +52,16 @@ var _ = Describe("Stack", func() {
 
 		It("should manage explicit connections independently and project them into topology", func() {
 			api := openapi.NewStackResource("api")
-			api.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			api.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 			api.SetPorts([]openapi.Port{
 				*openapi.NewPort("http", 8080, false),
 			})
 
 			web := openapi.NewStackResource("web")
-			web.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			web.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 
-			spec := openapi.NewStackSpec([]openapi.StackResource{*api, *web})
+			spec := openapi.NewStackSpec()
+			spec.SetStackResources([]openapi.StackResource{*api, *web})
 			stack := openapi.NewStack("test-connections", *spec)
 
 			created := shared.CreateStack(client, orgID, teamName, stack)
@@ -165,38 +166,48 @@ var _ = Describe("Stack", func() {
 	Context("Validation", func() {
 		It("should reject a stack with empty name", func() {
 			resource := openapi.NewStackResource("web")
-			resource.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
-			spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
+			resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
+			spec := openapi.NewStackSpec()
+			spec.SetStackResources([]openapi.StackResource{*resource})
 			stack := openapi.NewStack("", *spec)
 
 			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
 		})
 
-		It("should reject a stack with no resources", func() {
-			spec := openapi.NewStackSpec([]openapi.StackResource{})
+		It("should allow creating a stack with no resources", func() {
+			spec := openapi.NewStackSpec()
 			stack := openapi.NewStack("test-no-resources", *spec)
 
-			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
+			created := shared.CreateStack(client, orgID, teamName, stack)
+			Expect(created.Spec.StackResources).To(BeEmpty())
 		})
 
 		It("should reject a resource with neither build nor image spec", func() {
-			resource := openapi.NewStackResource("web")
-			spec := openapi.NewStackSpec([]openapi.StackResource{*resource})
-			stack := openapi.NewStack("test-no-image", *spec)
+			created := shared.CreateShellStack(client, orgID, teamName,
+				openapi.NewStack("test-no-image", *openapi.NewStackSpec()))
 
-			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
+			resource := openapi.NewStackResource("web")
+			spec := openapi.NewStackSpec()
+			spec.SetStackResources([]openapi.StackResource{*resource})
+			badStack := openapi.NewStack("test-no-image", *spec)
+
+			shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate resource names", func() {
+			created := shared.CreateShellStack(client, orgID, teamName,
+				openapi.NewStack("test-dup-resources", *openapi.NewStackSpec()))
+
 			resource1 := openapi.NewStackResource("web")
-			resource1.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			resource1.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 			resource2 := openapi.NewStackResource("web")
-			resource2.SetImageSpec(*openapi.NewImageSpec("nginx:1.25-alpine"))
+			resource2.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 
-			spec := openapi.NewStackSpec([]openapi.StackResource{*resource1, *resource2})
-			stack := openapi.NewStack("test-dup-resources", *spec)
+			spec := openapi.NewStackSpec()
+			spec.SetStackResources([]openapi.StackResource{*resource1, *resource2})
+			badStack := openapi.NewStack("test-dup-resources", *spec)
 
-			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
+			shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate stack names", func() {
@@ -205,6 +216,53 @@ var _ = Describe("Stack", func() {
 
 			duplicate := shared.CreateSimpleStack("test-dup-name")
 			shared.CreateStackExpectError(client, orgID, teamName, duplicate, http.StatusConflict)
+		})
+	})
+
+	Context("Shell-only update", func() {
+		It("PUT /stacks/{id} preserves children", func() {
+			By("Creating a fat stack with two resources and a connection")
+			created := shared.CreateStack(client, orgID, teamName, shared.CreateMultiResourceStack("shell-preserve"))
+			stackID := created.GetId()
+
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, teamName, stackID)
+			})
+
+			By("PUT-ing a shell-only body with a new label and empty resources/connections")
+			shellUpdate := openapi.NewStack("shell-preserve", *openapi.NewStackSpec())
+			shellUpdate.SetLabels([]openapi.Label{*openapi.NewLabel("tier", "shell-only")})
+
+			updated := shared.UpdateStackShellH(client, orgID, teamName, stackID, shellUpdate)
+
+			By("Verifying the label change is reflected")
+			hasLabel := false
+			for _, l := range updated.GetLabels() {
+				if l.GetKey() == "tier" && l.GetValue() == "shell-only" {
+					hasLabel = true
+					break
+				}
+			}
+			Expect(hasLabel).To(BeTrue(), "shell PUT should apply the label change")
+
+			By("Verifying children were preserved, not wiped")
+			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
+			Expect(topology.GetNodes()).To(HaveLen(2), "shell PUT must not drop resources")
+			Expect(topology.GetEdges()).To(HaveLen(1), "shell PUT must not drop the connection edge")
+			Expect(shared.ListStackConnections(client, orgID, teamName, stackID)).To(HaveLen(1), "shell PUT must preserve connections")
+		})
+
+		It("POST /stacks/{id}/resources with invalid source returns 400", func() {
+			shell := shared.CreateShellStack(client, orgID, teamName,
+				openapi.NewStack("shell-bad-resource", *openapi.NewStackSpec()))
+			stackID := shell.GetId()
+
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, teamName, stackID)
+			})
+
+			resource := openapi.NewStackResource("bad")
+			shared.CreateStackResourceExpectError(client, orgID, teamName, stackID, resource, http.StatusBadRequest)
 		})
 	})
 })

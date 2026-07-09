@@ -4,10 +4,10 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/handlers"
-	"github.com/ashishmax31/stackdome-api-server/pkg/web"
+	"github.com/Stackdome/stackdome/pkg/api"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/handlers"
+	"github.com/Stackdome/stackdome/pkg/web"
 	"github.com/gorilla/mux"
 )
 
@@ -91,6 +91,16 @@ func (s apiServer) routes() *mux.Router {
 		Logger:        logger,
 	})
 
+	registryCredentialHandler := handlers.NewRegistryCredentialHandler(handlers.RegistryCredentialHandlerSpec{
+		RegistryCredentialService: services.RegistryCredentialService,
+		Logger:                    logger,
+	})
+
+	gitIntegrationHandler := handlers.NewGitIntegrationHandler(handlers.GitIntegrationHandlerSpec{
+		GitIntegrationService: services.GitIntegrationService,
+		Logger:                logger,
+	})
+
 	postgresAddonHandler := handlers.NewPostgresAddonHandler(handlers.PostgresAddonHandlerSpec{
 		PostgresAddonService: services.PostgresAddonService,
 		TeamService:          services.TeamService,
@@ -121,6 +131,27 @@ func (s apiServer) routes() *mux.Router {
 	organizationsRouter.HandleFunc("/{org_id}/object-stores", objectStoreHandler.ListByOrgID).Methods(http.MethodGet)
 	organizationsRouter.HandleFunc("/{org_id}/postgres-addons", postgresAddonHandler.ListByOrgID).Methods(http.MethodGet)
 
+	// Org-scoped registry credentials
+	organizationsRouter.HandleFunc("/{org_id}/registry-credentials", registryCredentialHandler.Create).Methods(http.MethodPost)
+	organizationsRouter.HandleFunc("/{org_id}/registry-credentials", registryCredentialHandler.ListByOrgID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/registry-credentials/{id}", registryCredentialHandler.GetByID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/registry-credentials/{id}", registryCredentialHandler.Update).Methods(http.MethodPut)
+	organizationsRouter.HandleFunc("/{org_id}/registry-credentials/{id}", registryCredentialHandler.Delete).Methods(http.MethodDelete)
+	organizationsRouter.HandleFunc("/{org_id}/registry-credentials/{id}/verify", registryCredentialHandler.Verify).Methods(http.MethodPost)
+
+	// Org-scoped git integrations
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/github/manifest", gitIntegrationHandler.CreateGitHubAppManifest).Methods(http.MethodPost)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}/installations", gitIntegrationHandler.ListInstallations).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}/repositories", gitIntegrationHandler.ListRepositories).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}", gitIntegrationHandler.GetRepository).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches", gitIntegrationHandler.ListRepositoryBranches).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations", gitIntegrationHandler.Create).Methods(http.MethodPost)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations", gitIntegrationHandler.ListByOrgID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}", gitIntegrationHandler.GetByID).Methods(http.MethodGet)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}", gitIntegrationHandler.Update).Methods(http.MethodPut)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}", gitIntegrationHandler.Delete).Methods(http.MethodDelete)
+	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}/verify", gitIntegrationHandler.Verify).Methods(http.MethodPost)
+
 	// Cluster routes (org-scoped)
 	clusterRouter := apiV1Router.PathPrefix("/organizations/{org_id}/clusters").Subrouter()
 	clusterRouter.HandleFunc("", clusterHandler.ListClustersForOrg).Methods(http.MethodGet)
@@ -138,6 +169,11 @@ func (s apiServer) routes() *mux.Router {
 	authenticatedUserRouter.HandleFunc("/current", userHandler.GetCurrentUser).Methods(http.MethodGet)
 	authenticatedUserRouter.HandleFunc("/current/teams", teamHandler.ListCurrentUserTeams).Methods(http.MethodGet)
 	authenticatedUserRouter.HandleFunc("/{id}", userHandler.Get).Methods(http.MethodGet)
+
+	// GitHub App manifest callback (browser redirect) and webhook receiver;
+	// both are unauthenticated and validated by state / HMAC respectively.
+	apiV1Router.HandleFunc("/git-integrations/github/manifest/callback", gitIntegrationHandler.GitHubManifestCallback).Methods(http.MethodGet)
+	apiV1Router.HandleFunc("/webhooks/github", gitIntegrationHandler.GitHubWebhook).Methods(http.MethodPost)
 
 	authenticationRouter := apiV1Router.PathPrefix("/auth").Subrouter()
 	authenticationRouter.HandleFunc("/login", userHandler.Login).Methods(http.MethodPost)
@@ -215,6 +251,10 @@ func (s apiServer) routes() *mux.Router {
 	// Stacks (team-scoped)
 	teamResourceRouter.HandleFunc("/stacks", stackHandler.Create).Methods(http.MethodPost)
 	teamResourceRouter.HandleFunc("/stacks", stackHandler.ListByTeamName).Methods(http.MethodGet)
+	// Literal /stacks/apply must be registered before any /stacks/{id} route:
+	// gorilla/mux matches in registration order, so the literal wins over the
+	// {id} pattern for PUT /stacks/apply.
+	teamResourceRouter.HandleFunc("/stacks/apply", stackHandler.ApplyByName).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/topology", stackHandler.GetTopology).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/connections", stackHandler.ListConnections).Methods(http.MethodGet)
@@ -222,6 +262,7 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.UpdateConnection).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.DeleteConnection).Methods(http.MethodDelete)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Update).Methods(http.MethodPut)
+	teamResourceRouter.HandleFunc("/stacks/{id}/apply", stackHandler.Apply).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
 	teamResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)

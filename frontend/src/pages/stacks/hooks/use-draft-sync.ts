@@ -16,7 +16,18 @@ import {
 import { serverStateFromStack, type ServerStackState } from "@/pages/stacks/lib/draft-sync/server-state";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { computeSyncOps, type SyncOp } from "@/pages/stacks/lib/draft-sync/ops";
+import { getErrorMessage, getErrorStatus, isBadRequestError } from "@/api/client";
 import type { EditSessionDraft, UseStackEditSession } from "./use-stack-edit-session";
+
+/** Surfaced to the caller when an autosave op fails, carrying the offending op
+ *  so the UI can toast the reason and mark the responsible field inline. `op` is
+ *  absent when the ops all landed but the post-save refetch failed — the save
+ *  actually succeeded, so there is no op-level field error to attribute. */
+export interface SyncErrorInfo {
+  status?: number;
+  message: string;
+  op?: SyncOp;
+}
 
 export interface UseDraftSyncArgs {
   enabled: boolean;
@@ -24,6 +35,8 @@ export interface UseDraftSyncArgs {
   session: UseStackEditSession;
   ids: { orgId: string; teamName: string; stackId: string } | null;
   onStackRefreshed: (stack: Stack) => void;
+  /** Called when a sync op throws, before the mirror heals. */
+  onSyncError?: (info: SyncErrorInfo) => void;
 }
 
 export interface UseDraftSync {
@@ -74,6 +87,7 @@ export function useDraftSync({
   session,
   ids,
   onStackRefreshed,
+  onSyncError,
 }: UseDraftSyncArgs): UseDraftSync {
   const [status, setStatus] = useState<SyncStatus>(SYNC_STATUS.idle);
   const [failureCount, setFailureCount] = useState(0);
@@ -84,6 +98,8 @@ export function useDraftSync({
   idsRef.current = ids;
   const onRefreshedRef = useRef(onStackRefreshed);
   onRefreshedRef.current = onStackRefreshed;
+  const onSyncErrorRef = useRef(onSyncError);
+  onSyncErrorRef.current = onSyncError;
 
   const mirrorRef = useRef<ServerStackState | null>(null);
   const runningRef = useRef<Promise<boolean> | null>(null);
@@ -137,8 +153,19 @@ export function useDraftSync({
       }
 
       setStatus(SYNC_STATUS.saving);
+      // Track the op in flight so a throw can be pinned to it (ops.length > 0
+      // here, so ops[0] is a safe non-null seed for the type checker).
+      let failingOp: SyncOp = ops[0];
+      // Flips true once every op has landed; a later throw then comes from the
+      // post-save refetch, not from an op, so it must not misattribute a field
+      // error to the last (successful) op.
+      let opsSucceeded = false;
       try {
-        for (const op of ops) await executeOp(op, currentIds);
+        for (const op of ops) {
+          failingOp = op;
+          await executeOp(op, currentIds);
+        }
+        opsSucceeded = true;
         const fresh = await getStackById(currentIds.orgId, currentIds.teamName, currentIds.stackId);
         mirrorRef.current = serverStateFromStack(fresh);
         onRefreshedRef.current(fresh);
@@ -149,10 +176,17 @@ export function useDraftSync({
         setFailureCount(0);
         setStatus(SYNC_STATUS.saved);
         return true;
-      } catch {
+      } catch (err) {
         failuresRef.current += 1;
         setFailureCount(failuresRef.current);
         setStatus(SYNC_STATUS.error);
+        onSyncErrorRef.current?.({
+          status: getErrorStatus(err),
+          message: getErrorMessage(err),
+          // Ops all landed → the refetch failed, not an op. Leave op undefined so
+          // the caller doesn't pin a spurious field error on a save that landed.
+          op: opsSucceeded ? undefined : failingOp,
+        });
         // Heal the mirror from server truth; the draft stays authoritative locally.
         try {
           const fresh = await getStackById(currentIds.orgId, currentIds.teamName, currentIds.stackId);
@@ -161,11 +195,17 @@ export function useDraftSync({
         } catch {
           /* keep the stale mirror; the next attempt refetches again */
         }
-        const backoff = Math.min(RETRY_BASE_MS * 2 ** (failuresRef.current - 1), RETRY_MAX_MS);
-        if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
-        retryTimerRef.current = setTimeout(() => {
-          void startCycle();
-        }, backoff);
+        // A 400 is a client-side validation error: retrying the identical draft
+        // can only fail again. Leave the error status set (terminal) and wait for
+        // the next draft edit to re-trigger a cycle via the debounce effect.
+        // Non-400 (network/5xx) stays on the backoff-retry path.
+        if (!isBadRequestError(err)) {
+          const backoff = Math.min(RETRY_BASE_MS * 2 ** (failuresRef.current - 1), RETRY_MAX_MS);
+          if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+          retryTimerRef.current = setTimeout(() => {
+            void startCycle();
+          }, backoff);
+        }
         return false;
       }
     })().finally(() => {

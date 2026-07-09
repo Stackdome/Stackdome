@@ -11,20 +11,22 @@ import (
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
+
+//go:generate mockgen -destination=../mocks/mock_cluster_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ClusterService
 
 type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)

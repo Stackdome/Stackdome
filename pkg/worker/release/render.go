@@ -6,11 +6,11 @@ import (
 	stderrors "errors"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/builders"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stackdeploy"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stackrelease"
+	"github.com/Stackdome/stackdome/pkg/builders"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stackdeploy"
+	"github.com/Stackdome/stackdome/pkg/stackrelease"
 )
 
 type renderReconciler struct {

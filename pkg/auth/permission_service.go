@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/resourceaccess"
+	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
 //go:generate mockgen -source=permission_service.go -destination=../mocks/mock_permission_service.go -package=mocks

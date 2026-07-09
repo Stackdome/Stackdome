@@ -16,9 +16,8 @@ import (
 
 // InitSpec struct for InitSpec
 type InitSpec struct {
-	ImageSpec *ImageSpec `json:"image_spec,omitempty"`
-	Command   []string   `json:"command,omitempty"`
-	Args      []string   `json:"args,omitempty"`
+	Command []string `json:"command,omitempty"`
+	Args    []string `json:"args,omitempty"`
 }
 
 // NewInitSpec instantiates a new InitSpec object
@@ -36,38 +35,6 @@ func NewInitSpec() *InitSpec {
 func NewInitSpecWithDefaults() *InitSpec {
 	this := InitSpec{}
 	return &this
-}
-
-// GetImageSpec returns the ImageSpec field value if set, zero value otherwise.
-func (o *InitSpec) GetImageSpec() ImageSpec {
-	if o == nil || o.ImageSpec == nil {
-		var ret ImageSpec
-		return ret
-	}
-	return *o.ImageSpec
-}
-
-// GetImageSpecOk returns a tuple with the ImageSpec field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *InitSpec) GetImageSpecOk() (*ImageSpec, bool) {
-	if o == nil || o.ImageSpec == nil {
-		return nil, false
-	}
-	return o.ImageSpec, true
-}
-
-// HasImageSpec returns a boolean if a field has been set.
-func (o *InitSpec) HasImageSpec() bool {
-	if o != nil && o.ImageSpec != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetImageSpec gets a reference to the given ImageSpec and assigns it to the ImageSpec field.
-func (o *InitSpec) SetImageSpec(v ImageSpec) {
-	o.ImageSpec = &v
 }
 
 // GetCommand returns the Command field value if set, zero value otherwise.
@@ -136,9 +103,6 @@ func (o *InitSpec) SetArgs(v []string) {
 
 func (o InitSpec) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.ImageSpec != nil {
-		toSerialize["image_spec"] = o.ImageSpec
-	}
 	if o.Command != nil {
 		toSerialize["command"] = o.Command
 	}

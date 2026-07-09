@@ -7,9 +7,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/test/int/shared"
 )
 
 var _ = Describe("Release E2E", Ordered, func() {
@@ -88,7 +88,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 
 			By("Updating the stack resource image")
 			updateStack := shared.CreateSimpleStack("test-release-update")
-			updateStack.Spec.StackResources[0].ImageSpec.SetImage("nginx:1.26-alpine")
+			updateStack.Spec.StackResources[0].Source.Image.Ref = "nginx:1.26-alpine"
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
 
 			By("Creating release #2")
@@ -129,7 +129,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 
 			By("Updating image to nginx:1.26 + deploying release #2")
 			updateStack := shared.CreateSimpleStack("test-release-rollback")
-			updateStack.Spec.StackResources[0].ImageSpec.SetImage("nginx:1.26-alpine")
+			updateStack.Spec.StackResources[0].Source.Image.Ref = "nginx:1.26-alpine"
 			shared.UpdateStack(client, orgID, teamName, stackID, updateStack)
 			rel2 := shared.CreateRelease(client, orgID, teamName, stackID)
 			shared.WaitForReleaseReleased(client, orgID, teamName, stackID, rel2.GetId(), 5*time.Minute)

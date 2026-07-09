@@ -26,6 +26,9 @@ export interface ResourceTabContext {
   errors: { [field: string]: string | undefined };
   volumes?: Partial<VolumeFormData>[];
   allResources?: { name: string; index: number; outputs: string[] }[];
+  /** Server-computed outputs keyed by resource name. Used for the Self output
+   *  picker, whose draft copy carries no outputs for a newly-added resource. */
+  serverOutputsByName?: ReadonlyMap<string, string[]>;
   secrets: UseSecretsReturn;
   addons: PostgresAddon[];
   addonNameById: Map<string, string>;
@@ -129,12 +132,7 @@ export function useResourceTabProps(args: {
       resource.name,
       resource.depends_on,
       resource.sourceType,
-      resource.image_spec,
-      resource.build_spec,
-      resource.useImageSecret,
-      resource.selectedImageSecretId,
-      resource.useGitSecret,
-      resource.selectedGitSecretId,
+      resource.source,
       resource.gitRevisionType,
       resource.gitRevisionValue,
       resource.volume_mounts,
@@ -168,7 +166,14 @@ export function useResourceTabProps(args: {
         .map((r) => ({ name: r.name, outputs: r.outputs })),
     [context.allResources, thisResourceName],
   );
-  const selfOutputs = useMemo(() => (resource.outputs ?? []).map((o: { name: string }) => o.name), [resource.outputs]);
+  // Prefer the server-truth outputs for this resource's own name; fall back to
+  // the draft copy's outputs (empty for a resource added but not yet saved).
+  const selfOutputs = useMemo(
+    () =>
+      context.serverOutputsByName?.get(resource.name ?? "") ??
+      (resource.outputs ?? []).map((o: { name: string }) => o.name),
+    [context.serverOutputsByName, resource.name, resource.outputs],
+  );
 
   return {
     dirtyTabs,
@@ -182,7 +187,6 @@ export function useResourceTabProps(args: {
       errors: context.errors,
       volumes: context.volumes ?? [],
       allResources: context.allResources,
-      secrets: context.secrets,
       onDiscardField: context.onDiscardField,
       onPatchResource,
       onCreateVolume: context.onCreateVolume,

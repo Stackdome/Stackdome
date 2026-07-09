@@ -27,6 +27,7 @@ export type AddonBindingPatch = {
 
 export type EnvRowErrors = {
   name?: string;
+  value?: string;
   addonId?: string;
   database?: string;
   credField?: string;
@@ -138,7 +139,9 @@ export function EnvRow({
             <Input
               value={row.value || ""}
               onChange={(e) => onChangeValue(e.target.value)}
-              className="h-8 w-full font-mono text-xs md:text-xs"
+              className={`h-8 w-full font-mono text-xs md:text-xs ${
+                rowErrors?.value ? "border-danger" : ""
+              }`}
               placeholder="value"
             />
           )}
@@ -180,6 +183,9 @@ export function EnvRow({
               selfOutput={row.selfOutput}
               onChange={(out) => onChangeSelf?.(out)}
             />
+          )}
+          {rowErrors?.value && (
+            <p className="text-xs text-danger mt-1">{rowErrors.value}</p>
           )}
         </div>
 

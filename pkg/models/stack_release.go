@@ -79,7 +79,8 @@ type StackRelease struct {
 	ManifestRevision string
 	Pins             ReleasePins `gorm:"type:jsonb"`
 	RendererVersion  string
-	Outcome          *ReleaseOutcome `gorm:"type:jsonb"`
+	Outcome          *ReleaseOutcome         `gorm:"type:jsonb"`
+	ValidationErrors ReleaseValidationErrors `gorm:"type:jsonb"`
 	CreatedBy        string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -271,7 +272,10 @@ type ReleasePins struct {
 
 // ResourcePins holds the pinned artifact identifiers for a single resource.
 type ResourcePins struct {
-	GitSHA      string `json:"git_sha,omitempty"`
+	GitSHA string `json:"git_sha,omitempty"`
+	// Branch records the branch a default-branch resolution landed on, so the
+	// snapshot can carry it (the CRD requires branch-or-tag on git revisions).
+	Branch      string `json:"branch,omitempty"`
 	VolumeHash  string `json:"volume_hash,omitempty"`
 	ImageDigest string `json:"image_digest,omitempty"`
 }
@@ -321,6 +325,34 @@ func (o *ReleaseOutcome) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte failed for ReleaseOutcome")
 	}
 	return json.Unmarshal(b, o)
+}
+
+// --- ReleaseValidationErrors ---
+
+// ReleaseValidationError is one structured validation failure attached to a
+// release, addressed to a resource and a field of its spec.
+type ReleaseValidationError struct {
+	ResourceName string `json:"resource_name"`
+	Field        string `json:"field"`
+	Code         string `json:"code"`
+	Message      string `json:"message"`
+}
+
+type ReleaseValidationErrors []ReleaseValidationError
+
+func (v ReleaseValidationErrors) Value() (driver.Value, error) {
+	return json.Marshal(v)
+}
+
+func (v *ReleaseValidationErrors) Scan(value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed for ReleaseValidationErrors")
+	}
+	return json.Unmarshal(b, v)
 }
 
 // ReleaseSummary is a lightweight projection used for release GC decisions.

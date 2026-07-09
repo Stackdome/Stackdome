@@ -3,16 +3,16 @@ package environment
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/config"
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	emailpkg "github.com/ashishmax31/stackdome-api-server/pkg/email"
-	applogger "github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/resourceaccess"
-	"github.com/ashishmax31/stackdome-api-server/pkg/services"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
+	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/db"
+	emailpkg "github.com/Stackdome/stackdome/pkg/email"
+	applogger "github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/resourceaccess"
+	"github.com/Stackdome/stackdome/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -68,6 +68,9 @@ type Services struct {
 	LoggingService              services.LoggingService
 	MetricsService              services.MetricsService
 	SecretService               services.SecretService
+	CredentialResolver          services.CredentialResolver
+	RegistryCredentialService   services.RegistryCredentialService
+	GitIntegrationService       services.GitIntegrationService
 	EncryptionService           services.EncryptionService
 	ObjectStoreService          services.ObjectStoreService
 	PostgresAddonService        services.PostgresAddonService

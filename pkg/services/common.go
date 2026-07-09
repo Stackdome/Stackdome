@@ -1,8 +1,8 @@
 package services
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/services/clusterresource"
-	"github.com/ashishmax31/stackdome-api-server/pkg/worker/workermanager"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
+	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 )
 
 type ClusterResourceServiceInjectable interface {
@@ -11,7 +11,6 @@ type ClusterResourceServiceInjectable interface {
 
 // To be emdedded in services that require cluster resource service dependencies.
 type ClusterResourceServiceDeps struct {
-	ClusterStackService     clusterresource.ClusterStackService
 	ClusterNamespaceService clusterresource.NamespaceClusterResourceService
 	ClusterVolumeService    clusterresource.VolumeClusterResourceService
 	ClusterLoggingService   clusterresource.ClusterLoggingService
@@ -19,7 +18,6 @@ type ClusterResourceServiceDeps struct {
 }
 
 func (s *ClusterResourceServiceDeps) InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps) {
-	s.ClusterStackService = deps.ClusterStackService
 	s.ClusterNamespaceService = deps.ClusterNamespaceService
 	s.ClusterVolumeService = deps.ClusterVolumeService
 	s.ClusterLoggingService = deps.ClusterLoggingService

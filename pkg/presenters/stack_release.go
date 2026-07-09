@@ -3,9 +3,9 @@ package presenters
 import (
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"k8s.io/utils/ptr"
 )
 
@@ -41,6 +41,23 @@ func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
 		result.Pins = presentReleasePins(&r.Pins)
 	}
 
+	if len(r.ValidationErrors) > 0 {
+		result.ValidationErrors = presentReleaseValidationErrors(r.ValidationErrors)
+	}
+
+	return result
+}
+
+func presentReleaseValidationErrors(verrs models.ReleaseValidationErrors) []openapi.ReleaseValidationError {
+	result := make([]openapi.ReleaseValidationError, 0, len(verrs))
+	for _, ve := range verrs {
+		result = append(result, openapi.ReleaseValidationError{
+			ResourceName: ptr.To(ve.ResourceName),
+			Field:        ptr.To(ve.Field),
+			Code:         ptr.To(ve.Code),
+			Message:      ptr.To(ve.Message),
+		})
+	}
 	return result
 }
 
@@ -95,6 +112,7 @@ func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetai
 		RendererVersion:  base.RendererVersion,
 		Pins:             base.Pins,
 		Outcome:          base.Outcome,
+		ValidationErrors: base.ValidationErrors,
 		CreatedBy:        base.CreatedBy,
 		CreatedAt:        base.CreatedAt,
 		UpdatedAt:        base.UpdatedAt,

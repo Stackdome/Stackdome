@@ -3,13 +3,12 @@ package services
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	gitclient "github.com/ashishmax31/stackdome-api-server/pkg/clients/git"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator/secret"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/credentials"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
 type StackPreviewConfigService interface {
@@ -21,27 +20,25 @@ type StackPreviewConfigService interface {
 }
 
 type StackPreviewConfigServiceSpec struct {
-	Store             stores.StackPreviewConfigStore
-	PreviewStackStore stores.PreviewStackStore
-	SecretService     SecretService
-	Permissions       auth.PermissionService
+	Store              stores.StackPreviewConfigStore
+	PreviewStackStore  stores.PreviewStackStore
+	CredentialResolver CredentialResolver
+	Permissions        auth.PermissionService
 }
 
 type stackPreviewConfigService struct {
-	store             stores.StackPreviewConfigStore
-	previewStackStore stores.PreviewStackStore
-	secretService     SecretService
-	secretValidator   validator.SecretValidator
-	permissions       auth.PermissionService
+	store              stores.StackPreviewConfigStore
+	previewStackStore  stores.PreviewStackStore
+	credentialResolver CredentialResolver
+	permissions        auth.PermissionService
 }
 
 func NewStackPreviewConfigService(spec StackPreviewConfigServiceSpec) StackPreviewConfigService {
 	return &stackPreviewConfigService{
-		store:             spec.Store,
-		previewStackStore: spec.PreviewStackStore,
-		secretService:     spec.SecretService,
-		secretValidator:   secret.NewSecretValidator(),
-		permissions:       spec.Permissions,
+		store:              spec.Store,
+		previewStackStore:  spec.PreviewStackStore,
+		credentialResolver: spec.CredentialResolver,
+		permissions:        spec.Permissions,
 	}
 }
 
@@ -64,7 +61,11 @@ func (s *stackPreviewConfigService) Create(ctx context.Context, config *models.S
 		return nil, err
 	}
 
-	return s.store.Create(ctx, config)
+	created, err := s.store.Create(ctx, config)
+	if err != nil {
+		return nil, err
+	}
+	return created, nil
 }
 
 func (s *stackPreviewConfigService) Get(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError) {
@@ -94,6 +95,7 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 	updated.TeamID = existing.TeamID
 	updated.UserID = existing.UserID
 	updated.Name = existing.Name
+
 	if err := s.validate(ctx, updated); err != nil {
 		return nil, err
 	}
@@ -102,7 +104,11 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 		return nil, err
 	}
 
-	return s.store.Update(ctx, updated)
+	result, err := s.store.Update(ctx, updated)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }
 
 func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *errors.ServiceError {
@@ -123,7 +129,10 @@ func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *erro
 		return errors.Conflict("cannot delete preview config with %d active preview stack(s)", activeCount)
 	}
 
-	return s.store.Delete(ctx, id)
+	if err := s.store.Delete(ctx, id); err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *stackPreviewConfigService) List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
@@ -154,19 +163,6 @@ func (s *stackPreviewConfigService) validate(ctx context.Context, config *models
 		config.StackfilePath = models.DefaultStackfilePath
 	}
 
-	if config.UsesGitSecret() {
-		secret, gErr := s.secretService.InternalGetByID(ctx, *config.GitSecretID())
-		if gErr != nil {
-			if gErr.Code == errors.ErrorNotFound {
-				return errors.Validation("referenced git secret with id '%s' not found", *config.GitSecretID())
-			}
-			return errors.InternalServerError("failed to get git secret: %v", gErr)
-		}
-		if err := s.secretValidator.ValidateSecretType(models.SecretTypeGitCredentials, secret); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -190,22 +186,13 @@ func (s *stackPreviewConfigService) validateGitRepo(ctx context.Context, config 
 }
 
 func (s *stackPreviewConfigService) gitClientForConfig(ctx context.Context, config *models.StackPreviewConfig) (gitclient.GitClient, error) {
-	if !config.UsesGitSecret() {
-		return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, gitclient.GitCredentials{})
+	selector := credentials.GitAuthSelector{
+		IntegrationID: config.GitRepository.IntegrationID,
 	}
-	secret, sErr := s.secretService.InternalGetByID(ctx, *config.GitSecretID())
+
+	resolved, sErr := s.credentialResolver.GitCredentials(ctx, config.OrganisationID, config.GitRepository.RepoURL, selector)
 	if sErr != nil {
 		return nil, sErr
 	}
-	if token, ok := secret.Data[models.TokenSecretKey]; ok && token != "" {
-		return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, gitclient.GitCredentials{Token: token})
-	}
-
-	return gitclient.NewGitClientForRepo(
-		config.GitRepository.RepoURL,
-		gitclient.GitCredentials{
-			Username: secret.Data[models.UsernameSecretKey],
-			Password: secret.Data[models.PasswordSecretKey],
-		},
-	)
+	return gitclient.NewGitClientForRepo(config.GitRepository.RepoURL, resolved.Credentials)
 }

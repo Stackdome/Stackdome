@@ -6,8 +6,6 @@ import { useToast } from '@/components/ui/use-toast';
 export interface UseSecretsReturn {
   secrets: Secret[];
   isLoading: boolean;
-  dockerRegistrySecrets: Secret[];
-  gitSecrets: Secret[];
 }
 
 export function useSecrets(): UseSecretsReturn {
@@ -41,13 +39,8 @@ export function useSecrets(): UseSecretsReturn {
     fetchSecrets();
   }, [toast]);
 
-  const dockerRegistrySecrets = secrets.filter(secret => secret.type === 'DockerRegistry');
-  const gitSecrets = secrets.filter(secret => secret.type === 'GitCredentials');
-
   return {
     secrets,
     isLoading,
-    dockerRegistrySecrets,
-    gitSecrets,
   };
 }

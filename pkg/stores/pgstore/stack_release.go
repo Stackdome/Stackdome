@@ -5,10 +5,10 @@ import (
 	stderrors "errors"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"gorm.io/gorm"
 )
 
@@ -245,6 +245,28 @@ func (s *stackReleaseStore) MarkFailed(ctx context.Context, id string, message s
 
 	if result.Error != nil {
 		return false, errors.GeneralError("failed to mark failed: %s", result.Error.Error())
+	}
+	return result.RowsAffected > 0, nil
+}
+
+// MarkFailedWithValidationErrors transitions InProgress -> Failed, attaching
+// structured validation errors alongside the failure message.
+func (s *stackReleaseStore) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	now := time.Now().UTC()
+
+	result := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
+		Updates(map[string]interface{}{
+			"state":             models.ReleaseStateFailed,
+			"message":           message,
+			"validation_errors": verrs,
+			"completed_at":      now,
+			"updated_at":        now,
+		})
+
+	if result.Error != nil {
+		return false, errors.GeneralError("failed to mark failed with validation errors: %s", result.Error.Error())
 	}
 	return result.RowsAffected > 0, nil
 }

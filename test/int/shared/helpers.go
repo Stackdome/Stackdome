@@ -2,13 +2,14 @@ package shared
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"time"
 
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 // PostgreSQL addon CRUD operations for Ginkgo tests
@@ -57,6 +58,33 @@ func DeletePostgresAddon(client *openapi.APIClient, orgID, teamName, addonID str
 	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdDelete(ctx, orgID, teamName, addonID).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to delete postgres addon")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+}
+
+// CreateGitCredentialsIntegration registers an org-level git_credentials
+// integration (basic username/password). The credential resolver auto-attaches
+// it to clones whose host matches, so private-repo builds authenticate without
+// any per-source credential input.
+func CreateGitCredentialsIntegration(client *openapi.APIClient, orgID, host, username, password string) *openapi.GitIntegration {
+	ctx := context.Background()
+	gi := openapi.NewGitIntegration(host)
+	gi.SetType(openapi.GIT_INTEGRATION_TYPE_CREDENTIALS)
+	auth := openapi.NewGitIntegrationAuth()
+	auth.SetBasic(*openapi.NewGitIntegrationBasicAuth(username, password))
+	gi.SetAuth(*auth)
+
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsPost(ctx, orgID).GitIntegration(*gi).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create git integration")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected git integration response")
+
+	return resp
+}
+
+func DeleteGitIntegration(client *openapi.APIClient, orgID, integrationID string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdDelete(ctx, orgID, integrationID).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete git integration")
+	Expect(httpResp.StatusCode).To(BeElementOf(http.StatusOK, http.StatusNoContent), "unexpected status code")
 }
 
 // Error testing helpers for Ginkgo
@@ -282,8 +310,26 @@ func ExpectPostgresAddonEqual(expected, actual *openapi.PostgresAddon) {
 
 func CreateStack(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack) *openapi.Stack {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
+
+	// Thin create: server creates a shell, ignoring inline children.
+	postResp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
 	Expect(err).NotTo(HaveOccurred(), "failed to create stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(postResp).NotTo(BeNil(), "expected stack response")
+
+	// Fat apply: submit the same full stack so children are declared.
+	applied, httpResp, err := client.DefaultApi.ApplyStack(ctx, orgID, teamName, postResp.GetId()).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to apply stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(applied).NotTo(BeNil(), "expected applied stack response")
+
+	return applied
+}
+
+func CreateShellStack(client *openapi.APIClient, orgID, teamName string, stack *openapi.Stack) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksPost(ctx, orgID, teamName).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create shell stack")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
 
@@ -367,8 +413,21 @@ func ListStacks(client *openapi.APIClient, orgID, teamName string) *openapi.Stac
 
 func UpdateStack(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack) *openapi.Stack {
 	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.ApplyStack(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to apply stack")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack response")
+
+	return resp
+}
+
+// UpdateStackShellH updates a stack via the shell-only PUT endpoint. The server
+// updates shell fields (name, labels, etc.) and ignores any inline children, so
+// existing resources/connections are preserved.
+func UpdateStackShellH(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack) *openapi.Stack {
+	ctx := context.Background()
 	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdPut(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
-	Expect(err).NotTo(HaveOccurred(), "failed to update stack")
+	Expect(err).NotTo(HaveOccurred(), "failed to update stack shell")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
 	Expect(resp).NotTo(BeNil(), "expected stack response")
 
@@ -412,6 +471,37 @@ func UpdateStackExpectError(client *openapi.APIClient, orgID, teamName, stackID 
 	return apiErr
 }
 
+func ApplyStackExpectError(client *openapi.APIClient, orgID, teamName, stackID string, stack *openapi.Stack, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.ApplyStack(ctx, orgID, teamName, stackID).Stack(*stack).Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+// Thin stack sub-resource operations for Ginkgo tests
+
+func UpdateStackResourceH(client *openapi.APIClient, orgID, teamName, stackID, resourceName string, resource *openapi.StackResource) *openapi.StackResource {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.UpdateStackResource(ctx, orgID, teamName, stackID, resourceName).StackResource(*resource).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to update stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack resource response")
+
+	return resp
+}
+
+func DeleteStackResourceH(client *openapi.APIClient, orgID, teamName, stackID, resourceName string) {
+	ctx := context.Background()
+	httpResp, err := client.DefaultApi.DeleteStackResource(ctx, orgID, teamName, stackID, resourceName).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to delete stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusOK), "unexpected status code")
+}
+
 func CreateStackConnectionExpectError(client *openapi.APIClient, orgID, teamName, stackID string, connection *openapi.StackConnection, expectedStatus int) *openapi.GenericOpenAPIError {
 	ctx := context.Background()
 	_, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsPost(ctx, orgID, teamName, stackID).
@@ -445,6 +535,34 @@ func DeleteStackConnectionExpectError(client *openapi.APIClient, orgID, teamName
 	httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdConnectionsConnectionIdDelete(ctx, orgID, teamName, stackID, connectionID).Execute()
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+}
+
+// CreateStackResource adds a resource to an existing stack via the thin
+// resource-create endpoint (POST /stacks/{id}/resources).
+func CreateStackResource(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource) *openapi.StackResource {
+	ctx := context.Background()
+	resp, httpResp, err := client.DefaultApi.CreateStackResource(ctx, orgID, teamName, stackID).
+		StackResource(*resource).
+		Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create stack resource")
+	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated), "unexpected status code")
+	Expect(resp).NotTo(BeNil(), "expected stack resource response")
+
+	return resp
+}
+
+func CreateStackResourceExpectError(client *openapi.APIClient, orgID, teamName, stackID string, resource *openapi.StackResource, expectedStatus int) *openapi.GenericOpenAPIError {
+	ctx := context.Background()
+	_, httpResp, err := client.DefaultApi.CreateStackResource(ctx, orgID, teamName, stackID).
+		StackResource(*resource).
+		Execute()
+	Expect(err).To(HaveOccurred(), "expected error")
+	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
 }
 
 func GetStackTopologyExpectError(client *openapi.APIClient, orgID, teamName, stackID string, expectedStatus int) {
@@ -495,6 +613,45 @@ func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID s
 	).Execute()
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to get release, status: %d", httpResp.StatusCode)
 	return release
+}
+
+// CreateReleaseExpectError creates a release expecting the request to be rejected
+// (e.g. sync validation failures surfaced as 400 from resolvePins).
+func CreateReleaseExpectError(client *openapi.APIClient, orgID, teamName, stackID string, expectedStatus int) *openapi.GenericOpenAPIError {
+	_, httpResp, err := client.ReleasesApi.CreateRelease(
+		context.Background(), orgID, teamName, stackID,
+	).CreateReleaseRequest(openapi.CreateReleaseRequest{}).Execute()
+	ExpectWithOffset(1, err).To(HaveOccurred(), "expected error creating release")
+	ExpectWithOffset(1, httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
+
+	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	ExpectWithOffset(1, ok).To(BeTrue(), "expected GenericOpenAPIError")
+
+	return apiErr
+}
+
+// ErrorValidationCodes decodes an aggregated validation error's body and
+// returns the codes carried in details.errors[].code. Works for any endpoint
+// that returns errors.ValidationFailed (details: {"errors": [{field, code, message}]}),
+// whether or not the generated client populated apiErr.Model() for the route.
+func ErrorValidationCodes(apiErr *openapi.GenericOpenAPIError) []string {
+	var errObj openapi.Error
+	ExpectWithOffset(1, json.Unmarshal(apiErr.Body(), &errObj)).To(Succeed(), "failed to decode error response body")
+
+	raw, ok := errObj.Details["errors"]
+	ExpectWithOffset(1, ok).To(BeTrue(), "expected details.errors in error response, got: %+v", errObj.Details)
+
+	entries, ok := raw.([]interface{})
+	ExpectWithOffset(1, ok).To(BeTrue(), "expected details.errors to be an array")
+
+	codes := make([]string, 0, len(entries))
+	for _, e := range entries {
+		m, ok := e.(map[string]interface{})
+		ExpectWithOffset(1, ok).To(BeTrue(), "expected each details.errors entry to be an object")
+		code, _ := m["code"].(string)
+		codes = append(codes, code)
+	}
+	return codes
 }
 
 func CancelRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) {

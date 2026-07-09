@@ -3,19 +3,49 @@ package pgstore_test
 import (
 	"context"
 	"database/sql"
+	stderrors "errors"
 
-	"github.com/ashishmax31/stackdome-api-server/config"
+	"github.com/Stackdome/stackdome/config"
+	sqlitedriver "github.com/glebarez/go-sqlite"
 	"github.com/glebarez/sqlite"
 	. "github.com/onsi/gomega"
 	"gorm.io/gorm"
 )
+
+// SQLite extended result codes for constraint violations (SQLITE_CONSTRAINT_*).
+const (
+	sqliteConstraintPrimaryKey = 1555
+	sqliteConstraintUnique     = 2067
+)
+
+// translatingSQLiteDialector adds gorm's ErrorTranslator to the sqlite
+// dialector (glebarez/sqlite v1.7.0 does not implement it) so that unique
+// constraint violations surface as gorm.ErrDuplicatedKey, matching the
+// production session which opens gorm with TranslateError enabled.
+type translatingSQLiteDialector struct {
+	gorm.Dialector
+}
+
+func (d translatingSQLiteDialector) Translate(err error) error {
+	var driverErr *sqlitedriver.Error
+	if stderrors.As(err, &driverErr) {
+		switch driverErr.Code() {
+		case sqliteConstraintUnique, sqliteConstraintPrimaryKey:
+			return gorm.ErrDuplicatedKey
+		}
+	}
+	return err
+}
 
 type sqliteSessionFactory struct {
 	db *gorm.DB
 }
 
 func newSQLiteSessionFactory(ddlStatements ...string) *sqliteSessionFactory {
-	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
+	gdb, err := gorm.Open(
+		translatingSQLiteDialector{Dialector: sqlite.Open(":memory:")},
+		&gorm.Config{TranslateError: true},
+	)
 	Expect(err).NotTo(HaveOccurred(), "failed to open sqlite db")
 
 	for _, ddl := range ddlStatements {

@@ -167,7 +167,7 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm text-foreground">{r.name}</span>
                       <span className="block truncate font-mono text-[11px] text-muted-foreground">
-                        {r.image_spec?.image || "configure source"}
+                        {r.source?.image?.ref || "configure source"}
                       </span>
                     </span>
                     <button type="button" aria-label={`Remove ${r.name}`} onClick={() => removeResource(i)} className="text-muted-foreground hover:text-foreground">

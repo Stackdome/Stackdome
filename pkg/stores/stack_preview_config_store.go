@@ -3,8 +3,8 @@ package stores
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 //go:generate mockgen -source=stack_preview_config_store.go -destination=../mocks/mock_stack_preview_config_store.go -package=mocks

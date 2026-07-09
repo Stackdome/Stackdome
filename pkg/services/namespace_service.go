@@ -4,14 +4,20 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	"github.com/google/uuid"
 )
+
+// NamespaceService's mock lives in-package (not pkg/mocks): the embedded
+// ClusterResourceServiceInjectable references services.ClusterResourceServiceDeps,
+// so a pkg/mocks mock would import services and close an import cycle
+// (services -> auth -> mocks -> services).
+//go:generate mockgen -destination=namespace_service_mock_test.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services github.com/Stackdome/stackdome/pkg/services NamespaceService
 
 type NamespaceService interface {
 	CreateInDB(ctx context.Context, ns *models.Namespace) (*models.Namespace, *errors.ServiceError)

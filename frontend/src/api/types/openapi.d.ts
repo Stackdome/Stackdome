@@ -973,6 +973,1254 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/registry-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List registry credentials for the organization */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryCredentialList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create a registry credential for the organization */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegistryCredential"];
+                };
+            };
+            responses: {
+                /** @description Registry credential created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryCredential"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description A credential for this host and purpose already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/registry-credentials/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a registry credential */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryCredential"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Registry credential not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        /** Update a registry credential (username/password rotation) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegistryCredential"];
+                };
+            };
+            responses: {
+                /** @description Registry credential updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryCredential"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Registry credential not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Delete a registry credential
+         * @description Deletion is never blocked; the response lists stacks that were implicitly resolving against this credential so rotations are visible.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Registry credential deleted successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryCredentialDeleteResponse"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Registry credential not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/registry-credentials/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a registry credential against a repository */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RegistryCredentialVerifyRequest"];
+                };
+            };
+            responses: {
+                /** @description Credential verified successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Verification failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Registry credential not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/github/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start the GitHub App manifest flow for the organization */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Manifest flow started */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitHubAppManifestFlow"];
+                    };
+                };
+                /** @description The hub external URL is not configured */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description A GitHub App is already installed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/git-integrations/github/manifest/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** GitHub App manifest redirect target (unauthenticated, state-validated) */
+        get: {
+            parameters: {
+                query: {
+                    code: string;
+                    state: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Redirects the browser to the GitHub App install page */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid or expired state */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/webhooks/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** GitHub webhook receiver (unauthenticated, HMAC-verified) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            responses: {
+                /** @description Delivery accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Signature verification failed */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/{id}/installations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List GitHub App installations */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Re-list installations from GitHub before returning (covers missed webhooks) */
+                    refresh?: boolean;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitInstallationList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Git integration not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/{id}/repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List repositories visible to the GitHub App installation */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Substring filter on the repository full name */
+                    query?: string;
+                    page?: number;
+                    installation_id?: number;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitRepositoryPage"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Git integration not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get repository details through the GitHub App installation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    owner: string;
+                    repo: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitRepository"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List repository branches through the GitHub App installation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    owner: string;
+                    repo: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitBranchList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List git integrations for the organization */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitIntegrationList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /** Create a git integration for the organization */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GitIntegration"];
+                };
+            };
+            responses: {
+                /** @description Git integration created successfully */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitIntegration"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description An integration for this host already exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a git integration */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitIntegration"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Git integration not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        /** Update a git integration (credential rotation) */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GitIntegration"];
+                };
+            };
+            responses: {
+                /** @description Git integration updated successfully */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GitIntegration"];
+                    };
+                };
+                /** @description Invalid request payload */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Git integration not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
+        /** Delete a git integration */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Git integration deleted successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Git integration not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/git-integrations/{id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a git integration against a repository */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["GitIntegrationVerifyRequest"];
+                };
+            };
+            responses: {
+                /** @description Integration verified successfully */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Verification failed */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Git integration not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/object-stores": {
         parameters: {
             query?: never;
@@ -2398,7 +3646,13 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a new stack */
+        /**
+         * Create a new stack
+         * @description Creates a thin stack shell (name, labels, annotations, settings). Any inline
+         *     `stack_resources`, `volumes`, or `connections` in the body are ignored — add
+         *     children via `PUT /stacks/{id}/apply` or the individual sub-resource endpoints.
+         *
+         */
         post: {
             parameters: {
                 query?: never;
@@ -2519,7 +3773,13 @@ export interface paths {
                 };
             };
         };
-        /** Update a stack */
+        /**
+         * Update a stack
+         * @description Updates only shell fields (name, labels, annotations, settings). `namespace` is
+         *     immutable. Child collections (`stack_resources`, `volumes`, `connections`) in the
+         *     body are ignored — use `PUT /stacks/{id}/apply` for a full reconcile.
+         *
+         */
         put: {
             parameters: {
                 query?: never;
@@ -2621,6 +3881,57 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apply a full stack document by name (declarative upsert)
+         * @description Name-addressed declarative whole-document apply. Stack identity is the
+         *     `name` in the request body (unique per team). If a stack with that name
+         *     exists in the team it is reconciled exactly like the id-addressed apply
+         *     (resources and connections not present in the body are deleted, volumes
+         *     are add-only); otherwise the stack and its children are created
+         *     atomically after full validation. Idempotent — clients need not know
+         *     whether the stack already exists.
+         *
+         */
+        put: operations["applyStackByName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apply a full stack document (declarative reconcile)
+         * @description Declarative whole-document apply. Reconciles the stack against the supplied
+         *     document: resources and connections not present in the body are deleted, while
+         *     volumes are add-only and are never deleted. This is the only endpoint that
+         *     accepts a full stack document.
+         *
+         */
+        put: operations["applyStack"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2809,7 +4120,8 @@ export interface paths {
             };
         };
         put?: never;
-        post?: never;
+        /** Create a stack resource */
+        post: operations["createStackResource"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2869,9 +4181,11 @@ export interface paths {
                 };
             };
         };
-        put?: never;
+        /** Update a stack resource */
+        put: operations["updateStackResource"];
         post?: never;
-        delete?: never;
+        /** Delete a stack resource */
+        delete: operations["deleteStackResource"];
         options?: never;
         head?: never;
         patch?: never;
@@ -6417,7 +7731,7 @@ export interface components {
             total?: number;
         };
         StackSpec: {
-            stack_resources: components["schemas"]["StackResource"][];
+            stack_resources?: components["schemas"]["StackResource"][];
             volumes?: components["schemas"]["Volume"][];
             connections?: components["schemas"]["StackConnection"][];
         };
@@ -6437,8 +7751,7 @@ export interface components {
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
             readonly revision?: string;
-            build_spec?: components["schemas"]["StackResourceBuildSpec"];
-            image_spec?: components["schemas"]["ImageSpec"];
+            source?: components["schemas"]["SourceSpec"];
             init_spec?: components["schemas"]["InitSpec"];
             execution_config?: components["schemas"]["ExecutionConfig"];
             volume_mounts?: components["schemas"]["VolumeMount"][];
@@ -6669,6 +7982,126 @@ export interface components {
             /** @description The value for the secret data, base64 encoded if necessary */
             value: string;
         };
+        GitHubAppManifestFlow: {
+            /** @description GitHub App manifest to POST to github_url as the manifest form field */
+            manifest?: {
+                [key: string]: unknown;
+            };
+            github_url?: string;
+            state?: string;
+        };
+        GitInstallation: {
+            readonly id?: string;
+            /** Format: int64 */
+            installation_id?: number;
+            account_login?: string;
+            account_type?: string;
+            repository_selection?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+        };
+        GitInstallationList: {
+            items?: components["schemas"]["GitInstallation"][];
+            total?: number;
+        };
+        GitRepository: {
+            full_name?: string;
+            clone_url?: string;
+            default_branch?: string;
+            private?: boolean;
+            /** Format: date-time */
+            pushed_at?: string;
+            owner?: string;
+        };
+        GitRepositoryPage: {
+            items?: components["schemas"]["GitRepository"][];
+            page?: number;
+            total_count?: number;
+            has_next?: boolean;
+        };
+        GitBranchList: {
+            items?: string[];
+            total?: number;
+        };
+        GitIntegration: {
+            readonly id?: string;
+            type?: components["schemas"]["GitIntegrationType"];
+            /** @description Git host this integration covers, e.g. gitlab.example.com */
+            host: string;
+            /** @enum {string} */
+            readonly status?: "active" | "pending_install" | "installed";
+            auth?: components["schemas"]["GitIntegrationAuth"];
+            readonly credentials_configured?: boolean;
+            /** @description GitHub install page for adding the app to more accounts (github_app only) */
+            readonly install_url?: string;
+            readonly organisation_id?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        /**
+         * @default git_credentials
+         * @enum {string}
+         */
+        GitIntegrationType: "git_credentials" | "github_app";
+        /** @description Clone auth material; exactly one of token or basic. Never echoed in responses. */
+        GitIntegrationAuth: {
+            /** Format: password */
+            token?: string;
+            basic?: components["schemas"]["GitIntegrationBasicAuth"];
+        };
+        GitIntegrationBasicAuth: {
+            username: string;
+            /** Format: password */
+            password: string;
+        };
+        GitIntegrationList: {
+            items?: components["schemas"]["GitIntegration"][];
+            total?: number;
+        };
+        GitIntegrationVerifyRequest: {
+            repo_url: string;
+        };
+        RegistryCredential: {
+            readonly id?: string;
+            /** @description Registry host; normalized on create (docker.io aliases become index.docker.io) */
+            host: string;
+            purpose?: components["schemas"]["RegistryCredentialPurpose"];
+            username: string;
+            /**
+             * Format: password
+             * @description Required on create; omit on update to keep the stored password
+             */
+            password?: string;
+            readonly organisation_id?: string;
+            /** Format: date-time */
+            readonly created_at?: string;
+            /** Format: date-time */
+            readonly updated_at?: string;
+        };
+        RegistryCredentialList: {
+            items?: components["schemas"]["RegistryCredential"][];
+            total?: number;
+        };
+        /**
+         * @default both
+         * @enum {string}
+         */
+        RegistryCredentialPurpose: "pull" | "push" | "both";
+        RegistryCredentialVerifyRequest: {
+            /** @description Repository to verify against, e.g. ghcr.io/acme/app */
+            repository: string;
+            purpose?: components["schemas"]["RegistryCredentialPurpose"];
+        };
+        RegistryCredentialDeleteResponse: {
+            /** @description Stacks that were implicitly resolving against the deleted credential */
+            affected_stacks?: components["schemas"]["AffectedStackRef"][];
+        };
+        AffectedStackRef: {
+            id?: string;
+            name?: string;
+        };
         ClusterImageRegistryList: {
             items?: components["schemas"]["ClusterImageRegistry"][];
             total?: number;
@@ -6765,19 +8198,50 @@ export interface components {
             /** Format: date-time */
             restart_request_time?: string;
         };
-        StackResourceBuildSpec: {
-            source_context: components["schemas"]["BuildSourceContext"];
-            context_path_within_source: string;
-            dockerfile_path: string;
-            source_revision: components["schemas"]["BuildSourceRevision"];
-            /** @description The image repository to push the built image to */
-            image_repository: components["schemas"]["ImageRepository"];
-            registry_push_secret?: components["schemas"]["SecretRef"];
+        /** @description Where a stack resource's runtime image comes from. Exactly one of git, image, or volume must be set (enforced server-side). */
+        SourceSpec: {
+            git?: components["schemas"]["GitSource"];
+            image?: components["schemas"]["ImageSource"];
+            volume?: components["schemas"]["VolumeBuildSource"];
         };
-        /** @description The image repository to push the built image to */
-        ImageRepository: {
-            external_image_ref?: string;
-            use_internal_registry?: boolean;
+        GitSource: {
+            repo_url: string;
+            /** @description Defaults to the repository's default branch, resolved and stored at create time */
+            branch?: string;
+            /** @description Mutually exclusive with branch */
+            tag?: string;
+            /** @description Commit SHA pin; requires branch or tag */
+            commit?: string;
+            /** @default Dockerfile */
+            dockerfile_path: string;
+            /** @default . */
+            build_context: string;
+            /** @description Org-level git integration override for clone auth */
+            integration_id?: string;
+            /** @description Omit to push to the internal cluster registry */
+            push?: components["schemas"]["PushTarget"];
+        };
+        PushTarget: {
+            /** @description Push repository as host/path, without a tag */
+            repository: string;
+            /** @description Org-level registry credential override for push auth */
+            registry_credentials_id?: string;
+        };
+        ImageSource: {
+            ref: string;
+            /** @description Org-level registry credential override for pull auth */
+            registry_credentials_id?: string;
+        };
+        VolumeBuildSource: {
+            volume_id?: string;
+            /** @description Name of a volume defined on the stack; either volume_id or volume_name is required */
+            volume_name?: string;
+            /** @description Content hash of the volume used as the build source revision */
+            current_volume_hash?: string;
+            /** @default Dockerfile */
+            dockerfile_path: string;
+            /** @default . */
+            build_context: string;
         };
         BuildSourceContext: {
             volume?: {
@@ -6786,7 +8250,6 @@ export interface components {
             };
             git_repo?: {
                 repo_url: string;
-                git_secret?: components["schemas"]["SecretRef"];
             };
         };
         BuildSourceRevision: {
@@ -6795,15 +8258,7 @@ export interface components {
             };
             git_repo_revision?: components["schemas"]["GitRepoRevision"];
         };
-        ImageSpec: {
-            image: string;
-            pull_secret?: components["schemas"]["SecretRef"];
-        };
-        SecretRef: {
-            secret_id: string;
-        };
         InitSpec: {
-            image_spec?: components["schemas"]["ImageSpec"];
             command?: string[];
             args?: string[];
         };
@@ -6840,6 +8295,24 @@ export interface components {
             code?: string;
             reason?: string;
             operation_id?: string;
+            /** @description Optional structured, machine-readable error context */
+            details?: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description Structured payload carried in Error.details for aggregated validation failures. */
+        ValidationErrorDetail: {
+            errors?: components["schemas"]["FieldValidationError"][];
+        };
+        FieldValidationError: {
+            /** @description JSON path of the offending request field, e.g. "ports[0].protocol". */
+            field?: string;
+            /**
+             * @description Machine-readable validation code, e.g. "public_port_not_http".
+             * @enum {string}
+             */
+            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "env_self_output_unknown" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_credentials_required" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
+            message?: string;
         };
         ErrorList: {
             items?: components["schemas"]["Error"][];
@@ -7305,7 +8778,7 @@ export interface components {
         /** @enum {string} */
         StackReleaseState: "Pending" | "InProgress" | "Released" | "Failed" | "Superseded" | "Cancelled";
         /** @enum {string} */
-        ReleaseCauseKind: "manual" | "rollback" | "webhook_push";
+        ReleaseCauseKind: "manual" | "rollback" | "webhook_push" | "preview_sync";
         CreateReleaseRequest: {
             /** @description If set, creates a rollback release copying this release's manifest */
             from_release_id?: string;
@@ -7331,6 +8804,7 @@ export interface components {
             rendered_at?: string;
             /** Format: date-time */
             completed_at?: string;
+            readonly validation_errors?: components["schemas"]["ReleaseValidationError"][];
         };
         StackReleaseDetail: components["schemas"]["StackRelease"] & {
             snapshot?: components["schemas"]["StackReleaseSnapshot"];
@@ -7372,6 +8846,13 @@ export interface components {
         ReleaseCause: {
             kind?: components["schemas"]["ReleaseCauseKind"];
             detail?: string;
+        };
+        ReleaseValidationError: {
+            resource_name?: string;
+            field?: string;
+            /** @enum {string} */
+            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "env_self_output_unknown" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_credentials_required" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
+            message?: string;
         };
         ReleasePins: {
             resources?: {
@@ -7415,7 +8896,8 @@ export interface components {
         PreviewGitRepository: {
             repo_url: string;
             base_branch?: string;
-            git_secret_ref?: string;
+            /** @description Org-level git integration override for clone auth */
+            integration_id?: string;
         };
         StackPreviewConfig: {
             readonly id?: string;
@@ -7557,6 +9039,312 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    applyStackByName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Stack"];
+            };
+        };
+        responses: {
+            /** @description Stack updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stack"];
+                };
+            };
+            /** @description Stack created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stack"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    applyStack: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Stack"];
+            };
+        };
+        responses: {
+            /** @description Stack updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stack"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    createStackResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StackResource"];
+            };
+        };
+        responses: {
+            /** @description Stack resource created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackResource"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack resource already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    updateStackResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                /** @description The name of the stack resource */
+                resource_name: components["parameters"]["resource_name"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StackResource"];
+            };
+        };
+        responses: {
+            /** @description Stack resource updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StackResource"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack or resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    deleteStackResource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                /** @description The name of the stack resource */
+                resource_name: components["parameters"]["resource_name"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stack resource deleted successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Stack or resource not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     listReleases: {
         parameters: {
             query?: {

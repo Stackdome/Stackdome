@@ -4,7 +4,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 func summaries(specs ...[2]int) []models.ReleaseSummary {

@@ -7,9 +7,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/testutil"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/testutil"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	appsv1 "k8s.io/api/apps/v1"

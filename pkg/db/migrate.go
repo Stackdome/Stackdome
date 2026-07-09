@@ -1,7 +1,7 @@
 package db
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/db/migrations"
+	"github.com/Stackdome/stackdome/pkg/db/migrations"
 	"github.com/go-gormigrate/gormigrate/v2"
 	"github.com/golang/glog"
 	"gorm.io/gorm"

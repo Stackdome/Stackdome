@@ -1,5 +1,18 @@
 import { BlockId, type BlockCategoryMeta, type BlockPreset } from "./types";
 
+// Placeholder root/admin password baked into the datastore preset compose
+// snippets. MS SQL Server rejects weak passwords, so it keeps its own stronger
+// placeholder below. block-to-form swaps every placeholder for a generated
+// secret at add time so the container boots on first deploy.
+const PLACEHOLDER_PASSWORD = "changeme";
+const MSSQL_PLACEHOLDER_PASSWORD = "Change_me_123";
+
+/** Every placeholder password used by the preset compose snippets. */
+export const PLACEHOLDER_PASSWORDS: ReadonlySet<string> = new Set([
+  PLACEHOLDER_PASSWORD,
+  MSSQL_PLACEHOLDER_PASSWORD,
+]);
+
 export const BLOCK_CATEGORY_META: BlockCategoryMeta[] = [
   { id: "services", label: "SERVICES" },
   { id: "databases", label: "DATABASES" },
@@ -18,7 +31,7 @@ export const blockCatalog: BlockPreset[] = [
       '    ports: ["5432:5432"]',
       '    volumes: ["pgdata:/var/lib/postgresql/data"]',
       "    environment:",
-      '      POSTGRES_PASSWORD: ""',
+      `      POSTGRES_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
       "volumes:",
       "  pgdata: {}",
       "",
@@ -35,7 +48,7 @@ export const blockCatalog: BlockPreset[] = [
     id: BlockId.Mysql, name: "MySQL", category: "databases", icon: "mysql", summary: "mysql:8 · :3306",
     compose: [
       "services:", "  mysql:", "    image: mysql:8", '    ports: ["3306:3306"]',
-      '    volumes: ["mysql-data:/var/lib/mysql"]', "    environment:", '      MYSQL_ROOT_PASSWORD: ""',
+      '    volumes: ["mysql-data:/var/lib/mysql"]', "    environment:", `      MYSQL_ROOT_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
       "volumes:", "  mysql-data: {}", "",
     ].join("\n"),
   },
@@ -50,7 +63,7 @@ export const blockCatalog: BlockPreset[] = [
     id: BlockId.Mariadb, name: "MariaDB", category: "databases", icon: "mariadb", summary: "mariadb:11.4 · :3306",
     compose: [
       "services:", "  mariadb:", "    image: mariadb:11.4", '    ports: ["3306:3306"]',
-      '    volumes: ["mariadb-data:/var/lib/mysql"]', "    environment:", '      MARIADB_ROOT_PASSWORD: ""',
+      '    volumes: ["mariadb-data:/var/lib/mysql"]', "    environment:", `      MARIADB_ROOT_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
       "volumes:", "  mariadb-data: {}", "",
     ].join("\n"),
   },
@@ -58,7 +71,7 @@ export const blockCatalog: BlockPreset[] = [
     id: BlockId.Mssql, name: "MS SQL Server", category: "databases", icon: "mssql", summary: "mssql:2022 · :1433",
     compose: [
       "services:", "  mssql:", "    image: mcr.microsoft.com/mssql/server:2022-latest", '    ports: ["1433:1433"]',
-      '    volumes: ["mssql-data:/var/opt/mssql"]', "    environment:", '      ACCEPT_EULA: "Y"', '      MSSQL_SA_PASSWORD: ""',
+      '    volumes: ["mssql-data:/var/opt/mssql"]', "    environment:", '      ACCEPT_EULA: "Y"', `      MSSQL_SA_PASSWORD: "${MSSQL_PLACEHOLDER_PASSWORD}"`,
       "volumes:", "  mssql-data: {}", "",
     ].join("\n"),
   },
@@ -75,7 +88,7 @@ export const blockCatalog: BlockPreset[] = [
     id: BlockId.Couchdb, name: "CouchDB", category: "databases", icon: "couchdb", summary: "couchdb:3.3 · :5984",
     compose: [
       "services:", "  couchdb:", "    image: couchdb:3.3", '    ports: ["5984:5984"]',
-      '    volumes: ["couchdb-data:/opt/couchdb/data"]', "    environment:", '      COUCHDB_USER: "admin"', '      COUCHDB_PASSWORD: ""',
+      '    volumes: ["couchdb-data:/opt/couchdb/data"]', "    environment:", '      COUCHDB_USER: "admin"', `      COUCHDB_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
       "volumes:", "  couchdb-data: {}", "",
     ].join("\n"),
   },
@@ -90,7 +103,7 @@ export const blockCatalog: BlockPreset[] = [
     id: BlockId.Clickhouse, name: "ClickHouse", category: "analytics", icon: "clickhouse", summary: "clickhouse:24 · :8123",
     compose: [
       "services:", "  clickhouse:", "    image: clickhouse/clickhouse-server:24.8", '    ports: ["8123:8123", "9000:9000"]',
-      '    volumes: ["clickhouse-data:/var/lib/clickhouse"]', "    environment:", '      CLICKHOUSE_PASSWORD: ""',
+      '    volumes: ["clickhouse-data:/var/lib/clickhouse"]', "    environment:", `      CLICKHOUSE_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
       "volumes:", "  clickhouse-data: {}", "",
     ].join("\n"),
   },

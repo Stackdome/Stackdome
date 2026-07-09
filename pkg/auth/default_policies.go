@@ -1,6 +1,6 @@
 package auth
 
-import "github.com/ashishmax31/stackdome-api-server/pkg/models"
+import "github.com/Stackdome/stackdome/pkg/models"
 
 func DefaultPolicies() [][]string {
 	return [][]string{
@@ -9,6 +9,10 @@ func DefaultPolicies() [][]string {
 		{models.OrgMemberRole.String(), "*", "clusters/*", "read"},
 		{models.OrgMemberRole.String(), "*", "image-registries", "list"},
 		{models.OrgMemberRole.String(), "*", "image-registries/*", "read"},
+		{models.OrgMemberRole.String(), "*", "registry-credentials", "list"},
+		{models.OrgMemberRole.String(), "*", "registry-credentials/*", "read"},
+		{models.OrgMemberRole.String(), "*", "git-integrations", "list"},
+		{models.OrgMemberRole.String(), "*", "git-integrations/*", "read"},
 		{models.OrgMemberRole.String(), "*", "orgs/*", "read"},
 		{models.OrgMemberRole.String(), "*", "teams", "list"},
 		{models.OrgMemberRole.String(), "*", "teams/*", "read"},

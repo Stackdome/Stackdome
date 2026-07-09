@@ -13,8 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -144,19 +144,19 @@ func (mr *MockStackStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockStackStore)(nil).GetByID), ctx, id)
 }
 
-// GetByName mocks base method.
-func (m *MockStackStore) GetByName(ctx context.Context, Name, userID string) (*models.Stack, *errors.ServiceError) {
+// GetByNameAndTeamID mocks base method.
+func (m *MockStackStore) GetByNameAndTeamID(ctx context.Context, name, teamID string) (*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByName", ctx, Name, userID)
+	ret := m.ctrl.Call(m, "GetByNameAndTeamID", ctx, name, teamID)
 	ret0, _ := ret[0].(*models.Stack)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetByName indicates an expected call of GetByName.
-func (mr *MockStackStoreMockRecorder) GetByName(ctx, Name, userID any) *gomock.Call {
+// GetByNameAndTeamID indicates an expected call of GetByNameAndTeamID.
+func (mr *MockStackStoreMockRecorder) GetByNameAndTeamID(ctx, name, teamID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockStackStore)(nil).GetByName), ctx, Name, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTeamID", reflect.TypeOf((*MockStackStore)(nil).GetByNameAndTeamID), ctx, name, teamID)
 }
 
 // InternalList mocks base method.
@@ -324,6 +324,21 @@ func (m *MockStackStore) UpdateRevision(ctx context.Context, id, revision string
 func (mr *MockStackStoreMockRecorder) UpdateRevision(ctx, id, revision any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRevision", reflect.TypeOf((*MockStackStore)(nil).UpdateRevision), ctx, id, revision)
+}
+
+// UpdateShellWithTx mocks base method.
+func (m *MockStackStore) UpdateShellWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateShellWithTx", ctx, id, spec)
+	ret0, _ := ret[0].(*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// UpdateShellWithTx indicates an expected call of UpdateShellWithTx.
+func (mr *MockStackStoreMockRecorder) UpdateShellWithTx(ctx, id, spec any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateShellWithTx", reflect.TypeOf((*MockStackStore)(nil).UpdateShellWithTx), ctx, id, spec)
 }
 
 // UpdateStatus mocks base method.

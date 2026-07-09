@@ -20,6 +20,7 @@ Name | Type | Description | Notes
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
 **RenderedAt** | Pointer to **time.Time** |  | [optional] 
 **CompletedAt** | Pointer to **time.Time** |  | [optional] 
+**ValidationErrors** | Pointer to [**[]ReleaseValidationError**](ReleaseValidationError.md) |  | [optional] [readonly] 
 
 ## Methods
 
@@ -439,6 +440,31 @@ SetCompletedAt sets CompletedAt field to given value.
 `func (o *StackRelease) HasCompletedAt() bool`
 
 HasCompletedAt returns a boolean if a field has been set.
+
+### GetValidationErrors
+
+`func (o *StackRelease) GetValidationErrors() []ReleaseValidationError`
+
+GetValidationErrors returns the ValidationErrors field if non-nil, zero value otherwise.
+
+### GetValidationErrorsOk
+
+`func (o *StackRelease) GetValidationErrorsOk() (*[]ReleaseValidationError, bool)`
+
+GetValidationErrorsOk returns a tuple with the ValidationErrors field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetValidationErrors
+
+`func (o *StackRelease) SetValidationErrors(v []ReleaseValidationError)`
+
+SetValidationErrors sets ValidationErrors field to given value.
+
+### HasValidationErrors
+
+`func (o *StackRelease) HasValidationErrors() bool`
+
+HasValidationErrors returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

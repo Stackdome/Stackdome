@@ -236,8 +236,8 @@ describe("pairByFingerprint", () => {
 });
 
 describe("status is server telemetry, never dirt", () => {
-  const deployed = { name: "web", image_spec: { image: "nginx:1" }, status: { state: "Pending" } };
-  const live = { name: "web", image_spec: { image: "nginx:1" }, status: { state: "Ready", public_ingress: [{}] } };
+  const deployed = { name: "web", source: { image: { ref: "nginx:1" } }, status: { state: "Pending" } };
+  const live = { name: "web", source: { image: { ref: "nginx:1" } }, status: { state: "Ready", public_ingress: [{}] } };
 
   it("isResourceDirty ignores status drift", () => {
     expect(isResourceDirty(live as never, deployed as never)).toBe(false);
@@ -249,11 +249,11 @@ describe("status is server telemetry, never dirt", () => {
   });
 
   it("revertResource keeps the draft's live status", () => {
-    const draft = { resources: [{ ...live, image_spec: { image: "nginx:2" } }], volumes: [] };
+    const draft = { resources: [{ ...live, source: { image: { ref: "nginx:2" } } }], volumes: [] };
     const baseline = { resources: [deployed], volumes: [] };
     const next = revertResource(draft as never, baseline as never, 0);
     const r = next.resources[0] as typeof live;
-    expect(r.image_spec.image).toBe("nginx:1");
+    expect(r.source.image.ref).toBe("nginx:1");
     expect(r.status).toEqual(live.status);
   });
 });
@@ -268,7 +268,7 @@ describe("revertResource dangling-mount guard", () => {
     };
     // Draft deleted the volume (cascade already removed the mount) and edited the resource.
     const draft = {
-      resources: [{ name: "web", image_spec: { image: "nginx:2" }, volume_mounts: [] }],
+      resources: [{ name: "web", source: { image: { ref: "nginx:2" } }, volume_mounts: [] }],
       volumes: [],
     };
     const next = revertResource(draft as never, baseline as never, 0);

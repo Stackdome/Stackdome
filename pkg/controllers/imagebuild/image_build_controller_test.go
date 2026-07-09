@@ -3,7 +3,7 @@ package imagebuild
 import (
 	"testing"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"k8s.io/utils/ptr"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"

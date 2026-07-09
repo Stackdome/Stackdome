@@ -5,21 +5,24 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
-	"github.com/ashishmax31/stackdome-api-server/pkg/validator"
-	stackvalidator "github.com/ashishmax31/stackdome-api-server/pkg/validator/stack"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/validator"
+	stackvalidator "github.com/Stackdome/stackdome/pkg/validator/stack"
+	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	"k8s.io/utils/ptr"
 )
 
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError)
+	UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError)
 	CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
 	CreateStackVolume(ctx context.Context, stackID string, volume *models.Volume) (*models.Volume, *errors.ServiceError)
@@ -43,7 +46,6 @@ type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
-	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
 	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
@@ -56,18 +58,20 @@ type releaseServiceForStack interface {
 }
 
 type StackServiceSpec struct {
-	SessionFactory       db.SessionFactory
-	VolumeService        VolumeService
-	ClusterService       ClusterService
-	OrganisationService  OrganisationService
-	StackResourceService StackResourceService
-	NamespaceService     NamespaceService
-	SecretService        SecretService
-	PostgresAddonService PostgresAddonService
-	TeamService          TeamService
-	Permissions          auth.PermissionService
-	Logger               logger.Logger
-	ReferenceService     ReferenceService
+	SessionFactory        db.SessionFactory
+	VolumeService         VolumeService
+	ClusterService        ClusterService
+	OrganisationService   OrganisationService
+	StackResourceService  StackResourceService
+	NamespaceService      NamespaceService
+	SecretService         SecretService
+	PostgresAddonService  PostgresAddonService
+	TeamService           TeamService
+	Permissions           auth.PermissionService
+	Logger                logger.Logger
+	ReferenceService      ReferenceService
+	CredentialResolver    CredentialResolver
+	GitIntegrationService GitIntegrationService
 }
 
 type stackService struct {
@@ -96,6 +100,30 @@ func NewStackService(spec StackServiceSpec) StackService {
 		SessionFactory: spec.SessionFactory,
 		Logger:         spec.Logger,
 	})
+	// The whole-stack path gets its own resourceValidator instance (rather
+	// than reusing the one wired into StackResourceService). Volumes is a
+	// real DB-backed store here too - stackresource.validateMountedVolumes
+	// checks a mount against the request's own stack.Volumes before ever
+	// consulting this seam, so volumes bundled in the same (unpersisted)
+	// request still resolve correctly; the seam only gets used as a
+	// fallback for names/IDs the payload doesn't declare, where a
+	// namespace-scoped DB lookup is exactly what we want.
+	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
+		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		// Raw store, not the RBAC-enforcing SecretService: env secret_key_ref
+		// validation is an org-scoped existence check, not an authorized
+		// read. The thin per-resource path (cmd/environment) wires the same
+		// raw store, so both paths accept the same payload regardless of
+		// whether the caller holds secrets:read.
+		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		Domains:         organisationDomainService,
+		Credentials:     spec.CredentialResolver,
+		GitIntegrations: spec.GitIntegrationService,
+	})
 	return &stackService{
 		stackStore: pgstore.NewStackStore(&pgstore.StackStoreSpec{
 			SessionFactory: spec.SessionFactory,
@@ -106,9 +134,9 @@ func NewStackService(spec StackServiceSpec) StackService {
 		logger:              spec.Logger,
 		sessionFactory:      spec.SessionFactory,
 		stackValidator: stackvalidator.NewStackValidator(stackvalidator.StackValidatorSpec{
-			DomainService:        organisationDomainService,
 			SecretService:        spec.SecretService,
 			PostgresAddonService: spec.PostgresAddonService,
+			ResourceValidator:    resourceValidator,
 		}),
 		stackResourceService: spec.StackResourceService,
 		namespaceService:     spec.NamespaceService,
@@ -132,11 +160,42 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 	return s.InternalCreateStack(ctx, spec)
 }
 
+// ApplyStack upserts a stack by name within its team scope (stack names are
+// unique per team). When a stack with spec.Name exists in spec.TeamID it is
+// fully replaced through the same path as the id-addressed apply; otherwise
+// the stack and its children are created atomically after full validation.
+// The returned bool is true when a new stack was created.
+func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError) {
+	existingStack, lookupErr := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
+	if lookupErr != nil && !lookupErr.Is404() {
+		return nil, false, lookupErr
+	}
+	if existingStack != nil {
+		if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, existingStack.ID, auth.ActionWrite); permErr != nil {
+			return nil, false, permErr
+		}
+		updatedStack, serr := s.InternalUpdateStack(ctx, existingStack.ID, spec)
+		if serr != nil {
+			return nil, false, serr
+		}
+		return updatedStack, false, nil
+	}
+	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+		return nil, false, permErr
+	}
+	createdStack, serr := s.InternalCreateStack(ctx, spec)
+	if serr != nil {
+		return nil, false, serr
+	}
+	return createdStack, true, nil
+}
+
 func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	existingStack, _ := s.stackStore.GetByName(ctx, spec.Name, spec.UserID)
+	existingStack, _ := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
+
 	s.logger.Infof("running validation for stack creation: %s", spec.Name)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
 		return nil, err
@@ -199,17 +258,15 @@ func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.St
 		return nil, createErr
 	}
 
+	var createdVolumes []*models.Volume
 	for _, volume := range desiredVolumes {
-		if _, err := s.volumeService.InternalCreateWithTx(ctx, createdStack, volume); err != nil {
+		createdVolume, err := s.volumeService.InternalCreateWithTx(ctx, createdStack, volume)
+		if err != nil {
 			return nil, err
 		}
+		createdVolumes = append(createdVolumes, createdVolume)
 	}
-
-	volumesForStack, err := s.volumeService.ListVolumesUsedByStack(ctx, createdStack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to list volumes for stack '%s': %s", createdStack.ID, err.Error())
-	}
-	createdStack.Volumes = volumesForStack
+	createdStack.Volumes = createdVolumes
 
 	for _, resource := range desiredResources {
 		if _, err := s.stackResourceService.InternalCreateWithTx(ctx, createdStack, resource); err != nil {
@@ -217,6 +274,7 @@ func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.St
 		}
 	}
 
+	// This is makes sure that we track all the explicit resources we use in the stack.
 	if err := s.referenceService.ReprojectSpec(ctx, createdStack.ID); err != nil {
 		return nil, err
 	}
@@ -245,18 +303,19 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		return nil, err
 	}
 
-	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
-		return nil, err
-	}
-
-	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
-
 	// set namespace
+	spec.ID = existingStack.ID
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID
 	spec.OrganisationID = existingStack.OrganisationID
 	spec.TeamID = existingStack.TeamID
 	spec.UserID = existingStack.UserID
+
+	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
+		return nil, err
+	}
+
+	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
 
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
@@ -283,6 +342,64 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		}
 	}
 
+	return updatedStack, nil
+}
+
+func (s *stackService) UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	existingStack, err := s.GetStack(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+	if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
+		return nil, permErr
+	}
+	return s.InternalUpdateShellStack(ctx, ID, spec)
+}
+
+func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
+	existingStack, err := s.InternalGetStack(ctx, ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// set namespace
+	spec.ID = existingStack.ID
+	spec.Namespace = existingStack.Namespace
+	spec.ClusterID = existingStack.ClusterID
+	spec.OrganisationID = existingStack.OrganisationID
+	spec.TeamID = existingStack.TeamID
+	spec.UserID = existingStack.UserID
+
+	// Strip children so only the stack's own columns are updated; connections
+	// must NOT be replaced.
+	spec.StackResources = nil
+	spec.Volumes = nil
+	spec.Connections = nil
+
+	if verr := s.stackValidator.ValidateShell(ctx, spec); verr != nil {
+		return nil, verr
+	}
+
+	var updatedStack *models.Stack
+	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		updatedStack, err = s.InternalUpdateShellWithTx(ctx, spec, existingStack)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return updatedStack, nil
+}
+
+func (s *stackService) InternalUpdateShellWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+	updatedStack, updateErr := s.stackStore.UpdateShellWithTx(ctx, existingStack.ID, spec)
+	if updateErr != nil {
+		return nil, updateErr
+	}
 	return updatedStack, nil
 }
 
@@ -487,7 +604,7 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 		return nil, nil, serr
 	}
 	desired.Connections = nextConnections
-	if err := s.stackValidator.ValidateForUpdate(ctx, stack, &desired); err != nil {
+	if err := s.stackValidator.ValidateConnections(ctx, &desired); err != nil {
 		return nil, nil, err
 	}
 	return stack, &desired, nil
@@ -532,17 +649,6 @@ func (s *stackService) deleteSingleStackConnection(ctx context.Context, existing
 		}
 		return s.referenceService.ReprojectSpec(txCtx, existingStack.ID)
 	})
-}
-
-func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
-	stack, err := s.stackStore.GetByName(ctx, name, userID)
-	if err != nil {
-		return nil, err
-	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stack.ID, auth.ActionRead); permErr != nil {
-		return nil, permErr
-	}
-	return stack, nil
 }
 
 func (s *stackService) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {

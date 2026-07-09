@@ -3,8 +3,8 @@ package stores
 import (
 	"context"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 //go:generate mockgen -source=stack_release_store.go -destination=../mocks/mock_stack_release_store.go -package=mocks
@@ -30,6 +30,7 @@ type StackReleaseStore interface {
 	SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError)
 	MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError)
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
+	MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError)
 	Cancel(ctx context.Context, id string) (bool, *errors.ServiceError)
 	MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)
 	MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError)

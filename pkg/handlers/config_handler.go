@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/errors"
 )
 
 type ConfigHandlerSpec struct {

@@ -9,10 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	workerlib "github.com/ashishmax31/stackdome-api-server/pkg/worker"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 )
 
 // TODO: set a reasonable value for this based on metrics and testing.

@@ -1,0 +1,217 @@
+{
+  "name": "test-full",
+  "spec": {
+    "stack_resources": [
+      {
+        "name": "api",
+        "ports": [
+          {
+            "name": "http",
+            "number": 8080,
+            "exposed_to_public": false
+          }
+        ],
+        "source": {
+          "image": {
+            "ref": "nginx:1.25-alpine"
+          }
+        }
+      },
+      {
+        "name": "worker",
+        "depends_on": [
+          "api"
+        ],
+        "source": {
+          "image": {
+            "ref": "nginx:1.25-alpine"
+          }
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "uploads",
+        "spec": {
+          "size": "1Gi",
+          "needs_sync_before_use": false,
+          "access_mode": "ReadWriteOnce"
+        }
+      }
+    ],
+    "connections": [
+      {
+        "kind": "env",
+        "from": {
+          "type": "addon/postgres",
+          "id": "<ADDON_ID>"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "api"
+        },
+        "config": {
+          "database": "testdb"
+        },
+        "mappings": [
+          {
+            "value": {
+              "output": "host"
+            },
+            "target": {
+              "type": "env",
+              "name": "PG_HOST"
+            }
+          },
+          {
+            "value": {
+              "output": "port"
+            },
+            "target": {
+              "type": "env",
+              "name": "PG_PORT"
+            }
+          },
+          {
+            "value": {
+              "output": "username"
+            },
+            "target": {
+              "type": "env",
+              "name": "PG_USER"
+            }
+          },
+          {
+            "value": {
+              "output": "password"
+            },
+            "target": {
+              "type": "env",
+              "name": "PG_PASSWORD"
+            }
+          },
+          {
+            "value": {
+              "output": "database"
+            },
+            "target": {
+              "type": "env",
+              "name": "PG_DATABASE"
+            }
+          },
+          {
+            "value": {
+              "output": "url"
+            },
+            "target": {
+              "type": "env",
+              "name": "DATABASE_URL"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "env",
+        "from": {
+          "type": "addon/postgres",
+          "id": "<ADDON_ID>"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "worker"
+        },
+        "config": {
+          "database": "testdb"
+        },
+        "mappings": [
+          {
+            "value": {
+              "output": "url"
+            },
+            "target": {
+              "type": "env",
+              "name": "DATABASE_URL"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "env",
+        "from": {
+          "type": "secret",
+          "id": "<SECRET_ID>"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "api"
+        },
+        "mappings": [
+          {
+            "value": {
+              "output": "tls_cert"
+            },
+            "target": {
+              "type": "env",
+              "name": "TLS_CERT"
+            }
+          },
+          {
+            "value": {
+              "output": "tls_key"
+            },
+            "target": {
+              "type": "env",
+              "name": "TLS_KEY"
+            }
+          }
+        ]
+      },
+      {
+        "kind": "volume_mount",
+        "from": {
+          "type": "volume",
+          "name": "uploads"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "api"
+        },
+        "config": {
+          "mount_path": "/data/uploads",
+          "sub_path": "app-uploads"
+        }
+      },
+      {
+        "kind": "env",
+        "from": {
+          "type": "stack_resource",
+          "name": "api"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "worker"
+        },
+        "mappings": [
+          {
+            "value": {
+              "output": "host"
+            },
+            "target": {
+              "type": "env",
+              "name": "API_HOST"
+            }
+          },
+          {
+            "value": {
+              "output": "url.http"
+            },
+            "target": {
+              "type": "env",
+              "name": "API_URL"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

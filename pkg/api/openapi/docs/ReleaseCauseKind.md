@@ -9,6 +9,8 @@
 
 * `RELEASE_CAUSE_WEBHOOK_PUSH` (value: `"webhook_push"`)
 
+* `RELEASE_CAUSE_PREVIEW_SYNC` (value: `"preview_sync"`)
+
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

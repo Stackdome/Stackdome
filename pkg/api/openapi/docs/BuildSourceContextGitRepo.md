@@ -5,7 +5,6 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **RepoUrl** | **string** |  | 
-**GitSecret** | Pointer to [**SecretRef**](SecretRef.md) |  | [optional] 
 
 ## Methods
 
@@ -45,31 +44,6 @@ and a boolean to check if the value has been set.
 
 SetRepoUrl sets RepoUrl field to given value.
 
-
-### GetGitSecret
-
-`func (o *BuildSourceContextGitRepo) GetGitSecret() SecretRef`
-
-GetGitSecret returns the GitSecret field if non-nil, zero value otherwise.
-
-### GetGitSecretOk
-
-`func (o *BuildSourceContextGitRepo) GetGitSecretOk() (*SecretRef, bool)`
-
-GetGitSecretOk returns a tuple with the GitSecret field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetGitSecret
-
-`func (o *BuildSourceContextGitRepo) SetGitSecret(v SecretRef)`
-
-SetGitSecret sets GitSecret field to given value.
-
-### HasGitSecret
-
-`func (o *BuildSourceContextGitRepo) HasGitSecret() bool`
-
-HasGitSecret returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

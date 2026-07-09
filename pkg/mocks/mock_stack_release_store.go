@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
-	stores "github.com/ashishmax31/stackdome-api-server/pkg/stores"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
+	stores "github.com/Stackdome/stackdome/pkg/stores"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -219,6 +219,21 @@ func (m *MockStackReleaseStore) MarkFailed(ctx context.Context, id, message stri
 func (mr *MockStackReleaseStoreMockRecorder) MarkFailed(ctx, id, message, outcome any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailed", reflect.TypeOf((*MockStackReleaseStore)(nil).MarkFailed), ctx, id, message, outcome)
+}
+
+// MarkFailedWithValidationErrors mocks base method.
+func (m *MockStackReleaseStore) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkFailedWithValidationErrors", ctx, id, message, verrs)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// MarkFailedWithValidationErrors indicates an expected call of MarkFailedWithValidationErrors.
+func (mr *MockStackReleaseStoreMockRecorder) MarkFailedWithValidationErrors(ctx, id, message, verrs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailedWithValidationErrors", reflect.TypeOf((*MockStackReleaseStore)(nil).MarkFailedWithValidationErrors), ctx, id, message, verrs)
 }
 
 // MarkInProgress mocks base method.

@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 type DefaultingService[T any] interface {
@@ -17,6 +17,7 @@ func NewStackDefaultingService() DefaultingService[*models.Stack] {
 func (s *stackDefaultingService) PopulateDefaultValues(resource *models.Stack) (*models.Stack, error) {
 	for i := range resource.StackResources {
 		applyStackResourcePortDefaults(resource.StackResources[i])
+		normalizeStackResourceReplicas(resource.StackResources[i])
 	}
 	applyStackSettingsDefaults(resource)
 	return resource, nil
@@ -45,5 +46,24 @@ func applyStackResourcePortDefaults(resource *models.StackResource) {
 		if resource.Ports[i].ExposedToPublic && resource.Ports[i].Protocol == "" {
 			resource.Ports[i].Protocol = "http"
 		}
+	}
+}
+
+// singleInstanceReplicas is the replica count hard-coded for workloads that
+// always run exactly one instance per (scheduled) run.
+const singleInstanceReplicas = int32(1)
+
+// normalizeStackResourceReplicas hard-codes replicas to 1 for Job and
+// CronJob workloads regardless of what the client sent: those workloads
+// always run a single instance per run, so the persisted value stays
+// truthful instead of carrying a count that would never apply.
+func normalizeStackResourceReplicas(resource *models.StackResource) {
+	if resource == nil {
+		return
+	}
+	switch resource.WorkloadType {
+	case models.WorkloadTypeJob, models.WorkloadTypeCronJob:
+		replicas := singleInstanceReplicas
+		resource.Replicas = &replicas
 	}
 }

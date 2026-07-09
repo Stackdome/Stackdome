@@ -37,12 +37,7 @@ function createMockStackResource(name: string): FormStackResourceData {
     },
     gitRevisionType: undefined,
     gitRevisionValue: undefined,
-    useImageSecret: false,
-    selectedImageSecretId: undefined,
-    useGitSecret: false,
-    selectedGitSecretId: undefined,
-    image_spec: { image: 'test:latest' },
-    build_spec: undefined,
+    source: { image: { ref: 'test:latest' } },
   };
 }
 
@@ -86,7 +81,7 @@ describe('convertDockerComposeToStackData', () => {
     const resource = result.data!.spec.stack_resources[0];
     expect(resource.name).toBe('web-app');
     expect(resource.sourceType).toBe('image');
-    expect(resource.image_spec?.image).toBe('nginx:latest');
+    expect(resource.source?.image?.ref).toBe('nginx:latest');
     expect(resource.ports).toHaveLength(1);
     expect(resource.ports[0]).toEqual({
       name: 'http-80',
@@ -128,9 +123,9 @@ describe('convertDockerComposeToStackData', () => {
     const resource = result.data!.spec.stack_resources[0];
     expect(resource.name).toBe('api-server');
     expect(resource.sourceType).toBe('git');
-    expect(resource.build_spec).toBeDefined();
-    expect(resource.build_spec!.context_path_within_source).toBe('./api');
-    expect(resource.build_spec!.dockerfile_path).toBe('Dockerfile.prod');
+    expect(resource.source?.git).toBeDefined();
+    expect(resource.source!.git!.build_context).toBe('./api');
+    expect(resource.source!.git!.dockerfile_path).toBe('Dockerfile.prod');
     expect(resource.execution_config.command).toEqual(['npm', 'start']);
     expect(resource.execution_config.environment_variables).toHaveLength(2);
 
@@ -322,7 +317,7 @@ describe('convertServiceToStackResource', () => {
     expect(result.data).toBeDefined();
     expect(result.data!.name).toBe('cache');
     expect(result.data!.sourceType).toBe('image');
-    expect(result.data!.image_spec?.image).toBe('redis:6-alpine');
+    expect(result.data!.source?.image?.ref).toBe('redis:6-alpine');
     expect(result.data!.labels).toEqual([
       { key: 'app.version', value: '1.0.0' },
       { key: 'environment', value: 'production' },
@@ -340,8 +335,8 @@ describe('convertServiceToStackResource', () => {
 
     expect(result.success).toBe(true);
     expect(result.data!.sourceType).toBe('git');
-    expect(result.data!.build_spec).toBeDefined();
-    expect(result.data!.build_spec!.context_path_within_source).toBe('./backend');
+    expect(result.data!.source?.git).toBeDefined();
+    expect(result.data!.source!.git!.build_context).toBe('./backend');
     expect(result.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
   });
 

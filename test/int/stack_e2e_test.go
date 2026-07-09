@@ -11,9 +11,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/test/int/shared"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/test/int/shared"
 )
 
 var _ = Describe("Stack E2E", Ordered, func() {
@@ -627,6 +627,13 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			// For now print first 20 characters to verify it's being picked up without exposing the full token in logs
 			testenv := GetEnvironment()
 			testenv.Logger().Info("GITHUB_TOKEN set", "token", githubToken[:20]+"...")
+
+			// Register an org git integration for the repo host so private clones
+			// authenticate via host auto-match (inline source credentials are gone).
+			integration := shared.CreateGitCredentialsIntegration(client, orgID, shared.BuildSourceGitHost, shared.BuildSourceGitUsername, githubToken)
+			DeferCleanup(func() {
+				shared.DeleteGitIntegration(client, orgID, integration.GetId())
+			})
 		})
 
 		It("should build from a private git repo and expose to public", func() {
@@ -636,17 +643,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(err).NotTo(HaveOccurred())
 			ctx := context.Background()
 
-			By("Creating a GitCredentials secret with the GitHub token")
-			gitSecret := shared.CreateGitCredentialsSecret(shared.BuildSourceSecretName, githubToken)
-			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
-			secretID := createdSecret.GetId()
-
-			DeferCleanup(func() {
-				shared.DeleteSecret(client, orgID, teamName, secretID)
-			})
-
 			By("Creating a stack with build source and exposed port, then deploying")
-			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL, secretID)
+			stack := shared.CreateStackWithBuildSource("test-build-source", shared.BuildSourceRepoURL)
 			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()
@@ -734,17 +732,8 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			clusterClient := testEnv.Cluster.GetClient()
 			ctx := context.Background()
 
-			By("Creating a GitCredentials secret with the GitHub token")
-			gitSecret := shared.CreateGitCredentialsSecret("test-build-fail-creds", githubToken)
-			createdSecret := shared.CreateSecret(client, orgID, teamName, gitSecret)
-			secretID := createdSecret.GetId()
-
-			DeferCleanup(func() {
-				shared.DeleteSecret(client, orgID, teamName, secretID)
-			})
-
 			By("Creating a stack with a build source pointing to a branch with a broken Dockerfile and deploying")
-			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL, secretID)
+			stack := shared.CreateStackWithBrokenBuildSource("test-build-fail", shared.BuildSourceRepoURL)
 			created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
 			stackID := created.GetId()
 			stackName := created.GetName()

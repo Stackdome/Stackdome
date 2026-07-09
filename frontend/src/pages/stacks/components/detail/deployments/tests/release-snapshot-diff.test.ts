@@ -6,7 +6,7 @@ const snap = (resources: unknown[]) => ({ resources });
 const mk = (o: Record<string, unknown>) => o as unknown as Parameters<typeof diffSnapshots>[0];
 const web = (over: Record<string, unknown> = {}) => ({
   name: "web",
-  image_spec: { image: "web:1" },
+  source: { image: { ref: "web:1" } },
   ports: [{ number: 3000 }],
   execution_config: { command: ["node", "a.js"], environment_variables: [{ name: "LOG", value: "info" }] },
   ...over,
@@ -18,7 +18,7 @@ describe("diffSnapshots", () => {
   });
 
   it("flags a modified image as a changed configuration row", () => {
-    const out = diffSnapshots(snap([web()]), snap([web({ image_spec: { image: "web:2" } })])).resources;
+    const out = diffSnapshots(snap([web()]), snap([web({ source: { image: { ref: "web:2" } } })])).resources;
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ name: "web", change: "modified" });
     const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
@@ -60,7 +60,7 @@ describe("diffSnapshots", () => {
   });
 
   it("does NOT pair a rename when the config also changed (stays remove + add)", () => {
-    const out = diffSnapshots(snap([web()]), snap([web({ name: "web1", image_spec: { image: "web:2" } })])).resources;
+    const out = diffSnapshots(snap([web()]), snap([web({ name: "web1", source: { image: { ref: "web:2" } } })])).resources;
     const changes = out.map((r) => r.change).sort();
     expect(changes).toEqual(["added", "removed"]);
   });

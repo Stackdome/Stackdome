@@ -23,6 +23,12 @@ export interface ViewChangesModalProps {
   diff?: SnapshotDiff;
   /** Total pending changes (drives the header count). */
   count: number;
+  /** Autosave is in a terminal error state — the empty diff means "not saved",
+   *  not "nothing pending". */
+  errored?: boolean;
+  /** Unsaved session dirt exists even though the staged diff (saved-vs-release)
+   *  is empty — the edit is still in flight, so the diff can't show it yet. */
+  dirty?: boolean;
   stackName: string;
   /** Revert one resource/volume by name. Removed entries can't be reverted in
    *  isolation (no draft slot to restore into) — use Discard all for those. */
@@ -181,6 +187,8 @@ export function ViewChangesModal({
   onOpenChange,
   diff,
   count,
+  errored,
+  dirty,
   stackName,
   onDiscardResource,
   onDiscardVolume,
@@ -208,8 +216,16 @@ export function ViewChangesModal({
 
         <div className="flex max-h-[56vh] flex-col gap-1.5 overflow-auto px-5 pb-4 pt-3">
           {empty ? (
-            <p className="py-8 text-center text-[13px] text-fg-muted">
-              {diff ? "No pending changes." : "Saving changes… they'll appear here once saved."}
+            <p
+              className={`py-8 text-center text-[13px] ${errored ? "text-danger" : "text-fg-muted"}`}
+            >
+              {errored
+                ? "Changes couldn't be saved. Fix the highlighted error and try again."
+                : dirty
+                  ? "Saving changes… they'll appear here once saved."
+                  : diff
+                    ? "No pending changes."
+                    : "Saving changes… they'll appear here once saved."}
             </p>
           ) : (
             <>

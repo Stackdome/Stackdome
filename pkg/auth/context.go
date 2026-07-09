@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/golang-jwt/jwt"
 )
 

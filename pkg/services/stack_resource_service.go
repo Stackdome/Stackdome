@@ -4,18 +4,21 @@ import (
 	"context"
 	"time"
 
-	"github.com/ashishmax31/stackdome-api-server/pkg/auth"
-	"github.com/ashishmax31/stackdome-api-server/pkg/clustermanager"
-	"github.com/ashishmax31/stackdome-api-server/pkg/db"
-	"github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	"github.com/ashishmax31/stackdome-api-server/pkg/logger"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores"
-	"github.com/ashishmax31/stackdome-api-server/pkg/stores/pgstore"
+	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
+
+//go:generate mockgen -destination=../mocks/mock_stack_resource_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services StackResourceService
 
 type StackResourceService interface {
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
@@ -45,6 +48,7 @@ type StackResourceServiceSpec struct {
 	ClusterRegistryService ImageRegistryService
 	StackDomainService     StackDomainsService
 	ReferenceService       ReferenceService
+	ResourceValidator      stackresourcevalidator.Validator
 }
 
 type stackResourceService struct {
@@ -59,9 +63,13 @@ type stackResourceService struct {
 	clusterRegistryService ImageRegistryService
 	domainNameService      StackDomainsService
 	referenceService       ReferenceService
+	resourceValidator      stackresourcevalidator.Validator
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
+	if spec.ResourceValidator == nil {
+		panic("services.NewStackResourceService: ResourceValidator is required")
+	}
 	stackResourceStore := spec.StackResourceStore
 	if stackResourceStore == nil {
 		stackResourceStore = pgstore.NewStackResourceStore(pgstore.StackResourceStoreSpec{
@@ -79,6 +87,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		clusterRegistryService: spec.ClusterRegistryService,
 		domainNameService:      spec.StackDomainService,
 		referenceService:       spec.ReferenceService,
+		resourceValidator:      spec.ResourceValidator,
 	}
 }
 
@@ -93,6 +102,18 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 	}
 	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
+	}
+
+	siblings, sErr := s.stackResourceStore.GetByStackID(ctx, resource.StackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if len(ferrs) > 0 {
+		return nil, errors.ValidationFailed(ferrs)
 	}
 
 	var created *models.StackResource
@@ -128,6 +149,24 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.ID = existing.ID
 	resource.Name = resourceName
 
+	all, sErr := s.stackResourceStore.GetByStackID(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	siblings := make([]*models.StackResource, 0, len(all))
+	for _, r := range all {
+		if r.Name != resourceName {
+			siblings = append(siblings, r)
+		}
+	}
+	ferrs, vErr := s.resourceValidator.Validate(ctx, stack, resource, siblings)
+	if vErr != nil {
+		return nil, vErr
+	}
+	if len(ferrs) > 0 {
+		return nil, errors.ValidationFailed(ferrs)
+	}
+
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		var updateErr *errors.ServiceError
@@ -149,6 +188,7 @@ func (s *stackResourceService) prepareResource(ctx context.Context, stack *model
 	resource.UserID = stack.UserID
 	resource.Namespace = stack.Namespace
 	applyStackResourcePortDefaults(resource)
+	normalizeStackResourceReplicas(resource)
 	return s.populateRegistryUrlForResource(ctx, stack, resource)
 }
 
@@ -253,12 +293,16 @@ func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName
 		return err
 	}
 
-	return s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		if err := s.InternalDeleteWithTx(txCtx, existing.ID); err != nil {
 			return err
 		}
 		return s.referenceService.ReprojectSpec(txCtx, stackID)
-	})
+	}); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *stackResourceService) GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError) {

@@ -13,49 +13,10 @@ import (
 	context "context"
 	reflect "reflect"
 
-	errors "github.com/ashishmax31/stackdome-api-server/pkg/errors"
-	models "github.com/ashishmax31/stackdome-api-server/pkg/models"
+	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
 	gomock "go.uber.org/mock/gomock"
 )
-
-// MockorganisationDomainService is a mock of organisationDomainService interface.
-type MockorganisationDomainService struct {
-	ctrl     *gomock.Controller
-	recorder *MockorganisationDomainServiceMockRecorder
-	isgomock struct{}
-}
-
-// MockorganisationDomainServiceMockRecorder is the mock recorder for MockorganisationDomainService.
-type MockorganisationDomainServiceMockRecorder struct {
-	mock *MockorganisationDomainService
-}
-
-// NewMockorganisationDomainService creates a new mock instance.
-func NewMockorganisationDomainService(ctrl *gomock.Controller) *MockorganisationDomainService {
-	mock := &MockorganisationDomainService{ctrl: ctrl}
-	mock.recorder = &MockorganisationDomainServiceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockorganisationDomainService) EXPECT() *MockorganisationDomainServiceMockRecorder {
-	return m.recorder
-}
-
-// ListByOrganisationID mocks base method.
-func (m *MockorganisationDomainService) ListByOrganisationID(ctx context.Context, orgID string) ([]*models.OrganisationDomain, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByOrganisationID", ctx, orgID)
-	ret0, _ := ret[0].([]*models.OrganisationDomain)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// ListByOrganisationID indicates an expected call of ListByOrganisationID.
-func (mr *MockorganisationDomainServiceMockRecorder) ListByOrganisationID(ctx, orgID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganisationID", reflect.TypeOf((*MockorganisationDomainService)(nil).ListByOrganisationID), ctx, orgID)
-}
 
 // MocksecretService is a mock of secretService interface.
 type MocksecretService struct {
@@ -94,34 +55,6 @@ func (m *MocksecretService) InternalGetByID(ctx context.Context, ID string) (*mo
 func (mr *MocksecretServiceMockRecorder) InternalGetByID(ctx, ID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetByID", reflect.TypeOf((*MocksecretService)(nil).InternalGetByID), ctx, ID)
-}
-
-// ValidateGitSecretForStackResource mocks base method.
-func (m *MocksecretService) ValidateGitSecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateGitSecretForStackResource", ctx, secretID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// ValidateGitSecretForStackResource indicates an expected call of ValidateGitSecretForStackResource.
-func (mr *MocksecretServiceMockRecorder) ValidateGitSecretForStackResource(ctx, secretID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateGitSecretForStackResource", reflect.TypeOf((*MocksecretService)(nil).ValidateGitSecretForStackResource), ctx, secretID)
-}
-
-// ValidateImageRegistrySecretForStackResource mocks base method.
-func (m *MocksecretService) ValidateImageRegistrySecretForStackResource(ctx context.Context, secretID string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ValidateImageRegistrySecretForStackResource", ctx, secretID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// ValidateImageRegistrySecretForStackResource indicates an expected call of ValidateImageRegistrySecretForStackResource.
-func (mr *MocksecretServiceMockRecorder) ValidateImageRegistrySecretForStackResource(ctx, secretID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateImageRegistrySecretForStackResource", reflect.TypeOf((*MocksecretService)(nil).ValidateImageRegistrySecretForStackResource), ctx, secretID)
 }
 
 // ValidateSecretExists mocks base method.

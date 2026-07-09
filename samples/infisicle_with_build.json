@@ -1,118 +1,233 @@
 {
-    "name": "infisical-with-build",
-    "labels": [
-        { "key": "environment", "value": "development" }
-    ],
-    "spec": {
-        "stack_resources": [
-            {
-                "name": "backend",
-                "build_spec": {
-                    "context_path_within_source": "/",
-                    "dockerfile_path": "/Dockerfile.standalone-infisical",
-                    "image_repository": { "use_internal_registry": true },
-                    "source_context": {
-                        "git_repo": { "repo_url": "https://github.com/Infisical/infisical.git" }
-                    },
-                    "source_revision": {
-                        "git_repo_revision": { "branch": { "name": "main" } }
-                    }
-                },
-                "ports": [
-                    { "name": "http", "number": 8080, "exposed_to_public": true, "subdomain_prefix": "infisical-build", "protocol": "HTTP" }
-                ],
-                "execution_config": {
-                    "environment_variables": [
-                        { "name": "NODE_ENV", "value": "production" },
-                        { "name": "ENCRYPTION_KEY", "value": "6c1fe4e407b8911c104518103505b218" },
-                        { "name": "AUTH_SECRET", "value": "5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE=" },
-                        { "name": "POSTGRES_PASSWORD", "value": "infisical" },
-                        { "name": "POSTGRES_USER", "value": "infisical" },
-                        { "name": "POSTGRES_DB", "value": "infisical" },
-                        { "name": "SITE_URL", "value": "http://localhost:8080" },
-                        { "name": "ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT", "value": "true" }
-                    ]
-                },
-                "depends_on": ["db", "redis"]
-            },
-            {
-                "name": "db",
-                "image_spec": { "image": "postgres:14-alpine" },
-                "ports": [
-                    { "name": "postgres", "number": 5432, "exposed_to_public": false, "protocol": "TCP" }
-                ],
-                "execution_config": {
-                    "environment_variables": [
-                        { "name": "POSTGRES_PASSWORD", "value": "infisical" },
-                        { "name": "POSTGRES_USER", "value": "infisical" },
-                        { "name": "POSTGRES_DB", "value": "infisical" }
-                    ]
-                }
-            },
-            {
-                "name": "redis",
-                "image_spec": { "image": "redis:latest" },
-                "ports": [
-                    { "name": "redis", "number": 6379, "exposed_to_public": false, "protocol": "TCP" }
-                ],
-                "execution_config": {
-                    "environment_variables": [
-                        { "name": "ALLOW_EMPTY_PASSWORD", "value": "yes" }
-                    ]
-                }
-            }
-        ],
-        "volumes": [
-            {
-                "name": "db-volume",
-                "spec": { "size": "1Gi", "access_mode": "ReadWriteOnce", "needs_sync_before_use": false }
-            },
-            {
-                "name": "redis-volume",
-                "spec": { "size": "1Gi", "access_mode": "ReadWriteOnce", "needs_sync_before_use": false }
-            }
-        ],
-        "connections": [
-            {
-                "kind": "env",
-                "from": { "type": "stack_resource", "name": "db" },
-                "to": { "type": "stack_resource", "name": "backend" },
-                "mappings": [
-                    {
-                        "target": { "type": "env", "name": "DB_CONNECTION_URI" },
-                        "value": {
-                            "template": "postgres://infisical:infisical@{{ host }}:5432/infisical",
-                            "values": { "host": { "output": "host" } }
-                        }
-                    }
-                ]
-            },
-            {
-                "kind": "env",
-                "from": { "type": "stack_resource", "name": "redis" },
-                "to": { "type": "stack_resource", "name": "backend" },
-                "mappings": [
-                    {
-                        "target": { "type": "env", "name": "REDIS_URL" },
-                        "value": {
-                            "template": "redis://{{ host }}:6379",
-                            "values": { "host": { "output": "host" } }
-                        }
-                    }
-                ]
-            },
-            {
-                "kind": "volume_mount",
-                "from": { "type": "volume", "name": "db-volume" },
-                "to": { "type": "stack_resource", "name": "db" },
-                "config": { "mount_path": "/var/lib/postgresql/data" }
-            },
-            {
-                "kind": "volume_mount",
-                "from": { "type": "volume", "name": "redis-volume" },
-                "to": { "type": "stack_resource", "name": "redis" },
-                "config": { "mount_path": "/data" }
-            }
-        ]
+  "name": "infisical-with-build",
+  "labels": [
+    {
+      "key": "environment",
+      "value": "development"
     }
+  ],
+  "spec": {
+    "stack_resources": [
+      {
+        "name": "backend",
+        "ports": [
+          {
+            "name": "http",
+            "number": 8080,
+            "exposed_to_public": true,
+            "subdomain_prefix": "infisical-build",
+            "protocol": "HTTP"
+          }
+        ],
+        "execution_config": {
+          "environment_variables": [
+            {
+              "name": "NODE_ENV",
+              "value": "production"
+            },
+            {
+              "name": "ENCRYPTION_KEY",
+              "value": "6c1fe4e407b8911c104518103505b218"
+            },
+            {
+              "name": "AUTH_SECRET",
+              "value": "5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE="
+            },
+            {
+              "name": "POSTGRES_PASSWORD",
+              "value": "infisical"
+            },
+            {
+              "name": "POSTGRES_USER",
+              "value": "infisical"
+            },
+            {
+              "name": "POSTGRES_DB",
+              "value": "infisical"
+            },
+            {
+              "name": "SITE_URL",
+              "value": "http://localhost:8080"
+            },
+            {
+              "name": "ENABLE_MSSQL_SECRET_ROTATION_ENCRYPT",
+              "value": "true"
+            }
+          ]
+        },
+        "depends_on": [
+          "db",
+          "redis"
+        ],
+        "source": {
+          "git": {
+            "repo_url": "https://github.com/Infisical/infisical.git",
+            "branch": {
+              "name": "main"
+            },
+            "dockerfile_path": "/Dockerfile.standalone-infisical",
+            "build_context": "/"
+          }
+        }
+      },
+      {
+        "name": "db",
+        "ports": [
+          {
+            "name": "postgres",
+            "number": 5432,
+            "exposed_to_public": false,
+            "protocol": "TCP"
+          }
+        ],
+        "execution_config": {
+          "environment_variables": [
+            {
+              "name": "POSTGRES_PASSWORD",
+              "value": "infisical"
+            },
+            {
+              "name": "POSTGRES_USER",
+              "value": "infisical"
+            },
+            {
+              "name": "POSTGRES_DB",
+              "value": "infisical"
+            }
+          ]
+        },
+        "source": {
+          "image": {
+            "ref": "postgres:14-alpine"
+          }
+        }
+      },
+      {
+        "name": "redis",
+        "ports": [
+          {
+            "name": "redis",
+            "number": 6379,
+            "exposed_to_public": false,
+            "protocol": "TCP"
+          }
+        ],
+        "execution_config": {
+          "environment_variables": [
+            {
+              "name": "ALLOW_EMPTY_PASSWORD",
+              "value": "yes"
+            }
+          ]
+        },
+        "source": {
+          "image": {
+            "ref": "redis:latest"
+          }
+        }
+      }
+    ],
+    "volumes": [
+      {
+        "name": "db-volume",
+        "spec": {
+          "size": "1Gi",
+          "access_mode": "ReadWriteOnce",
+          "needs_sync_before_use": false
+        }
+      },
+      {
+        "name": "redis-volume",
+        "spec": {
+          "size": "1Gi",
+          "access_mode": "ReadWriteOnce",
+          "needs_sync_before_use": false
+        }
+      }
+    ],
+    "connections": [
+      {
+        "kind": "env",
+        "from": {
+          "type": "stack_resource",
+          "name": "db"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "backend"
+        },
+        "mappings": [
+          {
+            "target": {
+              "type": "env",
+              "name": "DB_CONNECTION_URI"
+            },
+            "value": {
+              "template": "postgres://infisical:infisical@{{ host }}:5432/infisical",
+              "values": {
+                "host": {
+                  "output": "host"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "env",
+        "from": {
+          "type": "stack_resource",
+          "name": "redis"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "backend"
+        },
+        "mappings": [
+          {
+            "target": {
+              "type": "env",
+              "name": "REDIS_URL"
+            },
+            "value": {
+              "template": "redis://{{ host }}:6379",
+              "values": {
+                "host": {
+                  "output": "host"
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "kind": "volume_mount",
+        "from": {
+          "type": "volume",
+          "name": "db-volume"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "db"
+        },
+        "config": {
+          "mount_path": "/var/lib/postgresql/data"
+        }
+      },
+      {
+        "kind": "volume_mount",
+        "from": {
+          "type": "volume",
+          "name": "redis-volume"
+        },
+        "to": {
+          "type": "stack_resource",
+          "name": "redis"
+        },
+        "config": {
+          "mount_path": "/data"
+        }
+      }
+    ]
+  }
 }

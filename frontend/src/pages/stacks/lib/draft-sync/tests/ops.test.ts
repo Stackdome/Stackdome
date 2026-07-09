@@ -11,7 +11,7 @@ const emptyDesired = (): DesiredStackState => ({
 });
 const kinds = (ops: SyncOp[]) => ops.map((o) => o.kind);
 
-const webResource = { name: "web", image_spec: { image: "nginx:1" } } as never;
+const webResource = { name: "web", source: { image: { ref: "nginx:1" } } } as never;
 const secretConn = (to: string) => ({
   kind: "env", from: { type: "secret", id: "s-1" }, to: { type: "stack_resource", name: to },
   mappings: [{ target: { type: "env", name: "TOKEN" }, value: { output: "token" } }],
@@ -36,14 +36,14 @@ describe("computeSyncOps", () => {
     const server = emptyServer();
     server.resourcesByName.set("web", webResource);
     const desired = emptyDesired();
-    desired.resources.set("web", { name: "web", image_spec: { image: "nginx:2" } } as never);
+    desired.resources.set("web", { name: "web", source: { image: { ref: "nginx:2" } } } as never);
     const ops = computeSyncOps(server, desired);
     expect(ops).toEqual([{ kind: "updateResource", name: "web", resource: desired.resources.get("web") }]);
   });
 
   it("treats structurally-empty differences as equal (no spurious updates)", () => {
     const server = emptyServer();
-    server.resourcesByName.set("web", { name: "web", image_spec: { image: "nginx:1" }, depends_on: [] } as never);
+    server.resourcesByName.set("web", { name: "web", source: { image: { ref: "nginx:1" } }, depends_on: [] } as never);
     const desired = emptyDesired();
     desired.resources.set("web", webResource);
     expect(computeSyncOps(server, desired)).toEqual([]);
@@ -62,7 +62,7 @@ describe("computeSyncOps", () => {
     const server = emptyServer();
     server.resourcesByName.set("web", webResource);
     const desired = emptyDesired();
-    desired.resources.set("web2", { name: "web2", image_spec: { image: "nginx:1" } } as never);
+    desired.resources.set("web2", { name: "web2", source: { image: { ref: "nginx:1" } } } as never);
     const ks = kinds(computeSyncOps(server, desired));
     expect(ks.indexOf("createResource")).toBeLessThan(ks.indexOf("deleteResource"));
   });
@@ -110,7 +110,7 @@ describe("computeSyncOps", () => {
 
   it("exempts held resources and their connections from deletion", () => {
     const server = emptyServer();
-    server.resourcesByName.set("api", { name: "api", image_spec: { image: "node:20" } } as never);
+    server.resourcesByName.set("api", { name: "api", source: { image: { ref: "node:20" } } } as never);
     server.connections.set("k", { id: "c-2", conn: secretConn("api") });
     const desired = emptyDesired();
     desired.held.add("api");

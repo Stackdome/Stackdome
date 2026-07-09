@@ -1,8 +1,8 @@
 package presenters
 
 import (
-	"github.com/ashishmax31/stackdome-api-server/pkg/api/openapi"
-	"github.com/ashishmax31/stackdome-api-server/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"k8s.io/utils/ptr"
 )
 
@@ -94,8 +94,7 @@ func presentStackResource(r *models.StackResource) openapi.StackResource {
 		Name:            r.Name,
 		Labels:          presentLabels(r.Labels),
 		Annotations:     presentAnnotations(r.Annotations),
-		BuildSpec:       presentBuildConfig(r.BuildConfig),
-		ImageSpec:       presentImageConfig(r.ImageConfig),
+		Source:          presentSource(r),
 		InitSpec:        presentInitConfig(r.Init),
 		ExecutionConfig: presentExecutionConfig(r.ExecutionConfig),
 		VolumeMounts:    presentVolumeMounts(r.VolumeMounts),

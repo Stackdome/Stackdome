@@ -5,7 +5,7 @@ import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 const web = (envRows: unknown[] = [], extra: Partial<FormStackResourceData> = {}): Partial<FormStackResourceData> =>
   ({
     name: "web",
-    image_spec: { image: "nginx:1" },
+    source: { image: { ref: "nginx:1" } },
     execution_config: { environment_variables: envRows },
     ...extra,
   }) as Partial<FormStackResourceData>;

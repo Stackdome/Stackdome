@@ -136,13 +136,13 @@ export default function StackResourceDetail({
               {resource.sourceType === "image" ? (
                 <span className="flex items-center gap-1.5">
                   <Box className="h-3.5 w-3.5" />
-                  <span>{resource.image_spec?.image || "No image specified"}</span>
+                  <span>{resource.source?.image?.ref || "No image specified"}</span>
                 </span>
               ) : (
                 <span className="flex items-center gap-1.5">
                   <GitBranch className="h-3.5 w-3.5" />
                   <span>
-                    {resource.build_spec?.source_context?.git_repo?.repo_url || "No repository specified"}
+                    {resource.source?.git?.repo_url || "No repository specified"}
                     {resource.gitRevisionType && resource.gitRevisionValue && (
                       <span className="ml-1 text-xs bg-muted/50 px-1.5 py-0.5 rounded-full">
                         {resource.gitRevisionType === "branch" && "Branch: "}
@@ -244,7 +244,7 @@ export default function StackResourceDetail({
                     <div>
                       <div className="mb-1 text-sm font-medium">Container Image</div>
                       <div className="p-2 bg-muted/30 rounded-md">
-                        {resource.image_spec?.image || "Not specified"}
+                        {resource.source?.image?.ref || "Not specified"}
                       </div>
                     </div>
                   ) : (
@@ -252,13 +252,13 @@ export default function StackResourceDetail({
                       <div>
                         <div className="mb-1 text-sm font-medium">Git Repository URL</div>
                         <div className="p-2 bg-muted/30 rounded-md overflow-x-auto">
-                          {resource.build_spec?.source_context?.git_repo?.repo_url || "Not specified"}
+                          {resource.source?.git?.repo_url || "Not specified"}
                         </div>
                       </div>
                       <div>
                         <div className="mb-1 text-sm font-medium">Image Repository URL</div>
                         <div className="p-2 bg-muted/30 rounded-md overflow-x-auto">
-                          {resource.build_spec?.image_repository?.external_image_ref || "Not specified"}
+                          {resource.source?.git?.push?.repository || "Not specified"}
                         </div>
                       </div>
                       {resource.gitRevisionType && (

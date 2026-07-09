@@ -17,7 +17,7 @@ describe("block-to-form", () => {
     const { resources, volumes } = blockToResources(getBlockById(BlockId.Postgres)!);
     expect(resources).toHaveLength(1);
     expect(resources[0].name).toBe("postgres");
-    expect(resources[0].image_spec?.image).toBe("postgres:16");
+    expect(resources[0].source?.image?.ref).toBe("postgres:16");
     expect(volumes).toHaveLength(1);
     expect(volumes[0].name).toBe("pgdata");
   });
@@ -27,7 +27,7 @@ describe("block-to-form", () => {
     expect(resources).toHaveLength(1);
     expect(resources[0].name).toBe("web");
     expect(resources[0].sourceType).toBe("image");
-    expect(resources[0].image_spec?.image).toBe("");
+    expect(resources[0].source?.image?.ref).toBe("");
     expect(volumes).toHaveLength(0);
   });
 

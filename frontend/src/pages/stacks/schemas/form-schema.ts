@@ -5,6 +5,7 @@
 import { z } from "zod";
 import {
   ApiStackResourceSchema,
+  ApiPortSchema,
   ApiVolumeSourceSchema,
   ApiVolumeSpecSchema,
   ApiVolumeSchema,
@@ -80,11 +81,9 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper fields for git revision, not part of API spec StackResource
   gitRevisionType: FormGitRevisionTypeSchema.optional(),
   gitRevisionValue: z.string().optional(),
-  // UI helper fields for secrets, not part of API spec StackResource
-  useImageSecret: z.boolean().optional().default(false),
-  selectedImageSecretId: z.string().optional(),
-  useGitSecret: z.boolean().optional().default(false),
-  selectedGitSecretId: z.string().optional(),
+  // Port name is optional in the form — the API requires it, so we auto-derive
+  // `port-<number>` on save rather than asking the user for it.
+  ports: z.array(ApiPortSchema.extend({ name: z.string().optional() })).optional(),
   // Override execution_config to use our form env var schema. The
   // environment_variables list holds literal env-var rows (`from: "stack"`);
   // the API array is reconstructed in the converter on save.
@@ -94,43 +93,40 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
     environment_variables: z.array(FormEnvVarSchema).optional(),
   }).optional(),
 }).superRefine((data, ctx) => {
-  // Validate that git revision fields are required when sourceType is git
-  if (data.sourceType === "git") {
-    if (!data.gitRevisionType) {
+  // Drive validation off the actual `source` union (same discriminant the canvas
+  // node card uses) rather than the `sourceType` UI helper, which can desync.
+  if (data.source?.git) {
+    if (!data.source.git.repo_url) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Required when source is Git",
-        path: ["gitRevisionType"],
+        message: "Git repository URL is required",
+        path: ["source", "git", "repo_url"],
       });
     }
-
-    if (!data.gitRevisionValue) {
+    // Revision (branch/tag/commit) is optional — the builder defaults to the
+    // repo's default branch when none is given. But if a revision *type* is
+    // chosen, its value must be filled.
+    if (data.gitRevisionType && !data.gitRevisionValue) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Required when source is Git",
+        message: "Enter a value for the selected revision, or clear the revision type",
         path: ["gitRevisionValue"],
       });
     }
-
-    // Make sure there's a valid Git repo URL when using Git repository
-    if (!data.build_spec?.source_context?.git_repo?.repo_url) {
+  } else if (data.source?.image) {
+    if (!data.source.image.ref) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Required when source is Git",
-        path: ["build_spec", "source_context", "git_repo", "repo_url"],
+        message: "Container image reference is required",
+        path: ["source", "image", "ref"],
       });
     }
-  }
-
-  // Validate that image URL is required when sourceType is image
-  if (data.sourceType === "image") {
-    if (!data.image_spec?.image) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Required",
-        path: ["image_spec", "image"],
-      });
-    }
+  } else {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Select a source — a container image or a Git repository",
+      path: ["source"],
+    });
   }
 });
 
@@ -240,10 +236,6 @@ function convertFormResourceToApiResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
-    useImageSecret,
-    selectedImageSecretId,
-    useGitSecret,
-    selectedGitSecretId,
     status,
     outputs,
     ...rest
@@ -281,8 +273,16 @@ function convertFormResourceToApiResource(
     }
     : undefined;
 
+  // The API requires a port name; derive `port-<number>` when the form left it
+  // blank (k8s port names must contain a letter, so a bare number won't do).
+  const apiPorts = rest.ports?.map((port) => ({
+    ...port,
+    name: port.name && port.name.trim() !== "" ? port.name : `port-${port.number}`,
+  }));
+
   return {
     ...rest,
+    ports: apiPorts,
     volume_mounts: cleanedVolumeMounts,
     execution_config: processedExecutionConfig,
   } as StackResourceUpdateRequest;
@@ -327,21 +327,21 @@ function convertFormVolumeToApiVolume(
 function convertApiResourceToFormResource(
   resource: z.infer<typeof ApiStackResourceSchema> & { status?: unknown } // API resource may have status
 ): FormStackResourceData {
-  const sourceType: "image" | "git" = resource.build_spec ? "git" : "image";
+  const git = resource.source?.git;
+  const sourceType: "image" | "git" = git ? "git" : "image";
   let gitRevisionType: "commit" | "branch" | "tag" | undefined = undefined;
   let gitRevisionValue: string | undefined = undefined;
 
-  if (resource.build_spec) {
-    const rev = resource.build_spec.source_revision?.git_repo_revision;
-    if (rev?.commit) {
+  if (git) {
+    if (git.commit) {
       gitRevisionType = "commit";
-      gitRevisionValue = rev.commit;
-    } else if (rev?.branch) {
+      gitRevisionValue = git.commit;
+    } else if (git.branch) {
       gitRevisionType = "branch";
-      gitRevisionValue = rev.branch;
-    } else if (rev?.tag) {
+      gitRevisionValue = git.branch;
+    } else if (git.tag) {
       gitRevisionType = "tag";
-      gitRevisionValue = rev.tag;
+      gitRevisionValue = git.tag;
     }
   }
 
@@ -355,13 +355,6 @@ function convertApiResourceToFormResource(
       : { from: "stack" as const, name: v.name, value: v.value ?? "" },
   );
 
-  // Detect if secrets are being used
-  const useImageSecret = Boolean(resource.image_spec?.pull_secret?.secret_id);
-  const selectedImageSecretId = resource.image_spec?.pull_secret?.secret_id;
-
-  const useGitSecret = Boolean(resource.build_spec?.source_context?.git_repo?.git_secret?.secret_id);
-  const selectedGitSecretId = resource.build_spec?.source_context?.git_repo?.git_secret?.secret_id;
-
   // Ensure all required fields are present, defaulting as needed
   return {
     ...resource,
@@ -369,10 +362,6 @@ function convertApiResourceToFormResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
-    useImageSecret,
-    selectedImageSecretId,
-    useGitSecret,
-    selectedGitSecretId,
     execution_config: resource.execution_config ? {
       ...resource.execution_config,
       environment_variables: processedEnvVars,
@@ -404,27 +393,31 @@ function convertApiVolumeToFormVolume(
 // Prepare one form resource for the API: normalize git source_revision, attach
 // selected secrets, then strip UI-only fields.
 function prepareFormResourceForApi(resource: FormStackResourceData): StackResourceUpdateRequest {
-  if (resource.build_spec) {
-    const gitRepoRev = resource.build_spec.source_revision?.git_repo_revision;
-    resource.build_spec.source_revision = {
-      volume_source_revision: undefined,
-      git_repo_revision: gitRepoRev,
+  const prepared = { ...resource };
+
+  if (resource.sourceType === 'git') {
+    const existingGit = resource.source?.git;
+    // Flatten the UI revision helpers into exactly one of branch/tag/commit.
+    // push is optional (omit => internal cluster registry); credential
+    // overrides (integration_id / registry_credentials_id) are public-only unset.
+    prepared.source = {
+      git: {
+        repo_url: existingGit?.repo_url ?? '',
+        dockerfile_path: existingGit?.dockerfile_path ?? 'Dockerfile',
+        build_context: existingGit?.build_context ?? '.',
+        branch: resource.gitRevisionType === 'branch' ? resource.gitRevisionValue : undefined,
+        tag: resource.gitRevisionType === 'tag' ? resource.gitRevisionValue : undefined,
+        commit: resource.gitRevisionType === 'commit' ? resource.gitRevisionValue : undefined,
+        push: existingGit?.push?.repository ? { repository: existingGit.push.repository } : undefined,
+      },
+    };
+  } else if (resource.sourceType === 'image') {
+    prepared.source = {
+      image: { ref: resource.source?.image?.ref ?? '' },
     };
   }
-  const resourceWithSecrets = { ...resource };
-  if (resource.sourceType === 'image' && resource.useImageSecret && resource.selectedImageSecretId) {
-    resourceWithSecrets.image_spec = {
-      image: resourceWithSecrets.image_spec?.image || '',
-      ...resourceWithSecrets.image_spec,
-      pull_secret: { secret_id: resource.selectedImageSecretId },
-    };
-  }
-  if (resource.sourceType === 'git' && resource.useGitSecret && resource.selectedGitSecretId) {
-    if (resourceWithSecrets.build_spec?.source_context?.git_repo) {
-      resourceWithSecrets.build_spec.source_context.git_repo.git_secret = { secret_id: resource.selectedGitSecretId };
-    }
-  }
-  return convertFormResourceToApiResource(resourceWithSecrets);
+
+  return convertFormResourceToApiResource(prepared);
 }
 
 function convertFormStackToApiStack(
@@ -432,12 +425,12 @@ function convertFormStackToApiStack(
 ): StackUpdateRequest {
   // Filter out empty or invalid resources (resources with empty names or no image)
   const validResources = stackData.spec.stack_resources.filter(resource => {
-    // A resource is valid if it has a name and either an image or build_spec
+    // A resource is valid if it has a name and either an image or git source
     const hasName = resource.name && resource.name.trim() !== '';
-    const hasImage = resource.image_spec?.image && resource.image_spec.image.trim() !== '';
-    const hasBuildSpec = resource.build_spec?.source_revision;
+    const hasImage = resource.source?.image?.ref && resource.source.image.ref.trim() !== '';
+    const hasGit = resource.source?.git?.repo_url && resource.source.git.repo_url.trim() !== '';
 
-    return hasName && (hasImage || hasBuildSpec);
+    return hasName && (hasImage || hasGit);
   });
 
   // Process all valid stack resources by removing UI-only fields. Volume
@@ -482,8 +475,8 @@ function convertFormStackToApiStack(
 
   // Create a new clean spec object that will only include API-expected fields
   const apiSpec = {
-    stack_resources: apiStackResources as z.infer<typeof ApiStackSchema>["spec"]["stack_resources"],
-    volumes: apiVolumes as z.infer<typeof ApiStackSchema>["spec"]["volumes"] | undefined,
+    stack_resources: apiStackResources,
+    volumes: apiVolumes,
     ...(connections.length > 0 ? { connections } : {}),
   };
 

@@ -5,7 +5,7 @@ import type { StackRelease, StackReleaseSnapshot } from "@/api/releases";
 
 const mkStack = (image: string, updatedAt?: string): Stack =>
   ({
-    spec: { stack_resources: [{ name: "web", image_spec: { image } }] },
+    spec: { stack_resources: [{ name: "web", source: { image: { ref: image } } }] },
     status: { last_converged: { release_id: "live-1" } },
     updated_at: updatedAt,
   } as unknown as Stack);
@@ -13,7 +13,7 @@ const mkStack = (image: string, updatedAt?: string): Stack =>
 const mkRelease = (over: Partial<StackRelease>): StackRelease =>
   ({ id: "r", sequence: 7, state: "Released", ...over } as StackRelease);
 
-const snap = (image: string): StackReleaseSnapshot => ({ resources: [{ name: "web", image_spec: { image } }] });
+const snap = (image: string): StackReleaseSnapshot => ({ resources: [{ name: "web", source: { image: { ref: image } } }] });
 
 describe("deriveDeployLifecycle", () => {
   it("editing — unsaved autosave in flight, even while a deploy is in flight", () => {
@@ -95,7 +95,7 @@ describe("deriveDeployLifecycle", () => {
 
   it("staged (first deploy) — never deployed, saved resources present, no snapshot", () => {
     const r = deriveDeployLifecycle({
-      stack: { spec: { stack_resources: [{ name: "web", image_spec: { image: "nginx:1.27" } }] }, status: {} } as unknown as Stack,
+      stack: { spec: { stack_resources: [{ name: "web", source: { image: { ref: "nginx:1.27" } } }] }, status: {} } as unknown as Stack,
       unsaved: false,
       activeRelease: undefined,
       liveRelease: undefined,

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 )
 
 type SSLMode string
@@ -18,6 +19,11 @@ type ApplicationConfig struct {
 	EncryptionKey string             `json:"encryption_key"`
 	LogLevel      string             `json:"log_level"`
 	GitHubOAuth   *GitHubOAuthConfig `json:"github_oauth"`
+	// ServerExternalURL is the externally reachable base URL of the hub,
+	// required for the GitHub App manifest flow (browser redirects, webhooks).
+	ServerExternalURL string `json:"server_external_url"`
+	// GitHubAPIBaseURL overrides the GitHub API endpoint (tests, GHES).
+	GitHubAPIBaseURL string `json:"github_api_base_url"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -37,7 +43,26 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 
 	c.GitHubOAuth.LoadEnvVariables()
+
+	if val, ok := EnvServerExternalURL.Lookup(); ok {
+		c.ServerExternalURL = val
+	}
+	if val, ok := EnvGitHubAPIBaseURL.Lookup(); ok {
+		c.GitHubAPIBaseURL = val
+	}
+
+	// The GitHub OAuth redirect is just the hub base plus a fixed callback path,
+	// so derive it from SERVER_EXTERNAL_URL when GITHUB_REDIRECT_URI is unset.
+	// The explicit env var stays as an override for unusual deployments.
+	if c.GitHubOAuth.RedirectURI == "" && c.ServerExternalURL != "" {
+		c.GitHubOAuth.RedirectURI = strings.TrimSuffix(c.ServerExternalURL, "/") + gitHubOAuthCallbackPath
+	}
 }
+
+// gitHubOAuthCallbackPath is the route the GitHub OAuth handler is mounted on;
+// it must match the "/github/callback" route under /api/v1/auth in
+// cmd/server/routes.go.
+const gitHubOAuthCallbackPath = "/api/v1/auth/github/callback"
 
 func (c *ApplicationConfig) Validate() error {
 	validateFuncs := []func() error{
