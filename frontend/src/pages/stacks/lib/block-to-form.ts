@@ -63,7 +63,7 @@ function internalizePorts(resource: FormStackResourceData): FormStackResourceDat
 
 /** Swap the registry's placeholder passwords (and any empty env value) for a
  *  generated secret so the container actually boots on first deploy. */
-function fillEmptyEnvValues(resource: FormStackResourceData): FormStackResourceData {
+function fillPlaceholderPasswords(resource: FormStackResourceData): FormStackResourceData {
   const isPlaceholder = (v: string | undefined) => v === "" || (v !== undefined && PLACEHOLDER_PASSWORDS.has(v));
   const env = resource.execution_config?.environment_variables as
     | { name?: string; value?: string; from?: string }[]
@@ -93,7 +93,7 @@ export function blockToResources(block: BlockPreset): {
     );
   }
   const resources = (result.data.spec.stack_resources ?? []).map((r) =>
-    DATA_BLOCK_CATEGORIES.has(block.category) ? fillEmptyEnvValues(internalizePorts(r)) : r,
+    DATA_BLOCK_CATEGORIES.has(block.category) ? fillPlaceholderPasswords(internalizePorts(r)) : r,
   );
   return {
     resources,
