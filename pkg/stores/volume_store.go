@@ -12,6 +12,7 @@ type VolumeStore interface {
 	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
+	InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.Volume, *errors.ServiceError)
 	UpdateGitRepoSourceRevision(ctx context.Context, id string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
 	UpdateGitRepoSourceRevisionWithTx(ctx context.Context, id string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)

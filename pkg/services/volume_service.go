@@ -20,6 +20,7 @@ type VolumeService interface {
 	InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
+	InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
@@ -162,6 +163,15 @@ func (s *volumeService) InternalList(ctx context.Context, ids []string) ([]*mode
 	volumes, err := s.volumeStore.InternalList(ctx, ids)
 	if err != nil {
 		s.logger.Errorf("failed to list volumes: %v", err)
+		return nil, err
+	}
+	return volumes, nil
+}
+
+func (s *volumeService) InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError) {
+	volumes, err := s.volumeStore.InternalListNotReady(ctx)
+	if err != nil {
+		s.logger.Errorf("failed to list not-ready volumes: %v", err)
 		return nil, err
 	}
 	return volumes, nil

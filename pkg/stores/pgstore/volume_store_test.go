@@ -10,6 +10,28 @@ import (
 	"gorm.io/gorm"
 )
 
+const volumesTableDDL = `
+	CREATE TABLE volumes (
+		id text PRIMARY KEY,
+		organisation_id text NOT NULL,
+		team_id text,
+		user_id text NOT NULL,
+		name text NOT NULL,
+		namespace_id text NOT NULL,
+		namespace text NOT NULL,
+		labels jsonb,
+		annotations jsonb,
+		size text,
+		storage_class text,
+		access_mode text NOT NULL,
+		volume_source jsonb,
+		sync_before_use boolean,
+		status jsonb,
+		created_at datetime,
+		updated_at datetime
+	)
+`
+
 func newVolumesTestSessionFactory(t *testing.T) *testSessionFactory {
 	t.Helper()
 
@@ -17,27 +39,7 @@ func newVolumesTestSessionFactory(t *testing.T) *testSessionFactory {
 	if err != nil {
 		t.Fatalf("failed to open sqlite db: %v", err)
 	}
-	if err := gdb.Exec(`
-		CREATE TABLE volumes (
-			id text PRIMARY KEY,
-			organisation_id text NOT NULL,
-			team_id text,
-			user_id text NOT NULL,
-			name text NOT NULL,
-			namespace_id text NOT NULL,
-			namespace text NOT NULL,
-			labels jsonb,
-			annotations jsonb,
-			size text,
-			storage_class text,
-			access_mode text NOT NULL,
-			volume_source jsonb,
-			sync_before_use boolean,
-			status jsonb,
-			created_at datetime,
-			updated_at datetime
-		)
-	`).Error; err != nil {
+	if err := gdb.Exec(volumesTableDDL).Error; err != nil {
 		t.Fatalf("failed to create volumes table: %v", err)
 	}
 	return &testSessionFactory{db: gdb}
