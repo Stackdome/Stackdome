@@ -3,7 +3,7 @@ import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
-import type { DotState } from "@/pages/stacks/lib/canvas/node-presentation";
+import type { StatusVariant } from "@/components/branded/status-variant";
 import { NodeGlyph } from "./node-glyph";
 
 export type ResourceFlowNode = Node<ResourceNodeData, "resource">;
@@ -11,11 +11,14 @@ export type ResourceFlowNode = Node<ResourceNodeData, "resource">;
 /** Edges are derived, not hand-drawn, so the handles are anchors only. */
 const HIDDEN_HANDLE = { opacity: 0, pointerEvents: "none" as const };
 
-/** Status-dot colour per state (semantic tokens only). */
-const DOT_COLOR: Record<DotState, string> = {
-  ok: "bg-success",
-  warn: "bg-warn",
-  err: "bg-danger",
+/** Live status dot per variant. Ready breathes (slow pulse = heartbeat);
+ *  pending uses the standard motion pulse; error/info/neutral hold still. */
+const DOT_CLASS: Record<StatusVariant, string> = {
+  ready: "bg-success animate-breathe",
+  pending: "bg-warn animate-pulse",
+  error: "bg-danger",
+  info: "bg-info",
+  neutral: "bg-fg-muted",
 };
 
 function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
@@ -47,7 +50,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
 
       <div className="px-[13px] py-3">
         <div className="flex items-center gap-2.5">
-          <span className={cn("size-2 shrink-0 rounded-full", DOT_COLOR[data.dotState])} aria-hidden />
+          <span className={cn("size-2 shrink-0 rounded-full", DOT_CLASS[data.dotVariant])} aria-hidden />
           <NodeGlyph glyph={data.glyph} className="size-[17px] shrink-0 text-fg-2" />
           <span className="flex-1 truncate text-sm font-medium text-foreground">{data.name}</span>
           <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-muted">
@@ -62,7 +65,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
           key={v.name}
           title={v.mountPath}
           data-volume-chip={v.name}
-          className="flex items-center gap-2 border-t border-border bg-background px-[13px] py-2"
+          className="flex cursor-pointer items-center gap-2 border-t border-border bg-background px-[13px] py-2 transition-colors hover:bg-card"
         >
           <HardDrive className="size-[13px] shrink-0 text-fg-muted" aria-hidden />
           <span className="truncate font-mono text-[10.5px] text-fg-2">{v.name}</span>

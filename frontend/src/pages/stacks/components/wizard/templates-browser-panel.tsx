@@ -216,7 +216,7 @@ export function TemplatesBrowserPanel({
         onBack={onBack}
         onContinue={() => selected && onUse(selected)}
         continueDisabled={!selected}
-        hint="Opens the new-stack form, prefilled with this template."
+        hint="Opens the canvas editor, prefilled with this template."
       />
     </div>
   );

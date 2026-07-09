@@ -96,48 +96,42 @@ func TestMapClusterStatusToServerStatus_noFailure(t *testing.T) {
 	}
 }
 
-func TestComputeStatusRewrite_carriesOverBuildFailureWhenCRHasNone(t *testing.T) {
+func TestComputeStatusRewrite_preservesBuildFailureWhenCRHasNoDetails(t *testing.T) {
+	buildFailure := &models.StackResourceFailure{Type: models.FailureTypeBuildFailure}
 	current := &models.StackResourceStatus{
-		LastFailure: &models.StackResourceFailure{
-			Type:  models.FailureTypeBuildFailure,
-			Build: &models.BuildFailureDetail{FailureType: "exit_error", Reason: "Error", Message: "build step failed"},
-		},
-	}
-	cr := &corev1alpha1.StackResource{}
-	cr.Name = "web"
-	cr.Status = corev1alpha1.StackResourceStatus{
-		Phase:      corev1alpha1.StackResourcePhaseReady,
-		StatusHash: "jkl012",
-	}
-
-	got := computeStatusRewrite(current, cr)
-
-	if got.LastFailure == nil {
-		t.Fatal("expected the existing build failure to be carried over")
-	}
-	if got.LastFailure != current.LastFailure {
-		t.Errorf("expected the carried-over build failure, got %+v", got.LastFailure)
-	}
-}
-
-func TestComputeStatusRewrite_crFailureWinsOverExistingBuildFailure(t *testing.T) {
-	current := &models.StackResourceStatus{
-		LastFailure: &models.StackResourceFailure{
-			Type:  models.FailureTypeBuildFailure,
-			Build: &models.BuildFailureDetail{FailureType: "exit_error", Reason: "Error", Message: "build step failed"},
-		},
+		LastObservedStatusHash: "old-hash",
+		LastFailure:            buildFailure,
 	}
 	cr := &corev1alpha1.StackResource{}
 	cr.Name = "web"
 	cr.Status = corev1alpha1.StackResourceStatus{
 		Phase:      corev1alpha1.StackResourcePhaseFailed,
-		StatusHash: "mno345",
+		StatusHash: "new-hash",
+	}
+
+	got := computeStatusRewrite(current, cr)
+
+	if got.LastFailure != buildFailure {
+		t.Fatalf("expected build failure to be carried over the rewrite, got %v", got.LastFailure)
+	}
+	if got.LastObservedStatusHash != "new-hash" {
+		t.Errorf("LastObservedStatusHash = %q, want new-hash", got.LastObservedStatusHash)
+	}
+}
+
+func TestComputeStatusRewrite_crFailureDetailsOverwriteBuildFailure(t *testing.T) {
+	current := &models.StackResourceStatus{
+		LastFailure: &models.StackResourceFailure{Type: models.FailureTypeBuildFailure},
+	}
+	cr := &corev1alpha1.StackResource{}
+	cr.Name = "web"
+	cr.Status = corev1alpha1.StackResourceStatus{
+		Phase: corev1alpha1.StackResourcePhaseFailed,
 		LastFailureDetails: []corev1alpha1.LastFailureDetail{
 			{
 				ContainerName:           "web",
-				RestartCount:            2,
+				RestartCount:            3,
 				LastTerminationReason:   "CrashLoopBackOff",
-				LastTerminationMessage:  "back-off restarting",
 				LastTerminationExitCode: ptr.To(int32(1)),
 			},
 		},
@@ -146,13 +140,59 @@ func TestComputeStatusRewrite_crFailureWinsOverExistingBuildFailure(t *testing.T
 	got := computeStatusRewrite(current, cr)
 
 	if got.LastFailure == nil {
-		t.Fatal("expected the CR-derived runtime failure to win")
+		t.Fatal("expected LastFailure to be set")
 	}
 	if got.LastFailure.Type != models.FailureTypeRuntimeCrash {
-		t.Errorf("Type = %q, want runtime_crash", got.LastFailure.Type)
+		t.Errorf("Type = %q, want %q", got.LastFailure.Type, models.FailureTypeRuntimeCrash)
 	}
-	if got.LastFailure.Build != nil {
-		t.Error("expected the build failure to be replaced, not merged")
+}
+
+func TestComputeStatusRewrite_doesNotCarryNonBuildFailure(t *testing.T) {
+	current := &models.StackResourceStatus{
+		LastFailure: &models.StackResourceFailure{Type: models.FailureTypeRuntimeCrash},
+	}
+	cr := &corev1alpha1.StackResource{}
+	cr.Name = "web"
+	cr.Status = corev1alpha1.StackResourceStatus{
+		Phase: corev1alpha1.StackResourcePhaseReady,
+	}
+
+	got := computeStatusRewrite(current, cr)
+
+	if got.LastFailure != nil {
+		t.Errorf("expected runtime failure to be cleared by the CR rewrite, got %v", got.LastFailure)
+	}
+}
+
+func TestComputeStatusRewrite_clearedBuildFailureStaysCleared(t *testing.T) {
+	current := &models.StackResourceStatus{}
+	cr := &corev1alpha1.StackResource{}
+	cr.Name = "web"
+	cr.Status = corev1alpha1.StackResourceStatus{
+		Phase: corev1alpha1.StackResourcePhaseReady,
+	}
+
+	got := computeStatusRewrite(current, cr)
+
+	if got.LastFailure != nil {
+		t.Errorf("expected LastFailure to stay nil after the imagebuild controller cleared it, got %v", got.LastFailure)
+	}
+}
+
+func TestComputeStatusRewrite_nilCurrentStatus(t *testing.T) {
+	cr := &corev1alpha1.StackResource{}
+	cr.Name = "web"
+	cr.Status = corev1alpha1.StackResourceStatus{
+		Phase: corev1alpha1.StackResourcePhaseReady,
+	}
+
+	got := computeStatusRewrite(nil, cr)
+
+	if got == nil {
+		t.Fatal("expected a status")
+	}
+	if got.LastFailure != nil {
+		t.Errorf("expected LastFailure to be nil, got %v", got.LastFailure)
 	}
 }
 

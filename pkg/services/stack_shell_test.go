@@ -111,3 +111,33 @@ func TestInternalUpdateShellStack_ValidSettings_Updates(t *testing.T) {
 	assert.Nil(t, serr)
 	assert.Equal(t, updated, got)
 }
+
+// TestInternalUpdateShellStack_RenameRejected asserts the stack name is
+// immutable on the shell path: the cluster Stack CR is keyed by name, so a
+// rename would orphan it at the next release apply.
+func TestInternalUpdateShellStack_RenameRejected(t *testing.T) {
+	ctx := context.Background()
+	stackID := "stack-123"
+	existing := &models.Stack{ID: stackID, Name: "demo", Namespace: "ns-demo"}
+	spec := &models.Stack{Name: "renamed"}
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockStackStore := mocks.NewMockStackStore(ctrl)
+	mockValidator := mocks.NewMockStackValidator(ctrl)
+
+	svc := &stackService{
+		stackStore:     mockStackStore,
+		stackValidator: mockValidator,
+	}
+
+	mockStackStore.EXPECT().GetByID(ctx, stackID).Return(existing, nil)
+	// No ValidateShell / WithTransaction expectations: the rename is rejected
+	// before validation or any write.
+
+	got, serr := svc.InternalUpdateShellStack(ctx, stackID, spec)
+	assert.Nil(t, got)
+	assert.NotNil(t, serr)
+	assert.Equal(t, "stack name cannot be updated", serr.Reason)
+}

@@ -1,9 +1,10 @@
 // Pure merge of the local (instant, authored) graph with server topology
 // (derived edges + runtime state). Local is never mutated.
 import type { StackTopology, TopologyNodeRef } from "@/api/topology";
+import { statusVariant } from "@/components/branded/status-variant";
 import {
   ATTACHMENT_LABEL, EDGE_SOURCE_OF_TRUTH, NODE_ID_PREFIX, NODE_KIND, edgeKey,
-  type AttachmentKind, type CanvasGraph, type CanvasNode, type EdgeKind,
+  type AttachmentKind, type CanvasGraph, type CanvasNode, type EdgeKind, type ResourceNodeData,
 } from "./graph-from-connections";
 
 // Secrets are intentionally absent: secret references never render on the
@@ -25,9 +26,34 @@ function nodeIdOfRef(ref: TopologyNodeRef | undefined): string | null {
   }
 }
 
-export function mergeTopology(local: CanvasGraph, server: StackTopology | null | undefined): CanvasGraph {
-  if (!server) return local;
+export function mergeTopology(
+  local: CanvasGraph,
+  server: StackTopology | null | undefined,
+  releaseInFlight = false,
+): CanvasGraph {
+  const merged = server ? mergeServer(local, server) : local;
+  return releaseInFlight ? overlayReleaseInFlight(merged) : merged;
+}
 
+/**
+ * While a release is in flight, per-resource server state lags the deploy (the
+ * old workload keeps reporting Ready until the agent starts the rollout), so a
+ * stale green would flash right after Deploy. Force resource dots to pending
+ * until the release terminates; an already-reported error still wins.
+ */
+function overlayReleaseInFlight(graph: CanvasGraph): CanvasGraph {
+  let changed = false;
+  const nodes = graph.nodes.map((node) => {
+    if (node.type !== "resource") return node;
+    const current = (node.data as ResourceNodeData).dotVariant;
+    if (current === "error" || current === "pending") return node;
+    changed = true;
+    return { ...node, data: { ...node.data, dotVariant: "pending" } } as CanvasNode;
+  });
+  return changed ? { nodes, edges: graph.edges } : graph;
+}
+
+function mergeServer(local: CanvasGraph, server: StackTopology): CanvasGraph {
   const nodes = [...local.nodes];
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const serverNodeByListId = new Map(
@@ -35,14 +61,16 @@ export function mergeTopology(local: CanvasGraph, server: StackTopology | null |
   );
   let changed = false;
 
-  // Runtime-state overlay onto matching local resource nodes.
+  // Runtime-state overlay: the fresher server topology state wins over the
+  // dot colour derived at graph-build time.
   for (const [id, serverNode] of serverNodeByListId) {
     if (!serverNode.state) continue;
     const idx = nodes.findIndex((n) => n.id === id && n.type === "resource");
     if (idx === -1) continue;
     const node = nodes[idx];
-    if ((node.data as { status?: string }).status === serverNode.state) continue;
-    const next: CanvasNode = { ...node, data: { ...node.data, status: serverNode.state } };
+    const dotVariant = statusVariant("resource", serverNode.state);
+    if ((node.data as ResourceNodeData).dotVariant === dotVariant) continue;
+    const next: CanvasNode = { ...node, data: { ...node.data, dotVariant } };
     nodes[idx] = next;
     nodeById.set(id!, next);
     changed = true;

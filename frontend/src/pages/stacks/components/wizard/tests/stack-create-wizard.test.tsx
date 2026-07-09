@@ -26,7 +26,7 @@ describe("StackCreateWizard", () => {
     const user = userEvent.setup();
     render(<StackCreateWizard open onOpenChange={vi.fn()} />);
     expect(screen.getByText(/How do you want to start\?/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /Compose blocks/i }));
+    await user.click(screen.getByRole("button", { name: /Build from blocks/i }));
     expect(screen.getByText(/What's in your stack\?/i)).toBeInTheDocument();
   });
 

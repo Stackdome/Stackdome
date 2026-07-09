@@ -12,18 +12,18 @@ import (
 )
 
 const (
-	volReadyTestStackID   = "stack-vol-1"
-	volReadyTestClusterID = "cluster-vol-1"
+	volExistTestStackID   = "stack-vol-1"
+	volExistTestClusterID = "cluster-vol-1"
 )
 
-func volReadyTestRelease(resources []*models.StackResource, connections models.StackConnections) *models.StackRelease {
+func volExistTestRelease(resources []*models.StackResource, connections models.StackConnections) *models.StackRelease {
 	return &models.StackRelease{
 		ID:      "release-vol-1",
-		StackID: volReadyTestStackID,
+		StackID: volExistTestStackID,
 		State:   models.ReleaseStateInProgress,
 		Snapshot: models.StackSnapshot{
 			Stack: models.StackShellSnapshot{
-				ID: volReadyTestStackID,
+				ID: volExistTestStackID,
 			},
 			Resources:   resources,
 			Connections: connections,
@@ -69,116 +69,54 @@ func buildArtifactSourceConnection(resourceName, volumeID, volumeName string) mo
 	}
 }
 
-func notReadyVolume(id string) *models.Volume {
-	return &models.Volume{
-		ID:     id,
-		Name:   id,
-		Status: &models.VolumeStatus{Phase: models.VolumePhasePending},
-	}
+func liveVolume(id string) *models.Volume {
+	return &models.Volume{ID: id, Name: id}
 }
 
-func readyVolume(id string) *models.Volume {
-	return &models.Volume{
-		ID:     id,
-		Name:   id,
-		Status: &models.VolumeStatus{Phase: models.VolumePhaseReady},
-	}
-}
-
-// (a) A volume that exists on the stack but isn't referenced by anything in
-// this release's snapshot must never gate the release, even if it's not
-// Ready. This is the core bug: a broken/unused volume must not block every
-// release forever.
-func TestApplyReconciler_VolumesReady_UnreferencedVolumeNotReady_DoesNotGate(t *testing.T) {
+// Every snapshot-referenced volume (via resource VolumeMounts and via
+// BuildConfig.SourceContext.Volume) exists in the DB -> no error. Extra live
+// volumes not referenced by the snapshot are irrelevant. Readiness is
+// deliberately not part of the contract: the cluster agent waits for PVCs
+// itself, so the hub only checks existence.
+func TestApplyReconciler_VerifyReferencedVolumesExist_AllExist_NoError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
 
-	release := volReadyTestRelease([]*models.StackResource{
-		volumeMountResource("web", "v-referenced"),
-	}, nil)
-
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
-		Return([]*models.Volume{
-			readyVolume("v-referenced"),
-			notReadyVolume("v-unreferenced"),
-		}, nil)
-
-	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !ready {
-		t.Fatalf("expected ready=true (unreferenced volume must not gate), got false")
-	}
-}
-
-// (b) A volume referenced via a resource's VolumeMounts that isn't Ready must
-// gate the release (requeue).
-func TestApplyReconciler_VolumesReady_ReferencedByMountNotReady_Gates(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	volSvc := NewMockvolumeService(ctrl)
-
-	release := volReadyTestRelease([]*models.StackResource{
+	release := volExistTestRelease([]*models.StackResource{
 		volumeMountResource("web", "v1"),
-	}, nil)
-
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
-		Return([]*models.Volume{notReadyVolume("v1")}, nil)
-
-	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if ready {
-		t.Fatalf("expected ready=false, got true")
-	}
-}
-
-// (c) A volume referenced via BuildConfig.SourceContext.Volume that isn't
-// Ready must gate the release.
-func TestApplyReconciler_VolumesReady_ReferencedByBuildContextNotReady_Gates(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	volSvc := NewMockvolumeService(ctrl)
-
-	release := volReadyTestRelease([]*models.StackResource{
 		buildContextVolumeResource("builder", "v2"),
 	}, nil)
 
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
-		Return([]*models.Volume{notReadyVolume("v2")}, nil)
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
+		Return([]*models.Volume{
+			liveVolume("v1"),
+			liveVolume("v2"),
+			liveVolume("v-unreferenced"),
+		}, nil)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
+	if err := r.verifyReferencedVolumesExist(context.Background(), release); err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if ready {
-		t.Fatalf("expected ready=false, got true")
 	}
 }
 
-// (d) A referenced volume that no longer exists in the DB must fail the
-// release outright (not requeue forever) via a missingVolumesError, since
-// applying CRs that reference a nonexistent volume would stall the cluster
-// agent trying to mount a PVC that will never appear.
-func TestApplyReconciler_VolumesReady_ReferencedVolumeMissing_ReturnsMissingVolumesError(t *testing.T) {
+// A referenced volume that no longer exists in the DB must fail the release
+// outright via a missingVolumesError, since applying CRs that reference a
+// nonexistent volume would stall the cluster agent trying to mount a PVC
+// that will never appear.
+func TestApplyReconciler_VerifyReferencedVolumesExist_ReferencedVolumeMissing_ReturnsMissingVolumesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
 
-	release := volReadyTestRelease([]*models.StackResource{
+	release := volExistTestRelease([]*models.StackResource{
 		volumeMountResource("web", "v-gone"),
 	}, nil)
 
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
 		Return([]*models.Volume{}, nil)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if ready {
-		t.Fatalf("expected ready=false, got true")
-	}
+	err := r.verifyReferencedVolumesExist(context.Background(), release)
 	var missing *missingVolumesError
 	if !stderrors.As(err, &missing) {
 		t.Fatalf("expected *missingVolumesError, got %v (%T)", err, err)
@@ -188,65 +126,61 @@ func TestApplyReconciler_VolumesReady_ReferencedVolumeMissing_ReturnsMissingVolu
 	}
 }
 
-// (e) No volumes referenced at all -> ready=true without calling the volume
-// service (asserted via zero mock expectations - an unexpected call fails the
-// gomock controller).
-func TestApplyReconciler_VolumesReady_NoReferences_SkipsListing(t *testing.T) {
+// No volumes referenced at all -> no error without calling the volume service
+// (asserted via zero mock expectations - an unexpected call fails the gomock
+// controller).
+func TestApplyReconciler_VerifyReferencedVolumesExist_NoReferences_SkipsListing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
 	// No EXPECT() set: any call to ListVolumesUsedByStack fails the test.
 
-	release := volReadyTestRelease([]*models.StackResource{
+	release := volExistTestRelease([]*models.StackResource{
 		{Name: "web"},
 	}, nil)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
+	if err := r.verifyReferencedVolumesExist(context.Background(), release); err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if !ready {
-		t.Fatalf("expected ready=true, got false")
 	}
 }
 
 // A volume referenced only via a volume_mount connection (not yet
 // materialized into resource.VolumeMounts, since the stackdeploy Resolver
 // only does that at render time on a throwaway Stack rebuilt from the
-// snapshot) must still gate the release when not Ready. This covers the
-// connections gap: release.Snapshot.Resources[].VolumeMounts alone would miss
-// this reference.
-func TestApplyReconciler_VolumesReady_ReferencedByVolumeMountConnection_Gates(t *testing.T) {
+// snapshot) must still be existence-checked. This covers the connections gap:
+// release.Snapshot.Resources[].VolumeMounts alone would miss this reference.
+func TestApplyReconciler_VerifyReferencedVolumesExist_VolumeMountConnectionMissing_ReturnsMissingVolumesError(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
 
-	release := volReadyTestRelease(
+	release := volExistTestRelease(
 		[]*models.StackResource{{Name: "web"}},
 		models.StackConnections{volumeMountConnection("v3", "data", "web")},
 	)
 
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
-		Return([]*models.Volume{notReadyVolume("v3")}, nil)
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
+		Return([]*models.Volume{}, nil)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	err := r.verifyReferencedVolumesExist(context.Background(), release)
+	var missing *missingVolumesError
+	if !stderrors.As(err, &missing) {
+		t.Fatalf("expected *missingVolumesError, got %v (%T)", err, err)
 	}
-	if ready {
-		t.Fatalf("expected ready=false, got true")
+	if len(missing.refs) != 1 || missing.refs[0] != "data" {
+		t.Fatalf("expected missing refs [data] (name preferred as label), got %+v", missing.refs)
 	}
 }
 
-// A volume_mount connection where From.Id is empty and only From.Name
-// is set (name-fallback branch) must gate the release when not Ready.
-// This covers the production scenario where volumes are referenced by
+// A volume_mount connection where From.Id is empty and only From.Name is set
+// (name-fallback branch) must be satisfied by a live volume matching that
+// name. This covers the production scenario where volumes are referenced by
 // name rather than ID.
-func TestApplyReconciler_VolumesReady_ReferencedByVolumeMountConnectionNameOnly_Gates(t *testing.T) {
+func TestApplyReconciler_VerifyReferencedVolumesExist_NameOnlyConnectionReference_Found(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
 
-	release := volReadyTestRelease(
+	release := volExistTestRelease(
 		[]*models.StackResource{{Name: "web"}},
 		models.StackConnections{
 			models.StackConnection{
@@ -258,132 +192,89 @@ func TestApplyReconciler_VolumesReady_ReferencedByVolumeMountConnectionNameOnly_
 		},
 	)
 
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
-		Return([]*models.Volume{notReadyVolume("data")}, nil)
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
+		Return([]*models.Volume{liveVolume("data")}, nil)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
+	if err := r.verifyReferencedVolumesExist(context.Background(), release); err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if ready {
-		t.Fatalf("expected ready=false, got true")
 	}
 }
 
 // A build_artifact_source connection (resource -> volume, the volume being a
-// build-output destination) must NOT gate the release: that volume is never
-// referenced by the Stack/StackResource CRs applied here — it's managed by
-// the separate volume worker/controller.
-func TestApplyReconciler_VolumesReady_BuildArtifactSourceConnection_DoesNotGate(t *testing.T) {
+// build-output destination) contributes no referenced volume: that volume is
+// never referenced by the Stack/StackResource CRs applied here — it's managed
+// by the separate volume worker/controller. With no other references the
+// service must not be called at all.
+func TestApplyReconciler_VerifyReferencedVolumesExist_BuildArtifactSourceConnection_NotReferenced(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
-	// No EXPECT() set: the build_artifact_source connection contributes no
-	// referenced volume, so with no other references the service must not be
-	// called at all.
+	// No EXPECT() set: any call to ListVolumesUsedByStack fails the test.
 
-	release := volReadyTestRelease(
+	release := volExistTestRelease(
 		[]*models.StackResource{{Name: "builder"}},
 		models.StackConnections{buildArtifactSourceConnection("builder", "v4", "artifacts")},
 	)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
+	if err := r.verifyReferencedVolumesExist(context.Background(), release); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if !ready {
-		t.Fatalf("expected ready=true, got false")
-	}
-}
-
-// recreatedVolumeRelease returns a release whose snapshot references a volume
-// by BOTH a (now stale) ID and its name — the shape a persisted VolumeMount
-// carries. Used by the recreated-volume tests below.
-func recreatedVolumeRelease(staleVolumeID, volumeName string) *models.StackRelease {
-	return volReadyTestRelease([]*models.StackResource{
-		{
-			Name: "web",
-			VolumeMounts: []*models.VolumeMount{
-				{SourceVolumeID: staleVolumeID, SourceVolumeName: volumeName, TargetPath: "/data"},
-			},
-		},
-	}, nil)
 }
 
 // A volume deleted and recreated under the same name while the release is in
-// flight gets a new ID: the snapshot ref carries the stale ID plus the name.
-// The live volume matches the ref by name, so the release must NOT be failed
-// as missing — and with the recreated volume Ready, it proceeds.
-func TestApplyReconciler_VolumesReady_RecreatedVolumeMatchedByName_Ready(t *testing.T) {
+// flight gets a new ID: the snapshot ref carries the stale ID plus the name
+// (the shape a persisted VolumeMount carries). The live volume matches the
+// ref by name, so the release must NOT be failed as missing.
+func TestApplyReconciler_VerifyReferencedVolumesExist_RecreatedVolumeMatchedByName_Found(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	volSvc := NewMockvolumeService(ctrl)
 
-	release := recreatedVolumeRelease("v-stale", "data")
+	release := volExistTestRelease([]*models.StackResource{
+		{
+			Name: "web",
+			VolumeMounts: []*models.VolumeMount{
+				{SourceVolumeID: "v-stale", SourceVolumeName: "data", TargetPath: "/data"},
+			},
+		},
+	}, nil)
 
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
 		Return([]*models.Volume{
-			{ID: "v-new", Name: "data", Status: &models.VolumeStatus{Phase: models.VolumePhaseReady}},
+			{ID: "v-new", Name: "data"},
 		}, nil)
 
 	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !ready {
-		t.Fatalf("expected ready=true (recreated volume matches ref by name), got false")
+	if err := r.verifyReferencedVolumesExist(context.Background(), release); err != nil {
+		t.Fatalf("unexpected error (recreated volume matches ref by name): %v", err)
 	}
 }
 
-// Same recreated-volume scenario, but the recreated volume isn't Ready yet:
-// the ref is satisfied (not missing), so no missingVolumesError — the release
-// just gates (requeues) until the volume becomes Ready.
-func TestApplyReconciler_VolumesReady_RecreatedVolumeMatchedByName_NotReady_Gates(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	volSvc := NewMockvolumeService(ctrl)
-
-	release := recreatedVolumeRelease("v-stale", "data")
-
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
-		Return([]*models.Volume{
-			{ID: "v-new", Name: "data", Status: &models.VolumeStatus{Phase: models.VolumePhasePending}},
-		}, nil)
-
-	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-	ready, err := r.volumesReady(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error (ref satisfied by name, must not be missing): %v", err)
-	}
-	if ready {
-		t.Fatalf("expected ready=false (recreated volume not Ready), got true")
-	}
-}
-
-// Reconcile-level: when volumesReady reports a *missingVolumesError, Reconcile
-// must route it through failRelease — MarkFailed is invoked with a message
-// naming the missing ref — and return resultStop with a nil error, matching
-// the other terminal failure paths. The snapshot resource carries only a
-// volume mount (no image/build config, no secret or postgres connections), so
-// the secret-sync steps before volumesReady are all no-ops.
+// Reconcile-level: when verifyReferencedVolumesExist reports a
+// *missingVolumesError, Reconcile must route it through failRelease —
+// MarkFailed is invoked with a message naming the missing ref — and return
+// resultStop with a nil error, matching the other terminal failure paths. The
+// snapshot resource carries only a volume mount (no image/build config, no
+// secret or postgres connections), so the secret-sync steps before the
+// existence check are all no-ops.
 func TestApplyReconciler_Reconcile_MissingVolume_FailsRelease(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
-	release := volReadyTestRelease([]*models.StackResource{
+	release := volExistTestRelease([]*models.StackResource{
 		volumeMountResource("web", "v-gone"),
 	}, nil)
 	release.Manifest = &models.ReleaseManifest{}
 
 	stackSvc := NewMockstackService(ctrl)
-	stackSvc.EXPECT().InternalGetStack(gomock.Any(), volReadyTestStackID).
-		Return(&models.Stack{ID: volReadyTestStackID, ClusterID: volReadyTestClusterID}, nil)
+	stackSvc.EXPECT().InternalGetStack(gomock.Any(), volExistTestStackID).
+		Return(&models.Stack{ID: volExistTestStackID, ClusterID: volExistTestClusterID}, nil)
 
 	clusterMgr := mocks.NewMockClusterManager(ctrl)
-	clusterMgr.EXPECT().GetClient(volReadyTestClusterID).
+	clusterMgr.EXPECT().GetClient(volExistTestClusterID).
 		Return(applySecretsTestClient(t), nil)
 
 	volSvc := NewMockvolumeService(ctrl)
-	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
 		Return([]*models.Volume{}, nil)
 
 	relSvc := NewMockreleaseService(ctrl)

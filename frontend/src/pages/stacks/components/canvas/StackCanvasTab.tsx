@@ -53,6 +53,7 @@ import {
   entryKey,
   type DrawerEntry,
 } from "@/pages/stacks/lib/canvas/drawer-stack";
+import { computeDrawerInset } from "@/pages/stacks/lib/canvas/drawer-inset";
 import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./nodes/node-glyph";
 import { HardDrive } from "lucide-react";
@@ -73,6 +74,8 @@ interface StackCanvasTabProps {
   serverOutputsByName?: ReadonlyMap<string, string[]>;
   connectionAddonIds: ReadonlySet<string>;
   addonNameById: ReadonlyMap<string, string>;
+  /** addonId → live state (e.g. "Ready"), for canvas addon node dots. */
+  addonStateById?: ReadonlyMap<string, string>;
   errors: { [index: number]: { [field: string]: string | undefined } };
   /** Switch the editor to the Logs tab (from the drawer's "View logs"). */
   onViewLogs?: () => void;
@@ -87,6 +90,9 @@ interface StackCanvasTabProps {
   deletingVolume?: boolean;
   /** Names of volumes that already exist server-side; their spec is immutable. */
   persistedVolumeNames?: ReadonlySet<string>;
+  /** A release is in flight — node status dots show pending until it terminates
+   *  (per-resource server state lags the deploy and would flash a stale Ready). */
+  releaseInFlight?: boolean;
 }
 
 function StackCanvasFlow({
@@ -98,6 +104,7 @@ function StackCanvasFlow({
   serverOutputsByName,
   connectionAddonIds,
   addonNameById,
+  addonStateById,
   errors,
   onViewLogs,
   topologyIds,
@@ -105,6 +112,7 @@ function StackCanvasFlow({
   onDeleteVolume,
   deletingVolume,
   persistedVolumeNames,
+  releaseInFlight,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
@@ -128,11 +136,14 @@ function StackCanvasFlow({
 
   // Local connection-derived data (cheap, pure). Re-runs on any edit.
   const dataGraph = useMemo(
-    () => deriveGraph({ resources, linkedAddonIds, addonNameById, volumeNames, dirty }),
-    [resources, linkedAddonIds, addonNameById, volumeNames, dirty],
+    () => deriveGraph({ resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty }),
+    [resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty],
   );
   // Local graph enhanced with server-derived edges + runtime status.
-  const mergedGraph = useMemo(() => mergeTopology(dataGraph, topology), [dataGraph, topology]);
+  const mergedGraph = useMemo(
+    () => mergeTopology(dataGraph, topology, releaseInFlight),
+    [dataGraph, topology, releaseInFlight],
+  );
   // Signature of the node/edge id-set — changes only when topology changes.
   const topologySignature = useMemo(
     () => `${mergedGraph.nodes.map((n) => n.id).join("|")}::${mergedGraph.edges.map((e) => e.id).join("|")}`,
@@ -146,8 +157,22 @@ function StackCanvasFlow({
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
   const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
   const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
-  const { fitView, getIntersectingNodes } = useReactFlow();
+  const { fitView, getIntersectingNodes, getViewport, setViewport } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
+
+  // When the drawer claims/releases horizontal space, the canvas container is
+  // squeezed from the right. Pan the viewport by half that delta so the point
+  // that was at the visible center stays centered — nodes glide left with the
+  // drawer instead of sitting still while the container shrinks around them.
+  const prevDrawerInsetRef = useRef(0);
+  useEffect(() => {
+    const inset = computeDrawerInset(drawerStack.length, window.innerWidth);
+    const delta = inset - prevDrawerInsetRef.current;
+    prevDrawerInsetRef.current = inset;
+    if (delta === 0) return;
+    const vp = getViewport();
+    void setViewport({ ...vp, x: vp.x - delta / 2 }, { duration: 260 });
+  }, [drawerStack.length, getViewport, setViewport]);
 
   const isFloatingVolume = (node: CanvasFlowNode) =>
     node.type === "attachment" && (node.data as AttachmentNodeData).kind === NODE_KIND.volume;
@@ -317,11 +342,17 @@ function StackCanvasFlow({
   );
 
   const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
-    (_event, node) => {
+    (event, node) => {
       if (node.type === "attachment") {
         const data = node.data as AttachmentNodeData;
         if (data.kind === NODE_KIND.volume) openVolumeFromCanvas(data.name);
         return; // secret/object-store attachments stay display-only
+      }
+      // A click on the attached-volume chip targets the volume, not the resource.
+      const chipEl = (event.target as HTMLElement).closest("[data-volume-chip]");
+      if (chipEl) {
+        openVolumeFromCanvas(chipEl.getAttribute("data-volume-chip")!);
+        return;
       }
       const idx = (node.data as ResourceNodeData).resourceIdx;
       if (idx == null) return; // addon node — managed via the Environment tab, no drawer in v1

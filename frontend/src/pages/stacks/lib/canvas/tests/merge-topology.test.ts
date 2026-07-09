@@ -5,8 +5,8 @@ import type { StackTopology } from "@/api/topology";
 
 const localGraph = (): CanvasGraph => ({
   nodes: [
-    { id: "resource:web", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "web", kindLabel: "WEB", glyph: "web", dotState: "ok", summary: "", volumes: [] } },
-    { id: "resource:api", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "api", kindLabel: "WEB", glyph: "web", dotState: "ok", summary: "", volumes: [] } },
+    { id: "resource:web", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "web", kindLabel: "WEB", glyph: "web", dotVariant: "neutral", summary: "", volumes: [] } },
+    { id: "resource:api", type: "resource", position: { x: 0, y: 0 }, data: { kind: "service", name: "api", kindLabel: "WEB", glyph: "web", dotVariant: "neutral", summary: "", volumes: [] } },
   ],
   edges: [
     { id: "env:resource:api->resource:web", source: "resource:api", target: "resource:web", type: "connection", data: { kind: "env", sourceOfTruth: "connection" } },
@@ -56,12 +56,64 @@ describe("mergeTopology", () => {
     expect(merged.edges.map((e) => e.id)).not.toContain("env:secret:s9->resource:web");
   });
 
-  it("overlays server node state onto matching resource nodes as status", () => {
+  it("overlays server node state onto matching resource node's dotVariant", () => {
     const server = {
-      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Degraded" }],
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Ready" }],
       edges: [],
     } as unknown as StackTopology;
     const merged = mergeTopology(localGraph(), server);
-    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.status).toBe("Degraded");
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("ready");
+  });
+
+  it("is a no-op (referentially equal node) when the derived dotVariant is unchanged", () => {
+    const local = localGraph();
+    const server = {
+      // "unknown" resource state maps to statusVariant("resource", "unknown") === "info",
+      // not "neutral" — pick a state that actually maps back to "neutral" for a true no-op.
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "" }],
+      edges: [],
+    } as unknown as StackTopology;
+    const merged = mergeTopology(local, server);
+    const before = local.nodes.find((n) => n.id === "resource:web");
+    const after = merged.nodes.find((n) => n.id === "resource:web");
+    expect(after).toBe(before);
+  });
+
+  it("leaves a node's dotVariant untouched when it is absent from server topology", () => {
+    const local = localGraph();
+    const server = { nodes: [], edges: [] } as unknown as StackTopology;
+    const merged = mergeTopology(local, server);
+    expect(merged.nodes.find((n) => n.id === "resource:api")?.data.dotVariant).toBe("neutral");
+  });
+});
+
+describe("mergeTopology release-in-flight overlay", () => {
+  it("forces resource dots to pending while a release is in flight, beating a stale server Ready", () => {
+    const server = {
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Ready" }],
+      edges: [],
+    } as unknown as StackTopology;
+    const merged = mergeTopology(localGraph(), server, true);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+    expect(merged.nodes.find((n) => n.id === "resource:api")?.data.dotVariant).toBe("pending");
+  });
+
+  it("applies in flight even without server topology", () => {
+    const merged = mergeTopology(localGraph(), null, true);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+  });
+
+  it("lets a reported error win over the in-flight pending", () => {
+    const server = {
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Failed" }],
+      edges: [],
+    } as unknown as StackTopology;
+    const merged = mergeTopology(localGraph(), server, true);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("error");
+  });
+
+  it("does not touch dots when no release is in flight", () => {
+    const merged = mergeTopology(localGraph(), null, false);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
   });
 });

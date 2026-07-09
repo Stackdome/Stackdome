@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -13,11 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-// NamespaceService's mock lives in-package (not pkg/mocks): the embedded
-// ClusterResourceServiceInjectable references services.ClusterResourceServiceDeps,
-// so a pkg/mocks mock would import services and close an import cycle
-// (services -> auth -> mocks -> services).
-//go:generate mockgen -destination=namespace_service_mock_test.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services github.com/Stackdome/stackdome/pkg/services NamespaceService
+//go:generate mockgen -destination=../mocks/mock_namespace_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services NamespaceService
 
 type NamespaceService interface {
 	CreateInDB(ctx context.Context, ns *models.Namespace) (*models.Namespace, *errors.ServiceError)
@@ -56,14 +53,29 @@ func NewNamespaceService(spec NamespaceServiceSpec) NamespaceService {
 }
 
 func (s *namespaceService) PrepareNamespaceForStack(ctx context.Context, stack *models.Stack) (*models.Namespace, *errors.ServiceError) {
-	// Generate a unique namespace for the stack
+	// Generate a unique namespace for the stack. The result must be a valid
+	// RFC 1123 DNS label, so namespaceNameForStack caps it at
+	// models.KubernetesDNSLabelMaxLength by cutting the UUID tail; the stack
+	// validator caps names at models.MaxStackNameLength so at least
+	// models.MinNamespaceUUIDSuffixLength UUID characters always survive.
 	namespace := &models.Namespace{
-		Name:           fmt.Sprintf("%s-%s", stack.Name, uuid.New().String()),
+		Name:           namespaceNameForStack(stack.Name),
 		OrganisationID: stack.OrganisationID,
 	}
 	namespace.AddDefaultLabels()
 
 	return namespace, nil
+}
+
+// namespaceNameForStack builds "<stack-name>-<uuid>" and deterministically
+// truncates the end so the result fits the DNS-label cap, then strips any
+// trailing separator left by the cut so it stays a valid RFC 1123 DNS label.
+func namespaceNameForStack(stackName string) string {
+	name := stackName + models.NamespaceNameSeparator + uuid.New().String()
+	if len(name) > models.KubernetesDNSLabelMaxLength {
+		name = name[:models.KubernetesDNSLabelMaxLength]
+	}
+	return strings.TrimRight(name, models.NamespaceNameSeparator)
 }
 
 func (s *namespaceService) PrepareNamespaceForAddon(ctx context.Context, addon models.Addon, organisationID string) (*models.Namespace, *errors.ServiceError) {

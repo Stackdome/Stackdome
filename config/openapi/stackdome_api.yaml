@@ -6072,6 +6072,7 @@ components:
             - registry_credentials_required
             - registry_auth_failed
             - push_access_denied
+            - stack_name_invalid
             - stack_settings_invalid
             - connection_invalid
         message:
@@ -7213,6 +7214,7 @@ components:
             - registry_credentials_required
             - registry_auth_failed
             - push_access_denied
+            - stack_name_invalid
             - stack_settings_invalid
             - connection_invalid
         message:

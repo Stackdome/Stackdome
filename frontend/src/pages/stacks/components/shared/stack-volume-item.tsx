@@ -9,6 +9,7 @@ import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData } 
 import type { z } from "zod";
 import { ApiVolumeStatusSchema } from "@/pages/stacks/schemas/api-schema";
 import { VolumeFields, volumeMountingInfo } from "./volume-fields";
+import { volumeDotClass } from "@/pages/stacks/lib/volume-status";
 
 interface StackVolumeItemProps {
   volume: Partial<VolumeFormData>;
@@ -32,13 +33,8 @@ export default function StackVolumeItem({
   allStackResources = [],
 }: StackVolumeItemProps) {
   const statusObj = (volume.status ?? {}) as z.infer<typeof ApiVolumeStatusSchema>;
-  const status = statusObj.phase?.toLowerCase() || 'pending';
-  let statusColor = 'bg-warn';
-  if (status === 'ready') {
-    statusColor = 'bg-success';
-  } else if (status === 'failed') {
-    statusColor = 'bg-danger';
-  }
+  const status = statusObj.phase?.toLowerCase() || 'unknown';
+  const statusColor = volumeDotClass(statusObj.phase);
 
   const mountingInfo = volumeMountingInfo(volume, allStackResources);
   const accessMode = volume.spec?.access_mode || "ReadWriteOnce";

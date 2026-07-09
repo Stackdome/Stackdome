@@ -1,4 +1,5 @@
 import type { components } from "@/api/types/openapi";
+import { pairByFingerprint } from "@/pages/stacks/lib/stack-diff";
 
 export type Snap = components["schemas"]["StackReleaseSnapshot"];
 type SnapResource = components["schemas"]["StackResource"];
@@ -93,21 +94,20 @@ function diffResources(prev: unknown, cur: unknown): ResourceDiff[] {
   }
   // Collapse a removed + added pair with identical config into a single rename
   // (the backend reconciles by name, so a rename is a delete + create).
-  const usedAdded = new Set<number>();
-  for (const r of removed) {
-    const fp = resourceFingerprint(r);
-    const matchIdx = added.findIndex((a, i) => !usedAdded.has(i) && resourceFingerprint(a) === fp);
-    if (matchIdx >= 0) {
-      usedAdded.add(matchIdx);
-      out.push({ name: added[matchIdx].name ?? "", fromName: r.name ?? "", change: "renamed", sections: [] });
-    } else {
-      out.push({ name: r.name ?? "", change: "removed", sections: sectionsFor(r, undefined), note: "Resource removed from this release — workload and config deleted from the stack." });
-    }
+  const pairs = pairByFingerprint(removed, added, resourceFingerprint, resourceFingerprint);
+  const renamedRemoved = new Set(pairs.map(([r]) => r));
+  const renamedAdded = new Set(pairs.map(([, a]) => a));
+  for (const [r, a] of pairs) {
+    out.push({ name: a.name ?? "", fromName: r.name ?? "", change: "renamed", sections: [] });
   }
-  added.forEach((a, i) => {
-    if (usedAdded.has(i)) return;
+  for (const r of removed) {
+    if (renamedRemoved.has(r)) continue;
+    out.push({ name: r.name ?? "", change: "removed", sections: sectionsFor(r, undefined), note: "Resource removed from this release — workload and config deleted from the stack." });
+  }
+  for (const a of added) {
+    if (renamedAdded.has(a)) continue;
     out.push({ name: a.name ?? "", change: "added", sections: sectionsFor(undefined, a) });
-  });
+  }
   return out;
 }
 
@@ -170,10 +170,29 @@ function connScalars(c: SnapConn): Record<string, string | undefined> {
   return out;
 }
 
+/** Rewrite resource endpoints of the previous snapshot's connections through the
+ *  rename map, so a connection whose only "change" is a renamed owner keys the
+ *  same as its current counterpart instead of diffing as a phantom remove + add. */
+function remapConnResources(conns: SnapConn[], renames: Map<string, string>): SnapConn[] {
+  if (renames.size === 0) return conns;
+  const remap = (n: SnapConn["from"]): SnapConn["from"] =>
+    n?.type === "stack_resource" && n.name && renames.has(n.name) ? { ...n, name: renames.get(n.name) } : n;
+  return conns.map((c) => ({ ...c, from: remap(c.from), to: remap(c.to) }));
+}
+
 export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
   if (prev == null) return { resources: [], volumes: [], connections: [] }; // no predecessor — caller distinguishes "initial"
   const resources = diffResources(prev, cur);
+  const renames = new Map(
+    resources.filter((r) => r.change === "renamed" && r.fromName).map((r) => [r.fromName!, r.name]),
+  );
   const volumes = diffNamed(prev.volumes ?? [], cur?.volumes ?? [], (v) => v.name ?? "", volumeScalars, "Volume removed from this release.");
-  const connections = diffNamed(prev.connections ?? [], cur?.connections ?? [], connName, connScalars, "Connection removed from this release.");
+  const connections = diffNamed(
+    remapConnResources(prev.connections ?? [], renames),
+    cur?.connections ?? [],
+    connName,
+    connScalars,
+    "Connection removed from this release.",
+  );
   return { resources, volumes, connections };
 }

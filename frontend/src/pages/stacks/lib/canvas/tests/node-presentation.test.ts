@@ -6,7 +6,6 @@ describe("nodePresentation", () => {
     expect(nodePresentation({ isAddon: true })).toEqual({
       kindLabel: "Postgres",
       glyph: "postgres",
-      dotState: "ok",
       summary: "managed postgres",
     });
   });
@@ -15,7 +14,6 @@ describe("nodePresentation", () => {
     const p = nodePresentation({ isAddon: false, image: "redis:6.2", ports: [{ number: 6379 }] });
     expect(p.kindLabel).toBe("Redis");
     expect(p.glyph).toBe("redis");
-    expect(p.dotState).toBe("ok");
     expect(p.summary).toBe("redis:6.2 · in-memory");
   });
 
@@ -31,9 +29,9 @@ describe("nodePresentation", () => {
     expect(nodePresentation({ isAddon: false, image: "mysql:8" }).glyph).toBe("database");
   });
 
-  it("detects minio as an Object store, warn dot, S3-compatible", () => {
+  it("detects minio as an Object store, S3-compatible", () => {
     const p = nodePresentation({ isAddon: false, image: "minio/minio:latest" });
-    expect(p).toMatchObject({ kindLabel: "Object", glyph: "object", dotState: "warn" });
+    expect(p).toMatchObject({ kindLabel: "Object", glyph: "object" });
     expect(p.summary).toBe("minio/minio:latest · S3-compatible");
   });
 

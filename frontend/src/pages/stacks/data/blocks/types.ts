@@ -1,4 +1,7 @@
-export type BlockCategory = "services" | "data";
+export type BlockCategory = "services" | "databases" | "analytics";
+
+/** Categories whose blocks are internal dependencies (tcp ports, generated passwords). */
+export const DATA_BLOCK_CATEGORIES: ReadonlySet<BlockCategory> = new Set(["databases", "analytics"]);
 
 export interface BlockCategoryMeta {
   id: BlockCategory;

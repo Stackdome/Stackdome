@@ -292,6 +292,17 @@ body {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
   }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.45; }
+  }
+  .animate-breathe {
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-breathe { animation: none; }
+  }
 }
 
 @layer base {

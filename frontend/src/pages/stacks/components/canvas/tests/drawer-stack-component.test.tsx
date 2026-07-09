@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import { DrawerStack } from "../DrawerStack";
 import type { DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-stack";
+import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
 
 afterEach(cleanup);
 
@@ -68,6 +69,37 @@ describe("DrawerStack", () => {
     window.dispatchEvent(ev);
     expect(onPop).not.toHaveBeenCalled();
     expect(onCloseAll).not.toHaveBeenCalled();
+  });
+
+  it("reports its occupied width to the inset context, and 0 when closed", () => {
+    const setInset = vi.fn();
+    const props = {
+      front: <div>body</div>,
+      onTruncate: vi.fn(),
+      onPop: vi.fn(),
+      onCloseAll: vi.fn(),
+    };
+    const { rerender } = render(
+      <DrawerInsetContext.Provider value={{ setInset }}>
+        <DrawerStack
+          panels={[
+            { entry: r(0), title: "web", icon: <span /> },
+            { entry: v("data"), title: "data", icon: <span /> },
+          ]}
+          {...props}
+        />
+      </DrawerInsetContext.Provider>,
+    );
+    // 12 (inset) + min(680, innerWidth - 24) + 16 (one behind panel)
+    const panelWidth = Math.min(680, window.innerWidth - 24);
+    expect(setInset).toHaveBeenLastCalledWith(12 + panelWidth + 16);
+
+    rerender(
+      <DrawerInsetContext.Provider value={{ setInset }}>
+        <DrawerStack panels={[]} {...props} front={null} />
+      </DrawerInsetContext.Provider>,
+    );
+    expect(setInset).toHaveBeenLastCalledWith(0);
   });
 
   it("renders nothing when the stack is empty", () => {
