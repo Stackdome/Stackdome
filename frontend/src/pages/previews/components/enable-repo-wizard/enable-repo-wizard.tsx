@@ -5,6 +5,7 @@ import { listGitIntegrations } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { ConnectPhase } from "./connect-phase";
 import { RepoPickerPhase } from "./repo-picker-phase";
+import { ConfigurePhase } from "./configure-phase";
 
 type Phase = "connect" | "pick" | "configure";
 
@@ -26,9 +27,7 @@ interface EnableRepoWizardProps {
   onCreated: (configId: string) => void;
 }
 
-// `onCreated` isn't wired until Task 9; the underscore keeps tsc/eslint's
-// unused-parameter checks quiet without hiding the still-real prop contract.
-export function EnableRepoWizard({ open, onOpenChange, onCreated: _onCreated }: EnableRepoWizardProps) {
+export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWizardProps) {
   const [phase, setPhase] = useState<Phase>("connect");
   const [integrationId, setIntegrationId] = useState<string | null>(null);
   const [repo, setRepo] = useState<PickedRepo | null>(null);
@@ -108,8 +107,16 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated: _onCreated }: 
               onBack={() => setPhase("connect")}
             />
           )}
-          {/* Task 9 replaces this stub with <ConfigurePhase …/> */}
-          {phase === "configure" && repo && <div data-testid="configure-phase" />}
+          {phase === "configure" && repo && (
+            <ConfigurePhase
+              repo={repo}
+              onCreated={(configId) => {
+                onCreated(configId);
+                close();
+              }}
+              onBack={() => setPhase("pick")}
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>
