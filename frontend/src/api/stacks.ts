@@ -65,6 +65,15 @@ export async function applyStack(orgId: string, teamName: string, stackId: strin
   return response.data;
 }
 
+// Name-addressed declarative upsert (kubectl-style): stack identity is the
+// body's name, unique per team. Missing -> creates the stack and its children
+// atomically (201); existing -> reconciles like applyStack (200). A server-side
+// validation failure persists nothing, so retrying after a fix just works.
+export async function applyStackByName(orgId: string, teamName: string, input: Stack): Promise<Stack> {
+  const response = await api.put<Stack>(`/organizations/${orgId}/teams/${teamName}/stacks/apply`, input);
+  return response.data;
+}
+
 export async function deleteStack(orgId: string, teamName: string, stackId: string): Promise<void> {
   await api.delete(`/organizations/${orgId}/teams/${teamName}/stacks/${stackId}`);
 }
