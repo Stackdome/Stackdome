@@ -186,6 +186,7 @@ func (s *stackResourceService) prepareResource(ctx context.Context, stack *model
 	resource.UserID = stack.UserID
 	resource.Namespace = stack.Namespace
 	applyStackResourcePortDefaults(resource)
+	normalizeStackResourceReplicas(resource)
 	return s.populateRegistryUrlForResource(ctx, stack, resource)
 }
 
