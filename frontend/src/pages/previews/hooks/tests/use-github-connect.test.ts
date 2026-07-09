@@ -1,0 +1,109 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+
+vi.mock("@/api/git-integrations", () => ({
+  createGitHubAppManifest: vi.fn(),
+  getGitIntegration: vi.fn(),
+  listInstallations: vi.fn(),
+  listGitIntegrations: vi.fn(),
+}));
+vi.mock("@/helpers/common", () => ({
+  getCurrentOrganizationId: () => "org1",
+}));
+
+import { createGitHubAppManifest, getGitIntegration, listInstallations, listGitIntegrations } from "@/api/git-integrations";
+import { GITHUB_APP_INSTALLED_MESSAGE } from "@/hooks/use-github-setup-landing";
+import { useGithubConnect } from "../use-github-connect";
+
+const flow = {
+  manifest: { name: "stackdome-org1" },
+  github_url: "https://github.com/settings/apps/new?state=s1",
+  state: "s1",
+};
+
+describe("useGithubConnect", () => {
+  let openSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
+    (createGitHubAppManifest as ReturnType<typeof vi.fn>).mockResolvedValue(flow);
+    (getGitIntegration as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "gi1", status: "pending_install" });
+    (listGitIntegrations as ReturnType<typeof vi.fn>).mockResolvedValue({
+      items: [{ id: "gi1", type: "github_app", status: "pending_install" }],
+      total: 1,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    openSpy.mockRestore();
+    vi.clearAllMocks();
+    document.querySelectorAll("form").forEach((f) => f.remove());
+  });
+
+  it("moves to waiting and form-posts the manifest into the popup", async () => {
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(openSpy).toHaveBeenCalled();
+    expect(result.current.state).toBe("waiting");
+    expect(createGitHubAppManifest).toHaveBeenCalledWith("org1");
+  });
+
+  it("errors when the popup is blocked", async () => {
+    openSpy.mockReturnValue(null);
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(result.current.state).toBe("error");
+    expect(result.current.error).toMatch(/popup blocked/i);
+  });
+
+  it("connects on the popup's postMessage", async () => {
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    act(() => {
+      window.dispatchEvent(new MessageEvent("message", {
+        data: { type: GITHUB_APP_INSTALLED_MESSAGE },
+        origin: window.location.origin,
+      }));
+    });
+    expect(result.current.state).toBe("connected");
+  });
+
+  it("connects when polling sees the integration installed", async () => {
+    (getGitIntegration as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ id: "gi1", status: "pending_install" })
+      .mockResolvedValueOnce({ id: "gi1", status: "installed" });
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(result.current.state).toBe("connected");
+  });
+
+  it("checkAgain refreshes installations and connects when one exists", async () => {
+    (listInstallations as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [{ id: "in1" }], total: 1 });
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    await act(async () => {
+      await result.current.checkAgain();
+    });
+    expect(listInstallations).toHaveBeenCalledWith("org1", "gi1", true);
+    expect(result.current.state).toBe("connected");
+  });
+});
