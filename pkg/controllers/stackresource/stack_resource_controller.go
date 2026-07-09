@@ -28,6 +28,8 @@ type stackResourceReconciler struct {
 	client               client.Client
 	stackResourceService services.StackResourceService
 	stackService         services.StackService
+	releaseChecker       releaseActiveChecker
+	eventRecorder        resourceEventRecorder
 	logger               logger.Logger
 	env                  string
 }
@@ -35,15 +37,25 @@ type stackResourceReconciler struct {
 type StackResourceReconcilerSpec struct {
 	StackResourceService services.StackResourceService
 	StackService         services.StackService
+	ReleaseChecker       releaseActiveChecker
+	EventRecorder        resourceEventRecorder
 	Log                  logger.Logger
 	Env                  string
 }
 
 func NewStackResourceReconciler(spec StackResourceReconcilerSpec) *stackResourceReconciler {
+	if spec.ReleaseChecker == nil {
+		panic("StackResourceReconciler requires a ReleaseChecker")
+	}
+	if spec.EventRecorder == nil {
+		panic("StackResourceReconciler requires an EventRecorder")
+	}
 	return &stackResourceReconciler{
 		client:               nil,
 		stackResourceService: spec.StackResourceService,
 		stackService:         spec.StackService,
+		releaseChecker:       spec.ReleaseChecker,
+		eventRecorder:        spec.EventRecorder,
 		logger:               spec.Log,
 		env:                  spec.Env,
 	}
@@ -103,13 +115,81 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if dbStackResource.Status == nil || dbStackResource.Status.LastObservedStatusHash != stackResourceCr.Status.StatusHash {
-		dbStackResource.Status = mapClusterStatusToServerStatus(stackResourceCr)
+		dbStackResource.Status = computeStatusRewrite(dbStackResource.Status, stackResourceCr)
 		if serr := w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %v", serr)
 		}
+		w.recordResourceEvent(ctx, stackID, dbStackResource)
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// recordResourceEvent records the observed resource state onto the active
+// release timeline. It runs only inside the StatusHash-change gate, so each
+// state transition is recorded at most once. A missing active release or a
+// recorder failure is non-fatal: the status update has already been persisted,
+// so both paths only log and return.
+func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stackID string, resource *models.StackResource) {
+	if resource.Status == nil {
+		return
+	}
+	eventType, reason, emit := resourceEventForState(resource.Status.State, resource.Status.Conditions, resource.Status.Message)
+	if !emit {
+		return
+	}
+	active, serr := w.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
+	if serr != nil || active == nil {
+		w.logger.Debugf("no active release for stack %s; skipping resource event for %s", stackID, resource.Name)
+		return
+	}
+	if recErr := w.eventRecorder.RecordResourceEvent(ctx, active, resource.Name, eventType, reason); recErr != nil {
+		w.logger.Errorf("failed to record resource event for %s: %v", resource.Name, recErr)
+	}
+}
+
+// resourceEventForState maps an observed resource state and the cluster-agent
+// conditions on it to a release timeline event. emit is false when no resource
+// event should be recorded: a build in progress (the imagebuild controller's
+// build events cover it) or an unmapped state.
+func resourceEventForState(state models.StackResourceState, conditions []models.Condition, statusReason string) (eventType models.ReleaseEventType, reason string, emit bool) {
+	switch state {
+	case models.StackResourcePhasePending:
+		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceDependenciesReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
+			return models.ReleaseEventTypeResourceWaiting, cond.Message, true
+		}
+		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceBuildReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
+			// Building — the imagebuild controller's build events cover this.
+			return "", "", false
+		}
+		return models.ReleaseEventTypeResourceDeploying, "", true
+	case models.StackResourcePhaseReady:
+		return models.ReleaseEventTypeResourceReady, "", true
+	case models.StackResourcePhaseFailed, models.StackResourcePhaseUnknown:
+		reason = statusReason
+		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) && cond.Message != "" {
+			reason = cond.Message
+		}
+		return models.ReleaseEventTypeResourceFailed, reason, true
+	default:
+		return "", "", false
+	}
+}
+
+// computeStatusRewrite rebuilds the whole server-side status from the cluster
+// CR. Build failures are owned by the imagebuild controller — the workload CR
+// never reports them — so when the CR yields no failure of its own, an
+// existing build_failure is carried over instead of being clobbered with nil.
+// A CR-derived (runtime) failure still overwrites it, and clearing a build
+// failure stays with the imagebuild controller, which clears it on build
+// success.
+func computeStatusRewrite(current *models.StackResourceStatus, clusterInstance *corev1alpha1.StackResource) *models.StackResourceStatus {
+	updated := mapClusterStatusToServerStatus(clusterInstance)
+	if updated.LastFailure == nil && current != nil && current.LastFailure != nil &&
+		current.LastFailure.Type == models.FailureTypeBuildFailure {
+		updated.LastFailure = current.LastFailure
+	}
+	return updated
 }
 
 func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource) *models.StackResourceStatus {
