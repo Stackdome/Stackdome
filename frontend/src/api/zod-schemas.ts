@@ -1082,6 +1082,35 @@ const StackReleaseSnapshot = z
 const StackReleaseDetail = StackRelease.and(
   z.object({ snapshot: StackReleaseSnapshot }).partial().passthrough()
 );
+const ReleaseEventLink = z
+  .object({ kind: z.string(), label: z.string(), target: z.record(z.string()) })
+  .partial()
+  .passthrough();
+const ReleaseEvent = z
+  .object({
+    id: z.string(),
+    release_id: z.string(),
+    stack_id: z.string(),
+    sequence: z.number().int(),
+    occurred_at: z.string().datetime({ offset: true }),
+    source: z.enum(["hub", "cluster"]),
+    scope: z.enum(["release", "resource"]),
+    resource_name: z.string(),
+    type: z.string(),
+    level: z.enum(["info", "success", "warning", "error"]),
+    message: z.string(),
+    links: z.array(ReleaseEventLink),
+    metadata: z.record(z.string()),
+  })
+  .partial()
+  .passthrough();
+const ReleaseEventList = z
+  .object({
+    items: z.array(ReleaseEvent),
+    next_after_sequence: z.number().int(),
+  })
+  .partial()
+  .passthrough();
 const PostgresVersion = z
   .object({
     major: z.number().int().gte(13).lte(17),
@@ -1764,6 +1793,9 @@ export const schemas = {
   StackReleaseList,
   StackReleaseSnapshot,
   StackReleaseDetail,
+  ReleaseEventLink,
+  ReleaseEvent,
+  ReleaseEventList,
   PostgresVersion,
   PostgresInstances,
   PostgresStorage,
@@ -6247,6 +6279,79 @@ accepts a full stack document.
         name: "release_id",
         type: "Path",
         schema: z.string(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id/events",
+    alias: "listReleaseEvents",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "after_sequence",
+        type: "Query",
+        schema: z.number().int().optional().default(0),
+      },
+      {
+        name: "limit",
+        type: "Query",
+        schema: z.number().int().lte(500).optional().default(100),
+      },
+    ],
+    response: ReleaseEventList,
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id/events/stream",
+    alias: "streamReleaseEvents",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "team_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "after_sequence",
+        type: "Query",
+        schema: z.number().int().optional().default(0),
       },
     ],
     response: z.void(),

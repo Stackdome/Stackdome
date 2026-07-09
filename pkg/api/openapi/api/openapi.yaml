@@ -3823,6 +3823,127 @@ paths:
       summary: Cancel a pending or rendering release
       tags:
       - Releases
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events:
+    get:
+      operationId: listReleaseEvents
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: release_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: after_sequence
+        required: false
+        schema:
+          default: 0
+          type: integer
+        style: form
+      - explode: true
+        in: query
+        name: limit
+        required: false
+        schema:
+          default: 100
+          maximum: 500
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseEventList'
+          description: Release events ordered by sequence
+      security:
+      - Bearer: []
+      summary: List release events ordered by sequence
+      tags:
+      - Releases
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream:
+    get:
+      operationId: streamReleaseEvents
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the team
+        explode: false
+        in: path
+        name: team_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: false
+        in: path
+        name: release_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - explode: true
+        in: query
+        name: after_sequence
+        required: false
+        schema:
+          default: 0
+          type: integer
+        style: form
+      responses:
+        "200":
+          content:
+            text/event-stream:
+              schema:
+                format: binary
+                type: string
+          description: Stream of release events via Server-Sent Events (SSE). Each
+            SSE frame's id is the event sequence; data is a ReleaseEvent JSON object.
+      security:
+      - Bearer: []
+      summary: Stream release events via Server-Sent Events
+      tags:
+      - Releases
   /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     get:
       parameters:
@@ -13940,6 +14061,146 @@ components:
           type: integer
         total_pages:
           description: Total number of pages
+          type: integer
+      type: object
+    ReleaseEventLink:
+      example:
+        kind: kind
+        label: label
+        target:
+          key: target
+      properties:
+        kind:
+          type: string
+        label:
+          type: string
+        target:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+    ReleaseEvent:
+      example:
+        release_id: release_id
+        metadata:
+          key: metadata
+        level: info
+        source: hub
+        type: type
+        message: message
+        occurred_at: 2000-01-23T04:56:07.000+00:00
+        sequence: 0
+        stack_id: stack_id
+        scope: release
+        links:
+        - kind: kind
+          label: label
+          target:
+            key: target
+        - kind: kind
+          label: label
+          target:
+            key: target
+        id: id
+        resource_name: resource_name
+      properties:
+        id:
+          type: string
+        release_id:
+          type: string
+        stack_id:
+          type: string
+        sequence:
+          type: integer
+        occurred_at:
+          format: date-time
+          type: string
+        source:
+          enum:
+          - hub
+          - cluster
+          type: string
+        scope:
+          enum:
+          - release
+          - resource
+          type: string
+        resource_name:
+          type: string
+        type:
+          type: string
+        level:
+          enum:
+          - info
+          - success
+          - warning
+          - error
+          type: string
+        message:
+          type: string
+        links:
+          items:
+            $ref: '#/components/schemas/ReleaseEventLink'
+          type: array
+        metadata:
+          additionalProperties:
+            type: string
+          type: object
+      type: object
+    ReleaseEventList:
+      example:
+        next_after_sequence: 6
+        items:
+        - release_id: release_id
+          metadata:
+            key: metadata
+          level: info
+          source: hub
+          type: type
+          message: message
+          occurred_at: 2000-01-23T04:56:07.000+00:00
+          sequence: 0
+          stack_id: stack_id
+          scope: release
+          links:
+          - kind: kind
+            label: label
+            target:
+              key: target
+          - kind: kind
+            label: label
+            target:
+              key: target
+          id: id
+          resource_name: resource_name
+        - release_id: release_id
+          metadata:
+            key: metadata
+          level: info
+          source: hub
+          type: type
+          message: message
+          occurred_at: 2000-01-23T04:56:07.000+00:00
+          sequence: 0
+          stack_id: stack_id
+          scope: release
+          links:
+          - kind: kind
+            label: label
+            target:
+              key: target
+          - kind: kind
+            label: label
+            target:
+              key: target
+          id: id
+          resource_name: resource_name
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ReleaseEvent'
+          type: array
+        next_after_sequence:
           type: integer
       type: object
     ReleaseCause:
