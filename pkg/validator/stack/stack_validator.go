@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"regexp"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -55,6 +56,7 @@ func NewStackValidator(
 func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError {
 	var ferrs []errors.FieldError
 
+	ferrs = append(ferrs, validateStackName(spec)...)
 	ferrs = append(ferrs, v.validateUniqueResourceNames(spec)...)
 
 	resourceErrs, serr := v.validateResources(ctx, spec)
@@ -121,13 +123,15 @@ func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.S
 }
 
 // ValidateShell runs only the rules scoped to the stack's own columns
-// (currently validateStackSettings), skipping validateResources,
+// (validateStackSettings), skipping validateResources,
 // validateUniqueResourceNames, and connection validation entirely. It backs
-// thin shell create/update (POST /stacks, PUT /stacks/{id}), which never
-// carry children, so out-of-range settings are rejected there with the same
-// limits the fat paths enforce.
+// thin shell update (PUT /stacks/{id}), which never carries children. Name
+// rules are create-only (ValidateForCreate): the name is immutable on every
+// update path, so re-validating it here would only brick updates of stacks
+// created before the current name rules.
 func (v *stackValidator) ValidateShell(_ context.Context, spec *models.Stack) *errors.ServiceError {
-	ferrs := dedupeFieldErrors(validateStackSettings(spec))
+	ferrs := validateStackSettings(spec)
+	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
 		return errors.ValidationFailed(ferrs)
 	}
@@ -158,6 +162,42 @@ func (v *stackValidator) validateResources(ctx context.Context, spec *models.Sta
 		}
 	}
 	return ferrs, nil
+}
+
+// stackNamePattern is the RFC 1123 DNS-label charset: lowercase
+// alphanumerics and '-', starting and ending with an alphanumeric. The stack
+// name is embedded verbatim in the generated Kubernetes namespace name
+// ("<stack-name>-<uuid>", truncated to the DNS-label cap), so anything
+// outside this charset would make the namespace invalid and stall
+// reconciliation at apply time instead of failing the request here, and
+// anything longer than models.MaxStackNameLength would leave fewer than
+// models.MinNamespaceUUIDSuffixLength UUID characters after truncation.
+var stackNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+
+func validateStackName(spec *models.Stack) []errors.FieldError {
+	if spec.Name == "" {
+		return []errors.FieldError{{
+			Field:   "name",
+			Code:    errors.VErrStackNameInvalid,
+			Message: "stack name is required",
+		}}
+	}
+	if len(spec.Name) > models.MaxStackNameLength {
+		return []errors.FieldError{{
+			Field: "name",
+			Code:  errors.VErrStackNameInvalid,
+			Message: fmt.Sprintf(
+				"stack name must be at most %d characters", models.MaxStackNameLength),
+		}}
+	}
+	if !stackNamePattern.MatchString(spec.Name) {
+		return []errors.FieldError{{
+			Field:   "name",
+			Code:    errors.VErrStackNameInvalid,
+			Message: "stack name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number",
+		}}
+	}
+	return nil
 }
 
 func validateStackSettings(spec *models.Stack) []errors.FieldError {
@@ -329,7 +369,7 @@ func (v *stackValidator) validateConnectionSource(
 		}
 		return resource.EnsureDeclaredOutputs(), nil
 	case models.TopologyNodeTypePostgresAddon:
-		addon, err := v.validatePostgresConnectionConfig(ctx, label, connection)
+		addon, err := v.validatePostgresConnectionConfig(ctx, orgID, label, connection)
 		if err != nil {
 			return nil, err
 		}
@@ -487,7 +527,7 @@ func validateBuildArtifactSourceConfig(volumeMap map[string]*models.Volume, labe
 	return nil
 }
 
-func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, label string, connection models.StackConnection) (*models.PostgresAddon, *errors.ServiceError) {
+func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, orgID string, label string, connection models.StackConnection) (*models.PostgresAddon, *errors.ServiceError) {
 	if connection.Kind != models.ConnectionKindEnv {
 		return nil, errors.BadRequest("connection '%s' with from.type '%s' only supports kind '%s'", label, connection.From.Type, models.ConnectionKindEnv)
 	}
@@ -532,8 +572,11 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, l
 		scope = "superuser"
 	}
 
+	// Org-scoped lookup: GetPostgresAddon itself is unscoped, so an addon
+	// belonging to another organisation must behave exactly like a missing
+	// one — anything else leaks cross-org addon existence.
 	addon, serviceErr := v.postgresAddonService.GetPostgresAddon(ctx, connection.From.Id)
-	if serviceErr != nil {
+	if serviceErr != nil || addon.OrganisationID != orgID {
 		return nil, errors.BadRequest("connection '%s' references non-existent postgres addon '%s'", label, connection.From.Id)
 	}
 

@@ -3,6 +3,7 @@ package stack
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -85,7 +86,8 @@ func TestValidateForCreateAllowsPostgresConnectionConfig(t *testing.T) {
 		},
 	})
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID: "pg-1",
+		ID:             "pg-1",
+		OrganisationID: "org-1",
 		Databases: []models.PostgresAddonDatabase{
 			{Name: "app"},
 		},
@@ -115,7 +117,8 @@ func TestValidateForCreateAllowsPostgresSuperuserConnectionConfig(t *testing.T) 
 		},
 	})
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID: "pg-1",
+		ID:             "pg-1",
+		OrganisationID: "org-1",
 		Configuration: models.PostgresConfiguration{
 			EnableSuperuserAccess: true,
 		},
@@ -141,11 +144,49 @@ func TestValidateForCreateRejectsPostgresConnectionConfigWithoutDatabase(t *test
 			Name: "web",
 		},
 	})
-	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{ID: "pg-1"}, nil)
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{ID: "pg-1", OrganisationID: "org-1"}, nil)
 
 	err := v.ValidateForCreate(context.Background(), spec)
 	fe := requireSingleFieldError(t, err)
 	if got, want := fe.Message, "connection 'pg-env' requires config.database when postgres credential scope is owner"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+// TestValidateForCreateRejectsPostgresConnectionFromAnotherOrganisation asserts
+// the connection-source postgres addon lookup is org-scoped: an addon that
+// exists but belongs to a different organisation behaves exactly like a
+// missing one, so cross-org addon existence never leaks through connection
+// validation.
+func TestValidateForCreateRejectsPostgresConnectionFromAnotherOrganisation(t *testing.T) {
+	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "pg-env",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypePostgresAddon,
+			Id:   "pg-1",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Config: map[string]interface{}{
+			string(models.ConnectionConfigKeyDatabase): "app",
+		},
+	})
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
+		ID:             "pg-1",
+		OrganisationID: "org-other",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
+	}, nil)
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrConnectionInvalid {
+		t.Fatalf("expected %s, got %s", errors.VErrConnectionInvalid, fe.Code)
+	}
+	if got, want := fe.Message, "connection 'pg-env' references non-existent postgres addon 'pg-1'"; got != want {
 		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
@@ -861,8 +902,9 @@ func TestValidateForCreateRejectsBuildArtifactSourceWithUnknownVolume(t *testing
 func TestValidateForCreateRejectsValueRefWithTemplateMissingValues(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID:        "pg-1",
-		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+		ID:             "pg-1",
+		OrganisationID: "org-1",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
 	}, nil)
 
 	spec := stackWithConnections(models.StackConnection{
@@ -889,8 +931,9 @@ func TestValidateForCreateRejectsValueRefWithTemplateMissingValues(t *testing.T)
 func TestValidateForCreateRejectsValueRefWithBothOutputAndTemplate(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID:        "pg-1",
-		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+		ID:             "pg-1",
+		OrganisationID: "org-1",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
 	}, nil)
 
 	spec := stackWithConnections(models.StackConnection{
@@ -917,8 +960,9 @@ func TestValidateForCreateRejectsValueRefWithBothOutputAndTemplate(t *testing.T)
 func TestValidateForCreateRejectsValueRefWithNeitherOutputNorTemplate(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID:        "pg-1",
-		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+		ID:             "pg-1",
+		OrganisationID: "org-1",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
 	}, nil)
 
 	spec := stackWithConnections(models.StackConnection{
@@ -1267,5 +1311,73 @@ func TestValidateConnectionsIgnoresUnrelatedResourceInvalidity(t *testing.T) {
 	// The connection-scoped gate must ignore it.
 	if err := v.ValidateConnections(context.Background(), spec); err != nil {
 		t.Fatalf("expected ValidateConnections to ignore unrelated resource invalidity, got %v", err)
+	}
+}
+
+func shellStack(name string) *models.Stack {
+	return &models.Stack{
+		Name:           name,
+		OrganisationID: "org-1",
+		UserID:         "user-1",
+	}
+}
+
+// requireStackNameInvalid asserts err carries exactly one field error
+// addressed to "name" with code VErrStackNameInvalid, and returns it.
+func requireStackNameInvalid(t *testing.T, err *errors.ServiceError) errors.FieldError {
+	t.Helper()
+	fe := requireSingleFieldError(t, err)
+	if fe.Field != "name" {
+		t.Fatalf("unexpected field: got %q want %q", fe.Field, "name")
+	}
+	if fe.Code != errors.VErrStackNameInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackNameInvalid)
+	}
+	return fe
+}
+
+func TestValidateForCreateAcceptsStackNameAtNamespaceBudget(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength))
+
+	if err := v.ValidateForCreate(context.Background(), spec); err != nil {
+		t.Fatalf("expected %d-character stack name to pass, got %v", models.MaxStackNameLength, err)
+	}
+}
+
+func TestValidateForCreateRejectsStackNameOverNamespaceBudget(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack(strings.Repeat("a", models.MaxStackNameLength+1))
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	requireStackNameInvalid(t, err)
+}
+
+func TestValidateForCreateRejectsEmptyStackName(t *testing.T) {
+	v := newTestValidator(t)
+	spec := shellStack("")
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireStackNameInvalid(t, err)
+	if got, want := fe.Message, "stack name is required"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateForCreateRejectsNonDNSLabelStackNames(t *testing.T) {
+	cases := map[string]string{
+		"uppercase":       "MyStack",
+		"underscore":      "my_stack",
+		"leading hyphen":  "-stack",
+		"trailing hyphen": "stack-",
+		"dot":             "my.stack",
+		"space":           "my stack",
+	}
+	for label, name := range cases {
+		t.Run(label, func(t *testing.T) {
+			v := newTestValidator(t)
+			err := v.ValidateForCreate(context.Background(), shellStack(name))
+			requireStackNameInvalid(t, err)
+		})
 	}
 }

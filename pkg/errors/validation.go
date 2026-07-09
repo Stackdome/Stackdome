@@ -95,7 +95,8 @@ const (
 	VErrRegistryAuthFailed          = "registry_auth_failed"
 	VErrPushAccessDenied            = "push_access_denied"
 
-	// stack-level (settings, connections, interpolations)
+	// stack-level (name, settings, connections, interpolations)
+	VErrStackNameInvalid     = "stack_name_invalid"
 	VErrStackSettingsInvalid = "stack_settings_invalid"
 	VErrConnectionInvalid    = "connection_invalid"
 )

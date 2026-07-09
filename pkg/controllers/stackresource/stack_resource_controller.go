@@ -103,13 +103,29 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	if dbStackResource.Status == nil || dbStackResource.Status.LastObservedStatusHash != stackResourceCr.Status.StatusHash {
-		dbStackResource.Status = mapClusterStatusToServerStatus(stackResourceCr)
+		dbStackResource.Status = computeStatusRewrite(dbStackResource.Status, stackResourceCr)
 		if serr := w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %v", serr)
 		}
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// computeStatusRewrite rebuilds the whole server-side status from the cluster
+// CR. Build failures are owned by the imagebuild controller — the workload CR
+// never reports them — so when the CR yields no failure of its own, an
+// existing build_failure is carried over instead of being clobbered with nil.
+// A CR-derived (runtime) failure still overwrites it, and clearing a build
+// failure stays with the imagebuild controller, which clears it on build
+// success.
+func computeStatusRewrite(current *models.StackResourceStatus, clusterInstance *corev1alpha1.StackResource) *models.StackResourceStatus {
+	updated := mapClusterStatusToServerStatus(clusterInstance)
+	if updated.LastFailure == nil && current != nil && current.LastFailure != nil &&
+		current.LastFailure.Type == models.FailureTypeBuildFailure {
+		updated.LastFailure = current.LastFailure
+	}
+	return updated
 }
 
 func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource) *models.StackResourceStatus {
