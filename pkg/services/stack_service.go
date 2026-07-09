@@ -112,7 +112,14 @@ func NewStackService(spec StackServiceSpec) StackService {
 		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		Secrets:         spec.SecretService,
+		// Raw store, not the RBAC-enforcing SecretService: env secret_key_ref
+		// validation is an org-scoped existence check, not an authorized
+		// read. The thin per-resource path (cmd/environment) wires the same
+		// raw store, so both paths accept the same payload regardless of
+		// whether the caller holds secrets:read.
+		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		Domains:         organisationDomainService,
 		Credentials:     spec.CredentialResolver,
 		GitIntegrations: spec.GitIntegrationService,
