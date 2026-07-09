@@ -226,6 +226,10 @@ func validateEnvVars(resource *models.StackResource) []errors.FieldError {
 		return nil
 	}
 	var errs []errors.FieldError
+	// Built lazily on first self_output use: env.SelfOutput must reference
+	// one of the resource's own declared outputs, otherwise the env renders
+	// broken/empty at deploy time with no signal to the user.
+	var allowedSelfOutputs map[string]bool
 	seen := map[string]bool{}
 	for i, env := range resource.ExecutionConfig.Env {
 		f := fmt.Sprintf("execution_config.env[%d]", i)
@@ -260,6 +264,18 @@ func validateEnvVars(resource *models.StackResource) []errors.FieldError {
 		if env.SecretKeyRef != nil && (env.SecretKeyRef.SecretName == "" || env.SecretKeyRef.Key == "") {
 			errs = append(errs, fieldErr(f+".secret_key_ref", errors.VErrEnvValueMissing,
 				"env '%s' secret_key_ref needs secret_name and key", env.Name))
+		}
+		if env.SelfOutput != "" {
+			if allowedSelfOutputs == nil {
+				allowedSelfOutputs = map[string]bool{}
+				for _, output := range resource.EnsureDeclaredOutputs() {
+					allowedSelfOutputs[output.Name] = true
+				}
+			}
+			if !allowedSelfOutputs[env.SelfOutput] {
+				errs = append(errs, fieldErr(f+".self_output", errors.VErrEnvSelfOutputUnknown,
+					"env '%s' references unsupported self_output '%s'; it must be one of the resource's declared outputs", env.Name, env.SelfOutput))
+			}
 		}
 	}
 	return errs

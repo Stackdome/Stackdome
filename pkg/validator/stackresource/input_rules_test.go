@@ -146,6 +146,13 @@ var _ = Describe("validateInputRules", func() {
 				r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{{Value: "1"}}}
 			},
 			errors.VErrEnvNameRequired, "execution_config.env[0].name"),
+		Entry("env self_output not a declared output",
+			func(r *models.StackResource) {
+				r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{
+					{Name: "CONN", SelfOutput: "conn_strinX"},
+				}}
+			},
+			errors.VErrEnvSelfOutputUnknown, "execution_config.env[0].self_output"),
 		Entry("volume mount missing target path",
 			func(r *models.StackResource) {
 				r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "data"}}
@@ -232,6 +239,17 @@ var _ = Describe("validateInputRules", func() {
 
 	It("has no errors for a valid resource", func() {
 		Expect(validateInputRules(validImageResource())).To(BeEmpty())
+	})
+
+	It("accepts env self_output referencing a declared output", func() {
+		r := validImageResource()
+		// "host" and "port.http"/"url.http" (from the declared http port) are
+		// this resource's declared outputs.
+		r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{
+			{Name: "SELF_HOST", SelfOutput: "host"},
+			{Name: "SELF_URL", SelfOutput: "url.http"},
+		}}
+		Expect(validateInputRules(r)).To(BeEmpty())
 	})
 
 	It("aggregates multiple failures", func() {

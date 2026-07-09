@@ -47,10 +47,11 @@ const (
 	VErrDomainNotConfigured = "domain_not_configured"
 
 	// env
-	VErrEnvNameRequired  = "env_name_required"
-	VErrEnvNameDuplicate = "env_name_duplicate"
-	VErrEnvValueMissing  = "env_value_missing"
-	VErrEnvValueConflict = "env_value_conflict"
+	VErrEnvNameRequired      = "env_name_required"
+	VErrEnvNameDuplicate     = "env_name_duplicate"
+	VErrEnvValueMissing      = "env_value_missing"
+	VErrEnvValueConflict     = "env_value_conflict"
+	VErrEnvSelfOutputUnknown = "env_self_output_unknown"
 
 	// volume mounts
 	VErrVolumeMountInvalid = "volume_mount_invalid"
