@@ -12,10 +12,6 @@ type SecretValidator interface {
 	ValidateSecretType(secretType models.SecretType, secret *models.Secret) *errors.ServiceError
 }
 
-type InterpolationValidation interface {
-	ValidateStackInterpolations(in *models.Stack) error
-}
-
 //go:generate mockgen -destination=../mocks/mock_stack_validator.go -package=mocks github.com/Stackdome/stackdome/pkg/validator StackValidator
 type StackValidator interface {
 	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError

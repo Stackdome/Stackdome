@@ -11963,7 +11963,6 @@ components:
           - push_access_denied
           - stack_settings_invalid
           - connection_invalid
-          - interpolation_invalid
           type: string
         message:
           type: string
@@ -13952,7 +13951,6 @@ components:
           - push_access_denied
           - stack_settings_invalid
           - connection_invalid
-          - interpolation_invalid
           type: string
         message:
           type: string

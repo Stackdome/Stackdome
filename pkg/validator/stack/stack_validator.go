@@ -28,10 +28,9 @@ type postgresAddonService interface {
 // rule. Expensive checks (image pull, push access, git clone) run later, in
 // the release worker's validation reconciler.
 type stackValidator struct {
-	interpolationValidator validator.InterpolationValidation
-	secretService          secretService
-	postgresAddonService   postgresAddonService
-	resourceValidator      stackresource.Validator
+	secretService        secretService
+	postgresAddonService postgresAddonService
+	resourceValidator    stackresource.Validator
 }
 
 type StackValidatorSpec struct {
@@ -47,10 +46,9 @@ func NewStackValidator(
 		panic("stack.NewStackValidator: ResourceValidator is required")
 	}
 	return &stackValidator{
-		interpolationValidator: NewInterpolationValidation(),
-		secretService:          spec.SecretService,
-		postgresAddonService:   spec.PostgresAddonService,
-		resourceValidator:      spec.ResourceValidator,
+		secretService:        spec.SecretService,
+		postgresAddonService: spec.PostgresAddonService,
+		resourceValidator:    spec.ResourceValidator,
 	}
 }
 
@@ -67,7 +65,6 @@ func (v *stackValidator) ValidateForCreate(ctx context.Context, spec *models.Sta
 
 	ferrs = append(ferrs, validateStackSettings(spec)...)
 	ferrs = append(ferrs, v.validateConnections(ctx, nil, spec)...)
-	ferrs = append(ferrs, v.validateInterpolations(spec)...)
 
 	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
@@ -100,7 +97,6 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 
 	ferrs = append(ferrs, validateStackSettings(spec)...)
 	ferrs = append(ferrs, v.validateConnections(ctx, existing, spec)...)
-	ferrs = append(ferrs, v.validateInterpolations(spec)...)
 
 	ferrs = dedupeFieldErrors(ferrs)
 	if len(ferrs) > 0 {
@@ -116,11 +112,6 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 // connection-only mutations (create/update/delete a single connection) so a
 // pre-existing, unrelated invalidity elsewhere in the stack can't block an
 // edit the user has no way to fix from the connection form.
-//
-// Interpolation validation is deliberately excluded: ValidateStackInterpolations
-// is currently a no-op stub (the cluster-agent interpolation package was
-// removed during the CRD redesign) and connections do not yet feed
-// interpolation inputs, so there is nothing connection-scoped to run there.
 func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.Stack) *errors.ServiceError {
 	ferrs := dedupeFieldErrors(v.validateConnections(ctx, nil, spec))
 	if len(ferrs) > 0 {
@@ -232,17 +223,6 @@ func (v *stackValidator) validateUniqueResourceNames(spec *models.Stack) []error
 		seen[r.Name] = struct{}{}
 	}
 	return errs
-}
-
-func (v *stackValidator) validateInterpolations(spec *models.Stack) []errors.FieldError {
-	if err := v.interpolationValidator.ValidateStackInterpolations(spec); err != nil {
-		return []errors.FieldError{{
-			Field:   "spec",
-			Code:    errors.VErrInterpolationInvalid,
-			Message: fmt.Sprintf("stack resource '%s' has invalid interpolation: %s", spec.Name, err.Error()),
-		}}
-	}
-	return nil
 }
 
 // validateConnections checks every stack connection, collecting one field

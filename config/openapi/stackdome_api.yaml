@@ -5952,7 +5952,6 @@ components:
             - push_access_denied
             - stack_settings_invalid
             - connection_invalid
-            - interpolation_invalid
         message:
           type: string
     ErrorList:
@@ -7034,7 +7033,6 @@ components:
             - push_access_denied
             - stack_settings_invalid
             - connection_invalid
-            - interpolation_invalid
         message:
           type: string
 

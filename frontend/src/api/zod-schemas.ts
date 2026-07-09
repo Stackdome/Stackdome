@@ -1016,7 +1016,6 @@ const ReleaseValidationError = z
       "push_access_denied",
       "stack_settings_invalid",
       "connection_invalid",
-      "interpolation_invalid",
     ]),
     message: z.string(),
   })
@@ -1592,7 +1591,6 @@ const FieldValidationError = z
       "push_access_denied",
       "stack_settings_invalid",
       "connection_invalid",
-      "interpolation_invalid",
     ]),
     message: z.string(),
   })

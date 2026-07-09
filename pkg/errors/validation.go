@@ -92,5 +92,4 @@ const (
 	// stack-level (settings, connections, interpolations)
 	VErrStackSettingsInvalid = "stack_settings_invalid"
 	VErrConnectionInvalid    = "connection_invalid"
-	VErrInterpolationInvalid = "interpolation_invalid"
 )
