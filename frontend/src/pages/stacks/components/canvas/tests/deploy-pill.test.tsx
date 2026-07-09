@@ -27,7 +27,7 @@ describe("DeployPill visibility", () => {
   it("shows on an existing stack with changes", () => {
     render(<DeployPill {...base} dirtyTotal={3} />);
     expect(screen.getByTestId("deploy-pill")).toBeInTheDocument();
-    expect(screen.getByText("3 changes")).toBeInTheDocument();
+    expect(screen.getByText("Apply 3 changes")).toBeInTheDocument();
   });
 
   it("stays visible while a deploy runs even when the count drops to zero", () => {

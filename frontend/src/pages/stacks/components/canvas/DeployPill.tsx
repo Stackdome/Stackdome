@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { FileDiff, Loader2, MoreHorizontal, Rocket, Undo2 } from "lucide-react";
+import { CornerDownLeft, Command, FileDiff, Loader2, MoreHorizontal, Rocket, Undo2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -71,18 +72,23 @@ export function DeployPill({
 
   if (!visible) return null;
 
+  const isMac = typeof navigator !== "undefined" && navigator.platform.toUpperCase().includes("MAC");
+
   return (
     <div
       data-testid="deploy-pill"
-      className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-border bg-background/95 py-1.5 pl-3.5 pr-1.5 shadow-lg backdrop-blur animate-in fade-in slide-in-from-top-2 duration-[260ms]"
+      className={cn(
+        "absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2.5 rounded-[10px] border border-brand-border bg-background/90 py-2 shadow-xl shadow-background/60 ring-1 ring-brand/10 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-[260ms]",
+        hasChanges ? "pl-4 pr-2" : "px-2",
+      )}
     >
       {hasChanges && (
-        <span className="text-[13px] font-medium text-warn">
-          {dirtyTotal} {dirtyTotal === 1 ? "change" : "changes"}
+        <span className="whitespace-nowrap text-[13px] font-medium tracking-[-0.01em] text-brand">
+          Apply {dirtyTotal} {dirtyTotal === 1 ? "change" : "changes"}
         </span>
       )}
       {hasChanges && (
-        <Button type="button" variant="outline" size="sm" onClick={onViewChanges}>
+        <Button type="button" variant="outline" size="sm" className="border-border bg-transparent hover:bg-muted" onClick={onViewChanges}>
           <FileDiff className="size-3.5" />
           Details
         </Button>
@@ -90,7 +96,15 @@ export function DeployPill({
       <Button type="button" variant="default" size="sm" onClick={fireDeploy} disabled={deployDisabled}>
         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
         {busy ? "Deploying" : "Deploy"}
-        {!busy && <kbd className="ml-1 font-mono text-[10px] opacity-70">⌘⏎</kbd>}
+        {!busy && (
+          <kbd
+            aria-hidden
+            className="ml-1 flex items-center gap-px rounded-[4px] border border-white/30 bg-white/15 px-1 py-0.5 text-white"
+          >
+            {isMac ? <Command className="size-2.5" /> : <span className="font-mono text-[9px] font-semibold leading-none">Ctrl</span>}
+            <CornerDownLeft className="size-2.5" />
+          </kbd>
+        )}
       </Button>
       {!isDraft && canDiscardDraft && onDiscardDraft && (
         <DropdownMenu>

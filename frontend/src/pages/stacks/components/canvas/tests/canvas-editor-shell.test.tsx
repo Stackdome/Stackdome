@@ -79,7 +79,7 @@ describe("CanvasEditorShell deploy pill", () => {
     render(
       <CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={3} onViewChanges={onViewChanges} />,
     );
-    expect(screen.getByText("3 changes")).toBeInTheDocument();
+    expect(screen.getByText("Apply 3 changes")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Details" }));
     expect(onViewChanges).toHaveBeenCalled();
   });
