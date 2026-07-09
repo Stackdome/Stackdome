@@ -168,9 +168,11 @@ func (v *stackValidator) validateResources(ctx context.Context, spec *models.Sta
 // stackNamePattern is the RFC 1123 DNS-label charset: lowercase
 // alphanumerics and '-', starting and ending with an alphanumeric. The stack
 // name is embedded verbatim in the generated Kubernetes namespace name
-// ("<stack-name>-<uuid>"), so anything outside this charset — or longer than
-// models.MaxStackNameLength — would make the namespace invalid and stall
-// reconciliation at apply time instead of failing the request here.
+// ("<stack-name>-<uuid>", truncated to the DNS-label cap), so anything
+// outside this charset would make the namespace invalid and stall
+// reconciliation at apply time instead of failing the request here, and
+// anything longer than models.MaxStackNameLength would leave fewer than
+// models.MinNamespaceUUIDSuffixLength UUID characters after truncation.
 var stackNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 
 func validateStackName(spec *models.Stack) []errors.FieldError {
@@ -186,7 +188,7 @@ func validateStackName(spec *models.Stack) []errors.FieldError {
 			Field: "name",
 			Code:  errors.VErrStackNameInvalid,
 			Message: fmt.Sprintf(
-				"stack name '%s' must be at most %d characters so the generated namespace '<name>-<uuid>' fits the %d-character Kubernetes limit",
+				"stack name '%s' must be at most %d characters so the generated namespace '<name>-<uuid>' keeps a unique suffix within the %d-character Kubernetes limit",
 				spec.Name, models.MaxStackNameLength, models.KubernetesDNSLabelMaxLength),
 		}}
 	}

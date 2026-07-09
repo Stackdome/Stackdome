@@ -7,24 +7,36 @@ const (
 	ManagedByLabelValue = "stackdome"
 )
 
-// Stack namespaces are generated as "<stack-name>-<uuid>" (see
-// PrepareNamespaceForStack in pkg/services/namespace_service.go). A
-// Kubernetes namespace name is an RFC 1123 DNS label capped at 63
-// characters, so the stack name only gets whatever budget the UUID suffix
-// leaves over. Namespace generation and stack-name validation both derive
-// from these constants — they are the single source of truth for that
-// budget.
+// Stack namespaces are generated as "<stack-name>-<uuid>" and then truncated
+// from the end to the DNS-label cap (see PrepareNamespaceForStack in
+// pkg/services/namespace_service.go). A Kubernetes namespace name is an RFC
+// 1123 DNS label capped at 63 characters; truncation cuts the UUID tail, so
+// the stack name only has to leave room for the separator plus the minimum
+// surviving slice of UUID entropy — not the full UUID. Namespace generation
+// and stack-name validation both derive from these constants — they are the
+// single source of truth for that budget.
 const (
 	// KubernetesDNSLabelMaxLength is the RFC 1123 DNS-label cap Kubernetes
 	// applies to namespace names and label values.
 	KubernetesDNSLabelMaxLength = 63
-	// NamespaceUUIDSuffixLength is the length of the "-<uuid>" suffix
-	// appended to the stack name: 1 separator + 36 characters of canonical
-	// RFC 4122 UUID text (as produced by uuid.UUID.String()).
-	NamespaceUUIDSuffixLength = 1 + 36
-	// MaxStackNameLength is the stack-name budget left inside a generated
-	// namespace name (63 - 37 = 26).
-	MaxStackNameLength = KubernetesDNSLabelMaxLength - NamespaceUUIDSuffixLength
+	// NamespaceNameSeparator joins the stack name and the UUID suffix in a
+	// generated namespace name.
+	NamespaceNameSeparator = "-"
+	// NamespaceUUIDLength is the length of canonical RFC 4122 UUID text (as
+	// produced by uuid.UUID.String()).
+	NamespaceUUIDLength = 36
+	// NamespaceUUIDSuffixLength is the length of the full
+	// "<separator><uuid>" suffix appended to the stack name before
+	// truncation. Short stack names keep it whole.
+	NamespaceUUIDSuffixLength = len(NamespaceNameSeparator) + NamespaceUUIDLength
+	// MinNamespaceUUIDSuffixLength is the entropy floor: at least this many
+	// UUID characters must survive truncation so generated namespace names
+	// stay effectively collision-free.
+	MinNamespaceUUIDSuffixLength = 8
+	// MaxStackNameLength is the stack-name budget inside a generated
+	// namespace name: the DNS-label cap minus the separator and the entropy
+	// floor (63 - 1 - 8 = 54).
+	MaxStackNameLength = KubernetesDNSLabelMaxLength - len(NamespaceNameSeparator) - MinNamespaceUUIDSuffixLength
 )
 
 type Namespace struct {
