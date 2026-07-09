@@ -26,9 +26,34 @@ function nodeIdOfRef(ref: TopologyNodeRef | undefined): string | null {
   }
 }
 
-export function mergeTopology(local: CanvasGraph, server: StackTopology | null | undefined): CanvasGraph {
-  if (!server) return local;
+export function mergeTopology(
+  local: CanvasGraph,
+  server: StackTopology | null | undefined,
+  releaseInFlight = false,
+): CanvasGraph {
+  const merged = server ? mergeServer(local, server) : local;
+  return releaseInFlight ? overlayReleaseInFlight(merged) : merged;
+}
 
+/**
+ * While a release is in flight, per-resource server state lags the deploy (the
+ * old workload keeps reporting Ready until the agent starts the rollout), so a
+ * stale green would flash right after Deploy. Force resource dots to pending
+ * until the release terminates; an already-reported error still wins.
+ */
+function overlayReleaseInFlight(graph: CanvasGraph): CanvasGraph {
+  let changed = false;
+  const nodes = graph.nodes.map((node) => {
+    if (node.type !== "resource") return node;
+    const current = (node.data as ResourceNodeData).dotVariant;
+    if (current === "error" || current === "pending") return node;
+    changed = true;
+    return { ...node, data: { ...node.data, dotVariant: "pending" } } as CanvasNode;
+  });
+  return changed ? { nodes, edges: graph.edges } : graph;
+}
+
+function mergeServer(local: CanvasGraph, server: StackTopology): CanvasGraph {
   const nodes = [...local.nodes];
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const serverNodeByListId = new Map(

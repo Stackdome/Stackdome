@@ -808,6 +808,7 @@ export default function StackDetailPage() {
             onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
             deletingVolume={volumeDelete.deleting}
             persistedVolumeNames={persistedVolumeNames}
+            releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
           />
         }
         deployments={deploymentsBody}

@@ -87,6 +87,9 @@ interface StackCanvasTabProps {
   deletingVolume?: boolean;
   /** Names of volumes that already exist server-side; their spec is immutable. */
   persistedVolumeNames?: ReadonlySet<string>;
+  /** A release is in flight — node status dots show pending until it terminates
+   *  (per-resource server state lags the deploy and would flash a stale Ready). */
+  releaseInFlight?: boolean;
 }
 
 function StackCanvasFlow({
@@ -105,6 +108,7 @@ function StackCanvasFlow({
   onDeleteVolume,
   deletingVolume,
   persistedVolumeNames,
+  releaseInFlight,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
@@ -132,7 +136,10 @@ function StackCanvasFlow({
     [resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty],
   );
   // Local graph enhanced with server-derived edges + runtime status.
-  const mergedGraph = useMemo(() => mergeTopology(dataGraph, topology), [dataGraph, topology]);
+  const mergedGraph = useMemo(
+    () => mergeTopology(dataGraph, topology, releaseInFlight),
+    [dataGraph, topology, releaseInFlight],
+  );
   // Signature of the node/edge id-set — changes only when topology changes.
   const topologySignature = useMemo(
     () => `${mergedGraph.nodes.map((n) => n.id).join("|")}::${mergedGraph.edges.map((e) => e.id).join("|")}`,

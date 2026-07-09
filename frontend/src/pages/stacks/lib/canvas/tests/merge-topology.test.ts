@@ -86,3 +86,34 @@ describe("mergeTopology", () => {
     expect(merged.nodes.find((n) => n.id === "resource:api")?.data.dotVariant).toBe("neutral");
   });
 });
+
+describe("mergeTopology release-in-flight overlay", () => {
+  it("forces resource dots to pending while a release is in flight, beating a stale server Ready", () => {
+    const server = {
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Ready" }],
+      edges: [],
+    } as unknown as StackTopology;
+    const merged = mergeTopology(localGraph(), server, true);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+    expect(merged.nodes.find((n) => n.id === "resource:api")?.data.dotVariant).toBe("pending");
+  });
+
+  it("applies in flight even without server topology", () => {
+    const merged = mergeTopology(localGraph(), null, true);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+  });
+
+  it("lets a reported error win over the in-flight pending", () => {
+    const server = {
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Failed" }],
+      edges: [],
+    } as unknown as StackTopology;
+    const merged = mergeTopology(localGraph(), server, true);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("error");
+  });
+
+  it("does not touch dots when no release is in flight", () => {
+    const merged = mergeTopology(localGraph(), null, false);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
+  });
+});
