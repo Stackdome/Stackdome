@@ -63,7 +63,29 @@ type validator struct {
 	gitIntegrations gitIntegrationGetter
 }
 
+// NewValidator wires the shared per-resource validator. Every seam is
+// required: this validator runs the full referential-integrity rule set
+// unconditionally, so a missing seam would silently skip whatever rule it
+// backs rather than fail loudly. Callers that genuinely don't need a
+// namespace-scoped DB lookup for volumes (e.g. the whole-stack fat path,
+// where bundled volumes aren't persisted yet) still pass a real store: see
+// the payload-first check in validateMountedVolumes.
 func NewValidator(spec ValidatorSpec) Validator {
+	if spec.Volumes == nil {
+		panic("stackresource.NewValidator: Volumes is required")
+	}
+	if spec.Secrets == nil {
+		panic("stackresource.NewValidator: Secrets is required")
+	}
+	if spec.Domains == nil {
+		panic("stackresource.NewValidator: Domains is required")
+	}
+	if spec.Credentials == nil {
+		panic("stackresource.NewValidator: Credentials is required")
+	}
+	if spec.GitIntegrations == nil {
+		panic("stackresource.NewValidator: GitIntegrations is required")
+	}
 	return &validator{
 		volumes:         spec.Volumes,
 		secrets:         spec.Secrets,

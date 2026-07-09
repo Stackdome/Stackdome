@@ -31,6 +31,17 @@ type validationReconciler struct {
 }
 
 func newValidationReconciler(spec ReleaseWorkerSpec) *validationReconciler {
+	if spec.ReleaseService == nil {
+		panic("release.newValidationReconciler: ReleaseService is required")
+	}
+	if spec.CredentialResolver == nil {
+		panic("release.newValidationReconciler: CredentialResolver is required")
+	}
+	if spec.ValidationRecords == nil {
+		panic("release.newValidationReconciler: ValidationRecords is required")
+	}
+	// RegistryClients is optional: nil substitutes the real (network)
+	// registry client provider.
 	registryClients := spec.RegistryClients
 	if registryClients == nil {
 		registryClients = defaultRegistryClientProvider{}
@@ -204,17 +215,11 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 }
 
 func (r *validationReconciler) probeCached(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind, fingerprint string) bool {
-	if r.validationRecords == nil {
-		return false
-	}
 	rec, serr := r.validationRecords.Get(ctx, stackID, resourceName, kind)
 	return serr == nil && rec != nil && rec.Fingerprint == fingerprint
 }
 
 func (r *validationReconciler) rememberSuccess(ctx context.Context, stackID, resourceName string, kind models.ResourceValidationCheckKind, fingerprint string) {
-	if r.validationRecords == nil {
-		return
-	}
 	if serr := r.validationRecords.Upsert(ctx, &models.ResourceValidationRecord{
 		StackID: stackID, ResourceName: resourceName, CheckKind: kind,
 		Fingerprint: fingerprint, ValidatedAt: time.Now().UTC(),

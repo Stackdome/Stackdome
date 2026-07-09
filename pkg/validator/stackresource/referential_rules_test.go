@@ -35,7 +35,9 @@ var _ = Describe("validateReferences", func() {
 			GetByVolumeNameAndNamespace(gomock.Any(), "data", "ns-1").
 			Return(nil, errors.NotFound("volume not found"))
 
-		v := &validator{volumes: volumes}
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
 		r := validImageResource()
 		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "data", TargetPath: "/data"}}
 
@@ -62,13 +64,76 @@ var _ = Describe("validateReferences", func() {
 		Expect(errs).To(BeEmpty())
 	})
 
+	// These two specs cover the fat whole-stack path: on create, bundled
+	// volumes aren't persisted yet, so NewStackService wires a real
+	// namespace-scoped store as the Volumes seam and relies on
+	// validateMountedVolumes checking the request's own stack.Volumes
+	// first. A volume declared in the payload must resolve without ever
+	// calling the (mocked, zero-expectation) DB seam; a name that isn't
+	// declared must still fall through to the seam and can fail.
+	It("resolves a mounted volume declared in the stack's own payload without querying the DB seam", func() {
+		volumes := NewMockvolumeGetter(ctrl) // no EXPECT: must not be called
+
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
+		stack := testStack()
+		stack.Volumes = []*models.Volume{{Name: "data"}}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "data", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), stack, r)
+
+		Expect(serr).To(BeNil())
+		Expect(errs).To(BeEmpty())
+	})
+
+	It("falls through to the DB seam and fails for a volume not declared in the payload", func() {
+		volumes := NewMockvolumeGetter(ctrl)
+		volumes.EXPECT().
+			GetByVolumeNameAndNamespace(gomock.Any(), "bogus", "ns-1").
+			Return(nil, errors.NotFound("volume not found"))
+
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
+		stack := testStack()
+		stack.Volumes = []*models.Volume{{Name: "data"}} // "bogus" is not declared here
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeName: "bogus", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), stack, r)
+
+		Expect(serr).To(BeNil())
+		Expect(codes(errs)).To(HaveKey(errors.VErrVolumeNotFound))
+	})
+
+	It("resolves a mounted volume declared in the stack's own payload by ID without querying the DB seam", func() {
+		volumes := NewMockvolumeGetter(ctrl) // no EXPECT: must not be called
+
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
+		stack := testStack()
+		stack.Volumes = []*models.Volume{{ID: "vol-1", Name: "data", Namespace: "ns-1"}}
+		r := validImageResource()
+		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-1", TargetPath: "/data"}}
+
+		errs, serr := v.validateReferences(context.Background(), stack, r)
+
+		Expect(serr).To(BeNil())
+		Expect(errs).To(BeEmpty())
+	})
+
 	It("reports a missing env secret", func() {
 		secrets := NewMocksecretGetter(ctrl)
 		secrets.EXPECT().
 			GetByName(gomock.Any(), "org-1", "api-secrets").
 			Return(nil, errors.NotFound("secret not found"))
 
-		v := &validator{secrets: secrets}
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{secrets: secrets, domains: domains}
 		r := validImageResource()
 		r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{{
 			Name: "KEY", SecretKeyRef: &models.EnvSecretRef{SecretName: "api-secrets", Key: "k"},
@@ -139,7 +204,9 @@ var _ = Describe("validateReferences", func() {
 				credentials.RegistryAuthSelector{RegistryCredentialID: "cred-1"}).
 			Return(nil, errors.NotFound("registry credential not found"))
 
-		v := &validator{credentials: mockCreds}
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{credentials: mockCreds, domains: domains}
 		r := validImageResource()
 		r.ImageConfig.RegistryCredentialID = "cred-1"
 
@@ -242,7 +309,9 @@ var _ = Describe("validateReferences", func() {
 			GetByID(gomock.Any(), "vol-bogus").
 			Return(nil, errors.NotFound("volume not found"))
 
-		v := &validator{volumes: volumes}
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
 		r := validImageResource()
 		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-bogus", TargetPath: "/data"}}
 
@@ -259,7 +328,9 @@ var _ = Describe("validateReferences", func() {
 			GetByID(gomock.Any(), "vol-1").
 			Return(&models.Volume{Namespace: "ns-1"}, nil)
 
-		v := &validator{volumes: volumes}
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
 		r := validImageResource()
 		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-1", TargetPath: "/data"}}
 
@@ -275,7 +346,9 @@ var _ = Describe("validateReferences", func() {
 			GetByID(gomock.Any(), "vol-1").
 			Return(&models.Volume{Namespace: "other-ns"}, nil)
 
-		v := &validator{volumes: volumes}
+		domains := oneDomainLister(ctrl)
+
+		v := &validator{volumes: volumes, domains: domains}
 		r := validImageResource()
 		r.VolumeMounts = []*models.VolumeMount{{SourceVolumeID: "vol-1", TargetPath: "/data"}}
 
@@ -411,4 +484,18 @@ func fields(errs []errors.FieldError) map[string]bool {
 		out[e.Field] = true
 	}
 	return out
+}
+
+// oneDomainLister returns a domainLister mock that reports one configured
+// organisation domain. validImageResource has an exposed port, so any spec
+// exercising it reaches validateExposedPortDomain regardless of which
+// referential rule is under test; this keeps those specs from failing on an
+// unrelated VErrDomainNotConfigured error now that the nil-seam guard is gone.
+func oneDomainLister(ctrl *gomock.Controller) *MockdomainLister {
+	domains := NewMockdomainLister(ctrl)
+	domains.EXPECT().
+		ListByOrganisationID(gomock.Any(), "org-1").
+		Return([]*models.OrganisationDomain{{Domain: "example.com"}}, nil).
+		AnyTimes()
+	return domains
 }

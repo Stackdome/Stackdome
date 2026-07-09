@@ -65,6 +65,9 @@ type stackResourceService struct {
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
+	if spec.ResourceValidator == nil {
+		panic("services.NewStackResourceService: ResourceValidator is required")
+	}
 	stackResourceStore := spec.StackResourceStore
 	if stackResourceStore == nil {
 		stackResourceStore = pgstore.NewStackResourceStore(pgstore.StackResourceStoreSpec{

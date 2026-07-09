@@ -101,13 +101,19 @@ func NewStackService(spec StackServiceSpec) StackService {
 		Logger:         spec.Logger,
 	})
 	// The whole-stack path gets its own resourceValidator instance (rather
-	// than reusing the one wired into StackResourceService) with Volumes left
-	// unset: on create the stack's namespace doesn't exist yet, and volumes
-	// bundled in the same request aren't persisted until after validation
-	// succeeds, so a namespace-scoped DB lookup would always report them
-	// missing. validateVolumeReferences in the stack validator checks bundled
-	// volumes against the request payload instead.
+	// than reusing the one wired into StackResourceService). Volumes is a
+	// real DB-backed store here too - stackresource.validateMountedVolumes
+	// checks a mount against the request's own stack.Volumes before ever
+	// consulting this seam, so volumes bundled in the same (unpersisted)
+	// request still resolve correctly; the seam only gets used as a
+	// fallback for names/IDs the payload doesn't declare, where a
+	// namespace-scoped DB lookup is exactly what we want (see also
+	// validateVolumeReferences in the stack validator, which independently
+	// checks bundled volumes by name against the request payload).
 	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
+		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		Secrets:         spec.SecretService,
 		Domains:         organisationDomainService,
 		Credentials:     spec.CredentialResolver,

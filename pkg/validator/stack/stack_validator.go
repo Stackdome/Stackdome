@@ -43,6 +43,9 @@ type StackValidatorSpec struct {
 func NewStackValidator(
 	spec StackValidatorSpec,
 ) validator.StackValidator {
+	if spec.ResourceValidator == nil {
+		panic("stack.NewStackValidator: ResourceValidator is required")
+	}
 	return &stackValidator{
 		interpolationValidator: NewInterpolationValidation(),
 		secretService:          spec.SecretService,

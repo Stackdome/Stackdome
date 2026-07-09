@@ -45,15 +45,13 @@ func (v *validator) validateReferences(ctx context.Context, stack *models.Stack,
 }
 
 func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
-	if v.volumes == nil {
-		return nil, nil
-	}
 	var errs []errors.FieldError
+	payload := stackVolumeIndexOf(stack)
 	for i, m := range resource.VolumeMounts {
 		if m.SourceVolumeName == "" && m.SourceVolumeID == "" {
 			continue // shape error already reported by input rules
 		}
-		ok, serr := v.volumeExists(ctx, stack.Namespace, m.SourceVolumeName, m.SourceVolumeID)
+		ok, serr := v.volumeExists(ctx, payload, stack.Namespace, m.SourceVolumeName, m.SourceVolumeID)
 		if serr != nil {
 			return nil, serr
 		}
@@ -65,7 +63,7 @@ func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.St
 	if resource.BuildConfig != nil && resource.BuildConfig.SourceContext.Volume != nil {
 		src := resource.BuildConfig.SourceContext.Volume
 		if src.SourceVolumeName != "" || src.SourceVolumeID != "" {
-			ok, serr := v.volumeExists(ctx, stack.Namespace, src.SourceVolumeName, src.SourceVolumeID)
+			ok, serr := v.volumeExists(ctx, payload, stack.Namespace, src.SourceVolumeName, src.SourceVolumeID)
 			if serr != nil {
 				return nil, serr
 			}
@@ -78,17 +76,49 @@ func (v *validator) validateMountedVolumes(ctx context.Context, stack *models.St
 	return errs, nil
 }
 
+// stackVolumeIndex indexes a stack's own Volumes slice by name and ID so
+// validateMountedVolumes can resolve a reference in-memory before falling
+// back to the (required) DB-backed volumeGetter seam.
+type stackVolumeIndex struct {
+	byName map[string]*models.Volume
+	byID   map[string]*models.Volume
+}
+
+// stackVolumeIndexOf builds a lookup over stack.Volumes, which the store
+// layer eagerly loads for both the thin per-resource path (persisted
+// volumes) and the fat whole-stack path (the request's own bundled
+// volumes - see NewStackService). Checking this first means a create
+// request can mount a volume declared in the same payload even though it
+// isn't persisted yet: the namespace-scoped DB lookup below would
+// otherwise always report it missing.
+func stackVolumeIndexOf(stack *models.Stack) stackVolumeIndex {
+	idx := stackVolumeIndex{byName: stack.VolumesMap(), byID: make(map[string]*models.Volume, len(stack.Volumes))}
+	for _, vol := range stack.Volumes {
+		if vol.ID != "" {
+			idx.byID[vol.ID] = vol
+		}
+	}
+	return idx
+}
+
 // volumeExists resolves a volume by name (preferred) or, when the name is
-// empty, by ID. Returns false (no error) on a 404 from either lookup path;
+// empty, by ID - first against the stack's own declared volumes, then via
+// the DB seam. Returns false (no error) on a 404 from the DB lookup path;
 // any other error is propagated so the caller aborts validation.
-func (v *validator) volumeExists(ctx context.Context, namespace, name, id string) (bool, *errors.ServiceError) {
+func (v *validator) volumeExists(ctx context.Context, payload stackVolumeIndex, namespace, name, id string) (bool, *errors.ServiceError) {
 	if name != "" {
+		if _, ok := payload.byName[name]; ok {
+			return true, nil
+		}
 		if _, serr := v.volumes.GetByVolumeNameAndNamespace(ctx, name, namespace); serr != nil {
 			if serr.Is404() {
 				return false, nil
 			}
 			return false, serr
 		}
+		return true, nil
+	}
+	if _, ok := payload.byID[id]; ok {
 		return true, nil
 	}
 	var (
@@ -118,7 +148,7 @@ func volumeRef(name, id string) string {
 }
 
 func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
-	if v.secrets == nil || resource.ExecutionConfig == nil {
+	if resource.ExecutionConfig == nil {
 		return nil, nil
 	}
 	var errs []errors.FieldError
@@ -142,7 +172,7 @@ func (v *validator) validateEnvSecrets(ctx context.Context, stack *models.Stack,
 
 func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
 	var errs []errors.FieldError
-	if id := resource.RegistryPullCredentialID(); id != "" && v.credentials != nil {
+	if id := resource.RegistryPullCredentialID(); id != "" {
 		if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID, resource.ImageConfig.Image,
 			credentials.RegistryPurposePull, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
 			if !serr.Is404() {
@@ -152,7 +182,7 @@ func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.St
 				errors.VErrRegistryCredentialNotFound, "registry credential '%s' does not exist", id))
 		}
 	}
-	if id := resource.RegistryPushCredentialID(); id != "" && v.credentials != nil {
+	if id := resource.RegistryPushCredentialID(); id != "" {
 		if _, serr := v.credentials.RegistryCredentials(ctx, stack.OrganisationID,
 			resource.BuildConfig.BuildImageRepository.ExternalImageRef,
 			credentials.RegistryPurposePush, credentials.RegistryAuthSelector{RegistryCredentialID: id}); serr != nil {
@@ -167,7 +197,7 @@ func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.St
 	// Existence check only - deliberately bypasses credentials.Resolver here.
 	// The resolver's GitCredentials mints a GitHub App installation token
 	// over the network for github_app integrations; this seam is DB-only.
-	if id := resource.GitIntegrationID(); id != "" && v.gitIntegrations != nil {
+	if id := resource.GitIntegrationID(); id != "" {
 		integration, serr := v.gitIntegrations.InternalGetByID(ctx, id)
 		if serr != nil && !serr.Is404() {
 			return nil, serr
@@ -181,9 +211,6 @@ func (v *validator) validateCredentialRefs(ctx context.Context, stack *models.St
 }
 
 func (v *validator) validateExposedPortDomain(ctx context.Context, stack *models.Stack, resource *models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
-	if v.domains == nil {
-		return nil, nil
-	}
 	exposedIdx := -1
 	for i, p := range resource.Ports {
 		if p.ExposedToPublic {
