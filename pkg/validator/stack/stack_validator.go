@@ -109,6 +109,26 @@ func (v *stackValidator) ValidateForUpdate(ctx context.Context, existing *models
 	return nil
 }
 
+// ValidateConnections runs only the connection-scoped rules over the full
+// stack context (resource/volume/secret/postgres-addon lookups needed to
+// validate a connection's endpoints), skipping validateResources,
+// validateUniqueResourceNames, and validateStackSettings entirely. It backs
+// connection-only mutations (create/update/delete a single connection) so a
+// pre-existing, unrelated invalidity elsewhere in the stack can't block an
+// edit the user has no way to fix from the connection form.
+//
+// Interpolation validation is deliberately excluded: ValidateStackInterpolations
+// is currently a no-op stub (the cluster-agent interpolation package was
+// removed during the CRD redesign) and connections do not yet feed
+// interpolation inputs, so there is nothing connection-scoped to run there.
+func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.Stack) *errors.ServiceError {
+	ferrs := dedupeFieldErrors(v.validateConnections(ctx, nil, spec))
+	if len(ferrs) > 0 {
+		return errors.ValidationFailed(ferrs)
+	}
+	return nil
+}
+
 // validateResources runs the shared per-resource validator (input shape,
 // referential existence, sibling rules) over every resource in the stack,
 // prefixing each field error with its resource's index. A non-nil

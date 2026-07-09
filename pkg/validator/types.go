@@ -20,6 +20,11 @@ type InterpolationValidation interface {
 type StackValidator interface {
 	ValidateForCreate(ctx context.Context, spec *models.Stack) *errors.ServiceError
 	ValidateForUpdate(ctx context.Context, existing *models.Stack, spec *models.Stack) *errors.ServiceError
+	// ValidateConnections runs only the connection-scoped rules against the
+	// full stack context, skipping per-resource validation and its DB
+	// referential lookups. Used for connection-only mutations so a
+	// pre-existing, unrelated stack invalidity can't block a connection edit.
+	ValidateConnections(ctx context.Context, spec *models.Stack) *errors.ServiceError
 }
 
 type PostgresAddonValidator interface {

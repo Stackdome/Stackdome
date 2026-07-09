@@ -563,7 +563,7 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 		return nil, nil, serr
 	}
 	desired.Connections = nextConnections
-	if err := s.stackValidator.ValidateForUpdate(ctx, stack, &desired); err != nil {
+	if err := s.stackValidator.ValidateConnections(ctx, &desired); err != nil {
 		return nil, nil, err
 	}
 	return stack, &desired, nil

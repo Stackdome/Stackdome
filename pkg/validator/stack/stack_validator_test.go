@@ -1033,3 +1033,123 @@ func TestValidateForCreateReportsMissingMountedVolumeFromResourceValidator(t *te
 		t.Fatalf("unexpected code: got %q want %q", got, want)
 	}
 }
+
+func TestValidateConnectionsRejectsUnknownTargetResource(t *testing.T) {
+	// No expectations set on the resource validator mock: ValidateConnections
+	// must not invoke per-resource validation at all.
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "internal-api",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "phantom"},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "WEB_URL"},
+				Value:  models.ValueRef{Output: "url.http"},
+			},
+		},
+	})
+
+	err := v.ValidateConnections(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Field, "spec.connections[0]"; got != want {
+		t.Fatalf("unexpected field: got %q want %q", got, want)
+	}
+	if got, want := fe.Code, errors.VErrConnectionInvalid; got != want {
+		t.Fatalf("unexpected code: got %q want %q", got, want)
+	}
+	if got, want := fe.Message, "connection 'internal-api' references unknown stack resource 'phantom'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateConnectionsAcceptsValidConnection(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "internal-api",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "SELF_URL"},
+				Value:  models.ValueRef{Output: "url.http"},
+			},
+		},
+	})
+
+	if err := v.ValidateConnections(context.Background(), spec); err != nil {
+		t.Fatalf("expected valid connection to pass, got %v", err)
+	}
+}
+
+// TestValidateConnectionsIgnoresUnrelatedResourceInvalidity is the point of
+// the narrow gate: a connection-only mutation must not be blocked by a
+// pre-existing, unrelated invalidity elsewhere in the stack (e.g. a bad port
+// on a resource the connection doesn't touch) that the connection form gives
+// the user no way to fix. ValidateForUpdate's full per-resource pass would
+// surface it; ValidateConnections must not even invoke the per-resource
+// validator.
+func TestValidateConnectionsIgnoresUnrelatedResourceInvalidity(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	resourceValidator := mocks.NewMockValidator(ctrl)
+	resourceValidator.EXPECT().
+		Validate(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ *models.Stack, resource *models.StackResource, _ []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+			if resource.Name == "worker" {
+				return []errors.FieldError{
+					{
+						Field:   "ports[0].number",
+						Code:    errors.VErrPortNumberInvalid,
+						Message: "port number is invalid",
+					},
+				}, nil
+			}
+			return nil, nil
+		}).
+		AnyTimes()
+
+	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
+	spec.StackResources = append(spec.StackResources, &models.StackResource{
+		Name:  "worker",
+		Ports: []models.Port{{Name: "bad", Number: -1, Protocol: "http"}},
+	})
+	spec.Connections = models.StackConnections{
+		{
+			ID:   "internal-api",
+			Kind: models.ConnectionKindEnv,
+			From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "worker"},
+			Mappings: []models.ConnectionMapping{
+				{
+					Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "WEB_URL"},
+					Value:  models.ValueRef{Output: "url.http"},
+				},
+			},
+		},
+	}
+
+	v := NewStackValidator(StackValidatorSpec{ResourceValidator: resourceValidator})
+
+	// Sanity check: the full-stack path does surface the unrelated resource's
+	// invalid port.
+	if err := v.ValidateForUpdate(context.Background(), spec, spec); err == nil {
+		t.Fatal("expected ValidateForUpdate to surface the unrelated resource's invalid port")
+	}
+
+	// The connection-scoped gate must ignore it.
+	if err := v.ValidateConnections(context.Background(), spec); err != nil {
+		t.Fatalf("expected ValidateConnections to ignore unrelated resource invalidity, got %v", err)
+	}
+}
