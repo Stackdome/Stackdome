@@ -106,4 +106,17 @@ describe("useGithubConnect", () => {
     expect(listInstallations).toHaveBeenCalledWith("org1", "gi1", true);
     expect(result.current.state).toBe("connected");
   });
+
+  it("closes the popup and errors when manifest creation fails", async () => {
+    const close = vi.fn();
+    openSpy.mockReturnValue({ close } as unknown as Window);
+    (createGitHubAppManifest as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("boom"));
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(close).toHaveBeenCalled();
+    expect(result.current.state).toBe("error");
+    expect(result.current.error).not.toBeNull();
+  });
 });
