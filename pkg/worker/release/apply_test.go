@@ -233,6 +233,39 @@ func TestApplyReconciler_VolumesReady_ReferencedByVolumeMountConnection_Gates(t 
 	}
 }
 
+// A volume_mount connection where From.Id is empty and only From.Name
+// is set (name-fallback branch) must gate the release when not Ready.
+// This covers the production scenario where volumes are referenced by
+// name rather than ID.
+func TestApplyReconciler_VolumesReady_ReferencedByVolumeMountConnectionNameOnly_Gates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	volSvc := NewMockvolumeService(ctrl)
+
+	release := volReadyTestRelease(
+		[]*models.StackResource{{Name: "web"}},
+		models.StackConnections{
+			models.StackConnection{
+				ID:   "conn-data",
+				Kind: models.ConnectionKindVolumeMount,
+				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Id: "", Name: "data"},
+				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "web"},
+			},
+		},
+	)
+
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+		Return([]*models.Volume{notReadyVolume("data")}, nil)
+
+	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
+	ready, err := r.volumesReady(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if ready {
+		t.Fatalf("expected ready=false, got true")
+	}
+}
+
 // A build_artifact_source connection (resource -> volume, the volume being a
 // build-output destination) must NOT gate the release: that volume is never
 // referenced by the Stack/StackResource CRs applied here — it's managed by
