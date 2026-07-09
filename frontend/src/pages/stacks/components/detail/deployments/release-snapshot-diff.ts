@@ -170,10 +170,29 @@ function connScalars(c: SnapConn): Record<string, string | undefined> {
   return out;
 }
 
+/** Rewrite resource endpoints of the previous snapshot's connections through the
+ *  rename map, so a connection whose only "change" is a renamed owner keys the
+ *  same as its current counterpart instead of diffing as a phantom remove + add. */
+function remapConnResources(conns: SnapConn[], renames: Map<string, string>): SnapConn[] {
+  if (renames.size === 0) return conns;
+  const remap = (n: SnapConn["from"]): SnapConn["from"] =>
+    n?.type === "stack_resource" && n.name && renames.has(n.name) ? { ...n, name: renames.get(n.name) } : n;
+  return conns.map((c) => ({ ...c, from: remap(c.from), to: remap(c.to) }));
+}
+
 export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
   if (prev == null) return { resources: [], volumes: [], connections: [] }; // no predecessor — caller distinguishes "initial"
   const resources = diffResources(prev, cur);
+  const renames = new Map(
+    resources.filter((r) => r.change === "renamed" && r.fromName).map((r) => [r.fromName!, r.name]),
+  );
   const volumes = diffNamed(prev.volumes ?? [], cur?.volumes ?? [], (v) => v.name ?? "", volumeScalars, "Volume removed from this release.");
-  const connections = diffNamed(prev.connections ?? [], cur?.connections ?? [], connName, connScalars, "Connection removed from this release.");
+  const connections = diffNamed(
+    remapConnResources(prev.connections ?? [], renames),
+    cur?.connections ?? [],
+    connName,
+    connScalars,
+    "Connection removed from this release.",
+  );
   return { resources, volumes, connections };
 }
