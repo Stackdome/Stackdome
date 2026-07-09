@@ -329,7 +329,7 @@ func (v *stackValidator) validateConnectionSource(
 		}
 		return resource.EnsureDeclaredOutputs(), nil
 	case models.TopologyNodeTypePostgresAddon:
-		addon, err := v.validatePostgresConnectionConfig(ctx, label, connection)
+		addon, err := v.validatePostgresConnectionConfig(ctx, orgID, label, connection)
 		if err != nil {
 			return nil, err
 		}
@@ -487,7 +487,7 @@ func validateBuildArtifactSourceConfig(volumeMap map[string]*models.Volume, labe
 	return nil
 }
 
-func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, label string, connection models.StackConnection) (*models.PostgresAddon, *errors.ServiceError) {
+func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, orgID string, label string, connection models.StackConnection) (*models.PostgresAddon, *errors.ServiceError) {
 	if connection.Kind != models.ConnectionKindEnv {
 		return nil, errors.BadRequest("connection '%s' with from.type '%s' only supports kind '%s'", label, connection.From.Type, models.ConnectionKindEnv)
 	}
@@ -532,8 +532,11 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, l
 		scope = "superuser"
 	}
 
+	// Org-scoped lookup: GetPostgresAddon itself is unscoped, so an addon
+	// belonging to another organisation must behave exactly like a missing
+	// one — anything else leaks cross-org addon existence.
 	addon, serviceErr := v.postgresAddonService.GetPostgresAddon(ctx, connection.From.Id)
-	if serviceErr != nil {
+	if serviceErr != nil || addon.OrganisationID != orgID {
 		return nil, errors.BadRequest("connection '%s' references non-existent postgres addon '%s'", label, connection.From.Id)
 	}
 

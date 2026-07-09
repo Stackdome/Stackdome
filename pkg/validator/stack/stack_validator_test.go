@@ -85,7 +85,8 @@ func TestValidateForCreateAllowsPostgresConnectionConfig(t *testing.T) {
 		},
 	})
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID: "pg-1",
+		ID:             "pg-1",
+		OrganisationID: "org-1",
 		Databases: []models.PostgresAddonDatabase{
 			{Name: "app"},
 		},
@@ -115,7 +116,8 @@ func TestValidateForCreateAllowsPostgresSuperuserConnectionConfig(t *testing.T) 
 		},
 	})
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID: "pg-1",
+		ID:             "pg-1",
+		OrganisationID: "org-1",
 		Configuration: models.PostgresConfiguration{
 			EnableSuperuserAccess: true,
 		},
@@ -141,11 +143,49 @@ func TestValidateForCreateRejectsPostgresConnectionConfigWithoutDatabase(t *test
 			Name: "web",
 		},
 	})
-	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{ID: "pg-1"}, nil)
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{ID: "pg-1", OrganisationID: "org-1"}, nil)
 
 	err := v.ValidateForCreate(context.Background(), spec)
 	fe := requireSingleFieldError(t, err)
 	if got, want := fe.Message, "connection 'pg-env' requires config.database when postgres credential scope is owner"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+// TestValidateForCreateRejectsPostgresConnectionFromAnotherOrganisation asserts
+// the connection-source postgres addon lookup is org-scoped: an addon that
+// exists but belongs to a different organisation behaves exactly like a
+// missing one, so cross-org addon existence never leaks through connection
+// validation.
+func TestValidateForCreateRejectsPostgresConnectionFromAnotherOrganisation(t *testing.T) {
+	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "pg-env",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypePostgresAddon,
+			Id:   "pg-1",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Config: map[string]interface{}{
+			string(models.ConnectionConfigKeyDatabase): "app",
+		},
+	})
+	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
+		ID:             "pg-1",
+		OrganisationID: "org-other",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
+	}, nil)
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrConnectionInvalid {
+		t.Fatalf("expected %s, got %s", errors.VErrConnectionInvalid, fe.Code)
+	}
+	if got, want := fe.Message, "connection 'pg-env' references non-existent postgres addon 'pg-1'"; got != want {
 		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
@@ -861,8 +901,9 @@ func TestValidateForCreateRejectsBuildArtifactSourceWithUnknownVolume(t *testing
 func TestValidateForCreateRejectsValueRefWithTemplateMissingValues(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID:        "pg-1",
-		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+		ID:             "pg-1",
+		OrganisationID: "org-1",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
 	}, nil)
 
 	spec := stackWithConnections(models.StackConnection{
@@ -889,8 +930,9 @@ func TestValidateForCreateRejectsValueRefWithTemplateMissingValues(t *testing.T)
 func TestValidateForCreateRejectsValueRefWithBothOutputAndTemplate(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID:        "pg-1",
-		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+		ID:             "pg-1",
+		OrganisationID: "org-1",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
 	}, nil)
 
 	spec := stackWithConnections(models.StackConnection{
@@ -917,8 +959,9 @@ func TestValidateForCreateRejectsValueRefWithBothOutputAndTemplate(t *testing.T)
 func TestValidateForCreateRejectsValueRefWithNeitherOutputNorTemplate(t *testing.T) {
 	v, postgresAddons := newValidatorWithMockedPostgresAddonService(t)
 	postgresAddons.EXPECT().GetPostgresAddon(gomock.Any(), "pg-1").Return(&models.PostgresAddon{
-		ID:        "pg-1",
-		Databases: []models.PostgresAddonDatabase{{Name: "app"}},
+		ID:             "pg-1",
+		OrganisationID: "org-1",
+		Databases:      []models.PostgresAddonDatabase{{Name: "app"}},
 	}, nil)
 
 	spec := stackWithConnections(models.StackConnection{
