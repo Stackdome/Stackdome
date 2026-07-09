@@ -152,17 +152,6 @@ func (b *BuildArtifactSources) Scan(value interface{}) error {
 	return json.Unmarshal(v, &b)
 }
 
-// Volume status phases reported by the cluster agent
-// (storage/v1alpha1 VolumePhase values).
-const (
-	// VolumePhasePending is reported while a volume's PVC (or source sync)
-	// is still being provisioned and the volume is not yet usable.
-	VolumePhasePending = "Pending"
-	// VolumePhaseReady is the terminal status phase reported by the cluster
-	// agent once a volume's PVC (and any source sync) is ready for use.
-	VolumePhaseReady = "Ready"
-)
-
 type VolumeStatus struct {
 	ObservedGeneration     int64                   `json:"observed_generation"`
 	Conditions             []Condition             `json:"conditions"`

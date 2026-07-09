@@ -137,18 +137,13 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultNil, fmt.Errorf("failed to sync generic secrets: %w", err)
 	}
 
-	ready, err := r.volumesReady(ctx, release)
-	if err != nil {
+	if err := r.verifyReferencedVolumesExist(ctx, release); err != nil {
 		var missing *missingVolumesError
 		if stderrors.As(err, &missing) {
 			failRelease(ctx, r.releaseService, r.logger, release, err.Error())
 			return resultStop, nil
 		}
-		return resultNil, fmt.Errorf("failed to check volume readiness: %w", err)
-	}
-	if !ready {
-		r.logger.Infof("release %s: volumes not ready, requeueing", release.ID)
-		return resultRequeueAfter(convergencePollInterval), nil
+		return resultNil, fmt.Errorf("failed to verify referenced volumes exist: %w", err)
 	}
 
 	stackCR, err := r.applyStackCR(ctx, clusterClient, release)
@@ -370,36 +365,33 @@ func (ref volumeRef) label() string {
 	return ref.id
 }
 
-// volumesReady gates release application on the readiness of only the volumes
-// the release snapshot actually references — not every live volume on the
-// stack. An unreferenced volume (e.g. one belonging to a resource dropped from
-// this release, or a broken volume nobody mounts) must never block a release.
-// Status is still read live from the DB (that's the correct, current cluster
-// state); it's the SET of volumes being waited on that must come from the
-// immutable snapshot, so a volume created after this release was cut can't
-// gate it either.
-func (r *applyReconciler) volumesReady(ctx context.Context, release *models.StackRelease) (bool, error) {
+// verifyReferencedVolumesExist checks that every volume the release snapshot
+// references — not every live volume on the stack — still exists in the
+// server's database, returning a *missingVolumesError naming the absent ones.
+// Existence is the hub's responsibility; volume READINESS is deliberately not
+// checked: the cluster agent reconciles declaratively and waits for PVCs
+// itself, so the hub gating on phase would only duplicate that wait. It's the
+// SET of volumes being checked that must come from the immutable snapshot, so
+// a volume created after this release was cut can't affect it, and an
+// unreferenced broken volume can't fail it.
+func (r *applyReconciler) verifyReferencedVolumesExist(ctx context.Context, release *models.StackRelease) error {
 	refs := referencedVolumeRefs(&release.Snapshot)
 	if len(refs) == 0 {
-		return true, nil
+		return nil
 	}
 
 	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, release.StackID)
 	if serr != nil {
-		return false, serr
+		return serr
 	}
 
-	ready := true
 	var missing []string
 	for _, ref := range refs {
 		found := false
 		for _, v := range volumes {
-			if !ref.matches(v) {
-				continue
-			}
-			found = true
-			if v.Status == nil || v.Status.Phase != models.VolumePhaseReady {
-				ready = false
+			if ref.matches(v) {
+				found = true
+				break
 			}
 		}
 		if !found {
@@ -408,10 +400,10 @@ func (r *applyReconciler) volumesReady(ctx context.Context, release *models.Stac
 	}
 	if len(missing) > 0 {
 		sort.Strings(missing)
-		return false, &missingVolumesError{refs: missing}
+		return &missingVolumesError{refs: missing}
 	}
 
-	return ready, nil
+	return nil
 }
 
 // referencedVolumeRefs computes the set of volumes referenced by a release
