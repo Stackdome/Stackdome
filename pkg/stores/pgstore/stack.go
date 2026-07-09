@@ -278,6 +278,32 @@ func (w *stackStore) GetByName(ctx context.Context, name string, userID string) 
 	return &stack, nil
 }
 
+func (w *stackStore) GetByNameAndTeamID(ctx context.Context, name string, teamID string) (*models.Stack, *errors.ServiceError) {
+	var stack models.Stack
+	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND team_id = ?", name, teamID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return nil, errors.NotFound("stack with name %s not found", name)
+		}
+		return nil, errors.GeneralError("failed to get stack: %s", err.Error())
+	}
+	resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get stack resources: %v", err)
+	}
+	stack.StackResources = resources
+	stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get stack volumes: %v", err)
+	}
+	stack.Volumes = stackVolumes
+	stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
+	if err != nil {
+		return nil, errors.GeneralError("failed to get stack connections: %v", err)
+	}
+	stack.Connections = stackConnections
+	return &stack, nil
+}
+
 func (w *stackStore) Update(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
 	_, err := w.GetByID(ctx, id)
 	if err != nil {

@@ -368,6 +368,50 @@ func (h *stackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	handle(w, r, cfg, http.StatusOK)
 }
 
+// ApplyByName is the name-addressed variant of Apply (kubectl-style upsert):
+// stack identity comes from the body's name (unique per team), not the URL.
+// Responds 201 when the stack was created, 200 when it was updated.
+func (h *stackHandler) ApplyByName(w http.ResponseWriter, r *http.Request) {
+	var ws openapi.Stack
+	created := false
+	cfg := &handlerConfig{
+		&ws,
+		validation.ValidateStack(&ws),
+		func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			identity := auth.GetIdentityFromCtx(ctx)
+			if identity == nil {
+				return nil, errors.Unauthorized("failed to fetch user")
+			}
+
+			teamID, serr := resolveTeamID(r, h.teamService)
+			if serr != nil {
+				return nil, serr
+			}
+
+			convertedObject := presenters.ConvertStack(&ws)
+			orgID := mux.Vars(r)["org_id"]
+			convertedObject.OrganisationID = orgID
+			convertedObject.TeamID = teamID
+			convertedObject.UserID = identity.UserID
+
+			obj, wasCreated, serr := h.stackService.ApplyStack(ctx, convertedObject)
+			if serr != nil {
+				return nil, serr
+			}
+			created = wasCreated
+			return presenters.PresentStack(obj), nil
+		},
+		handleError,
+	}
+	handleWithDynamicStatus(w, r, cfg, func() int {
+		if created {
+			return http.StatusCreated
+		}
+		return http.StatusOK
+	})
+}
+
 func (h *stackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

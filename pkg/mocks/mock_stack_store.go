@@ -159,6 +159,21 @@ func (mr *MockStackStoreMockRecorder) GetByName(ctx, Name, userID any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockStackStore)(nil).GetByName), ctx, Name, userID)
 }
 
+// GetByNameAndTeamID mocks base method.
+func (m *MockStackStore) GetByNameAndTeamID(ctx context.Context, name, teamID string) (*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByNameAndTeamID", ctx, name, teamID)
+	ret0, _ := ret[0].(*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetByNameAndTeamID indicates an expected call of GetByNameAndTeamID.
+func (mr *MockStackStoreMockRecorder) GetByNameAndTeamID(ctx, name, teamID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTeamID", reflect.TypeOf((*MockStackStore)(nil).GetByNameAndTeamID), ctx, name, teamID)
+}
+
 // InternalList mocks base method.
 func (m *MockStackStore) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()

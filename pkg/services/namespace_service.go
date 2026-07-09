@@ -13,6 +13,12 @@ import (
 	"github.com/google/uuid"
 )
 
+// NamespaceService's mock lives in-package (not pkg/mocks): the embedded
+// ClusterResourceServiceInjectable references services.ClusterResourceServiceDeps,
+// so a pkg/mocks mock would import services and close an import cycle
+// (services -> auth -> mocks -> services).
+//go:generate mockgen -destination=namespace_service_mock_test.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services github.com/Stackdome/stackdome/pkg/services NamespaceService
+
 type NamespaceService interface {
 	CreateInDB(ctx context.Context, ns *models.Namespace) (*models.Namespace, *errors.ServiceError)
 	CreateInCluster(ctx context.Context, ns *models.Namespace) *errors.ServiceError

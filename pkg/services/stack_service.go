@@ -21,6 +21,7 @@ import (
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError)
 	UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError)
 	CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
@@ -158,6 +159,36 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 		return nil, permErr
 	}
 	return s.InternalCreateStack(ctx, spec)
+}
+
+// ApplyStack upserts a stack by name within its team scope (stack names are
+// unique per team). When a stack with spec.Name exists in spec.TeamID it is
+// fully replaced through the same path as the id-addressed apply; otherwise
+// the stack and its children are created atomically after full validation.
+// The returned bool is true when a new stack was created.
+func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError) {
+	existingStack, lookupErr := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
+	if lookupErr != nil && !lookupErr.Is404() {
+		return nil, false, lookupErr
+	}
+	if existingStack != nil {
+		if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, existingStack.ID, auth.ActionWrite); permErr != nil {
+			return nil, false, permErr
+		}
+		updatedStack, serr := s.InternalUpdateStack(ctx, existingStack.ID, spec)
+		if serr != nil {
+			return nil, false, serr
+		}
+		return updatedStack, false, nil
+	}
+	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+		return nil, false, permErr
+	}
+	createdStack, serr := s.InternalCreateStack(ctx, spec)
+	if serr != nil {
+		return nil, false, serr
+	}
+	return createdStack, true, nil
 }
 
 func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
