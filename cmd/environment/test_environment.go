@@ -628,6 +628,8 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					StackService:         te.Services.StackService,
 					StackResourceService: te.Services.StackResourceService,
 					Env:                  te.Env.Name,
+					ReleaseChecker:       te.Services.StackReleaseService,
+					EventRecorder:        te.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
@@ -636,6 +638,8 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					DBImageBuildService:   te.Services.ImageBuildService,
 					DBResourceService:     te.Services.StackResourceService,
 					GitIntegrationService: te.Services.GitIntegrationService,
+					ReleaseChecker:        te.Services.StackReleaseService,
+					EventRecorder:         te.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {

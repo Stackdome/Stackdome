@@ -281,6 +281,8 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					StackService:         d.Services.StackService,
 					StackResourceService: d.Services.StackResourceService,
 					Env:                  d.Env.Name,
+					ReleaseChecker:       d.Services.StackReleaseService,
+					EventRecorder:        d.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
@@ -289,6 +291,8 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
+					ReleaseChecker:        d.Services.StackReleaseService,
+					EventRecorder:         d.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
