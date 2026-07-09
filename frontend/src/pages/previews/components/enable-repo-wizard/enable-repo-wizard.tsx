@@ -1,0 +1,112 @@
+import { useEffect, useState } from "react";
+import { GitPullRequest } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { listGitIntegrations } from "@/api/git-integrations";
+import { getCurrentOrganizationId } from "@/helpers/common";
+import { ConnectPhase } from "./connect-phase";
+
+type Phase = "connect" | "pick" | "configure";
+
+const CONNECTED_STATUSES = new Set(["installed", "active"]);
+
+export interface PickedRepo {
+  /** e.g. "acme/webapp" */
+  fullName: string;
+  cloneUrl: string;
+  defaultBranch: string;
+  /** null when the user typed a URL manually (no discovery available) */
+  integrationId: string | null;
+}
+
+interface EnableRepoWizardProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Called with the created config's id after a successful create. */
+  onCreated: (configId: string) => void;
+}
+
+// `onCreated` isn't wired until Task 9; the underscore keeps tsc/eslint's
+// unused-parameter checks quiet without hiding the still-real prop contract.
+export function EnableRepoWizard({ open, onOpenChange, onCreated: _onCreated }: EnableRepoWizardProps) {
+  const [phase, setPhase] = useState<Phase>("connect");
+  // `integrationId` is threaded to the pick/configure phases starting Task 8.
+  const [_integrationId, setIntegrationId] = useState<string | null>(null);
+  const [repo, setRepo] = useState<PickedRepo | null>(null);
+  const [checkedIntegrations, setCheckedIntegrations] = useState(false);
+
+  // On open: skip connect when a usable GitHub App integration already exists.
+  useEffect(() => {
+    if (!open) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) return;
+    let cancelled = false;
+    setCheckedIntegrations(false);
+    listGitIntegrations(orgId)
+      .then((list) => {
+        if (cancelled) return;
+        const connected = (list.items ?? []).find(
+          (i) => i.type === "github_app" && CONNECTED_STATUSES.has(i.status ?? ""),
+        );
+        if (connected) {
+          setIntegrationId(connected.id ?? null);
+          setPhase("pick");
+        } else {
+          setPhase("connect");
+        }
+        setCheckedIntegrations(true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPhase("connect");
+          setCheckedIntegrations(true);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  const close = () => {
+    onOpenChange(false);
+    setPhase("connect");
+    setRepo(null);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
+      <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[760px]">
+        <DialogTitle className="sr-only">Enable repository</DialogTitle>
+        <DialogDescription className="sr-only">
+          Connect GitHub and enable preview environments on a repository
+        </DialogDescription>
+        <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
+          <span className="flex h-6 w-6 items-center justify-center text-primary">
+            <GitPullRequest className="h-5 w-5" />
+          </span>
+          <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+            Enable repository
+          </span>
+        </div>
+
+        <div className="h-[520px] max-h-[80vh] overflow-hidden">
+          {phase === "connect" && checkedIntegrations && (
+            <ConnectPhase
+              onConnected={(id) => {
+                setIntegrationId(id);
+                setPhase("pick");
+              }}
+              onCancel={close}
+            />
+          )}
+          {/* Task 8 replaces this stub with <RepoPickerPhase …/> */}
+          {phase === "pick" && <div data-testid="pick-phase" />}
+          {/* Task 9 replaces this stub with <ConfigurePhase …/> */}
+          {phase === "configure" && repo && <div data-testid="configure-phase" />}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Referenced by later tasks; used from Task 10 onward.
+export type { Phase };
