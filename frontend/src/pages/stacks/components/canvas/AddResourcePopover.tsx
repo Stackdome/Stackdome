@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, HardDrive, Plus, Search } from "lucide-react";
+import { Check, ExternalLink, HardDrive, Plus, Search } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
@@ -120,43 +120,6 @@ export function AddResourcePanel({
             </div>
           </div>
         ) : null}
-        {visibleAddons.length > 0 && (
-          <div className="mt-5">
-            <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-              Managed add-ons
-            </div>
-            <div className="grid grid-cols-2 gap-2.5">
-              {visibleAddons.map((a) => {
-                const linked = linkedAddonIds.has(a.id);
-                return (
-                  <button
-                    type="button"
-                    key={a.id}
-                    onClick={() => onLinkAddon(a.id)}
-                    className="flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary"
-                  >
-                    <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
-                      <AddonTypeIcon type="postgres" size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium text-foreground">
-                        {a.name}
-                      </span>
-                      <span className="block truncate font-mono text-[11px] text-muted-foreground">
-                        managed postgres
-                      </span>
-                    </span>
-                    {linked ? (
-                      <Check className="h-[17px] w-[17px] text-success" />
-                    ) : (
-                      <Plus className="h-[17px] w-[17px] text-primary" />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
         <div className="mt-5">
           <BlockPicker
             catalog={blockCatalog}
@@ -167,6 +130,66 @@ export function AddResourcePanel({
             hideEmptyMessage
           />
         </div>
+        {/* Last section, matching the wizard's block composer order. */}
+        {(visibleAddons.length > 0 || (addons.length === 0 && !trimmedQuery)) && (
+          <div className="mt-5">
+            <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+              Managed add-ons
+            </div>
+            {addons.length === 0 ? (
+              // No managed addons in the workspace yet — offer a way to create
+              // one (same empty state as the wizard's block composer).
+              <a
+                href="/addons"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex min-h-[60px] items-center gap-3 rounded-md border border-dashed bg-card/40 px-3 py-3 text-left transition-colors hover:border-primary hover:bg-card"
+              >
+                <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                  <Plus className="h-[18px] w-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">Create an add-on</span>
+                  <span className="block text-[12px] text-muted-foreground">
+                    No managed add-ons yet. Set one up in the Addons page.
+                  </span>
+                </span>
+                <ExternalLink className="h-4 w-4 flex-none text-muted-foreground" />
+              </a>
+            ) : (
+              <div className="grid grid-cols-2 gap-2.5">
+                {visibleAddons.map((a) => {
+                  const linked = linkedAddonIds.has(a.id);
+                  return (
+                    <button
+                      type="button"
+                      key={a.id}
+                      onClick={() => onLinkAddon(a.id)}
+                      className="flex min-h-[60px] items-center gap-3 rounded-md border bg-card px-3 py-3 text-left transition-colors hover:border-primary"
+                    >
+                      <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                        <AddonTypeIcon type="postgres" size={18} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-foreground">
+                          {a.name}
+                        </span>
+                        <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                          managed postgres
+                        </span>
+                      </span>
+                      {linked ? (
+                        <Check className="h-[17px] w-[17px] text-success" />
+                      ) : (
+                        <Plus className="h-[17px] w-[17px] text-primary" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </>
   );
