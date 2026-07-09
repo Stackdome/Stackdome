@@ -41,6 +41,16 @@ func (v *volumeStore) InternalList(ctx context.Context, ids []string) ([]*models
 	return res, nil
 }
 
+func (v *volumeStore) InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError) {
+	var res []*models.Volume
+	if err := v.sessionFactory.New(ctx).
+		Where("status IS NULL OR status->>'phase' IS NULL OR status->>'phase' <> ?", models.VolumePhaseReady).
+		Find(&res).Error; err != nil {
+		return nil, errors.GeneralError("failed to fetch not-ready volumes: %s", err.Error())
+	}
+	return res, nil
+}
+
 func (v *volumeStore) GetByVolumeNameAndNamespace(ctx context.Context, name string, namespace string) (*models.Volume, *errors.ServiceError) {
 	var res models.Volume
 	if err := v.sessionFactory.New(ctx).Where("name = ? AND namespace = ?", name, namespace).First(&res).Error; err != nil {

@@ -23,6 +23,11 @@ const (
 	READ_ONLY_MANY  VolumeAccessMode = "ReadOnlyMany"
 )
 
+const (
+	VolumePhasePending = "Pending"
+	VolumePhaseReady   = "Ready"
+)
+
 type Volume struct {
 	ID             string           `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	OrganisationID string           `gorm:"not null" json:"organisation_id"`
