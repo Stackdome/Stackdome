@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +16,7 @@ import (
 type deprovisionReconciler struct {
 	postgresAddonService postgresAddonService
 	referenceService     referenceService
-	clusterManager       clustermanager.ClusterManager
+	clusterManager       clusterClientGetter
 	logger               logger.Logger
 }
 
@@ -33,9 +32,7 @@ func newDeprovisionReconciler(spec PostgresAddonWorkerSpec) *deprovisionReconcil
 func (r *deprovisionReconciler) Name() string { return "deprovision" }
 
 func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
-	// TODO: Use addon.DeletionTimestamp != nil instead of state string check
-	// (see docs/plans/postgres-addon-improvements.md #1).
-	if addon.Status.State != models.PostgresAddonStateDeleting {
+	if addon.DeletionTimestamp == nil {
 		return resultNil, nil
 	}
 

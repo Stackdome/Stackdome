@@ -310,6 +310,22 @@ func (s *postgresAddonStore) UpdateBackupRequestedAt(ctx context.Context, id str
 	return nil
 }
 
+func (s *postgresAddonStore) UpdateDeletionTimestamp(ctx context.Context, id string, timestamp *time.Time) *errors.ServiceError {
+	result := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).
+		Where("id = ?", id).
+		Update("deletion_timestamp", timestamp)
+
+	if result.Error != nil {
+		return errors.GeneralError("failed to update postgres addon deletion timestamp: %s", result.Error.Error())
+	}
+
+	if result.RowsAffected == 0 {
+		return errors.NotFound("postgres addon with id '%s' not found", id)
+	}
+
+	return nil
+}
+
 func (s *postgresAddonStore) InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError) {
 	var addons []*models.PostgresAddon
 

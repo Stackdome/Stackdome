@@ -79,6 +79,7 @@ type PostgresAddon struct {
 	// Lifecycle fields
 	BackupRequestedAt *time.Time              `gorm:"default:NULL"`
 	LifecycleConfig   PostgresLifecycleConfig `gorm:"type:jsonb"`
+	DeletionTimestamp *time.Time              `gorm:"default:NULL"`
 
 	// Status fields
 	Status    PostgresAddonStatus `gorm:"type:jsonb"`
