@@ -50,7 +50,7 @@ export function WizardChooser({
     {
       icon: Grid3x3,
       label: "Build from blocks",
-      desc: "Assemble web, Postgres, Redis, and workers — fully configured.",
+      desc: "Assemble your stack from pre-configured building blocks of resources.",
       onClick: onPickBlocks,
     },
     {
