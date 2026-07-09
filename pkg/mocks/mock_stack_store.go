@@ -144,21 +144,6 @@ func (mr *MockStackStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockStackStore)(nil).GetByID), ctx, id)
 }
 
-// GetByName mocks base method.
-func (m *MockStackStore) GetByName(ctx context.Context, Name, userID string) (*models.Stack, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByName", ctx, Name, userID)
-	ret0, _ := ret[0].(*models.Stack)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetByName indicates an expected call of GetByName.
-func (mr *MockStackStoreMockRecorder) GetByName(ctx, Name, userID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByName", reflect.TypeOf((*MockStackStore)(nil).GetByName), ctx, Name, userID)
-}
-
 // GetByNameAndTeamID mocks base method.
 func (m *MockStackStore) GetByNameAndTeamID(ctx context.Context, name, teamID string) (*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()

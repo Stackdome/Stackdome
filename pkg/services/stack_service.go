@@ -46,7 +46,6 @@ type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
-	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
 	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
@@ -192,7 +191,7 @@ func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*mod
 }
 
 func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	existingStack, _ := s.stackStore.GetByName(ctx, spec.Name, spec.UserID)
+	existingStack, _ := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
@@ -650,17 +649,6 @@ func (s *stackService) deleteSingleStackConnection(ctx context.Context, existing
 		}
 		return s.referenceService.ReprojectSpec(txCtx, existingStack.ID)
 	})
-}
-
-func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
-	stack, err := s.stackStore.GetByName(ctx, name, userID)
-	if err != nil {
-		return nil, err
-	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stack.ID, auth.ActionRead); permErr != nil {
-		return nil, permErr
-	}
-	return stack, nil
 }
 
 func (s *stackService) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {

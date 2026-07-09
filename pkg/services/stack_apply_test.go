@@ -74,8 +74,8 @@ func TestApplyStack_CreatesWhenMissing(t *testing.T) {
 		Return(nil, errors.NotFound("stack with name demo not found"))
 	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
 
-	// InternalCreateStack path.
-	env.stackStore.EXPECT().GetByName(ctx, "demo", userID).
+	// InternalCreateStack path: its own team-scoped duplicate re-check.
+	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
 		Return(nil, errors.NotFound("stack with name demo not found"))
 	env.validator.EXPECT().ValidateForCreate(ctx, spec).Return(nil)
 	namespace := &models.Namespace{Name: "ns-demo"}
@@ -144,10 +144,13 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 	assert.Equal(t, updated, got)
 }
 
-// TestApplyStack_ConflictOnConcurrentCreate: the team-scoped lookup misses,
-// but by the time the create path runs its own duplicate check a stack with
-// the same name exists — the Conflict propagates untouched.
-func TestApplyStack_ConflictOnConcurrentCreate(t *testing.T) {
+// TestApplyStack_ConflictOnDuplicateNameRecheck: the apply-level team-scoped
+// lookup misses, but the create path's own sequential duplicate re-check finds
+// a stack with the same name in the team — the Conflict propagates untouched.
+// (The true concurrent race is covered by the DB unique index on
+// stacks(team_id, name); see the StackStore Create/CreateWithTx Conflict
+// mapping tests in pkg/stores/pgstore.)
+func TestApplyStack_ConflictOnDuplicateNameRecheck(t *testing.T) {
 	ctx := context.Background()
 	teamID := "team-1"
 	userID := "user-1"
@@ -160,8 +163,8 @@ func TestApplyStack_ConflictOnConcurrentCreate(t *testing.T) {
 	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
 		Return(nil, errors.NotFound("stack with name demo not found"))
 	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
-	env.stackStore.EXPECT().GetByName(ctx, "demo", userID).
-		Return(&models.Stack{ID: "stack-raced", Name: "demo"}, nil)
+	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
+		Return(&models.Stack{ID: "stack-raced", Name: "demo", TeamID: teamID}, nil)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
 	assert.Nil(t, got)

@@ -17,7 +17,6 @@ type StackStore interface {
 	// Only meaningful inside WithTransaction; serializes concurrent mutations
 	// that must observe each other (e.g. duplicate-name checks on create).
 	LockByID(ctx context.Context, id string) *errors.ServiceError
-	GetByName(ctx context.Context, Name string, userID string) (*models.Stack, *errors.ServiceError)
 	// GetByNameAndTeamID resolves a stack by name within a team scope. Stack
 	// names are unique per team, so this is the canonical lookup for
 	// name-addressed operations (e.g. declarative apply).

@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -44,6 +45,9 @@ func (w *stackStore) Create(ctx context.Context, spec *models.Stack) (*models.St
 	ctx = db.CtxWithTransaction(ctx, tx)
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Create(spec).Error; err != nil {
 		tx.Rollback()
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
+		}
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
@@ -94,6 +98,9 @@ func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*mod
 	}
 
 	if err := tx.Model(&models.Stack{}).Omit(clause.Associations).Create(spec).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
+		}
 		return nil, errors.GeneralError("failed to create stack: %s", err.Error())
 	}
 	if err := w.stackConnectionStore.ReplaceByStackIDWithTx(ctx, spec.ID, spec.Connections); err != nil {
@@ -250,32 +257,6 @@ func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceErr
 		return errors.GeneralError("failed to lock stack: %s", err.Error())
 	}
 	return nil
-}
-
-func (w *stackStore) GetByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
-	var stack models.Stack
-	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND user_id = ?", name, userID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			return nil, errors.NotFound("stack with name %s not found", name)
-		}
-		return nil, errors.GeneralError("failed to get stack: %s", err.Error())
-	}
-	resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get stack resources: %v", err)
-	}
-	stack.StackResources = resources
-	stackVolumes, err := w.stackVolumeStore.ListVolumesByStackID(ctx, stack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get stack volumes: %v", err)
-	}
-	stack.Volumes = stackVolumes
-	stackConnections, err := w.stackConnectionStore.ListByStackID(ctx, stack.ID)
-	if err != nil {
-		return nil, errors.GeneralError("failed to get stack connections: %v", err)
-	}
-	stack.Connections = stackConnections
-	return &stack, nil
 }
 
 func (w *stackStore) GetByNameAndTeamID(ctx context.Context, name string, teamID string) (*models.Stack, *errors.ServiceError) {
