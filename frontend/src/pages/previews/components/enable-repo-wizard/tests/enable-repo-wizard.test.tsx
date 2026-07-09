@@ -45,7 +45,7 @@ describe("EnableRepoWizard", () => {
     });
     renderWizard();
     await waitFor(() => {
-      expect(screen.getByTestId("pick-phase")).toBeTruthy();
+      expect(screen.getByPlaceholderText(/search repositories/i)).toBeTruthy();
     });
   });
 

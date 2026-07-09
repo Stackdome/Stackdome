@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { listGitIntegrations } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { ConnectPhase } from "./connect-phase";
+import { RepoPickerPhase } from "./repo-picker-phase";
 
 type Phase = "connect" | "pick" | "configure";
 
@@ -29,8 +30,7 @@ interface EnableRepoWizardProps {
 // unused-parameter checks quiet without hiding the still-real prop contract.
 export function EnableRepoWizard({ open, onOpenChange, onCreated: _onCreated }: EnableRepoWizardProps) {
   const [phase, setPhase] = useState<Phase>("connect");
-  // `integrationId` is threaded to the pick/configure phases starting Task 8.
-  const [_integrationId, setIntegrationId] = useState<string | null>(null);
+  const [integrationId, setIntegrationId] = useState<string | null>(null);
   const [repo, setRepo] = useState<PickedRepo | null>(null);
   const [checkedIntegrations, setCheckedIntegrations] = useState(false);
 
@@ -98,8 +98,16 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated: _onCreated }: 
               onCancel={close}
             />
           )}
-          {/* Task 8 replaces this stub with <RepoPickerPhase …/> */}
-          {phase === "pick" && <div data-testid="pick-phase" />}
+          {phase === "pick" && (
+            <RepoPickerPhase
+              integrationId={integrationId}
+              onPicked={(r) => {
+                setRepo(r);
+                setPhase("configure");
+              }}
+              onBack={() => setPhase("connect")}
+            />
+          )}
           {/* Task 9 replaces this stub with <ConfigurePhase …/> */}
           {phase === "configure" && repo && <div data-testid="configure-phase" />}
         </div>
