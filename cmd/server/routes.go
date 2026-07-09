@@ -251,6 +251,10 @@ func (s apiServer) routes() *mux.Router {
 	// Stacks (team-scoped)
 	teamResourceRouter.HandleFunc("/stacks", stackHandler.Create).Methods(http.MethodPost)
 	teamResourceRouter.HandleFunc("/stacks", stackHandler.ListByTeamName).Methods(http.MethodGet)
+	// Literal /stacks/apply must be registered before any /stacks/{id} route:
+	// gorilla/mux matches in registration order, so the literal wins over the
+	// {id} pattern for PUT /stacks/apply.
+	teamResourceRouter.HandleFunc("/stacks/apply", stackHandler.ApplyByName).Methods(http.MethodPut)
 	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/topology", stackHandler.GetTopology).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/connections", stackHandler.ListConnections).Methods(http.MethodGet)

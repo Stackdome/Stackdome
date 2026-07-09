@@ -21,6 +21,7 @@ import (
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
+	ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError)
 	UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	ListStackConnections(ctx context.Context, stackID string) (models.StackConnections, *errors.ServiceError)
 	CreateStackConnection(ctx context.Context, stackID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
@@ -45,7 +46,6 @@ type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
-	GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError)
 	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
@@ -112,7 +112,14 @@ func NewStackService(spec StackServiceSpec) StackService {
 		Volumes: pgstore.NewVolumeStore(pgstore.VolumeStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		Secrets:         spec.SecretService,
+		// Raw store, not the RBAC-enforcing SecretService: env secret_key_ref
+		// validation is an org-scoped existence check, not an authorized
+		// read. The thin per-resource path (cmd/environment) wires the same
+		// raw store, so both paths accept the same payload regardless of
+		// whether the caller holds secrets:read.
+		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		Domains:         organisationDomainService,
 		Credentials:     spec.CredentialResolver,
 		GitIntegrations: spec.GitIntegrationService,
@@ -153,8 +160,38 @@ func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*mo
 	return s.InternalCreateStack(ctx, spec)
 }
 
+// ApplyStack upserts a stack by name within its team scope (stack names are
+// unique per team). When a stack with spec.Name exists in spec.TeamID it is
+// fully replaced through the same path as the id-addressed apply; otherwise
+// the stack and its children are created atomically after full validation.
+// The returned bool is true when a new stack was created.
+func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError) {
+	existingStack, lookupErr := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
+	if lookupErr != nil && !lookupErr.Is404() {
+		return nil, false, lookupErr
+	}
+	if existingStack != nil {
+		if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, existingStack.ID, auth.ActionWrite); permErr != nil {
+			return nil, false, permErr
+		}
+		updatedStack, serr := s.InternalUpdateStack(ctx, existingStack.ID, spec)
+		if serr != nil {
+			return nil, false, serr
+		}
+		return updatedStack, false, nil
+	}
+	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+		return nil, false, permErr
+	}
+	createdStack, serr := s.InternalCreateStack(ctx, spec)
+	if serr != nil {
+		return nil, false, serr
+	}
+	return createdStack, true, nil
+}
+
 func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	existingStack, _ := s.stackStore.GetByName(ctx, spec.Name, spec.UserID)
+	existingStack, _ := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
@@ -338,6 +375,10 @@ func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, 
 	spec.StackResources = nil
 	spec.Volumes = nil
 	spec.Connections = nil
+
+	if verr := s.stackValidator.ValidateShell(ctx, spec); verr != nil {
+		return nil, verr
+	}
 
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
@@ -608,17 +649,6 @@ func (s *stackService) deleteSingleStackConnection(ctx context.Context, existing
 		}
 		return s.referenceService.ReprojectSpec(txCtx, existingStack.ID)
 	})
-}
-
-func (s *stackService) GetStackByName(ctx context.Context, name string, userID string) (*models.Stack, *errors.ServiceError) {
-	stack, err := s.stackStore.GetByName(ctx, name, userID)
-	if err != nil {
-		return nil, err
-	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stack.ID, auth.ActionRead); permErr != nil {
-		return nil, permErr
-	}
-	return stack, nil
 }
 
 func (s *stackService) InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError) {

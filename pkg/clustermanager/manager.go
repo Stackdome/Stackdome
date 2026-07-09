@@ -35,6 +35,8 @@ type CredentialDecryptor interface {
 	DecryptData(in string) ([]byte, error)
 }
 
+//go:generate mockgen -destination=../mocks/mock_cluster_manager.go -package=mocks github.com/Stackdome/stackdome/pkg/clustermanager ClusterManager
+
 // ClusterManager defines the interface for managing clusters
 type ClusterManager interface {
 	RegisterCluster(cluster *models.Cluster) error

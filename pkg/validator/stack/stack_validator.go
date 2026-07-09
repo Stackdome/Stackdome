@@ -120,6 +120,20 @@ func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.S
 	return nil
 }
 
+// ValidateShell runs only the rules scoped to the stack's own columns
+// (currently validateStackSettings), skipping validateResources,
+// validateUniqueResourceNames, and connection validation entirely. It backs
+// thin shell create/update (POST /stacks, PUT /stacks/{id}), which never
+// carry children, so out-of-range settings are rejected there with the same
+// limits the fat paths enforce.
+func (v *stackValidator) ValidateShell(_ context.Context, spec *models.Stack) *errors.ServiceError {
+	ferrs := dedupeFieldErrors(validateStackSettings(spec))
+	if len(ferrs) > 0 {
+		return errors.ValidationFailed(ferrs)
+	}
+	return nil
+}
+
 // validateResources runs the shared per-resource validator (input shape,
 // referential existence, sibling rules) over every resource in the stack,
 // prefixing each field error with its resource's index. A non-nil
@@ -241,7 +255,7 @@ func (v *stackValidator) validateConnections(ctx context.Context, existing *mode
 	var errs []errors.FieldError
 	for i, connection := range spec.Connections {
 		label := connectionLabel(connection, i)
-		if serr := v.validateSingleConnection(ctx, resourceMap, volumeMap, label, connection); serr != nil {
+		if serr := v.validateSingleConnection(ctx, spec.OrganisationID, resourceMap, volumeMap, label, connection); serr != nil {
 			errs = append(errs, errors.FieldError{
 				Field:   fmt.Sprintf("spec.connections[%d]", i),
 				Code:    errors.VErrConnectionInvalid,
@@ -255,6 +269,7 @@ func (v *stackValidator) validateConnections(ctx context.Context, existing *mode
 
 func (v *stackValidator) validateSingleConnection(
 	ctx context.Context,
+	orgID string,
 	resourceMap map[string]*models.StackResource,
 	volumeMap map[string]*models.Volume,
 	label string,
@@ -267,7 +282,7 @@ func (v *stackValidator) validateSingleConnection(
 		return err
 	}
 
-	sourceOutputs, err := v.validateConnectionSource(ctx, resourceMap, volumeMap, label, connection)
+	sourceOutputs, err := v.validateConnectionSource(ctx, orgID, resourceMap, volumeMap, label, connection)
 	if err != nil {
 		return err
 	}
@@ -291,6 +306,7 @@ func validateConnectionKind(label string, kind models.ConnectionKind) *errors.Se
 
 func (v *stackValidator) validateConnectionSource(
 	ctx context.Context,
+	orgID string,
 	resourceMap map[string]*models.StackResource,
 	volumeMap map[string]*models.Volume,
 	label string,
@@ -325,8 +341,11 @@ func (v *stackValidator) validateConnectionSource(
 		if len(connection.Config) > 0 {
 			return nil, errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
 		}
+		// Org-scoped lookup: InternalGetByID itself is unscoped, so a secret
+		// belonging to another organisation must behave exactly like a
+		// missing one — anything else leaks cross-org secret existence.
 		secret, serviceErr := v.secretService.InternalGetByID(ctx, connection.From.Id)
-		if serviceErr != nil {
+		if serviceErr != nil || secret.OrganisationID != orgID {
 			return nil, errors.BadRequest("connection '%s' references non-existent secret '%s'", label, connection.From.Id)
 		}
 		return secret.EnsureDeclaredOutputs(), nil

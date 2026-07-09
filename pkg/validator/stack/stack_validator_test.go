@@ -350,13 +350,59 @@ func TestValidateForCreateAllowsSecretConnectionUsingBracketAccessor(t *testing.
 		},
 	})
 	secrets.EXPECT().InternalGetByID(gomock.Any(), "sec-1").Return(&models.Secret{
-		ID:   "sec-1",
-		Keys: []string{"tls.crt"},
+		ID:             "sec-1",
+		OrganisationID: "org-1",
+		Keys:           []string{"tls.crt"},
 	}, nil)
 
 	err := v.ValidateForCreate(context.Background(), spec)
 	if err != nil {
 		t.Fatalf("expected secret connection output to validate, got %v", err)
+	}
+}
+
+// TestValidateForCreateRejectsSecretConnectionFromAnotherOrganisation asserts
+// the connection-source secret lookup is org-scoped: a secret that exists but
+// belongs to a different organisation behaves exactly like a missing one, so
+// cross-org secret existence never leaks through connection validation.
+func TestValidateForCreateRejectsSecretConnectionFromAnotherOrganisation(t *testing.T) {
+	v, secrets := newValidatorWithMockedSecretService(t)
+	spec := stackWithConnections(models.StackConnection{
+		ID:   "tls-cert",
+		Kind: models.ConnectionKindEnv,
+		From: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeSecret,
+			Id:   "sec-1",
+		},
+		To: models.TopologyNodeRef{
+			Type: models.TopologyNodeTypeStackResource,
+			Name: "web",
+		},
+		Mappings: []models.ConnectionMapping{
+			{
+				Target: models.ConnectionTarget{
+					Type: models.ConnectionTargetTypeEnv,
+					Name: "TLS_CERT",
+				},
+				Value: models.ValueRef{
+					Output: "tls.crt",
+				},
+			},
+		},
+	})
+	secrets.EXPECT().InternalGetByID(gomock.Any(), "sec-1").Return(&models.Secret{
+		ID:             "sec-1",
+		OrganisationID: "org-other",
+		Keys:           []string{"tls.crt"},
+	}, nil)
+
+	err := v.ValidateForCreate(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrConnectionInvalid {
+		t.Fatalf("expected %s, got %s", errors.VErrConnectionInvalid, fe.Code)
+	}
+	if got, want := fe.Message, "connection 'tls-cert' references non-existent secret 'sec-1'"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
 	}
 }
 
@@ -443,6 +489,76 @@ func TestValidateForCreateRejectsMinSuccessfulExceedingRetention(t *testing.T) {
 	fe := requireSingleFieldError(t, err)
 	if got, want := fe.Message, "min_successful_releases (10) must not exceed release_retention_limit (5)"; got != want {
 		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateShellRejectsRetentionLimitAboveMax(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name:     "demo",
+		Settings: &models.StackSettings{ReleaseRetentionLimit: models.MaxReleaseRetentionLimit + 1},
+	}
+
+	err := v.ValidateShell(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrStackSettingsInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackSettingsInvalid)
+	}
+}
+
+func TestValidateShellRejectsDeployTimeoutAboveMax(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name:     "demo",
+		Settings: &models.StackSettings{DeployTimeoutMinutes: models.MaxDeployTimeoutMinutes + 1},
+	}
+
+	err := v.ValidateShell(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if fe.Code != errors.VErrStackSettingsInvalid {
+		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackSettingsInvalid)
+	}
+}
+
+func TestValidateShellRejectsMinSuccessfulExceedingRetention(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name: "demo",
+		Settings: &models.StackSettings{
+			ReleaseRetentionLimit: 5,
+			MinSuccessfulReleases: 10,
+		},
+	}
+
+	err := v.ValidateShell(context.Background(), spec)
+	fe := requireSingleFieldError(t, err)
+	if got, want := fe.Message, "min_successful_releases (10) must not exceed release_retention_limit (5)"; got != want {
+		t.Fatalf("unexpected message: got %q want %q", got, want)
+	}
+}
+
+func TestValidateShellAcceptsValidSettings(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{
+		Name: "demo",
+		Settings: &models.StackSettings{
+			ReleaseRetentionLimit: 20,
+			MinSuccessfulReleases: 10,
+			DeployTimeoutMinutes:  30,
+		},
+	}
+
+	if err := v.ValidateShell(context.Background(), spec); err != nil {
+		t.Fatalf("expected valid settings to pass, got %v", err)
+	}
+}
+
+func TestValidateShellAcceptsNilSettings(t *testing.T) {
+	v := newTestValidator(t)
+	spec := &models.Stack{Name: "demo"}
+
+	if err := v.ValidateShell(context.Background(), spec); err != nil {
+		t.Fatalf("expected nil settings to pass, got %v", err)
 	}
 }
 

@@ -47,10 +47,11 @@ const (
 	VErrDomainNotConfigured = "domain_not_configured"
 
 	// env
-	VErrEnvNameRequired  = "env_name_required"
-	VErrEnvNameDuplicate = "env_name_duplicate"
-	VErrEnvValueMissing  = "env_value_missing"
-	VErrEnvValueConflict = "env_value_conflict"
+	VErrEnvNameRequired      = "env_name_required"
+	VErrEnvNameDuplicate     = "env_name_duplicate"
+	VErrEnvValueMissing      = "env_value_missing"
+	VErrEnvValueConflict     = "env_value_conflict"
+	VErrEnvSelfOutputUnknown = "env_self_output_unknown"
 
 	// volume mounts
 	VErrVolumeMountInvalid = "volume_mount_invalid"
@@ -86,8 +87,13 @@ const (
 	VErrGitTagNotFound     = "git_tag_not_found"
 	VErrGitRateLimited     = "git_rate_limited"
 	VErrImageNotFound      = "image_not_found"
-	VErrRegistryAuthFailed = "registry_auth_failed"
-	VErrPushAccessDenied   = "push_access_denied"
+	// VErrRegistryCredentialsRequired means the registry rejected anonymous
+	// access and NO credentials were configured for it — the fix is adding
+	// credentials, not correcting them (that case is VErrRegistryAuthFailed
+	// / VErrPushAccessDenied).
+	VErrRegistryCredentialsRequired = "registry_credentials_required"
+	VErrRegistryAuthFailed          = "registry_auth_failed"
+	VErrPushAccessDenied            = "push_access_denied"
 
 	// stack-level (settings, connections, interpolations)
 	VErrStackSettingsInvalid = "stack_settings_invalid"

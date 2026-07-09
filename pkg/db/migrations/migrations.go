@@ -70,4 +70,5 @@ var MigrationList = []*gormigrate.Migration{
 	createGitInstallationsTable(),
 	addReleaseValidationErrors(),
 	createResourceValidationRecords(),
+	addStackTeamNameUniqueIndex(),
 }

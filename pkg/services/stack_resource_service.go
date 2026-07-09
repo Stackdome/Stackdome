@@ -18,6 +18,8 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
+//go:generate mockgen -destination=../mocks/mock_stack_resource_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services StackResourceService
+
 type StackResourceService interface {
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 	Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
@@ -186,6 +188,7 @@ func (s *stackResourceService) prepareResource(ctx context.Context, stack *model
 	resource.UserID = stack.UserID
 	resource.Namespace = stack.Namespace
 	applyStackResourcePortDefaults(resource)
+	normalizeStackResourceReplicas(resource)
 	return s.populateRegistryUrlForResource(ctx, stack, resource)
 }
 

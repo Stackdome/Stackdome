@@ -40,6 +40,13 @@ func handleError(ctx context.Context, w http.ResponseWriter, err *errors.Service
 }
 
 func handle(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStatus int) {
+	handleWithDynamicStatus(w, r, cfg, func() int { return httpStatus })
+}
+
+// handleWithDynamicStatus behaves like handle but resolves the success status
+// code after the action has run, so an action can decide between statuses
+// (e.g. 200 vs 201 on an upsert).
+func handleWithDynamicStatus(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStatus func() int) {
 	if cfg.ErrorHandler == nil {
 		cfg.ErrorHandler = handleError
 	}
@@ -72,7 +79,7 @@ func handle(w http.ResponseWriter, r *http.Request, cfg *handlerConfig, httpStat
 	case serviceErr != nil:
 		cfg.ErrorHandler(r.Context(), w, serviceErr)
 	default:
-		writeJSONResponse(w, httpStatus, result)
+		writeJSONResponse(w, httpStatus(), result)
 	}
 
 }

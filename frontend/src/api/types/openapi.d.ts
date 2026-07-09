@@ -3886,6 +3886,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Apply a full stack document by name (declarative upsert)
+         * @description Name-addressed declarative whole-document apply. Stack identity is the
+         *     `name` in the request body (unique per team). If a stack with that name
+         *     exists in the team it is reconciled exactly like the id-addressed apply
+         *     (resources and connections not present in the body are deleted, volumes
+         *     are add-only); otherwise the stack and its children are created
+         *     atomically after full validation. Idempotent — clients need not know
+         *     whether the stack already exists.
+         *
+         */
+        put: operations["applyStackByName"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply": {
         parameters: {
             query?: never;
@@ -8284,7 +8311,7 @@ export interface components {
              * @description Machine-readable validation code, e.g. "public_port_not_http".
              * @enum {string}
              */
-            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
+            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "env_self_output_unknown" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_credentials_required" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
             message?: string;
         };
         ErrorList: {
@@ -8824,7 +8851,7 @@ export interface components {
             resource_name?: string;
             field?: string;
             /** @enum {string} */
-            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
+            code?: "resource_name_required" | "resource_name_invalid" | "resource_name_duplicate" | "source_required" | "source_conflict" | "workload_type_invalid" | "schedule_required" | "schedule_not_allowed" | "schedule_invalid" | "replicas_invalid" | "ports_not_allowed" | "public_port_not_http" | "port_protocol_invalid" | "port_name_invalid" | "port_number_invalid" | "port_name_duplicate" | "port_number_duplicate" | "subdomain_duplicate" | "domain_not_configured" | "env_name_required" | "env_name_duplicate" | "env_value_missing" | "env_value_conflict" | "env_self_output_unknown" | "volume_mount_invalid" | "volume_not_found" | "volume_hash_missing" | "secret_not_found" | "git_integration_not_found" | "registry_credential_not_found" | "self_dependency" | "duplicate_dependency" | "unknown_dependency" | "dependency_cycle" | "git_repo_url_required" | "git_branch_tag_conflict" | "git_commit_invalid" | "git_commit_requires_ref" | "image_ref_required" | "image_ref_invalid" | "push_target_required" | "push_target_conflict" | "push_ref_invalid" | "git_repo_unreachable" | "git_auth_failed" | "git_branch_not_found" | "git_tag_not_found" | "git_rate_limited" | "image_not_found" | "registry_credentials_required" | "registry_auth_failed" | "push_access_denied" | "stack_settings_invalid" | "connection_invalid";
             message?: string;
         };
         ReleasePins: {
@@ -9012,6 +9039,69 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    applyStackByName: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Stack"];
+            };
+        };
+        responses: {
+            /** @description Stack updated successfully */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stack"];
+                };
+            };
+            /** @description Stack created successfully */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stack"];
+                };
+            };
+            /** @description Invalid request data. `details` carries a `ValidationErrorDetail` payload when the failure is an aggregated field validation error. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Unauthorized */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     applyStack: {
         parameters: {
             query?: never;

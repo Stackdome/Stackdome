@@ -194,6 +194,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1UsersIdGet**](docs/DefaultApi.md#apiv1usersidget) | **Get** /api/v1/users/{id} | Get a user
 *DefaultApi* | [**ApiV1WebhooksGithubPost**](docs/DefaultApi.md#apiv1webhooksgithubpost) | **Post** /api/v1/webhooks/github | GitHub webhook receiver (unauthenticated, HMAC-verified)
 *DefaultApi* | [**ApplyStack**](docs/DefaultApi.md#applystack) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply | Apply a full stack document (declarative reconcile)
+*DefaultApi* | [**ApplyStackByName**](docs/DefaultApi.md#applystackbyname) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply | Apply a full stack document by name (declarative upsert)
 *DefaultApi* | [**CreateStackResource**](docs/DefaultApi.md#createstackresource) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources | Create a stack resource
 *DefaultApi* | [**DeleteStackResource**](docs/DefaultApi.md#deletestackresource) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Delete a stack resource
 *DefaultApi* | [**UpdateStackResource**](docs/DefaultApi.md#updatestackresource) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name} | Update a stack resource

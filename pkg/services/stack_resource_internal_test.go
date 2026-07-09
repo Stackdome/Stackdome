@@ -204,3 +204,37 @@ func TestStackResourceService_InternalDeleteWithTx(t *testing.T) {
 
 	assert.Nil(t, err)
 }
+
+func TestStackResourceService_PrepareResource_NormalizesJobReplicas(t *testing.T) {
+	svc := &stackResourceService{}
+	ctx := context.Background()
+	stack := &models.Stack{ID: "stack-1", UserID: "user-1", Namespace: "ns-1"}
+	replicas := int32(4)
+	resource := &models.StackResource{
+		Name:         "batch",
+		WorkloadType: models.WorkloadTypeCronJob,
+		Replicas:     &replicas,
+	}
+
+	serr := svc.prepareResource(ctx, stack, resource)
+	require.Nil(t, serr)
+	require.NotNil(t, resource.Replicas)
+	assert.Equal(t, singleInstanceReplicas, *resource.Replicas)
+}
+
+func TestStackResourceService_PrepareResource_LeavesServiceReplicas(t *testing.T) {
+	svc := &stackResourceService{}
+	ctx := context.Background()
+	stack := &models.Stack{ID: "stack-1", UserID: "user-1", Namespace: "ns-1"}
+	replicas := int32(4)
+	resource := &models.StackResource{
+		Name:         "web",
+		WorkloadType: models.WorkloadTypeService,
+		Replicas:     &replicas,
+	}
+
+	serr := svc.prepareResource(ctx, stack, resource)
+	require.Nil(t, serr)
+	require.NotNil(t, resource.Replicas)
+	assert.Equal(t, int32(4), *resource.Replicas)
+}
