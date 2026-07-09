@@ -18,7 +18,7 @@ type applyStackTestEnv struct {
 	stackStore        *mocks.MockStackStore
 	permissions       *mocks.MockPermissionService
 	validator         *mocks.MockStackValidator
-	namespaceService  *MockNamespaceService
+	namespaceService  *mocks.MockNamespaceService
 	clusterService    *mocks.MockClusterService
 	volumeService     *mocks.MockVolumeService
 	resourceService   *mocks.MockStackResourceService
@@ -31,7 +31,7 @@ func newApplyStackTestEnv(ctrl *gomock.Controller) *applyStackTestEnv {
 		stackStore:        mocks.NewMockStackStore(ctrl),
 		permissions:       mocks.NewMockPermissionService(ctrl),
 		validator:         mocks.NewMockStackValidator(ctrl),
-		namespaceService:  NewMockNamespaceService(ctrl),
+		namespaceService:  mocks.NewMockNamespaceService(ctrl),
 		clusterService:    mocks.NewMockClusterService(ctrl),
 		volumeService:     mocks.NewMockVolumeService(ctrl),
 		resourceService:   mocks.NewMockStackResourceService(ctrl),

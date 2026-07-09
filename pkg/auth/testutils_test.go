@@ -1,8 +1,14 @@
-package auth
+// Package auth_test is an external test package by necessity: these helpers
+// import pkg/mocks, which mocks services interfaces and therefore imports
+// pkg/services, which imports pkg/auth. In-package test files would close
+// that cycle (auth [test] -> mocks -> services -> auth); the external test
+// package keeps pkg/auth's own build (and its in-package tests) mocks-free.
+package auth_test
 
 import (
 	"context"
 
+	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -16,20 +22,20 @@ func newTestPolicyManager() resourceaccess.ResourceAccessPolicyManager {
 		panic("failed to create test policy manager: " + err.Error())
 	}
 
-	if err := LoadDefaultPolicies(pm.AddPolicy); err != nil {
+	if err := auth.LoadDefaultPolicies(pm.AddPolicy); err != nil {
 		panic("failed to load default policies: " + err.Error())
 	}
 
 	return pm
 }
 
-func ctxWithIdentity(identity *Identity) context.Context {
-	return SetIdentityInContext(context.Background(), identity)
+func ctxWithIdentity(identity *auth.Identity) context.Context {
+	return auth.SetIdentityInContext(context.Background(), identity)
 }
 
 type testEnv struct {
 	policyMgr   resourceaccess.ResourceAccessPolicyManager
-	permService PermissionService
+	permService auth.PermissionService
 	ctrl        *gomock.Controller
 }
 
@@ -47,7 +53,7 @@ func newTestEnv(t gomock.TestReporter, teams map[string]*models.Team) *testEnv {
 	mockLog.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 
 	pm := newTestPolicyManager()
-	ps := NewPermissionService(PermissionServiceSpec{
+	ps := auth.NewPermissionService(auth.PermissionServiceSpec{
 		PolicyManager: pm,
 		TeamStore:     mockTeam,
 		Logger:        mockLog,

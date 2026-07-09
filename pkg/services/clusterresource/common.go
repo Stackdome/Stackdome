@@ -65,6 +65,32 @@ func WrapErrAsServiceError(err error) *errors.ServiceError {
 	return errors.GeneralError("%s", err.Error())
 }
 
+// ClusterResourceServiceInjectable is implemented (by embedding
+// ClusterResourceServiceDeps) by services that need cluster resource service
+// dependencies injected. It lives in this leaf package — not pkg/services —
+// so that mocks of services interfaces embedding it (pkg/mocks) never import
+// pkg/services, which would close an import cycle through the in-package
+// tests of pkg/services and its dependents.
+type ClusterResourceServiceInjectable interface {
+	InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps)
+}
+
+// ClusterResourceServiceDeps is embedded in services that require cluster
+// resource service dependencies.
+type ClusterResourceServiceDeps struct {
+	ClusterNamespaceService NamespaceClusterResourceService
+	ClusterVolumeService    VolumeClusterResourceService
+	ClusterLoggingService   ClusterLoggingService
+	ClusterMetricsService   ClusterMetricsService
+}
+
+func (s *ClusterResourceServiceDeps) InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps) {
+	s.ClusterNamespaceService = deps.ClusterNamespaceService
+	s.ClusterVolumeService = deps.ClusterVolumeService
+	s.ClusterLoggingService = deps.ClusterLoggingService
+	s.ClusterMetricsService = deps.ClusterMetricsService
+}
+
 type DBClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 }

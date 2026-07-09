@@ -362,6 +362,12 @@ func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, 
 		return nil, err
 	}
 
+	// The stack name is immutable: the cluster Stack CR is keyed by it, so a
+	// rename would orphan the existing CR at the next release apply.
+	if spec.Name != existingStack.Name {
+		return nil, errors.BadRequest("stack name cannot be updated")
+	}
+
 	// set namespace
 	spec.ID = existingStack.ID
 	spec.Namespace = existingStack.Namespace

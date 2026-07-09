@@ -433,13 +433,13 @@ function convertFormStackToApiStack(
     return hasName && (hasImage || hasGit);
   });
 
-  // Process all valid stack resources by removing UI-only fields. Volume
-  // mounts persist server-side only as volume_mount connections (the
-  // volume_mounts table was dropped; the resource field is derived and
-  // ignored on write), so strip it here and emit connections below —
-  // mirroring what draft-sync does for saved stacks.
-  const apiStackResources = validResources.map((r) => ({
-    ...prepareFormResourceForApi(r),
+  // Process all valid stack resources by removing UI-only fields. Mounts are
+  // fully represented as volume_mount connections (built below) — strip
+  // volume_mounts so the payload has one source of truth, matching the
+  // draft-sync save path (the server returns volume_mounts: [] and stores
+  // mounts in connections).
+  const apiStackResources = validResources.map((resource) => ({
+    ...prepareFormResourceForApi(resource),
     volume_mounts: undefined,
   }));
 
@@ -463,12 +463,13 @@ function convertFormStackToApiStack(
     })),
   );
 
-  // Volume mounts become volume_mount connections. Mounts referencing volumes
-  // absent from the spec are dangling — never emit them.
+  // Volume mounts persist as volume_mount connections too (compose blocks and
+  // the canvas record mounts as form rows on the resource). Mounts referencing
+  // volumes absent from the payload are dangling — never emit them.
   const volumeNames = new Set((validVolumes ?? []).map((v) => v.name));
   for (const r of validResources) {
     const liveMounts = ((r.volume_mounts ?? []) as FormMountRow[]).filter(
-      (m) => m.source_volume_name && volumeNames.has(m.source_volume_name),
+      (m) => volumeNames.has(m.source_volume_name ?? ""),
     );
     connections.push(...mountsToConnections(r.name ?? "", liveMounts));
   }
