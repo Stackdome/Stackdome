@@ -188,17 +188,14 @@ func validateStackName(spec *models.Stack) []errors.FieldError {
 			Field: "name",
 			Code:  errors.VErrStackNameInvalid,
 			Message: fmt.Sprintf(
-				"stack name '%s' must be at most %d characters so the generated namespace '<name>-<uuid>' keeps a unique suffix within the %d-character Kubernetes limit",
-				spec.Name, models.MaxStackNameLength, models.KubernetesDNSLabelMaxLength),
+				"stack name must be at most %d characters", models.MaxStackNameLength),
 		}}
 	}
 	if !stackNamePattern.MatchString(spec.Name) {
 		return []errors.FieldError{{
-			Field: "name",
-			Code:  errors.VErrStackNameInvalid,
-			Message: fmt.Sprintf(
-				"stack name '%s' must be a lowercase RFC 1123 DNS label matching %s",
-				spec.Name, stackNamePattern.String()),
+			Field:   "name",
+			Code:    errors.VErrStackNameInvalid,
+			Message: "stack name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number",
 		}}
 	}
 	return nil
