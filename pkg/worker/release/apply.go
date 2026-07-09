@@ -345,6 +345,31 @@ func (e *missingVolumesError) Error() string {
 	return fmt.Sprintf("release references volume(s) that no longer exist: %s", strings.Join(e.refs, ", "))
 }
 
+// volumeRef identifies a snapshot-referenced volume by whatever coordinates
+// the reference carries. A persisted reference usually has both an ID and a
+// name; a live volume matching EITHER coordinate satisfies the reference. The
+// either-match matters when a volume is deleted and recreated under the same
+// name while a release is in flight: the recreated volume has a new ID, but
+// by name it is still the volume the release means, so the release must not
+// be failed as missing.
+type volumeRef struct {
+	id   string
+	name string
+}
+
+func (ref volumeRef) matches(v *models.Volume) bool {
+	return (ref.id != "" && ref.id == v.ID) || (ref.name != "" && ref.name == v.Name)
+}
+
+// label is the identifier reported in the missing-volumes error message:
+// the name when known (more meaningful to users), the ID otherwise.
+func (ref volumeRef) label() string {
+	if ref.name != "" {
+		return ref.name
+	}
+	return ref.id
+}
+
 // volumesReady gates release application on the readiness of only the volumes
 // the release snapshot actually references — not every live volume on the
 // stack. An unreferenced volume (e.g. one belonging to a resource dropped from
@@ -354,8 +379,8 @@ func (e *missingVolumesError) Error() string {
 // immutable snapshot, so a volume created after this release was cut can't
 // gate it either.
 func (r *applyReconciler) volumesReady(ctx context.Context, release *models.StackRelease) (bool, error) {
-	byID, byName := referencedVolumeRefs(&release.Snapshot)
-	if len(byID) == 0 && len(byName) == 0 {
+	refs := referencedVolumeRefs(&release.Snapshot)
+	if len(refs) == 0 {
 		return true, nil
 	}
 
@@ -364,35 +389,21 @@ func (r *applyReconciler) volumesReady(ctx context.Context, release *models.Stac
 		return false, serr
 	}
 
-	foundByID := make(map[string]struct{}, len(byID))
-	foundByName := make(map[string]struct{}, len(byName))
 	ready := true
-	for _, v := range volumes {
-		_, wantID := byID[v.ID]
-		_, wantName := byName[v.Name]
-		if !wantID && !wantName {
-			continue
-		}
-		if wantID {
-			foundByID[v.ID] = struct{}{}
-		}
-		if wantName {
-			foundByName[v.Name] = struct{}{}
-		}
-		if v.Status == nil || v.Status.Phase != models.VolumePhaseReady {
-			ready = false
-		}
-	}
-
 	var missing []string
-	for id := range byID {
-		if _, ok := foundByID[id]; !ok {
-			missing = append(missing, id)
+	for _, ref := range refs {
+		found := false
+		for _, v := range volumes {
+			if !ref.matches(v) {
+				continue
+			}
+			found = true
+			if v.Status == nil || v.Status.Phase != models.VolumePhaseReady {
+				ready = false
+			}
 		}
-	}
-	for name := range byName {
-		if _, ok := foundByName[name]; !ok {
-			missing = append(missing, name)
+		if !found {
+			missing = append(missing, ref.label())
 		}
 	}
 	if len(missing) > 0 {
@@ -420,17 +431,20 @@ func (r *applyReconciler) volumesReady(ctx context.Context, release *models.Stac
 // into that volume by the volume controller), so the volume is never
 // referenced by the Stack/StackResource CRs this reconciler applies — it's
 // managed entirely by the separate volume worker/controller.
-func referencedVolumeRefs(snapshot *models.StackSnapshot) (byID, byName map[string]struct{}) {
-	byID = make(map[string]struct{})
-	byName = make(map[string]struct{})
+func referencedVolumeRefs(snapshot *models.StackSnapshot) []volumeRef {
+	seen := make(map[volumeRef]struct{})
+	var refs []volumeRef
 
 	addRef := func(id, name string) {
-		switch {
-		case id != "":
-			byID[id] = struct{}{}
-		case name != "":
-			byName[name] = struct{}{}
+		ref := volumeRef{id: id, name: name}
+		if ref == (volumeRef{}) {
+			return
 		}
+		if _, ok := seen[ref]; ok {
+			return
+		}
+		seen[ref] = struct{}{}
+		refs = append(refs, ref)
 	}
 
 	for _, resource := range snapshot.Resources {
@@ -456,5 +470,5 @@ func referencedVolumeRefs(snapshot *models.StackSnapshot) (byID, byName map[stri
 		addRef(conn.From.Id, conn.From.Name)
 	}
 
-	return byID, byName
+	return refs
 }

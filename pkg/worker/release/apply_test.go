@@ -3,13 +3,18 @@ package release
 import (
 	"context"
 	stderrors "errors"
+	"strings"
 	"testing"
 
+	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
 )
 
-const volReadyTestStackID = "stack-vol-1"
+const (
+	volReadyTestStackID   = "stack-vol-1"
+	volReadyTestClusterID = "cluster-vol-1"
+)
 
 func volReadyTestRelease(resources []*models.StackResource, connections models.StackConnections) *models.StackRelease {
 	return &models.StackRelease{
@@ -68,7 +73,7 @@ func notReadyVolume(id string) *models.Volume {
 	return &models.Volume{
 		ID:     id,
 		Name:   id,
-		Status: &models.VolumeStatus{Phase: "Pending"},
+		Status: &models.VolumeStatus{Phase: models.VolumePhasePending},
 	}
 }
 
@@ -289,5 +294,119 @@ func TestApplyReconciler_VolumesReady_BuildArtifactSourceConnection_DoesNotGate(
 	}
 	if !ready {
 		t.Fatalf("expected ready=true, got false")
+	}
+}
+
+// recreatedVolumeRelease returns a release whose snapshot references a volume
+// by BOTH a (now stale) ID and its name — the shape a persisted VolumeMount
+// carries. Used by the recreated-volume tests below.
+func recreatedVolumeRelease(staleVolumeID, volumeName string) *models.StackRelease {
+	return volReadyTestRelease([]*models.StackResource{
+		{
+			Name: "web",
+			VolumeMounts: []*models.VolumeMount{
+				{SourceVolumeID: staleVolumeID, SourceVolumeName: volumeName, TargetPath: "/data"},
+			},
+		},
+	}, nil)
+}
+
+// A volume deleted and recreated under the same name while the release is in
+// flight gets a new ID: the snapshot ref carries the stale ID plus the name.
+// The live volume matches the ref by name, so the release must NOT be failed
+// as missing — and with the recreated volume Ready, it proceeds.
+func TestApplyReconciler_VolumesReady_RecreatedVolumeMatchedByName_Ready(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	volSvc := NewMockvolumeService(ctrl)
+
+	release := recreatedVolumeRelease("v-stale", "data")
+
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+		Return([]*models.Volume{
+			{ID: "v-new", Name: "data", Status: &models.VolumeStatus{Phase: models.VolumePhaseReady}},
+		}, nil)
+
+	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
+	ready, err := r.volumesReady(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !ready {
+		t.Fatalf("expected ready=true (recreated volume matches ref by name), got false")
+	}
+}
+
+// Same recreated-volume scenario, but the recreated volume isn't Ready yet:
+// the ref is satisfied (not missing), so no missingVolumesError — the release
+// just gates (requeues) until the volume becomes Ready.
+func TestApplyReconciler_VolumesReady_RecreatedVolumeMatchedByName_NotReady_Gates(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	volSvc := NewMockvolumeService(ctrl)
+
+	release := recreatedVolumeRelease("v-stale", "data")
+
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+		Return([]*models.Volume{
+			{ID: "v-new", Name: "data", Status: &models.VolumeStatus{Phase: models.VolumePhasePending}},
+		}, nil)
+
+	r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
+	ready, err := r.volumesReady(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error (ref satisfied by name, must not be missing): %v", err)
+	}
+	if ready {
+		t.Fatalf("expected ready=false (recreated volume not Ready), got true")
+	}
+}
+
+// Reconcile-level: when volumesReady reports a *missingVolumesError, Reconcile
+// must route it through failRelease — MarkFailed is invoked with a message
+// naming the missing ref — and return resultStop with a nil error, matching
+// the other terminal failure paths. The snapshot resource carries only a
+// volume mount (no image/build config, no secret or postgres connections), so
+// the secret-sync steps before volumesReady are all no-ops.
+func TestApplyReconciler_Reconcile_MissingVolume_FailsRelease(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	release := volReadyTestRelease([]*models.StackResource{
+		volumeMountResource("web", "v-gone"),
+	}, nil)
+	release.Manifest = &models.ReleaseManifest{}
+
+	stackSvc := NewMockstackService(ctrl)
+	stackSvc.EXPECT().InternalGetStack(gomock.Any(), volReadyTestStackID).
+		Return(&models.Stack{ID: volReadyTestStackID, ClusterID: volReadyTestClusterID}, nil)
+
+	clusterMgr := mocks.NewMockClusterManager(ctrl)
+	clusterMgr.EXPECT().GetClient(volReadyTestClusterID).
+		Return(applySecretsTestClient(t), nil)
+
+	volSvc := NewMockvolumeService(ctrl)
+	volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volReadyTestStackID).
+		Return([]*models.Volume{}, nil)
+
+	relSvc := NewMockreleaseService(ctrl)
+	relSvc.EXPECT().MarkFailed(
+		gomock.Any(),
+		release.ID,
+		gomock.Cond(func(msg string) bool { return strings.Contains(msg, "v-gone") }),
+		gomock.Nil(),
+	).Return(true, nil)
+
+	r := &applyReconciler{
+		releaseService: relSvc,
+		stackService:   stackSvc,
+		clusterManager: clusterMgr,
+		volumeService:  volSvc,
+		logger:         testLogger(),
+	}
+
+	result, err := r.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("expected nil error (terminal failure is routed via failRelease), got: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatal("expected resultStop when a referenced volume is missing")
 	}
 }
