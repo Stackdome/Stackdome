@@ -170,7 +170,10 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 		if e != nil {
 			return e
 		}
-		return s.referenceService.ProjectRelease(txCtx, created)
+		if e := s.referenceService.ProjectRelease(txCtx, created); e != nil {
+			return e
+		}
+		return s.eventRecorder.RecordReleaseCreated(txCtx, created)
 	}); txErr != nil {
 		return nil, txErr
 	}
@@ -243,7 +246,10 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		if e != nil {
 			return e
 		}
-		return s.referenceService.ProjectRelease(txCtx, created)
+		if e := s.referenceService.ProjectRelease(txCtx, created); e != nil {
+			return e
+		}
+		return s.eventRecorder.RecordReleaseCreated(txCtx, created)
 	}); txErr != nil {
 		return nil, txErr
 	}

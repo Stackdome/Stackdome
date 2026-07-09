@@ -184,6 +184,123 @@ var _ = Describe("stackReleaseService.resolvePins", func() {
 	})
 })
 
+var _ = Describe("stackReleaseService release creation records release_created", func() {
+	const (
+		createEventsStackID = "stack-1"
+		createEventsOrgID   = "org-1"
+		createEventsTeamID  = "team-1"
+		createEventsUserID  = "user-1"
+		rollbackFromRelID   = "rel-src"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		stackSvc     *MockStackService
+		perms        *mocks.MockPermissionService
+		referenceSvc *mocks.MockReferenceService
+		recorder     *MockReleaseEventRecorder
+		enqueuer     *mocks.MockBackgroundJobEnqueuer
+		svc          *stackReleaseService
+		ctx          context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		stackSvc = NewMockStackService(ctrl)
+		perms = mocks.NewMockPermissionService(ctrl)
+		referenceSvc = mocks.NewMockReferenceService(ctrl)
+		recorder = NewMockReleaseEventRecorder(ctrl)
+		enqueuer = mocks.NewMockBackgroundJobEnqueuer(ctrl)
+		svc = &stackReleaseService{
+			store:            releaseStore,
+			stackQuery:       stackSvc,
+			permissions:      perms,
+			referenceService: referenceSvc,
+			eventRecorder:    recorder,
+			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
+				BackgroundJobEnqueuer: enqueuer,
+			},
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	// runTxInline stubs WithTransaction to execute the closure inline with the
+	// same context, so the ambient-transaction body is exercised directly.
+	runTxInline := func() {
+		releaseStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			})
+	}
+
+	Describe("fresh create (createReleaseForStack)", func() {
+		var stack *models.Stack
+
+		BeforeEach(func() {
+			stack = &models.Stack{ID: createEventsStackID, OrganisationID: createEventsOrgID}
+		})
+
+		It("records release_created inside the creation transaction as its final act", func() {
+			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
+			runTxInline()
+			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
+			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
+			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
+			enqueuer.EXPECT().EnqueueAfterCommit(ctx, &models.StackRelease{ID: "rel-1"}).Return(nil)
+
+			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
+			Expect(serr).To(BeNil())
+			Expect(got).To(Equal(created))
+		})
+
+		It("fails creation and hands back no release when recording release_created fails", func() {
+			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
+			runTxInline()
+			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
+			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
+			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(errors.GeneralError("event insert failed"))
+			// EnqueueAfterCommit must never run: the transaction rolled back.
+
+			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
+			Expect(serr).ToNot(BeNil())
+			Expect(got).To(BeNil())
+		})
+	})
+
+	Describe("rollback (RollbackRelease)", func() {
+		BeforeEach(func() {
+			releaseStore.EXPECT().
+				GetByID(ctx, rollbackFromRelID).
+				Return(&models.StackRelease{ID: rollbackFromRelID, StackID: createEventsStackID, State: models.ReleaseStateReleased, Sequence: 7}, nil)
+			stackSvc.EXPECT().
+				GetStack(ctx, createEventsStackID).
+				Return(&models.Stack{ID: createEventsStackID, TeamID: createEventsTeamID}, nil)
+			perms.EXPECT().
+				Check(ctx, createEventsTeamID, auth.ResourceStacks, createEventsStackID, auth.ActionWrite).
+				Return(nil)
+		})
+
+		It("records release_created inside the rollback transaction", func() {
+			created := &models.StackRelease{ID: "rel-2", StackID: createEventsStackID}
+			runTxInline()
+			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
+			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
+			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
+			enqueuer.EXPECT().EnqueueAfterCommit(ctx, &models.StackRelease{ID: "rel-2"}).Return(nil)
+
+			got, serr := svc.RollbackRelease(ctx, createEventsStackID, rollbackFromRelID)
+			Expect(serr).To(BeNil())
+			Expect(got).To(Equal(created))
+		})
+	})
+})
+
 var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 	const (
 		listEventsStackID   = "stack-1"
