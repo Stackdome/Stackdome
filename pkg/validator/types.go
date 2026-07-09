@@ -21,6 +21,11 @@ type StackValidator interface {
 	// referential lookups. Used for connection-only mutations so a
 	// pre-existing, unrelated stack invalidity can't block a connection edit.
 	ValidateConnections(ctx context.Context, spec *models.Stack) *errors.ServiceError
+	// ValidateShell runs only the rules scoped to the stack's own columns
+	// (currently the settings limits), skipping resource, uniqueness, and
+	// connection validation entirely. Used for thin shell mutations, which
+	// never carry children.
+	ValidateShell(ctx context.Context, spec *models.Stack) *errors.ServiceError
 }
 
 type PostgresAddonValidator interface {

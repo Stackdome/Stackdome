@@ -339,6 +339,10 @@ func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, 
 	spec.Volumes = nil
 	spec.Connections = nil
 
+	if verr := s.stackValidator.ValidateShell(ctx, spec); verr != nil {
+		return nil, verr
+	}
+
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		updatedStack, err = s.InternalUpdateShellWithTx(ctx, spec, existingStack)

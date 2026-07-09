@@ -120,6 +120,20 @@ func (v *stackValidator) ValidateConnections(ctx context.Context, spec *models.S
 	return nil
 }
 
+// ValidateShell runs only the rules scoped to the stack's own columns
+// (currently validateStackSettings), skipping validateResources,
+// validateUniqueResourceNames, and connection validation entirely. It backs
+// thin shell create/update (POST /stacks, PUT /stacks/{id}), which never
+// carry children, so out-of-range settings are rejected there with the same
+// limits the fat paths enforce.
+func (v *stackValidator) ValidateShell(_ context.Context, spec *models.Stack) *errors.ServiceError {
+	ferrs := dedupeFieldErrors(validateStackSettings(spec))
+	if len(ferrs) > 0 {
+		return errors.ValidationFailed(ferrs)
+	}
+	return nil
+}
+
 // validateResources runs the shared per-resource validator (input shape,
 // referential existence, sibling rules) over every resource in the stack,
 // prefixing each field error with its resource's index. A non-nil
