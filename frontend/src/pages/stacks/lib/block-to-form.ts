@@ -26,6 +26,29 @@ function genericResource(block: BlockPreset): FormStackResourceData {
   return base as unknown as FormStackResourceData;
 }
 
+/**
+ * Datastore presets ship a compose snippet purely as a convenient way to
+ * describe the image/ports/volume — they are never public HTTP endpoints.
+ * The shared compose converter defaults ports to public http (correct for the
+ * real docker-compose import flow), so for "data" blocks we override every
+ * derived port back to a private tcp port after conversion.
+ */
+function asPrivateTcpPorts(
+  resources: FormStackResourceData[]
+): FormStackResourceData[] {
+  return resources.map((resource) => {
+    if (!resource.ports?.length) return resource;
+    return {
+      ...resource,
+      ports: resource.ports.map((port) => ({
+        ...port,
+        protocol: "tcp",
+        exposed_to_public: false,
+      })),
+    };
+  });
+}
+
 export function blockToResources(block: BlockPreset): {
   resources: FormStackResourceData[];
   volumes: FormVolumeData[];
@@ -40,8 +63,10 @@ export function blockToResources(block: BlockPreset): {
       `Block "${block.id}" failed to convert: ${result.errors?.[0]?.message ?? "unknown"}`
     );
   }
+  const resources = result.data.spec.stack_resources ?? [];
   return {
-    resources: result.data.spec.stack_resources ?? [],
+    resources:
+      block.category === "data" ? asPrivateTcpPorts(resources) : resources,
     volumes: (result.data.spec.volumes ?? []) as FormVolumeData[],
   };
 }
