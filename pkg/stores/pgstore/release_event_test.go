@@ -100,6 +100,16 @@ var _ = Describe("ReleaseEventStore", func() {
 				Count(&count).Error).NotTo(HaveOccurred())
 			Expect(count).To(Equal(int64(1)))
 		})
+
+		It("returns not found when the release does not exist", func() {
+			event := newEvent("dedupe-1")
+			event.ReleaseID = "release-does-not-exist"
+
+			created, err := store.Insert(ctx, event)
+			Expect(created).To(BeNil())
+			Expect(err).NotTo(BeNil())
+			Expect(err.Is404()).To(BeTrue())
+		})
 	})
 
 	Describe("ListByReleaseID", func() {
@@ -160,6 +170,31 @@ var _ = Describe("ReleaseEventStore", func() {
 			events, err := store.ListByReleaseID(ctx, releaseID, 0, 10)
 			Expect(err).To(BeNil())
 			Expect(events).To(HaveLen(1))
+		})
+
+		It("keeps the caller's transaction usable after a dedupe no-op", func() {
+			tx := sf.New(ctx).Begin()
+			txCtx := db.CtxWithTransaction(ctx, tx)
+
+			first, err := store.InsertWithTx(txCtx, newEvent("dedupe-1"))
+			Expect(err).To(BeNil())
+			Expect(first.Sequence).To(Equal(1))
+
+			dup, err := store.InsertWithTx(txCtx, newEvent("dedupe-1"))
+			Expect(err).To(BeNil())
+			Expect(dup).To(BeNil())
+
+			third, err := store.InsertWithTx(txCtx, newEvent("dedupe-2"))
+			Expect(err).To(BeNil())
+			Expect(third.Sequence).To(Equal(2))
+
+			Expect(tx.Commit().Error).NotTo(HaveOccurred())
+
+			events, err := store.ListByReleaseID(ctx, releaseID, 0, 10)
+			Expect(err).To(BeNil())
+			Expect(events).To(HaveLen(2))
+			Expect(events[0].Sequence).To(Equal(1))
+			Expect(events[1].Sequence).To(Equal(2))
 		})
 	})
 })

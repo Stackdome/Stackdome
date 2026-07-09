@@ -70,12 +70,17 @@ func (s *releaseEventStore) InsertWithTx(ctx context.Context, event *models.Rele
 	}
 	event.Sequence = maxSeq + 1
 
-	if err := tx.Create(event).Error; err != nil {
-		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
-			// Parent row is locked, so a duplicate can only be the dedupe key.
-			return nil, nil
-		}
-		return nil, errors.GeneralError("failed to insert release event: %v", err)
+	// Use ON CONFLICT DO NOTHING instead of letting a duplicate-key error
+	// abort the INSERT: in Postgres a failed statement poisons the
+	// surrounding transaction, which would break InsertWithTx callers who
+	// keep using their transaction after a dedupe no-op.
+	res := tx.Clauses(clause.OnConflict{DoNothing: true}).Create(event)
+	if res.Error != nil {
+		return nil, errors.GeneralError("failed to insert release event: %v", res.Error)
+	}
+	if res.RowsAffected == 0 {
+		// Parent row is locked, so a conflict can only be the dedupe key.
+		return nil, nil
 	}
 	return event, nil
 }
