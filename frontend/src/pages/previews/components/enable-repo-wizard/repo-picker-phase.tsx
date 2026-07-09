@@ -35,17 +35,28 @@ export function RepoPickerPhase({ integrationId, onPicked, onBack }: RepoPickerP
     if (manual || !integrationId) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId) return;
+    let cancelled = false;
     setLoading(true);
     const t = setTimeout(() => {
       searchRepositories(orgId, integrationId, { query: query || undefined })
         .then((page) => {
+          if (cancelled) return;
           setRepos(page.items ?? []);
           setError(null);
         })
-        .catch((e) => setError(getErrorMessage(e)))
-        .finally(() => setLoading(false));
+        .catch((e) => {
+          if (cancelled) return;
+          setError(getErrorMessage(e));
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setLoading(false);
+        });
     }, 300);
-    return () => clearTimeout(t);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [manual, integrationId, query]);
 
   const pick = async (repo: GitRepository) => {
@@ -91,7 +102,7 @@ export function RepoPickerPhase({ integrationId, onPicked, onBack }: RepoPickerP
           onBack={onBack}
           onContinue={() =>
             onPicked({
-              fullName: repoTail(manualUrl),
+              fullName: repoTail(manualUrl.trim()),
               cloneUrl: manualUrl.trim(),
               defaultBranch: "",
               integrationId: null,
