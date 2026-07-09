@@ -3,6 +3,7 @@ package release
 import (
 	"context"
 	stderrors "errors"
+	"strings"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/clients"
@@ -211,13 +212,14 @@ func TestValidationReconciler_ImagePull_ImageNotFound(t *testing.T) {
 	}
 }
 
-// 5. CheckImage returns clients.ErrAuthFailed -> code VErrRegistryAuthFailed, resultStop.
+// 5. CheckImage returns clients.ErrAuthFailed with CONFIGURED credentials
+// (SourceIntegration) -> code VErrRegistryAuthFailed, resultStop.
 func TestValidationReconciler_ImagePull_AuthFailed(t *testing.T) {
 	f := newValidationReconcilerFixture(t)
 	res := imageResource("web", "example.com/app:v1")
 	release := validationTestRelease(res)
 
-	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	resolved := &credentials.ResolvedRegistryCredential{Source: credentials.SourceIntegration, DataHash: "hash-1"}
 	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
 		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).
 		Return(resolved, nil)
@@ -232,6 +234,52 @@ func TestValidationReconciler_ImagePull_AuthFailed(t *testing.T) {
 		DoAndReturn(func(_ context.Context, _ string, _ string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
 			if len(verrs) != 1 || verrs[0].Code != errors.VErrRegistryAuthFailed {
 				t.Fatalf("expected VErrRegistryAuthFailed, got %+v", verrs)
+			}
+			if !strings.Contains(verrs[0].Message, "configured credentials") {
+				t.Fatalf("expected message to name the configured-credentials case, got %q", verrs[0].Message)
+			}
+			return true, nil
+		})
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatalf("expected resultStop, got %+v", result)
+	}
+}
+
+// 5b. CheckImage returns clients.ErrAuthFailed with NO credentials resolved
+// (SourceAnonymous) -> code VErrRegistryCredentialsRequired naming the
+// registry host and image ref, resultStop. Recovers main's
+// CredentialsRequired vs CredentialsInvalid distinction in the async check.
+func TestValidationReconciler_ImagePull_AnonymousAuthFailed_CredentialsRequired(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := imageResource("web", "example.com/app:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{Source: credentials.SourceAnonymous}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/app:v1",
+		credentials.RegistryPurposePull, credentials.RegistryAuthSelector{}).
+		Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "web", models.ValidationCheckImagePull).
+		Return(nil, errors.NotFound("no record"))
+
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, clients.ErrAuthFailed)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), "release-1", gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+			if len(verrs) != 1 || verrs[0].Code != errors.VErrRegistryCredentialsRequired {
+				t.Fatalf("expected VErrRegistryCredentialsRequired, got %+v", verrs)
+			}
+			msg := verrs[0].Message
+			for _, want := range []string{"example.com/app:v1", "example.com", "none are configured"} {
+				if !strings.Contains(msg, want) {
+					t.Fatalf("expected message to contain %q, got %q", want, msg)
+				}
 			}
 			return true, nil
 		})
@@ -355,14 +403,15 @@ func TestValidationReconciler_RateLimited_DoesNotMaskOtherFailures(t *testing.T)
 	}
 }
 
-//  7. Build resource with ExternalImageRef: CheckPushAccess error (auth) ->
-//     code VErrPushAccessDenied, resultStop.
+//  7. Build resource with ExternalImageRef: CheckPushAccess error (auth) with
+//     CONFIGURED credentials (SourceIntegration) -> code VErrPushAccessDenied,
+//     resultStop.
 func TestValidationReconciler_PushAccess_Denied(t *testing.T) {
 	f := newValidationReconcilerFixture(t)
 	res := buildResourceWithPush("worker", "example.com/worker:v1")
 	release := validationTestRelease(res)
 
-	resolved := &credentials.ResolvedRegistryCredential{DataHash: "hash-1"}
+	resolved := &credentials.ResolvedRegistryCredential{Source: credentials.SourceIntegration, DataHash: "hash-1"}
 	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
 		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).
 		Return(resolved, nil)
@@ -377,6 +426,51 @@ func TestValidationReconciler_PushAccess_Denied(t *testing.T) {
 		DoAndReturn(func(_ context.Context, _ string, _ string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
 			if len(verrs) != 1 || verrs[0].Code != errors.VErrPushAccessDenied {
 				t.Fatalf("expected VErrPushAccessDenied, got %+v", verrs)
+			}
+			if !strings.Contains(verrs[0].Message, "configured credentials") {
+				t.Fatalf("expected message to name the configured-credentials case, got %q", verrs[0].Message)
+			}
+			return true, nil
+		})
+
+	result, err := f.reconciler.Reconcile(context.Background(), release)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !result.resultStop {
+		t.Fatalf("expected resultStop, got %+v", result)
+	}
+}
+
+// 7b. CheckPushAccess auth failure with NO credentials resolved
+// (SourceAnonymous) -> code VErrRegistryCredentialsRequired naming the
+// registry host and push ref, resultStop.
+func TestValidationReconciler_PushAccess_AnonymousAuthFailed_CredentialsRequired(t *testing.T) {
+	f := newValidationReconcilerFixture(t)
+	res := buildResourceWithPush("worker", "example.com/worker:v1")
+	release := validationTestRelease(res)
+
+	resolved := &credentials.ResolvedRegistryCredential{Source: credentials.SourceAnonymous}
+	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
+		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).
+		Return(resolved, nil)
+	f.records.EXPECT().Get(gomock.Any(), validationTestStackID, "worker", models.ValidationCheckPushAccess).
+		Return(nil, errors.NotFound("no record"))
+
+	client := mocks.NewMockRegistryClient(f.ctrl)
+	client.EXPECT().CheckPushAccess(gomock.Any(), "example.com/worker:v1").Return(clients.ErrAuthFailed)
+	f.registryClients.EXPECT().ClientFor(resolved).Return(client, nil)
+
+	f.releaseService.EXPECT().MarkFailedWithValidationErrors(gomock.Any(), "release-1", gomock.Any(), gomock.Any()).
+		DoAndReturn(func(_ context.Context, _ string, _ string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
+			if len(verrs) != 1 || verrs[0].Code != errors.VErrRegistryCredentialsRequired {
+				t.Fatalf("expected VErrRegistryCredentialsRequired, got %+v", verrs)
+			}
+			msg := verrs[0].Message
+			for _, want := range []string{"example.com/worker:v1", "example.com", "none are configured"} {
+				if !strings.Contains(msg, want) {
+					t.Fatalf("expected message to contain %q, got %q", want, msg)
+				}
 			}
 			return true, nil
 		})
@@ -407,7 +501,7 @@ func TestValidationReconciler_TwoBadResources_OneCallWithBothErrors(t *testing.T
 	pullClient.EXPECT().CheckImage(gomock.Any(), "example.com/app:v1").Return(false, nil)
 	f.registryClients.EXPECT().ClientFor(resolvedPull).Return(pullClient, nil)
 
-	resolvedPush := &credentials.ResolvedRegistryCredential{DataHash: "hash-2"}
+	resolvedPush := &credentials.ResolvedRegistryCredential{Source: credentials.SourceIntegration, DataHash: "hash-2"}
 	f.resolver.EXPECT().RegistryCredentials(gomock.Any(), validationTestOrgID, "example.com/worker:v1",
 		credentials.RegistryPurposePush, credentials.RegistryAuthSelector{}).
 		Return(resolvedPush, nil)

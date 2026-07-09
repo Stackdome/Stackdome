@@ -142,11 +142,20 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 		// verified.
 		r.logger.Warnf("release %s: resource %s: registry rate limited while checking image '%s'; skipping check", release.ID, res.Name, imageRef)
 		return nil, nil
+	case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
+		// No credentials were resolved for this registry and it rejects
+		// anonymous access: the user needs to ADD credentials, which is a
+		// different failure from configured credentials being rejected.
+		return models.ReleaseValidationErrors{{
+			ResourceName: res.Name, Field: "source.image.ref",
+			Code:    errors.VErrRegistryCredentialsRequired,
+			Message: fmt.Sprintf("image '%s' requires credentials for registry '%s', but none are configured", imageRef, registryHostForRef(imageRef)),
+		}}, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.image.ref",
 			Code:    errors.VErrRegistryAuthFailed,
-			Message: fmt.Sprintf("registry rejected credentials for image '%s'", imageRef),
+			Message: fmt.Sprintf("registry '%s' rejected the configured credentials for image '%s'", registryHostForRef(imageRef), imageRef),
 		}}, nil
 	case err != nil:
 		// transient network problem: let the worker retry the whole reconcile
@@ -196,11 +205,20 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 		// registry rate limit cannot hang the release to deploy timeout.
 		r.logger.Warnf("release %s: resource %s: registry rate limited while checking push access to '%s'; skipping check", release.ID, res.Name, pushRef)
 		return nil, nil
+	case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
+		// Same distinction as checkImagePull: pushing without any resolved
+		// credentials means the user must add push credentials, not fix
+		// rejected ones.
+		return models.ReleaseValidationErrors{{
+			ResourceName: res.Name, Field: "source.git.push.repository",
+			Code:    errors.VErrRegistryCredentialsRequired,
+			Message: fmt.Sprintf("pushing to '%s' requires credentials for registry '%s', but none are configured", pushRef, registryHostForRef(pushRef)),
+		}}, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
 			ResourceName: res.Name, Field: "source.git.push.repository",
 			Code:    errors.VErrPushAccessDenied,
-			Message: fmt.Sprintf("cannot push to '%s': registry rejected credentials", pushRef),
+			Message: fmt.Sprintf("cannot push to '%s': registry rejected the configured credentials", pushRef),
 		}}, nil
 	case err != nil:
 		// transient network problem: let the worker retry the whole reconcile
