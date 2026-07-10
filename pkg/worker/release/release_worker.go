@@ -23,6 +23,7 @@ const (
 
 type ReleaseWorkerSpec struct {
 	ReleaseService        releaseService
+	EventRecorder         eventRecorder
 	StackService          stackService
 	ClusterManager        clustermanager.ClusterManager
 	CRBuilder             builders.ClusterResourceBuilder

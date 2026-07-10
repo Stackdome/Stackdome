@@ -189,7 +189,7 @@ func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *c
 		return false, nil
 	}
 
-	reason := fmt.Sprintf("superseded by release #%d already applied to cluster", appliedRelease.Sequence)
+	reason := fmt.Sprintf(supersededEventMessageFmt, appliedRelease.Sequence)
 	if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
 		return false, fmt.Errorf("failed to mark release superseded: %w", err)
 	}

@@ -211,7 +211,9 @@ Class | Method | HTTP request | Description
 *ReleasesApi* | [**CancelRelease**](docs/ReleasesApi.md#cancelrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel | Cancel a pending or rendering release
 *ReleasesApi* | [**CreateRelease**](docs/ReleasesApi.md#createrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | Create a new release (deploy)
 *ReleasesApi* | [**GetRelease**](docs/ReleasesApi.md#getrelease) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id} | Get a release by ID
+*ReleasesApi* | [**ListReleaseEvents**](docs/ReleasesApi.md#listreleaseevents) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events | List release events ordered by sequence
 *ReleasesApi* | [**ListReleases**](docs/ReleasesApi.md#listreleases) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | List releases for a stack
+*ReleasesApi* | [**StreamReleaseEvents**](docs/ReleasesApi.md#streamreleaseevents) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream | Stream release events via Server-Sent Events
 
 
 ## Documentation For Models
@@ -349,6 +351,9 @@ Class | Method | HTTP request | Description
  - [RegistryCredentialVerifyRequest](docs/RegistryCredentialVerifyRequest.md)
  - [ReleaseCause](docs/ReleaseCause.md)
  - [ReleaseCauseKind](docs/ReleaseCauseKind.md)
+ - [ReleaseEvent](docs/ReleaseEvent.md)
+ - [ReleaseEventLink](docs/ReleaseEventLink.md)
+ - [ReleaseEventList](docs/ReleaseEventList.md)
  - [ReleaseOutcome](docs/ReleaseOutcome.md)
  - [ReleasePins](docs/ReleasePins.md)
  - [ReleaseValidationError](docs/ReleaseValidationError.md)

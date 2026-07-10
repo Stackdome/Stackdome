@@ -145,6 +145,9 @@ docs/RegistryCredentialPurpose.md
 docs/RegistryCredentialVerifyRequest.md
 docs/ReleaseCause.md
 docs/ReleaseCauseKind.md
+docs/ReleaseEvent.md
+docs/ReleaseEventLink.md
+docs/ReleaseEventList.md
 docs/ReleaseOutcome.md
 docs/ReleasePins.md
 docs/ReleaseValidationError.md
@@ -362,6 +365,9 @@ model_registry_credential_purpose.go
 model_registry_credential_verify_request.go
 model_release_cause.go
 model_release_cause_kind.go
+model_release_event.go
+model_release_event_link.go
+model_release_event_list.go
 model_release_outcome.go
 model_release_pins.go
 model_release_validation_error.go

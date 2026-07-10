@@ -2,376 +2,376 @@ package release
 
 import (
 	"context"
-	"testing"
 	"time"
 
-	"github.com/Stackdome/stackdome/pkg/logger"
-	"github.com/Stackdome/stackdome/pkg/models"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
+
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 func testLogger() logger.Logger {
 	return logger.NewLoggerWithPrefix(context.Background(), "release-test")
 }
 
-func TestGatekeeperReconciler_OlderSequence(t *testing.T) {
-	ctrl := gomock.NewController(t)
+var _ = Describe("GatekeeperReconciler", func() {
+	var ctrl *gomock.Controller
 
-	svc := NewMockreleaseService(ctrl)
-	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
-		Return(&models.StackRelease{ID: "newer", Sequence: 2}, nil)
-	svc.EXPECT().MarkSuperseded(gomock.Any(), "older", gomock.Any()).
-		Return(true, nil)
-
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
-
-	release := &models.StackRelease{ID: "older", StackID: "stack-1", Sequence: 1, State: models.ReleaseStateInProgress}
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultStop {
-		t.Fatal("expected resultStop")
-	}
-}
-
-func TestGatekeeperReconciler_LatestSequence(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 2, State: models.ReleaseStateInProgress}
-
-	svc := NewMockreleaseService(ctrl)
-	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
-		Return(release, nil)
-
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultNil {
-		t.Fatal("expected resultNil")
-	}
-}
-
-func TestGatekeeperReconciler_PendingCASWon(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
-
-	svc := NewMockreleaseService(ctrl)
-	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
-		Return(release, nil)
-	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
-		Return(true, nil)
-
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultNil {
-		t.Fatal("expected resultNil")
-	}
-	if release.State != models.ReleaseStateInProgress {
-		t.Fatalf("expected InProgress, got %s", release.State)
-	}
-}
-
-func TestGatekeeperReconciler_PendingCASLost(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
-
-	svc := NewMockreleaseService(ctrl)
-	svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
-		Return(release, nil)
-	svc.EXPECT().MarkInProgress(gomock.Any(), "self").
-		Return(false, nil)
-
-	r := &gatekeeperReconciler{releaseService: svc, logger: testLogger()}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultStop {
-		t.Fatal("expected resultStop")
-	}
-}
-
-func TestRenderReconciler_ManifestPresent(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	r := &renderReconciler{releaseService: NewMockreleaseService(ctrl)}
-	release := &models.StackRelease{Manifest: &models.ReleaseManifest{}}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultNil {
-		t.Fatal("expected resultNil")
-	}
-}
-
-func TestConvergeReconciler_MatchesLastConverged(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	now := time.Now().UTC()
-
-	release := &models.StackRelease{
-		ID:               "rel-1",
-		StackID:          "stack-1",
-		ManifestRevision: "rev-1",
-		RenderedAt:       &now,
-		Manifest:         &models.ReleaseManifest{},
-	}
-
-	relSvc := NewMockreleaseService(ctrl)
-	relSvc.EXPECT().MarkReleased(gomock.Any(), "rel-1", gomock.Any()).
-		Return(true, nil)
-
-	stackSvc := NewMockstackService(ctrl)
-	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
-		Return(&models.Stack{
-			ID: "stack-1",
-			Status: &models.StackStatus{
-				LastConverged: &models.StackConvergenceRecord{
-					ReleaseID: "rel-1",
-					Revision:  "rev-1",
-				},
-			},
-		}, nil)
-
-	r := &convergeReconciler{
-		releaseService: relSvc,
-		stackService:   stackSvc,
-		logger:         testLogger(),
-	}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultStop {
-		t.Fatal("expected resultStop")
-	}
-}
-
-func TestConvergeReconciler_MarkReleasedCASFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	now := time.Now().UTC()
-
-	release := &models.StackRelease{
-		ID:               "rel-1",
-		StackID:          "stack-1",
-		ManifestRevision: "rev-1",
-		RenderedAt:       &now,
-		Manifest:         &models.ReleaseManifest{},
-	}
-
-	relSvc := NewMockreleaseService(ctrl)
-	relSvc.EXPECT().MarkReleased(gomock.Any(), "rel-1", gomock.Any()).
-		Return(false, nil)
-
-	stackSvc := NewMockstackService(ctrl)
-	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
-		Return(&models.Stack{
-			ID: "stack-1",
-			Status: &models.StackStatus{
-				LastConverged: &models.StackConvergenceRecord{
-					ReleaseID: "rel-1",
-					Revision:  "rev-1",
-				},
-			},
-		}, nil)
-
-	r := &convergeReconciler{
-		releaseService: relSvc,
-		stackService:   stackSvc,
-		logger:         testLogger(),
-	}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultStop {
-		t.Fatal("expected resultStop when CAS fails")
-	}
-}
-
-func TestConvergeReconciler_Timeout(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	past := time.Now().UTC().Add(-time.Duration(models.DefaultDeployTimeoutMinutes)*time.Minute - time.Minute)
-
-	release := &models.StackRelease{
-		ID:               "rel-1",
-		StackID:          "stack-1",
-		ManifestRevision: "rev-1",
-		RenderedAt:       &past,
-		Manifest:         &models.ReleaseManifest{},
-	}
-
-	relSvc := NewMockreleaseService(ctrl)
-	relSvc.EXPECT().MarkFailed(gomock.Any(), "rel-1", gomock.Any(), gomock.Any()).
-		Return(true, nil)
-
-	stackSvc := NewMockstackService(ctrl)
-	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
-		Return(&models.Stack{ID: "stack-1"}, nil)
-
-	r := &convergeReconciler{
-		releaseService: relSvc,
-		stackService:   stackSvc,
-		logger:         testLogger(),
-	}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultStop {
-		t.Fatal("expected resultStop")
-	}
-}
-
-func TestConvergeReconciler_NotYet(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	now := time.Now().UTC()
-
-	release := &models.StackRelease{
-		ID:               "rel-1",
-		StackID:          "stack-1",
-		ManifestRevision: "rev-1",
-		RenderedAt:       &now,
-		Manifest:         &models.ReleaseManifest{},
-	}
-
-	stackSvc := NewMockstackService(ctrl)
-	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
-		Return(&models.Stack{ID: "stack-1"}, nil)
-
-	r := &convergeReconciler{
-		releaseService: NewMockreleaseService(ctrl),
-		stackService:   stackSvc,
-		logger:         testLogger(),
-	}
-
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.resultRequeueAfter == nil || *result.resultRequeueAfter != convergencePollInterval {
-		t.Fatalf("expected requeue after %s, got %v", convergencePollInterval, result.resultRequeueAfter)
-	}
-}
-
-func TestApplyReconciler_SupersededByClusterCR(t *testing.T) {
-	ctrl := gomock.NewController(t)
-
-	relSvc := NewMockreleaseService(ctrl)
-	relSvc.EXPECT().InternalGet(gomock.Any(), "higher-release").
-		Return(&models.StackRelease{ID: "higher-release", Sequence: 5}, nil)
-	relSvc.EXPECT().MarkSuperseded(gomock.Any(), "self", gomock.Any()).
-		Return(true, nil)
-
-	r := &applyReconciler{
-		releaseService: relSvc,
-		logger:         testLogger(),
-	}
-
-	existing := &corev1alpha1.Stack{}
-	existing.SetAnnotations(map[string]string{
-		corev1alpha1.ReleaseIDAnnotation: "higher-release",
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
 	})
 
-	release := &models.StackRelease{ID: "self", Sequence: 3}
+	It("marks an older sequence superseded and stops", func() {
+		svc := NewMockreleaseService(ctrl)
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+			Return(&models.StackRelease{ID: "newer", Sequence: 2}, nil)
+		svc.EXPECT().MarkSuperseded(gomock.Any(), "older", "Release superseded by release #2").
+			Return(true, nil)
 
-	superseded, err := r.supersededByClusterCR(context.Background(), existing, release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !superseded {
-		t.Fatal("expected release to be superseded")
-	}
-}
+		rec := NewMockeventRecorder(ctrl)
 
-func TestApplyReconciler_NotSupersededByLowerSequence(t *testing.T) {
-	ctrl := gomock.NewController(t)
+		r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
 
-	relSvc := NewMockreleaseService(ctrl)
-	relSvc.EXPECT().InternalGet(gomock.Any(), "lower-release").
-		Return(&models.StackRelease{ID: "lower-release", Sequence: 1}, nil)
-
-	r := &applyReconciler{
-		releaseService: relSvc,
-		logger:         testLogger(),
-	}
-
-	existing := &corev1alpha1.Stack{}
-	existing.SetAnnotations(map[string]string{
-		corev1alpha1.ReleaseIDAnnotation: "lower-release",
+		release := &models.StackRelease{ID: "older", StackID: "stack-1", Sequence: 1, State: models.ReleaseStateInProgress}
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue())
 	})
 
-	release := &models.StackRelease{ID: "self", Sequence: 3}
+	It("continues when the release is the latest sequence", func() {
+		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 2, State: models.ReleaseStateInProgress}
 
-	superseded, err := r.supersededByClusterCR(context.Background(), existing, release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if superseded {
-		t.Fatal("expected release NOT to be superseded by lower sequence")
-	}
-}
+		svc := NewMockreleaseService(ctrl)
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+			Return(release, nil)
 
-func TestApplyReconciler_NoManifestSkips(t *testing.T) {
-	r := &applyReconciler{logger: testLogger()}
+		rec := NewMockeventRecorder(ctrl)
 
-	release := &models.StackRelease{ID: "self", Manifest: nil}
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultNil {
-		t.Fatal("expected resultNil when manifest is nil")
-	}
-}
+		r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
 
-func TestApplyReconciler_StackDeletedFails(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	now := time.Now().UTC()
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultNil).To(BeTrue())
+	})
 
-	relSvc := NewMockreleaseService(ctrl)
-	relSvc.EXPECT().MarkFailed(gomock.Any(), "self", gomock.Any(), gomock.Any()).
-		Return(true, nil)
+	It("marks a pending release in progress when the CAS wins", func() {
+		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
 
-	stackSvc := NewMockstackService(ctrl)
-	stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
-		Return(&models.Stack{
-			ID:                "stack-1",
-			DeletionTimestamp: &now,
-		}, nil)
+		svc := NewMockreleaseService(ctrl)
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+			Return(release, nil)
+		svc.EXPECT().MarkInProgress(gomock.Any(), "self").
+			Return(true, nil)
 
-	r := &applyReconciler{
-		releaseService: relSvc,
-		stackService:   stackSvc,
-		logger:         testLogger(),
-	}
+		rec := NewMockeventRecorder(ctrl)
+		rec.EXPECT().RecordReleaseStarted(gomock.Any(), release).Return(nil)
 
-	release := &models.StackRelease{
-		ID:       "self",
-		StackID:  "stack-1",
-		Manifest: &models.ReleaseManifest{},
-	}
-	result, err := r.Reconcile(context.Background(), release)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !result.resultStop {
-		t.Fatal("expected resultStop when stack is being deleted")
-	}
-}
+		r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultNil).To(BeTrue())
+		Expect(release.State).To(Equal(models.ReleaseStateInProgress))
+	})
+
+	It("treats a recorder error on release start as log-only", func() {
+		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
+
+		svc := NewMockreleaseService(ctrl)
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+			Return(release, nil)
+		svc.EXPECT().MarkInProgress(gomock.Any(), "self").
+			Return(true, nil)
+
+		rec := NewMockeventRecorder(ctrl)
+		rec.EXPECT().RecordReleaseStarted(gomock.Any(), release).
+			Return(errors.GeneralError("event insert failed"))
+
+		r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred(), "recorder error must not fail the reconciler")
+		Expect(result.resultNil).To(BeTrue())
+	})
+
+	It("stops without recording when the pending CAS is lost", func() {
+		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
+
+		svc := NewMockreleaseService(ctrl)
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
+			Return(release, nil)
+		svc.EXPECT().MarkInProgress(gomock.Any(), "self").
+			Return(false, nil)
+
+		// CAS lost: recorder must never be called.
+		rec := NewMockeventRecorder(ctrl)
+
+		r := &gatekeeperReconciler{releaseService: svc, eventRecorder: rec, logger: testLogger()}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue())
+	})
+})
+
+var _ = Describe("RenderReconciler", func() {
+	var ctrl *gomock.Controller
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+	})
+
+	It("continues when a manifest is already present", func() {
+		r := &renderReconciler{releaseService: NewMockreleaseService(ctrl)}
+		release := &models.StackRelease{Manifest: &models.ReleaseManifest{}}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultNil).To(BeTrue())
+	})
+})
+
+var _ = Describe("ConvergeReconciler", func() {
+	var ctrl *gomock.Controller
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+	})
+
+	It("marks released and stops when the stack matches the last converged record", func() {
+		now := time.Now().UTC()
+
+		release := &models.StackRelease{
+			ID:               "rel-1",
+			StackID:          "stack-1",
+			ManifestRevision: "rev-1",
+			RenderedAt:       &now,
+			Manifest:         &models.ReleaseManifest{},
+		}
+
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().MarkReleased(gomock.Any(), "rel-1", gomock.Any()).
+			Return(true, nil)
+
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{
+				ID: "stack-1",
+				Status: &models.StackStatus{
+					LastConverged: &models.StackConvergenceRecord{
+						ReleaseID: "rel-1",
+						Revision:  "rev-1",
+					},
+				},
+			}, nil)
+
+		r := &convergeReconciler{
+			releaseService: relSvc,
+			stackService:   stackSvc,
+			logger:         testLogger(),
+		}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue())
+	})
+
+	It("stops when the MarkReleased CAS fails", func() {
+		now := time.Now().UTC()
+
+		release := &models.StackRelease{
+			ID:               "rel-1",
+			StackID:          "stack-1",
+			ManifestRevision: "rev-1",
+			RenderedAt:       &now,
+			Manifest:         &models.ReleaseManifest{},
+		}
+
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().MarkReleased(gomock.Any(), "rel-1", gomock.Any()).
+			Return(false, nil)
+
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{
+				ID: "stack-1",
+				Status: &models.StackStatus{
+					LastConverged: &models.StackConvergenceRecord{
+						ReleaseID: "rel-1",
+						Revision:  "rev-1",
+					},
+				},
+			}, nil)
+
+		r := &convergeReconciler{
+			releaseService: relSvc,
+			stackService:   stackSvc,
+			logger:         testLogger(),
+		}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue(), "expected resultStop when CAS fails")
+	})
+
+	It("marks failed and stops on deploy timeout", func() {
+		past := time.Now().UTC().Add(-time.Duration(models.DefaultDeployTimeoutMinutes)*time.Minute - time.Minute)
+
+		release := &models.StackRelease{
+			ID:               "rel-1",
+			StackID:          "stack-1",
+			ManifestRevision: "rev-1",
+			RenderedAt:       &past,
+			Manifest:         &models.ReleaseManifest{},
+		}
+
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().MarkFailed(gomock.Any(), "rel-1", gomock.Any(), gomock.Any()).
+			Return(true, nil)
+
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{ID: "stack-1"}, nil)
+
+		r := &convergeReconciler{
+			releaseService: relSvc,
+			stackService:   stackSvc,
+			logger:         testLogger(),
+		}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue())
+	})
+
+	It("requeues at the convergence poll interval when not yet converged", func() {
+		now := time.Now().UTC()
+
+		release := &models.StackRelease{
+			ID:               "rel-1",
+			StackID:          "stack-1",
+			ManifestRevision: "rev-1",
+			RenderedAt:       &now,
+			Manifest:         &models.ReleaseManifest{},
+		}
+
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{ID: "stack-1"}, nil)
+
+		r := &convergeReconciler{
+			releaseService: NewMockreleaseService(ctrl),
+			stackService:   stackSvc,
+			logger:         testLogger(),
+		}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultRequeueAfter).ToNot(BeNil())
+		Expect(*result.resultRequeueAfter).To(Equal(convergencePollInterval))
+	})
+})
+
+var _ = Describe("ApplyReconciler", func() {
+	var ctrl *gomock.Controller
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+	})
+
+	// The apply-time cluster-CR supersede path mirrors the gatekeeper supersede
+	// invariant: whether the CAS is won or lost, supersededByClusterCR reports
+	// the release as superseded.
+	DescribeTable("supersededByClusterCR",
+		func(casWon bool) {
+			relSvc := NewMockreleaseService(ctrl)
+			relSvc.EXPECT().InternalGet(gomock.Any(), "higher-release").
+				Return(&models.StackRelease{ID: "higher-release", Sequence: 5}, nil)
+			relSvc.EXPECT().MarkSuperseded(gomock.Any(), "self", "Release superseded by release #5").
+				Return(casWon, nil)
+
+			r := &applyReconciler{
+				releaseService: relSvc,
+				logger:         testLogger(),
+			}
+
+			existing := &corev1alpha1.Stack{}
+			existing.SetAnnotations(map[string]string{
+				corev1alpha1.ReleaseIDAnnotation: "higher-release",
+			})
+
+			release := &models.StackRelease{ID: "self", Sequence: 3}
+
+			superseded, err := r.supersededByClusterCR(context.Background(), existing, release)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(superseded).To(BeTrue(), "expected release to be superseded")
+		},
+		Entry("CAS win", true),
+		Entry("CAS loss", false),
+	)
+
+	It("does not supersede when the cluster CR carries a lower sequence", func() {
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().InternalGet(gomock.Any(), "lower-release").
+			Return(&models.StackRelease{ID: "lower-release", Sequence: 1}, nil)
+
+		r := &applyReconciler{
+			releaseService: relSvc,
+			logger:         testLogger(),
+		}
+
+		existing := &corev1alpha1.Stack{}
+		existing.SetAnnotations(map[string]string{
+			corev1alpha1.ReleaseIDAnnotation: "lower-release",
+		})
+
+		release := &models.StackRelease{ID: "self", Sequence: 3}
+
+		superseded, err := r.supersededByClusterCR(context.Background(), existing, release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(superseded).To(BeFalse(), "expected release NOT to be superseded by lower sequence")
+	})
+
+	It("continues when the manifest is nil", func() {
+		r := &applyReconciler{logger: testLogger()}
+
+		release := &models.StackRelease{ID: "self", Manifest: nil}
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultNil).To(BeTrue(), "expected resultNil when manifest is nil")
+	})
+
+	It("marks failed and stops when the stack is being deleted", func() {
+		now := time.Now().UTC()
+
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().MarkFailed(gomock.Any(), "self", gomock.Any(), gomock.Any()).
+			Return(true, nil)
+
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{
+				ID:                "stack-1",
+				DeletionTimestamp: &now,
+			}, nil)
+
+		r := &applyReconciler{
+			releaseService: relSvc,
+			stackService:   stackSvc,
+			logger:         testLogger(),
+		}
+
+		release := &models.StackRelease{
+			ID:       "self",
+			StackID:  "stack-1",
+			Manifest: &models.ReleaseManifest{},
+		}
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue(), "expected resultStop when stack is being deleted")
+	})
+})

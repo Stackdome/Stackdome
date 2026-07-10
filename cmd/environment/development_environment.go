@@ -113,6 +113,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       d.Services.StackReleaseService,
+		EventRecorder:        d.Services.ReleaseEventRecorder,
 		StackService:         d.Services.StackService,
 		ClusterManager:       d.ClusterManager,
 		SecretService:        d.Services.SecretService,
@@ -280,6 +281,8 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					StackService:         d.Services.StackService,
 					StackResourceService: d.Services.StackResourceService,
 					Env:                  d.Name,
+					ReleaseChecker:       d.Services.StackReleaseService,
+					EventRecorder:        d.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
@@ -288,6 +291,8 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
+					ReleaseChecker:        d.Services.StackReleaseService,
+					EventRecorder:         d.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
@@ -631,12 +636,21 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: d.DBSession,
 	})
 
+	releaseEventStore := pgstore.NewReleaseEventStore(pgstore.ReleaseEventStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	releaseEventRecorder := services.NewReleaseEventRecorder(services.ReleaseEventRecorderSpec{
+		Store: releaseEventStore,
+	})
+
 	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
 		Store:              stackReleaseStore,
 		StackService:       stackService,
 		CredentialResolver: credentialResolver,
 		Permissions:        d.PermissionService,
 		ReferenceService:   referenceService,
+		EventStore:         releaseEventStore,
+		EventRecorder:      releaseEventRecorder,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -694,6 +708,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
+		ReleaseEventRecorder:        releaseEventRecorder,
 		ReferenceService:            referenceService,
 		StackPreviewConfigService:   stackPreviewConfigService,
 		PreviewStackService:         previewStackService,

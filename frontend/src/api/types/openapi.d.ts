@@ -5071,6 +5071,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List release events ordered by sequence */
+        get: operations["listReleaseEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream release events via Server-Sent Events */
+        get: operations["streamReleaseEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/teams/{team_name}/secrets": {
         parameters: {
             query?: never;
@@ -8843,6 +8877,38 @@ export interface components {
             /** @description Total number of pages */
             total_pages?: number;
         };
+        ReleaseEventLink: {
+            kind?: string;
+            label?: string;
+            target?: {
+                [key: string]: string;
+            };
+        };
+        ReleaseEvent: {
+            id?: string;
+            release_id?: string;
+            stack_id?: string;
+            sequence?: number;
+            /** Format: date-time */
+            occurred_at?: string;
+            /** @enum {string} */
+            source?: "hub" | "cluster";
+            /** @enum {string} */
+            scope?: "release" | "resource";
+            resource_name?: string;
+            type?: string;
+            /** @enum {string} */
+            level?: "info" | "success" | "warning" | "error";
+            message?: string;
+            links?: components["schemas"]["ReleaseEventLink"][];
+            metadata?: {
+                [key: string]: string;
+            };
+        };
+        ReleaseEventList: {
+            items?: components["schemas"]["ReleaseEvent"][];
+            next_after_sequence?: number;
+        };
         ReleaseCause: {
             kind?: components["schemas"]["ReleaseCauseKind"];
             detail?: string;
@@ -9461,6 +9527,67 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listReleaseEvents: {
+        parameters: {
+            query?: {
+                after_sequence?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Release events ordered by sequence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseEventList"];
+                };
+            };
+        };
+    };
+    streamReleaseEvents: {
+        parameters: {
+            query?: {
+                after_sequence?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stream of release events via Server-Sent Events (SSE). Each SSE frame's id is the event sequence; data is a ReleaseEvent JSON object. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
             };
         };
     };

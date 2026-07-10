@@ -620,6 +620,15 @@ func ListReleases(client *openapi.APIClient, orgID, teamName, stackID string) *o
 	return list
 }
 
+// ListReleaseEvents fetches the ordered release event timeline for a release.
+func ListReleaseEvents(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.ReleaseEventList {
+	list, httpResp, err := client.ReleasesApi.ListReleaseEvents(
+		context.Background(), orgID, teamName, stackID, releaseID,
+	).Execute()
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "failed to list release events, status: %d", httpResp.StatusCode)
+	return list
+}
+
 func GetRelease(client *openapi.APIClient, orgID, teamName, stackID, releaseID string) *openapi.StackReleaseDetail {
 	release, httpResp, err := client.ReleasesApi.GetRelease(
 		context.Background(), orgID, teamName, stackID, releaseID,

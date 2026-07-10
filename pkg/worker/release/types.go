@@ -1,4 +1,4 @@
-//go:generate mockgen -source=types.go -destination=types_mock_test.go -package=release
+//go:generate mockgen -source=types.go -destination=types_mock.go -package=release
 package release
 
 import (
@@ -41,6 +41,12 @@ type releaseService interface {
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
 	MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError)
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
+}
+
+type eventRecorder interface {
+	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
+	RecordReleaseChecksStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
+	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 }
 
 type stackService interface {

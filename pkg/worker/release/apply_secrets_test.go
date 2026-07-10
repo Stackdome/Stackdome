@@ -23,7 +23,7 @@ const (
 	applySecretsTestStackID   = "stack-1"
 )
 
-func applySecretsTestClient(t *testing.T) client.Client {
+func applySecretsTestClient(t gomock.TestHelper) client.Client {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {

@@ -498,12 +498,21 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: te.DBSession,
 	})
 
+	releaseEventStore := pgstore.NewReleaseEventStore(pgstore.ReleaseEventStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	releaseEventRecorder := services.NewReleaseEventRecorder(services.ReleaseEventRecorderSpec{
+		Store: releaseEventStore,
+	})
+
 	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
 		Store:              stackReleaseStore,
 		StackService:       stackService,
 		CredentialResolver: credentialResolver,
 		Permissions:        te.PermissionService,
 		ReferenceService:   referenceService,
+		EventStore:         releaseEventStore,
+		EventRecorder:      releaseEventRecorder,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -561,6 +570,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
+		ReleaseEventRecorder:        releaseEventRecorder,
 		ReferenceService:            referenceService,
 		StackPreviewConfigService:   stackPreviewConfigService,
 		PreviewStackService:         previewStackService,
@@ -618,6 +628,8 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					StackService:         te.Services.StackService,
 					StackResourceService: te.Services.StackResourceService,
 					Env:                  te.Name,
+					ReleaseChecker:       te.Services.StackReleaseService,
+					EventRecorder:        te.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
@@ -626,6 +638,8 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					DBImageBuildService:   te.Services.ImageBuildService,
 					DBResourceService:     te.Services.StackResourceService,
 					GitIntegrationService: te.Services.GitIntegrationService,
+					ReleaseChecker:        te.Services.StackReleaseService,
+					EventRecorder:         te.Services.ReleaseEventRecorder,
 				})
 			},
 			func() clustermanager.Controller {
@@ -673,6 +687,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       te.Services.StackReleaseService,
+		EventRecorder:        te.Services.ReleaseEventRecorder,
 		StackService:         te.Services.StackService,
 		ClusterManager:       te.ClusterManager,
 		SecretService:        te.Services.SecretService,

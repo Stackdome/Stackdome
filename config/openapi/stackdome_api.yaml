@@ -2560,6 +2560,76 @@ paths:
         '200':
           description: Release cancelled
 
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events:
+    get:
+      summary: List release events ordered by sequence
+      operationId: listReleaseEvents
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - name: release_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: after_sequence
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+      responses:
+        '200':
+          description: Release events ordered by sequence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseEventList'
+
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream:
+    get:
+      summary: Stream release events via Server-Sent Events
+      operationId: streamReleaseEvents
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - name: release_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: after_sequence
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Stream of release events via Server-Sent Events (SSE). Each SSE frame's id is the event sequence; data is a ReleaseEvent JSON object.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+
   # Team-scoped secret routes
   /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     post:
@@ -7015,6 +7085,64 @@ components:
         total_pages:
           type: integer
           description: Total number of pages
+
+    ReleaseEventLink:
+      type: object
+      properties:
+        kind:
+          type: string
+        label:
+          type: string
+        target:
+          type: object
+          additionalProperties:
+            type: string
+    ReleaseEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        release_id:
+          type: string
+        stack_id:
+          type: string
+        sequence:
+          type: integer
+        occurred_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [hub, cluster]
+        scope:
+          type: string
+          enum: [release, resource]
+        resource_name:
+          type: string
+        type:
+          type: string
+        level:
+          type: string
+          enum: [info, success, warning, error]
+        message:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseEventLink'
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    ReleaseEventList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseEvent'
+        next_after_sequence:
+          type: integer
 
     ReleaseCause:
       type: object

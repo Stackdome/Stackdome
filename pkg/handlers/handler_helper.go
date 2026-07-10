@@ -190,6 +190,9 @@ func internalStreamHandler(w http.ResponseWriter, r *http.Request, streamable in
 			}
 			data := streamObject.Data()
 			if data != "" {
+				if withID, ok := streamObject.(interfaces.StreamObjectWithID); ok {
+					_, _ = fmt.Fprintf(w, "id: %s\n", withID.ID())
+				}
 				_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 				flusher.Flush()
 			}
@@ -250,6 +253,16 @@ func parseListParams(r *http.Request, allowedFilters []string) stores.ListParams
 	}
 
 	return params
+}
+
+// parseOptionalIntQuery reads an integer query parameter, returning def when the
+// parameter is absent. A present-but-unparseable value is an error.
+func parseOptionalIntQuery(r *http.Request, name string, def int) (int, error) {
+	raw := r.URL.Query().Get(name)
+	if raw == "" {
+		return def, nil
+	}
+	return strconv.Atoi(raw)
 }
 
 func resolveTeamID(r *http.Request, teamService services.TeamService) (string, *errors.ServiceError) {
