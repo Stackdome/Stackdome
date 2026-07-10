@@ -6931,6 +6931,7 @@ components:
 
     StackLifecycle:
       type: string
+      readOnly: true
       description: Coarse stack entity lifecycle. Deploy/runtime status lives on releases.
       enum: [active, deleting]
       x-enum-varnames: [STACK_LIFECYCLE_ACTIVE, STACK_LIFECYCLE_DELETING]
