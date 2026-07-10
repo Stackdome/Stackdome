@@ -57,6 +57,7 @@ export default function PreviewConfigDetailPage() {
     if (!orgId || !defaultTeamName || !configId || !config) return;
     setSaving(true);
     try {
+      // PUT is full-replace server-side; echo unchanged fields so they survive the save.
       const updated = await updatePreviewConfig(orgId, defaultTeamName, configId, {
         git_repository: {
           repo_url: config.git_repository?.repo_url ?? "",
@@ -64,6 +65,9 @@ export default function PreviewConfigDetailPage() {
         },
         stackfile_path: stackfilePath,
         max_active_previews: maxActive,
+        ...(config.description != null ? { description: config.description } : {}),
+        ...(config.labels != null ? { labels: config.labels } : {}),
+        ...(config.annotations != null ? { annotations: config.annotations } : {}),
       });
       setConfig(updated);
       toast({ title: "Configuration saved" });
