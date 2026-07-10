@@ -1,4 +1,4 @@
-//go:generate mockgen -source=types.go -destination=types_mock_test.go -package=release
+//go:generate mockgen -source=types.go -destination=types_mock.go -package=release
 package release
 
 import (
@@ -43,15 +43,9 @@ type releaseService interface {
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
 }
 
-// eventRecorder is the narrow slice of services.ReleaseEventRecorder the
-// release worker needs. It is declared locally (the worker never imports
-// pkg/services) so the concrete recorder is injected structurally and mocked
-// in-package alongside the other reconciler dependencies.
 type eventRecorder interface {
 	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
-	RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError
 	RecordReleaseChecksStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
-	RecordReleaseCheckFailed(ctx context.Context, release *models.StackRelease, resourceName, check, reason string) *errors.ServiceError
 	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 }
 

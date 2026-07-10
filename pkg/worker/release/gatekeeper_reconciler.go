@@ -34,19 +34,11 @@ func (r *gatekeeperReconciler) Reconcile(ctx context.Context, release *models.St
 		return resultNil, fmt.Errorf("failed to get active release: %w", serr)
 	}
 	if latest != nil && latest.ID != release.ID && latest.Sequence > release.Sequence {
-		reason := fmt.Sprintf("superseded by release #%d", latest.Sequence)
-		won, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason)
-		if err != nil {
+		reason := fmt.Sprintf(supersededEventMessageFmt, latest.Sequence)
+		if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
 			return resultNil, fmt.Errorf("failed to mark release superseded: %w", err)
 		}
 		r.logger.Infof("release %s: %s", release.ID, reason)
-		if won {
-			release.State = models.ReleaseStateSuperseded
-			message := fmt.Sprintf(supersededEventMessageFmt, latest.Sequence)
-			if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateSuperseded, message); recErr != nil {
-				r.logger.Errorf("release %s: failed to record release_superseded event: %v", release.ID, recErr)
-			}
-		}
 		return resultStop, nil
 	}
 

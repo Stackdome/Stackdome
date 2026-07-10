@@ -32,18 +32,6 @@ type validationReconciler struct {
 }
 
 func newValidationReconciler(spec ReleaseWorkerSpec) *validationReconciler {
-	if spec.ReleaseService == nil {
-		panic("release.newValidationReconciler: ReleaseService is required")
-	}
-	if spec.CredentialResolver == nil {
-		panic("release.newValidationReconciler: CredentialResolver is required")
-	}
-	if spec.ValidationRecords == nil {
-		panic("release.newValidationReconciler: ValidationRecords is required")
-	}
-	if spec.EventRecorder == nil {
-		panic("release.newValidationReconciler: EventRecorder is required")
-	}
 	// RegistryClients is optional: nil substitutes the real (network)
 	// registry client provider.
 	registryClients := spec.RegistryClients
@@ -91,22 +79,10 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 
 	if len(verrs) > 0 {
 		msg := fmt.Sprintf("release validation failed: %d error(s)", len(verrs))
-		for _, verr := range verrs {
-			if recErr := r.eventRecorder.RecordReleaseCheckFailed(ctx, release, verr.ResourceName, validationCheckKey(verr), verr.Message); recErr != nil {
-				r.logger.Errorf("release %s: failed to record release_check_failed event: %v", release.ID, recErr)
-			}
-		}
-		won, serr := r.releaseService.MarkFailedWithValidationErrors(ctx, release.ID, msg, verrs)
-		if serr != nil {
+		// The release service records the per-check and terminal failure
+		// events on the CAS win.
+		if _, serr := r.releaseService.MarkFailedWithValidationErrors(ctx, release.ID, msg, verrs); serr != nil {
 			return resultNil, fmt.Errorf("failed to mark release failed: %w", serr)
-		}
-		// Only the winner of the terminal CAS records the terminal event, so a
-		// requeue that lost the race does not double-emit release_failed.
-		if won {
-			release.State = models.ReleaseStateFailed
-			if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateFailed, msg); recErr != nil {
-				r.logger.Errorf("release %s: failed to record release_failed event: %v", release.ID, recErr)
-			}
 		}
 		return resultStop, nil
 	}
@@ -120,16 +96,6 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 		}
 	}
 	return resultNil, nil
-}
-
-// validationCheckKey identifies a check failure for event dedupe. The error
-// Code alone can collide across the pull and push checks of one resource
-// (both can yield registry_credential_not_found / registry_credentials_required
-// for the same resource name), so Field — which encodes the check surface
-// (source.image.* vs source.git.push.*) — is prefixed to keep the dedupe key
-// unique per (resource, check).
-func validationCheckKey(verr models.ReleaseValidationError) string {
-	return fmt.Sprintf("%s:%s", verr.Field, verr.Code)
 }
 
 func (r *validationReconciler) validateResource(ctx context.Context, release *models.StackRelease, res *models.StackResource) (models.ReleaseValidationErrors, bool, error) {

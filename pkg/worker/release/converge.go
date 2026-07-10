@@ -9,14 +9,9 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
-// releaseLiveMessage is the user-facing message recorded on the
-// release_released terminal event.
-const releaseLiveMessage = "Release is live"
-
 type convergeReconciler struct {
 	releaseService releaseService
 	stackService   stackService
-	eventRecorder  eventRecorder
 	logger         logger.Logger
 }
 
@@ -24,7 +19,6 @@ func newConvergeReconciler(spec ReleaseWorkerSpec) *convergeReconciler {
 	return &convergeReconciler{
 		releaseService: spec.ReleaseService,
 		stackService:   spec.StackService,
-		eventRecorder:  spec.EventRecorder,
 		logger:         logger.NewLoggerWithPrefix(context.Background(), "release-converge"),
 	}
 }
@@ -39,7 +33,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 	latest, serr := r.stackService.InternalGetStack(ctx, release.StackID)
 	if serr != nil {
 		if serr.Is404() {
-			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, "stack not found")
+			failRelease(ctx, r.releaseService, r.logger, release, "stack not found")
 			return resultStop, nil
 		}
 		return resultNil, fmt.Errorf("failed to get stack: %w", serr)
@@ -55,10 +49,6 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 			}
 			if ok {
 				r.logger.Infof("release %s converged", release.ID)
-				release.State = models.ReleaseStateReleased
-				if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateReleased, releaseLiveMessage); recErr != nil {
-					r.logger.Errorf("release %s: failed to record release_released event: %v", release.ID, recErr)
-				}
 			}
 			return resultStop, nil
 		}
@@ -68,17 +58,10 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 	if release.RenderedAt != nil && time.Since(*release.RenderedAt) > deployTimeout {
 		msg := fmt.Sprintf("timed out waiting for convergence after %s", deployTimeout)
 		outcome := buildOutcome(latest, release)
-		won, markErr := r.releaseService.MarkFailed(ctx, release.ID, msg, &outcome)
-		if markErr != nil {
+		if _, markErr := r.releaseService.MarkFailed(ctx, release.ID, msg, &outcome); markErr != nil {
 			return resultNil, fmt.Errorf("failed to mark failed: %w", markErr)
 		}
 		r.logger.Errorf("release %s: %s", release.ID, msg)
-		if won {
-			release.State = models.ReleaseStateFailed
-			if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateFailed, msg); recErr != nil {
-				r.logger.Errorf("release %s: failed to record release_failed event: %v", release.ID, recErr)
-			}
-		}
 		return resultStop, nil
 	}
 

@@ -17,10 +17,6 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-// Ginkgo supports exactly one RunSpecs call per test binary; this package's
-// suite is bootstrapped by TestAESEncryptionService in
-// encryption_service_test.go, which discovers every Describe below.
-
 const (
 	resolvePinsTestOrgID   = "org-1"
 	resolvePinsTestRepoURL = "https://github.com/acme/web.git"
@@ -489,6 +485,243 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 12, 0)
 		Expect(serr).To(BeNil())
 		Expect(page.NextAfterSequence).To(Equal(12))
+	})
+})
+
+var _ = Describe("stackReleaseService terminal Mark methods record events", func() {
+	const (
+		markReleaseID        = "rel-1"
+		markCancelReason     = "worker requeue"
+		markSupersededReason = "superseded by release #9"
+		markFailedMessage    = "deploy timed out"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		recorder     *MockReleaseEventRecorder
+		svc          *stackReleaseService
+		ctx          context.Context
+		rel          *models.StackRelease
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		recorder = NewMockReleaseEventRecorder(ctrl)
+		svc = &stackReleaseService{
+			store:         releaseStore,
+			eventRecorder: recorder,
+			logger:        logger.NewLoggerWithPrefix(context.Background(), "stack-release-service-test"),
+		}
+		ctx = context.Background()
+		rel = &models.StackRelease{ID: markReleaseID, StackID: "stack-1"}
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	type terminalMarkCase struct {
+		method      string
+		state       models.StackReleaseState
+		message     string
+		expectStore func(store *mocks.MockStackReleaseStore, ctx context.Context, won bool, serr *errors.ServiceError)
+		invoke      func(svc *stackReleaseService, ctx context.Context) (bool, *errors.ServiceError)
+	}
+
+	cases := []terminalMarkCase{
+		{
+			method:  "MarkCancelled",
+			state:   models.ReleaseStateCancelled,
+			message: releaseCancelledMessage,
+			expectStore: func(store *mocks.MockStackReleaseStore, ctx context.Context, won bool, serr *errors.ServiceError) {
+				store.EXPECT().MarkCancelled(ctx, markReleaseID, markCancelReason).Return(won, serr)
+			},
+			invoke: func(svc *stackReleaseService, ctx context.Context) (bool, *errors.ServiceError) {
+				return svc.MarkCancelled(ctx, markReleaseID, markCancelReason)
+			},
+		},
+		{
+			method:  "MarkSuperseded",
+			state:   models.ReleaseStateSuperseded,
+			message: markSupersededReason,
+			expectStore: func(store *mocks.MockStackReleaseStore, ctx context.Context, won bool, serr *errors.ServiceError) {
+				store.EXPECT().MarkSuperseded(ctx, markReleaseID, markSupersededReason).Return(won, serr)
+			},
+			invoke: func(svc *stackReleaseService, ctx context.Context) (bool, *errors.ServiceError) {
+				return svc.MarkSuperseded(ctx, markReleaseID, markSupersededReason)
+			},
+		},
+		{
+			method:  "MarkReleased",
+			state:   models.ReleaseStateReleased,
+			message: releaseLiveMessage,
+			expectStore: func(store *mocks.MockStackReleaseStore, ctx context.Context, won bool, serr *errors.ServiceError) {
+				store.EXPECT().MarkReleased(ctx, markReleaseID, models.ReleaseOutcome{}).Return(won, serr)
+			},
+			invoke: func(svc *stackReleaseService, ctx context.Context) (bool, *errors.ServiceError) {
+				return svc.MarkReleased(ctx, markReleaseID, models.ReleaseOutcome{})
+			},
+		},
+		{
+			method:  "MarkFailed",
+			state:   models.ReleaseStateFailed,
+			message: markFailedMessage,
+			expectStore: func(store *mocks.MockStackReleaseStore, ctx context.Context, won bool, serr *errors.ServiceError) {
+				store.EXPECT().MarkFailed(ctx, markReleaseID, markFailedMessage, nil).Return(won, serr)
+			},
+			invoke: func(svc *stackReleaseService, ctx context.Context) (bool, *errors.ServiceError) {
+				return svc.MarkFailed(ctx, markReleaseID, markFailedMessage, nil)
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		Describe(tc.method, func() {
+			It("records the terminal event when the CAS is won", func() {
+				tc.expectStore(releaseStore, ctx, true, nil)
+				releaseStore.EXPECT().GetByID(ctx, markReleaseID).Return(rel, nil)
+				recorder.EXPECT().RecordReleaseTerminal(ctx, rel, tc.state, tc.message).Return(nil)
+
+				won, serr := tc.invoke(svc, ctx)
+				Expect(serr).To(BeNil())
+				Expect(won).To(BeTrue())
+			})
+
+			It("records nothing when the CAS is lost", func() {
+				tc.expectStore(releaseStore, ctx, false, nil)
+
+				won, serr := tc.invoke(svc, ctx)
+				Expect(serr).To(BeNil())
+				Expect(won).To(BeFalse())
+			})
+
+			It("propagates a store error and records nothing", func() {
+				tc.expectStore(releaseStore, ctx, false, errors.GeneralError("store down"))
+
+				won, serr := tc.invoke(svc, ctx)
+				Expect(serr).ToNot(BeNil())
+				Expect(won).To(BeFalse())
+			})
+
+			It("still returns success when recording the event errors (log-only)", func() {
+				tc.expectStore(releaseStore, ctx, true, nil)
+				releaseStore.EXPECT().GetByID(ctx, markReleaseID).Return(rel, nil)
+				recorder.EXPECT().RecordReleaseTerminal(ctx, rel, tc.state, tc.message).
+					Return(errors.GeneralError("event insert failed"))
+
+				won, serr := tc.invoke(svc, ctx)
+				Expect(serr).To(BeNil())
+				Expect(won).To(BeTrue())
+			})
+
+			It("still returns success and records nothing when loading the release fails", func() {
+				tc.expectStore(releaseStore, ctx, true, nil)
+				releaseStore.EXPECT().GetByID(ctx, markReleaseID).Return(nil, errors.GeneralError("load failed"))
+
+				won, serr := tc.invoke(svc, ctx)
+				Expect(serr).To(BeNil())
+				Expect(won).To(BeTrue())
+			})
+		})
+	}
+})
+
+var _ = Describe("stackReleaseService.MarkFailedWithValidationErrors records failure events", func() {
+	const (
+		vfailReleaseID = "rel-1"
+		vfailMessage   = "release validation failed"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		recorder     *MockReleaseEventRecorder
+		svc          *stackReleaseService
+		ctx          context.Context
+		rel          *models.StackRelease
+		verrs        models.ReleaseValidationErrors
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		recorder = NewMockReleaseEventRecorder(ctrl)
+		svc = &stackReleaseService{
+			store:         releaseStore,
+			eventRecorder: recorder,
+			logger:        logger.NewLoggerWithPrefix(context.Background(), "stack-release-service-test"),
+		}
+		ctx = context.Background()
+		rel = &models.StackRelease{ID: vfailReleaseID, StackID: "stack-1"}
+		verrs = models.ReleaseValidationErrors{
+			{ResourceName: "web", Field: "resources[web].source.git.branch", Code: errors.VErrGitBranchNotFound, Message: "cannot resolve branch 'main'"},
+			{ResourceName: "worker", Field: "resources[worker].source.git.tag", Code: errors.VErrGitTagNotFound, Message: "cannot resolve tag 'v1'"},
+		}
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("records one release_check_failed per validation error plus the terminal release_failed when the CAS is won", func() {
+		releaseStore.EXPECT().MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs).Return(true, nil)
+		releaseStore.EXPECT().GetByID(ctx, vfailReleaseID).Return(rel, nil)
+		for _, verr := range verrs {
+			recorder.EXPECT().
+				RecordReleaseCheckFailed(ctx, rel, verr.ResourceName, verr.Field+":"+verr.Code, verr.Message).
+				Return(nil)
+		}
+		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateFailed, vfailMessage).Return(nil)
+
+		won, serr := svc.MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs)
+		Expect(serr).To(BeNil())
+		Expect(won).To(BeTrue())
+	})
+
+	It("records nothing when the CAS is lost", func() {
+		releaseStore.EXPECT().MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs).Return(false, nil)
+
+		won, serr := svc.MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs)
+		Expect(serr).To(BeNil())
+		Expect(won).To(BeFalse())
+	})
+
+	It("propagates a store error and records nothing", func() {
+		releaseStore.EXPECT().
+			MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs).
+			Return(false, errors.GeneralError("store down"))
+
+		won, serr := svc.MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs)
+		Expect(serr).ToNot(BeNil())
+		Expect(won).To(BeFalse())
+	})
+
+	It("still returns success and records nothing when loading the release fails", func() {
+		releaseStore.EXPECT().MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs).Return(true, nil)
+		releaseStore.EXPECT().GetByID(ctx, vfailReleaseID).Return(nil, errors.GeneralError("load failed"))
+
+		won, serr := svc.MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs)
+		Expect(serr).To(BeNil())
+		Expect(won).To(BeTrue())
+	})
+
+	It("still returns success when recording the events errors (log-only)", func() {
+		releaseStore.EXPECT().MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs).Return(true, nil)
+		releaseStore.EXPECT().GetByID(ctx, vfailReleaseID).Return(rel, nil)
+		for _, verr := range verrs {
+			recorder.EXPECT().
+				RecordReleaseCheckFailed(ctx, rel, verr.ResourceName, verr.Field+":"+verr.Code, verr.Message).
+				Return(errors.GeneralError("event insert failed"))
+		}
+		recorder.EXPECT().RecordReleaseTerminal(ctx, rel, models.ReleaseStateFailed, vfailMessage).
+			Return(errors.GeneralError("event insert failed"))
+
+		won, serr := svc.MarkFailedWithValidationErrors(ctx, vfailReleaseID, vfailMessage, verrs)
+		Expect(serr).To(BeNil())
+		Expect(won).To(BeTrue())
 	})
 })
 

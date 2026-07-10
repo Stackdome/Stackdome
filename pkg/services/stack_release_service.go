@@ -83,12 +83,6 @@ type stackReleaseService struct {
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
-	if spec.EventStore == nil {
-		panic("StackReleaseService requires a ReleaseEventStore")
-	}
-	if spec.EventRecorder == nil {
-		panic("StackReleaseService requires a ReleaseEventRecorder")
-	}
 	gitClients := spec.GitClients
 	if gitClients == nil {
 		gitClients = defaultSourceGitClientProvider{}
@@ -305,6 +299,10 @@ const (
 // release_cancelled terminal event.
 const releaseCancelledMessage = "Release cancelled"
 
+// releaseLiveMessage is the user-facing message recorded on the
+// release_released terminal event.
+const releaseLiveMessage = "Release is live"
+
 // ReleaseEventPage is a sequence-cursor page of release events.
 type ReleaseEventPage struct {
 	Events            []*models.ReleaseEvent
@@ -443,23 +441,82 @@ func (s *stackReleaseService) SaveManifest(ctx context.Context, id string, m *mo
 }
 
 func (s *stackReleaseService) MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
-	return s.store.MarkCancelled(ctx, id, reason)
+	won, serr := s.store.MarkCancelled(ctx, id, reason)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateCancelled, releaseCancelledMessage)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
-	return s.store.MarkSuperseded(ctx, id, reason)
+	won, serr := s.store.MarkSuperseded(ctx, id, reason)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateSuperseded, reason)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError) {
-	return s.store.MarkReleased(ctx, id, outcome)
+	won, serr := s.store.MarkReleased(ctx, id, outcome)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateReleased, releaseLiveMessage)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError) {
-	return s.store.MarkFailed(ctx, id, message, outcome)
+	won, serr := s.store.MarkFailed(ctx, id, message, outcome)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateFailed, message)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
-	return s.store.MarkFailedWithValidationErrors(ctx, id, message, verrs)
+	won, serr := s.store.MarkFailedWithValidationErrors(ctx, id, message, verrs)
+	if serr != nil || !won {
+		return won, serr
+	}
+	rel, getErr := s.store.GetByID(ctx, id)
+	if getErr != nil {
+		s.logger.Errorf("release %s: failed to load release for failure events: %v", id, getErr)
+		return true, nil
+	}
+	for _, verr := range verrs {
+		if recErr := s.eventRecorder.RecordReleaseCheckFailed(ctx, rel, verr.ResourceName, validationCheckKey(verr), verr.Message); recErr != nil {
+			s.logger.Errorf("release %s: failed to record release_check_failed event: %v", id, recErr)
+		}
+	}
+	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateFailed, message); recErr != nil {
+		s.logger.Errorf("release %s: failed to record release_failed event: %v", id, recErr)
+	}
+	return true, nil
+}
+
+// recordTerminalEvent runs after a won terminal CAS: the state change is
+// already persisted, so recording is best-effort and only the winner reaches
+// here — a requeue that lost the race cannot double-emit.
+func (s *stackReleaseService) recordTerminalEvent(ctx context.Context, id string, state models.StackReleaseState, message string) {
+	rel, serr := s.store.GetByID(ctx, id)
+	if serr != nil {
+		s.logger.Errorf("release %s: failed to load release for %s event: %v", id, state, serr)
+		return
+	}
+	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, state, message); recErr != nil {
+		s.logger.Errorf("release %s: failed to record %s event: %v", id, state, recErr)
+	}
+}
+
+// validationCheckKey identifies a check failure for event dedupe. The error
+// Code alone can collide across the pull and push checks of one resource,
+// so Field — which encodes the check surface — is prefixed to keep the
+// dedupe key unique per (resource, check).
+func validationCheckKey(verr models.ReleaseValidationError) string {
+	return fmt.Sprintf("%s:%s", verr.Field, verr.Code)
 }
 
 func (s *stackReleaseService) AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError {

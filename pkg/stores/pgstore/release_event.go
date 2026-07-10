@@ -23,9 +23,6 @@ type releaseEventStore struct {
 }
 
 func NewReleaseEventStore(spec ReleaseEventStoreSpec) stores.ReleaseEventStore {
-	if spec.SessionFactory == nil {
-		panic("ReleaseEventStore requires a SessionFactory")
-	}
 	return &releaseEventStore{
 		sessionFactory: spec.SessionFactory,
 		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
@@ -50,7 +47,10 @@ func (s *releaseEventStore) InsertWithTx(ctx context.Context, event *models.Rele
 		return nil, errors.GeneralError("transaction not found in context")
 	}
 
-	// Serialize sequence assignment per release (spec requirement).
+	// Lock the release row before computing MAX(sequence): two concurrent
+	// inserts for the same release would otherwise read the same max and
+	// collide on the (release_id, sequence) unique index. The lock also
+	// guarantees the parent release still exists for the FK insert below.
 	var release models.StackRelease
 	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
 		Select("id").

@@ -80,7 +80,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 					i, events[i].GetSequence(), events[i-1].GetSequence())
 			}
 
-			By("Asserting every event type is within the known 17-constant vocabulary")
+			By("Asserting every event type is within the known 18-constant vocabulary")
 			vocabulary := map[string]struct{}{
 				string(models.ReleaseEventTypeReleaseCreated):       {},
 				string(models.ReleaseEventTypeReleaseChecksStarted): {},
@@ -90,6 +90,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 				string(models.ReleaseEventTypeBuildQueued):          {},
 				string(models.ReleaseEventTypeBuildStarted):         {},
 				string(models.ReleaseEventTypeBuildSucceeded):       {},
+				string(models.ReleaseEventTypeBuildAttemptFailed):   {},
 				string(models.ReleaseEventTypeBuildFailed):          {},
 				string(models.ReleaseEventTypeResourceWaiting):      {},
 				string(models.ReleaseEventTypeResourceDeploying):    {},
@@ -100,7 +101,7 @@ var _ = Describe("Release E2E", Ordered, func() {
 				string(models.ReleaseEventTypeReleaseSuperseded):    {},
 				string(models.ReleaseEventTypeReleaseCancelled):     {},
 			}
-			Expect(vocabulary).To(HaveLen(17), "the release event vocabulary must contain exactly 17 types")
+			Expect(vocabulary).To(HaveLen(18), "the release event vocabulary must contain exactly 18 types")
 
 			counts := map[string]int{}
 			indexOf := map[string]int{}

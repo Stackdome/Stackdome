@@ -1,4 +1,4 @@
-package workspaceresource
+package stackresource
 
 import (
 	"context"
@@ -10,6 +10,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -23,6 +25,21 @@ import (
 const (
 	controllerName = "stack-resource-controller"
 )
+
+//go:generate mockgen -source=stack_resource_controller.go -destination=stack_resource_controller_mock.go -package=stackresource
+
+type releaseActiveChecker interface {
+	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
+}
+
+type resourceEventRecorder interface {
+	RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string, message string) *apperrors.ServiceError
+}
+
+// stalledReasonBuildFailed mirrors the Stalled condition reason the cluster
+// agent sets on a terminal build failure (image_build_reconciler.go); the
+// agent does not export its reason strings.
+const stalledReasonBuildFailed = "BuildFailed"
 
 type stackResourceReconciler struct {
 	client               client.Client
@@ -44,12 +61,6 @@ type StackResourceReconcilerSpec struct {
 }
 
 func NewStackResourceReconciler(spec StackResourceReconcilerSpec) *stackResourceReconciler {
-	if spec.ReleaseChecker == nil {
-		panic("StackResourceReconciler requires a ReleaseChecker")
-	}
-	if spec.EventRecorder == nil {
-		panic("StackResourceReconciler requires an EventRecorder")
-	}
 	return &stackResourceReconciler{
 		client:               nil,
 		stackResourceService: spec.StackResourceService,
@@ -119,7 +130,7 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if serr := w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %w", serr)
 		}
-		w.recordResourceEvent(ctx, stackID, dbStackResource)
+		w.recordResourceEvent(ctx, stackID, dbStackResource, stackResourceCr)
 		return ctrl.Result{}, nil
 	}
 	return ctrl.Result{}, nil
@@ -130,11 +141,11 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 // state transition is recorded at most once. A missing active release or a
 // recorder failure is non-fatal: the status update has already been persisted,
 // so both paths only log and return.
-func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stackID string, resource *models.StackResource) {
+func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stackID string, resource *models.StackResource, cr *corev1alpha1.StackResource) {
 	if resource.Status == nil {
 		return
 	}
-	eventType, reason, emit := resourceEventForState(resource.Status.State, resource.Status.Conditions, lastFailureReason(resource.Status.LastFailure))
+	eventType, reason, message, emit := resourceEvent(resource.Status.Conditions, resource.Status.LastFailure, convergedForGeneration(cr))
 	if !emit {
 		return
 	}
@@ -143,70 +154,87 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 		w.logger.Debugf("no active release for stack %s; skipping resource event for %s", stackID, resource.Name)
 		return
 	}
-	if recErr := w.eventRecorder.RecordResourceEvent(ctx, active, resource.Name, eventType, reason); recErr != nil {
+	if recErr := w.eventRecorder.RecordResourceEvent(ctx, active, resource.Name, eventType, reason, message); recErr != nil {
 		w.logger.Errorf("failed to record resource event for %s: %v", resource.Name, recErr)
 	}
 }
 
-// lastFailureReason extracts the most user-meaningful reason from a resource's
-// last failure. It prefers the human-readable Message and falls back to the
-// shorter Reason code, checking the main container first, then the init
-// container, then a build failure. Returns "" when no failure detail carries a
-// reason (a truthful empty reason).
-func lastFailureReason(f *models.StackResourceFailure) string {
-	if f == nil {
-		return ""
+// runtimeFailureDetail returns the reason code and long message of a runtime
+// crash, main container first, then init container. Build failures are the
+// imagebuild controller's to surface, so they are never read here.
+func runtimeFailureDetail(f *models.StackResourceFailure) (reason, message string) {
+	if f == nil || f.Type != models.FailureTypeRuntimeCrash {
+		return "", ""
 	}
 	for _, d := range []*models.ContainerFailureDetail{f.Container, f.InitContainer} {
 		if d == nil {
 			continue
 		}
-		if d.Message != "" {
-			return d.Message
-		}
-		if d.Reason != "" {
-			return d.Reason
+		if d.Reason != "" || d.Message != "" {
+			return d.Reason, d.Message
 		}
 	}
-	if f.Build != nil {
-		if f.Build.Message != "" {
-			return f.Build.Message
-		}
-		if f.Build.Reason != "" {
-			return f.Build.Reason
-		}
-	}
-	return ""
+	return "", ""
 }
 
-// resourceEventForState maps an observed resource state and the cluster-agent
-// conditions on it to a release timeline event. emit is false when no resource
-// event should be recorded: a build in progress (the imagebuild controller's
-// build events cover it) or an unmapped state. failureReason is the reason
-// derived from the resource's last failure, used on the failed path unless a
-// Stalled=True condition supplies a more specific message.
-func resourceEventForState(state models.StackResourceState, conditions []models.Condition, failureReason string) (eventType models.ReleaseEventType, reason string, emit bool) {
-	switch state {
-	case models.StackResourcePhasePending:
-		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceDependenciesReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
-			return models.ReleaseEventTypeResourceWaiting, cond.Message, true
+// convergedForGeneration mirrors the cluster agent's isResourceConverged: the
+// Converged condition only counts when it was written for the CR's current
+// generation, otherwise it is a leftover from a previous rollout. Computed
+// from the raw CR because the server-side condition model drops
+// ObservedGeneration.
+func convergedForGeneration(cr *corev1alpha1.StackResource) bool {
+	cond := meta.FindStatusCondition(cr.Status.Conditions, string(corev1alpha1.StackResourceConverged))
+	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == cr.Generation
+}
+
+// resourceEvent maps the cluster-agent's status conditions (and any captured
+// runtime crash detail) to a release timeline event. Conditions are the
+// authoritative signal — Phase is a coarse rollup the agent writes alongside
+// them. emit is false when the imagebuild controller's build events already
+// cover the state (build in progress, terminal build failure) or no condition
+// maps to an event.
+//
+// Available=True does NOT imply the rollout landed: the agent also reports it
+// when only the previous revision is still serving (Phase=Degraded). Ready
+// therefore additionally requires converged, and the not-converged path keeps
+// the Converged condition's detail so a stuck rollout is diagnosable from the
+// timeline.
+func resourceEvent(conditions []models.Condition, failure *models.StackResourceFailure, converged bool) (eventType models.ReleaseEventType, reason, message string, emit bool) {
+	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) {
+		if cond.Reason == stalledReasonBuildFailed {
+			return "", "", "", false
 		}
-		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceBuildReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
-			// Building — the imagebuild controller's build events cover this.
-			return "", "", false
-		}
-		return models.ReleaseEventTypeResourceDeploying, "", true
-	case models.StackResourcePhaseReady:
-		return models.ReleaseEventTypeResourceReady, "", true
-	case models.StackResourcePhaseFailed, models.StackResourcePhaseUnknown:
-		reason = failureReason
-		if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) && cond.Message != "" {
-			reason = cond.Message
-		}
-		return models.ReleaseEventTypeResourceFailed, reason, true
-	default:
-		return "", "", false
+		return models.ReleaseEventTypeResourceFailed, cond.Reason, cond.Message, true
 	}
+	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceDependenciesReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
+		return models.ReleaseEventTypeResourceWaiting, cond.Reason, cond.Message, true
+	}
+	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceBuildReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
+		return "", "", "", false
+	}
+	if r, m := runtimeFailureDetail(failure); r != "" || m != "" {
+		return models.ReleaseEventTypeResourceFailed, r, m, true
+	}
+	available := models.FindCondition(conditions, string(corev1alpha1.StackResourceStatusAvailable))
+	availableTrue := available != nil && available.Status == string(models.ConditionTrue)
+	convergedCond := models.FindCondition(conditions, string(corev1alpha1.StackResourceConverged))
+	if availableTrue && converged {
+		return models.ReleaseEventTypeResourceReady, "", "", true
+	}
+	if convergedCond != nil && !converged {
+		if convergedCond.Status == string(models.ConditionFalse) {
+			reason, message = convergedCond.Reason, convergedCond.Message
+		}
+		if availableTrue {
+			if message == "" {
+				message = "previous revision still serving"
+			} else {
+				message = "previous revision still serving; " + message
+			}
+		}
+		return models.ReleaseEventTypeResourceDeploying, reason, message, true
+	}
+	return "", "", "", false
 }
 
 // computeStatusRewrite rebuilds the whole server-side status from the cluster

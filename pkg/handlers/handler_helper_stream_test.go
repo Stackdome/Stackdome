@@ -4,8 +4,9 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/Stackdome/stackdome/pkg/interfaces"
 )
@@ -46,30 +47,26 @@ func (f fakeStreamable) Stream(ctx context.Context) (<-chan interfaces.StreamObj
 	return ch, nil
 }
 
-func TestInternalStreamHandler_WritesIDFrameWhenAvailable(t *testing.T) {
-	streamable := fakeStreamable{objects: []interfaces.StreamObject{
-		idStreamObject{data: `{"sequence":3}`, id: "3"},
-		plainStreamObject{data: `{"sequence":4}`},
-	}}
+var _ = Describe("internalStreamHandler", func() {
+	It("writes an id frame when the object provides one", func() {
+		streamable := fakeStreamable{objects: []interfaces.StreamObject{
+			idStreamObject{data: `{"sequence":3}`, id: "3"},
+			plainStreamObject{data: `{"sequence":4}`},
+		}}
 
-	req := httptest.NewRequest(http.MethodGet, "/stream", nil)
-	rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/stream", nil)
+		rec := httptest.NewRecorder()
 
-	cfg := &handlerConfig{}
-	internalStreamHandler(rec, req, streamable, cfg)
+		cfg := &handlerConfig{}
+		internalStreamHandler(rec, req, streamable, cfg)
 
-	body := rec.Body.String()
+		body := rec.Body.String()
 
-	// The object implementing StreamObjectWithID gets an id line before its data.
-	if !strings.Contains(body, "id: 3\ndata: {\"sequence\":3}\n\n") {
-		t.Fatalf("expected id+data frame for the object with an ID, got:\n%q", body)
-	}
+		// The object implementing StreamObjectWithID gets an id line before its data.
+		Expect(body).To(ContainSubstring("id: 3\ndata: {\"sequence\":3}\n\n"))
 
-	// The plain object gets a data frame with no id line.
-	if !strings.Contains(body, "data: {\"sequence\":4}\n\n") {
-		t.Fatalf("expected data frame for the plain object, got:\n%q", body)
-	}
-	if strings.Contains(body, "id: 4") {
-		t.Fatalf("did not expect an id line for the plain object, got:\n%q", body)
-	}
-}
+		// The plain object gets a data frame with no id line.
+		Expect(body).To(ContainSubstring("data: {\"sequence\":4}\n\n"))
+		Expect(body).NotTo(ContainSubstring("id: 4"))
+	})
+})

@@ -59,7 +59,6 @@ func isTransientClusterError(err error) bool {
 type applyReconciler struct {
 	releaseService       releaseService
 	stackService         stackService
-	eventRecorder        eventRecorder
 	clusterManager       clustermanager.ClusterManager
 	secretBuilder        builders.SecretBuilder
 	secretService        secretService
@@ -73,7 +72,6 @@ func newApplyReconciler(spec ReleaseWorkerSpec) *applyReconciler {
 	return &applyReconciler{
 		releaseService:       spec.ReleaseService,
 		stackService:         spec.StackService,
-		eventRecorder:        spec.EventRecorder,
 		clusterManager:       spec.ClusterManager,
 		secretBuilder:        spec.SecretBuilder,
 		secretService:        spec.SecretService,
@@ -94,14 +92,14 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 	stack, serr := r.stackService.InternalGetStack(ctx, release.StackID)
 	if serr != nil {
 		if serr.Is404() {
-			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, "stack not found")
+			failRelease(ctx, r.releaseService, r.logger, release, "stack not found")
 			return resultStop, nil
 		}
 		return resultNil, fmt.Errorf("failed to get stack: %w", serr)
 	}
 
 	if stack.DeletionTimestamp != nil {
-		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, "stack is being deleted")
+		failRelease(ctx, r.releaseService, r.logger, release, "stack is being deleted")
 		return resultStop, nil
 	}
 
@@ -139,7 +137,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 	if err := r.verifyReferencedVolumesExist(ctx, release); err != nil {
 		var missing *missingVolumesError
 		if stderrors.As(err, &missing) {
-			failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, err.Error())
+			failRelease(ctx, r.releaseService, r.logger, release, err.Error())
 			return resultStop, nil
 		}
 		return resultNil, fmt.Errorf("failed to verify referenced volumes exist: %w", err)
@@ -154,7 +152,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 			r.logger.Warnf("release %s: transient error applying stack CR, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
 		return resultStop, nil
 	}
 	if err := r.applyStackResourceCRs(ctx, clusterClient, release, stackCR); err != nil {
@@ -162,7 +160,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 			r.logger.Warnf("release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
-		failRelease(ctx, r.releaseService, r.eventRecorder, r.logger, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
+		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
 		return resultStop, nil
 	}
 
@@ -191,19 +189,11 @@ func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *c
 		return false, nil
 	}
 
-	reason := fmt.Sprintf("superseded by release #%d already applied to cluster", appliedRelease.Sequence)
-	won, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason)
-	if err != nil {
+	reason := fmt.Sprintf(supersededEventMessageFmt, appliedRelease.Sequence)
+	if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
 		return false, fmt.Errorf("failed to mark release superseded: %w", err)
 	}
 	r.logger.Infof("release %s: %s", release.ID, reason)
-	if won {
-		release.State = models.ReleaseStateSuperseded
-		message := fmt.Sprintf(supersededEventMessageFmt, appliedRelease.Sequence)
-		if recErr := r.eventRecorder.RecordReleaseTerminal(ctx, release, models.ReleaseStateSuperseded, message); recErr != nil {
-			r.logger.Errorf("release %s: failed to record release_superseded event: %v", release.ID, recErr)
-		}
-	}
 	return true, nil
 }
 

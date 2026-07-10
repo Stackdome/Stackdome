@@ -25,19 +25,12 @@ const (
 	controllerName = "image-build-controller"
 )
 
-//go:generate mockgen -source=image_build_controller.go -destination=image_build_controller_mock_test.go -package=imagebuild
+//go:generate mockgen -source=image_build_controller.go -destination=image_build_controller_mock.go -package=imagebuild
 
-// releaseActiveChecker is a narrow interface to check for an active release
-// without importing the full StackReleaseService (mirrors the same seam the
-// stack controller uses).
 type releaseActiveChecker interface {
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
 }
 
-// buildEventRecorder records release lifecycle events for builds. It is declared
-// locally (rather than reusing services.ReleaseEventRecorder) so the tests can
-// mock it in-package: the services gomock mock lives in the services test
-// package, and depending on it from here would create an import cycle.
 type buildEventRecorder interface {
 	RecordBuildEvent(
 		ctx context.Context,
@@ -46,7 +39,7 @@ type buildEventRecorder interface {
 		eventType models.ReleaseEventType,
 		buildID string,
 		attribution string,
-		reason string,
+		failure *models.BuildFailureDetail,
 	) *apperrors.ServiceError
 }
 
@@ -75,12 +68,6 @@ type ImageBuildReconcilerSpec struct {
 }
 
 func NewImageBuildReconciler(spec ImageBuildReconcilerSpec) *ImageBuildReconciler {
-	if spec.ReleaseChecker == nil {
-		panic("imagebuild: ReleaseChecker is required")
-	}
-	if spec.EventRecorder == nil {
-		panic("imagebuild: EventRecorder is required")
-	}
 	return &ImageBuildReconciler{
 		Client:                spec.Client,
 		DBImageBuildService:   spec.DBImageBuildService,
@@ -302,15 +289,22 @@ func (r *ImageBuildReconciler) recordBuildEvent(
 	build *models.ImageBuild,
 ) {
 	var eventType models.ReleaseEventType
-	var reason string
+	var failure *models.BuildFailureDetail
 	switch cr.Status.Phase {
 	case buildsv1alpha1.BuildPhasePending:
-		eventType = models.ReleaseEventTypeBuildStarted
+		if cr.Status.LastBuildFailureDetail != nil {
+			// The build job is still retrying (Failed only lands once the job's
+			// backoff limit is exhausted), but an attempt already errored.
+			eventType = models.ReleaseEventTypeBuildAttemptFailed
+			failure = controllers.MapBuildFailureDetail(cr.Status.LastBuildFailureDetail)
+		} else {
+			eventType = models.ReleaseEventTypeBuildStarted
+		}
 	case buildsv1alpha1.BuildPhaseSuccess:
 		eventType = models.ReleaseEventTypeBuildSucceeded
 	case buildsv1alpha1.BuildPhaseFailed:
 		eventType = models.ReleaseEventTypeBuildFailed
-		reason = buildFailureReason(cr.Status)
+		failure = controllers.MapBuildFailureDetail(cr.Status.LastBuildFailureDetail)
 	default:
 		// Cancelled and unknown phases emit nothing.
 		return
@@ -334,23 +328,10 @@ func (r *ImageBuildReconciler) recordBuildEvent(
 	}
 
 	if recErr := r.eventRecorder.RecordBuildEvent(
-		ctx, active, cr.Spec.ResourceName, eventType, build.ID, attribution, reason,
+		ctx, active, cr.Spec.ResourceName, eventType, build.ID, attribution, failure,
 	); recErr != nil {
 		r.Logger.Errorf("failed to record build event for build %s: %v", build.ID, recErr)
 	}
-}
-
-// buildFailureReason extracts a human-readable failure reason from the build
-// status the controller already observes.
-func buildFailureReason(status buildsv1alpha1.ImageBuildStatus) string {
-	d := status.LastBuildFailureDetail
-	if d == nil {
-		return ""
-	}
-	if d.LastTerminationMessage != "" {
-		return d.LastTerminationMessage
-	}
-	return d.LastTerminationReason
 }
 
 // buildMatchesReleasePins reports whether the active release's pins

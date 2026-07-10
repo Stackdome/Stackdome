@@ -13,7 +13,7 @@ import (
 // Record method references ReleaseEventInput, so a pkg/mocks mock would import
 // services and close an import cycle (services -> auth -> mocks -> services).
 // This mirrors the NamespaceService pattern above.
-//go:generate mockgen -source=release_event_recorder.go -destination=release_event_recorder_mock_test.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
+//go:generate mockgen -source=release_event_recorder.go -destination=release_event_recorder_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
 
 type ReleaseEventInput struct {
 	Release      *models.StackRelease
@@ -32,8 +32,8 @@ type ReleaseEventRecorder interface {
 	RecordReleaseCheckFailed(ctx context.Context, release *models.StackRelease, resourceName, check, reason string) *errors.ServiceError
 	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
-	RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, reason string) *errors.ServiceError
-	RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string) *errors.ServiceError
+	RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError
+	RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string, message string) *errors.ServiceError
 	RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError
 }
 
@@ -50,6 +50,7 @@ var eventTypeMeta = map[models.ReleaseEventType]struct {
 	models.ReleaseEventTypeBuildQueued:          {models.ReleaseEventScopeResource, models.ReleaseEventLevelInfo},
 	models.ReleaseEventTypeBuildStarted:         {models.ReleaseEventScopeResource, models.ReleaseEventLevelInfo},
 	models.ReleaseEventTypeBuildSucceeded:       {models.ReleaseEventScopeResource, models.ReleaseEventLevelSuccess},
+	models.ReleaseEventTypeBuildAttemptFailed:   {models.ReleaseEventScopeResource, models.ReleaseEventLevelWarning},
 	models.ReleaseEventTypeBuildFailed:          {models.ReleaseEventScopeResource, models.ReleaseEventLevelError},
 	models.ReleaseEventTypeResourceWaiting:      {models.ReleaseEventScopeResource, models.ReleaseEventLevelWarning},
 	models.ReleaseEventTypeResourceDeploying:    {models.ReleaseEventScopeResource, models.ReleaseEventLevelInfo},
@@ -77,9 +78,6 @@ type releaseEventRecorder struct {
 }
 
 func NewReleaseEventRecorder(spec ReleaseEventRecorderSpec) ReleaseEventRecorder {
-	if spec.Store == nil {
-		panic("ReleaseEventRecorder requires a ReleaseEventStore")
-	}
 	return &releaseEventRecorder{store: spec.Store}
 }
 
@@ -186,18 +184,17 @@ func (r *releaseEventRecorder) RecordReleaseStarted(ctx context.Context, release
 	return serr
 }
 
-func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, reason string) *errors.ServiceError {
+func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError {
 	var message string
 	switch eventType {
 	case models.ReleaseEventTypeBuildStarted:
 		message = fmt.Sprintf("Building %s", resourceName)
 	case models.ReleaseEventTypeBuildSucceeded:
 		message = fmt.Sprintf("Build succeeded for %s", resourceName)
+	case models.ReleaseEventTypeBuildAttemptFailed:
+		message = withFailureDetail(fmt.Sprintf("Build attempt failed for %s (will retry)", resourceName), failure)
 	case models.ReleaseEventTypeBuildFailed:
-		message = fmt.Sprintf("Build failed for %s", resourceName)
-		if reason != "" {
-			message = fmt.Sprintf("%s: %s", message, reason)
-		}
+		message = withFailureDetail(fmt.Sprintf("Build failed for %s", resourceName), failure)
 	default:
 		return errors.GeneralError("unsupported build event type %q", eventType)
 	}
@@ -205,8 +202,8 @@ func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *mo
 	if attribution != "" {
 		metadata[models.ReleaseEventMetaAttribution] = attribution
 	}
-	if reason != "" {
-		metadata[models.ReleaseEventMetaReason] = reason
+	if failure != nil && failure.Reason != "" {
+		metadata[models.ReleaseEventMetaReason] = failure.Reason
 	}
 	var links models.ReleaseEventLinks
 	if buildID != "" {
@@ -231,22 +228,36 @@ func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *mo
 	return serr
 }
 
-func (r *releaseEventRecorder) RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string) *errors.ServiceError {
-	var message string
+func (r *releaseEventRecorder) RecordResourceEvent(
+	ctx context.Context,
+	release *models.StackRelease,
+	resourceName string,
+	eventType models.ReleaseEventType,
+	reason string,
+	message string,
+) *errors.ServiceError {
+	detail := message
+	if detail == "" {
+		detail = reason
+	}
+	var text string
 	switch eventType {
 	case models.ReleaseEventTypeResourceWaiting:
-		message = fmt.Sprintf("%s is waiting on dependencies", resourceName)
-		if reason != "" {
-			message = fmt.Sprintf("%s is waiting: %s", resourceName, reason)
+		text = fmt.Sprintf("%s is waiting on dependencies", resourceName)
+		if detail != "" {
+			text = fmt.Sprintf("%s is waiting: %s", resourceName, detail)
 		}
 	case models.ReleaseEventTypeResourceDeploying:
-		message = fmt.Sprintf("Deploying %s", resourceName)
+		text = fmt.Sprintf("Deploying %s", resourceName)
+		if detail != "" {
+			text = fmt.Sprintf("%s: %s", text, detail)
+		}
 	case models.ReleaseEventTypeResourceReady:
-		message = fmt.Sprintf("%s is ready", resourceName)
+		text = fmt.Sprintf("%s is ready", resourceName)
 	case models.ReleaseEventTypeResourceFailed:
-		message = fmt.Sprintf("%s failed to start", resourceName)
-		if reason != "" {
-			message = fmt.Sprintf("%s: %s", message, reason)
+		text = fmt.Sprintf("%s failed to start", resourceName)
+		if detail != "" {
+			text = fmt.Sprintf("%s: %s", text, detail)
 		}
 	default:
 		return errors.GeneralError("unsupported resource event type %q", eventType)
@@ -259,11 +270,27 @@ func (r *releaseEventRecorder) RecordResourceEvent(ctx context.Context, release 
 		Release:      release,
 		ResourceName: resourceName,
 		Type:         eventType,
-		Message:      message,
+		Message:      text,
 		DedupeKey:    fmt.Sprintf("resource:%s:%s", resourceName, eventType),
 		Metadata:     metadata,
 	})
 	return serr
+}
+
+// withFailureDetail appends the failure's long message (or its short reason
+// when no message was captured) to the base event text.
+func withFailureDetail(base string, failure *models.BuildFailureDetail) string {
+	if failure == nil {
+		return base
+	}
+	detail := failure.Message
+	if detail == "" {
+		detail = failure.Reason
+	}
+	if detail == "" {
+		return base
+	}
+	return fmt.Sprintf("%s: %s", base, detail)
 }
 
 func (r *releaseEventRecorder) RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError {

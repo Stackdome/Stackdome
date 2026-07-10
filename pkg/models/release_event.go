@@ -18,15 +18,19 @@ const (
 	ReleaseEventTypeBuildQueued          ReleaseEventType = "build_queued" // reserved; not emitted in v1
 	ReleaseEventTypeBuildStarted         ReleaseEventType = "build_started"
 	ReleaseEventTypeBuildSucceeded       ReleaseEventType = "build_succeeded"
-	ReleaseEventTypeBuildFailed          ReleaseEventType = "build_failed"
-	ReleaseEventTypeResourceWaiting      ReleaseEventType = "resource_waiting"
-	ReleaseEventTypeResourceDeploying    ReleaseEventType = "resource_deploying"
-	ReleaseEventTypeResourceReady        ReleaseEventType = "resource_ready"
-	ReleaseEventTypeResourceFailed       ReleaseEventType = "resource_failed"
-	ReleaseEventTypeReleaseReleased      ReleaseEventType = "release_released"
-	ReleaseEventTypeReleaseFailed        ReleaseEventType = "release_failed"
-	ReleaseEventTypeReleaseSuperseded    ReleaseEventType = "release_superseded"
-	ReleaseEventTypeReleaseCancelled     ReleaseEventType = "release_cancelled"
+	// ReleaseEventTypeBuildAttemptFailed: a build attempt errored but the build
+	// job is still retrying (ImageBuild phase stays Pending until the job's
+	// backoff limit is exhausted).
+	ReleaseEventTypeBuildAttemptFailed ReleaseEventType = "build_attempt_failed"
+	ReleaseEventTypeBuildFailed        ReleaseEventType = "build_failed"
+	ReleaseEventTypeResourceWaiting    ReleaseEventType = "resource_waiting"
+	ReleaseEventTypeResourceDeploying  ReleaseEventType = "resource_deploying"
+	ReleaseEventTypeResourceReady      ReleaseEventType = "resource_ready"
+	ReleaseEventTypeResourceFailed     ReleaseEventType = "resource_failed"
+	ReleaseEventTypeReleaseReleased    ReleaseEventType = "release_released"
+	ReleaseEventTypeReleaseFailed      ReleaseEventType = "release_failed"
+	ReleaseEventTypeReleaseSuperseded  ReleaseEventType = "release_superseded"
+	ReleaseEventTypeReleaseCancelled   ReleaseEventType = "release_cancelled"
 )
 
 type ReleaseEventScope string
@@ -60,7 +64,11 @@ const (
 	ReleaseEventMetaBuildID     = "build_id"
 )
 
-// ReleaseEventAttributionActiveRelease marks best-effort build attribution.
+// ReleaseEventAttributionActiveRelease is set on a build event whose build
+// could not be matched to the release's pins (no per-resource git SHA/volume
+// hash match), so it was attributed to whichever release was active when the
+// build status changed. Consumers should treat such events as best-effort:
+// the build may belong to an older or concurrent release.
 const ReleaseEventAttributionActiveRelease = "active_release"
 
 // Link kinds.

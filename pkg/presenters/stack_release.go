@@ -169,7 +169,7 @@ func PresentReleaseEvent(e *models.ReleaseEvent) openapi.ReleaseEvent {
 			links[i] = openapi.ReleaseEventLink{
 				Kind:   ptr.To(l.Kind),
 				Label:  ptr.To(l.Label),
-				Target: ptr.To(map[string]string(l.Target)),
+				Target: ptr.To(l.Target),
 			}
 		}
 		result.Links = links

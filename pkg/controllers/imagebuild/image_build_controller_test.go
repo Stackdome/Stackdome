@@ -4,8 +4,20 @@ import (
 	"context"
 	"testing"
 
+	apperrors "github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	ctrlreconcile "sigs.k8s.io/controller-runtime/pkg/reconcile"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
@@ -199,3 +211,331 @@ func TestPropagateBuildFailure_nilStatusWithoutFailureIsNoOp(t *testing.T) {
 		t.Fatalf("expected no error when there is no failure to propagate, got %v", err)
 	}
 }
+
+const (
+	testEventStackID      = "stack-1"
+	testEventResourceName = "api"
+	testEventBuildID      = "build-1"
+	testEventNamespace    = "ns-1"
+)
+
+func newEventReconciler() (*ImageBuildReconciler, *MockreleaseActiveChecker, *MockbuildEventRecorder) {
+	ctrl := gomock.NewController(GinkgoT())
+	checker := NewMockreleaseActiveChecker(ctrl)
+	recorder := NewMockbuildEventRecorder(ctrl)
+	r := &ImageBuildReconciler{
+		Logger:         logger.NewLoggerWithPrefix(context.Background(), "event-test"),
+		releaseChecker: checker,
+		eventRecorder:  recorder,
+	}
+	return r, checker, recorder
+}
+
+func eventBuildCR(phase buildsv1alpha1.BuildPhase) *buildsv1alpha1.ImageBuild {
+	return &buildsv1alpha1.ImageBuild{
+		ObjectMeta: metav1.ObjectMeta{Name: testEventBuildID, Namespace: testEventNamespace},
+		Spec:       buildsv1alpha1.ImageBuildSpec{ResourceName: testEventResourceName},
+		Status:     buildsv1alpha1.ImageBuildStatus{Phase: phase},
+	}
+}
+
+func gitBuildModel(commit string) *models.ImageBuild {
+	return &models.ImageBuild{
+		ID: testEventBuildID,
+		Spec: models.BuildConfigSpec{
+			SourceRevision: models.BuildSourceRevision{
+				Git: &models.GitRevision{Commit: commit},
+			},
+		},
+	}
+}
+
+var _ = Describe("recordBuildEvent", func() {
+	DescribeTable("phase to event type mapping with best-effort active-release attribution",
+		func(phase buildsv1alpha1.BuildPhase, eventType models.ReleaseEventType) {
+			r, checker, recorder := newEventReconciler()
+			active := &models.StackRelease{ID: "rel-1"}
+
+			checker.EXPECT().
+				InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+				Return(active, nil)
+			recorder.EXPECT().
+				RecordBuildEvent(
+					gomock.Any(),
+					active,
+					testEventResourceName,
+					eventType,
+					testEventBuildID,
+					models.ReleaseEventAttributionActiveRelease,
+					nil,
+				).
+				Return(nil)
+
+			r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(phase), gitBuildModel("deadbeef"))
+		},
+		Entry("pending emits build_started", buildsv1alpha1.BuildPhasePending, models.ReleaseEventTypeBuildStarted),
+		Entry("success emits build_succeeded", buildsv1alpha1.BuildPhaseSuccess, models.ReleaseEventTypeBuildSucceeded),
+		Entry("failed emits build_failed", buildsv1alpha1.BuildPhaseFailed, models.ReleaseEventTypeBuildFailed),
+	)
+
+	It("includes the mapped failure detail on failed builds", func() {
+		r, checker, recorder := newEventReconciler()
+		active := &models.StackRelease{ID: "rel-1"}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhaseFailed)
+		cr.Status.LastBuildFailureDetail = &corev1alpha1.LastFailureDetail{
+			LastTerminationReason:   "Error",
+			LastTerminationMessage:  "COPY failed: file not found",
+			LastTerminationExitCode: ptr.To(int32(1)),
+		}
+
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(active, nil)
+		recorder.EXPECT().
+			RecordBuildEvent(
+				gomock.Any(),
+				active,
+				testEventResourceName,
+				models.ReleaseEventTypeBuildFailed,
+				testEventBuildID,
+				models.ReleaseEventAttributionActiveRelease,
+				&models.BuildFailureDetail{
+					FailureType: "exit_error",
+					Reason:      "Error",
+					Message:     "COPY failed: file not found",
+					ExitCode:    ptr.To(int32(1)),
+				},
+			).
+			Return(nil)
+
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("deadbeef"))
+	})
+
+	It("records build_attempt_failed when a pending build carries a failure detail", func() {
+		r, checker, recorder := newEventReconciler()
+		active := &models.StackRelease{ID: "rel-1"}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhasePending)
+		cr.Status.LastBuildFailureDetail = &corev1alpha1.LastFailureDetail{
+			LastTerminationReason:   "OOMKilled",
+			LastTerminationMessage:  "build container OOMKilled",
+			RestartCount:            2,
+			LastTerminationExitCode: ptr.To(int32(137)),
+		}
+
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(active, nil)
+		// build_attempt_failed only: gomock rejects a build_started call.
+		recorder.EXPECT().
+			RecordBuildEvent(
+				gomock.Any(),
+				active,
+				testEventResourceName,
+				models.ReleaseEventTypeBuildAttemptFailed,
+				testEventBuildID,
+				models.ReleaseEventAttributionActiveRelease,
+				&models.BuildFailureDetail{
+					FailureType:  "out_of_memory",
+					Reason:       "OOMKilled",
+					Message:      "build container OOMKilled",
+					RestartCount: 2,
+					ExitCode:     ptr.To(int32(137)),
+				},
+			).
+			Return(nil)
+
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("deadbeef"))
+	})
+
+	DescribeTable("phases that emit nothing",
+		func(phase buildsv1alpha1.BuildPhase) {
+			// No checker/recorder EXPECT: gomock fails the spec on any call.
+			r, _, _ := newEventReconciler()
+			r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(phase), gitBuildModel("deadbeef"))
+		},
+		Entry("cancelled", buildsv1alpha1.BuildPhaseCancelled),
+		Entry("unknown phase", buildsv1alpha1.BuildPhase("Weird")),
+	)
+
+	DescribeTable("skips the recorder when there is no active release",
+		func(active *models.StackRelease, serr *apperrors.ServiceError) {
+			r, checker, _ := newEventReconciler()
+			checker.EXPECT().
+				InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+				Return(active, serr)
+			// No recorder EXPECT: it must not be called.
+			r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhasePending), gitBuildModel("deadbeef"))
+		},
+		Entry("nil active release", nil, nil),
+		Entry("lookup error", nil, apperrors.GeneralError("boom")),
+	)
+
+	DescribeTable("deterministic pin match drops the attribution marker",
+		func(pins models.ReleasePins, build *models.ImageBuild) {
+			r, checker, recorder := newEventReconciler()
+			active := &models.StackRelease{ID: "rel-1", Pins: pins}
+
+			checker.EXPECT().
+				InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+				Return(active, nil)
+			recorder.EXPECT().
+				RecordBuildEvent(
+					gomock.Any(),
+					active,
+					testEventResourceName,
+					models.ReleaseEventTypeBuildStarted,
+					testEventBuildID,
+					"", // deterministic pin match: no attribution marker
+					nil,
+				).
+				Return(nil)
+
+			r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhasePending), build)
+		},
+		Entry("git commit pin match",
+			models.ReleasePins{Resources: map[string]models.ResourcePins{
+				testEventResourceName: {GitSHA: "abc123"},
+			}},
+			gitBuildModel("abc123"),
+		),
+		Entry("volume hash pin match",
+			models.ReleasePins{Resources: map[string]models.ResourcePins{
+				testEventResourceName: {VolumeHash: "vh-9"},
+			}},
+			&models.ImageBuild{
+				ID: testEventBuildID,
+				Spec: models.BuildConfigSpec{
+					SourceRevision: models.BuildSourceRevision{
+						Volume: &models.VolumeRevision{CurrentVolumeHash: "vh-9"},
+					},
+				},
+			},
+		),
+	)
+
+	It("falls back to active-release attribution on a pin mismatch", func() {
+		r, checker, recorder := newEventReconciler()
+		active := &models.StackRelease{
+			ID: "rel-1",
+			Pins: models.ReleasePins{Resources: map[string]models.ResourcePins{
+				testEventResourceName: {GitSHA: "abc123"},
+			}},
+		}
+
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(active, nil)
+		recorder.EXPECT().
+			RecordBuildEvent(
+				gomock.Any(), active, testEventResourceName,
+				models.ReleaseEventTypeBuildStarted, testEventBuildID,
+				models.ReleaseEventAttributionActiveRelease, nil,
+			).
+			Return(nil)
+
+		r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhasePending), gitBuildModel("differentsha"))
+	})
+
+	It("swallows recorder errors", func() {
+		r, checker, recorder := newEventReconciler()
+		active := &models.StackRelease{ID: "rel-1"}
+
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(active, nil)
+		recorder.EXPECT().
+			RecordBuildEvent(gomock.Any(), active, testEventResourceName, gomock.Any(), testEventBuildID, gomock.Any(), gomock.Any()).
+			Return(apperrors.GeneralError("db down"))
+
+		// Must not panic or otherwise surface the error.
+		r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhaseSuccess), gitBuildModel("deadbeef"))
+	})
+})
+
+func eventsTestScheme() *runtime.Scheme {
+	scheme := runtime.NewScheme()
+	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
+	Expect(buildsv1alpha1.AddToScheme(scheme)).To(Succeed())
+	return scheme
+}
+
+func reconcileCR(phase buildsv1alpha1.BuildPhase, statusHash string) *buildsv1alpha1.ImageBuild {
+	cr := eventBuildCR(phase)
+	cr.Labels = map[string]string{corev1alpha1.LabelStackID: testEventStackID}
+	cr.Status.StatusHash = statusHash
+	return cr
+}
+
+func newReconcileHarness(cr *buildsv1alpha1.ImageBuild) (
+	*ImageBuildReconciler, *mocks.MockStackResourceService, *mocks.MockImageBuildService, *MockreleaseActiveChecker, *MockbuildEventRecorder,
+) {
+	ctrl := gomock.NewController(GinkgoT())
+
+	resources := mocks.NewMockStackResourceService(ctrl)
+	builds := mocks.NewMockImageBuildService(ctrl)
+	checker := NewMockreleaseActiveChecker(ctrl)
+	recorder := NewMockbuildEventRecorder(ctrl)
+
+	fakeClient := fake.NewClientBuilder().WithScheme(eventsTestScheme()).WithObjects(cr).Build()
+
+	r := &ImageBuildReconciler{
+		Client:              fakeClient,
+		DBResourceService:   resources,
+		DBImageBuildService: builds,
+		Logger:              logger.NewLoggerWithPrefix(context.Background(), "reconcile-test"),
+		releaseChecker:      checker,
+		eventRecorder:       recorder,
+	}
+	return r, resources, builds, checker, recorder
+}
+
+var _ = Describe("Reconcile build event hook", func() {
+	// The hook lives strictly inside the StatusHash-change gate.
+	It("records no event when the status hash is unchanged", func() {
+		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "same-hash")
+		r, resources, builds, _, _ := newReconcileHarness(cr)
+
+		resources.EXPECT().
+			InternalGetByStackIDAndResourceName(gomock.Any(), testEventStackID, testEventResourceName).
+			Return(&models.StackResource{ID: "res-1", StackID: testEventStackID, Name: testEventResourceName}, nil)
+		builds.EXPECT().
+			InternalGetByID(gomock.Any(), testEventBuildID).
+			Return(&models.ImageBuild{
+				ID:     testEventBuildID,
+				Status: &models.ImageBuildStatus{LastObservedStatusHash: "same-hash"},
+			}, nil)
+		// No InternalUpdateStatus, no checker, no recorder: the hash gate is closed.
+
+		_, err := r.Reconcile(context.Background(), ctrlreconcile.Request{
+			NamespacedName: client.ObjectKey{Name: testEventBuildID, Namespace: testEventNamespace},
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("updates status and skips the recorder when the hash changed but no release is active", func() {
+		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "new-hash")
+		r, resources, builds, checker, _ := newReconcileHarness(cr)
+
+		resources.EXPECT().
+			InternalGetByStackIDAndResourceName(gomock.Any(), testEventStackID, testEventResourceName).
+			Return(&models.StackResource{ID: "res-1", StackID: testEventStackID, Name: testEventResourceName}, nil)
+		builds.EXPECT().
+			InternalGetByID(gomock.Any(), testEventBuildID).
+			Return(&models.ImageBuild{
+				ID:     testEventBuildID,
+				Status: &models.ImageBuildStatus{LastObservedStatusHash: "old-hash"},
+			}, nil)
+		builds.EXPECT().
+			InternalUpdateStatus(gomock.Any(), testEventBuildID, gomock.Any()).
+			Return(nil)
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(nil, nil)
+		// No recorder EXPECT: no active release means no event.
+
+		_, err := r.Reconcile(context.Background(), ctrlreconcile.Request{
+			NamespacedName: client.ObjectKey{Name: testEventBuildID, Namespace: testEventNamespace},
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+})
