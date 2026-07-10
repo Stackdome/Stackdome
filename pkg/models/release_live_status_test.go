@@ -68,7 +68,7 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 	})
 
 	ginkgo.It("rolls up degraded from the stack Degraded condition when no resource failed", func() {
-		stack.Status.Conditions = []Condition{{Type: string(StackConditionDegraded), Status: "True"}}
+		stack.Status.Conditions = []Condition{{Type: string(StackConditionDegraded), Status: string(ConditionTrue)}}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthDegraded))
 	})
 })

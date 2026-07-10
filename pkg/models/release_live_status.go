@@ -66,10 +66,8 @@ func rollupHealth(release *StackRelease, stack *Stack) ReleaseHealth {
 		}
 	}
 	if health == ReleaseHealthOK {
-		for _, c := range stack.Status.Conditions {
-			if c.Type == string(StackConditionDegraded) && c.Status == "True" {
-				return ReleaseHealthDegraded
-			}
+		if IsConditionTrue(stack.Status.Conditions, string(StackConditionDegraded)) {
+			return ReleaseHealthDegraded
 		}
 		if release.State.Active() {
 			return ReleaseHealthProgressing
