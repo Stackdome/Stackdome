@@ -339,6 +339,63 @@ func (s *stackReleaseStore) ListStackIDsExceedingRetention(ctx context.Context, 
 	return stackIDs, nil
 }
 
+// GetLatestByStackID returns the highest-sequence release for a stack, any state,
+// or (nil, nil) if the stack has no releases.
+func (s *stackReleaseStore) GetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+	var release models.StackRelease
+	err := s.sessionFactory.New(ctx).
+		Where("stack_id = ?", stackID).
+		Order("sequence DESC").
+		First(&release).Error
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, errors.GeneralError("failed to get latest release: %s", err.Error())
+	}
+	return &release, nil
+}
+
+// GetLatestByStackIDs returns the highest-sequence release for each of the given
+// stack IDs, keyed by stack ID. Stacks with no releases are absent from the map.
+func (s *stackReleaseStore) GetLatestByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	result := make(map[string]*models.StackRelease, len(stackIDs))
+	if len(stackIDs) == 0 {
+		return result, nil
+	}
+	var releases []*models.StackRelease
+	err := s.sessionFactory.New(ctx).
+		Where("id IN (?)", s.sessionFactory.New(ctx).
+			Model(&models.StackRelease{}).
+			Select("DISTINCT ON (stack_id) id").
+			Where("stack_id IN ?", stackIDs).
+			Order("stack_id, sequence DESC")).
+		Find(&releases).Error
+	if err != nil {
+		return nil, errors.GeneralError("failed to get latest releases: %s", err.Error())
+	}
+	for _, r := range releases {
+		result[r.StackID] = r
+	}
+	return result, nil
+}
+
+// GetByIDs returns releases keyed by release ID.
+func (s *stackReleaseStore) GetByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	result := make(map[string]*models.StackRelease, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+	var releases []*models.StackRelease
+	if err := s.sessionFactory.New(ctx).Where("id IN ?", ids).Find(&releases).Error; err != nil {
+		return nil, errors.GeneralError("failed to get releases by ids: %s", err.Error())
+	}
+	for _, r := range releases {
+		result[r.ID] = r
+	}
+	return result, nil
+}
+
 // AppendImageDigests merges image digests into the release's pins.
 func (s *stackReleaseStore) AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError {
 	release, svcErr := s.GetByID(ctx, id)

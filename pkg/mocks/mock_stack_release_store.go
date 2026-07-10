@@ -131,6 +131,51 @@ func (mr *MockStackReleaseStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockStackReleaseStore)(nil).GetByID), ctx, id)
 }
 
+// GetByIDs mocks base method.
+func (m *MockStackReleaseStore) GetByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIDs", ctx, ids)
+	ret0, _ := ret[0].(map[string]*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetByIDs indicates an expected call of GetByIDs.
+func (mr *MockStackReleaseStoreMockRecorder) GetByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIDs", reflect.TypeOf((*MockStackReleaseStore)(nil).GetByIDs), ctx, ids)
+}
+
+// GetLatestByStackID mocks base method.
+func (m *MockStackReleaseStore) GetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestByStackID", ctx, stackID)
+	ret0, _ := ret[0].(*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetLatestByStackID indicates an expected call of GetLatestByStackID.
+func (mr *MockStackReleaseStoreMockRecorder) GetLatestByStackID(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByStackID", reflect.TypeOf((*MockStackReleaseStore)(nil).GetLatestByStackID), ctx, stackID)
+}
+
+// GetLatestByStackIDs mocks base method.
+func (m *MockStackReleaseStore) GetLatestByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestByStackIDs", ctx, stackIDs)
+	ret0, _ := ret[0].(map[string]*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetLatestByStackIDs indicates an expected call of GetLatestByStackIDs.
+func (mr *MockStackReleaseStoreMockRecorder) GetLatestByStackIDs(ctx, stackIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByStackIDs", reflect.TypeOf((*MockStackReleaseStore)(nil).GetLatestByStackIDs), ctx, stackIDs)
+}
+
 // ListActive mocks base method.
 func (m *MockStackReleaseStore) ListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {
 	m.ctrl.T.Helper()
