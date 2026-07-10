@@ -207,13 +207,13 @@ func validatePorts(resource *models.StackResource) []errors.FieldError {
 
 		proto := strings.ToLower(p.Protocol)
 		switch proto {
-		case "", "http", "grpc", "tcp":
+		case "", models.PortProtocolHTTP, models.PortProtocolGRPC, models.PortProtocolTCP:
 		default:
 			errs = append(errs, fieldErr(f("protocol"), errors.VErrPortProtocolInvalid,
 				"protocol '%s' must be one of http, grpc, tcp", p.Protocol))
 			continue
 		}
-		if p.ExposedToPublic && proto != "http" && proto != "" {
+		if p.ExposedToPublic && proto != models.PortProtocolHTTP && proto != "" {
 			errs = append(errs, fieldErr(f("protocol"), errors.VErrPublicPortNotHTTP,
 				"port '%s' (%s) cannot be exposed to public; only http ports can", p.Name, proto))
 		}

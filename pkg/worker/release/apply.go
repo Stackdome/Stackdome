@@ -53,10 +53,7 @@ func isTransientClusterError(err error) bool {
 		return true
 	}
 	var netErr *net.OpError
-	if stderrors.As(err, &netErr) {
-		return true
-	}
-	return false
+	return stderrors.As(err, &netErr)
 }
 
 type applyReconciler struct {

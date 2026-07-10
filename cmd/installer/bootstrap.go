@@ -12,6 +12,8 @@ import (
 	"github.com/Stackdome/stackdome/install"
 )
 
+const nameField = "name"
+
 var apiBaseURL string
 
 type bootstrapResult struct {
@@ -94,7 +96,7 @@ func tryLogin(email, password string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusCreated {
 		return "", "", fmt.Errorf("login returned %d", resp.StatusCode)
@@ -111,11 +113,11 @@ func tryLogin(email, password string) (string, string, error) {
 
 func signup(email, password string) (string, string, error) {
 	payload, _ := json.Marshal(map[string]interface{}{
-		"name":     "Platform Admin",
+		nameField:  "Platform Admin",
 		"email":    email,
 		"password": password,
 		"organisation": map[string]string{
-			"name": "Default",
+			nameField: "Default",
 		},
 	})
 
@@ -123,7 +125,7 @@ func signup(email, password string) (string, string, error) {
 	if err != nil {
 		return "", "", fmt.Errorf("signup request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusCreated {
@@ -163,7 +165,7 @@ func configureDomain(token, orgID, domain string) error {
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
 		return fmt.Errorf("domain config returned %d: %s", resp.StatusCode, string(body))
@@ -190,7 +192,7 @@ func domainExists(token, orgID, domain string) bool {
 	if err != nil {
 		return false
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return false
@@ -257,7 +259,7 @@ func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, 
 	resp, err := http.DefaultClient.Do(req)
 	if err == nil && resp.StatusCode == http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		var listResp struct {
 			Items []struct {
@@ -271,12 +273,12 @@ func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, 
 	}
 
 	payload, _ := json.Marshal(map[string]interface{}{
-		"name":             "local",
+		nameField:          "local",
 		"cluster_url":      clusterURL,
 		"cluster_ca_data":  caData,
 		"cluster_sa_token": saToken,
 		"cluster_image_registry": map[string]interface{}{
-			"name": "default-registry",
+			nameField: "default-registry",
 			"spec": map[string]interface{}{
 				"backend_storage_size": "50Gi",
 			},
@@ -296,7 +298,7 @@ func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, 
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusCreated {

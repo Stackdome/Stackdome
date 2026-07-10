@@ -201,7 +201,7 @@ func (h *stackHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 				return nil, serr
 			}
 
-			stream := r.URL.Query().Get("stream") == "true"
+			stream := r.URL.Query().Get("stream") == queryValueTrue
 			if stream {
 				streamer, err := h.metricsService.StreamMetricsForStack(ctx, orgID, stackID)
 				if err != nil {

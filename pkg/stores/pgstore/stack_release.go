@@ -12,6 +12,13 @@ import (
 	"gorm.io/gorm"
 )
 
+const (
+	colState       = "state"
+	colMessage     = "message"
+	colCompletedAt = "completed_at"
+	colUpdatedAt   = "updated_at"
+)
+
 type StackReleaseStoreSpec struct {
 	SessionFactory db.SessionFactory
 }
@@ -74,7 +81,7 @@ func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRel
 func (s *stackReleaseStore) GetByID(ctx context.Context, id string) (*models.StackRelease, *errors.ServiceError) {
 	var release models.StackRelease
 	if err := s.sessionFactory.New(ctx).First(&release, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("release with id %s not found", id)
 		}
 		return nil, errors.GeneralError("failed to get release: %s", err.Error())
@@ -127,7 +134,7 @@ func (s *stackReleaseStore) GetActiveByStackID(ctx context.Context, stackID stri
 		Where("stack_id = ? AND state IN ?", stackID, activeReleaseStates).
 		Order("sequence DESC").
 		First(&release).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, errors.GeneralError("failed to get active release: %s", err.Error())
@@ -141,8 +148,8 @@ func (s *stackReleaseStore) MarkInProgress(ctx context.Context, id string) (bool
 		Model(&models.StackRelease{}).
 		Where("id = ? AND state = ?", id, models.ReleaseStatePending).
 		Updates(map[string]interface{}{
-			"state":      models.ReleaseStateInProgress,
-			"updated_at": time.Now().UTC(),
+			colState:     models.ReleaseStateInProgress,
+			colUpdatedAt: time.Now().UTC(),
 		})
 
 	if result.Error != nil {
@@ -163,7 +170,7 @@ func (s *stackReleaseStore) SaveManifest(ctx context.Context, id string, m *mode
 			"pins":              pins,
 			"renderer_version":  rendererVersion,
 			"rendered_at":       now,
-			"updated_at":        now,
+			colUpdatedAt:        now,
 		})
 
 	if result.Error != nil {
@@ -177,9 +184,9 @@ func (s *stackReleaseStore) MarkCancelled(ctx context.Context, id string, reason
 		Model(&models.StackRelease{}).
 		Where("id = ? AND state = ?", id, models.ReleaseStatePending).
 		Updates(map[string]interface{}{
-			"state":      models.ReleaseStateCancelled,
-			"message":    reason,
-			"updated_at": time.Now().UTC(),
+			colState:     models.ReleaseStateCancelled,
+			colMessage:   reason,
+			colUpdatedAt: time.Now().UTC(),
 		})
 	if result.Error != nil {
 		return false, errors.GeneralError("failed to mark cancelled: %s", result.Error.Error())
@@ -194,10 +201,10 @@ func (s *stackReleaseStore) MarkSuperseded(ctx context.Context, id string, reaso
 		Model(&models.StackRelease{}).
 		Where("id = ? AND state IN ?", id, activeReleaseStates).
 		Updates(map[string]interface{}{
-			"state":        models.ReleaseStateSuperseded,
-			"message":      reason,
-			"completed_at": now,
-			"updated_at":   now,
+			colState:       models.ReleaseStateSuperseded,
+			colMessage:     reason,
+			colCompletedAt: now,
+			colUpdatedAt:   now,
 		})
 	if result.Error != nil {
 		return false, errors.GeneralError("failed to mark superseded: %s", result.Error.Error())
@@ -212,10 +219,10 @@ func (s *stackReleaseStore) MarkReleased(ctx context.Context, id string, outcome
 		Model(&models.StackRelease{}).
 		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
 		Updates(map[string]interface{}{
-			"state":        models.ReleaseStateReleased,
+			colState:       models.ReleaseStateReleased,
 			"outcome":      outcome,
-			"completed_at": now,
-			"updated_at":   now,
+			colCompletedAt: now,
+			colUpdatedAt:   now,
 		})
 
 	if result.Error != nil {
@@ -229,10 +236,10 @@ func (s *stackReleaseStore) MarkFailed(ctx context.Context, id string, message s
 	now := time.Now().UTC()
 
 	updates := map[string]interface{}{
-		"state":        models.ReleaseStateFailed,
-		"message":      message,
-		"completed_at": now,
-		"updated_at":   now,
+		colState:       models.ReleaseStateFailed,
+		colMessage:     message,
+		colCompletedAt: now,
+		colUpdatedAt:   now,
 	}
 	if outcome != nil {
 		updates["outcome"] = outcome
@@ -258,11 +265,11 @@ func (s *stackReleaseStore) MarkFailedWithValidationErrors(ctx context.Context, 
 		Model(&models.StackRelease{}).
 		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
 		Updates(map[string]interface{}{
-			"state":             models.ReleaseStateFailed,
-			"message":           message,
+			colState:            models.ReleaseStateFailed,
+			colMessage:          message,
 			"validation_errors": verrs,
-			"completed_at":      now,
-			"updated_at":        now,
+			colCompletedAt:      now,
+			colUpdatedAt:        now,
 		})
 
 	if result.Error != nil {
@@ -279,9 +286,9 @@ func (s *stackReleaseStore) Cancel(ctx context.Context, id string) (bool, *error
 		Model(&models.StackRelease{}).
 		Where("id = ? AND state = ?", id, models.ReleaseStatePending).
 		Updates(map[string]interface{}{
-			"state":        models.ReleaseStateCancelled,
-			"completed_at": now,
-			"updated_at":   now,
+			colState:       models.ReleaseStateCancelled,
+			colCompletedAt: now,
+			colUpdatedAt:   now,
 		})
 
 	if result.Error != nil {
@@ -296,7 +303,7 @@ func (s *stackReleaseStore) ListTerminalSummariesByStackID(ctx context.Context, 
 	var out []models.ReleaseSummary
 	if err := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
-		Select("id", "sequence", "state").
+		Select("id", "sequence", colState).
 		Where("stack_id = ? AND state IN ?", stackID, models.TerminalStackReleaseStates()).
 		Order("sequence DESC").
 		Scan(&out).Error; err != nil {
@@ -356,7 +363,7 @@ func (s *stackReleaseStore) AppendImageDigests(ctx context.Context, id string, d
 		Where("id = ?", id).
 		Updates(map[string]interface{}{
 			"pins":       release.Pins,
-			"updated_at": time.Now().UTC(),
+			colUpdatedAt: time.Now().UTC(),
 		})
 
 	if result.Error != nil {

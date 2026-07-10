@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const httpsScheme = "https"
+
 //go:generate mockgen -destination=../mocks/mock_cluster_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ClusterService
 
 type ClusterService interface {
@@ -227,7 +229,7 @@ func (s *clusterService) validateCluster(cluster *models.Cluster) *errors.Servic
 	if err != nil {
 		return errors.BadRequest("cluster URL is not valid: %s", err.Error())
 	}
-	if url.Scheme != "https" {
+	if url.Scheme != httpsScheme {
 		return errors.BadRequest("cluster URL must use https scheme")
 	}
 

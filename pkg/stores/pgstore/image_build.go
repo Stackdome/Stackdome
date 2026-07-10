@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -58,7 +59,7 @@ func (r *imageBuildStore) GetByResourceID(ctx context.Context, resourceID string
 func (r *imageBuildStore) GetByID(ctx context.Context, ID string) (*models.ImageBuild, *errors.ServiceError) {
 	var imageBuild models.ImageBuild
 	if err := r.sessionFactory.New(ctx).Where("id = ?", ID).Preload(clause.Associations).First(&imageBuild).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("image build with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get image build: %s", err.Error())

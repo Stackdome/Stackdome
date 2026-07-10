@@ -157,7 +157,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			r.Logger.Infof("imageBuild %s not found in DB, creating a new build", imageBuild.Name)
 			return ctrl.Result{Requeue: true}, r.createImageBuildInDB(ctx, imageBuild, dbStackResouce)
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get image build from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get image build from db: %w", serr)
 	}
 
 	if dbResourceBuild.Status == nil || dbResourceBuild.Status.LastObservedStatusHash != imageBuild.Status.StatusHash {
@@ -167,11 +167,11 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		// recorded — otherwise the requeued retry would skip this block and
 		// the failure would be dropped for good.
 		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %v", err)
+			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %w", err)
 		}
 		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
 		if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %w", serr)
 		}
 		r.recordBuildEvent(ctx, stackID, imageBuild, dbResourceBuild)
 	}

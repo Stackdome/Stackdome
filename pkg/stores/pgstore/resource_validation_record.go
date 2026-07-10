@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -30,7 +31,7 @@ func (s *resourceValidationRecordStore) Get(ctx context.Context, stackID, resour
 	if err := s.sessionFactory.New(ctx).
 		Where("stack_id = ? AND resource_name = ? AND check_kind = ?", stackID, resourceName, kind).
 		First(&record).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("no validation record for stack '%s' resource '%s' check '%s'", stackID, resourceName, kind)
 		}
 		return nil, errors.GeneralError("failed to get resource validation record: %s", err.Error())

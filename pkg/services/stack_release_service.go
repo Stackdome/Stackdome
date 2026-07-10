@@ -112,7 +112,7 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, sErr
 	}
 
-	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == "true" {
+	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == models.LabelValueTrue {
 		return nil, errors.BadRequest("cannot create releases on preview-managed stacks; use the preview sync API")
 	}
 
@@ -210,7 +210,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, sErr
 	}
 
-	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == "true" {
+	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == models.LabelValueTrue {
 		return nil, errors.BadRequest("cannot roll back a stack that is managed by preview sync")
 	}
 

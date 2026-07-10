@@ -17,6 +17,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
+const fieldSourceImageRef = "source.image.ref"
+
 // validationReconciler runs the expensive checks (image existence, registry
 // pull/push auth) once a release is InProgress, before render. Successful
 // probes are remembered by fingerprint so unchanged targets are skipped.
@@ -96,7 +98,7 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 		}
 		won, serr := r.releaseService.MarkFailedWithValidationErrors(ctx, release.ID, msg, verrs)
 		if serr != nil {
-			return resultNil, fmt.Errorf("failed to mark release failed: %v", serr)
+			return resultNil, fmt.Errorf("failed to mark release failed: %w", serr)
 		}
 		// Only the winner of the terminal CAS records the terminal event, so a
 		// requeue that lost the race does not double-emit release_failed.
@@ -198,13 +200,13 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 		// anonymous access: the user needs to ADD credentials, which is a
 		// different failure from configured credentials being rejected.
 		return models.ReleaseValidationErrors{{
-			ResourceName: res.Name, Field: "source.image.ref",
+			ResourceName: res.Name, Field: fieldSourceImageRef,
 			Code:    errors.VErrRegistryCredentialsRequired,
 			Message: fmt.Sprintf("image '%s' requires credentials for registry '%s', but none are configured", imageRef, registryHostForRef(imageRef)),
 		}}, false, nil
 	case stderrors.Is(err, clients.ErrAuthFailed):
 		return models.ReleaseValidationErrors{{
-			ResourceName: res.Name, Field: "source.image.ref",
+			ResourceName: res.Name, Field: fieldSourceImageRef,
 			Code:    errors.VErrRegistryAuthFailed,
 			Message: fmt.Sprintf("registry '%s' rejected the configured credentials for image '%s'", registryHostForRef(imageRef), imageRef),
 		}}, false, nil
@@ -213,7 +215,7 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 		return nil, false, fmt.Errorf("resource %s: image probe: %w", res.Name, err)
 	case !exists:
 		return models.ReleaseValidationErrors{{
-			ResourceName: res.Name, Field: "source.image.ref",
+			ResourceName: res.Name, Field: fieldSourceImageRef,
 			Code:    errors.VErrImageNotFound,
 			Message: fmt.Sprintf("image '%s' does not exist or is not accessible", imageRef),
 		}}, false, nil

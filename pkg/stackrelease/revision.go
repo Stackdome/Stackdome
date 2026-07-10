@@ -28,8 +28,8 @@ var printer = spew.ConfigState{
 // cluster resource builder.
 func ComputeResourceRevision(cr *corev1alpha1.StackResource) string {
 	hasher := fnv.New64a()
-	printer.Fprintf(hasher, "%#v", cr.Spec)
-	printer.Fprintf(hasher, "%#v", cr.Labels)
+	_, _ = printer.Fprintf(hasher, "%#v", cr.Spec)
+	_, _ = printer.Fprintf(hasher, "%#v", cr.Labels)
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum64()))
 }
 
@@ -37,10 +37,10 @@ func ComputeResourceRevision(cr *corev1alpha1.StackResource) string {
 // release manifest, combining all resource revisions.
 func ComputeManifestRevision(m *models.ReleaseManifest) string {
 	hasher := fnv.New64a()
-	printer.Fprintf(hasher, "%#v", m.StackCR)
-	printer.Fprintf(hasher, "%#v", m.ResourceNames)
-	printer.Fprintf(hasher, "%#v", m.ResourceRevisions)
-	printer.Fprintf(hasher, "%#v", m.VolumeBuildSources)
+	_, _ = printer.Fprintf(hasher, "%#v", m.StackCR)
+	_, _ = printer.Fprintf(hasher, "%#v", m.ResourceNames)
+	_, _ = printer.Fprintf(hasher, "%#v", m.ResourceRevisions)
+	_, _ = printer.Fprintf(hasher, "%#v", m.VolumeBuildSources)
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum64()))
 }
 

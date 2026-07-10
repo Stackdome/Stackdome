@@ -97,7 +97,7 @@ func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) error {
 	d.Logger.Debugf("Initializing worker manager")
 	d.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
-		Environment: d.Env.Name,
+		Environment: d.Name,
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
@@ -106,7 +106,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		ClusterManager:   d.ClusterManager,
 		VolumeService:    d.Services.VolumeService,
 		NamespaceService: d.Services.NamespaceService,
-		Env:              d.Env.Name,
+		Env:              d.Name,
 	})
 
 	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
@@ -133,14 +133,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 			SessionFactory: d.DBSession,
 		}),
 		ReleaseWorkerEnqueuer: d.WorkerManager,
-		Env:                   d.Env.Name,
+		Env:                   d.Name,
 	})
 	d.WorkerManager.RegisterWorker(releaseWorker, &models.StackRelease{})
 
 	releaseGCWorker := releasegcworker.NewReleaseGCWorker(releasegcworker.ReleaseGCWorkerSpec{
 		ReleaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{SessionFactory: d.DBSession}),
 		StackStore:   pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession}),
-		Env:          d.Env.Name,
+		Env:          d.Name,
 	})
 	d.WorkerManager.RegisterWorker(releaseGCWorker, &releasegcworker.ReleaseGCRequest{})
 
@@ -152,7 +152,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 			SessionFactory: d.DBSession,
 		}),
 		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
-		Env:             d.Env.Name,
+		Env:             d.Name,
 	})
 	d.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 
@@ -164,7 +164,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		ReferenceService:     d.Services.ReferenceService,
 		ClusterManager:       d.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
-		Env:                  d.Env.Name,
+		Env:                  d.Name,
 	})
 	d.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
@@ -172,14 +172,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		InviteService:  d.Services.OrgInviteService,
 		EmailService:   d.EmailService,
 		LeadershipFlag: d.LeadershipFlag,
-		Env:            d.Env.Name,
+		Env:            d.Name,
 	})
 	d.WorkerManager.RegisterWorker(inviteEmailWorker, &models.OrgInvite{})
 
 	inviteCleanupWorker := inviteworker.NewInviteCleanupWorker(inviteworker.InviteCleanupWorkerSpec{
 		InviteService:  d.Services.OrgInviteService,
 		LeadershipFlag: d.LeadershipFlag,
-		Env:            d.Env.Name,
+		Env:            d.Name,
 	})
 	d.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
@@ -193,7 +193,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		}),
 		ReleaseService: d.Services.StackReleaseService,
 		StackService:   d.Services.StackService,
-		Env:            d.Env.Name,
+		Env:            d.Name,
 	})
 	d.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
@@ -255,7 +255,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()),
 					StorageService: d.Services.StackStorageService,
 					VolumeService:  d.Services.VolumeService,
-					Env:            d.Env.Name,
+					Env:            d.Name,
 				})
 			},
 			func() clustermanager.Controller {
@@ -263,14 +263,14 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
 					WorkspaceUserService: d.Services.WorkspaceUserService,
 					ClusterService:       d.Services.ClusterService,
-					Env:                  d.Env.Name,
+					Env:                  d.Name,
 				})
 			},
 			func() clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
 					Log:            applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
 					StackService:   d.Services.StackService,
-					Env:            d.Env.Name,
+					Env:            d.Name,
 					ReleaseChecker: d.Services.StackReleaseService,
 					Enqueuer:       d.WorkerManager,
 				})
@@ -280,7 +280,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()),
 					StackService:         d.Services.StackService,
 					StackResourceService: d.Services.StackResourceService,
-					Env:                  d.Env.Name,
+					Env:                  d.Name,
 					ReleaseChecker:       d.Services.StackReleaseService,
 					EventRecorder:        d.Services.ReleaseEventRecorder,
 				})
@@ -305,7 +305,7 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
 					Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
 					PostgresAddonService: d.Services.PostgresAddonService,
-					Env:                  d.Env.Name,
+					Env:                  d.Name,
 				})
 			},
 			func() clustermanager.Controller {

@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -22,7 +23,7 @@ type StackVolumeStoreSpec struct {
 func NewStackVolumeStore(spec StackVolumeStoreSpec) stores.StackVolumeStore {
 	return &stackVolumeStore{
 		sessionFactory: spec.SessionFactory,
-		volumeStore:    NewVolumeStore(VolumeStoreSpec{SessionFactory: spec.SessionFactory}),
+		volumeStore:    NewVolumeStore(VolumeStoreSpec(spec)),
 	}
 }
 
@@ -54,7 +55,7 @@ func (s *stackVolumeStore) Get(ctx context.Context, stackID, volumeID string) (*
 	var sv models.StackVolume
 	err := grm.Model(&models.StackVolume{}).Where("stack_id = ? AND volume_id = ?", stackID, volumeID).First(&sv).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack_volume with stack_id '%s' and volume_id '%s' not found", stackID, volumeID)
 		}
 		return nil, errors.GeneralError("failed to fetch stack_volume: %s", err.Error())
@@ -66,7 +67,7 @@ func (s *stackVolumeStore) Delete(ctx context.Context, stackID, volumeID string)
 	grm := s.sessionFactory.New(ctx)
 	err := grm.Where("stack_id = ? AND volume_id = ?", stackID, volumeID).Delete(&models.StackVolume{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack_volume with stack_id '%s' and volume_id '%s' not found", stackID, volumeID)
 		}
 		return errors.GeneralError("failed to delete stack_volume: %s", err.Error())
@@ -81,7 +82,7 @@ func (s *stackVolumeStore) DeleteWithTx(ctx context.Context, stackID, volumeID s
 	}
 	err := tx.Where("stack_id = ? AND volume_id = ?", stackID, volumeID).Delete(&models.StackVolume{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack_volume with stack_id '%s' and volume_id '%s' not found", stackID, volumeID)
 		}
 		return errors.GeneralError("failed to delete stack_volume: %s", err.Error())
@@ -94,7 +95,7 @@ func (s *stackVolumeStore) GetByVolumeID(ctx context.Context, volumeID string) (
 	var sv models.StackVolume
 	err := grm.Model(&models.StackVolume{}).Where("volume_id = ?", volumeID).First(&sv).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack_volume with volume_id '%s' not found", volumeID)
 		}
 		return nil, errors.GeneralError("failed to fetch stack_volume: %s", err.Error())

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -17,6 +16,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/gorilla/mux"
 )
+
+const queryValueTrue = "true"
 
 type handlerConfig struct {
 	MarshalInto  interface{}
@@ -113,8 +114,8 @@ func handleGet(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 	}
 
 	result, serviceErr := cfg.Action()
-	switch {
-	case serviceErr == nil:
+	switch serviceErr {
+	case nil:
 		writeJSONResponse(w, http.StatusOK, result)
 	default:
 		cfg.ErrorHandler(r.Context(), w, serviceErr)
@@ -183,16 +184,16 @@ func internalStreamHandler(w http.ResponseWriter, r *http.Request, streamable in
 				return
 			}
 			if err := streamObject.Error(); err != nil {
-				fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+				_, _ = fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
 				flusher.Flush()
 				return
 			}
 			data := streamObject.Data()
 			if data != "" {
 				if withID, ok := streamObject.(interfaces.StreamObjectWithID); ok {
-					fmt.Fprintf(w, "id: %s\n", withID.ID())
+					_, _ = fmt.Fprintf(w, "id: %s\n", withID.ID())
 				}
-				fmt.Fprintf(w, "data: %s\n\n", data)
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 				flusher.Flush()
 			}
 		}
@@ -223,23 +224,6 @@ func writeJSONResponse(w http.ResponseWriter, code int, payload interface{}) {
 		response, _ := json.Marshal(payload)
 		_, _ = w.Write(response)
 	}
-}
-
-// Prepare a 'list' of non-db-backed resources
-func determineListRange(obj interface{}, page int, size int) (list []interface{}, total int) {
-	items := reflect.ValueOf(obj)
-	total = items.Len()
-	low := (page - 1) * size
-	high := low + size
-	if low < 0 || low >= total || high >= total {
-		low = 0
-		high = total
-	}
-	for i := low; i < high; i++ {
-		list = append(list, items.Index(i).Interface())
-	}
-
-	return list, total
 }
 
 func addStreamHeaders(w http.ResponseWriter) {

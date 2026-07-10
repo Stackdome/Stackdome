@@ -136,7 +136,7 @@ func (s *clusterMetricsService) GetMetricsForResource(ctx context.Context, orgID
 	}
 
 	podMetricsForResource := lo.Filter(metricsObj.NamespaceMetrics, func(podMetrics v1beta1.PodMetrics, _ int) bool {
-		resourceNameInPod, ok := podMetrics.ObjectMeta.Labels["resource"]
+		resourceNameInPod, ok := podMetrics.Labels["resource"]
 		return ok && resourceNameInPod == stackResource.Name
 	})
 
@@ -320,7 +320,7 @@ func (s *clusterMetricsStreamer) streamStackResourceMetrics(ctx context.Context)
 					continue
 				}
 				filteredMetrics := lo.Filter(metricsObj.NamespaceMetrics, func(podMetrics v1beta1.PodMetrics, _ int) bool {
-					resourceNameInPod, ok := podMetrics.ObjectMeta.Labels["resource"]
+					resourceNameInPod, ok := podMetrics.Labels["resource"]
 					return ok && resourceNameInPod == s.target.stackResource.Name
 				})
 				metrics := accumulatePodMetrics(filteredMetrics)
@@ -425,7 +425,7 @@ func accumulatePodMetrics(podMetricsList []v1beta1.PodMetrics) *models.ResourceM
 		for _, container := range podMetrics.Containers {
 			metrics.CPUUsage.Add(container.Usage[corev1.ResourceCPU])
 			metrics.MemoryUsage.Add(container.Usage[corev1.ResourceMemory])
-			metrics.TimeStamp = podMetrics.Timestamp.Time.UTC()
+			metrics.TimeStamp = podMetrics.Timestamp.UTC()
 		}
 		assignedNode, ok := podMetrics.Annotations[models.AssignedNodeAnnotation]
 		if ok && assignedNode != "" {

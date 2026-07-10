@@ -85,7 +85,7 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 	dbImageRegistry, serr := r.DBImageRegistryService.InternalGet(ctx, registryID)
 	if serr != nil {
 		r.Logger.Error(ctx, "failed to get cluster image registry from DB: %v", serr)
-		return ctrl.Result{}, fmt.Errorf("failed to get cluster image registry from DB: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get cluster image registry from DB: %w", serr)
 	}
 
 	if dbImageRegistry.Status == nil ||
@@ -93,7 +93,7 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 		len(dbImageRegistry.Status.Conditions) != len(registryCr.Status.Conditions) || dbImageRegistry.Status.RegistryUrl == "" {
 		dbImageRegistry.Status = mapClusterStatusToServerStatus(registryCr.Status)
 		if serr := r.DBImageRegistryService.UpdateStatus(ctx, dbImageRegistry.ID, dbImageRegistry.Status); serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update cluster image registry status: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update cluster image registry status: %w", serr)
 		}
 		return ctrl.Result{}, nil
 	}

@@ -37,8 +37,12 @@ func installK3s() error {
 }
 
 func setupKubeconfig() error {
-	os.Setenv("KUBECONFIG", k3sKubeconfigPath)
-	os.Chmod(k3sKubeconfigPath, 0600)
+	if err := os.Setenv("KUBECONFIG", k3sKubeconfigPath); err != nil {
+		return fmt.Errorf("setting KUBECONFIG: %w", err)
+	}
+	if err := os.Chmod(k3sKubeconfigPath, 0600); err != nil {
+		return fmt.Errorf("chmod kubeconfig: %w", err)
+	}
 	return nil
 }
 

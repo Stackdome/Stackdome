@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -35,7 +36,7 @@ func (s *refreshTokenStore) GetByTokenHash(ctx context.Context, hash string) (*m
 	session := s.sessionFactory.New(ctx)
 	token := &models.RefreshToken{}
 	if err := session.Where("token_hash = ? AND revoked_at IS NULL", hash).First(token).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("refresh token not found")
 		}
 		return nil, errors.GeneralError("failed to get refresh token: %s", err.Error())

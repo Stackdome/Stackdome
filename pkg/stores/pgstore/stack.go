@@ -221,7 +221,7 @@ func (w *stackStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*mo
 func (w *stackStore) GetByID(ctx context.Context, id string) (*models.Stack, *errors.ServiceError) {
 	var stack models.Stack
 	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack with id %s not found", id)
 		}
 		return nil, errors.GeneralError("failed to get stack: %s", err.Error())
@@ -251,7 +251,7 @@ func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceErr
 		Clauses(clause.Locking{Strength: "UPDATE"}).
 		Select("id").
 		First(&stack, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack with id %s not found", id)
 		}
 		return errors.GeneralError("failed to lock stack: %s", err.Error())
@@ -262,7 +262,7 @@ func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceErr
 func (w *stackStore) GetByNameAndTeamID(ctx context.Context, name string, teamID string) (*models.Stack, *errors.ServiceError) {
 	var stack models.Stack
 	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND team_id = ?", name, teamID).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack with name %s not found", name)
 		}
 		return nil, errors.GeneralError("failed to get stack: %s", err.Error())

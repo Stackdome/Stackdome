@@ -17,7 +17,7 @@ func ValidDNSName(input string) string {
 	result = reg.ReplaceAllString(result, "-")
 
 	// Replace multiple consecutive dots with a single dot
-	reg = regexp.MustCompile("\\.+")
+	reg = regexp.MustCompile(`\.+`)
 	result = reg.ReplaceAllString(result, ".")
 
 	// Remove leading and trailing hyphens and dots

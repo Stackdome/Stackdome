@@ -16,17 +16,21 @@ import {
 import { serverStateFromStack, type ServerStackState } from "@/pages/stacks/lib/draft-sync/server-state";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { computeSyncOps, type SyncOp } from "@/pages/stacks/lib/draft-sync/ops";
-import { getErrorMessage, getErrorStatus, isBadRequestError } from "@/api/client";
+import { isBadRequestError } from "@/api/client";
+import { parseApiError, type ParsedFieldError } from "@/api/errors";
 import type { EditSessionDraft, UseStackEditSession } from "./use-stack-edit-session";
 
 /** Surfaced to the caller when an autosave op fails, carrying the offending op
  *  so the UI can toast the reason and mark the responsible field inline. `op` is
  *  absent when the ops all landed but the post-save refetch failed — the save
- *  actually succeeded, so there is no op-level field error to attribute. */
+ *  actually succeeded, so there is no op-level field error to attribute.
+ *  `fieldErrors` are the structured per-field validation errors from the
+ *  response (empty for non-validation failures). */
 export interface SyncErrorInfo {
   status?: number;
   message: string;
   op?: SyncOp;
+  fieldErrors: ParsedFieldError[];
 }
 
 export interface UseDraftSyncArgs {
@@ -180,9 +184,11 @@ export function useDraftSync({
         failuresRef.current += 1;
         setFailureCount(failuresRef.current);
         setStatus(SYNC_STATUS.error);
+        const parsed = parseApiError(err);
         onSyncErrorRef.current?.({
-          status: getErrorStatus(err),
-          message: getErrorMessage(err),
+          status: parsed.status,
+          message: parsed.topLevel,
+          fieldErrors: parsed.fieldErrors,
           // Ops all landed → the refetch failed, not an op. Leave op undefined so
           // the caller doesn't pin a spurious field error on a save that landed.
           op: opsSucceeded ? undefined : failingOp,

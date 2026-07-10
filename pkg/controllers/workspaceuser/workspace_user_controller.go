@@ -90,12 +90,12 @@ func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if serr.Code == apperrors.ErrorNotFound {
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get workspace user from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get workspace user from db: %w", serr)
 	}
 
 	cluster, serr := r.ClusterService.InternalGet(ctx, workspaceuser.ClusterID)
 	if serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get cluster from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get cluster from db: %w", serr)
 	}
 
 	// status changed
@@ -103,7 +103,7 @@ func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		workspaceuser.Status = mapToDBStatusAndState(clusterInstance, cluster)
 		serr := r.WorkspaceUserService.UpdateStatus(ctx, workspaceuser.ID, workspaceuser)
 		if serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update workspace user status in db: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update workspace user status in db: %w", serr)
 		}
 		return ctrl.Result{}, nil
 	}

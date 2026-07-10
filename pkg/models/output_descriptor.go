@@ -13,6 +13,17 @@ const (
 	OutputValueTypeBoolean OutputValueType = "boolean"
 )
 
+const (
+	OutputNameHost          = "host"
+	OutputNamePort          = "port"
+	OutputNameDatabase      = "database"
+	OutputNameUsername      = "username"
+	OutputNamePassword      = "password"
+	OutputNameSSLMode       = "sslmode"
+	OutputNameCACertificate = "ca_certificate"
+	OutputNameURL           = "url"
+)
+
 type OutputDescriptor struct {
 	Name      string          `json:"name"`
 	Type      OutputValueType `json:"type"`
@@ -47,11 +58,11 @@ func (r *StackResource) ToOutputMap() map[string]string {
 	outputs := make(map[string]string)
 
 	host := r.InternalServiceHost()
-	outputs["host"] = host
+	outputs[OutputNameHost] = host
 
 	for _, port := range r.Ports {
 		outputs["port."+port.Name] = strconv.Itoa(port.Number)
-		if port.Protocol == "http" {
+		if port.Protocol == PortProtocolHTTP {
 			outputs["url."+port.Name] = fmt.Sprintf("http://%s:%d", host, port.Number)
 		} else {
 			outputs["url."+port.Name] = fmt.Sprintf("%s:%d", host, port.Number)
@@ -89,7 +100,7 @@ func (s *Secret) ToOutputMap() map[string]string {
 func StackResourceOutputDescriptors(resource *StackResource) []OutputDescriptor {
 	outputs := []OutputDescriptor{
 		{
-			Name:      "host",
+			Name:      OutputNameHost,
 			Type:      OutputValueTypeString,
 			Sensitive: false,
 		},
@@ -142,13 +153,13 @@ func SecretOutputDescriptors(secret *Secret) []OutputDescriptor {
 
 func PostgresAddonOutputDescriptors(_ *PostgresAddon) []OutputDescriptor {
 	return []OutputDescriptor{
-		{Name: "host", Type: OutputValueTypeString, Sensitive: false},
-		{Name: "port", Type: OutputValueTypeInteger, Sensitive: false},
-		{Name: "database", Type: OutputValueTypeString, Sensitive: false},
-		{Name: "username", Type: OutputValueTypeString, Sensitive: true},
-		{Name: "password", Type: OutputValueTypeString, Sensitive: true},
-		{Name: "sslmode", Type: OutputValueTypeString, Sensitive: false},
-		{Name: "ca_certificate", Type: OutputValueTypeString, Sensitive: true},
-		{Name: "url", Type: OutputValueTypeString, Sensitive: true},
+		{Name: OutputNameHost, Type: OutputValueTypeString, Sensitive: false},
+		{Name: OutputNamePort, Type: OutputValueTypeInteger, Sensitive: false},
+		{Name: OutputNameDatabase, Type: OutputValueTypeString, Sensitive: false},
+		{Name: OutputNameUsername, Type: OutputValueTypeString, Sensitive: true},
+		{Name: OutputNamePassword, Type: OutputValueTypeString, Sensitive: true},
+		{Name: OutputNameSSLMode, Type: OutputValueTypeString, Sensitive: false},
+		{Name: OutputNameCACertificate, Type: OutputValueTypeString, Sensitive: true},
+		{Name: OutputNameURL, Type: OutputValueTypeString, Sensitive: true},
 	}
 }

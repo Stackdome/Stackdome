@@ -1,8 +1,6 @@
 package presenters
 
 import (
-	"fmt"
-
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
@@ -81,7 +79,7 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 		return nil
 	}
 	result := &openapi.ReleaseOutcome{
-		Duration: ptr.To(fmt.Sprintf("%s", o.Duration)),
+		Duration: ptr.To(o.Duration.String()),
 	}
 	if o.Resources != nil {
 		resources := make(map[string]openapi.ResourceOutcome, len(o.Resources))

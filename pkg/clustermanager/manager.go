@@ -122,7 +122,7 @@ func (cc *ClusterControl) createManager() (ctrl.Manager, error) {
 func (cc *ClusterControl) registerControllers(manager ctrl.Manager) error {
 	for _, controller := range cc.controllers {
 		if err := controller.AddToManager(manager); err != nil {
-			return fmt.Errorf("failed to register controller %s: %v", controller.Name(), err)
+			return fmt.Errorf("failed to register controller %s: %w", controller.Name(), err)
 		}
 	}
 	return nil

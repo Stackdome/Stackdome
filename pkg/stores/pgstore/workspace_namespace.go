@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -56,7 +57,7 @@ func (d dbWorkspaceNamespaceStore) GetByNamespace(ctx context.Context, namespace
 	var wn models.WorkspaceNamespace
 	err := grm.Where("namespace = ?", namespace).First(&wn).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("workspace namespace '%s' not found", namespace)
 		}
 		return nil, errors.GeneralError("failed to fetch workspace namespace: %s", err.Error())
@@ -73,7 +74,7 @@ func (d dbWorkspaceNamespaceStore) GetByWorkspaceName(ctx context.Context, works
 	var wn models.WorkspaceNamespace
 	err := grm.Where("workspace = ? AND user_id = ?", workspaceName, userID).First(&wn).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("workspace namespace not found for workspace '%s' and user '%s'", workspaceName, userID)
 		}
 		return nil, errors.GeneralError("failed to fetch workspace namespace: %s", err.Error())

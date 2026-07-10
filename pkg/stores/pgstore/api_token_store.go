@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -35,7 +36,7 @@ func (s *apiTokenStore) GetByID(ctx context.Context, id string) (*models.APIToke
 	session := s.sessionFactory.New(ctx)
 	token := &models.APIToken{}
 	if err := session.Where("id = ?", id).First(token).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("api token not found")
 		}
 		return nil, errors.GeneralError("failed to get api token: %s", err.Error())
@@ -47,7 +48,7 @@ func (s *apiTokenStore) GetByTokenHash(ctx context.Context, hash string) (*model
 	session := s.sessionFactory.New(ctx)
 	token := &models.APIToken{}
 	if err := session.Where("token_hash = ? AND revoked_at IS NULL", hash).First(token).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("api token not found")
 		}
 		return nil, errors.GeneralError("failed to get api token: %s", err.Error())

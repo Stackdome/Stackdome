@@ -77,13 +77,18 @@ type appLogger struct {
 	logger *logrus.Logger
 }
 
+const (
+	logTimestampFormat = "2006-01-02 15:04:05"
+	componentField     = "component"
+)
+
 // NewLogger creates a new logger instance with standard configuration
 func NewLogger() Logger {
 	l := logrus.New()
 	// Set default formatter with timestamps and full log level names
 	l.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
+		TimestampFormat: logTimestampFormat,
 		DisableQuote:    true,
 	})
 	return &appLogger{
@@ -96,7 +101,7 @@ func NewLoggerWithPrefix(ctx context.Context, prefix string) Logger {
 	l := logrus.New()
 	l.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
+		TimestampFormat: logTimestampFormat,
 		DisableQuote:    true,
 	})
 	return &appLogger{
@@ -110,7 +115,7 @@ func NewLoggerWithDebug(ctx context.Context) Logger {
 	l.SetLevel(logrus.DebugLevel)
 	l.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
-		TimestampFormat: "2006-01-02 15:04:05",
+		TimestampFormat: logTimestampFormat,
 		DisableQuote:    true,
 	})
 	return &appLogger{
@@ -124,7 +129,7 @@ func NewLoggerWithDebug(ctx context.Context) Logger {
 func (l *appLogger) withFields(ctx context.Context) *logrus.Entry {
 	fields := logrus.Fields{}
 	if l.prefix != "" {
-		fields["component"] = l.prefix
+		fields[componentField] = l.prefix
 	}
 	// You can add more context-based fields here, like:
 	// - Request ID from context
@@ -167,34 +172,34 @@ func (l *appLogger) Debug(ctx context.Context, format string, args ...interface{
 func (l *appLogger) Infof(format string, args ...interface{}) {
 	// For backwards compatibility with methods that don't have context
 	l.logger.WithFields(logrus.Fields{
-		"component": l.prefix,
+		componentField: l.prefix,
 	}).Infof(format, args...)
 }
 
 func (l *appLogger) Warnf(format string, args ...interface{}) {
 	// For backwards compatibility with methods that don't have context
 	l.logger.WithFields(logrus.Fields{
-		"component": l.prefix,
+		componentField: l.prefix,
 	}).Warnf(format, args...)
 }
 
 func (l *appLogger) Errorf(format string, args ...interface{}) {
 	// For backwards compatibility with methods that don't have context
 	l.logger.WithFields(logrus.Fields{
-		"component": l.prefix,
+		componentField: l.prefix,
 	}).Errorf(format, args...)
 }
 
 func (l *appLogger) Debugf(format string, args ...interface{}) {
 	// For backwards compatibility with methods that don't have context
 	l.logger.WithFields(logrus.Fields{
-		"component": l.prefix,
+		componentField: l.prefix,
 	}).Debugf(format, args...)
 }
 
 func (l *appLogger) Fatalf(format string, args ...interface{}) {
 	l.logger.WithFields(logrus.Fields{
-		"component": l.prefix,
+		componentField: l.prefix,
 	}).Fatalf(format, args...)
 }
 

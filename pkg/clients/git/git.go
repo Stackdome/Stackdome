@@ -57,7 +57,7 @@ func newGitClientAnonymous() (GitClient, error) {
 func (g *gitClient) CheckAccess(ctx context.Context, repoURL string) (bool, error) {
 	// Create a remote to list references
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
+		Name: git.DefaultRemoteName,
 		URLs: []string{repoURL},
 	})
 
@@ -68,9 +68,9 @@ func (g *gitClient) CheckAccess(ctx context.Context, repoURL string) (bool, erro
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return false, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+			return false, fmt.Errorf("authentication failed: %w: %w", err, ErrAuthFailed)
 		} else if isGitNotFoundError(err) {
-			return false, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+			return false, fmt.Errorf("repository not found: %w: %w", err, ErrNotFound)
 		}
 		return false, fmt.Errorf("failed to access git repo: %w", err)
 	}
@@ -81,7 +81,7 @@ func (g *gitClient) CheckAccess(ctx context.Context, repoURL string) (bool, erro
 // verify branch existence and get HEAD SHA
 func (g *gitClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch string) (*RepoResult, error) {
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
+		Name: git.DefaultRemoteName,
 		URLs: []string{repoURL},
 	})
 
@@ -110,7 +110,7 @@ func (g *gitClient) GetBranchHeadSHA(ctx context.Context, repoURL, branch string
 // against a branch ref.
 func (g *gitClient) GetDefaultBranch(ctx context.Context, repoURL string) (string, error) {
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
+		Name: git.DefaultRemoteName,
 		URLs: []string{repoURL},
 	})
 
@@ -119,9 +119,9 @@ func (g *gitClient) GetDefaultBranch(ctx context.Context, repoURL string) (strin
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return "", fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+			return "", fmt.Errorf("authentication failed: %w: %w", err, ErrAuthFailed)
 		} else if isGitNotFoundError(err) {
-			return "", fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+			return "", fmt.Errorf("repository not found: %w: %w", err, ErrNotFound)
 		}
 		return "", fmt.Errorf("failed to list remote refs: %w", err)
 	}
@@ -155,7 +155,7 @@ func (g *gitClient) GetDefaultBranch(ctx context.Context, repoURL string) (strin
 
 func (g *gitClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string, error) {
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
+		Name: git.DefaultRemoteName,
 		URLs: []string{repoURL},
 	})
 	refs, err := rem.List(&git.ListOptions{
@@ -176,7 +176,7 @@ func (g *gitClient) GetTagSHA(ctx context.Context, repoURL, tag string) (string,
 
 func (g *gitClient) CheckTagExists(ctx context.Context, repoURL, tag string) (bool, error) {
 	rem := git.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
+		Name: git.DefaultRemoteName,
 		URLs: []string{repoURL},
 	})
 	ref, err := rem.List(&git.ListOptions{
@@ -214,19 +214,19 @@ func (g *gitClient) fetchFileByBranch(ctx context.Context, repoURL, branch, file
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return nil, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+			return nil, fmt.Errorf("authentication failed: %w: %w", err, ErrAuthFailed)
 		}
 		if isGitNotFoundError(err) {
-			return nil, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+			return nil, fmt.Errorf("repository not found: %w: %w", err, ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to clone repository: %w", err)
 	}
 
 	f, err := fs.Open(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("file '%s' not found at ref '%s': %v: %w", filePath, branch, err, ErrNotFound)
+		return nil, fmt.Errorf("file '%s' not found at ref '%s': %w: %w", filePath, branch, err, ErrNotFound)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	content, err := io.ReadAll(f)
 	if err != nil {
@@ -244,17 +244,17 @@ func (g *gitClient) fetchFileByCommit(ctx context.Context, repoURL, sha, filePat
 	})
 	if err != nil {
 		if isGitAuthError(err) {
-			return nil, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+			return nil, fmt.Errorf("authentication failed: %w: %w", err, ErrAuthFailed)
 		}
 		if isGitNotFoundError(err) {
-			return nil, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+			return nil, fmt.Errorf("repository not found: %w: %w", err, ErrNotFound)
 		}
 		return nil, fmt.Errorf("failed to clone repository: %w", err)
 	}
 
 	commit, err := repo.CommitObject(plumbing.NewHash(sha))
 	if err != nil {
-		return nil, fmt.Errorf("commit '%s' not found: %v: %w", sha, err, ErrNotFound)
+		return nil, fmt.Errorf("commit '%s' not found: %w: %w", sha, err, ErrNotFound)
 	}
 
 	tree, err := commit.Tree()
@@ -264,7 +264,7 @@ func (g *gitClient) fetchFileByCommit(ctx context.Context, repoURL, sha, filePat
 
 	file, err := tree.File(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("file '%s' not found at ref '%s': %v: %w", filePath, sha, err, ErrNotFound)
+		return nil, fmt.Errorf("file '%s' not found at ref '%s': %w: %w", filePath, sha, err, ErrNotFound)
 	}
 
 	content, err := file.Contents()
@@ -281,7 +281,7 @@ func isCommitSHA(s string) bool {
 		return false
 	}
 	for _, c := range s {
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') && (c < 'A' || c > 'F') {
 			return false
 		}
 	}

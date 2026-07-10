@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -83,7 +84,7 @@ func (d dbOrganisationDomainStore) Get(ctx context.Context, id string) (*models.
 	var domain models.OrganisationDomain
 	err := grm.Model(&models.OrganisationDomain{}).Where("id = ?", id).First(&domain).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("organisation domain with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch organisation domain: %s", err.Error())
@@ -95,7 +96,7 @@ func (d dbOrganisationDomainStore) Delete(ctx context.Context, id string) *error
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("id = ?", id).Delete(&models.OrganisationDomain{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("organisation domain with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete organisation domain: %s", err.Error())
@@ -110,7 +111,7 @@ func (d dbOrganisationDomainStore) DeleteWithTx(ctx context.Context, id string) 
 	}
 	err := tx.Where("id = ?", id).Delete(&models.OrganisationDomain{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("organisation domain with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete organisation domain: %s", err.Error())
@@ -122,7 +123,7 @@ func (d dbOrganisationDomainStore) Update(ctx context.Context, id string, domain
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Model(&models.OrganisationDomain{}).Where("id = ?", id).Updates(domain).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("organisation domain with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to update organisation domain: %s", err.Error())

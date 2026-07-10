@@ -91,7 +91,7 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			r.Log.Infof("postgres addon %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %w", serr)
 	}
 
 	// TODO(cluster-agent): Remove StatusHash=="" fallback once cluster-agent computes
@@ -123,7 +123,7 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
 		if serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %w", serr)
 		}
 		r.Log.Infof("updated postgres addon %s status: phase=%s", postgresAddonID, newStatus.State)
 	}
@@ -152,7 +152,7 @@ func mapPhaseToState(phase string) models.PostgresAddonState {
 
 func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus) *models.PostgresAddonStatus {
 	status := &models.PostgresAddonStatus{
-		State:                  mapPhaseToState(string(clusterStatus.Phase)),
+		State:                  mapPhaseToState(clusterStatus.Phase),
 		Conditions:             models.ConvertConditions(clusterStatus.Conditions),
 		LastObservedStatusHash: clusterStatus.StatusHash,
 	}

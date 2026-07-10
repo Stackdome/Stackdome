@@ -163,6 +163,12 @@ type StackResourceFailure struct {
 	Build         *BuildFailureDetail      `json:"build,omitempty"`
 }
 
+const (
+	PortProtocolHTTP = "http"
+	PortProtocolGRPC = "grpc"
+	PortProtocolTCP  = "tcp"
+)
+
 type Port struct {
 	Name                     string `json:"name"`
 	Number                   int    `json:"number"`
