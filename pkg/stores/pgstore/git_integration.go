@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -34,7 +35,7 @@ func (s *gitIntegrationStore) Create(ctx context.Context, integration *models.Gi
 func (s *gitIntegrationStore) GetByID(ctx context.Context, ID string) (*models.GitIntegration, *errors.ServiceError) {
 	var integration models.GitIntegration
 	if err := s.sessionFactory.New(ctx).Where("id = ?", ID).First(&integration).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("git integration with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get git integration: %s", err.Error())
@@ -47,7 +48,7 @@ func (s *gitIntegrationStore) GetByOrgAndHost(ctx context.Context, organisationI
 	if err := s.sessionFactory.New(ctx).
 		Where("organisation_id = ? AND host = ? AND type = ?", organisationID, host, models.GitIntegrationTypeGitCredentials).
 		First(&integration).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("no git integration for host '%s'", host)
 		}
 		return nil, errors.GeneralError("failed to get git integration for host: %s", err.Error())
@@ -60,7 +61,7 @@ func (s *gitIntegrationStore) GetGitHubAppForOrg(ctx context.Context, organisati
 	if err := s.sessionFactory.New(ctx).
 		Where("organisation_id = ? AND type = ?", organisationID, models.GitIntegrationTypeGitHubApp).
 		First(&integration).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("no GitHub App integration for organisation '%s'", organisationID)
 		}
 		return nil, errors.GeneralError("failed to get GitHub App integration: %s", err.Error())

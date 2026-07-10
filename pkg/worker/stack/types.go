@@ -16,12 +16,8 @@ type subReconcilerResult struct {
 }
 
 var (
-	resultNil          = subReconcilerResult{resultNil: true}
-	resultStop         = subReconcilerResult{resultStop: true}
-	resultRequeue      = subReconcilerResult{resultRequeue: true}
-	resultRequeueAfter = func(t time.Duration) subReconcilerResult {
-		return subReconcilerResult{resultRequeueAfter: &t}
-	}
+	resultNil  = subReconcilerResult{resultNil: true}
+	resultStop = subReconcilerResult{resultStop: true}
 )
 
 //go:generate mockgen -source=types.go -destination=types_mock.go -package=stack
@@ -50,9 +46,4 @@ type namespaceService interface {
 type volumeService interface {
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 	InternalDeleteVolumesUsedByStackFromDB(ctx context.Context, stackID string) *errors.ServiceError
-}
-
-type postgresAddonService interface {
-	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
-	InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 }

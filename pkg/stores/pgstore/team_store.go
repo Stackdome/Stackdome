@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -36,7 +37,7 @@ func (s *dbTeamStore) GetByID(ctx context.Context, id string) (*models.Team, *er
 	grm := s.sessionFactory.New(ctx)
 	var team models.Team
 	if err := grm.Where("id = ?", id).First(&team).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("team with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch team: %s", err.Error())
@@ -48,7 +49,7 @@ func (s *dbTeamStore) GetByOrgAndName(ctx context.Context, orgID, name string) (
 	grm := s.sessionFactory.New(ctx)
 	var team models.Team
 	if err := grm.Where("organisation_id = ? AND name = ?", orgID, name).First(&team).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("team '%s' not found in organisation", name)
 		}
 		return nil, errors.GeneralError("failed to fetch team: %s", err.Error())
@@ -68,7 +69,7 @@ func (s *dbTeamStore) ListByOrgID(ctx context.Context, orgID string) ([]*models.
 func (s *dbTeamStore) Update(ctx context.Context, id string, team *models.Team) (*models.Team, *errors.ServiceError) {
 	grm := s.sessionFactory.New(ctx)
 	if err := grm.Model(&models.Team{}).Where("id = ?", id).Updates(team).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("team with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to update team: %s", err.Error())
@@ -79,7 +80,7 @@ func (s *dbTeamStore) Update(ctx context.Context, id string, team *models.Team) 
 func (s *dbTeamStore) Delete(ctx context.Context, id string) *errors.ServiceError {
 	grm := s.sessionFactory.New(ctx)
 	if err := grm.Where("id = ?", id).Delete(&models.Team{}).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("team with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete team: %s", err.Error())
@@ -91,7 +92,7 @@ func (s *dbTeamStore) GetDefaultTeamForOrg(ctx context.Context, orgID string) (*
 	grm := s.sessionFactory.New(ctx)
 	var team models.Team
 	if err := grm.Where("organisation_id = ? AND default_team = ?", orgID, true).First(&team).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("default team not found for organisation '%s'", orgID)
 		}
 		return nil, errors.GeneralError("failed to fetch default team: %s", err.Error())

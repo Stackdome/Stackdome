@@ -21,6 +21,11 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+const (
+	controlPlaneNamespace   = "stackdome-control-plane"
+	apiServerServiceAccount = "stackdome-api-server-account"
+)
+
 type ClientManager struct {
 	client    *openapi.APIClient
 	cluster   *testutil.TestCluster
@@ -117,7 +122,7 @@ func (cm *ClientManager) createTestUser(ctx context.Context) (*UserInfo, error) 
 	if err != nil {
 		return nil, fmt.Errorf("user signup failed: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	if httpResp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(httpResp.Body)
@@ -184,7 +189,7 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 	// Create namespace
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "stackdome-control-plane",
+			Name: controlPlaneNamespace,
 		},
 	}
 	_, err = kubeClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})
@@ -195,11 +200,11 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 	// Create service account
 	sa := &corev1.ServiceAccount{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "stackdome-api-server-account",
-			Namespace: "stackdome-control-plane",
+			Name:      apiServerServiceAccount,
+			Namespace: controlPlaneNamespace,
 		},
 	}
-	_, err = kubeClient.CoreV1().ServiceAccounts("stackdome-control-plane").Create(ctx, sa, metav1.CreateOptions{})
+	_, err = kubeClient.CoreV1().ServiceAccounts(controlPlaneNamespace).Create(ctx, sa, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create service account: %w", err)
 	}
@@ -235,8 +240,8 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 		Subjects: []rbacv1.Subject{
 			{
 				Kind:      "ServiceAccount",
-				Name:      "stackdome-api-server-account",
-				Namespace: "stackdome-control-plane",
+				Name:      apiServerServiceAccount,
+				Namespace: controlPlaneNamespace,
 			},
 		},
 	}
@@ -249,21 +254,21 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "stackdome-api-server-account-secret",
-			Namespace: "stackdome-control-plane",
+			Namespace: controlPlaneNamespace,
 			Annotations: map[string]string{
-				"kubernetes.io/service-account.name": "stackdome-api-server-account",
+				"kubernetes.io/service-account.name": apiServerServiceAccount,
 			},
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
-	_, err = kubeClient.CoreV1().Secrets("stackdome-control-plane").Create(ctx, secret, metav1.CreateOptions{})
+	_, err = kubeClient.CoreV1().Secrets(controlPlaneNamespace).Create(ctx, secret, metav1.CreateOptions{})
 	if err != nil && !strings.Contains(err.Error(), "already exists") {
 		return fmt.Errorf("failed to create secret: %w", err)
 	}
 
 	// Wait for secret to be populated
 	for i := 0; i < 30; i++ {
-		s, err := kubeClient.CoreV1().Secrets("stackdome-control-plane").Get(ctx, "stackdome-api-server-account-secret", metav1.GetOptions{})
+		s, err := kubeClient.CoreV1().Secrets(controlPlaneNamespace).Get(ctx, "stackdome-api-server-account-secret", metav1.GetOptions{})
 		if err == nil && len(s.Data["token"]) > 0 && len(s.Data["ca.crt"]) > 0 {
 			return nil
 		}
@@ -288,7 +293,7 @@ func (cm *ClientManager) extractClusterCredentials(ctx context.Context) (string,
 	clusterURL := config.Host
 
 	// Get CA certificate and token from secret
-	secret, err := clientset.CoreV1().Secrets("stackdome-control-plane").Get(ctx, "stackdome-api-server-account-secret", metav1.GetOptions{})
+	secret, err := clientset.CoreV1().Secrets(controlPlaneNamespace).Get(ctx, "stackdome-api-server-account-secret", metav1.GetOptions{})
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to get secret: %w", err)
 	}
@@ -336,7 +341,7 @@ func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, 
 	if err != nil {
 		return "", fmt.Errorf("failed to make request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)

@@ -320,23 +320,6 @@ func presentPorts(ports models.Ports) []openapi.Port {
 	return result
 }
 
-func presentResourceStatus(status *models.StackResourceStatus) *openapi.StackResourceStatus {
-	if status == nil {
-		return nil
-	}
-	return &openapi.StackResourceStatus{
-		State:             ptr.To(string(status.State)),
-		ObservedRevision:  &status.ObservedCrRevision,
-		Conditions:        presentConditions(status.Conditions),
-		LastFailure:       presentStackResourceFailure(status.LastFailure),
-		Replicas:          &status.Replicas,
-		AvailableReplicas: &status.AvailableReplicas,
-		UpdatedReplicas:   &status.UpdatedReplicas,
-		LastRunTime:       status.LastRunTime,
-		LastRunSucceeded:  status.LastRunSucceeded,
-	}
-}
-
 // ConvertWorkspace converts an API Workspace object to a model
 func ConvertStack(w *openapi.Stack) *models.Stack {
 	return &models.Stack{

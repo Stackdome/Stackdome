@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -87,7 +88,7 @@ func (s *postgresAddonDatabaseStore) CreateWithTx(ctx context.Context, database 
 func (s *postgresAddonDatabaseStore) GetByID(ctx context.Context, ID string) (*models.PostgresAddonDatabase, *errors.ServiceError) {
 	var database models.PostgresAddonDatabase
 	if err := s.sessionFactory.New(ctx).Where("id = ?", ID).First(&database).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon database with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get postgres addon database: %s", err.Error())
@@ -100,7 +101,7 @@ func (s *postgresAddonDatabaseStore) GetByName(ctx context.Context, postgresAddo
 	if err := s.sessionFactory.New(ctx).
 		Where("postgres_addon_id = ? AND name = ?", postgresAddonID, name).
 		First(&database).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon database with name '%s' not found", name)
 		}
 		return nil, errors.GeneralError("failed to get postgres addon database by name: %s", err.Error())
@@ -119,7 +120,7 @@ func (s *postgresAddonDatabaseStore) Update(ctx context.Context, database *model
 	var existingDatabase models.PostgresAddonDatabase
 	if err := tx.Where("id = ?", database.ID).First(&existingDatabase).Error; err != nil {
 		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon database with id '%s' not found", database.ID)
 		}
 		return nil, errors.GeneralError("failed to find postgres addon database for update: %s", err.Error())
@@ -163,7 +164,7 @@ func (s *postgresAddonDatabaseStore) UpdateWithTx(ctx context.Context, database 
 
 	var existingDatabase models.PostgresAddonDatabase
 	if err := tx.Where("id = ?", database.ID).First(&existingDatabase).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon database with id '%s' not found", database.ID)
 		}
 		return nil, errors.GeneralError("failed to find postgres addon database for update: %s", err.Error())

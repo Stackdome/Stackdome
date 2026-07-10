@@ -19,7 +19,6 @@ type subReconcilerResult struct {
 var (
 	resultNil          = subReconcilerResult{resultNil: true}
 	resultStop         = subReconcilerResult{resultStop: true}
-	resultRequeue      = subReconcilerResult{resultRequeue: true}
 	resultRequeueAfter = func(t time.Duration) subReconcilerResult {
 		return subReconcilerResult{resultRequeueAfter: &t}
 	}

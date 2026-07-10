@@ -84,8 +84,8 @@ var _ = Describe("PermissionService.Check", func() {
 		BeforeEach(func() {
 			env = newTestEnv(GinkgoT(), defaultTeams())
 			// User is a developer. Team membership role also means org membership.
-			env.policyMgr.AddGroupingPolicy(userDev, string(models.DeveloperRole), teamABC)
-			env.policyMgr.AddGroupingPolicy(userDev, string(models.OrgMemberRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(userDev, string(models.DeveloperRole), teamABC)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(userDev, string(models.OrgMemberRole), orgABC)).To(Succeed())
 		})
 
 		DescribeTable("scope checks for user with developer role under org 'OrgABC' in team 'TeamABC'",
@@ -139,8 +139,8 @@ var _ = Describe("PermissionService.Check", func() {
 
 		BeforeEach(func() {
 			env = newTestEnv(GinkgoT(), defaultTeams())
-			env.policyMgr.AddGroupingPolicy(userDev, string(models.DeveloperRole), teamABC)
-			env.policyMgr.AddGroupingPolicy(userDev, string(models.OrgMemberRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(userDev, string(models.DeveloperRole), teamABC)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(userDev, string(models.OrgMemberRole), orgABC)).To(Succeed())
 			ctx = ctxWithIdentity(jwtIdentity(userDev, orgABC))
 		})
 
@@ -241,8 +241,8 @@ var _ = Describe("PermissionService.Check", func() {
 
 		BeforeEach(func() {
 			env = newTestEnv(GinkgoT(), defaultTeams())
-			env.policyMgr.AddGroupingPolicy(userView, string(models.ViewerRole), teamABC)
-			env.policyMgr.AddGroupingPolicy(userView, string(models.OrgMemberRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(userView, string(models.ViewerRole), teamABC)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(userView, string(models.OrgMemberRole), orgABC)).To(Succeed())
 			ctx = ctxWithIdentity(jwtIdentity(userView, orgABC))
 		})
 
@@ -334,7 +334,7 @@ var _ = Describe("PermissionService.Check", func() {
 
 		BeforeEach(func() {
 			env = newTestEnv(GinkgoT(), defaultTeams())
-			env.policyMgr.AddGroupingPolicy(userMem, string(models.OrgMemberRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(userMem, string(models.OrgMemberRole), orgABC)).To(Succeed())
 			ctx = ctxWithIdentity(jwtIdentity(userMem, orgABC))
 		})
 
@@ -399,7 +399,7 @@ var _ = Describe("PermissionService.Check", func() {
 
 		BeforeEach(func() {
 			env = newTestEnv(GinkgoT(), defaultTeams())
-			env.policyMgr.AddGroupingPolicy(userAdmin, string(models.OrgAdminRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(userAdmin, string(models.OrgAdminRole), orgABC)).To(Succeed())
 			ctx = ctxWithIdentity(jwtIdentity(userAdmin, orgABC))
 		})
 
@@ -462,10 +462,10 @@ var _ = Describe("PermissionService.Check", func() {
 
 			user1 := "user-1"
 			user2 := "user-2"
-			env.policyMgr.AddGroupingPolicy(user1, string(models.DeveloperRole), teamABC)
-			env.policyMgr.AddGroupingPolicy(user1, string(models.OrgMemberRole), orgABC)
-			env.policyMgr.AddGroupingPolicy(user2, string(models.DeveloperRole), teamXYZ)
-			env.policyMgr.AddGroupingPolicy(user2, string(models.OrgMemberRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(user1, string(models.DeveloperRole), teamABC)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(user1, string(models.OrgMemberRole), orgABC)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(user2, string(models.DeveloperRole), teamXYZ)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(user2, string(models.OrgMemberRole), orgABC)).To(Succeed())
 
 			ctx1 := ctxWithIdentity(jwtIdentity(user1, orgABC))
 			ctx2 := ctxWithIdentity(jwtIdentity(user2, orgABC))
@@ -490,9 +490,9 @@ var _ = Describe("PermissionService.Check", func() {
 			}
 			env = newTestEnv(GinkgoT(), teams)
 			user := "user-multi"
-			env.policyMgr.AddGroupingPolicy(user, string(models.DeveloperRole), teamABC)
-			env.policyMgr.AddGroupingPolicy(user, string(models.ViewerRole), teamXYZ)
-			env.policyMgr.AddGroupingPolicy(user, string(models.OrgMemberRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(user, string(models.DeveloperRole), teamABC)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(user, string(models.ViewerRole), teamXYZ)).To(Succeed())
+			Expect(env.policyMgr.AddGroupingPolicy(user, string(models.OrgMemberRole), orgABC)).To(Succeed())
 			ctx = ctxWithIdentity(jwtIdentity(user, orgABC))
 		})
 
@@ -533,8 +533,8 @@ var _ = Describe("PermissionService.Check", func() {
 
 			BeforeEach(func() {
 				env = newTestEnv(GinkgoT(), defaultTeams())
-				env.policyMgr.AddGroupingPolicy(userView, string(models.ViewerRole), teamABC)
-				env.policyMgr.AddGroupingPolicy(userView, string(models.OrgMemberRole), orgABC)
+				Expect(env.policyMgr.AddGroupingPolicy(userView, string(models.ViewerRole), teamABC)).To(Succeed())
+				Expect(env.policyMgr.AddGroupingPolicy(userView, string(models.OrgMemberRole), orgABC)).To(Succeed())
 			})
 
 			DescribeTable("token cannot expand Viewer permissions",
@@ -585,8 +585,8 @@ var _ = Describe("PermissionService.Check", func() {
 
 			BeforeEach(func() {
 				env = newTestEnv(GinkgoT(), defaultTeams())
-				env.policyMgr.AddGroupingPolicy(userDev, string(models.DeveloperRole), teamABC)
-				env.policyMgr.AddGroupingPolicy(userDev, string(models.OrgMemberRole), orgABC)
+				Expect(env.policyMgr.AddGroupingPolicy(userDev, string(models.DeveloperRole), teamABC)).To(Succeed())
+				Expect(env.policyMgr.AddGroupingPolicy(userDev, string(models.OrgMemberRole), orgABC)).To(Succeed())
 			})
 
 			DescribeTable("token restricts Developer permissions",
@@ -616,7 +616,7 @@ var _ = Describe("PermissionService.Check", func() {
 
 			BeforeEach(func() {
 				env = newTestEnv(GinkgoT(), defaultTeams())
-				env.policyMgr.AddGroupingPolicy(userAdmin, string(models.OrgAdminRole), orgABC)
+				Expect(env.policyMgr.AddGroupingPolicy(userAdmin, string(models.OrgAdminRole), orgABC)).To(Succeed())
 			})
 
 			DescribeTable("token restricts OrgAdmin permissions",
@@ -650,7 +650,7 @@ var _ = Describe("PermissionService.Check", func() {
 
 		BeforeEach(func() {
 			env = newTestEnv(GinkgoT(), defaultTeams())
-			env.policyMgr.AddGroupingPolicy(userAdmin, string(models.OrgAdminRole), orgABC)
+			Expect(env.policyMgr.AddGroupingPolicy(userAdmin, string(models.OrgAdminRole), orgABC)).To(Succeed())
 		})
 
 		It("should deny empty domain even for OrgAdmin", func() {

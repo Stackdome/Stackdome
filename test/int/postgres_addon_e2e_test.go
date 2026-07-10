@@ -119,7 +119,7 @@ var _ = Describe("PostgresAddon E2E", Ordered, func() {
 
 			By("Connecting to postgres and running a query")
 			db := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "testdb", "disable")
-			defer db.Close()
+			defer func() { _ = db.Close() }()
 
 			var result int
 			err = db.QueryRowContext(ctx, "SELECT 1").Scan(&result)

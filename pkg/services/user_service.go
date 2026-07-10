@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"time"
 
@@ -233,7 +234,7 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(userInDB.Password), []byte(loginRequest.Password)); err != nil {
-		if err == bcrypt.ErrMismatchedHashAndPassword {
+		if stderrors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, errors.BadRequest("invalid email or password")
 		}
 		u.logger.Errorf("failed to login: %s", err.Error())

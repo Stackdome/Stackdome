@@ -196,7 +196,7 @@ func isExactRef(value string) bool {
 func isSelfRef(value string) bool {
 	refs := findRefs(value)
 	for _, r := range refs {
-		if r.Source == "self" {
+		if r.Source == sourceSelf {
 			return true
 		}
 	}
@@ -206,7 +206,7 @@ func isSelfRef(value string) bool {
 func extractSelfOutput(value string) string {
 	refs := findRefs(value)
 	for _, r := range refs {
-		if r.Source == "self" {
+		if r.Source == sourceSelf {
 			return r.Output
 		}
 	}
@@ -216,7 +216,7 @@ func extractSelfOutput(value string) string {
 func hasResourceRef(value string) bool {
 	refs := findRefs(value)
 	for _, r := range refs {
-		if r.Source != "self" {
+		if r.Source != sourceSelf {
 			return true
 		}
 	}
@@ -298,7 +298,7 @@ func buildEnvRefConnections(targetResource string, env map[string]string) []open
 			continue
 		}
 
-		_, currentEnvIsSelfRef := lo.Find(refsInCurrentEnv, func(r envRef) bool { return r.Source == "self" })
+		_, currentEnvIsSelfRef := lo.Find(refsInCurrentEnv, func(r envRef) bool { return r.Source == sourceSelf })
 		if currentEnvIsSelfRef {
 			// skip self refs, they will be handled in execution config
 			continue
@@ -323,7 +323,7 @@ func buildEnvRefConnections(targetResource string, env map[string]string) []open
 
 		mapping := openapi.ConnectionMapping{
 			Target: openapi.ConnectionTarget{
-				Type: "env",
+				Type: targetTypeEnv,
 				Name: ptr.To(envName),
 			},
 			Value: vr,
@@ -334,13 +334,13 @@ func buildEnvRefConnections(targetResource string, env map[string]string) []open
 	var connections []openapi.StackConnection
 	for source, mappings := range grouped {
 		conn := openapi.StackConnection{
-			Kind: "env",
+			Kind: connectionKindEnv,
 			From: openapi.TopologyNodeRef{
-				Type: "stack_resource",
+				Type: nodeTypeStackResource,
 				Name: ptr.To(source),
 			},
 			To: openapi.TopologyNodeRef{
-				Type: "stack_resource",
+				Type: nodeTypeStackResource,
 				Name: ptr.To(targetResource),
 			},
 			Mappings: mappings,
@@ -358,7 +358,7 @@ func buildSecretConnections(targetResource string, secrets map[string]SecretMapp
 		for envName, secretKey := range mapping {
 			mappings = append(mappings, openapi.ConnectionMapping{
 				Target: openapi.ConnectionTarget{
-					Type: "env",
+					Type: targetTypeEnv,
 					Name: ptr.To(envName),
 				},
 				Value: openapi.ValueRef{
@@ -368,13 +368,13 @@ func buildSecretConnections(targetResource string, secrets map[string]SecretMapp
 		}
 
 		conn := openapi.StackConnection{
-			Kind: "env",
+			Kind: connectionKindEnv,
 			From: openapi.TopologyNodeRef{
-				Type: "secret",
+				Type: nodeTypeSecret,
 				Name: ptr.To(secretName),
 			},
 			To: openapi.TopologyNodeRef{
-				Type: "stack_resource",
+				Type: nodeTypeStackResource,
 				Name: ptr.To(targetResource),
 			},
 			Mappings: mappings,
@@ -391,13 +391,13 @@ func buildAddonConnections(targetResource string, addons map[string]AddonConnect
 		mappings := buildAddonMappings(addon.Env)
 
 		conn := openapi.StackConnection{
-			Kind: "env",
+			Kind: connectionKindEnv,
 			From: openapi.TopologyNodeRef{
 				Type: "addon/" + addon.Type,
 				Name: ptr.To(addonName),
 			},
 			To: openapi.TopologyNodeRef{
-				Type: "stack_resource",
+				Type: nodeTypeStackResource,
 				Name: ptr.To(targetResource),
 			},
 			Mappings: mappings,
@@ -443,7 +443,7 @@ func buildAddonMappings(env map[string]string) []openapi.ConnectionMapping {
 
 		mappings = append(mappings, openapi.ConnectionMapping{
 			Target: openapi.ConnectionTarget{
-				Type: "env",
+				Type: targetTypeEnv,
 				Name: ptr.To(envName),
 			},
 			Value: vr,
@@ -476,13 +476,13 @@ func buildVolumeMountConnections(targetResource string, mounts []VolumeMountDef)
 	var connections []openapi.StackConnection
 	for _, m := range mounts {
 		conn := openapi.StackConnection{
-			Kind: "volume_mount",
+			Kind: connectionKindVolumeMount,
 			From: openapi.TopologyNodeRef{
-				Type: "volume",
+				Type: nodeTypeVolume,
 				Name: ptr.To(m.Name),
 			},
 			To: openapi.TopologyNodeRef{
-				Type: "stack_resource",
+				Type: nodeTypeStackResource,
 				Name: ptr.To(targetResource),
 			},
 			Config: &openapi.StackConnectionConfig{

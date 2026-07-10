@@ -3,6 +3,7 @@ package clients
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"sort"
@@ -119,7 +120,7 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 	logChannel := make(chan *LogStreamObject)
 	go func() {
 		defer close(logChannel)
-		defer stream.Close()
+		defer func() { _ = stream.Close() }()
 		numStreamErrors := 0
 		for {
 			select {
@@ -129,7 +130,7 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 			}
 			line, err := reader.ReadString('\n')
 			if err != nil {
-				if err == context.Canceled || err == context.DeadlineExceeded {
+				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 					return
 				}
 				if err == io.EOF {
@@ -142,7 +143,7 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 					return
 				}
 				k.logger.Errorf("error reading log line: %v", err)
-				safeWriteToChannel(ctx, logChannel, &LogStreamObject{Error: fmt.Errorf("error reading log line: %v", err)})
+				safeWriteToChannel(ctx, logChannel, &LogStreamObject{Error: fmt.Errorf("error reading log line: %w", err)})
 				numStreamErrors++
 				continue
 			}
@@ -248,7 +249,7 @@ func (k *kubernetesClient) StreamNamespaceMetrics(ctx context.Context, namespace
 						return
 					}
 					k.logger.Errorf("error fetching pod metrics: %v", err)
-					safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{Error: fmt.Errorf("error fetching pod metrics: %v", err)})
+					safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{Error: fmt.Errorf("error fetching pod metrics: %w", err)})
 					numStreamErrors++
 					continue
 				}
@@ -264,7 +265,7 @@ func (k *kubernetesClient) StreamNamespaceMetrics(ctx context.Context, namespace
 func (k *kubernetesClient) attachablePodForObject(object runtime.Object, timeout time.Duration) (*corev1.Pod, error) {
 	namespace, selector, err := polymorphichelpers.SelectorsForObject(object)
 	if err != nil {
-		return nil, fmt.Errorf("cannot attach to %T: %v", object, err)
+		return nil, fmt.Errorf("cannot attach to %T: %w", object, err)
 	}
 	sortBy := func(pods []*corev1.Pod) sort.Interface { return sort.Reverse(podutils.ActivePods(pods)) }
 	pod, _, err := polymorphichelpers.GetFirstPod(k.clientSet.CoreV1(), namespace, selector.String(), timeout, sortBy)

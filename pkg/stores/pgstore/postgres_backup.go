@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -50,7 +51,7 @@ func (s *postgresBackupStore) Create(ctx context.Context, backup *models.Postgre
 func (s *postgresBackupStore) GetByID(ctx context.Context, ID string) (*models.PostgresBackup, *errors.ServiceError) {
 	var backup models.PostgresBackup
 	if err := s.sessionFactory.New(ctx).Where("id = ?", ID).First(&backup).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres backup with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get postgres backup: %s", err.Error())
@@ -63,7 +64,7 @@ func (s *postgresBackupStore) GetByName(ctx context.Context, postgresAddonID str
 	if err := s.sessionFactory.New(ctx).
 		Where("postgres_addon_id = ? AND name = ?", postgresAddonID, name).
 		First(&backup).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres backup '%s' not found for addon '%s'", name, postgresAddonID)
 		}
 		return nil, errors.GeneralError("failed to get postgres backup by name: %s", err.Error())
@@ -82,7 +83,7 @@ func (s *postgresBackupStore) Update(ctx context.Context, backup *models.Postgre
 	var existingBackup models.PostgresBackup
 	if err := tx.Where("id = ?", backup.ID).First(&existingBackup).Error; err != nil {
 		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres backup with id '%s' not found", backup.ID)
 		}
 		return nil, errors.GeneralError("failed to find postgres backup for update: %s", err.Error())

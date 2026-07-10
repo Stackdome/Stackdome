@@ -25,6 +25,8 @@ type Condition struct {
 	Message            string    `json:"message"`
 }
 
+const LabelValueTrue = "true"
+
 type Label struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`

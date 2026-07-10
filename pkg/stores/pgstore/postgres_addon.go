@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -98,7 +99,7 @@ func (s *postgresAddonStore) GetByID(ctx context.Context, ID string) (*models.Po
 		Preload("Backups").
 		Where("id = ?", ID).
 		First(&addon).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get postgres addon: %s", err.Error())
@@ -113,7 +114,7 @@ func (s *postgresAddonStore) GetByName(ctx context.Context, organisationID, name
 		Preload("Backups").
 		Where("organisation_id = ? AND name = ?", organisationID, name).
 		First(&addon).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon with name '%s' not found", name)
 		}
 		return nil, errors.GeneralError("failed to get postgres addon by name: %s", err.Error())
@@ -132,7 +133,7 @@ func (s *postgresAddonStore) Update(ctx context.Context, addon *models.PostgresA
 	var existingAddon models.PostgresAddon
 	if err := tx.Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
 		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon with id '%s' not found", addon.ID)
 		}
 		return nil, errors.GeneralError("failed to find postgres addon for update: %s", err.Error())
@@ -162,7 +163,7 @@ func (s *postgresAddonStore) UpdateWithTx(ctx context.Context, addon *models.Pos
 
 	var existingAddon models.PostgresAddon
 	if err := tx.Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon with id '%s' not found", addon.ID)
 		}
 		return nil, errors.GeneralError("failed to find postgres addon for update: %s", err.Error())

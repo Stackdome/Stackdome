@@ -35,6 +35,10 @@ fmt:
 	gofmt -w .
 .PHONY: fmt
 
+lint: ## Run golangci-lint (installs pinned version if needed)
+	mage lint
+.PHONY: lint
+
 binary:
 	GOOS=$(GOOS) GOARCH=$(GOARCH) go build -o bin/stackdome-server cmd/main.go
 .PHONY: binary

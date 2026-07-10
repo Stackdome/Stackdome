@@ -44,7 +44,7 @@ func applyStackResourcePortDefaults(resource *models.StackResource) {
 	}
 	for i := range resource.Ports {
 		if resource.Ports[i].ExposedToPublic && resource.Ports[i].Protocol == "" {
-			resource.Ports[i].Protocol = "http"
+			resource.Ports[i].Protocol = models.PortProtocolHTTP
 		}
 	}
 }

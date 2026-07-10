@@ -107,11 +107,11 @@ func (sm *ServerManager) waitForReady(ctx context.Context) error {
 		case <-ticker.C:
 			resp, err := http.Get(healthURL)
 			if err == nil && resp.StatusCode == http.StatusOK {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 				return nil
 			}
 			if resp != nil {
-				resp.Body.Close()
+				_ = resp.Body.Close()
 			}
 		}
 	}

@@ -19,7 +19,7 @@ func (s apiServer) routes() *mux.Router {
 	// Health check endpoint
 	mainRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}).Methods(http.MethodGet)
 	services := s.environment.Environment().Services
 	logger := s.environment.Environment().Logger

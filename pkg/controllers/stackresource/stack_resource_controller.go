@@ -99,13 +99,13 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			w.logger.Infof("StackResource %s not found in DB", stackResourceCr.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get stack resource from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get stack resource from db: %w", serr)
 	}
 
 	if dbStackResource.Status == nil || dbStackResource.Status.LastObservedStatusHash != stackResourceCr.Status.StatusHash {
 		dbStackResource.Status = computeStatusRewrite(dbStackResource.Status, stackResourceCr)
 		if serr := w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status); serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %w", serr)
 		}
 		return ctrl.Result{}, nil
 	}

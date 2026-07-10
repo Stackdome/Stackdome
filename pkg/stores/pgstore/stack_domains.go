@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -69,7 +70,7 @@ func (d dbStackDomainsStore) GetByStackResourceAndPort(ctx context.Context, stac
 	var domain models.StackDomain
 	err := grm.Model(&models.StackDomain{}).Where("stack_resource_id = ? AND target_port = ?", stackResourceID, port).First(&domain).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack domain with stack resource id '%s' and port '%d' not found", stackResourceID, port)
 		}
 		return nil, errors.InternalServerError("failed to fetch stack domain by stack resource id and port: %s", err.Error())
@@ -82,7 +83,7 @@ func (d dbStackDomainsStore) DeleteForStackResourceAndPort(ctx context.Context, 
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("stack_resource_id = ? AND target_port = ?", stackResourceID, port).Delete(&models.StackDomain{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack domain with stack resource id '%s' and port '%d' not found", stackResourceID, port)
 		}
 		return errors.InternalServerError("failed to delete stack domain: %s", err.Error())
@@ -99,7 +100,7 @@ func (d dbStackDomainsStore) DeleteForStackResourceAndPortWithTx(ctx context.Con
 	}
 	err := tx.Where("stack_resource_id = ? AND target_port = ?", stackResourceID, port).Delete(&models.StackDomain{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack domain with stack resource id '%s' and port '%d' not found", stackResourceID, port)
 		}
 		return errors.InternalServerError("failed to delete stack domain: %s", err.Error())
@@ -148,7 +149,7 @@ func (d dbStackDomainsStore) Get(ctx context.Context, id string) (*models.StackD
 	var domain models.StackDomain
 	err := grm.Model(&models.StackDomain{}).Where("id = ?", id).First(&domain).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack domain with id '%s' not found", id)
 		}
 		return nil, errors.InternalServerError("failed to fetch stack domain: %s", err.Error())
@@ -160,7 +161,7 @@ func (d dbStackDomainsStore) Delete(ctx context.Context, id string) *errors.Serv
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("id = ?", id).Delete(&models.StackDomain{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack domain with id '%s' not found", id)
 		}
 		return errors.InternalServerError("failed to delete stack domain: %s", err.Error())
@@ -175,7 +176,7 @@ func (d dbStackDomainsStore) DeleteWithTx(ctx context.Context, id string) *error
 	}
 	err := tx.Where("id = ?", id).Delete(&models.StackDomain{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("stack domain with id '%s' not found", id)
 		}
 		return errors.InternalServerError("failed to delete stack domain: %s", err.Error())
@@ -187,7 +188,7 @@ func (d dbStackDomainsStore) Update(ctx context.Context, id string, domain *mode
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Model(&models.StackDomain{}).Where("id = ?", id).Updates(domain).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack domain with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to update stack domain: %s", err.Error())
@@ -220,7 +221,7 @@ func (d dbStackDomainsStore) GetByFqdn(ctx context.Context, fqdn string) (*model
 	var domain models.StackDomain
 	err := grm.Model(&models.StackDomain{}).Where("fqdn = ?", fqdn).First(&domain).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack domain with fqdn '%s' not found", fqdn)
 		}
 		return nil, errors.InternalServerError("failed to fetch stack domain by fqdn: %s", err.Error())

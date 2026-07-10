@@ -83,7 +83,9 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	rawToken, decErr := w.inviteService.InternalDecryptToken(ctx, invite.EncryptedToken)
 	if decErr != nil {
 		w.Logger().Errorf("failed to decrypt token for invite %s: %s", invite.ID, decErr.Error())
-		w.inviteService.InternalMarkEmailError(ctx, invite.ID, "failed to decrypt token")
+		if markErr := w.inviteService.InternalMarkEmailError(ctx, invite.ID, "failed to decrypt token"); markErr != nil {
+			w.Logger().Errorf("failed to mark email error for invite %s: %s", invite.ID, markErr.Error())
+		}
 		return worker.Result{}, nil
 	}
 
@@ -120,7 +122,9 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	})
 	if txErr != nil {
 		w.Logger().Errorf("failed to send invite email to %s: %s", invite.Email, txErr.Error())
-		w.inviteService.InternalMarkEmailError(ctx, invite.ID, txErr.Error())
+		if markErr := w.inviteService.InternalMarkEmailError(ctx, invite.ID, txErr.Error()); markErr != nil {
+			w.Logger().Errorf("failed to mark email error for invite %s: %s", invite.ID, markErr.Error())
+		}
 		return worker.Result{RequeueAfter: 5 * time.Minute}, nil
 	}
 

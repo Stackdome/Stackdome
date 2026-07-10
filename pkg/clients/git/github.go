@@ -10,6 +10,8 @@ import (
 	"github.com/google/go-github/v88/github"
 )
 
+const githubHost = "github.com"
+
 // GitHubClient provides GitHub-specific API operations.
 type gitHubClient struct {
 	client *github.Client
@@ -46,13 +48,13 @@ func (g *gitHubClient) CheckAccess(ctx context.Context, repoURL string) (bool, e
 	if err != nil {
 		if resp != nil {
 			if isRateLimited(resp) {
-				return false, fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+				return false, fmt.Errorf("rate limited: %w: %w", err, ErrRateLimited)
 			}
 			switch resp.StatusCode {
 			case http.StatusNotFound:
-				return false, fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+				return false, fmt.Errorf("repository not found: %w: %w", err, ErrNotFound)
 			case http.StatusUnauthorized, http.StatusForbidden:
-				return false, fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+				return false, fmt.Errorf("authentication failed: %w: %w", err, ErrAuthFailed)
 			}
 		}
 		return false, fmt.Errorf("failed to access git repo: %w", err)
@@ -69,13 +71,13 @@ func (g *gitHubClient) GetDefaultBranch(ctx context.Context, repoURL string) (st
 	if err != nil {
 		if resp != nil {
 			if isRateLimited(resp) {
-				return "", fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+				return "", fmt.Errorf("rate limited: %w: %w", err, ErrRateLimited)
 			}
 			switch resp.StatusCode {
 			case http.StatusNotFound:
-				return "", fmt.Errorf("repository not found: %v: %w", err, ErrNotFound)
+				return "", fmt.Errorf("repository not found: %w: %w", err, ErrNotFound)
 			case http.StatusUnauthorized, http.StatusForbidden:
-				return "", fmt.Errorf("authentication failed: %v: %w", err, ErrAuthFailed)
+				return "", fmt.Errorf("authentication failed: %w: %w", err, ErrAuthFailed)
 			}
 		}
 		return "", fmt.Errorf("failed to get repository: %w", err)
@@ -153,7 +155,7 @@ func (g *gitHubClient) FetchFile(ctx context.Context, repoURL, ref, filePath str
 	if err != nil {
 		if resp != nil {
 			if isRateLimited(resp) {
-				return nil, fmt.Errorf("rate limited: %v: %w", err, ErrRateLimited)
+				return nil, fmt.Errorf("rate limited: %w: %w", err, ErrRateLimited)
 			}
 			if resp.StatusCode == http.StatusNotFound {
 				return nil, fmt.Errorf("file '%s' not found at ref '%s': %w", filePath, ref, ErrNotFound)
@@ -186,7 +188,7 @@ func isRateLimited(resp *github.Response) bool {
 }
 
 func IsGithubHost(host string) bool {
-	return host == "github.com" || host == "www.github.com"
+	return host == githubHost || host == "www."+githubHost
 }
 
 // ParseGitHubRepoURL extracts owner and repo from a GitHub URL.

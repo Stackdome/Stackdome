@@ -18,7 +18,6 @@ const (
 type stackWorker struct {
 	stackService   stackService
 	clusterManager clustermanager.ClusterManager
-	env            string
 	subReconcilers []subReconciler
 	worker.BaseWorker
 }

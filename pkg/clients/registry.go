@@ -152,7 +152,7 @@ func (ic *registryClient) CheckImage(ctx context.Context, imageRef string) (bool
 	// Parse the image reference
 	ref, err := name.ParseReference(imageRef)
 	if err != nil {
-		return false, fmt.Errorf("invalid image reference: %v", err)
+		return false, fmt.Errorf("invalid image reference: %w", err)
 	}
 
 	_, err = remote.Get(ref, remote.WithAuth(ic.auth), remote.WithContext(ctx))
@@ -165,7 +165,7 @@ func (ic *registryClient) CheckImage(ctx context.Context, imageRef string) (bool
 		} else if isNotFoundError(err) {
 			return false, nil
 		}
-		return false, fmt.Errorf("failed to check image: %v", err)
+		return false, fmt.Errorf("failed to check image: %w", err)
 	}
 
 	_, err = remote.Image(ref, remote.WithAuth(ic.auth), remote.WithContext(ctx))
@@ -173,7 +173,7 @@ func (ic *registryClient) CheckImage(ctx context.Context, imageRef string) (bool
 		if isRateLimitedError(err) {
 			return false, fmt.Errorf("%w: %w", ErrRateLimited, err)
 		}
-		return false, fmt.Errorf("image exists but not pullable: %v", err)
+		return false, fmt.Errorf("image exists but not pullable: %w", err)
 	}
 
 	return true, nil
@@ -183,7 +183,7 @@ func (ic *registryClient) CheckImage(ctx context.Context, imageRef string) (bool
 func (ic *registryClient) CheckPushAccess(ctx context.Context, repoRef string) error {
 	repo, err := name.NewRepository(repoRef)
 	if err != nil {
-		return fmt.Errorf("invalid repository reference: %v", err)
+		return fmt.Errorf("invalid repository reference: %w", err)
 	}
 
 	// CheckPushPermission needs a name.Reference to compute the push scope;
@@ -198,9 +198,9 @@ func (ic *registryClient) CheckPushAccess(ctx context.Context, repoRef string) e
 			return fmt.Errorf("%w: %w", ErrRateLimited, err)
 		}
 		if isAuthError(err) {
-			return fmt.Errorf("push access check failed: %v: %w", err, ErrAuthFailed)
+			return fmt.Errorf("push access check failed: %w: %w", err, ErrAuthFailed)
 		}
-		return fmt.Errorf("push access check failed: %v", err)
+		return fmt.Errorf("push access check failed: %w", err)
 	}
 	return nil
 }

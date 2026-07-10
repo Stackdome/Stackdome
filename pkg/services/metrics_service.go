@@ -51,7 +51,7 @@ func (s *metricsService) GetMetricsForStackResource(ctx context.Context, orgID s
 		return nil, errors.UnprocessableEntity("resource %s is not ready for metrics", resource.Name)
 	}
 
-	res, cerr := s.ClusterResourceServiceDeps.ClusterMetricsService.GetMetricsForResource(ctx, orgID, resource)
+	res, cerr := s.ClusterMetricsService.GetMetricsForResource(ctx, orgID, resource)
 	if cerr != nil {
 		return nil, cerr
 	}
@@ -69,7 +69,7 @@ func (s *metricsService) GetMetricsForStack(ctx context.Context, orgID string, s
 		return nil, errors.UnprocessableEntity("stack %s is not ready for metrics", stackID)
 	}
 
-	res, cerr := s.ClusterResourceServiceDeps.ClusterMetricsService.GetMetricsForStack(ctx, orgID, stack)
+	res, cerr := s.ClusterMetricsService.GetMetricsForStack(ctx, orgID, stack)
 	if cerr != nil {
 		s.logger.Errorf("failed to get metrics for stack: %v", cerr)
 		return nil, cerr
@@ -86,7 +86,7 @@ func (s *metricsService) StreamMetricsForStackResource(ctx context.Context, orgI
 	if resource.Status != nil && resource.Status.State != models.StackResourcePhaseReady {
 		return nil, errors.UnprocessableEntity("resource %s is not ready for metrics", resource.Name)
 	}
-	streamer, cerr := s.ClusterResourceServiceDeps.ClusterMetricsService.StreamMetricsForResource(ctx, orgID, resource)
+	streamer, cerr := s.ClusterMetricsService.StreamMetricsForResource(ctx, orgID, resource)
 	if cerr != nil {
 		s.logger.Errorf("failed to stream metrics for resource: %v", cerr)
 		return nil, cerr
@@ -103,7 +103,7 @@ func (s *metricsService) StreamMetricsForStack(ctx context.Context, orgID string
 	if stack.Status != nil && stack.Status.State != models.StackReady {
 		return nil, errors.UnprocessableEntity("stack %s is not ready for metrics", stackID)
 	}
-	streamer, cerr := s.ClusterResourceServiceDeps.ClusterMetricsService.StreamMetricsForStack(ctx, orgID, stack)
+	streamer, cerr := s.ClusterMetricsService.StreamMetricsForStack(ctx, orgID, stack)
 	if cerr != nil {
 		s.logger.Errorf("failed to stream metrics for stack: %v", cerr)
 		return nil, cerr

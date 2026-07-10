@@ -16,6 +16,8 @@ func PostgresCredentialSecretName(addonID, database string) string {
 	return fmt.Sprintf("pgcred-%s-%s", hashPrefix, sanitizeDNS(database))
 }
 
+const defaultDNSLabel = "default"
+
 var dnsUnsafe = regexp.MustCompile(`[^a-z0-9-]`)
 
 // sanitizeDNS lowercases the input, replaces underscores with hyphens,
@@ -27,7 +29,7 @@ func sanitizeDNS(s string) string {
 	s = dnsUnsafe.ReplaceAllString(s, "")
 	s = strings.Trim(s, "-")
 	if s == "" {
-		s = "default"
+		s = defaultDNSLabel
 	}
 	return s
 }

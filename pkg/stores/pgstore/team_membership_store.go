@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -36,7 +37,7 @@ func (s *dbTeamMembershipStore) GetByID(ctx context.Context, id string) (*models
 	grm := s.sessionFactory.New(ctx)
 	var membership models.TeamMembership
 	if err := grm.Preload("Team").Preload("User").Where("id = ?", id).First(&membership).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("team membership with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch team membership: %s", err.Error())
@@ -48,7 +49,7 @@ func (s *dbTeamMembershipStore) GetByTeamAndUser(ctx context.Context, teamID, us
 	grm := s.sessionFactory.New(ctx)
 	var membership models.TeamMembership
 	if err := grm.Preload("Team").Preload("User").Where("team_id = ? AND user_id = ?", teamID, userID).First(&membership).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("membership not found for user in team")
 		}
 		return nil, errors.GeneralError("failed to fetch team membership: %s", err.Error())

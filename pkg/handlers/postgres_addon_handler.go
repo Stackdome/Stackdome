@@ -259,7 +259,7 @@ func (h *postgresAddonHandler) GetCredentials(w http.ResponseWriter, r *http.Req
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
 			database := mux.Vars(r)["database"]
-			superuser := r.URL.Query().Get("superuser") == "true"
+			superuser := r.URL.Query().Get("superuser") == queryValueTrue
 
 			creds, err := h.postgresAddonService.GetCredentials(ctx, id, database, superuser)
 			if err != nil {
