@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { PreviewEnvRow } from "../preview-env-row";
 import type { PreviewStack } from "@/api/preview-envs";
 
@@ -25,6 +26,16 @@ describe("PreviewEnvRow", () => {
     const link = screen.getByRole("link", { name: /web/i });
     expect(link.getAttribute("href")).toBe("https://pr-42.example.com");
     expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("links to the underlying stack when stack_id is set", () => {
+    render(
+      <MemoryRouter>
+        <PreviewEnvRow env={{ ...base, stack_id: "s-123" }} onSync={vi.fn()} onDelete={vi.fn()} />
+      </MemoryRouter>,
+    );
+    const link = screen.getByRole("link", { name: /view stack for pr #42/i });
+    expect(link.getAttribute("href")).toBe("/stacks/s-123");
   });
 
   it("expands failure reason with stackfile hint", () => {

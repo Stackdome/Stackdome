@@ -1,4 +1,5 @@
-import { ExternalLink, RefreshCw, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ExternalLink, Layers, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { PreviewStack, PreviewPhase } from "@/api/preview-envs";
@@ -51,6 +52,13 @@ export function PreviewEnvRow({ env, onSync, onDelete }: PreviewEnvRowProps) {
             {u.resource}
           </a>
         ))}
+        {env.stack_id && (
+          <Button variant="ghost" size="icon" asChild>
+            <Link to={`/stacks/${env.stack_id}`} aria-label={`View stack for PR #${env.pr_number}`}>
+              <Layers className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
