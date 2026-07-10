@@ -174,7 +174,6 @@ docs/Stack.md
 docs/StackConnection.md
 docs/StackConnectionConfig.md
 docs/StackConnectionList.md
-docs/StackCurrentRelease.md
 docs/StackLifecycle.md
 docs/StackList.md
 docs/StackPreviewConfig.md
@@ -185,7 +184,6 @@ docs/StackRelease.md
 docs/StackReleaseDetail.md
 docs/StackReleaseDetailAllOf.md
 docs/StackReleaseList.md
-docs/StackReleaseLiveStatus.md
 docs/StackReleaseSnapshot.md
 docs/StackReleaseSnapshotStack.md
 docs/StackReleaseState.md
@@ -396,7 +394,6 @@ model_stack.go
 model_stack_connection.go
 model_stack_connection_config.go
 model_stack_connection_list.go
-model_stack_current_release.go
 model_stack_lifecycle.go
 model_stack_list.go
 model_stack_preview_config.go
@@ -407,7 +404,6 @@ model_stack_release.go
 model_stack_release_detail.go
 model_stack_release_detail_all_of.go
 model_stack_release_list.go
-model_stack_release_live_status.go
 model_stack_release_snapshot.go
 model_stack_release_snapshot_stack.go
 model_stack_release_state.go

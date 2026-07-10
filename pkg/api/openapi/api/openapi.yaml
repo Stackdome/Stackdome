@@ -7348,7 +7348,14 @@ components:
           key: key
         - value: value
           key: key
-        current_release: null
+        current_release:
+          sequence: 7
+          completed_at: 2000-01-23T04:56:07.000+00:00
+          health: null
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          state: null
+          message: message
         created_at: 2000-01-23T04:56:07.000+00:00
         team_id: team_id
         spec:
@@ -7731,8 +7738,15 @@ components:
         - value: value
           key: key
         revision: revision
-        latest_release: null
-        lifecycle: ""
+        latest_release:
+          sequence: 7
+          completed_at: 2000-01-23T04:56:07.000+00:00
+          health: null
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
+          state: null
+          message: message
+        lifecycle: null
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
         user_id: user_id
@@ -7773,13 +7787,11 @@ components:
         settings:
           $ref: '#/components/schemas/StackSettings'
         lifecycle:
-          allOf:
-          - $ref: '#/components/schemas/StackLifecycle'
-          readOnly: true
+          $ref: '#/components/schemas/StackLifecycle'
         current_release:
-          $ref: '#/components/schemas/Stack_current_release'
+          $ref: '#/components/schemas/ReleaseSummary'
         latest_release:
-          $ref: '#/components/schemas/Stack_current_release'
+          $ref: '#/components/schemas/ReleaseSummary'
         created_at:
           format: date-time
           readOnly: true
@@ -7814,7 +7826,7 @@ components:
       type: object
     StackList:
       example:
-        total: 7
+        total: 9
         items:
         - settings:
             deploy_timeout_minutes: 2
@@ -7825,7 +7837,14 @@ components:
             key: key
           - value: value
             key: key
-          current_release: null
+          current_release:
+            sequence: 7
+            completed_at: 2000-01-23T04:56:07.000+00:00
+            health: null
+            created_at: 2000-01-23T04:56:07.000+00:00
+            id: id
+            state: null
+            message: message
           created_at: 2000-01-23T04:56:07.000+00:00
           team_id: team_id
           spec:
@@ -8208,8 +8227,15 @@ components:
           - value: value
             key: key
           revision: revision
-          latest_release: null
-          lifecycle: ""
+          latest_release:
+            sequence: 7
+            completed_at: 2000-01-23T04:56:07.000+00:00
+            health: null
+            created_at: 2000-01-23T04:56:07.000+00:00
+            id: id
+            state: null
+            message: message
+          lifecycle: null
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
@@ -8225,7 +8251,14 @@ components:
             key: key
           - value: value
             key: key
-          current_release: null
+          current_release:
+            sequence: 7
+            completed_at: 2000-01-23T04:56:07.000+00:00
+            health: null
+            created_at: 2000-01-23T04:56:07.000+00:00
+            id: id
+            state: null
+            message: message
           created_at: 2000-01-23T04:56:07.000+00:00
           team_id: team_id
           spec:
@@ -8608,8 +8641,15 @@ components:
           - value: value
             key: key
           revision: revision
-          latest_release: null
-          lifecycle: ""
+          latest_release:
+            sequence: 7
+            completed_at: 2000-01-23T04:56:07.000+00:00
+            health: null
+            created_at: 2000-01-23T04:56:07.000+00:00
+            id: id
+            state: null
+            message: message
+          lifecycle: null
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
           user_id: user_id
@@ -10854,6 +10894,54 @@ components:
       - ImageRegistryRunning
       type: string
     StackResourceStatus:
+      example:
+        updated_replicas: 3
+        last_run_succeeded: true
+        last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+        last_failure:
+          container:
+            reason: reason
+            restart_count: 5
+            failure_type: crash_loop
+            exit_code: 2
+            message: message
+          build:
+            reason: reason
+            restart_count: 0
+            failure_type: crash_loop
+            exit_code: 6
+            message: message
+          init_container:
+            reason: reason
+            restart_count: 5
+            failure_type: crash_loop
+            exit_code: 2
+            message: message
+          type: runtime_crash
+        available_replicas: 9
+        internal_service_name: internal_service_name
+        replicas: 7
+        state: state
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        observed_revision: observed_revision
+        public_ingress:
+        - target_port: 5
+          url: url
+        - target_port: 5
+          url: url
+        last_run_time: 2000-01-23T04:56:07.000+00:00
       properties:
         public_ingress:
           items:
@@ -10895,6 +10983,12 @@ components:
           type: boolean
       type: object
     ContainerFailureDetail:
+      example:
+        reason: reason
+        restart_count: 5
+        failure_type: crash_loop
+        exit_code: 2
+        message: message
       properties:
         failure_type:
           enum:
@@ -10943,6 +11037,26 @@ components:
           type: integer
       type: object
     StackResourceFailure:
+      example:
+        container:
+          reason: reason
+          restart_count: 5
+          failure_type: crash_loop
+          exit_code: 2
+          message: message
+        build:
+          reason: reason
+          restart_count: 0
+          failure_type: crash_loop
+          exit_code: 6
+          message: message
+        init_container:
+          reason: reason
+          restart_count: 5
+          failure_type: crash_loop
+          exit_code: 2
+          message: message
+        type: runtime_crash
       properties:
         type:
           enum:
@@ -10957,6 +11071,9 @@ components:
           $ref: '#/components/schemas/BuildFailureDetail'
       type: object
     Ingress:
+      example:
+        target_port: 5
+        url: url
       properties:
         url:
           type: string
@@ -13079,6 +13196,14 @@ components:
       - RELEASE_HEALTH_FAILED
     ReleaseSummary:
       description: Lightweight release reference embedded in the stack for list views.
+      example:
+        sequence: 7
+        completed_at: 2000-01-23T04:56:07.000+00:00
+        health: null
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
+        state: null
+        message: message
       properties:
         id:
           type: string
@@ -13103,6 +13228,72 @@ components:
       description: Current runtime status overlaid onto a release at read time. Present
         only when the release is live (currently converged) or active (Pending/InProgress).
         Never stored; recomputed per request.
+      example:
+        health: null
+        resources:
+          key:
+            updated_replicas: 3
+            last_run_succeeded: true
+            last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+            last_failure:
+              container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 2
+                message: message
+              build:
+                reason: reason
+                restart_count: 0
+                failure_type: crash_loop
+                exit_code: 6
+                message: message
+              init_container:
+                reason: reason
+                restart_count: 5
+                failure_type: crash_loop
+                exit_code: 2
+                message: message
+              type: runtime_crash
+            available_replicas: 9
+            internal_service_name: internal_service_name
+            replicas: 7
+            state: state
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            observed_revision: observed_revision
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
+            last_run_time: 2000-01-23T04:56:07.000+00:00
+        target_revision: target_revision
+        conditions:
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        - reason: reason
+          last_transition_time: 2000-01-23T04:56:07.000+00:00
+          type: type
+          message: message
+          observed_generation: 1
+          status: status
+        observed_revision: observed_revision
       properties:
         health:
           $ref: '#/components/schemas/ReleaseHealth'
@@ -13182,7 +13373,72 @@ components:
               ready_replicas: 6
               replicas: 1
               message: message
-        live_status: null
+        live_status:
+          health: null
+          resources:
+            key:
+              updated_replicas: 3
+              last_run_succeeded: true
+              last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+              last_failure:
+                container:
+                  reason: reason
+                  restart_count: 5
+                  failure_type: crash_loop
+                  exit_code: 2
+                  message: message
+                build:
+                  reason: reason
+                  restart_count: 0
+                  failure_type: crash_loop
+                  exit_code: 6
+                  message: message
+                init_container:
+                  reason: reason
+                  restart_count: 5
+                  failure_type: crash_loop
+                  exit_code: 2
+                  message: message
+                type: runtime_crash
+              available_replicas: 9
+              internal_service_name: internal_service_name
+              replicas: 7
+              state: state
+              conditions:
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+              - reason: reason
+                last_transition_time: 2000-01-23T04:56:07.000+00:00
+                type: type
+                message: message
+                observed_generation: 1
+                status: status
+              observed_revision: observed_revision
+              public_ingress:
+              - target_port: 5
+                url: url
+              - target_port: 5
+                url: url
+              last_run_time: 2000-01-23T04:56:07.000+00:00
+          target_revision: target_revision
+          conditions:
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          - reason: reason
+            last_transition_time: 2000-01-23T04:56:07.000+00:00
+            type: type
+            message: message
+            observed_generation: 1
+            status: status
+          observed_revision: observed_revision
       properties:
         id:
           type: string
@@ -13226,7 +13482,7 @@ components:
           readOnly: true
           type: array
         live_status:
-          $ref: '#/components/schemas/StackRelease_live_status'
+          $ref: '#/components/schemas/ReleaseLiveStatus'
       type: object
     StackReleaseDetail:
       allOf:
@@ -13254,9 +13510,9 @@ components:
       type: object
     StackReleaseList:
       example:
-        total: 5
-        page: 5
-        total_pages: 7
+        total: 2
+        page: 4
+        total_pages: 1
         items:
         - cause:
             kind: null
@@ -13297,7 +13553,72 @@ components:
                 ready_replicas: 6
                 replicas: 1
                 message: message
-          live_status: null
+          live_status:
+            health: null
+            resources:
+              key:
+                updated_replicas: 3
+                last_run_succeeded: true
+                last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+                last_failure:
+                  container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 2
+                    message: message
+                  build:
+                    reason: reason
+                    restart_count: 0
+                    failure_type: crash_loop
+                    exit_code: 6
+                    message: message
+                  init_container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 2
+                    message: message
+                  type: runtime_crash
+                available_replicas: 9
+                internal_service_name: internal_service_name
+                replicas: 7
+                state: state
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                observed_revision: observed_revision
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
+            target_revision: target_revision
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            observed_revision: observed_revision
         - cause:
             kind: null
             detail: detail
@@ -13337,8 +13658,73 @@ components:
                 ready_replicas: 6
                 replicas: 1
                 message: message
-          live_status: null
-        page_size: 2
+          live_status:
+            health: null
+            resources:
+              key:
+                updated_replicas: 3
+                last_run_succeeded: true
+                last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
+                last_failure:
+                  container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 2
+                    message: message
+                  build:
+                    reason: reason
+                    restart_count: 0
+                    failure_type: crash_loop
+                    exit_code: 6
+                    message: message
+                  init_container:
+                    reason: reason
+                    restart_count: 5
+                    failure_type: crash_loop
+                    exit_code: 2
+                    message: message
+                  type: runtime_crash
+                available_replicas: 9
+                internal_service_name: internal_service_name
+                replicas: 7
+                state: state
+                conditions:
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                - reason: reason
+                  last_transition_time: 2000-01-23T04:56:07.000+00:00
+                  type: type
+                  message: message
+                  observed_generation: 1
+                  status: status
+                observed_revision: observed_revision
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
+            target_revision: target_revision
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            observed_revision: observed_revision
+        page_size: 7
       properties:
         items:
           items:
@@ -14182,10 +14568,6 @@ components:
         namespace:
           type: string
       type: object
-    Stack_current_release:
-      allOf:
-      - $ref: '#/components/schemas/ReleaseSummary'
-      readOnly: true
     ResourceMetrics_node_capacities_inner:
       example:
         storage_capacity: storage_capacity
@@ -14423,10 +14805,6 @@ components:
           description: Secret containing CA certificate
           type: string
       type: object
-    StackRelease_live_status:
-      allOf:
-      - $ref: '#/components/schemas/ReleaseLiveStatus'
-      readOnly: true
     StackReleaseDetail_allOf:
       properties:
         snapshot:

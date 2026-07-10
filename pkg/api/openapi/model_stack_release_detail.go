@@ -34,7 +34,7 @@ type StackReleaseDetail struct {
 	RenderedAt       *time.Time               `json:"rendered_at,omitempty"`
 	CompletedAt      *time.Time               `json:"completed_at,omitempty"`
 	ValidationErrors []ReleaseValidationError `json:"validation_errors,omitempty"`
-	LiveStatus       *StackReleaseLiveStatus  `json:"live_status,omitempty"`
+	LiveStatus       *ReleaseLiveStatus       `json:"live_status,omitempty"`
 	Snapshot         *StackReleaseSnapshot    `json:"snapshot,omitempty"`
 }
 
@@ -600,9 +600,9 @@ func (o *StackReleaseDetail) SetValidationErrors(v []ReleaseValidationError) {
 }
 
 // GetLiveStatus returns the LiveStatus field value if set, zero value otherwise.
-func (o *StackReleaseDetail) GetLiveStatus() StackReleaseLiveStatus {
+func (o *StackReleaseDetail) GetLiveStatus() ReleaseLiveStatus {
 	if o == nil || o.LiveStatus == nil {
-		var ret StackReleaseLiveStatus
+		var ret ReleaseLiveStatus
 		return ret
 	}
 	return *o.LiveStatus
@@ -610,7 +610,7 @@ func (o *StackReleaseDetail) GetLiveStatus() StackReleaseLiveStatus {
 
 // GetLiveStatusOk returns a tuple with the LiveStatus field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackReleaseDetail) GetLiveStatusOk() (*StackReleaseLiveStatus, bool) {
+func (o *StackReleaseDetail) GetLiveStatusOk() (*ReleaseLiveStatus, bool) {
 	if o == nil || o.LiveStatus == nil {
 		return nil, false
 	}
@@ -626,8 +626,8 @@ func (o *StackReleaseDetail) HasLiveStatus() bool {
 	return false
 }
 
-// SetLiveStatus gets a reference to the given StackReleaseLiveStatus and assigns it to the LiveStatus field.
-func (o *StackReleaseDetail) SetLiveStatus(v StackReleaseLiveStatus) {
+// SetLiveStatus gets a reference to the given ReleaseLiveStatus and assigns it to the LiveStatus field.
+func (o *StackReleaseDetail) SetLiveStatus(v ReleaseLiveStatus) {
 	o.LiveStatus = &v
 }
 

@@ -4736,17 +4736,11 @@ components:
         settings:
           $ref: '#/components/schemas/StackSettings'
         lifecycle:
-          allOf:
-            - $ref: '#/components/schemas/StackLifecycle'
-          readOnly: true
+          $ref: '#/components/schemas/StackLifecycle'
         current_release:
-          allOf:
-            - $ref: '#/components/schemas/ReleaseSummary'
-          readOnly: true
+          $ref: '#/components/schemas/ReleaseSummary'
         latest_release:
-          allOf:
-            - $ref: '#/components/schemas/ReleaseSummary'
-          readOnly: true
+          $ref: '#/components/schemas/ReleaseSummary'
         created_at:
           type: string
           format: date-time
@@ -7054,9 +7048,7 @@ components:
           items:
             $ref: '#/components/schemas/ReleaseValidationError'
         live_status:
-          allOf:
-            - $ref: '#/components/schemas/ReleaseLiveStatus'
-          readOnly: true
+          $ref: '#/components/schemas/ReleaseLiveStatus'
 
     StackReleaseDetail:
       allOf:
