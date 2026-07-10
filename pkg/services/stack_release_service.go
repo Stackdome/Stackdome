@@ -35,6 +35,7 @@ type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
 	GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+	GetReleaseDetail(ctx context.Context, releaseID string) (*models.StackRelease, *models.ReleaseLiveStatus, *errors.ServiceError)
 	ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError)
 	ListReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence, limit int) (*ReleaseEventPage, *errors.ServiceError)
 	StreamReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence int) (interfaces.ServerSideStreamable, *errors.ServiceError)
@@ -43,6 +44,7 @@ type StackReleaseService interface {
 	// Internal methods are called by workers and controllers; no permission checks.
 	InternalCreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+	InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 	MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError)
@@ -275,6 +277,81 @@ func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) 
 	}
 
 	return rel, nil
+}
+
+// GetReleaseDetail returns the release plus its live-status overlay, computed
+// from the release's stack. The overlay is nil unless the release is active
+// or is the stack's currently converged (live) release.
+func (s *stackReleaseService) GetReleaseDetail(ctx context.Context, releaseID string) (*models.StackRelease, *models.ReleaseLiveStatus, *errors.ServiceError) {
+	release, sErr := s.GetRelease(ctx, releaseID)
+	if sErr != nil {
+		return nil, nil, sErr
+	}
+
+	stack, sErr := s.stackQuery.GetStack(ctx, release.StackID)
+	if sErr != nil {
+		return nil, nil, sErr
+	}
+
+	return release, models.BuildReleaseLiveStatus(release, stack), nil
+}
+
+// InternalGetReleaseRefs batch-resolves the latest and currently converged
+// release for each given stack. No permission checks: callers have already
+// authorized the stacks.
+func (s *stackReleaseService) InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError) {
+	stackIDs := make([]string, len(stacks))
+	for i, stack := range stacks {
+		stackIDs[i] = stack.ID
+	}
+
+	latestByStackID, sErr := s.store.GetLatestByStackIDs(ctx, stackIDs)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	refs := make(map[string]models.StackReleaseRefs, len(stacks))
+	var missingCurrentIDs []string
+	for _, stack := range stacks {
+		entry := models.StackReleaseRefs{Latest: latestByStackID[stack.ID]}
+		if currentID := convergedReleaseID(stack); currentID != "" {
+			if entry.Latest != nil && entry.Latest.ID == currentID {
+				entry.Current = entry.Latest
+			} else {
+				missingCurrentIDs = append(missingCurrentIDs, currentID)
+			}
+		}
+		refs[stack.ID] = entry
+	}
+
+	if len(missingCurrentIDs) > 0 {
+		currentByID, sErr := s.store.GetByIDs(ctx, missingCurrentIDs)
+		if sErr != nil {
+			return nil, sErr
+		}
+		for _, stack := range stacks {
+			currentID := convergedReleaseID(stack)
+			if currentID == "" {
+				continue
+			}
+			entry := refs[stack.ID]
+			if entry.Current == nil {
+				entry.Current = currentByID[currentID]
+				refs[stack.ID] = entry
+			}
+		}
+	}
+
+	return refs, nil
+}
+
+// convergedReleaseID returns the release ID the stack last converged to, or
+// "" if the stack has never converged.
+func convergedReleaseID(stack *models.Stack) string {
+	if stack.Status == nil || stack.Status.LastConverged == nil {
+		return ""
+	}
+	return stack.Status.LastConverged.ReleaseID
 }
 
 func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
