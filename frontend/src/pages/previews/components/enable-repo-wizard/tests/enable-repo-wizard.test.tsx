@@ -63,4 +63,12 @@ describe("EnableRepoWizard", () => {
       expect(screen.getByText(/waiting for installation/i)).toBeTruthy();
     });
   });
+
+  it("allows skipping connect to enter a public repository URL manually", async () => {
+    (listGitIntegrations as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [], total: 0 });
+    renderWizard();
+    await waitFor(() => screen.getByRole("button", { name: /connect github/i }));
+    await userEvent.click(screen.getByText(/skip.*public repository url/i));
+    await screen.findByPlaceholderText(/https:\/\/github.com/i);
+  });
 });

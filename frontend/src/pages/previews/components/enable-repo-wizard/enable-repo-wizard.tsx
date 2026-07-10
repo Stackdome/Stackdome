@@ -95,6 +95,10 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
                 setPhase("pick");
               }}
               onCancel={close}
+              onSkip={() => {
+                setIntegrationId(null);
+                setPhase("pick");
+              }}
             />
           )}
           {phase === "pick" && (

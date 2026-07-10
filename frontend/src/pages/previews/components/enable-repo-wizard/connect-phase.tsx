@@ -6,9 +6,10 @@ import { useEffect } from "react";
 interface ConnectPhaseProps {
   onConnected: (integrationId: string | null) => void;
   onCancel: () => void;
+  onSkip?: () => void;
 }
 
-export function ConnectPhase({ onConnected, onCancel }: ConnectPhaseProps) {
+export function ConnectPhase({ onConnected, onCancel, onSkip }: ConnectPhaseProps) {
   const { state, error, connect, checkAgain, integrationId } = useGithubConnect();
 
   useEffect(() => {
@@ -47,6 +48,12 @@ export function ConnectPhase({ onConnected, onCancel }: ConnectPhaseProps) {
       )}
 
       {error && <p className="text-sm text-destructive">{error}</p>}
+
+      {onSkip && (
+        <Button variant="link" size="sm" className="text-muted-foreground" onClick={onSkip}>
+          Skip — use a public repository URL instead
+        </Button>
+      )}
 
       <Button variant="ghost" size="sm" onClick={onCancel}>
         Cancel
