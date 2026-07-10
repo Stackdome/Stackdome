@@ -1,0 +1,38 @@
+version: "2"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 5m
+  build-tags:
+    - integration
+
+linters:
+  default: standard
+  settings:
+    staticcheck:
+      dot-import-whitelist:
+        - github.com/onsi/gomega
+  enable:
+    - errorlint
+    - goconst
+    - containedctx
+    - misspell
+    - unconvert
+    - nolintlint
+  exclusions:
+    generated: lax
+    paths:
+      - pkg/api/openapi
+      - pkg/mocks
+    rules:
+      - path: _test\.go
+        linters:
+          - goconst
+      # ctxRoundTripper: struct-held ctx is the only cancellation seam for
+      # go-containerregistry's CheckPushPermission (no ctx parameter upstream)
+      - path: pkg/clients/registry\.go
+        linters:
+          - containedctx
