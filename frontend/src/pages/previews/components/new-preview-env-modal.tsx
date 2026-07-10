@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronsUpDown } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -52,6 +52,10 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
     setError(null);
     setAdvanced(false);
   };
+
+  useEffect(() => {
+    if (open) reset();
+  }, [open]);
 
   const submit = async () => {
     const orgId = getCurrentOrganizationId();

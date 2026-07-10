@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -25,6 +25,15 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
   const [stackfileContent, setStackfileContent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const envId = env?.id;
+  useEffect(() => {
+    if (envId == null) return;
+    setCommit("");
+    setForce(false);
+    setStackfileContent("");
+    setError(null);
+  }, [envId]);
 
   const submit = async () => {
     const orgId = getCurrentOrganizationId();
@@ -80,7 +89,7 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
             in task-11-report.md — confirm before treating this as final.
           */}
           <div className="flex items-start gap-3">
-            <Switch id="sync-force" checked={force} onCheckedChange={(v) => setForce(v === true)} className="mt-0.5" />
+            <Switch id="sync-force" checked={force} onCheckedChange={setForce} className="mt-0.5" />
             <Label htmlFor="sync-force">Force sync even when nothing changed</Label>
           </div>
           <div className="space-y-1.5">
