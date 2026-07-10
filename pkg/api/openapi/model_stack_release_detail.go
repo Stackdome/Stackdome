@@ -34,6 +34,7 @@ type StackReleaseDetail struct {
 	RenderedAt       *time.Time               `json:"rendered_at,omitempty"`
 	CompletedAt      *time.Time               `json:"completed_at,omitempty"`
 	ValidationErrors []ReleaseValidationError `json:"validation_errors,omitempty"`
+	LiveStatus       *StackReleaseLiveStatus  `json:"live_status,omitempty"`
 	Snapshot         *StackReleaseSnapshot    `json:"snapshot,omitempty"`
 }
 
@@ -598,6 +599,38 @@ func (o *StackReleaseDetail) SetValidationErrors(v []ReleaseValidationError) {
 	o.ValidationErrors = v
 }
 
+// GetLiveStatus returns the LiveStatus field value if set, zero value otherwise.
+func (o *StackReleaseDetail) GetLiveStatus() StackReleaseLiveStatus {
+	if o == nil || o.LiveStatus == nil {
+		var ret StackReleaseLiveStatus
+		return ret
+	}
+	return *o.LiveStatus
+}
+
+// GetLiveStatusOk returns a tuple with the LiveStatus field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackReleaseDetail) GetLiveStatusOk() (*StackReleaseLiveStatus, bool) {
+	if o == nil || o.LiveStatus == nil {
+		return nil, false
+	}
+	return o.LiveStatus, true
+}
+
+// HasLiveStatus returns a boolean if a field has been set.
+func (o *StackReleaseDetail) HasLiveStatus() bool {
+	if o != nil && o.LiveStatus != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLiveStatus gets a reference to the given StackReleaseLiveStatus and assigns it to the LiveStatus field.
+func (o *StackReleaseDetail) SetLiveStatus(v StackReleaseLiveStatus) {
+	o.LiveStatus = &v
+}
+
 // GetSnapshot returns the Snapshot field value if set, zero value otherwise.
 func (o *StackReleaseDetail) GetSnapshot() StackReleaseSnapshot {
 	if o == nil || o.Snapshot == nil {
@@ -682,6 +715,9 @@ func (o StackReleaseDetail) MarshalJSON() ([]byte, error) {
 	}
 	if o.ValidationErrors != nil {
 		toSerialize["validation_errors"] = o.ValidationErrors
+	}
+	if o.LiveStatus != nil {
+		toSerialize["live_status"] = o.LiveStatus
 	}
 	if o.Snapshot != nil {
 		toSerialize["snapshot"] = o.Snapshot

@@ -17,20 +17,22 @@ import (
 
 // Stack struct for Stack
 type Stack struct {
-	Id             *string        `json:"id,omitempty"`
-	OrganisationId *string        `json:"organisation_id,omitempty"`
-	TeamId         *string        `json:"team_id,omitempty"`
-	UserId         *string        `json:"user_id,omitempty"`
-	Name           string         `json:"name"`
-	Namespace      *string        `json:"namespace,omitempty"`
-	Labels         []Label        `json:"labels,omitempty"`
-	Annotations    []Annotation   `json:"annotations,omitempty"`
-	Revision       *string        `json:"revision,omitempty"`
-	Spec           StackSpec      `json:"spec"`
-	Settings       *StackSettings `json:"settings,omitempty"`
-	Status         *StackStatus   `json:"status,omitempty"`
-	CreatedAt      *time.Time     `json:"created_at,omitempty"`
-	UpdatedAt      *time.Time     `json:"updated_at,omitempty"`
+	Id             *string                `json:"id,omitempty"`
+	OrganisationId *string                `json:"organisation_id,omitempty"`
+	TeamId         *string                `json:"team_id,omitempty"`
+	UserId         *string                `json:"user_id,omitempty"`
+	Name           string                 `json:"name"`
+	Namespace      *string                `json:"namespace,omitempty"`
+	Labels         []Label                `json:"labels,omitempty"`
+	Annotations    []Annotation           `json:"annotations,omitempty"`
+	Revision       *string                `json:"revision,omitempty"`
+	Spec           StackSpec              `json:"spec"`
+	Settings       *StackSettings         `json:"settings,omitempty"`
+	Lifecycle      NullableStackLifecycle `json:"lifecycle,omitempty"`
+	CurrentRelease *StackCurrentRelease   `json:"current_release,omitempty"`
+	LatestRelease  *StackCurrentRelease   `json:"latest_release,omitempty"`
+	CreatedAt      *time.Time             `json:"created_at,omitempty"`
+	UpdatedAt      *time.Time             `json:"updated_at,omitempty"`
 }
 
 // NewStack instantiates a new Stack object
@@ -388,36 +390,111 @@ func (o *Stack) SetSettings(v StackSettings) {
 	o.Settings = &v
 }
 
-// GetStatus returns the Status field value if set, zero value otherwise.
-func (o *Stack) GetStatus() StackStatus {
-	if o == nil || o.Status == nil {
-		var ret StackStatus
+// GetLifecycle returns the Lifecycle field value if set, zero value otherwise (both if not set or set to explicit null).
+func (o *Stack) GetLifecycle() StackLifecycle {
+	if o == nil || o.Lifecycle.Get() == nil {
+		var ret StackLifecycle
 		return ret
 	}
-	return *o.Status
+	return *o.Lifecycle.Get()
 }
 
-// GetStatusOk returns a tuple with the Status field value if set, nil otherwise
+// GetLifecycleOk returns a tuple with the Lifecycle field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Stack) GetStatusOk() (*StackStatus, bool) {
-	if o == nil || o.Status == nil {
+// NOTE: If the value is an explicit nil, `nil, true` will be returned
+func (o *Stack) GetLifecycleOk() (*StackLifecycle, bool) {
+	if o == nil {
 		return nil, false
 	}
-	return o.Status, true
+	return o.Lifecycle.Get(), o.Lifecycle.IsSet()
 }
 
-// HasStatus returns a boolean if a field has been set.
-func (o *Stack) HasStatus() bool {
-	if o != nil && o.Status != nil {
+// HasLifecycle returns a boolean if a field has been set.
+func (o *Stack) HasLifecycle() bool {
+	if o != nil && o.Lifecycle.IsSet() {
 		return true
 	}
 
 	return false
 }
 
-// SetStatus gets a reference to the given StackStatus and assigns it to the Status field.
-func (o *Stack) SetStatus(v StackStatus) {
-	o.Status = &v
+// SetLifecycle gets a reference to the given NullableStackLifecycle and assigns it to the Lifecycle field.
+func (o *Stack) SetLifecycle(v StackLifecycle) {
+	o.Lifecycle.Set(&v)
+}
+
+// SetLifecycleNil sets the value for Lifecycle to be an explicit nil
+func (o *Stack) SetLifecycleNil() {
+	o.Lifecycle.Set(nil)
+}
+
+// UnsetLifecycle ensures that no value is present for Lifecycle, not even an explicit nil
+func (o *Stack) UnsetLifecycle() {
+	o.Lifecycle.Unset()
+}
+
+// GetCurrentRelease returns the CurrentRelease field value if set, zero value otherwise.
+func (o *Stack) GetCurrentRelease() StackCurrentRelease {
+	if o == nil || o.CurrentRelease == nil {
+		var ret StackCurrentRelease
+		return ret
+	}
+	return *o.CurrentRelease
+}
+
+// GetCurrentReleaseOk returns a tuple with the CurrentRelease field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Stack) GetCurrentReleaseOk() (*StackCurrentRelease, bool) {
+	if o == nil || o.CurrentRelease == nil {
+		return nil, false
+	}
+	return o.CurrentRelease, true
+}
+
+// HasCurrentRelease returns a boolean if a field has been set.
+func (o *Stack) HasCurrentRelease() bool {
+	if o != nil && o.CurrentRelease != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetCurrentRelease gets a reference to the given StackCurrentRelease and assigns it to the CurrentRelease field.
+func (o *Stack) SetCurrentRelease(v StackCurrentRelease) {
+	o.CurrentRelease = &v
+}
+
+// GetLatestRelease returns the LatestRelease field value if set, zero value otherwise.
+func (o *Stack) GetLatestRelease() StackCurrentRelease {
+	if o == nil || o.LatestRelease == nil {
+		var ret StackCurrentRelease
+		return ret
+	}
+	return *o.LatestRelease
+}
+
+// GetLatestReleaseOk returns a tuple with the LatestRelease field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Stack) GetLatestReleaseOk() (*StackCurrentRelease, bool) {
+	if o == nil || o.LatestRelease == nil {
+		return nil, false
+	}
+	return o.LatestRelease, true
+}
+
+// HasLatestRelease returns a boolean if a field has been set.
+func (o *Stack) HasLatestRelease() bool {
+	if o != nil && o.LatestRelease != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLatestRelease gets a reference to the given StackCurrentRelease and assigns it to the LatestRelease field.
+func (o *Stack) SetLatestRelease(v StackCurrentRelease) {
+	o.LatestRelease = &v
 }
 
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
@@ -519,8 +596,14 @@ func (o Stack) MarshalJSON() ([]byte, error) {
 	if o.Settings != nil {
 		toSerialize["settings"] = o.Settings
 	}
-	if o.Status != nil {
-		toSerialize["status"] = o.Status
+	if o.Lifecycle.IsSet() {
+		toSerialize["lifecycle"] = o.Lifecycle.Get()
+	}
+	if o.CurrentRelease != nil {
+		toSerialize["current_release"] = o.CurrentRelease
+	}
+	if o.LatestRelease != nil {
+		toSerialize["latest_release"] = o.LatestRelease
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

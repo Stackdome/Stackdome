@@ -16,24 +16,23 @@ import (
 
 // StackResource struct for StackResource
 type StackResource struct {
-	Id              *string              `json:"id,omitempty"`
-	StackId         *string              `json:"stack_id,omitempty"`
-	Name            string               `json:"name"`
-	Labels          []Label              `json:"labels,omitempty"`
-	Annotations     []Annotation         `json:"annotations,omitempty"`
-	Revision        *string              `json:"revision,omitempty"`
-	Source          *SourceSpec          `json:"source,omitempty"`
-	InitSpec        *InitSpec            `json:"init_spec,omitempty"`
-	ExecutionConfig *ExecutionConfig     `json:"execution_config,omitempty"`
-	VolumeMounts    []VolumeMount        `json:"volume_mounts,omitempty"`
-	DependsOn       []string             `json:"depends_on,omitempty"`
-	LifecycleConfig *LifecycleConfig     `json:"lifecycle_config,omitempty"`
-	Ports           []Port               `json:"ports,omitempty"`
-	Outputs         []OutputDescriptor   `json:"outputs,omitempty"`
-	WorkloadType    *string              `json:"workload_type,omitempty"`
-	Schedule        *string              `json:"schedule,omitempty"`
-	Replicas        *int32               `json:"replicas,omitempty"`
-	Status          *StackResourceStatus `json:"status,omitempty"`
+	Id              *string            `json:"id,omitempty"`
+	StackId         *string            `json:"stack_id,omitempty"`
+	Name            string             `json:"name"`
+	Labels          []Label            `json:"labels,omitempty"`
+	Annotations     []Annotation       `json:"annotations,omitempty"`
+	Revision        *string            `json:"revision,omitempty"`
+	Source          *SourceSpec        `json:"source,omitempty"`
+	InitSpec        *InitSpec          `json:"init_spec,omitempty"`
+	ExecutionConfig *ExecutionConfig   `json:"execution_config,omitempty"`
+	VolumeMounts    []VolumeMount      `json:"volume_mounts,omitempty"`
+	DependsOn       []string           `json:"depends_on,omitempty"`
+	LifecycleConfig *LifecycleConfig   `json:"lifecycle_config,omitempty"`
+	Ports           []Port             `json:"ports,omitempty"`
+	Outputs         []OutputDescriptor `json:"outputs,omitempty"`
+	WorkloadType    *string            `json:"workload_type,omitempty"`
+	Schedule        *string            `json:"schedule,omitempty"`
+	Replicas        *int32             `json:"replicas,omitempty"`
 }
 
 // NewStackResource instantiates a new StackResource object
@@ -594,38 +593,6 @@ func (o *StackResource) SetReplicas(v int32) {
 	o.Replicas = &v
 }
 
-// GetStatus returns the Status field value if set, zero value otherwise.
-func (o *StackResource) GetStatus() StackResourceStatus {
-	if o == nil || o.Status == nil {
-		var ret StackResourceStatus
-		return ret
-	}
-	return *o.Status
-}
-
-// GetStatusOk returns a tuple with the Status field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *StackResource) GetStatusOk() (*StackResourceStatus, bool) {
-	if o == nil || o.Status == nil {
-		return nil, false
-	}
-	return o.Status, true
-}
-
-// HasStatus returns a boolean if a field has been set.
-func (o *StackResource) HasStatus() bool {
-	if o != nil && o.Status != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetStatus gets a reference to the given StackResourceStatus and assigns it to the Status field.
-func (o *StackResource) SetStatus(v StackResourceStatus) {
-	o.Status = &v
-}
-
 func (o StackResource) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
@@ -678,9 +645,6 @@ func (o StackResource) MarshalJSON() ([]byte, error) {
 	}
 	if o.Replicas != nil {
 		toSerialize["replicas"] = o.Replicas
-	}
-	if o.Status != nil {
-		toSerialize["status"] = o.Status
 	}
 	return json.Marshal(toSerialize)
 }

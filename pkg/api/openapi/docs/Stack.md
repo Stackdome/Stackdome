@@ -15,7 +15,9 @@ Name | Type | Description | Notes
 **Revision** | Pointer to **string** |  | [optional] [readonly] 
 **Spec** | [**StackSpec**](StackSpec.md) |  | 
 **Settings** | Pointer to [**StackSettings**](StackSettings.md) |  | [optional] 
-**Status** | Pointer to [**StackStatus**](StackStatus.md) |  | [optional] 
+**Lifecycle** | Pointer to [**NullableStackLifecycle**](StackLifecycle.md) |  | [optional] [readonly] 
+**CurrentRelease** | Pointer to [**StackCurrentRelease**](StackCurrentRelease.md) |  | [optional] 
+**LatestRelease** | Pointer to [**StackCurrentRelease**](StackCurrentRelease.md) |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 
@@ -303,30 +305,90 @@ SetSettings sets Settings field to given value.
 
 HasSettings returns a boolean if a field has been set.
 
-### GetStatus
+### GetLifecycle
 
-`func (o *Stack) GetStatus() StackStatus`
+`func (o *Stack) GetLifecycle() StackLifecycle`
 
-GetStatus returns the Status field if non-nil, zero value otherwise.
+GetLifecycle returns the Lifecycle field if non-nil, zero value otherwise.
 
-### GetStatusOk
+### GetLifecycleOk
 
-`func (o *Stack) GetStatusOk() (*StackStatus, bool)`
+`func (o *Stack) GetLifecycleOk() (*StackLifecycle, bool)`
 
-GetStatusOk returns a tuple with the Status field if it's non-nil, zero value otherwise
+GetLifecycleOk returns a tuple with the Lifecycle field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetStatus
+### SetLifecycle
 
-`func (o *Stack) SetStatus(v StackStatus)`
+`func (o *Stack) SetLifecycle(v StackLifecycle)`
 
-SetStatus sets Status field to given value.
+SetLifecycle sets Lifecycle field to given value.
 
-### HasStatus
+### HasLifecycle
 
-`func (o *Stack) HasStatus() bool`
+`func (o *Stack) HasLifecycle() bool`
 
-HasStatus returns a boolean if a field has been set.
+HasLifecycle returns a boolean if a field has been set.
+
+### SetLifecycleNil
+
+`func (o *Stack) SetLifecycleNil(b bool)`
+
+ SetLifecycleNil sets the value for Lifecycle to be an explicit nil
+
+### UnsetLifecycle
+`func (o *Stack) UnsetLifecycle()`
+
+UnsetLifecycle ensures that no value is present for Lifecycle, not even an explicit nil
+### GetCurrentRelease
+
+`func (o *Stack) GetCurrentRelease() StackCurrentRelease`
+
+GetCurrentRelease returns the CurrentRelease field if non-nil, zero value otherwise.
+
+### GetCurrentReleaseOk
+
+`func (o *Stack) GetCurrentReleaseOk() (*StackCurrentRelease, bool)`
+
+GetCurrentReleaseOk returns a tuple with the CurrentRelease field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetCurrentRelease
+
+`func (o *Stack) SetCurrentRelease(v StackCurrentRelease)`
+
+SetCurrentRelease sets CurrentRelease field to given value.
+
+### HasCurrentRelease
+
+`func (o *Stack) HasCurrentRelease() bool`
+
+HasCurrentRelease returns a boolean if a field has been set.
+
+### GetLatestRelease
+
+`func (o *Stack) GetLatestRelease() StackCurrentRelease`
+
+GetLatestRelease returns the LatestRelease field if non-nil, zero value otherwise.
+
+### GetLatestReleaseOk
+
+`func (o *Stack) GetLatestReleaseOk() (*StackCurrentRelease, bool)`
+
+GetLatestReleaseOk returns a tuple with the LatestRelease field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLatestRelease
+
+`func (o *Stack) SetLatestRelease(v StackCurrentRelease)`
+
+SetLatestRelease sets LatestRelease field to given value.
+
+### HasLatestRelease
+
+`func (o *Stack) HasLatestRelease() bool`
+
+HasLatestRelease returns a boolean if a field has been set.
 
 ### GetCreatedAt
 

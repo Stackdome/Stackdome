@@ -34,6 +34,7 @@ type StackRelease struct {
 	RenderedAt       *time.Time               `json:"rendered_at,omitempty"`
 	CompletedAt      *time.Time               `json:"completed_at,omitempty"`
 	ValidationErrors []ReleaseValidationError `json:"validation_errors,omitempty"`
+	LiveStatus       *StackReleaseLiveStatus  `json:"live_status,omitempty"`
 }
 
 // NewStackRelease instantiates a new StackRelease object
@@ -597,6 +598,38 @@ func (o *StackRelease) SetValidationErrors(v []ReleaseValidationError) {
 	o.ValidationErrors = v
 }
 
+// GetLiveStatus returns the LiveStatus field value if set, zero value otherwise.
+func (o *StackRelease) GetLiveStatus() StackReleaseLiveStatus {
+	if o == nil || o.LiveStatus == nil {
+		var ret StackReleaseLiveStatus
+		return ret
+	}
+	return *o.LiveStatus
+}
+
+// GetLiveStatusOk returns a tuple with the LiveStatus field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackRelease) GetLiveStatusOk() (*StackReleaseLiveStatus, bool) {
+	if o == nil || o.LiveStatus == nil {
+		return nil, false
+	}
+	return o.LiveStatus, true
+}
+
+// HasLiveStatus returns a boolean if a field has been set.
+func (o *StackRelease) HasLiveStatus() bool {
+	if o != nil && o.LiveStatus != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetLiveStatus gets a reference to the given StackReleaseLiveStatus and assigns it to the LiveStatus field.
+func (o *StackRelease) SetLiveStatus(v StackReleaseLiveStatus) {
+	o.LiveStatus = &v
+}
+
 func (o StackRelease) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.Id != nil {
@@ -649,6 +682,9 @@ func (o StackRelease) MarshalJSON() ([]byte, error) {
 	}
 	if o.ValidationErrors != nil {
 		toSerialize["validation_errors"] = o.ValidationErrors
+	}
+	if o.LiveStatus != nil {
+		toSerialize["live_status"] = o.LiveStatus
 	}
 	return json.Marshal(toSerialize)
 }

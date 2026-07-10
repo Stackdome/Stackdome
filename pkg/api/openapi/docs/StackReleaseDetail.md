@@ -21,6 +21,7 @@ Name | Type | Description | Notes
 **RenderedAt** | Pointer to **time.Time** |  | [optional] 
 **CompletedAt** | Pointer to **time.Time** |  | [optional] 
 **ValidationErrors** | Pointer to [**[]ReleaseValidationError**](ReleaseValidationError.md) |  | [optional] [readonly] 
+**LiveStatus** | Pointer to [**StackReleaseLiveStatus**](StackReleaseLiveStatus.md) |  | [optional] 
 **Snapshot** | Pointer to [**StackReleaseSnapshot**](StackReleaseSnapshot.md) |  | [optional] 
 
 ## Methods
@@ -466,6 +467,31 @@ SetValidationErrors sets ValidationErrors field to given value.
 `func (o *StackReleaseDetail) HasValidationErrors() bool`
 
 HasValidationErrors returns a boolean if a field has been set.
+
+### GetLiveStatus
+
+`func (o *StackReleaseDetail) GetLiveStatus() StackReleaseLiveStatus`
+
+GetLiveStatus returns the LiveStatus field if non-nil, zero value otherwise.
+
+### GetLiveStatusOk
+
+`func (o *StackReleaseDetail) GetLiveStatusOk() (*StackReleaseLiveStatus, bool)`
+
+GetLiveStatusOk returns a tuple with the LiveStatus field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetLiveStatus
+
+`func (o *StackReleaseDetail) SetLiveStatus(v StackReleaseLiveStatus)`
+
+SetLiveStatus sets LiveStatus field to given value.
+
+### HasLiveStatus
+
+`func (o *StackReleaseDetail) HasLiveStatus() bool`
+
+HasLiveStatus returns a boolean if a field has been set.
 
 ### GetSnapshot
 

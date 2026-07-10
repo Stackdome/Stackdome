@@ -148,8 +148,11 @@ docs/ReleaseCauseKind.md
 docs/ReleaseEvent.md
 docs/ReleaseEventLink.md
 docs/ReleaseEventList.md
+docs/ReleaseHealth.md
+docs/ReleaseLiveStatus.md
 docs/ReleaseOutcome.md
 docs/ReleasePins.md
+docs/ReleaseSummary.md
 docs/ReleaseValidationError.md
 docs/ReleasesApi.md
 docs/RemoteSource.md
@@ -171,7 +174,8 @@ docs/Stack.md
 docs/StackConnection.md
 docs/StackConnectionConfig.md
 docs/StackConnectionList.md
-docs/StackConvergenceRecord.md
+docs/StackCurrentRelease.md
+docs/StackLifecycle.md
 docs/StackList.md
 docs/StackPreviewConfig.md
 docs/StackPreviewConfigCreate.md
@@ -181,6 +185,7 @@ docs/StackRelease.md
 docs/StackReleaseDetail.md
 docs/StackReleaseDetailAllOf.md
 docs/StackReleaseList.md
+docs/StackReleaseLiveStatus.md
 docs/StackReleaseSnapshot.md
 docs/StackReleaseSnapshotStack.md
 docs/StackReleaseState.md
@@ -188,10 +193,8 @@ docs/StackResource.md
 docs/StackResourceFailure.md
 docs/StackResourceList.md
 docs/StackResourceStatus.md
-docs/StackResourceSummary.md
 docs/StackSettings.md
 docs/StackSpec.md
-docs/StackStatus.md
 docs/StackTopology.md
 docs/Team.md
 docs/TeamCreateRequest.md
@@ -368,8 +371,11 @@ model_release_cause_kind.go
 model_release_event.go
 model_release_event_link.go
 model_release_event_list.go
+model_release_health.go
+model_release_live_status.go
 model_release_outcome.go
 model_release_pins.go
+model_release_summary.go
 model_release_validation_error.go
 model_remote_source.go
 model_resource_metrics.go
@@ -390,7 +396,8 @@ model_stack.go
 model_stack_connection.go
 model_stack_connection_config.go
 model_stack_connection_list.go
-model_stack_convergence_record.go
+model_stack_current_release.go
+model_stack_lifecycle.go
 model_stack_list.go
 model_stack_preview_config.go
 model_stack_preview_config_create.go
@@ -400,6 +407,7 @@ model_stack_release.go
 model_stack_release_detail.go
 model_stack_release_detail_all_of.go
 model_stack_release_list.go
+model_stack_release_live_status.go
 model_stack_release_snapshot.go
 model_stack_release_snapshot_stack.go
 model_stack_release_state.go
@@ -407,10 +415,8 @@ model_stack_resource.go
 model_stack_resource_failure.go
 model_stack_resource_list.go
 model_stack_resource_status.go
-model_stack_resource_summary.go
 model_stack_settings.go
 model_stack_spec.go
-model_stack_status.go
 model_stack_topology.go
 model_team.go
 model_team_create_request.go
