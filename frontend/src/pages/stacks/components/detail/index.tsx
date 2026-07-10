@@ -26,7 +26,7 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { ReleaseState, isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
+import { deriveHeaderHealth, shouldRefetchStackSummaries } from "@/pages/stacks/components/detail/deployments/derive";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
@@ -547,7 +547,7 @@ export default function StackDetailPage() {
     detail: releaseDetail,
   });
 
-  // When a release transitions into Released, the stack's current_release /
+  // When a release settles into ANY terminal state, the stack's current_release /
   // latest_release summaries are stale until refetched — the staged panel would
   // keep diffing against the old snapshot otherwise. Refetch once per transition,
   // keyed on the polled releases list (not on the stack's own pointer).
@@ -558,18 +558,21 @@ export default function StackDetailPage() {
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       // Server topology may have changed with the new release; re-derive edges.
       setTopologyRefreshKey((k) => k + 1);
+    }).catch(() => {
+      // Transient fetch failure; the next terminal transition retries.
     });
   }, [deployIds, setStacks]);
   const activeRelease = releasesResult.activeRelease;
-  const prevActiveReleaseStateRef = useRef<string | undefined>(activeRelease?.state);
+  const prevActiveReleaseRef = useRef<{ id?: string; state?: string } | undefined>(
+    activeRelease && { id: activeRelease.id, state: activeRelease.state },
+  );
   useEffect(() => {
-    const prevState = prevActiveReleaseStateRef.current;
-    prevActiveReleaseStateRef.current = activeRelease?.state;
-    if (!activeRelease || activeRelease.state !== ReleaseState.Released) return;
-    if (prevState === ReleaseState.Released) return; // already handled this transition
-    if (stackToShow?.current_release?.id === activeRelease.id) return; // already up to date
-    refetchStack();
-  }, [activeRelease, stackToShow?.current_release?.id, refetchStack]);
+    const prev = prevActiveReleaseRef.current;
+    prevActiveReleaseRef.current = activeRelease && { id: activeRelease.id, state: activeRelease.state };
+    if (shouldRefetchStackSummaries(prev, activeRelease, stackToShow?.latest_release)) {
+      refetchStack();
+    }
+  }, [activeRelease, stackToShow?.latest_release, refetchStack]);
 
   // Live snapshot: already lazily fetched above (currentReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
@@ -869,11 +872,7 @@ export default function StackDetailPage() {
     );
   }
 
-  // Header pill health: an in-flight (non-terminal) latest release always reads as
-  // "progressing"; otherwise the live release's own health rollup drives the pill.
-  const headerHealth = effectiveStack?.latest_release && !isTerminal(effectiveStack.latest_release.state)
-    ? "progressing"
-    : effectiveStack?.current_release?.health;
+  const headerHealth = effectiveStack ? deriveHeaderHealth(effectiveStack) : undefined;
 
   const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
@@ -959,7 +958,6 @@ export default function StackDetailPage() {
         onNameChange={handleNameChange}
         nameError={nameError}
         headerHealth={headerHealth}
-        hasLatestRelease={!!effectiveStack?.latest_release}
         lifecycle={effectiveStack?.lifecycle}
         subtitle={subtitleText}
         activeTab={activeTab}

@@ -20,7 +20,7 @@ import { statusVariant } from "@/components/branded/status-variant";
 import { formatDistanceToNow } from "date-fns";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/pages/stacks/types";
-import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
+import { deriveHeaderHealth } from "@/pages/stacks/components/detail/deployments/derive";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -49,14 +49,15 @@ function inferStackIcon(stack: Stack) {
   return Layers;
 }
 
-/** Header pill for a stack card: "Deleting" / "Not deployed" override health;
- *  otherwise an in-flight latest release reads as "progressing", else the live
- *  release's health rollup drives it. Mirrors the stack detail page's header. */
+/** Header pill for a stack card: "Deleting" overrides health; no derivable health
+ *  (never deployed, or only cancelled/superseded attempts) reads "Not deployed";
+ *  otherwise the release health rollup drives it (deriveHeaderHealth — mirrors the
+ *  stack detail page's header). */
 function headerStatus(stack: Stack): { label: string; variant: StatusVariant } {
   if (stack.lifecycle === "deleting") return { label: "Deleting", variant: "pending" };
-  if (!stack.latest_release) return { label: "Not deployed", variant: "neutral" };
-  const health = !isTerminal(stack.latest_release.state) ? "progressing" : stack.current_release?.health;
-  return { label: health ?? "", variant: statusVariant("health", health) };
+  const health = deriveHeaderHealth(stack);
+  if (!health) return { label: "Not deployed", variant: "neutral" };
+  return { label: health, variant: statusVariant("health", health) };
 }
 
 function bucketStatus(stack: Stack): StatusFilter {

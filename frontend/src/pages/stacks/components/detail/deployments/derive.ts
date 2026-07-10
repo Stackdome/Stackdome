@@ -1,15 +1,46 @@
 import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
-import type { StackRelease, ReleaseLiveStatus } from "@/api/releases";
+import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
-import { ReleaseState } from "./release-states";
+import { ReleaseState, isTerminal } from "./release-states";
 
 export type Stack = components["schemas"]["Stack"];
+export type ReleaseHealth = components["schemas"]["ReleaseHealth"];
 export type StackResource = components["schemas"]["StackResource"];
 export type StackResourceFailure = components["schemas"]["StackResourceFailure"];
 export type ReleaseCause = components["schemas"]["ReleaseCause"];
 export type FailureStage = "build" | "runtime" | "init" | "validation";
+
+/**
+ * Health driving the stack header pill: an in-flight latest release always reads
+ * "progressing"; otherwise the live release's rollup, falling back to "failed" for a
+ * Failed latest with nothing live. Undefined → nothing ever deployed (no releases,
+ * or only cancelled/superseded attempts) → callers render a neutral "Not deployed".
+ */
+export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
+  const latest = stack.latest_release;
+  if (!latest) return undefined;
+  if (!isTerminal(latest.state)) return "progressing";
+  if (stack.current_release?.health) return stack.current_release.health;
+  return latest.state === ReleaseState.Failed ? "failed" : undefined;
+}
+
+/**
+ * True when the polled releases list shows a release newly settled into a terminal
+ * state that the stack's own latest_release summary doesn't reflect yet — the signal
+ * to refetch the stack so its release summaries stay fresh.
+ */
+export function shouldRefetchStackSummaries(
+  prev: { id?: string; state?: string } | undefined,
+  active: StackRelease | undefined,
+  latest: ReleaseSummary | undefined,
+): boolean {
+  if (!active || !isTerminal(active.state)) return false;
+  if (prev && prev.id === active.id && prev.state === active.state) return false; // already handled
+  if (latest && latest.id === active.id && latest.state === active.state) return false; // already fresh
+  return true;
+}
 
 export interface ResourceSource {
   kind: "image" | "git";

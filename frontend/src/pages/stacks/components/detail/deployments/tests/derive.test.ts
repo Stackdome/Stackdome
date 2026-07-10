@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
-import type { FailingResource } from "../derive";
-import type { StackRelease, ReleaseLiveStatus } from "@/api/releases";
+import { deriveHeaderHealth, shouldRefetchStackSummaries } from "../derive";
+import type { FailingResource, Stack } from "../derive";
+import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 
 function release(partial: Partial<StackRelease>): StackRelease {
   return { id: "r1", ...partial } as StackRelease;
@@ -10,6 +11,10 @@ function release(partial: Partial<StackRelease>): StackRelease {
 
 function liveStatusWith(resources: Record<string, Record<string, unknown>>): ReleaseLiveStatus {
   return { resources } as unknown as ReleaseLiveStatus;
+}
+
+function stackWithReleases(current?: Partial<ReleaseSummary>, latest?: Partial<ReleaseSummary>): Stack {
+  return { current_release: current, latest_release: latest } as unknown as Stack;
 }
 
 describe("deriveFailingResources", () => {
@@ -251,5 +256,78 @@ describe("phaseTone", () => {
     expect(toneTextClass("err")).toBe("text-danger");
     expect(toneTextClass("amber")).toBe("text-warn");
     expect(toneDotClass("muted")).toBe("bg-fg-muted");
+  });
+});
+
+describe("deriveHeaderHealth", () => {
+  it("undefined when no releases exist (never deployed)", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, undefined))).toBeUndefined();
+  });
+
+  it("progressing while the latest release is in flight", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "InProgress" }))).toBe("progressing");
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r0", health: "ok" }, { id: "r1", state: "Pending" }))).toBe("progressing");
+  });
+
+  it("live release health once the latest is terminal", () => {
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r1", health: "ok" }, { id: "r1", state: "Released" }))).toBe("ok");
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r1", health: "degraded" }, { id: "r1", state: "Released" }))).toBe("degraded");
+  });
+
+  it("live health wins over a newer failed attempt (healthy current + failed latest)", () => {
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r1", health: "ok" }, { id: "r2", state: "Failed" }))).toBe("ok");
+  });
+
+  it("failed first deploy (no live release) falls back to 'failed'", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Failed" }))).toBe("failed");
+  });
+
+  it("cancelled/superseded-only history (nothing ever ran) stays undefined → 'Not deployed'", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Cancelled" }))).toBeUndefined();
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Superseded" }))).toBeUndefined();
+  });
+});
+
+describe("shouldRefetchStackSummaries", () => {
+  const latest = (partial: Partial<ReleaseSummary>): ReleaseSummary => partial as ReleaseSummary;
+
+  it("false with no active release or a non-terminal one", () => {
+    expect(shouldRefetchStackSummaries(undefined, undefined, undefined)).toBe(false);
+    expect(shouldRefetchStackSummaries(undefined, release({ state: "InProgress" }), undefined)).toBe(false);
+    expect(shouldRefetchStackSummaries({ id: "r1", state: "Pending" }, release({ state: "Pending" }), undefined)).toBe(false);
+  });
+
+  it("true on a transition into any terminal state with a stale summary", () => {
+    for (const state of ["Released", "Failed", "Cancelled", "Superseded"] as const) {
+      expect(shouldRefetchStackSummaries(
+        { id: "r2", state: "InProgress" },
+        release({ id: "r2", state }),
+        latest({ id: "r2", state: "InProgress" }),
+      )).toBe(true);
+    }
+  });
+
+  it("false when the same terminal transition was already handled", () => {
+    expect(shouldRefetchStackSummaries(
+      { id: "r2", state: "Failed" },
+      release({ id: "r2", state: "Failed" }),
+      latest({ id: "r1", state: "Released" }),
+    )).toBe(false);
+  });
+
+  it("false when the stack's latest_release summary is already fresh", () => {
+    expect(shouldRefetchStackSummaries(
+      undefined,
+      release({ id: "r2", state: "Failed" }),
+      latest({ id: "r2", state: "Failed" }),
+    )).toBe(false);
+  });
+
+  it("true on first observation of a terminal release the summary doesn't know", () => {
+    expect(shouldRefetchStackSummaries(
+      undefined,
+      release({ id: "r2", state: "Released" }),
+      latest({ id: "r1", state: "Released" }),
+    )).toBe(true);
   });
 });

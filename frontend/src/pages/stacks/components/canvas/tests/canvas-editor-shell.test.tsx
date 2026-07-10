@@ -8,7 +8,7 @@ import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 afterEach(cleanup);
 
 const base = {
-  hasLatestRelease: false, subtitle: "0 services · 0 volumes",
+  subtitle: "0 services · 0 volumes",
   activeTab: "architecture", onTabChange: () => {},
   isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
   hasResources: true,
@@ -37,18 +37,24 @@ describe("CanvasEditorShell header", () => {
   });
 
   it("renders a single status pill and never a DRAFT pill", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" hasLatestRelease headerHealth="ok" isStaged />);
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" headerHealth="ok" isStaged />);
     expect(screen.getByText("ok")).toBeInTheDocument();
     expect(screen.queryByText("DRAFT")).toBeNull();
   });
 
-  it("shows a neutral 'Not deployed' pill when the stack has no latest release", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" hasLatestRelease={false} />);
+  it("shows a neutral 'Not deployed' pill when no health is derivable (never deployed)", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" />);
     expect(screen.getByText("Not deployed")).toBeInTheDocument();
   });
 
+  it("failed first deploy shows an error pill (health 'failed'), not an empty header", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" headerHealth="failed" />);
+    expect(screen.getByText("failed")).toBeInTheDocument();
+    expect(screen.queryByText("Not deployed")).toBeNull();
+  });
+
   it("shows a pending 'Deleting' pill when the stack lifecycle is deleting, overriding health", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" hasLatestRelease headerHealth="ok" lifecycle="deleting" />);
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" headerHealth="ok" lifecycle="deleting" />);
     expect(screen.getByText("Deleting")).toBeInTheDocument();
     expect(screen.queryByText("ok")).toBeNull();
   });

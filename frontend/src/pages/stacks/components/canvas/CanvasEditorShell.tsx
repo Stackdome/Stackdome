@@ -33,10 +33,9 @@ export interface CanvasEditorShellProps {
   stackName: string;
   /** Persistence key for header collapse; falls back to a shared draft key. */
   stackId?: string;
-  /** Health off the current/latest release (ReleaseHealth: "ok" | "progressing" | "degraded" | "failed"). */
+  /** Health off the current/latest release (ReleaseHealth: "ok" | "progressing" | "degraded" |
+   *  "failed"). Undefined → nothing ever deployed → a neutral "Not deployed" pill. */
   headerHealth?: string;
-  /** Whether the stack has ever completed a release — false renders a neutral "Not deployed" pill instead of health. */
-  hasLatestRelease: boolean;
   /** Stack entity lifecycle — "deleting" overrides health with a pending "Deleting" pill. */
   lifecycle?: StackLifecycle;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
@@ -104,7 +103,6 @@ export function CanvasEditorShell({
   stackName,
   stackId,
   headerHealth,
-  hasLatestRelease,
   lifecycle,
   subtitle,
   hasResources,
@@ -144,8 +142,8 @@ export function CanvasEditorShell({
   // Header status pill: "Deleting" overrides everything, "Not deployed" covers a
   // stack that has never completed a release, otherwise health drives the pill.
   const isDeleting = lifecycle === ("deleting" satisfies StackLifecycle);
-  const pillLabel = isDeleting ? "Deleting" : !hasLatestRelease ? "Not deployed" : headerHealth;
-  const pillVariant = isDeleting ? "pending" : !hasLatestRelease ? "neutral" : statusVariant("health", headerHealth);
+  const pillLabel = isDeleting ? "Deleting" : headerHealth ?? "Not deployed";
+  const pillVariant = isDeleting ? "pending" : headerHealth ? statusVariant("health", headerHealth) : "neutral";
 
   const collapseKey = `${COLLAPSE_KEY_PREFIX}${stackId ?? DRAFT_COLLAPSE_ID}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
