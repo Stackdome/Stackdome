@@ -20,6 +20,7 @@ import { statusVariant } from "@/components/branded/status-variant";
 import { formatDistanceToNow } from "date-fns";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/pages/stacks/types";
+import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -48,11 +49,21 @@ function inferStackIcon(stack: Stack) {
   return Layers;
 }
 
-function bucketStatus(state?: string | null): StatusFilter {
-  const v = statusVariant("stack", state);
-  if (v === "ready") return "ready";
-  if (v === "pending") return "pending";
-  if (v === "error") return "error";
+/** Header pill for a stack card: "Deleting" / "Not deployed" override health;
+ *  otherwise an in-flight latest release reads as "progressing", else the live
+ *  release's health rollup drives it. Mirrors the stack detail page's header. */
+function headerStatus(stack: Stack): { label: string; variant: StatusVariant } {
+  if (stack.lifecycle === "deleting") return { label: "Deleting", variant: "pending" };
+  if (!stack.latest_release) return { label: "Not deployed", variant: "neutral" };
+  const health = !isTerminal(stack.latest_release.state) ? "progressing" : stack.current_release?.health;
+  return { label: health ?? "", variant: statusVariant("health", health) };
+}
+
+function bucketStatus(stack: Stack): StatusFilter {
+  const { variant } = headerStatus(stack);
+  if (variant === "ready") return "ready";
+  if (variant === "pending") return "pending";
+  if (variant === "error") return "error";
   return "all";
 }
 
@@ -94,7 +105,7 @@ export default function StacksPage() {
   const counts = useMemo(() => {
     const c = { all: stacks.length, ready: 0, pending: 0, error: 0 } as Record<StatusFilter, number>;
     for (const s of stacks) {
-      const b = bucketStatus(s.status?.state);
+      const b = bucketStatus(s);
       if (b !== "all") c[b]++;
     }
     return c;
@@ -103,7 +114,7 @@ export default function StacksPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let out = stacks.filter((s) => {
-      if (statusFilter !== "all" && bucketStatus(s.status?.state) !== statusFilter) return false;
+      if (statusFilter !== "all" && bucketStatus(s) !== statusFilter) return false;
       if (q && !(s.name?.toLowerCase().includes(q))) return false;
       return true;
     });
@@ -251,7 +262,7 @@ export default function StacksPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                 {filtered.map((stack) => {
                   const Icon = inferStackIcon(stack);
-                  const variant = statusVariant("stack", stack.status?.state);
+                  const { label: statusLabel, variant } = headerStatus(stack);
                   const resourceCount = stack.spec?.stack_resources?.length || 0;
                   const volumeCount = stack.spec?.volumes?.length || 0;
                   const updatedAt = stack.updated_at || stack.created_at;
@@ -275,28 +286,26 @@ export default function StacksPage() {
                             >
                               {stack.name}
                             </span>
-                            {stack.status?.state && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span
-                                    className={cn(
-                                      "mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full",
-                                      variant === "ready" && "bg-success",
-                                      variant === "pending" && "bg-warn",
-                                      variant === "error" && "bg-danger",
-                                      variant === "info" && "bg-info",
-                                      variant === "neutral" && "bg-fg-muted",
-                                    )}
-                                    aria-label={stack.status.state}
-                                  />
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  <span className="font-mono text-[11px] uppercase tracking-[1.5px]">
-                                    {stack.status.state}
-                                  </span>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className={cn(
+                                    "mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full",
+                                    variant === "ready" && "bg-success",
+                                    variant === "pending" && "bg-warn",
+                                    variant === "error" && "bg-danger",
+                                    variant === "info" && "bg-info",
+                                    variant === "neutral" && "bg-fg-muted",
+                                  )}
+                                  aria-label={statusLabel}
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <span className="font-mono text-[11px] uppercase tracking-[1.5px]">
+                                  {statusLabel}
+                                </span>
+                              </TooltipContent>
+                            </Tooltip>
                           </div>
                         </div>
 

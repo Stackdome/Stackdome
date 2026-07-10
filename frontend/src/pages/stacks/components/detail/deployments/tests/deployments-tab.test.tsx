@@ -16,7 +16,7 @@ beforeAll(() => {
   for (const [k, v] of Object.entries(stubs)) (Element.prototype as unknown as Record<string, unknown>)[k] = v;
 });
 
-const stack = { status: { resources: [] }, spec: { stack_resources: [] } } as unknown as Stack;
+const stack = { spec: { stack_resources: [] } } as unknown as Stack;
 const releases: StackRelease[] = [{ id: "r1", sequence: 14, state: "Released", cause: { kind: "manual" } } as StackRelease];
 const handlers = { onRollback: vi.fn(), onCancel: vi.fn(), onCopyId: vi.fn() };
 const base = { orgId: "o", teamName: "t", stackId: "s", stack, loading: false, error: null, ...handlers };
@@ -55,7 +55,7 @@ describe("DeploymentsTab", () => {
   });
 
   it("pins a live anchor when the live release is buried below a newer deploy", () => {
-    const buriedStack = { status: { resources: [{ name: "web", phase: "Ready" }], last_converged: { release_id: "r14" } }, spec: { stack_resources: [{ name: "web" }] } } as unknown as Stack;
+    const buriedStack = { current_release: { id: "r14" }, spec: { stack_resources: [{ name: "web" }] } } as unknown as Stack;
     const buried: StackRelease[] = [
       { id: "r15", sequence: 15, state: "InProgress", cause: { kind: "manual" } } as StackRelease,
       { id: "r14", sequence: 14, state: "Released", cause: { kind: "manual" } } as StackRelease,
@@ -66,7 +66,7 @@ describe("DeploymentsTab", () => {
   });
 
   it("does not pin a live anchor when the live release is already the newest node", () => {
-    const liveTopStack = { status: { resources: [], last_converged: { release_id: "r14" } }, spec: { stack_resources: [] } } as unknown as Stack;
+    const liveTopStack = { current_release: { id: "r14" }, spec: { stack_resources: [] } } as unknown as Stack;
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
     render(<DeploymentsTab {...base} stack={liveTopStack} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.queryByRole("button", { name: /Live release/ })).not.toBeInTheDocument();

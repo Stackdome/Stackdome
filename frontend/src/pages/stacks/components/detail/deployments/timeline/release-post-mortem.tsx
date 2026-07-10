@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { StageTracker } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
-import type { Stack } from "@/api/stacks";
 import type { ReleaseDetail } from "../use-release-detail";
 import { diffSnapshots } from "../release-snapshot-diff";
 import { resourceSource, replicaLabel, deriveStages } from "../derive";
@@ -14,13 +13,11 @@ import type { ResourceRowVM } from "./resource-row";
 export interface ReleasePostMortemProps {
   detail: ReleaseDetail;
   release: StackRelease;
-  /** Live stack — only used to derive the Build→Deploy→Ready tracker (last_converged). */
-  stack: Stack;
   prevReleaseId?: string;
   prevSeq?: number;
 }
 
-export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevSeq }: ReleasePostMortemProps) {
+export function ReleasePostMortem({ detail, release, prevReleaseId, prevSeq }: ReleasePostMortemProps) {
   useEffect(() => {
     if (release.id) detail.ensure(release.id);
     if (prevReleaseId) detail.ensure(prevReleaseId);
@@ -47,9 +44,9 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
     msg: o.message,
     source: resourceSource(sourceByName.get(name)),
   }));
-  // Tracker reads the release's own state/outcome; stack supplies only last_converged.
+  // Tracker reads the release's own state/outcome/live_status.
   // Empty failure set: an old node must not surface current cluster crashes.
-  const stages = deriveStages(stack, release, []);
+  const stages = deriveStages(release, [], release.live_status);
 
   return (
     <div className="px-0.5 pb-1.5 pt-3.5">

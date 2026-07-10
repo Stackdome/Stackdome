@@ -22,7 +22,7 @@ export interface TimelineNodeProps {
   onCopyId: (id: string) => void;
   /** releases[0] — render LIVE progress from the stack rather than the stored outcome. */
   isActive: boolean;
-  /** This release currently serves traffic (stack.status.last_converged). */
+  /** This release currently serves traffic (stack.current_release). */
   isLive: boolean;
   stack: Stack;
   logContext?: LogContext;
@@ -90,7 +90,7 @@ export function TimelineNode(props: TimelineNodeProps) {
               prevSeq={prevSeq}
             />
           ) : (
-            <ReleasePostMortem detail={detail} release={release} stack={stack} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
+            <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
           )}
         </div>
       )}

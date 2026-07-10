@@ -8,7 +8,7 @@ import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 afterEach(cleanup);
 
 const base = {
-  statusState: null, subtitle: "0 services · 0 volumes",
+  hasLatestRelease: false, subtitle: "0 services · 0 volumes",
   activeTab: "architecture", onTabChange: () => {},
   isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
   hasResources: true,
@@ -37,9 +37,20 @@ describe("CanvasEditorShell header", () => {
   });
 
   it("renders a single status pill and never a DRAFT pill", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" statusState="Ready" isStaged />);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" hasLatestRelease headerHealth="ok" isStaged />);
+    expect(screen.getByText("ok")).toBeInTheDocument();
     expect(screen.queryByText("DRAFT")).toBeNull();
+  });
+
+  it("shows a neutral 'Not deployed' pill when the stack has no latest release", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" hasLatestRelease={false} />);
+    expect(screen.getByText("Not deployed")).toBeInTheDocument();
+  });
+
+  it("shows a pending 'Deleting' pill when the stack lifecycle is deleting, overriding health", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" hasLatestRelease headerHealth="ok" lifecycle="deleting" />);
+    expect(screen.getByText("Deleting")).toBeInTheDocument();
+    expect(screen.queryByText("ok")).toBeNull();
   });
 });
 

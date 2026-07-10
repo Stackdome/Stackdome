@@ -23,7 +23,7 @@ export interface LiveReleaseBodyProps {
 
 /**
  * Detail-card body for the latest deploy (releases[0]). Renders LIVE progress from
- * stack.status.resources + the derived tracker (vs a historical node's stored outcome).
+ * release.live_status.resources + the derived tracker (vs a historical node's stored outcome).
  */
 export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq }: LiveReleaseBodyProps) {
   // Source image/repo from THIS release's snapshot (the frozen spec it ships), not the
@@ -33,26 +33,26 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
     if (prevReleaseId) detail?.ensure(prevReleaseId);
   }, [detail, release.id, prevReleaseId]);
   const releaseSnapshot = detail?.peek(release.id).data?.snapshot;
-  const failing = deriveFailingResources(stack);
+  const liveStatus = release.live_status;
+  const failing = deriveFailingResources(release, liveStatus);
   const canDiff = !!prevReleaseId && !!detail;
   // Suppress empty "no changes" until prev snapshot resolves — else the diff briefly lies.
   const prevLoaded = !prevReleaseId || !!detail?.peek(prevReleaseId).data;
   const diff = diffSnapshots(detail?.peek(prevReleaseId).data?.snapshot, detail?.peek(release.id).data?.snapshot);
-  const recovered = deriveRecovered(stack);
+  const recovered = deriveRecovered(release, liveStatus);
   const recoveredNames = new Set(recovered.map((r) => r.name));
   const failingByName = new Map(failing.map((f) => [f.name, f]));
-  const stages = deriveStages(stack, release, failing);
-  const summaries = stack.status?.resources ?? [];
+  const stages = deriveStages(release, failing, liveStatus);
+  const liveResources = Object.entries(liveStatus?.resources ?? {});
   const sourceByName = new Map((releaseSnapshot?.resources ?? stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const failureMsg = release.state === ReleaseState.Failed && failing.length === 0 ? release.message : undefined;
-  const rows: ResourceRowVM[] = summaries.map((s) => ({
-    name: s.name ?? "",
-    phase: s.phase ?? "",
+  const rows: ResourceRowVM[] = liveResources.map(([name, s]) => ({
+    name,
+    phase: s.state ?? "",
     replicas: replicaLabel(s.available_replicas, s.replicas),
-    msg: s.message,
-    tag: recoveredNames.has(s.name ?? "") ? "RECOVERED" : undefined,
-    failure: failingByName.get(s.name ?? ""),
-    source: resourceSource(sourceByName.get(s.name ?? "")),
+    tag: recoveredNames.has(name) ? "RECOVERED" : undefined,
+    failure: failingByName.get(name),
+    source: resourceSource(sourceByName.get(name)),
   }));
 
   return (

@@ -38,8 +38,8 @@ export function connectionIdentityKey(c: StackConnection): string {
 
 /** Strip server-computed fields so a server resource compares against form-derived ones. */
 export function cleanServerResource(r: StackResource): StackResourceUpdateRequest {
-  const { id, stack_id, revision, status, outputs, ...rest } = r as StackResource & { outputs?: unknown };
-  void id; void stack_id; void revision; void status; void outputs;
+  const { id, stack_id, revision, outputs, ...rest } = r as StackResource & { outputs?: unknown };
+  void id; void stack_id; void revision; void outputs;
   // volume_mounts are stored as volume_mount connections since the volume_mounts
   // table was dropped. The server always returns volume_mounts: [] on resources,
   // while the desired state strips them too — both sides must be undefined so

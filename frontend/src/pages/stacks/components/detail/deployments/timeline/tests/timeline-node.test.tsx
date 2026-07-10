@@ -16,7 +16,7 @@ beforeAll(() => {
   for (const [k, v] of Object.entries(stubs)) (Element.prototype as unknown as Record<string, unknown>)[k] = v;
 });
 
-const stack = { status: { resources: [] }, spec: { stack_resources: [] } } as unknown as Stack;
+const stack = { spec: { stack_resources: [] } } as unknown as Stack;
 
 function Wrap(over: Partial<React.ComponentProps<typeof TimelineNode>> & { release: StackRelease }) {
   const detail = useReleaseDetail("o", "t", "s");

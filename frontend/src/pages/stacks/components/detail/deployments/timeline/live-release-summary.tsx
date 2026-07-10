@@ -9,7 +9,7 @@ import { LiveReleaseBody } from "./live-release-body";
 import type { LogContext } from "./resource-row";
 
 export interface LiveReleaseSummaryProps {
-  /** The release currently serving traffic (stack.status.last_converged). */
+  /** The release currently serving traffic (stack.current_release). */
   release: StackRelease;
   stack: Stack;
   /** Previous release, for the config diff inside the expanded body. */

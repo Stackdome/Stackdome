@@ -15,7 +15,7 @@ beforeAll(() => {
   for (const [k, v] of Object.entries(stubs)) (Element.prototype as unknown as Record<string, unknown>)[k] = v;
 });
 
-const stack = { status: { resources: [] }, spec: { stack_resources: [] } } as unknown as Stack;
+const stack = { spec: { stack_resources: [] } } as unknown as Stack;
 const rels = (n: number): StackRelease[] => Array.from({ length: n }, (_, i) => ({ id: `r${n - i}`, sequence: n - i, state: "Released", cause: { kind: "manual" } } as StackRelease));
 
 const base = { stack, onRollback: vi.fn(), onCancel: vi.fn(), onCopyId: vi.fn() };
@@ -38,7 +38,7 @@ describe("TimelineRail", () => {
 
   it("opens the latest deploy by default and tags the live release", () => {
     const r = rels(3);
-    const liveStack = { status: { resources: [], last_converged: { release_id: "r2" } }, spec: { stack_resources: [] } } as unknown as Stack;
+    const liveStack = { current_release: { id: "r2" }, spec: { stack_resources: [] } } as unknown as Stack;
     render(<TimelineRail releases={r} activeRelease={r[0]} {...base} stack={liveStack} />);
     // #2 is the live release → carries the LIVE chip.
     expect(screen.getByText("Live")).toBeInTheDocument();
@@ -46,7 +46,7 @@ describe("TimelineRail", () => {
 
   it("renders only the live dot solid; every other dot is a hollow ring", () => {
     const r = rels(3);
-    const liveStack = { status: { resources: [], last_converged: { release_id: "r2" } }, spec: { stack_resources: [] } } as unknown as Stack;
+    const liveStack = { current_release: { id: "r2" }, spec: { stack_resources: [] } } as unknown as Stack;
     render(<TimelineRail releases={r} activeRelease={r[0]} {...base} stack={liveStack} />);
     const dots = screen.getAllByTestId("rail-dot");
     const solid = dots.filter((d) => !d.className.includes("border-2") && !d.className.includes("animate-spin"));

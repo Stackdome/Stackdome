@@ -14,9 +14,12 @@ beforeAll(() => {
   for (const [k, v] of Object.entries(stubs)) (Element.prototype as unknown as Record<string, unknown>)[k] = v;
 });
 
-const release = { id: "r18", sequence: 18, state: "Released", cause: { kind: "manual" } } as StackRelease;
+const release = {
+  id: "r18", sequence: 18, state: "Released", cause: { kind: "manual" },
+  live_status: { resources: { web: { state: "Ready" } } },
+} as unknown as StackRelease;
 const stack = {
-  status: { resources: [{ name: "web", phase: "Ready" }], last_converged: { release_id: "r18" } },
+  current_release: { id: "r18" },
   spec: { stack_resources: [{ name: "web" }] },
 } as unknown as Stack;
 const ctx = { orgId: "o", teamName: "t", stackId: "s" };

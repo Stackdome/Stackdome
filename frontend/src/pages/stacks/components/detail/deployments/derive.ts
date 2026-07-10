@@ -1,6 +1,6 @@
 import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
-import type { StackRelease } from "@/api/releases";
+import type { StackRelease, ReleaseLiveStatus } from "@/api/releases";
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState } from "./release-states";
@@ -71,17 +71,20 @@ function failureDetail(f: StackResourceFailure) {
   return { detail: f.container, stage: "runtime" as const };
 }
 
-export function deriveFailingResources(stack: Stack): FailingResource[] {
-  const resources = stack.spec?.stack_resources ?? [];
+/** Live per-resource statuses come from the release's live_status (present only while the
+ *  release is live/converged or actively deploying); undefined until that's wired in.
+ *  `_release` isn't read yet — kept for signature parity with deriveStages/deriveRecovered. */
+export function deriveFailingResources(_release: StackRelease, liveStatus?: ReleaseLiveStatus): FailingResource[] {
+  const resources = liveStatus?.resources ?? {};
   const out: FailingResource[] = [];
-  for (const r of resources) {
-    const f = r.status?.last_failure;
-    const state = r.status?.state ?? "";
+  for (const [name, r] of Object.entries(resources)) {
+    const f = r.last_failure;
+    const state = r.state ?? "";
     // Only surface as ACTIVE failure when the resource is not currently healthy.
     if (!f || isHealthyState(state)) continue;
     const { detail, stage } = failureDetail(f);
     out.push({
-      name: r.name ?? "",
+      name,
       type: (f.type ?? "runtime_crash") as FailingResource["type"],
       stage,
       reason: detail?.reason ?? humanizeFailureType(detail?.failure_type),
@@ -94,15 +97,15 @@ export function deriveFailingResources(stack: Stack): FailingResource[] {
   return out;
 }
 
-export function deriveRecovered(stack: Stack): RecoveredResource[] {
-  const resources = stack.spec?.stack_resources ?? [];
+export function deriveRecovered(_release: StackRelease, liveStatus?: ReleaseLiveStatus): RecoveredResource[] {
+  const resources = liveStatus?.resources ?? {};
   const out: RecoveredResource[] = [];
-  for (const r of resources) {
-    const f = r.status?.last_failure;
-    const state = r.status?.state ?? "";
+  for (const [name, r] of Object.entries(resources)) {
+    const f = r.last_failure;
+    const state = r.state ?? "";
     if (!f || !isHealthyState(state)) continue;
     const { detail } = failureDetail(f);
-    out.push({ name: r.name ?? "", reason: detail?.reason ?? humanizeFailureType(detail?.failure_type), restartCount: detail?.restart_count });
+    out.push({ name, reason: detail?.reason ?? humanizeFailureType(detail?.failure_type), restartCount: detail?.restart_count });
   }
   return out;
 }
@@ -163,11 +166,12 @@ function hasBuildResources(release: StackRelease): boolean {
 
 /**
  * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
- * deriveFailingResources(stack) — recovered resources excluded, so any failure here is CURRENT.
+ * deriveFailingResources(release, liveStatus) — recovered resources excluded, so any
+ * failure here is CURRENT. `liveStatus` is only ever present while a release is live
+ * (converged) or actively deploying, so its presence alone marks convergence.
  */
-export function deriveStages(stack: Stack, release: StackRelease, failing: FailingResource[]): Stages {
-  const converged = stack.status?.last_converged?.release_id != null
-    && stack.status?.last_converged?.release_id === release.id;
+export function deriveStages(release: StackRelease, failing: FailingResource[], liveStatus?: ReleaseLiveStatus): Stages {
+  const converged = liveStatus != null;
   const buildFailed = failing.some((f) => f.type === "build_failure");
   const runtimeFailed = failing.some((f) => f.type === "runtime_crash");
   const hasBuild = hasBuildResources(release);

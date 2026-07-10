@@ -3,6 +3,7 @@ import type { components } from "./types/openapi";
 import type { StackList } from "@/pages/stacks/types";
 
 export type Stack = components["schemas"]["Stack"];
+export type StackLifecycle = components["schemas"]["StackLifecycle"];
 export type StackResource = components["schemas"]["StackResource"];
 export type StackResourceList = components["schemas"]["StackResourceList"];
 export type Volume = components["schemas"]["Volume"];

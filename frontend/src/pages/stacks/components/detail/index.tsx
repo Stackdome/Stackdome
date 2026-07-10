@@ -26,7 +26,7 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { ReleaseState } from "@/pages/stacks/components/detail/deployments/release-states";
+import { ReleaseState, isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
@@ -209,16 +209,7 @@ export default function StackDetailPage() {
   );
   const effectiveStack = draftStackView ?? stackToShow;
 
-  // Publicly exposed services → best live ingress URL, for the header's
-  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
   const orgDomains = useOrgDomains(effectiveStack?.organisation_id ?? getCurrentOrganizationId() ?? undefined);
-  const publicEndpoints = useMemo(() => {
-    if (isDraft) return [];
-    return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
-      const best = pickBestIngress(r.status?.public_ingress ?? [], orgDomains);
-      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
-    });
-  }, [isDraft, effectiveStack, orgDomains]);
 
   // ── Release plumbing (needed this early: the diff baseline is pinned to the
   // latest release's snapshot, not the autosaved server state) ──
@@ -231,13 +222,33 @@ export default function StackDetailPage() {
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
 
   // Diff anchor: the latest release (the config last shipped via Deploy), falling
-  // back to the converged release until the releases list loads.
+  // back to the live (currently converged) release until the releases list loads.
   const baselineReleaseId =
-    releasesResult.activeRelease?.id ?? stackToShow?.status?.last_converged?.release_id;
+    releasesResult.activeRelease?.id ?? stackToShow?.current_release?.id;
   useEffect(() => {
     if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
   }, [baselineReleaseId, releaseDetail]);
   const deployedSnapshot = releaseDetail.peek(baselineReleaseId).data?.snapshot;
+
+  // Live release (stack.current_release): what's actually serving traffic — source
+  // for live per-resource status (public ingress endpoints below).
+  const currentReleaseId = stackToShow?.current_release?.id;
+  useEffect(() => {
+    if (currentReleaseId) releaseDetail.ensure(currentReleaseId);
+  }, [currentReleaseId, releaseDetail]);
+  const currentReleaseDetail = releaseDetail.peek(currentReleaseId).data;
+
+  // Publicly exposed services → best live ingress URL, for the header's
+  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
+  const publicEndpoints = useMemo(() => {
+    if (isDraft) return [];
+    const liveResources = currentReleaseDetail?.live_status?.resources ?? {};
+    return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
+      const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
+      const best = pickBestIngress(ingress, orgDomains);
+      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
+    });
+  }, [isDraft, effectiveStack, orgDomains, currentReleaseDetail]);
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.
@@ -536,33 +547,33 @@ export default function StackDetailPage() {
     detail: releaseDetail,
   });
 
-  // When a release converges, the server moves status.last_converged but the
-  // client's stack copy still points at the previous release, so the staged
-  // panel keeps diffing against the old snapshot until a manual page refresh.
-  // Refetch the stack once per newly-released release to pick up the pointer.
-  const convergedFetchRef = useRef<string | undefined>(undefined);
-  const activeRelease = releasesResult.activeRelease;
-  useEffect(() => {
-    if (!deployIds.stackId || !activeRelease) return;
-    if (activeRelease.state !== ReleaseState.Released) return;
-    if (stackToShow?.status?.last_converged?.release_id === activeRelease.id) return;
-    if (convergedFetchRef.current === activeRelease.id) return;
-    convergedFetchRef.current = activeRelease.id;
+  // When a release transitions into Released, the stack's current_release /
+  // latest_release summaries are stale until refetched — the staged panel would
+  // keep diffing against the old snapshot otherwise. Refetch once per transition,
+  // keyed on the polled releases list (not on the stack's own pointer).
+  const refetchStack = useCallback(() => {
+    if (!deployIds.stackId) return;
     void getStackById(deployIds.orgId, deployIds.teamName, deployIds.stackId).then((fresh) => {
       setFetchedStack(fresh);
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       // Server topology may have changed with the new release; re-derive edges.
       setTopologyRefreshKey((k) => k + 1);
-    }).catch(() => {
-      // Poll-driven refresh; the next release poll retries naturally.
-      convergedFetchRef.current = undefined;
     });
-  }, [deployIds, activeRelease, stackToShow?.status?.last_converged?.release_id, setStacks]);
+  }, [deployIds, setStacks]);
+  const activeRelease = releasesResult.activeRelease;
+  const prevActiveReleaseStateRef = useRef<string | undefined>(activeRelease?.state);
+  useEffect(() => {
+    const prevState = prevActiveReleaseStateRef.current;
+    prevActiveReleaseStateRef.current = activeRelease?.state;
+    if (!activeRelease || activeRelease.state !== ReleaseState.Released) return;
+    if (prevState === ReleaseState.Released) return; // already handled this transition
+    if (stackToShow?.current_release?.id === activeRelease.id) return; // already up to date
+    refetchStack();
+  }, [activeRelease, stackToShow?.current_release?.id, refetchStack]);
 
-  // Live snapshot: already lazily fetched by useDeployLifecycle via detail.ensure;
-  // peek here to gate canDiscardDraft and pass to the revert hook.
-  const liveReleaseId = stackToShow?.status?.last_converged?.release_id;
-  const liveSnapshot = releaseDetail.peek(liveReleaseId).data?.snapshot;
+  // Live snapshot: already lazily fetched above (currentReleaseId ensure); peek
+  // here to gate canDiscardDraft and pass to the revert hook.
+  const liveSnapshot = currentReleaseDetail?.snapshot;
 
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
   const [viewChangesOpen, setViewChangesOpen] = useState(false);
@@ -858,6 +869,12 @@ export default function StackDetailPage() {
     );
   }
 
+  // Header pill health: an in-flight (non-terminal) latest release always reads as
+  // "progressing"; otherwise the live release's own health rollup drives the pill.
+  const headerHealth = effectiveStack?.latest_release && !isTerminal(effectiveStack.latest_release.state)
+    ? "progressing"
+    : effectiveStack?.current_release?.health;
+
   const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
   const addonCount = connectionAddonIds.size;
@@ -941,7 +958,9 @@ export default function StackDetailPage() {
         nameEditable={isDraft}
         onNameChange={handleNameChange}
         nameError={nameError}
-        statusState={effectiveStack?.status?.state}
+        headerHealth={headerHealth}
+        hasLatestRelease={!!effectiveStack?.latest_release}
+        lifecycle={effectiveStack?.lifecycle}
         subtitle={subtitleText}
         activeTab={activeTab}
         onTabChange={setActiveTab}

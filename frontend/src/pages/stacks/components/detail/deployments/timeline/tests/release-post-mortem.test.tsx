@@ -10,11 +10,9 @@ import type { StackRelease } from "@/api/releases";
 
 afterEach(cleanup);
 
-const stack = { status: {}, spec: { stack_resources: [] } } as unknown as import("@/api/stacks").Stack;
-
 function Wrap({ release, prevId }: { release: StackRelease; prevId?: string }) {
   const detail = useReleaseDetail("o", "t", "s");
-  return <ReleasePostMortem detail={detail} release={release} stack={stack} prevReleaseId={prevId} prevSeq={12} />;
+  return <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevId} prevSeq={12} />;
 }
 
 describe("ReleasePostMortem", () => {

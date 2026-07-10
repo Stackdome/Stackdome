@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/branded";
 import { statusVariant } from "@/components/branded/status-variant";
+import type { StackLifecycle } from "@/api/stacks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +33,12 @@ export interface CanvasEditorShellProps {
   stackName: string;
   /** Persistence key for header collapse; falls back to a shared draft key. */
   stackId?: string;
-  /** Raw stack status state (mapped to a pill variant), e.g. "Ready". */
-  statusState?: string | null;
+  /** Health off the current/latest release (ReleaseHealth: "ok" | "progressing" | "degraded" | "failed"). */
+  headerHealth?: string;
+  /** Whether the stack has ever completed a release — false renders a neutral "Not deployed" pill instead of health. */
+  hasLatestRelease: boolean;
+  /** Stack entity lifecycle — "deleting" overrides health with a pending "Deleting" pill. */
+  lifecycle?: StackLifecycle;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
   subtitle: string;
   /** At least one resource exists on the canvas — gates the draft deploy pill. */
@@ -98,7 +103,9 @@ export interface CanvasEditorShellProps {
 export function CanvasEditorShell({
   stackName,
   stackId,
-  statusState,
+  headerHealth,
+  hasLatestRelease,
+  lifecycle,
   subtitle,
   hasResources,
   isDraft,
@@ -133,6 +140,12 @@ export function CanvasEditorShell({
   // so the drawer pushes content instead of covering it.
   const [drawerInset, setDrawerInset] = useState(0);
   const drawerInsetCtx = useMemo(() => ({ setInset: setDrawerInset }), []);
+
+  // Header status pill: "Deleting" overrides everything, "Not deployed" covers a
+  // stack that has never completed a release, otherwise health drives the pill.
+  const isDeleting = lifecycle === ("deleting" satisfies StackLifecycle);
+  const pillLabel = isDeleting ? "Deleting" : !hasLatestRelease ? "Not deployed" : headerHealth;
+  const pillVariant = isDeleting ? "pending" : !hasLatestRelease ? "neutral" : statusVariant("health", headerHealth);
 
   const collapseKey = `${COLLAPSE_KEY_PREFIX}${stackId ?? DRAFT_COLLAPSE_ID}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -212,16 +225,18 @@ export function CanvasEditorShell({
           style={{ marginRight: drawerInset }}
         >
           <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
-          {statusState && (
+          {pillLabel && (
             <span
-              aria-label={`status ${statusState}`}
+              aria-label={`status ${pillLabel}`}
               className={cn(
                 "size-2 flex-none rounded-full",
-                statusVariant("stack", statusState) === "ready"
+                pillVariant === "ready"
                   ? "bg-success"
-                  : statusVariant("stack", statusState) === "error"
+                  : pillVariant === "error"
                     ? "bg-danger"
-                    : "bg-warn",
+                    : pillVariant === "neutral"
+                      ? "bg-fg-muted"
+                      : "bg-warn",
               )}
             />
           )}
@@ -279,9 +294,9 @@ export function CanvasEditorShell({
               ) : (
                 <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
               )}
-              {statusState && (
-                <StatusPill variant={statusVariant("stack", statusState)} className="flex-none">
-                  {statusState}
+              {pillLabel && (
+                <StatusPill variant={pillVariant} className="flex-none">
+                  {pillLabel}
                 </StatusPill>
               )}
               <div className="flex-1" />
@@ -290,7 +305,7 @@ export function CanvasEditorShell({
               <p className="mt-1 text-[12px] text-danger">{nameError}</p>
             )}
             <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-            <PublicEndpointRow endpoints={publicEndpoints ?? []} statusState={statusState} />
+            <PublicEndpointRow endpoints={publicEndpoints ?? []} variant={pillVariant} />
           </div>
 
           {/* Tab + action rail */}
