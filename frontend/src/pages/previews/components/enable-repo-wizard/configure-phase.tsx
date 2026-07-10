@@ -31,12 +31,16 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
   useEffect(() => {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !repo.integrationId) return;
+    let cancelled = false;
     const [owner, repoName] = repo.fullName.split("/");
     listRepositoryBranches(orgId, repo.integrationId, owner, repoName)
-      .then((b) => setBranches(b.items ?? []))
+      .then((b) => {
+        if (!cancelled) setBranches(b.items ?? []);
+      })
       .catch(() => {
         // fall back to free-text branch input
       });
+    return () => { cancelled = true; };
   }, [repo]);
 
   const submit = async () => {
@@ -127,7 +131,10 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
             type="number"
             min={1}
             value={maxActive}
-            onChange={(e) => setMaxActive(Number(e.target.value))}
+            onChange={(e) => {
+              const n = e.target.valueAsNumber;
+              setMaxActive(Number.isNaN(n) ? 1 : Math.max(1, Math.floor(n)));
+            }}
             className="w-28"
           />
         </div>
