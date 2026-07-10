@@ -155,11 +155,9 @@ var _ = Describe("Stack", func() {
 
 			deleted := shared.DeleteStack(client, orgID, teamName, created.GetId())
 
-			status, ok := deleted.GetStatusOk()
+			lifecycle, ok := deleted.GetLifecycleOk()
 			Expect(ok).To(BeTrue())
-			state, stateOk := status.GetStateOk()
-			Expect(stateOk).To(BeTrue())
-			Expect(*state).To(Equal("Deleting"))
+			Expect(*lifecycle).To(Equal(openapi.STACK_LIFECYCLE_DELETING))
 		})
 	})
 

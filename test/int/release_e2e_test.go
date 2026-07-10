@@ -61,6 +61,15 @@ var _ = Describe("Release E2E", Ordered, func() {
 			By("Verifying stack is Ready via API")
 			shared.WaitForStackReady(client, orgID, teamName, stackID, 2*time.Minute)
 
+			By("Verifying the release-centric stack summary reflects convergence")
+			convergedStack := shared.GetStack(client, orgID, teamName, stackID)
+			Expect(convergedStack.GetLifecycle()).To(Equal(openapi.STACK_LIFECYCLE_ACTIVE))
+			currentRelease := convergedStack.GetCurrentRelease()
+			Expect(currentRelease.GetId()).To(Equal(released.GetId()))
+			Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
+			latestRelease := convergedStack.GetLatestRelease()
+			Expect(latestRelease.GetId()).To(Equal(released.GetId()))
+
 			By("Listing releases — should have exactly 1")
 			list := shared.ListReleases(client, orgID, teamName, stackID)
 			Expect(list.GetItems()).To(HaveLen(1))
