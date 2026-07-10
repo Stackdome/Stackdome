@@ -91,7 +91,7 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
 	})
 	if cerr != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %v", cerr)
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", cerr)
 	}
 
 	readyResources := lo.Filter(resources, func(resource *models.StackResource, _ int) bool {
@@ -196,7 +196,7 @@ func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObjec
 		podLogChan, err := s.k8sclient.StreamPodLogs(ctxWithTimeout, pod, &s.streamConfig)
 		if err != nil {
 			cancel()
-			return nil, fmt.Errorf("failed to stream logs for resource '%s': %v", resourceName, err)
+			return nil, fmt.Errorf("failed to stream logs for resource '%s': %w", resourceName, err)
 		}
 		podResourceStreamMap[resourceName] = podLogChan
 	}

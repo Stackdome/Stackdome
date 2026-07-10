@@ -140,7 +140,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon := shared.CreateMinimalPostgresAddon("test-invalid-storage")
 			addon.Spec.Storage.SetSize("invalid-size")
 
-			shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
+			_ = shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
 		})
 
 		It("should reject addon with zero instances", func() {
@@ -148,7 +148,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon := shared.CreateMinimalPostgresAddon("test-zero-instances")
 			addon.Spec.Instances.SetCount(0)
 
-			shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
+			_ = shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
 		})
 
 		It("should reject addon with invalid postgres version", func() {
@@ -156,7 +156,7 @@ var _ = Describe("PostgreSQL Addon", func() {
 			addon := shared.CreateMinimalPostgresAddon("test-invalid-version")
 			addon.Spec.Version.SetMajor(99) // Invalid version
 
-			shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
+			_ = shared.CreatePostgresAddonExpectError(client, orgID, teamName, addon, 400)
 		})
 	})
 

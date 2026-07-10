@@ -726,7 +726,9 @@ func (s *stackService) InternalDeleteStack(ctx context.Context, stack *models.St
 	}
 	if s.releaseService != nil {
 		if active, _ := s.releaseService.InternalGetActiveByStackID(ctx, stack.ID); active != nil {
-			s.releaseService.MarkFailed(ctx, active.ID, "stack deleted", nil)
+			if _, markErr := s.releaseService.MarkFailed(ctx, active.ID, "stack deleted", nil); markErr != nil {
+				s.logger.Errorf("failed to mark release '%s' failed for deleted stack '%s': %s", active.ID, stack.Name, markErr.Error())
+			}
 		}
 	}
 	stack.DeletionTimestamp = ptr.To(time.Now().UTC())

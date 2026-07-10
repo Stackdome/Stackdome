@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -24,11 +25,9 @@ type WorkspaceUserStoreSpec struct {
 
 func NewWorkspaceUserStore(spec WorkspaceUserStoreSpec) stores.WorkspaceUserStore {
 	return &workspaceUserStore{
-		sessionFactory: spec.SessionFactory,
-		workspaceNamespaceStore: NewWorkspaceNamespaceStore(WorkspaceNamespaceStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
-		atomicExecutor: atomicExecutor{sessionFactory: spec.SessionFactory},
+		sessionFactory:          spec.SessionFactory,
+		workspaceNamespaceStore: NewWorkspaceNamespaceStore(WorkspaceNamespaceStoreSpec(spec)),
+		atomicExecutor:          atomicExecutor{sessionFactory: spec.SessionFactory},
 	}
 }
 
@@ -87,7 +86,7 @@ func (w *workspaceUserStore) GetByID(ctx context.Context, id string) (*models.Wo
 	}
 	var res models.WorkspaceUser
 	if err := grm.Model(&models.WorkspaceUser{}).Preload(clause.Associations).Where("id = ?", id).First(&res).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("workspace provision request with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch workspace provision request: %s", err.Error())
@@ -111,7 +110,7 @@ func (w *workspaceUserStore) GetByUserID(ctx context.Context, userID string) (*m
 	grm := w.sessionFactory.New(ctx)
 	var res models.WorkspaceUser
 	if err := grm.Model(&models.WorkspaceUser{}).Preload(clause.Associations).Where("user_id = ?", userID).First(&res).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("workspace provision request with user_id '%s' not found", userID)
 		}
 		return nil, errors.GeneralError("failed to fetch workspace provision request: %s", err.Error())
@@ -281,7 +280,7 @@ func (w *workspaceUserStore) Delete(ctx context.Context, id string) *errors.Serv
 	}
 	grm := w.sessionFactory.New(ctx)
 	if err := grm.Where("id = ?", id).Delete(&models.WorkspaceUser{}).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("workspace provision request with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete object: %s", err.Error())
@@ -298,7 +297,7 @@ func (w *workspaceUserStore) DeleteWithTx(ctx context.Context, id string) *error
 		return errors.GeneralError("transaction not found in context")
 	}
 	if err := tx.Where("id = ?", id).Delete(&models.WorkspaceUser{}).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("workspace provision request with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete object: %s", err.Error())

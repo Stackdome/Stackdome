@@ -137,7 +137,7 @@ func PostgresConnectionConfig(connection models.StackConnection) (database strin
 	if scope, ok, err := connection.ConfigString(string(models.ConnectionConfigKeyCredentialScope)); err != nil {
 		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)
 	} else if ok {
-		superuser = scope == "superuser"
+		superuser = scope == models.CredentialScopeSuperuser
 	}
 	if value, ok, err := connection.ConfigBool(string(models.ConnectionConfigKeySuperuser)); err != nil {
 		return "", false, fmt.Errorf("connection '%s' has invalid config: %w", connection.ID, err)

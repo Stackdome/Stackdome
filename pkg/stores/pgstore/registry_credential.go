@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -34,7 +35,7 @@ func (s *registryCredentialStore) Create(ctx context.Context, credential *models
 func (s *registryCredentialStore) GetByID(ctx context.Context, ID string) (*models.RegistryCredential, *errors.ServiceError) {
 	var credential models.RegistryCredential
 	if err := s.sessionFactory.New(ctx).Where("id = ?", ID).First(&credential).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("registry credential with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get registry credential: %s", err.Error())

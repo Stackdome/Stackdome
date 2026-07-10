@@ -12,6 +12,11 @@ import (
 	"github.com/Stackdome/stackdome/pkg/validator/stackresource"
 )
 
+const (
+	fieldName         = "name"
+	fieldSpecSettings = "spec.settings"
+)
+
 //go:generate mockgen -source=stack_validator.go -destination=../../mocks/mock_stack_validator_dependencies.go -package=mocks
 type secretService interface {
 	ValidateSecretHasKeys(ctx context.Context, secretID string, requiredKeys []string) (bool, []string, *errors.ServiceError)
@@ -177,14 +182,14 @@ var stackNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
 func validateStackName(spec *models.Stack) []errors.FieldError {
 	if spec.Name == "" {
 		return []errors.FieldError{{
-			Field:   "name",
+			Field:   fieldName,
 			Code:    errors.VErrStackNameInvalid,
 			Message: "stack name is required",
 		}}
 	}
 	if len(spec.Name) > models.MaxStackNameLength {
 		return []errors.FieldError{{
-			Field: "name",
+			Field: fieldName,
 			Code:  errors.VErrStackNameInvalid,
 			Message: fmt.Sprintf(
 				"stack name must be at most %d characters", models.MaxStackNameLength),
@@ -192,7 +197,7 @@ func validateStackName(spec *models.Stack) []errors.FieldError {
 	}
 	if !stackNamePattern.MatchString(spec.Name) {
 		return []errors.FieldError{{
-			Field:   "name",
+			Field:   fieldName,
 			Code:    errors.VErrStackNameInvalid,
 			Message: "stack name can only contain lowercase letters, numbers, and hyphens, and must start and end with a letter or number",
 		}}
@@ -208,28 +213,28 @@ func validateStackSettings(spec *models.Stack) []errors.FieldError {
 	var errs []errors.FieldError
 	if s.ReleaseRetentionLimit > models.MaxReleaseRetentionLimit {
 		errs = append(errs, errors.FieldError{
-			Field:   "spec.settings",
+			Field:   fieldSpecSettings,
 			Code:    errors.VErrStackSettingsInvalid,
 			Message: fmt.Sprintf("release_retention_limit must be at most %d", models.MaxReleaseRetentionLimit),
 		})
 	}
 	if s.MinSuccessfulReleases > models.MaxMinSuccessfulReleases {
 		errs = append(errs, errors.FieldError{
-			Field:   "spec.settings",
+			Field:   fieldSpecSettings,
 			Code:    errors.VErrStackSettingsInvalid,
 			Message: fmt.Sprintf("min_successful_releases must be at most %d", models.MaxMinSuccessfulReleases),
 		})
 	}
 	if s.DeployTimeoutMinutes > models.MaxDeployTimeoutMinutes {
 		errs = append(errs, errors.FieldError{
-			Field:   "spec.settings",
+			Field:   fieldSpecSettings,
 			Code:    errors.VErrStackSettingsInvalid,
 			Message: fmt.Sprintf("deploy_timeout_minutes must be at most %d", models.MaxDeployTimeoutMinutes),
 		})
 	}
 	if s.MinSuccessfulReleases > 0 && s.ReleaseRetentionLimit > 0 && s.MinSuccessfulReleases > s.ReleaseRetentionLimit {
 		errs = append(errs, errors.FieldError{
-			Field:   "spec.settings",
+			Field:   fieldSpecSettings,
 			Code:    errors.VErrStackSettingsInvalid,
 			Message: fmt.Sprintf("min_successful_releases (%d) must not exceed release_retention_limit (%d)", s.MinSuccessfulReleases, s.ReleaseRetentionLimit),
 		})
@@ -560,16 +565,16 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, o
 		return nil, errors.BadRequest("connection '%s' cannot set both config.credential_scope and config.superuser", label)
 	}
 
-	scope := "owner"
+	scope := models.CredentialScopeOwner
 	if hasCredentialScope {
 		switch credentialScope {
-		case "owner", "superuser":
+		case models.CredentialScopeOwner, models.CredentialScopeSuperuser:
 			scope = credentialScope
 		default:
 			return nil, errors.BadRequest("connection '%s' has unsupported postgres credential scope '%s'", label, credentialScope)
 		}
 	} else if hasSuperuser && superuser {
-		scope = "superuser"
+		scope = models.CredentialScopeSuperuser
 	}
 
 	// Org-scoped lookup: GetPostgresAddon itself is unscoped, so an addon
@@ -580,7 +585,7 @@ func (v *stackValidator) validatePostgresConnectionConfig(ctx context.Context, o
 		return nil, errors.BadRequest("connection '%s' references non-existent postgres addon '%s'", label, connection.From.Id)
 	}
 
-	if scope == "superuser" {
+	if scope == models.CredentialScopeSuperuser {
 		if !addon.Configuration.EnableSuperuserAccess {
 			return nil, errors.BadRequest("connection '%s' requests superuser access but addon '%s' does not have superuser access enabled", label, connection.From.Id)
 		}

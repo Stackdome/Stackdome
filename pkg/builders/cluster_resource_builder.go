@@ -74,14 +74,14 @@ func (b *clusterResourceBuilder) GetStackCRHash(stack *models.Stack) (string, er
 		DisableMethods: true,
 		SpewKeys:       true,
 	}
-	printer.Fprintf(hasher, "%#v", stackCR)
+	_, _ = printer.Fprintf(hasher, "%#v", stackCR)
 
 	for _, sr := range stack.StackResources {
 		srCR, err := b.BuildStackResourceCR(sr, stack.Name, stack.OrganisationID)
 		if err != nil {
 			return "", fmt.Errorf("failed to build stack resource CR for '%s': %w", sr.Name, err)
 		}
-		printer.Fprintf(hasher, "%#v", srCR)
+		_, _ = printer.Fprintf(hasher, "%#v", srCR)
 	}
 
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
@@ -385,7 +385,7 @@ func (b *clusterResourceBuilder) buildImageRepositorySpec(buildConfig *models.Bu
 
 	res := corev1alpha1.ImageRepositorySpec{
 		External: &corev1alpha1.ExternalRegistrySpec{
-			Host: repo.Registry.RegistryStr(),
+			Host: repo.RegistryStr(),
 		},
 		Repository: repo.RepositoryStr(),
 	}

@@ -553,11 +553,3 @@ var _ = Describe("ProvisionReconciler", func() {
 		})
 	})
 })
-
-// helper to construct a ReleaseCause matcher; we use gomock.Any() instead for simplicity.
-func newPreviewStackWithPhase(id string, phase models.PreviewStackPhase) *models.PreviewStack {
-	return &models.PreviewStack{
-		ID:     id,
-		Status: models.PreviewStackStatus{Phase: phase},
-	}
-}

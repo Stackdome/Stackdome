@@ -321,6 +321,9 @@ func (s *teamService) InternalAddMember(ctx context.Context, teamID, userID stri
 func (s *teamService) AddMember(ctx context.Context, teamID, userID string, role models.TeamRole) (*models.TeamMembership, *errors.ServiceError) {
 	// Check if membership already exists
 	exists, serr := s.membershipStore.GetByTeamAndUser(ctx, teamID, userID)
+	if serr != nil && serr.Code != errors.ErrorNotFound {
+		return nil, serr
+	}
 	if exists != nil {
 		return nil, errors.Conflict("user is already a member of this team")
 	}
@@ -497,7 +500,7 @@ func validateTeamName(name string) *errors.ServiceError {
 		return errors.BadRequest("team name must be at most 63 characters")
 	}
 	if len(name) == 1 {
-		if !((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= '0' && name[0] <= '9')) {
+		if (name[0] < 'a' || name[0] > 'z') && (name[0] < '0' || name[0] > '9') {
 			return errors.BadRequest("team name must contain only lowercase alphanumeric characters and hyphens, and must start and end with an alphanumeric character")
 		}
 		return nil

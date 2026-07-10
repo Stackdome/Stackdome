@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -32,7 +33,7 @@ func (d dbClusterStore) GetByClusterUrl(ctx context.Context, clusterURL string) 
 	var res models.Cluster
 	err := grm.Model(&models.Cluster{}).Where("cluster_url = ?", clusterURL).Preload(clause.Associations).First(&res).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("cluster with url '%s' not found", clusterURL)
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
@@ -75,7 +76,7 @@ func (d dbClusterStore) PersistManagerState(ctx context.Context, id string, runn
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Update("manager_running", running).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("cluster with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to update cluster: %s", err.Error())
@@ -88,7 +89,7 @@ func (d dbClusterStore) Get(ctx context.Context, id string) (*models.Cluster, *e
 	var res models.Cluster
 	err := grm.Model(&models.Cluster{}).Preload(clause.Associations).Where("id = ?", id).First(&res).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("cluster with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
@@ -101,7 +102,7 @@ func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*mo
 	var res models.Cluster
 	err := grm.Model(&models.Cluster{}).Where("organisation_id = ?", orgID).Preload(clause.Associations).First(&res).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("cluster for organisation '%s' not found", orgID)
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
@@ -114,7 +115,7 @@ func (d dbClusterStore) GetDefaultCluster(ctx context.Context) (*models.Cluster,
 	var res models.Cluster
 	err := grm.Model(&models.Cluster{}).Where("\"default\" = ?", true).Preload(clause.Associations).First(&res).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("default cluster not found")
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
@@ -126,7 +127,7 @@ func (d dbClusterStore) Delete(ctx context.Context, id string) *errors.ServiceEr
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("id = ?", id).Delete(&models.Cluster{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("cluster with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete cluster: %s", err.Error())

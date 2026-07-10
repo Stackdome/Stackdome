@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -64,7 +65,7 @@ func (s *secretStore) Create(ctx context.Context, secret *models.Secret) (*model
 func (s *secretStore) GetByID(ctx context.Context, ID string) (*models.Secret, *errors.ServiceError) {
 	var secret models.Secret
 	if err := s.sessionFactory.New(ctx).Where("id = ?", ID).First(&secret).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("secret with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get secret: %s", err.Error())
@@ -77,7 +78,7 @@ func (s *secretStore) GetByName(ctx context.Context, organisationID, name string
 	if err := s.sessionFactory.New(ctx).
 		Where("organisation_id = ? AND name = ?", organisationID, name).
 		First(&secret).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("secret with name '%s' not found", name)
 		}
 		return nil, errors.GeneralError("failed to get secret by name: %s", err.Error())
@@ -96,7 +97,7 @@ func (s *secretStore) Update(ctx context.Context, secret *models.Secret) (*model
 	var existingSecret models.Secret
 	if err := tx.Where("id = ?", secret.ID).First(&existingSecret).Error; err != nil {
 		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("secret with id '%s' not found", secret.ID)
 		}
 		return nil, errors.GeneralError("failed to find secret for update: %s", err.Error())
@@ -244,7 +245,7 @@ func (s *secretStore) ValidateSecretExists(ctx context.Context, secretID string)
 func (s *secretStore) GetSecretKeys(ctx context.Context, secretID string) ([]string, *errors.ServiceError) {
 	var secret models.Secret
 	if err := s.sessionFactory.New(ctx).Select("keys").Where("id = ?", secretID).First(&secret).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("secret with id '%s' not found", secretID)
 		}
 		return nil, errors.GeneralError("failed to get secret keys: %s", err.Error())

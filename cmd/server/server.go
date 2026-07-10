@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"net"
 	"net/http"
 	"os"
@@ -184,7 +185,7 @@ func WithRequestTimeoutMiddleware(next http.Handler, timeoutDuration time.Durati
 }
 
 func check(err error, msg string) {
-	if err != nil && err != http.ErrServerClosed {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		glog.Errorf("%s: %s", msg, err)
 		os.Exit(1)
 	}

@@ -13,6 +13,8 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const postgresDialect = "postgres"
+
 type DatabaseManager struct {
 	config         *DatabaseConfig
 	adminDB        *sql.DB
@@ -66,7 +68,7 @@ func (dm *DatabaseManager) Bootstrap(ctx context.Context) error {
 	adminConnStr := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=disable",
 		dm.config.Host, dm.config.Port, dm.config.User, dm.config.Password)
 
-	adminDB, err := sql.Open("postgres", adminConnStr)
+	adminDB, err := sql.Open(postgresDialect, adminConnStr)
 	if err != nil {
 		return fmt.Errorf("failed to connect to admin database: %w", err)
 	}
@@ -80,7 +82,7 @@ func (dm *DatabaseManager) Bootstrap(ctx context.Context) error {
 
 	// Create database config for test database
 	testDBConfig := &config.DatabaseConfig{
-		Dialect:            "postgres",
+		Dialect:            postgresDialect,
 		SSLMode:            "disable",
 		Debug:              false,
 		MaxOpenConnections: 50,
@@ -117,7 +119,7 @@ func (dm *DatabaseManager) GetSessionFactory() db.SessionFactory {
 
 func (dm *DatabaseManager) GetConfig() *config.DatabaseConfig {
 	return &config.DatabaseConfig{
-		Dialect:            "postgres",
+		Dialect:            postgresDialect,
 		SSLMode:            "disable",
 		Debug:              false,
 		MaxOpenConnections: 50,
@@ -187,7 +189,7 @@ func (dm *DatabaseManager) GetResourceValidationRecord(ctx context.Context, stac
 func (dm *DatabaseManager) Cleanup(ctx context.Context) error {
 	// Close connections to test database
 	if dm.sessionFactory != nil {
-		dm.sessionFactory.Close()
+		_ = dm.sessionFactory.Close()
 	}
 
 	// Drop test database
@@ -211,7 +213,7 @@ func (dm *DatabaseManager) Cleanup(ctx context.Context) error {
 			return fmt.Errorf("failed to drop test database: %w", err)
 		}
 
-		dm.adminDB.Close()
+		_ = dm.adminDB.Close()
 	}
 
 	return nil

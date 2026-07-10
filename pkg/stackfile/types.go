@@ -1,9 +1,23 @@
 package stackfile
 
-import "gopkg.in/yaml.v3"
+import (
+	"gopkg.in/yaml.v3"
+
+	"github.com/Stackdome/stackdome/pkg/models"
+)
 
 const (
 	PostgresAddonType = "postgres"
+
+	sourceSelf = "self"
+
+	connectionKindEnv         = string(models.ConnectionKindEnv)
+	connectionKindVolumeMount = string(models.ConnectionKindVolumeMount)
+	nodeTypeStackResource     = string(models.TopologyNodeTypeStackResource)
+	nodeTypeSecret            = string(models.TopologyNodeTypeSecret)
+	nodeTypeVolume            = string(models.TopologyNodeTypeVolume)
+	nodeTypePostgresAddon     = string(models.TopologyNodeTypePostgresAddon)
+	targetTypeEnv             = string(models.ConnectionTargetTypeEnv)
 )
 
 type Stackfile struct {

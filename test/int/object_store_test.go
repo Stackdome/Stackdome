@@ -127,7 +127,7 @@ var _ = Describe("ObjectStore", func() {
 			shared.DeleteObjectStore(client, orgID, teamName, createdStore.GetId())
 
 			By("Verifying the object store is deleted")
-			shared.GetObjectStoreExpectError(client, orgID, teamName, createdStore.GetId(), 404)
+			_ = shared.GetObjectStoreExpectError(client, orgID, teamName, createdStore.GetId(), 404)
 		})
 	})
 
@@ -197,21 +197,21 @@ var _ = Describe("ObjectStore", func() {
 			By("Creating object store with invalid name (uppercase)")
 			store := shared.CreateObjectStoreWithS3("Test-Invalid-Name", s3Secret.GetId())
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject object store with invalid retention policy format", func() {
 			By("Creating object store with invalid retention policy")
 			store := shared.CreateObjectStoreWithRetention("test-invalid-retention", s3Secret.GetId(), "invalid")
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject object store with non-existent secret reference", func() {
 			By("Creating object store with non-existent secret ID")
 			store := shared.CreateObjectStoreWithS3("test-bad-secret", "non-existent-secret-id")
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject object store with invalid secret key reference", func() {
@@ -227,7 +227,7 @@ var _ = Describe("ObjectStore", func() {
 			spec := openapi.NewObjectStoreSpec(*config, "s3://my-bucket/backups")
 			store := openapi.NewObjectStore("test-wrong-key", *spec)
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject object store with no credentials", func() {
@@ -236,7 +236,7 @@ var _ = Describe("ObjectStore", func() {
 			spec := openapi.NewObjectStoreSpec(*config, "s3://my-bucket/backups")
 			store := openapi.NewObjectStore("test-no-creds", *spec)
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject object store name change on update", func() {
@@ -247,7 +247,7 @@ var _ = Describe("ObjectStore", func() {
 			By("Attempting to change the name")
 			updateStore := shared.CreateObjectStoreWithS3("test-new-name", s3Secret.GetId())
 
-			shared.UpdateObjectStoreExpectError(client, orgID, teamName, createdStore.GetId(), updateStore, 400)
+			_ = shared.UpdateObjectStoreExpectError(client, orgID, teamName, createdStore.GetId(), updateStore, 400)
 		})
 
 		It("should reject S3 object store with invalid destination path prefix", func() {
@@ -255,7 +255,7 @@ var _ = Describe("ObjectStore", func() {
 			store := shared.CreateObjectStoreWithS3("test-s3-bad-prefix", s3Secret.GetId())
 			store.Spec.SetDestinationPath("http://my-bucket/backups")
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject S3 object store with missing bucket name", func() {
@@ -263,7 +263,7 @@ var _ = Describe("ObjectStore", func() {
 			store := shared.CreateObjectStoreWithS3("test-s3-no-bucket", s3Secret.GetId())
 			store.Spec.SetDestinationPath("s3://")
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject object store with empty destination path", func() {
@@ -271,7 +271,7 @@ var _ = Describe("ObjectStore", func() {
 			store := shared.CreateObjectStoreWithS3("test-empty-path", s3Secret.GetId())
 			store.Spec.SetDestinationPath("")
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject Azure object store with invalid destination path", func() {
@@ -290,7 +290,7 @@ var _ = Describe("ObjectStore", func() {
 			spec := openapi.NewObjectStoreSpec(*config, "https://invalid-path/container")
 			store := openapi.NewObjectStore("test-azure-bad-path", *spec)
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject GCS object store with invalid destination path prefix", func() {
@@ -308,7 +308,7 @@ var _ = Describe("ObjectStore", func() {
 			spec := openapi.NewObjectStoreSpec(*config, "s3://wrong-prefix/backups")
 			store := openapi.NewObjectStore("test-gcs-bad-prefix", *spec)
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 
 		It("should reject GCS object store with missing bucket name", func() {
@@ -326,7 +326,7 @@ var _ = Describe("ObjectStore", func() {
 			spec := openapi.NewObjectStoreSpec(*config, "gs://")
 			store := openapi.NewObjectStore("test-gcs-no-bucket", *spec)
 
-			shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
+			_ = shared.CreateObjectStoreExpectError(client, orgID, teamName, store, 400)
 		})
 	})
 })

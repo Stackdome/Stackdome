@@ -85,7 +85,7 @@ func (r *postgresBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.createBackupRecord(ctx, addonID, backup)
 	}
 	if serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to lookup backup: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to lookup backup: %w", serr)
 	}
 
 	return r.updateBackupRecord(ctx, existing, backup)
@@ -130,7 +130,7 @@ func (r *postgresBackupReconciler) createBackupRecord(ctx context.Context, addon
 	}
 
 	if _, serr := r.PostgresBackupService.Create(ctx, record); serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to create backup record: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to create backup record: %w", serr)
 	}
 
 	r.Log.Infof("created backup record for %s (addon %s)", backup.Name, addonID)
@@ -156,7 +156,7 @@ func (r *postgresBackupReconciler) updateBackupRecord(ctx context.Context, exist
 	}
 
 	if _, serr := r.PostgresBackupService.Update(ctx, existing.ID, existing); serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update backup record: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to update backup record: %w", serr)
 	}
 
 	r.Log.Infof("updated backup %s phase to %s", backup.Name, newPhase)

@@ -295,14 +295,14 @@ type PostgresCredentials struct {
 
 func (c *PostgresCredentials) ToOutputMap() map[string]string {
 	return map[string]string{
-		"host":           c.Host,
-		"port":           strconv.Itoa(int(c.Port)),
-		"username":       c.Username,
-		"password":       c.Password,
-		"database":       c.Database,
-		"sslmode":        c.SSLMode,
-		"url":            c.ConnectionString,
-		"ca_certificate": c.CACertificate,
+		OutputNameHost:          c.Host,
+		OutputNamePort:          strconv.Itoa(int(c.Port)),
+		OutputNameUsername:      c.Username,
+		OutputNamePassword:      c.Password,
+		OutputNameDatabase:      c.Database,
+		OutputNameSSLMode:       c.SSLMode,
+		OutputNameURL:           c.ConnectionString,
+		OutputNameCACertificate: c.CACertificate,
 	}
 }
 

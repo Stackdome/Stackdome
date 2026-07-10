@@ -75,7 +75,7 @@ func checkExternalAccess(domain string) {
 		externallyReachable = false
 		return
 	}
-	resp.Body.Close()
+	_ = resp.Body.Close()
 	if resp.StatusCode == http.StatusOK {
 		successLog(fmt.Sprintf("Dashboard reachable from the internet at %s", domain))
 		externallyReachable = true
@@ -97,7 +97,7 @@ func waitForAPIServer() error {
 		client := &http.Client{Timeout: 5 * time.Second}
 		resp, err := client.Get(healthURL)
 		if err == nil {
-			resp.Body.Close()
+			_ = resp.Body.Close()
 			if resp.StatusCode == http.StatusOK {
 				return nil
 			}

@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -30,7 +31,7 @@ func (s *gitInstallationStore) Upsert(ctx context.Context, installation *models.
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "git_integration_id"}, {Name: "installation_id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
-				"account_login", "account_type", "repository_selection", "updated_at",
+				"account_login", "account_type", "repository_selection", colUpdatedAt,
 			}),
 		}).
 		Create(installation).Error; err != nil {
@@ -55,7 +56,7 @@ func (s *gitInstallationStore) GetByIntegrationAndAccount(ctx context.Context, i
 	if err := s.sessionFactory.New(ctx).
 		Where("git_integration_id = ? AND LOWER(account_login) = LOWER(?)", integrationID, accountLogin).
 		First(&installation).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("no installation for account '%s'", accountLogin)
 		}
 		return nil, errors.GeneralError("failed to get git installation: %s", err.Error())

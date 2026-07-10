@@ -108,7 +108,7 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 			w.Log.Infof("Stack %s not found in DB", stackCr.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get stack from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get stack from db: %w", serr)
 	}
 
 	if dbStack.Status == nil {
@@ -123,7 +123,7 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 		serr = w.StackService.UpdateStatus(ctx, stackID, dbStack.Status)
 		if serr != nil {
 			w.Log.Errorf("Failed to update stack '%s' status : %s", dbStack.ID, serr)
-			return ctrl.Result{}, fmt.Errorf("failed to update stack status: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update stack status: %w", serr)
 		}
 
 		// Kick the release worker so it can observe the new status quickly.

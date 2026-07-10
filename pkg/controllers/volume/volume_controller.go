@@ -91,7 +91,7 @@ func (r *volumeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			r.Log.Infof("volume %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get volume from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get volume from db: %w", serr)
 	}
 
 	// status changed
@@ -99,7 +99,7 @@ func (r *volumeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		dbInstance.Status = mapToVolumeStatus(clusterInstance.Status)
 		serr := r.VolumeService.UpdateStatus(ctx, dbInstance.ID, dbInstance.Status)
 		if serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update  volume status in db: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update  volume status in db: %w", serr)
 		}
 		return ctrl.Result{}, nil
 	}

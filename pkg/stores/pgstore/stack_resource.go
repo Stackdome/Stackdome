@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -97,7 +98,7 @@ func (w *stackResourceStore) UpdateStatus(ctx context.Context, ID string, status
 func (w *stackResourceStore) GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError) {
 	var stackResource models.StackResource
 	if err := w.sessionFactory.New(ctx).Where("id = ?", ID).Preload(clause.Associations).First(&stackResource).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack resource not found")
 		}
 		return nil, errors.GeneralError("failed to get stack resource: %s", err.Error())
@@ -108,7 +109,7 @@ func (w *stackResourceStore) GetByID(ctx context.Context, ID string) (*models.St
 func (w *stackResourceStore) GetByStackIDAndResourceName(ctx context.Context, stackID, resourceName string) (*models.StackResource, *errors.ServiceError) {
 	var stackResource models.StackResource
 	if err := w.sessionFactory.New(ctx).Where("stack_id = ? AND name = ?", stackID, resourceName).Preload(clause.Associations).First(&stackResource).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack resource not found")
 		}
 		return nil, errors.GeneralError("failed to get stack resource: %s", err.Error())

@@ -66,21 +66,21 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	dbManager := NewDatabaseManager()
 	env.Database = dbManager
 	if err := dbManager.Bootstrap(ctx); err != nil {
-		return fmt.Errorf("database bootstrap failed: %v", err)
+		return fmt.Errorf("database bootstrap failed: %w", err)
 	}
 
 	// Initialize cluster
 	clusterManager := NewClusterManager()
 	env.clusterManager = clusterManager
 	if err := clusterManager.Bootstrap(ctx); err != nil {
-		return fmt.Errorf("cluster bootstrap failed: %v", err)
+		return fmt.Errorf("cluster bootstrap failed: %w", err)
 	}
 	env.Cluster = clusterManager.GetCluster()
 
 	// Deploy MinIO for backup tests
 	logger.Info("Deploying MinIO to cluster")
 	if err := deployMinIO(ctx, env.Cluster.GetClient()); err != nil {
-		return fmt.Errorf("MinIO deployment failed: %v", err)
+		return fmt.Errorf("MinIO deployment failed: %w", err)
 	}
 
 	// Initialize server
@@ -88,7 +88,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	serverManager := NewServerManager(dbManager.GetSessionFactory(), dbManager.GetConfig(), logger)
 	env.serverManager = serverManager
 	if err := serverManager.Bootstrap(ctx); err != nil {
-		return fmt.Errorf("server bootstrap failed: %v", err)
+		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 
 	// Initialize client and register cluster
@@ -96,13 +96,13 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	clientManager := NewClientManager(serverManager.GetBaseURL(), clusterManager.GetCluster(), logger)
 	env.clientManager = clientManager
 	if err := clientManager.Bootstrap(ctx); err != nil {
-		return fmt.Errorf("client bootstrap failed: %v", err)
+		return fmt.Errorf("client bootstrap failed: %w", err)
 	}
 
 	// Create organisation domain for stack tests
 	logger.Info("Creating organisation domain for stack tests")
 	if err := createOrganisationDomain(ctx, dbManager, clientManager.GetOrgID()); err != nil {
-		return fmt.Errorf("failed to create organisation domain: %v", err)
+		return fmt.Errorf("failed to create organisation domain: %w", err)
 	}
 
 	// Set final client details

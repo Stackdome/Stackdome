@@ -3,6 +3,7 @@ package shared
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"time"
 
@@ -94,7 +95,8 @@ func CreatePostgresAddonExpectError(client *openapi.APIClient, orgID, teamName s
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -106,7 +108,8 @@ func UpdatePostgresAddonExpectError(client *openapi.APIClient, orgID, teamName, 
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -118,7 +121,8 @@ func GetPostgresAddonExpectError(client *openapi.APIClient, orgID, teamName, add
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -219,7 +223,8 @@ func CreateObjectStoreExpectError(client *openapi.APIClient, orgID, teamName str
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -231,7 +236,8 @@ func GetObjectStoreExpectError(client *openapi.APIClient, orgID, teamName, store
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -243,7 +249,8 @@ func UpdateObjectStoreExpectError(client *openapi.APIClient, orgID, teamName, st
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -453,7 +460,8 @@ func CreateStackExpectError(client *openapi.APIClient, orgID, teamName string, s
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -465,7 +473,8 @@ func UpdateStackExpectError(client *openapi.APIClient, orgID, teamName, stackID 
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -477,7 +486,8 @@ func ApplyStackExpectError(client *openapi.APIClient, orgID, teamName, stackID s
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -510,7 +520,8 @@ func CreateStackConnectionExpectError(client *openapi.APIClient, orgID, teamName
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -524,7 +535,8 @@ func UpdateStackConnectionExpectError(client *openapi.APIClient, orgID, teamName
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -559,7 +571,8 @@ func CreateStackResourceExpectError(client *openapi.APIClient, orgID, teamName, 
 	Expect(err).To(HaveOccurred(), "expected error")
 	Expect(httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	Expect(ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr
@@ -624,7 +637,8 @@ func CreateReleaseExpectError(client *openapi.APIClient, orgID, teamName, stackI
 	ExpectWithOffset(1, err).To(HaveOccurred(), "expected error creating release")
 	ExpectWithOffset(1, httpResp.StatusCode).To(Equal(expectedStatus), "unexpected status code")
 
-	apiErr, ok := err.(*openapi.GenericOpenAPIError)
+	var apiErr *openapi.GenericOpenAPIError
+	ok := errors.As(err, &apiErr)
 	ExpectWithOffset(1, ok).To(BeTrue(), "expected GenericOpenAPIError")
 
 	return apiErr

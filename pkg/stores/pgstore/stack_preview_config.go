@@ -40,7 +40,7 @@ func (s *stackPreviewConfigStore) Create(ctx context.Context, config *models.Sta
 func (s *stackPreviewConfigStore) GetByID(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError) {
 	var config models.StackPreviewConfig
 	if err := s.sessionFactory.New(ctx).First(&config, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("preview config with id %s not found", id)
 		}
 		return nil, errors.GeneralError("failed to get preview config: %s", err.Error())
@@ -51,7 +51,7 @@ func (s *stackPreviewConfigStore) GetByID(ctx context.Context, id string) (*mode
 func (s *stackPreviewConfigStore) GetByTeamAndName(ctx context.Context, teamID, name string) (*models.StackPreviewConfig, *errors.ServiceError) {
 	var config models.StackPreviewConfig
 	if err := s.sessionFactory.New(ctx).First(&config, "team_id = ? AND name = ?", teamID, name).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("preview config with name '%s' not found", name)
 		}
 		return nil, errors.GeneralError("failed to get preview config: %s", err.Error())

@@ -31,7 +31,7 @@ func (s *secretValidator) ValidateSecretData(secret *models.Secret) *errors.Serv
 		return errors.BadRequest("secret user ID cannot be empty")
 	}
 
-	if secret.Data == nil || len(secret.Data) == 0 {
+	if len(secret.Data) == 0 {
 		return errors.BadRequest("secret data cannot be empty")
 	}
 

@@ -44,6 +44,12 @@ const (
 	ConnectionConfigKeyDestinationPath ConnectionConfigKey = "destination_path"
 )
 
+// Postgres credential_scope values
+const (
+	CredentialScopeOwner     = "owner"
+	CredentialScopeSuperuser = "superuser"
+)
+
 type ConnectionTargetType string
 
 const (
