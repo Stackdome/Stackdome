@@ -3,13 +3,12 @@ import { GitPullRequest } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { listGitIntegrations } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { CONNECTED_STATUSES } from "@/pages/previews/hooks/use-github-connect";
 import { ConnectPhase } from "./connect-phase";
 import { RepoPickerPhase } from "./repo-picker-phase";
 import { ConfigurePhase } from "./configure-phase";
 
 type Phase = "connect" | "pick" | "configure";
-
-const CONNECTED_STATUSES = new Set(["installed", "active"]);
 
 export interface PickedRepo {
   /** e.g. "acme/webapp" */
@@ -126,6 +125,3 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
     </Dialog>
   );
 }
-
-// Referenced by later tasks; used from Task 10 onward.
-export type { Phase };

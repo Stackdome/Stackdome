@@ -16,7 +16,7 @@ const POPUP_FEATURES = "width=1020,height=800";
 const POLL_MS = 5_000;
 const MAX_POLLS = 40;
 
-const CONNECTED_STATUSES = new Set(["installed", "active"]);
+export const CONNECTED_STATUSES = new Set(["installed", "active"]);
 
 export interface GithubConnect {
   state: GithubConnectState;

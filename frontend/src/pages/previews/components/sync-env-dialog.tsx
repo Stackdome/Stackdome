@@ -80,13 +80,10 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
             />
           </div>
           {/*
-            Brief calls for a "Force sync" Checkbox; @/components/ui/checkbox does not
-            exist in this codebase and no @radix-ui/react-checkbox dependency is
-            installed. Per task instructions ("report BLOCKED rather than hand-rolling
-            one"), no new checkbox primitive was fabricated. Switch is the codebase's
-            existing sanctioned primitive for a single boolean toggle (see
-            add-cluster-dialog.tsx), so it is used here instead. Flagged as a concern
-            in task-11-report.md — confirm before treating this as final.
+            "Force sync" uses a Switch rather than a Checkbox: @/components/ui/checkbox
+            does not exist in this codebase and no @radix-ui/react-checkbox dependency is
+            installed. Switch is the codebase's existing sanctioned primitive for a
+            single boolean toggle (see add-cluster-dialog.tsx).
           */}
           <div className="flex items-start gap-3">
             <Switch id="sync-force" checked={force} onCheckedChange={setForce} className="mt-0.5" />

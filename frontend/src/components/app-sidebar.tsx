@@ -8,6 +8,7 @@ import { NavClusters } from "@/components/nav-clusters"
 import { NavSecrets } from "@/components/nav-secrets"
 import { NavObjectStores } from "@/components/nav-object-stores"
 import { NavDomains } from "@/components/nav-domains"
+import { NavGitIntegrations } from "@/components/nav-git-integrations"
 import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
@@ -70,6 +71,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 don't see (or fetch) endpoints that return 403 for them. */}
             {isOrgAdmin && <NavClusters />}
             {isOrgAdmin && <NavDomains />}
+            {isOrgAdmin && <NavGitIntegrations />}
           </SidebarGroupContent>
         </SidebarGroup>
         {/* Settings group (Users + Teams) is shelved — nav hidden and routes

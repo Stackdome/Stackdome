@@ -20,7 +20,7 @@ export interface UsePreviewEnvs {
 function hasNonTerminal(envs: PreviewStack[]): boolean {
   return envs.some((e) => {
     const phase = e.status?.phase;
-    return phase != null && !TERMINAL_PHASES.includes(phase);
+    return phase == null || !TERMINAL_PHASES.includes(phase);
   });
 }
 

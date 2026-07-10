@@ -60,4 +60,23 @@ describe("usePreviewEnvs", () => {
     });
     expect((listPreviewEnvs as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
   });
+
+  it("keeps polling when an env has no status yet (phase not reported)", async () => {
+    (listPreviewEnvs as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ items: [{ id: "p1" }], total: 1 })
+      .mockResolvedValueOnce({ items: [{ id: "p1" }], total: 1 });
+
+    renderHook(() => usePreviewEnvs("c1"));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect((listPreviewEnvs as ReturnType<typeof vi.fn>).mock.calls.length).toBe(1);
+
+    // Second interval tick should still fire because a missing phase counts
+    // as non-terminal (keep polling until a terminal phase appears).
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(7_000);
+    });
+    expect((listPreviewEnvs as ReturnType<typeof vi.fn>).mock.calls.length).toBe(2);
+  });
 });
