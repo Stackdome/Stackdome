@@ -58,6 +58,7 @@ func (s apiServer) routes() *mux.Router {
 	stackHandler := handlers.NewStackHandler(handlers.StackHandlerSpec{
 		StackService:         services.StackService,
 		StackResourceService: services.StackResourceService,
+		StackReleaseService:  services.StackReleaseService,
 		ImageBuildService:    services.ImageBuildService,
 		LoggingService:       services.LoggingService,
 		MetricsService:       services.MetricsService,

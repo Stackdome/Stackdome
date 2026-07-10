@@ -2,6 +2,10 @@ package presenters_test
 
 import (
 	"testing"
+	"time"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -42,7 +46,7 @@ func TestPresentStackIncludesConnections(t *testing.T) {
 		},
 	}
 
-	out := presenters.PresentStack(stack)
+	out := presenters.PresentStack(stack, models.StackReleaseRefs{})
 
 	if len(out.Spec.Connections) != 1 {
 		t.Fatalf("expected one connection, got %d", len(out.Spec.Connections))
@@ -136,7 +140,7 @@ func TestPresentPostgresEnvConnectionWithUnrecognizedConfigReturnsNilConfig(t *t
 		},
 	}
 
-	out := presenters.PresentStack(stack)
+	out := presenters.PresentStack(stack, models.StackReleaseRefs{})
 	if len(out.Spec.Connections) != 1 {
 		t.Fatalf("expected one connection, got %d", len(out.Spec.Connections))
 	}
@@ -163,7 +167,7 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 		},
 	}
 
-	presented := presenters.PresentStack(stack)
+	presented := presenters.PresentStack(stack, models.StackReleaseRefs{})
 	if len(presented.Spec.StackResources) != 1 || len(presented.Spec.StackResources[0].GetExecutionConfig().EnvironmentVariables) != 1 {
 		t.Fatalf("expected one presented env var")
 	}
@@ -195,3 +199,37 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 		t.Fatalf("expected converted self_output, got %q", converted.StackResources[0].ExecutionConfig.Env[0].SelfOutput)
 	}
 }
+
+var _ = Describe("PresentStack release-centric fields", func() {
+	It("presents lifecycle active and null releases for a fresh stack", func() {
+		s := &models.Stack{ID: "s1", Name: "app"}
+		out := presenters.PresentStack(s, models.StackReleaseRefs{})
+		Expect(*out.Lifecycle).To(Equal(openapi.STACK_LIFECYCLE_ACTIVE))
+		Expect(out.CurrentRelease).To(BeNil())
+		Expect(out.LatestRelease).To(BeNil())
+	})
+
+	It("presents lifecycle deleting when deletion timestamp set", func() {
+		now := time.Now()
+		s := &models.Stack{ID: "s1", DeletionTimestamp: &now}
+		out := presenters.PresentStack(s, models.StackReleaseRefs{})
+		Expect(*out.Lifecycle).To(Equal(openapi.STACK_LIFECYCLE_DELETING))
+	})
+
+	It("embeds current and latest release summaries with health", func() {
+		current := &models.StackRelease{ID: "r1", Sequence: 3, State: models.ReleaseStateReleased, Message: "Release is live"}
+		latest := &models.StackRelease{ID: "r2", Sequence: 4, State: models.ReleaseStateInProgress}
+		s := &models.Stack{
+			ID:     "s1",
+			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "r1"}},
+			StackResources: []*models.StackResource{
+				{Name: "web", Status: &models.StackResourceStatus{State: models.StackResourcePhaseReady}},
+			},
+		}
+		out := presenters.PresentStack(s, models.StackReleaseRefs{Current: current, Latest: latest})
+		Expect(*out.CurrentRelease.Id).To(Equal("r1"))
+		Expect(*out.CurrentRelease.Health).To(Equal(openapi.RELEASE_HEALTH_OK))
+		Expect(*out.LatestRelease.Id).To(Equal("r2"))
+		Expect(*out.LatestRelease.Health).To(Equal(openapi.RELEASE_HEALTH_PROGRESSING))
+	})
+})

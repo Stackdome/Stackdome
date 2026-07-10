@@ -105,6 +105,5 @@ func presentStackResource(r *models.StackResource) openapi.StackResource {
 		WorkloadType:    (*string)(&r.WorkloadType),
 		Schedule:        &r.Schedule,
 		Replicas:        r.Replicas,
-		Status:          presentStackResourceStatus(r.Status),
 	}
 }

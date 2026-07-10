@@ -6,15 +6,15 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func PresentStackList(stacks []*models.Stack) []openapi.Stack {
+func PresentStackList(stacks []*models.Stack, refs map[string]models.StackReleaseRefs) []openapi.Stack {
 	result := make([]openapi.Stack, len(stacks))
 	for i, s := range stacks {
-		result[i] = PresentStack(s)
+		result[i] = PresentStack(s, refs[s.ID])
 	}
 	return result
 }
 
-func PresentStack(s *models.Stack) openapi.Stack {
+func PresentStack(s *models.Stack, refs models.StackReleaseRefs) openapi.Stack {
 	return openapi.Stack{
 		Id:             &s.ID,
 		OrganisationId: &s.OrganisationID,
@@ -27,10 +27,51 @@ func PresentStack(s *models.Stack) openapi.Stack {
 		Annotations:    presentAnnotations(s.Annotations),
 		Spec:           presentStackSpec(s),
 		Settings:       presentStackSettings(s),
-		Status:         presentStackStatus(s.Status),
+		Lifecycle:      ptr.To(presentStackLifecycle(s)),
+		CurrentRelease: presentReleaseSummary(refs.Current, s, true),
+		LatestRelease:  presentReleaseSummary(refs.Latest, s, false),
 		CreatedAt:      &s.CreatedAt,
 		UpdatedAt:      &s.UpdatedAt,
 	}
+}
+
+func presentStackLifecycle(s *models.Stack) openapi.StackLifecycle {
+	if s.DeletionTimestamp != nil {
+		return openapi.STACK_LIFECYCLE_DELETING
+	}
+	return openapi.STACK_LIFECYCLE_ACTIVE
+}
+
+func presentReleaseSummary(r *models.StackRelease, s *models.Stack, isCurrent bool) *openapi.ReleaseSummary {
+	if r == nil {
+		return nil
+	}
+	summary := &openapi.ReleaseSummary{
+		Id:          &r.ID,
+		Sequence:    ptr.To(int32(r.Sequence)),
+		State:       ptr.To(openapi.StackReleaseState(r.State)),
+		Message:     &r.Message,
+		CreatedAt:   &r.CreatedAt,
+		CompletedAt: r.CompletedAt,
+	}
+	summary.Health = summaryHealth(r, s, isCurrent)
+	return summary
+}
+
+func summaryHealth(r *models.StackRelease, s *models.Stack, isCurrent bool) *openapi.ReleaseHealth {
+	if isCurrent {
+		if live := models.BuildReleaseLiveStatus(r, s); live != nil {
+			return ptr.To(openapi.ReleaseHealth(live.Health))
+		}
+		return ptr.To(openapi.RELEASE_HEALTH_PROGRESSING)
+	}
+	switch r.State {
+	case models.ReleaseStateFailed:
+		return ptr.To(openapi.RELEASE_HEALTH_FAILED)
+	case models.ReleaseStatePending, models.ReleaseStateInProgress:
+		return ptr.To(openapi.RELEASE_HEALTH_PROGRESSING)
+	}
+	return nil
 }
 
 func presentStackSettings(s *models.Stack) *openapi.StackSettings {
@@ -59,48 +100,6 @@ func presentStackSpec(w *models.Stack) openapi.StackSpec {
 		Volumes:        presentVolumes(w.Volumes, true),
 		Connections:    presentConnections(w.Connections),
 	}
-}
-
-func presentStackStatus(status *models.StackStatus) *openapi.StackStatus {
-	if status == nil {
-		return nil
-	}
-	res := &openapi.StackStatus{
-		State:            ptr.To(string(status.State)),
-		ObservedRevision: &status.ObservedCrRevision,
-		Conditions:       presentConditions(status.Conditions),
-	}
-	if status.TargetRevision != "" {
-		res.TargetRevision = &status.TargetRevision
-	}
-	if status.LastConverged != nil {
-		res.LastConverged = &openapi.StackConvergenceRecord{
-			Revision:  &status.LastConverged.Revision,
-			ReleaseId: &status.LastConverged.ReleaseID,
-			At:        &status.LastConverged.At,
-		}
-	}
-	if len(status.Resources) > 0 {
-		summaries := make([]openapi.StackResourceSummary, len(status.Resources))
-		for i, r := range status.Resources {
-			summaries[i] = openapi.StackResourceSummary{
-				Name:              &r.Name,
-				Phase:             ptr.To(string(r.Phase)),
-				ObservedRevision:  &r.ObservedRevision,
-				ConvergedRevision: &r.ConvergedRevision,
-				AvailableReplicas: &r.AvailableReplicas,
-				UpdatedReplicas:   &r.UpdatedReplicas,
-				Replicas:          &r.Replicas,
-				Missing:           &r.Missing,
-				Message:           &r.Message,
-			}
-		}
-		res.Resources = summaries
-	}
-	if status.LastValidationRun != nil && !status.LastValidationRun.Passed {
-		res.Message = &status.LastValidationRun.Message
-	}
-	return res
 }
 
 func presentStackResources(resources []*models.StackResource) []openapi.StackResource {
