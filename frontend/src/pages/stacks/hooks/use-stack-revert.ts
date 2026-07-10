@@ -4,6 +4,7 @@ import { getStackById, applyStack } from "@/api/stacks";
 import { deleteVolume } from "@/api/volumes";
 import type { StackReleaseSnapshot } from "@/api/releases";
 import { snapshotToUpdateRequest, volumesToDelete } from "@/pages/stacks/lib/draft-sync/snapshot-to-update";
+import { parseApiError } from "@/api/errors";
 
 export interface UseStackRevertArgs {
   ids: { orgId: string; teamName: string; stackId: string } | null;
@@ -11,10 +12,12 @@ export interface UseStackRevertArgs {
   liveSnapshot: StackReleaseSnapshot | undefined;
   /** session.discard — the page's session auto-start effect re-seeds from the refreshed stack. */
   onReverted: (fresh: Stack) => void;
+  /** Called with the backend reason when the revert throws. */
+  onError?: (message: string) => void;
 }
 
 /** Restore the authored stack to the last deployed snapshot. */
-export function useStackRevert({ ids, stack, liveSnapshot, onReverted }: UseStackRevertArgs) {
+export function useStackRevert({ ids, stack, liveSnapshot, onReverted, onError }: UseStackRevertArgs) {
   const [reverting, setReverting] = useState(false);
 
   const revert = useCallback(async (): Promise<boolean> => {
@@ -31,12 +34,13 @@ export function useStackRevert({ ids, stack, liveSnapshot, onReverted }: UseStac
       const fresh = await getStackById(ids.orgId, ids.teamName, ids.stackId);
       onReverted(fresh);
       return true;
-    } catch {
+    } catch (err) {
+      onError?.(parseApiError(err).topLevel);
       return false;
     } finally {
       setReverting(false);
     }
-  }, [ids, stack, liveSnapshot, onReverted]);
+  }, [ids, stack, liveSnapshot, onReverted, onError]);
 
   return { reverting, revert };
 }

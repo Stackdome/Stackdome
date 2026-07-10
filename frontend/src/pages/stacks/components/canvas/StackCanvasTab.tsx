@@ -14,7 +14,7 @@ import type {
   FormStackResourceData,
   FormVolumeExtendedData as VolumeFormData,
 } from "@/pages/stacks/schemas/form-schema";
-import type { EditSessionDraft, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
+import type { EditSessionDraft, EditSessionTab, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
@@ -93,6 +93,10 @@ interface StackCanvasTabProps {
   /** A release is in flight — node status dots show pending until it terminates
    *  (per-resource server state lags the deploy and would flash a stale Ready). */
   releaseInFlight?: boolean;
+  /** Bumped by the parent to request opening a resource drawer (banner "jump to
+   *  error") on the tab holding the field; the nonce distinguishes repeat jumps
+   *  to the same resource. */
+  openResourceSignal?: { index: number; tab: EditSessionTab; nonce: number } | null;
 }
 
 function StackCanvasFlow({
@@ -113,6 +117,7 @@ function StackCanvasFlow({
   deletingVolume,
   persistedVolumeNames,
   releaseInFlight,
+  openResourceSignal,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
@@ -309,7 +314,7 @@ function StackCanvasFlow({
   }, [mergedGraph, setNodes, fitView]);
 
   const openResourceDrawer = useCallback(
-    (idx: number) => {
+    (idx: number, tab: EditSessionTab = "configuration") => {
       // Activate an edit session lazily so drawer edits land in a draft.
       if (!session.isActive) {
         session.start(
@@ -317,15 +322,27 @@ function StackCanvasFlow({
           {
             linkedAddonIds: new Set(connectionAddonIds),
             openResourceIdx: idx,
-            openTab: "configuration",
+            openTab: tab,
             draft: { resources: draftResources, volumes: draftVolumes },
           },
         );
+      } else {
+        session.setOpenTab(tab);
       }
       setDrawerStack(replaceStack({ kind: "resource", index: idx }));
     },
     [session, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds],
   );
+
+  // Open the requested resource drawer when the parent bumps the signal (banner
+  // jump). Gated on the nonce so an unrelated re-render can't reopen the drawer.
+  const lastJumpNonceRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!openResourceSignal) return;
+    if (lastJumpNonceRef.current === openResourceSignal.nonce) return;
+    lastJumpNonceRef.current = openResourceSignal.nonce;
+    openResourceDrawer(openResourceSignal.index, openResourceSignal.tab);
+  }, [openResourceSignal, openResourceDrawer]);
 
   const openVolumeFromCanvas = useCallback(
     (volumeName: string) => {

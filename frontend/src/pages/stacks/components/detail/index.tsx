@@ -1,12 +1,15 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { getErrorMessage } from "@/api/client";
+import { parseApiError, type ParsedFieldError } from "@/api/errors";
+import { mapFieldErrors } from "@/pages/stacks/lib/map-field-errors";
+import { ValidationBanner, type ValidationBannerItem } from "@/pages/stacks/components/detail/ValidationBanner";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
-import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
@@ -394,14 +397,22 @@ export default function StackDetailPage() {
     [stackToShow?.spec?.volumes],
   );
 
-  // Backend validation errors from a failed autosave, mapped onto the offending
-  // env-var field so the row shows them inline. Keyed by resource NAME → env-var
-  // name → message (NOT by index): the resource may be reordered/removed before
-  // the user fixes it, so the current index + env index are resolved at render
-  // time when merging into the index-keyed errors prop.
+  // Backend structured field errors (from a failed autosave or draft deploy),
+  // mapped onto the editor's inner field keys so the offending inputs show them
+  // inline. Keyed by resource NAME → field key → message (NOT by index): the
+  // resource may be reordered/removed before the user fixes it, so the current
+  // index is resolved at render time when merging into the index-keyed errors prop.
   const [serverFieldErrors, setServerFieldErrors] = useState<{
-    [resourceName: string]: { [envName: string]: string };
+    [resourceName: string]: { [fieldKey: string]: string };
   }>({});
+  // Raw structured errors from the last draft-deploy attempt, used to render the
+  // summary banner. Cleared when a deploy is retried or the banner is dismissed.
+  const [deployFieldErrors, setDeployFieldErrors] = useState<ParsedFieldError[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Bumped to ask the canvas to open a resource drawer (banner "jump to error").
+  const [openResourceSignal, setOpenResourceSignal] = useState<
+    { index: number; tab: EditSessionTab; nonce: number } | null
+  >(null);
 
   // Dedupe for autosave-failure toasts: the backoff retry loop and re-edits after
   // a terminal 400 re-run the same ops and would re-toast the same reason every
@@ -422,26 +433,26 @@ export default function StackDetailPage() {
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       setTopologyRefreshKey((k) => k + 1);
     },
-    onSyncError: ({ message, op }) => {
+    onSyncError: ({ message, op, fieldErrors }) => {
       // No op → the save actually landed and only the post-save refetch failed;
       // don't alarm the user with a "Save failed" toast or field error.
       if (!op) return;
-      // Dedupe: skip if this exact reason is already on screen (retry/re-edit).
-      if (lastSyncErrorMsgRef.current === message) return;
-      lastSyncErrorMsgRef.current = message;
-      toast({ title: "Save failed", description: message, variant: "destructive" });
-      // Only resource create/update ops carry env vars; others just toast.
+      // Dedupe the toast: skip if this exact reason is already on screen.
+      if (lastSyncErrorMsgRef.current !== message) {
+        lastSyncErrorMsgRef.current = message;
+        toast({ title: "Save failed", description: message, variant: "destructive" });
+      }
+      // Only resource create/update ops carry mappable field errors.
       if (op.kind !== "createResource" && op.kind !== "updateResource") return;
       const resourceName = op.resource.name;
-      if (!resourceName) return;
-      // The backend reason names the offending var: `env var '<NAME>'`.
-      const envName = message.match(/env var '([^']+)'/)?.[1];
-      if (!envName) return;
-      // Key by resource + env-var NAME; the current row indices are resolved at
-      // render time so a reorder/removal can't misattach the inline error.
+      if (!resourceName || fieldErrors.length === 0) return;
+      // Thin op → all errors belong to this one resource; map to editor field keys
+      // and store by resource NAME so a reorder/removal can't misattach them.
+      const fields = mapFieldErrors(fieldErrors, { dialect: "thin", resourceIndex: 0 }).resources[0];
+      if (!fields) return;
       setServerFieldErrors((prev) => ({
         ...prev,
-        [resourceName]: { ...(prev[resourceName] ?? {}), [envName]: message },
+        [resourceName]: { ...(prev[resourceName] ?? {}), ...fields },
       }));
     },
   });
@@ -473,29 +484,47 @@ export default function StackDetailPage() {
     return { resources, volumes: {} };
   }, [desiredState.resourceIssues]);
 
-  // Merge live zod validation (index-keyed) with backend field errors from a
-  // failed autosave (name-keyed). Resolve each server error's resource NAME and
-  // env-var NAME to their CURRENT indices here so the merged map stays index-keyed
-  // for consumers but survives a reorder/removal since the error was captured.
+  // Merge live zod validation (index-keyed) with backend field errors (name-keyed).
+  // Resolve each server error's resource NAME to its CURRENT index here so the
+  // merged map stays index-keyed for consumers but survives a reorder/removal
+  // since the error was captured.
   const mergedResourceErrors = useMemo(() => {
     const merged: { [index: number]: { [field: string]: string | undefined } } = {};
     for (const [k, v] of Object.entries(validationErrors.resources)) {
       merged[Number(k)] = { ...v };
     }
-    for (const [resourceName, envErrors] of Object.entries(serverFieldErrors)) {
+    for (const [resourceName, fields] of Object.entries(serverFieldErrors)) {
       const idx = session.draft.resources.findIndex((r) => r.name === resourceName);
       if (idx < 0) continue;
-      const draftEnv = (session.draft.resources[idx]?.execution_config
-        ?.environment_variables ?? []) as FormEnvVarData[];
-      for (const [envName, message] of Object.entries(envErrors)) {
-        const envIdx = draftEnv.findIndex((e) => e.name === envName);
-        if (envIdx < 0) continue;
-        const fieldKey = `execution_config.environment_variables.${envIdx}.value`;
-        merged[idx] = { ...(merged[idx] ?? {}), [fieldKey]: message };
-      }
+      merged[idx] = { ...(merged[idx] ?? {}), ...fields };
     }
     return merged;
   }, [validationErrors.resources, serverFieldErrors, session.draft.resources]);
+
+  // Summary-banner rows for the last draft-deploy failure. Fat dialect: resource
+  // errors carry a jump index; stack-level errors (name/settings/connections) do not.
+  const bannerItems = useMemo<ValidationBannerItem[]>(() => {
+    if (deployFieldErrors.length === 0) return [];
+    const mapped = mapFieldErrors(deployFieldErrors, { dialect: "fat" });
+    const items: ValidationBannerItem[] = [];
+    if (mapped.stackName) items.push({ label: "Stack name", message: mapped.stackName });
+    for (const [idxStr, fields] of Object.entries(mapped.resources)) {
+      const idx = Number(idxStr);
+      const label = session.draft.resources[idx]?.name?.trim() || `Resource ${idx + 1}`;
+      for (const [fieldKey, message] of Object.entries(fields)) {
+        // Env errors live on the Environment tab; everything else renders on
+        // Configuration. Jump opens the tab holding the offending field.
+        const tab = fieldKey.startsWith("execution_config.environment_variables")
+          ? "environment"
+          : "configuration";
+        items.push({ label, message, resourceIndex: idx, tab });
+      }
+    }
+    for (const m of mapped.settings) items.push({ label: "Stack settings", message: m });
+    for (const m of mapped.connections) items.push({ label: "Connection", message: m });
+    for (const u of mapped.unmapped) items.push({ label: u.field, message: u.message });
+    return items;
+  }, [deployFieldErrors, session.draft.resources]);
 
   const lifecycle = useDeployLifecycle({
     stack: stackToShow ?? undefined,
@@ -550,6 +579,15 @@ export default function StackDetailPage() {
       draftSync.notifyExternalUpdate(fresh);
       session.discard(); // auto-start effect restarts the session on the reverted baseline
       toast({ title: "Draft discarded", description: "Stack restored to the last deployment.", variant: "success" });
+    },
+    onError: (message) => {
+      // Revert isn't atomic (apply + volume deletes), so warn about partial state
+      // alongside the backend reason.
+      toast({
+        title: "Discard failed",
+        description: `${message} The stack may be partially reverted; reload to see its current state.`,
+        variant: "destructive",
+      });
     },
   });
 
@@ -617,6 +655,9 @@ export default function StackDetailPage() {
     if (!isDraft) return;
     setDraftDeploying(true);
     setNameError(undefined);
+    // Clear stale validation state from a previous failed attempt.
+    setDeployFieldErrors([]);
+    setServerFieldErrors({});
 
     // A draft needs a name before it can be created. The stack name field is not
     // min-length-constrained in the schema (empty passes zod and only fails at
@@ -715,11 +756,33 @@ export default function StackDetailPage() {
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
-      toast({
-        title: "Failed to create stack",
-        description: getErrorMessage(err),
-        variant: "destructive"
-      });
+      const parsed = parseApiError(err);
+      if (parsed.fieldErrors.length > 0) {
+        // Rich validation failure: paint each field inline and summarize in the banner.
+        const mapped = mapFieldErrors(parsed.fieldErrors, { dialect: "fat" });
+        if (mapped.stackName) setNameError(mapped.stackName);
+        setServerFieldErrors((prev) => {
+          const next = { ...prev };
+          for (const [idxStr, fields] of Object.entries(mapped.resources)) {
+            const nm = session.draft.resources[Number(idxStr)]?.name;
+            if (nm) next[nm] = { ...(next[nm] ?? {}), ...fields };
+          }
+          return next;
+        });
+        setDeployFieldErrors(parsed.fieldErrors);
+        setBannerDismissed(false);
+        toast({
+          title: "Deploy failed",
+          description: `${parsed.fieldErrors.length} validation ${parsed.fieldErrors.length === 1 ? "error" : "errors"}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Failed to create stack",
+          description: parsed.topLevel,
+          variant: "destructive",
+        });
+      }
     } finally {
       setDraftDeploying(false);
     }
@@ -900,25 +963,37 @@ export default function StackDetailPage() {
         onDelete={() => setDeleteConfirmOpen(true)}
         publicEndpoints={publicEndpoints}
         architecture={
-          <StackCanvasTab
-            session={session}
-            baselineResources={baselineResources}
-            baselineVolumes={baselineVolumes}
-            draftResources={draftResources}
-            draftVolumes={draftVolumes}
-            serverOutputsByName={serverOutputsByName}
-            connectionAddonIds={connectionAddonIds}
-            addonNameById={addonNameById}
-            addonStateById={addonStateById}
-            errors={mergedResourceErrors}
-            onViewLogs={() => setActiveTab("logs")}
-            topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
-            topologyRefreshKey={topologyRefreshKey}
-            onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
-            deletingVolume={volumeDelete.deleting}
-            persistedVolumeNames={persistedVolumeNames}
-            releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
-          />
+          <>
+            {!bannerDismissed && bannerItems.length > 0 && (
+              <div className="px-4 pt-3">
+                <ValidationBanner
+                  items={bannerItems}
+                  onJump={(index, tab) => setOpenResourceSignal({ index, tab, nonce: Date.now() })}
+                  onDismiss={() => setBannerDismissed(true)}
+                />
+              </div>
+            )}
+            <StackCanvasTab
+              session={session}
+              openResourceSignal={openResourceSignal}
+              baselineResources={baselineResources}
+              baselineVolumes={baselineVolumes}
+              draftResources={draftResources}
+              draftVolumes={draftVolumes}
+              serverOutputsByName={serverOutputsByName}
+              connectionAddonIds={connectionAddonIds}
+              addonNameById={addonNameById}
+              addonStateById={addonStateById}
+              errors={mergedResourceErrors}
+              onViewLogs={() => setActiveTab("logs")}
+              topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
+              topologyRefreshKey={topologyRefreshKey}
+              onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
+              deletingVolume={volumeDelete.deleting}
+              persistedVolumeNames={persistedVolumeNames}
+              releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
+            />
+          </>
         }
         deployments={deploymentsBody}
         logs={logsBody}
@@ -967,14 +1042,8 @@ export default function StackDetailPage() {
                 void (async () => {
                   // Flush any pending autosave before reverting (don't block on failure)
                   await draftSync.flush();
-                  const ok = await stackRevert.revert();
-                  if (!ok) {
-                    toast({
-                      title: "Discard failed",
-                      description: "The stack may be partially reverted. Reload the page to see its current state.",
-                      variant: "destructive",
-                    });
-                  }
+                  // Failure surfaces via the hook's onError toast.
+                  await stackRevert.revert();
                 })();
               }}
               disabled={stackRevert.reverting}

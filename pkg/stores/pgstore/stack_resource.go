@@ -46,8 +46,7 @@ func (w *stackResourceStore) CreateWithTx(ctx context.Context, spec *models.Stac
 }
 
 func (w *stackResourceStore) Update(ctx context.Context, ID string, spec *models.StackResource, stack *models.Stack) (*models.StackResource, *errors.ServiceError) {
-	spec.Status = nil
-	if err := w.sessionFactory.New(ctx).Model(&models.StackResource{}).Omit(clause.Associations).Where("id = ?", ID).Updates(spec).Error; err != nil {
+	if err := applyStackResourceUpdate(w.sessionFactory.New(ctx), ID, spec); err != nil {
 		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
 	}
 	return w.GetByID(ctx, ID)
@@ -58,11 +57,21 @@ func (w *stackResourceStore) UpdateWithTx(ctx context.Context, ID string, spec *
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
 	}
-	spec.Status = nil
-	if err := tx.Model(&models.StackResource{}).Omit(clause.Associations).Where("id = ?", ID).Updates(spec).Error; err != nil {
+	if err := applyStackResourceUpdate(tx, ID, spec); err != nil {
 		return nil, errors.GeneralError("failed to update stack resource: %s", err.Error())
 	}
 	return w.GetByID(ctx, ID)
+}
+
+// applyStackResourceUpdate writes all spec columns, including ones zeroed by
+// the caller, so cleared fields (e.g. image_config on an image→git switch)
+// don't survive the update. Status is agent-owned and never written here.
+func applyStackResourceUpdate(dbSession *gorm.DB, ID string, spec *models.StackResource) error {
+	return dbSession.Model(&models.StackResource{}).
+		Select("*").
+		Omit(clause.Associations, "status", "version", "created_at").
+		Where("id = ?", ID).
+		Updates(spec).Error
 }
 
 func (w *stackResourceStore) UpdatePortsWithTx(ctx context.Context, resourceID string, resource *models.StackResource) *errors.ServiceError {

@@ -77,6 +77,9 @@ export interface UseStackEditSession {
       | ((prev: VolumeArr) => VolumeArr),
   ) => void;
   setLinkedAddonIds: (next: Set<string> | ((prev: Set<string>) => Set<string>)) => void;
+  /** Switch the active resource-drawer tab (drives the controlled Tabs). No-op
+   *  when no session is active. */
+  setOpenTab: (tab: EditSessionTab | null) => void;
   /** Advance the baseline to a synced snapshot; the draft is untouched, so
    *  edits made after the snapshot remain dirty. */
   rebase: (baseline: EditSessionDraft) => void;
@@ -180,6 +183,10 @@ export function useStackEditSession(): UseStackEditSession {
     [],
   );
 
+  const setOpenTab = useCallback((tab: EditSessionTab | null) => {
+    setState((prev) => (prev.isActive && prev.openTab !== tab ? { ...prev, openTab: tab } : prev));
+  }, []);
+
   const rebase = useCallback((baseline: EditSessionDraft) => {
     setState((prev) => {
       if (!prev.isActive) return prev;
@@ -213,6 +220,7 @@ export function useStackEditSession(): UseStackEditSession {
     updateResources,
     updateVolumes,
     setLinkedAddonIds,
+    setOpenTab,
     rebase,
   };
 }
