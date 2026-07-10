@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Github, RefreshCw, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,16 +19,18 @@ import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 function IntegrationInstallations({ integration }: { integration: GitIntegration }) {
   const [installs, setInstalls] = useState<GitInstallation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const requestSeq = useRef(0);
 
   const load = useCallback(async (refresh: boolean) => {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !integration.id) return;
+    const seq = ++requestSeq.current;
     setRefreshing(true);
     try {
       const list = await listInstallations(orgId, integration.id, refresh);
-      setInstalls(list.items ?? []);
+      if (seq === requestSeq.current) setInstalls(list.items ?? []);
     } finally {
-      setRefreshing(false);
+      if (seq === requestSeq.current) setRefreshing(false);
     }
   }, [integration.id]);
 
@@ -132,6 +134,9 @@ export default function GitIntegrationsPage() {
               <Badge variant={integration.status === "pending_install" ? "secondary" : "default"}>
                 {integration.status}
               </Badge>
+              {integration.credentials_configured && (
+                <Badge variant="outline" className="text-muted-foreground">credentials set</Badge>
+              )}
               <span className="flex-1" />
               <AlertDialog>
                 <AlertDialogTrigger asChild>

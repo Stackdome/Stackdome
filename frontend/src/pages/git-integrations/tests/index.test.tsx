@@ -37,6 +37,7 @@ describe("GitIntegrationsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("github.com")).toBeTruthy();
       expect(screen.getByText("installed")).toBeTruthy();
+      expect(screen.getByText(/credentials set/i)).toBeTruthy();
     });
     expect(screen.queryByRole("button", { name: /connect github/i })).toBeNull();
   });
