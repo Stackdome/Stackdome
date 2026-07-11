@@ -4,6 +4,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GitIntegrationsPage from "../index";
+import {
+  GIT_INTEGRATION_TYPE_GITHUB_APP,
+  GIT_INTEGRATION_TYPE_CREDENTIALS,
+  STATUS_INSTALLED,
+  STATUS_ACTIVE,
+  STATUS_PENDING_INSTALL,
+} from "../lib/derive-row";
 
 afterEach(cleanup);
 
@@ -49,8 +56,8 @@ describe("GitIntegrationsPage", () => {
   it("lists integrations inside the panel with human copy", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({
       items: [
-        { id: "g1", host: "github.com", type: "github_app", status: "installed", credentials_configured: true },
-        { id: "g2", host: "gitlab.com", type: "git_credentials", status: "active", credentials_configured: true },
+        { id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED, credentials_configured: true },
+        { id: "g2", host: "gitlab.com", type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, credentials_configured: true },
       ],
     });
     render(<GitIntegrationsPage />);
@@ -64,8 +71,8 @@ describe("GitIntegrationsPage", () => {
   it("renders the summary strip when the list is populated", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({
       items: [
-        { id: "g1", host: "github.com", type: "github_app", status: "installed", credentials_configured: true },
-        { id: "g2", host: "gitlab.com", type: "git_credentials", status: "pending_install", credentials_configured: true },
+        { id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED, credentials_configured: true },
+        { id: "g2", host: "gitlab.com", type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_PENDING_INSTALL, credentials_configured: true },
       ],
     });
     render(<GitIntegrationsPage />);
@@ -78,7 +85,7 @@ describe("GitIntegrationsPage", () => {
     vi.mocked(listGitIntegrations)
       .mockRejectedValueOnce(new Error("request failed with status 500"))
       .mockResolvedValueOnce({
-        items: [{ id: "g1", host: "github.com", type: "github_app", status: "installed", credentials_configured: true }],
+        items: [{ id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED, credentials_configured: true }],
       });
 
     render(<GitIntegrationsPage />);
@@ -92,7 +99,7 @@ describe("GitIntegrationsPage", () => {
 
   it("verifies a repository URL through the verify dialog", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({
-      items: [{ id: "g1", host: "github.com", type: "git_credentials", status: "active", credentials_configured: true }],
+      items: [{ id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, credentials_configured: true }],
     });
     vi.mocked(verifyGitIntegration).mockResolvedValue(undefined);
 
@@ -115,7 +122,7 @@ describe("GitIntegrationsPage", () => {
   it("removes an integration via the row menu and confirm dialog", async () => {
     vi.mocked(listGitIntegrations)
       .mockResolvedValueOnce({
-        items: [{ id: "g1", host: "github.com", type: "github_app", status: "installed", credentials_configured: true }],
+        items: [{ id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED, credentials_configured: true }],
       })
       .mockResolvedValueOnce({ items: [] });
     vi.mocked(deleteGitIntegration).mockResolvedValue(undefined);

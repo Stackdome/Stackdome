@@ -30,7 +30,7 @@ export function RowMenu({
           <Ellipsis className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[236px]">
+      <DropdownMenuContent align="end" className="w-[200px]">
         {/* Verify and Remove both open a dialog. Radix's DropdownMenu→Dialog
             composition races the menu's close (which resets
             document.body.style.pointerEvents) against the dialog's mount, and

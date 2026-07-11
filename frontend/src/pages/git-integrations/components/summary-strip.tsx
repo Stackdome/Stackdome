@@ -9,7 +9,7 @@ interface StatCardProps {
 
 function StatCard({ dotClassName, count, caption }: StatCardProps) {
   return (
-    <div className="rounded-[10px] border border-border bg-card px-4 py-3">
+    <div className="rounded-lg border border-border bg-card px-4 py-3">
       <div className="flex items-center gap-2">
         <span className={cn("h-2 w-2 rounded-full", dotClassName)} />
         <span className="text-2xl font-semibold text-foreground">{count}</span>
@@ -19,9 +19,8 @@ function StatCard({ dotClassName, count, caption }: StatCardProps) {
   );
 }
 
+/** Parent gates on rows.length > 0, so no empty branch here. */
 export function SummaryStrip({ rows }: { rows: RowViewModel[] }) {
-  if (rows.length === 0) return null;
-
   const connectedCount = rows.filter((row) => row.statusKey === "connected").length;
   const attentionCount = rows.length - connectedCount;
 

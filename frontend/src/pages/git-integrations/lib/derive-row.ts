@@ -5,6 +5,7 @@ export const GIT_INTEGRATION_TYPE_CREDENTIALS = "git_credentials" as const;
 export const STATUS_PENDING_INSTALL = "pending_install" as const;
 export const STATUS_INSTALLED = "installed" as const;
 export const STATUS_ACTIVE = "active" as const;
+export const REPOSITORY_SELECTION_ALL = "all" as const;
 
 export type ProviderId = "github" | "gitlab" | "bitbucket" | "gitea" | "other";
 
@@ -47,6 +48,7 @@ export interface RowViewModel {
   access: RowAccess;
 }
 
+// Invariant: status must stay derivable from the integration alone (no installations) — SummaryStrip derives rows without them.
 function statusFor(integration: GitIntegration): { key: RowViewModel["statusKey"]; label: string; tone: RowTone } {
   if (integration.credentials_configured === false) {
     return { key: "action_needed", label: "Needs attention", tone: "attention" };
@@ -89,7 +91,7 @@ function accessFor(
     }
     const count = installations?.length ?? 0;
     const installationWord = count === 1 ? "installation" : "installations";
-    const hasAll = installations?.some((installation) => installation.repository_selection === "all") ?? false;
+    const hasAll = installations?.some((installation) => installation.repository_selection === REPOSITORY_SELECTION_ALL) ?? false;
     const scope = hasAll ? "all repositories" : "selected repositories";
     return { label: `${count} ${installationWord}`, hint: scope };
   }

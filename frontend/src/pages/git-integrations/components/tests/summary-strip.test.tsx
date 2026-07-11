@@ -19,11 +19,6 @@ function row(overrides: Partial<RowViewModel> = {}): RowViewModel {
 }
 
 describe("SummaryStrip", () => {
-  it("renders null when there are no rows", () => {
-    const { container } = render(<SummaryStrip rows={[]} />);
-    expect(container).toBeEmptyDOMElement();
-  });
-
   it("counts connected rows and attention rows separately", () => {
     const rows: RowViewModel[] = [
       row({ statusKey: "connected", tone: "ok" }),
