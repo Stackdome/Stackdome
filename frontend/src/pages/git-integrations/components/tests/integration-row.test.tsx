@@ -90,7 +90,7 @@ describe("IntegrationRow", () => {
     await waitFor(() => expect(listInstallations).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText(/verify repository access/i), { pointerEventsCheck: 0 });
-    expect(onVerify).toHaveBeenCalledWith(row);
+    await waitFor(() => expect(onVerify).toHaveBeenCalledWith(row));
   });
 
   it("dispatches Remove integration from the kebab menu", async () => {
@@ -101,7 +101,29 @@ describe("IntegrationRow", () => {
     await waitFor(() => expect(listInstallations).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText(/remove integration/i), { pointerEventsCheck: 0 });
-    expect(onRemove).toHaveBeenCalledWith(row);
+    await waitFor(() => expect(onRemove).toHaveBeenCalledWith(row));
+  });
+
+  it("dispatching Verify or Remove defers the callback until after the menu has closed, avoiding the Radix pointer-events lock", async () => {
+    // Regression test for a Radix DropdownMenu -> Dialog composition bug: if the
+    // dialog-opening callback fires synchronously from onSelect, the menu's
+    // close and the dialog's mount race and can leave
+    // document.body.style.pointerEvents stuck at "none" forever. Deferring the
+    // callback via setTimeout(0) lets the menu finish closing (and reset
+    // pointer-events) before the dialog mounts.
+    const user = userEvent.setup();
+    const onRemove = vi.fn();
+    renderRow({ onRemove });
+    await waitFor(() => expect(listInstallations).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
+    const removeItem = await screen.findByText(/remove integration/i);
+    await user.click(removeItem, { pointerEventsCheck: 0 });
+
+    await waitFor(() => expect(onRemove).toHaveBeenCalled());
+    // Once the deferred callback has run, the dropdown menu's own close
+    // cleanup must have already reset pointer-events — it is not left
+    // stuck at "none" by the callback firing before the menu unmounts.
+    expect(document.body.style.pointerEvents).not.toBe("none");
   });
 
   it("Sync from GitHub refetches installations with refresh=true then calls onChanged", async () => {
