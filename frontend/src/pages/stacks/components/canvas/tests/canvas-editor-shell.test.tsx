@@ -117,6 +117,23 @@ describe("CanvasEditorShell deploy pill", () => {
   });
 });
 
+describe("CanvasEditorShell deploy-failed chip", () => {
+  it("shows a 'Deploy failed' chip wired to onTabChange('deployments') when latestDeployFailed", () => {
+    const onTabChange = vi.fn();
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" latestDeployFailed onTabChange={onTabChange} />);
+    const chip = screen.getByRole("button", { name: "Latest deploy failed — view deployments" });
+    expect(chip).toBeInTheDocument();
+    expect(screen.getByText("Deploy failed")).toBeVisible();
+    fireEvent.click(chip);
+    expect(onTabChange).toHaveBeenCalledWith("deployments");
+  });
+
+  it("renders no chip when latestDeployFailed is unset", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" />);
+    expect(screen.queryByRole("button", { name: "Latest deploy failed — view deployments" })).toBeNull();
+  });
+});
+
 describe("CanvasEditorShell actions menu", () => {
   it("exposes the actions trigger for existing stacks with no 'Discard all changes' item", () => {
     // Radix dropdown content mounts on pointer interaction (not in jsdom), so we

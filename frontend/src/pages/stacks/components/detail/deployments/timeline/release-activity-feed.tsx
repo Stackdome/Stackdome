@@ -50,7 +50,7 @@ export function ReleaseActivityFeed({ events, streaming }: ReleaseActivityFeedPr
               {(e.links ?? []).map((l, i) => (
                 // target is a structured key/value map (e.g. build_id, resource_name), not a URL —
                 // no navigable href exists yet, so the link renders as a label, not an anchor.
-                <span key={l.kind ?? i} className="block text-xs font-medium text-info">{l.label} &rarr;</span>
+                <span key={`${l.kind ?? "link"}-${i}`} className="block text-xs font-medium text-info">{l.label} &rarr;</span>
               ))}
             </div>
             <span className="flex-none pt-0.5 font-mono text-[10.5px] tabular-nums text-fg-muted">
