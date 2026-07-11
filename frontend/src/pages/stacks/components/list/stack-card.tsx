@@ -130,7 +130,7 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
 
   return (
     <Link to={`/stacks/${stack.id}`} className="block group h-full">
-      <Card className="flex h-full min-h-[180px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20">
+      <Card className="flex h-full min-h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20">
         <StatusRail tone={tone} />
         <div className="flex flex-1 flex-col gap-[18px] p-5">
           <div className="flex items-center gap-[11px]">
