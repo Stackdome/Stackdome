@@ -23,8 +23,8 @@ export type RowTone = "ok" | "attention";
 
 export interface RowMeter {
   left: string;
-  right: string;
-  fill: "full" | "partial" | "none";
+  /** Optional mono hint rendered right-aligned (e.g. repository scope). */
+  right?: string;
 }
 
 export interface RowViewModel {
@@ -70,21 +70,21 @@ function meterFor(
   installations?: GitInstallation[],
 ): RowMeter {
   if (statusKey === "action_needed") {
-    return { left: "Access blocked", right: "this host", fill: "none" };
+    return { left: "Access blocked" };
   }
 
   if (integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP) {
     if (statusKey === "needs_setup") {
-      return { left: "No repositories yet", right: "finish install", fill: "none" };
+      return { left: "No repositories yet", right: "finish install" };
     }
     const count = installations?.length ?? 0;
     const installationWord = count === 1 ? "installation" : "installations";
     const hasAll = installations?.some((installation) => installation.repository_selection === "all") ?? false;
     const scope = hasAll ? "all repositories" : "selected repositories";
-    return { left: `${count} ${installationWord}`, right: scope, fill: "full" };
+    return { left: `${count} ${installationWord}`, right: scope };
   }
 
-  return { left: "Token-scoped access", right: "this host", fill: "partial" };
+  return { left: `Token-scoped access to ${integration.host}` };
 }
 
 export function deriveRow(integration: GitIntegration, installations?: GitInstallation[]): RowViewModel {

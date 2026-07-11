@@ -97,7 +97,7 @@ describe("deriveRow", () => {
 
   it("builds a singular-installation meter for one all-repositories installation", () => {
     const row = deriveRow(integration(), [installation({ repository_selection: "all" })]);
-    expect(row.meter).toEqual({ left: "1 installation", right: "all repositories", fill: "full" });
+    expect(row.meter).toEqual({ left: "1 installation", right: "all repositories" });
   });
 
   it("builds a plural-installation meter for multiple installations with selected repositories", () => {
@@ -105,7 +105,7 @@ describe("deriveRow", () => {
       installation({ repository_selection: "selected" }),
       installation({ repository_selection: "selected" }),
     ]);
-    expect(row.meter).toEqual({ left: "2 installations", right: "selected repositories", fill: "full" });
+    expect(row.meter).toEqual({ left: "2 installations", right: "selected repositories" });
   });
 
   it("prefers all repositories in the meter when installations are mixed", () => {
@@ -113,7 +113,7 @@ describe("deriveRow", () => {
       installation({ repository_selection: "selected" }),
       installation({ repository_selection: "all" }),
     ]);
-    expect(row.meter).toEqual({ left: "2 installations", right: "all repositories", fill: "full" });
+    expect(row.meter).toEqual({ left: "2 installations", right: "all repositories" });
   });
 
   it("builds a token-scoped meter for connected credentials-type integrations", () => {
@@ -121,22 +121,22 @@ describe("deriveRow", () => {
       integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, credentials_configured: true }),
       [installation()],
     );
-    expect(row.meter).toEqual({ left: "Token-scoped access", right: "this host", fill: "partial" });
+    expect(row.meter).toEqual({ left: "Token-scoped access to github.com" });
   });
 
   it("builds a zero-installation meter for connected github_app with no installations yet", () => {
     const row = deriveRow(integration(), []);
-    expect(row.meter).toEqual({ left: "0 installations", right: "selected repositories", fill: "full" });
+    expect(row.meter).toEqual({ left: "0 installations", right: "selected repositories" });
   });
 
   it("builds a needs-setup meter for pending_install github_app integrations", () => {
     const row = deriveRow(integration({ status: STATUS_PENDING_INSTALL }));
-    expect(row.meter).toEqual({ left: "No repositories yet", right: "finish install", fill: "none" });
+    expect(row.meter).toEqual({ left: "No repositories yet", right: "finish install" });
   });
 
   it("builds an access-blocked meter for action_needed integrations regardless of type", () => {
     const row = deriveRow(integration({ status: STATUS_ACTIVE, credentials_configured: false }));
-    expect(row.meter).toEqual({ left: "Access blocked", right: "this host", fill: "none" });
+    expect(row.meter).toEqual({ left: "Access blocked" });
   });
 });
 

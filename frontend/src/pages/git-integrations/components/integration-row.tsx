@@ -8,19 +8,13 @@ import {
   type GitInstallation,
 } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, type ProviderId, type RowViewModel, type RowMeter } from "../lib/derive-row";
+import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, type ProviderId, type RowViewModel } from "../lib/derive-row";
 import { RowMenu } from "./row-menu";
 import { ProviderLogo } from "./provider-logo";
 
 function statusPillClasses(statusKey: RowViewModel["statusKey"]) {
   if (statusKey === "action_needed") return "border-danger-border bg-danger-bg text-danger";
   return "border-warn-border bg-warn-bg text-warn";
-}
-
-function meterFillClasses(fill: RowMeter["fill"]) {
-  if (fill === "full") return "w-full bg-brand";
-  if (fill === "partial") return "w-1/3 bg-brand";
-  return "w-0 bg-brand";
 }
 
 const PROVIDER_TITLES: Record<ProviderId, string> = {
@@ -144,9 +138,6 @@ export function IntegrationRow({
           <div className="flex items-baseline justify-between gap-2">
             <span className="truncate text-[11.5px] text-muted-foreground">{row.meter.left}</span>
             <span className="shrink-0 font-mono text-[11px] text-fg-muted">{row.meter.right}</span>
-          </div>
-          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-border">
-            <div className={cn("h-full rounded-full", meterFillClasses(row.meter.fill))} />
           </div>
         </div>
 
