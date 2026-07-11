@@ -61,11 +61,11 @@ function Stepper({ phase }: { phase: Phase }) {
         const isPast = STEPS.findIndex((s) => s.phase === currentStep) > i;
         return (
           <div key={step.phase} className="flex flex-1 flex-col gap-1.5">
-            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-primary" : "bg-border")} />
+            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-brand" : "bg-border")} />
             <span
               data-current={isCurrent}
               className={cn(
-                "font-mono text-[10px] uppercase tracking-[1.5px]",
+                "font-mono text-[11px] uppercase tracking-[1.5px]",
                 isCurrent && "text-foreground",
                 !isCurrent && isPast && "text-muted-foreground",
                 !isCurrent && !isPast && "text-muted-foreground/60",
@@ -117,6 +117,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
     setProvider(p);
     setHost(p.hostPrefill);
     setUsername("");
+    setToken("");
     setSubmitError(null);
     setPhase(p.id === "github" ? "github" : "credentials");
   };
@@ -168,7 +169,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
           Connect a git provider so Stackdome can clone repositories and trigger preview environments
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-primary">
+          <span className="flex h-6 w-6 items-center justify-center text-brand">
             <GitBranch className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
@@ -198,7 +199,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                       onClick={() => pickProvider(p)}
                       className={cn(
                         "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
-                        "hover:border-primary focus-visible:border-primary focus-visible:outline-none",
+                        "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
                       )}
                     >
                       <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
@@ -232,14 +233,14 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   onClick={startAppInstall}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
-                    "hover:border-primary focus-visible:border-primary focus-visible:outline-none",
+                    "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
                     "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border",
                   )}
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <Github className="h-4 w-4" />
                     Install GitHub App
-                    <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide text-primary">
+                    <span className="rounded-sm bg-brand-bg px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[1.5px] text-brand">
                       Recommended
                     </span>
                   </span>
@@ -258,7 +259,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   }}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
-                    "hover:border-primary focus-visible:border-primary focus-visible:outline-none",
+                    "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
                   )}
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
@@ -278,7 +279,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
           {phase === "connecting" && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-primary">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-brand">
                 <Github className="h-6 w-6" />
               </span>
               <div className="space-y-1">
@@ -317,7 +318,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                           {status === "done" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />}
                           {status === "active" && (
                             <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center motion-safe:animate-pulse">
-                              <span className="h-2 w-2 rounded-full bg-primary" />
+                              <span className="h-2 w-2 rounded-full bg-brand" />
                             </span>
                           )}
                           {status === "pending" && <Circle className="h-3.5 w-3.5 shrink-0 text-border" />}

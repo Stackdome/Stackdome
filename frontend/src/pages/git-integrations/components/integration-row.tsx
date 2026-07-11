@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppWindow, CircleAlert, CircleCheck, KeyRound, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { StatusPill } from "@/components/branded";
 import { cn } from "@/lib/utils";
 import {
   listInstallations,
@@ -12,25 +13,22 @@ import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, PROVIDER_DIS
 import { RowMenu } from "./row-menu";
 import { ProviderLogo } from "./provider-logo";
 
-function statusPillClasses(statusKey: RowViewModel["statusKey"]) {
-  if (statusKey === "action_needed") return "border-danger-border bg-danger-bg text-danger";
-  return "border-warn-border bg-warn-bg text-warn";
-}
-
 function Banner({
   banner,
   statusKey,
   onVerify,
+  onUpdateCredentials,
 }: {
   banner: NonNullable<RowViewModel["banner"]>;
   statusKey: RowViewModel["statusKey"];
   onVerify: () => void;
+  onUpdateCredentials?: () => void;
 }) {
   const Icon = statusKey === "action_needed" ? CircleAlert : TriangleAlert;
   const toneClasses =
     statusKey === "action_needed"
-      ? "border-danger-border bg-danger/[0.05] text-danger"
-      : "border-warn-border bg-warn/[0.05] text-warn";
+      ? "border-danger-border bg-danger-bg text-danger"
+      : "border-warn-border bg-warn-bg text-warn";
 
   return (
     <div className={cn("flex items-center gap-2 border-t px-4 py-2 text-xs", toneClasses)}>
@@ -61,7 +59,7 @@ function Banner({
           variant="outline"
           size="sm"
           className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-          onClick={onVerify}
+          onClick={statusKey === "action_needed" ? onUpdateCredentials : onVerify}
         >
           {banner.ctaLabel}
         </Button>
@@ -74,15 +72,23 @@ export function IntegrationRow({
   integration,
   onVerify,
   onRemove,
+  onUpdateCredentials,
 }: {
   integration: GitIntegration;
   onVerify: (integration: GitIntegration) => void;
   onRemove: (integration: GitIntegration) => void;
+  /** Opens the connect-provider wizard so missing credentials can be re-added. */
+  onUpdateCredentials?: () => void;
 }) {
   const [installations, setInstallations] = useState<GitInstallation[]>([]);
   const requestSeq = useRef(0);
 
+  const isGithubApp = integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP;
+
   const load = useCallback(async () => {
+    // Only GitHub App integrations have installations; a credentials row would
+    // burn a GitHub refresh call for an always-empty list.
+    if (!isGithubApp) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId || !integration.id) return;
     const seq = ++requestSeq.current;
@@ -95,20 +101,19 @@ export function IntegrationRow({
     } catch {
       // Row keeps its last-known installations on failure; reload retries.
     }
-  }, [integration.id]);
+  }, [integration.id, isGithubApp]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const row = deriveRow(integration, installations);
-  const isGithubApp = integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP;
 
   return (
-    <div className={cn(row.tone === "attention" && "bg-warn/[0.03]")}>
+    <div className={cn(row.tone === "attention" && "bg-warn-bg/50")}>
       <div className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
         <div className="flex w-[180px] min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-border bg-card">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
             <ProviderLogo providerId={providerIdFor(integration)} className="h-5 w-5 shrink-0" />
           </div>
           <div className="min-w-0">
@@ -140,20 +145,9 @@ export function IntegrationRow({
               Connected
             </span>
           ) : (
-            <span
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs",
-                statusPillClasses(row.statusKey),
-              )}
-            >
-              <span
-                className={cn(
-                  "h-1.5 w-1.5 rounded-full",
-                  row.statusKey === "action_needed" ? "bg-danger" : "bg-warn",
-                )}
-              />
+            <StatusPill variant={row.statusKey === "action_needed" ? "error" : "pending"}>
               {row.statusLabel}
-            </span>
+            </StatusPill>
           )}
         </div>
 
@@ -164,7 +158,12 @@ export function IntegrationRow({
       </div>
 
       {row.banner && (
-        <Banner banner={row.banner} statusKey={row.statusKey} onVerify={() => onVerify(integration)} />
+        <Banner
+          banner={row.banner}
+          statusKey={row.statusKey}
+          onVerify={() => onVerify(integration)}
+          onUpdateCredentials={onUpdateCredentials}
+        />
       )}
     </div>
   );

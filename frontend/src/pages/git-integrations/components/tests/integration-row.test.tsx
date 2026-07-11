@@ -4,6 +4,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { IntegrationRow } from "../integration-row";
+import {
+  GIT_INTEGRATION_TYPE_GITHUB_APP,
+  GIT_INTEGRATION_TYPE_CREDENTIALS,
+  STATUS_INSTALLED,
+  STATUS_ACTIVE,
+  STATUS_PENDING_INSTALL,
+  REPOSITORY_SELECTION_ALL,
+} from "../../lib/derive-row";
 import type { GitIntegration } from "@/api/git-integrations";
 
 afterEach(cleanup);
@@ -20,8 +28,8 @@ function integration(overrides: Partial<GitIntegration> = {}): GitIntegration {
   return {
     id: "int-1",
     host: "github.com",
-    type: "github_app",
-    status: "installed",
+    type: GIT_INTEGRATION_TYPE_GITHUB_APP,
+    status: STATUS_INSTALLED,
     credentials_configured: true,
     ...overrides,
   };
@@ -54,7 +62,7 @@ describe("IntegrationRow", () => {
   it("renders a loud row with a banner CTA anchored to install_url for pending_install", async () => {
     renderRow({
       integration: integration({
-        status: "pending_install",
+        status: STATUS_PENDING_INSTALL,
         install_url: "https://github.com/apps/x/installations/new",
       }),
     });
@@ -66,16 +74,36 @@ describe("IntegrationRow", () => {
   });
 
   it("renders the banner CTA as disabled when install_url is missing", async () => {
-    renderRow({ integration: integration({ status: "pending_install", install_url: undefined }) });
+    renderRow({ integration: integration({ status: STATUS_PENDING_INSTALL, install_url: undefined }) });
     await waitFor(() => expect(listInstallations).toHaveBeenCalled());
     expect(screen.queryByRole("link", { name: /finish install/i })).not.toBeInTheDocument();
     const cta = screen.getByRole("button", { name: /finish install/i });
     expect(cta).toBeDisabled();
   });
 
+  it("routes the action_needed banner CTA to onUpdateCredentials, not onVerify", async () => {
+    const user = userEvent.setup();
+    const onVerify = vi.fn();
+    const onUpdateCredentials = vi.fn();
+    renderRow({
+      onVerify,
+      onUpdateCredentials,
+      integration: integration({
+        type: GIT_INTEGRATION_TYPE_CREDENTIALS,
+        status: STATUS_ACTIVE,
+        host: "gitlab.com",
+        credentials_configured: false,
+      }),
+    });
+    const cta = screen.getByRole("button", { name: /update credentials/i });
+    await user.click(cta, { pointerEventsCheck: 0 });
+    expect(onUpdateCredentials).toHaveBeenCalledOnce();
+    expect(onVerify).not.toHaveBeenCalled();
+  });
+
   it("renders the access summary derived from installations", async () => {
     vi.mocked(listInstallations).mockResolvedValue({
-      items: [{ id: "i1", repository_selection: "all" }],
+      items: [{ id: "i1", repository_selection: REPOSITORY_SELECTION_ALL }],
     });
     renderRow();
     await waitFor(() => expect(screen.getByText("1 installation")).toBeInTheDocument());
@@ -85,7 +113,7 @@ describe("IntegrationRow", () => {
   it("opens the kebab menu and dispatches Verify repository access on a credentials row", async () => {
     const user = userEvent.setup();
     const onVerify = vi.fn();
-    const row = integration({ type: "git_credentials", status: "active", host: "gitlab.com" });
+    const row = integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, host: "gitlab.com" });
     renderRow({ onVerify, integration: row });
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText(/verify repository access/i), { pointerEventsCheck: 0 });
@@ -138,5 +166,13 @@ describe("IntegrationRow", () => {
     renderRow();
     await waitFor(() => expect(listInstallations).toHaveBeenCalledTimes(1));
     expect(listInstallations).toHaveBeenCalledWith("org-1", "int-1", true);
+  });
+
+  it("never fetches installations for a credentials row (no installations exist to refresh)", async () => {
+    renderRow({
+      integration: integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, host: "gitlab.com" }),
+    });
+    expect(screen.getByText("gitlab.com")).toBeInTheDocument();
+    await waitFor(() => expect(listInstallations).not.toHaveBeenCalled());
   });
 });

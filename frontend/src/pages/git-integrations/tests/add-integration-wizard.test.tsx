@@ -227,6 +227,15 @@ describe("AddIntegrationWizard", () => {
     });
   });
 
+  it("clears a typed token when switching providers so a secret never leaks across", () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: /GitLab/ }));
+    fireEvent.change(screen.getByLabelText(/token/i), { target: { value: "glpat-secret" } });
+    fireEvent.click(screen.getByRole("button", { name: /back/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Bitbucket/ }));
+    expect(screen.getByLabelText(/token/i)).toHaveValue("");
+  });
+
   it("back from GitHub-credentials returns to method choice", () => {
     renderWizard();
     fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));

@@ -7,14 +7,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  listGitIntegrations, deleteGitIntegration, verifyGitIntegration,
+  listGitIntegrations, deleteGitIntegration,
   type GitIntegration,
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
@@ -23,70 +18,7 @@ import { deriveRow, GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
 import { SummaryStrip } from "./components/summary-strip";
 import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
 import { IntegrationRow } from "./components/integration-row";
-
-interface VerifyIntegrationDialogProps {
-  integration: GitIntegration | null;
-  onOpenChange: (open: boolean) => void;
-}
-
-function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyIntegrationDialogProps) {
-  const { toast } = useToast();
-  const [repoUrl, setRepoUrl] = useState("");
-  const [verifying, setVerifying] = useState(false);
-
-  const integrationId = integration?.id;
-  useEffect(() => {
-    if (integrationId == null) return;
-    setRepoUrl("");
-  }, [integrationId]);
-
-  const submit = async () => {
-    const orgId = getCurrentOrganizationId();
-    if (!orgId || !integration?.id || !repoUrl.trim()) return;
-    setVerifying(true);
-    try {
-      await verifyGitIntegration(orgId, integration.id, repoUrl.trim());
-      toast({ title: "Repository access verified" });
-      onOpenChange(false);
-    } catch (e) {
-      toast({ title: "Couldn't verify repository access", description: getErrorMessage(e), variant: "destructive" });
-    } finally {
-      setVerifying(false);
-    }
-  };
-
-  return (
-    <Dialog open={integration != null} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[440px]">
-        <DialogHeader>
-          <DialogTitle>Verify repository access</DialogTitle>
-          <DialogDescription>
-            Confirms the {integration?.host} integration can access a repository.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="verify-repo-url">Repository URL</Label>
-            <Input
-              id="verify-repo-url"
-              placeholder="https://github.com/acme/webapp"
-              value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={verifying}>
-            Cancel
-          </Button>
-          <Button onClick={() => void submit()} disabled={verifying || !repoUrl.trim()}>
-            Verify
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { VerifyIntegrationDialog } from "./components/verify-integration-dialog";
 
 export default function GitIntegrationsPage() {
   const { toast } = useToast();
@@ -99,7 +31,11 @@ export default function GitIntegrationsPage() {
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
+    if (!orgId) {
+      setError("No organization selected.");
+      setLoading(false);
+      return;
+    }
     try {
       const list = await listGitIntegrations(orgId);
       setIntegrations(list.items ?? []);
@@ -117,7 +53,14 @@ export default function GitIntegrationsPage() {
 
   const remove = async (integration: GitIntegration) => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !integration.id) return;
+    if (!orgId || !integration.id) {
+      toast({
+        title: "Remove failed",
+        description: !orgId ? "No organization selected." : "Integration is no longer available.",
+        variant: "destructive",
+      });
+      return;
+    }
     try {
       await deleteGitIntegration(orgId, integration.id);
       toast({ title: "Integration removed" });
@@ -146,14 +89,21 @@ export default function GitIntegrationsPage() {
         actions={addButton}
       />
 
-      {error && <IntegrationsErrorState message={error} onRetry={() => void refresh()} />}
+      {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
+
+      {/* Full-page error only when there's nothing to show; a failed re-fetch
+          keeps the already-loaded list visible with an inline error line. */}
+      {error && integrations.length === 0 && (
+        <IntegrationsErrorState message={error} onRetry={() => void refresh()} />
+      )}
 
       {!loading && !error && integrations.length === 0 && (
         <IntegrationsEmptyState onAdd={() => setWizardOpen(true)} />
       )}
 
-      {!error && integrations.length > 0 && (
+      {integrations.length > 0 && (
         <>
+          {error && <p className="text-sm text-destructive">Couldn&apos;t refresh integrations: {error}</p>}
           <SummaryStrip rows={rows} />
           <Panel title="Connected providers" count={integrations.length}>
             <div className="divide-y divide-border">
@@ -163,6 +113,7 @@ export default function GitIntegrationsPage() {
                   integration={integration}
                   onVerify={setVerifying}
                   onRemove={setRemoving}
+                  onUpdateCredentials={() => setWizardOpen(true)}
                 />
               ))}
             </div>
