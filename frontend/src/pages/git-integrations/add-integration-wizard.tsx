@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { GitBranch, Github, KeyRound, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, GitBranch, Github, KeyRound, Loader2 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createGitIntegration, type GitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
@@ -10,7 +11,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 import { cn } from "@/lib/utils";
 
-type Phase = "provider" | "github" | "credentials";
+type Phase = "provider" | "github" | "credentials" | "connecting" | "done";
 
 type ProviderId = "github" | "gitlab" | "bitbucket" | "gitea" | "other";
 
@@ -31,6 +32,55 @@ const PROVIDERS: Provider[] = [
 ];
 
 const GIT_INTEGRATION_TYPE_CREDENTIALS: GitIntegration["type"] = "git_credentials";
+
+const STEPS: { phase: Phase; label: string }[] = [
+  { phase: "provider", label: "Provider" },
+  { phase: "github", label: "Connect" },
+  { phase: "done", label: "Done" },
+];
+
+/** Maps every wizard phase onto one of the three stepper steps for highlighting. */
+const STEP_FOR_PHASE: Record<Phase, Phase> = {
+  provider: "provider",
+  github: "github",
+  credentials: "github",
+  connecting: "github",
+  done: "done",
+};
+
+const CONNECTING_CHECKLIST = [
+  "Opening GitHub authorization…",
+  "Authorizing the installation…",
+  "Fetching accessible repositories…",
+];
+
+function Stepper({ phase }: { phase: Phase }) {
+  const currentStep = STEP_FOR_PHASE[phase];
+  return (
+    <div data-testid="wizard-stepper" className="flex items-center gap-2 border-b px-5 py-3">
+      {STEPS.map((step, i) => {
+        const isCurrent = step.phase === currentStep;
+        const isPast = STEPS.findIndex((s) => s.phase === currentStep) > i;
+        return (
+          <div key={step.phase} className="flex flex-1 flex-col gap-1.5">
+            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-primary" : "bg-border")} />
+            <span
+              data-current={isCurrent}
+              className={cn(
+                "font-mono text-[10px] uppercase tracking-[1.5px]",
+                isCurrent && "text-foreground",
+                !isCurrent && isPast && "text-muted-foreground",
+                !isCurrent && !isPast && "text-muted-foreground/60",
+              )}
+            >
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 interface AddIntegrationWizardProps {
   open: boolean;
@@ -88,7 +138,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
           : { token: token.trim() },
       });
       onCreated();
-      close();
+      setPhase("done");
     } catch (e) {
       setSubmitError(getErrorMessage(e));
     } finally {
@@ -97,25 +147,24 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
   };
 
   const startAppInstall = () => {
-    void github.connect().then(() => {
-      // connect() resolves after the popup opens; completion is signalled by state.
-    });
+    setPhase("connecting");
+    void github.connect();
   };
 
-  // Surface GitHub connect completion to the parent, then close — even if the
-  // wizard was closed while the popup finished in the background, so the
-  // parent's list refresh isn't dropped.
+  // Surface GitHub connect completion to the parent even if the wizard was
+  // closed while the popup finished in the background, so the parent's list
+  // refresh isn't dropped. The done phase itself only renders while open.
   useEffect(() => {
     if (github.state === "connected") {
       onCreated();
-      close();
+      if (open) setPhase("done");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [github.state]);
 
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
-      <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[760px]">
+      <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[540px]">
         <DialogTitle className="sr-only">Add git integration</DialogTitle>
         <DialogDescription className="sr-only">
           Connect a git provider so Stackdome can clone repositories and trigger preview environments
@@ -128,6 +177,8 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
             Add git integration
           </span>
         </div>
+
+        <Stepper phase={phase} />
 
         <div className="flex h-[480px] max-h-[80vh] flex-col overflow-hidden">
           {phase === "provider" && (
@@ -159,7 +210,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
               <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-5">
                 <button
                   type="button"
-                  disabled={hasGithubApp || github.state === "waiting"}
+                  disabled={hasGithubApp}
                   onClick={startAppInstall}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
@@ -177,14 +228,8 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   <span className="text-xs text-muted-foreground">
                     {hasGithubApp
                       ? "Already connected — manage installations from the integration card."
-                      : "Grants repository access via a GitHub App installation. Webhooks keep previews in sync."}
+                      : "Fine-grained access you manage on GitHub. Webhooks keep previews in sync — no tokens to rotate."}
                   </span>
-                  {github.state === "waiting" && (
-                    <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Waiting for the GitHub App installation to finish in the popup…
-                    </span>
-                  )}
                 </button>
                 <button
                   type="button"
@@ -204,7 +249,6 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   </span>
                   <span className="text-xs text-muted-foreground">{provider.hint}</span>
                 </button>
-                {github.error && <p className="text-sm text-destructive">{github.error}</p>}
               </div>
               <WizardFooter
                 onBack={() => setPhase("provider")}
@@ -212,6 +256,55 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                 continueLabel="Done"
               />
             </>
+          )}
+
+          {phase === "connecting" && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-primary">
+                <Github className="h-6 w-6" />
+              </span>
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium">Installing the GitHub App</h3>
+                <p className="text-xs text-muted-foreground">
+                  Finish the installation in the GitHub popup — we&apos;ll pick it up here.
+                </p>
+              </div>
+
+              {github.error ? (
+                <div className="w-full space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-left">
+                  <p className="text-sm font-medium text-destructive">Couldn&apos;t verify the token</p>
+                  <p className="text-xs text-muted-foreground">{github.error}</p>
+                  <Button type="button" variant="outline" size="sm" onClick={() => void github.connect()}>
+                    Retry
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <ul className="w-full space-y-2 text-left">
+                    {CONNECTING_CHECKLIST.map((step) => (
+                      <li key={step} className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {github.state === "connected"
+                          ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
+                          : <Circle className="h-3.5 w-3.5 animate-pulse text-primary" />}
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Waiting for the GitHub App installation to finish…
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void github.checkAgain()}
+                  >
+                    Check again
+                  </Button>
+                </>
+              )}
+            </div>
           )}
 
           {phase === "credentials" && (
@@ -249,17 +342,44 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   />
                   <p className="text-xs text-muted-foreground">{provider.hint}</p>
                 </div>
-                {submitError && <p className="text-sm text-destructive">{submitError}</p>}
+                {submitError && (
+                  <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 p-3">
+                    <p className="text-sm font-medium text-destructive">Couldn&apos;t verify the token</p>
+                    <p className="text-xs text-muted-foreground">{submitError}</p>
+                  </div>
+                )}
               </div>
               <WizardFooter
                 onBack={() => setPhase(provider.id === "github" ? "github" : "provider")}
                 onContinue={() => void submitCredentials()}
-                continueLabel="Add integration"
+                continueLabel="Connect"
                 continueDisabled={!host.trim() || !token.trim()}
                 loading={submitting}
               />
             </>
           )}
+
+          {phase === "done" && (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
+                <CheckCircle2 className="h-8 w-8" />
+              </span>
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium">
+                  {provider.id === "github" ? "GitHub App installed" : `${provider.label} connected`}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {provider.id === "github"
+                    ? "Stackdome can now clone repositories from your installed accounts. Webhooks will keep preview environments in sync."
+                    : `Stackdome can now clone repositories on ${host} using your access token.`}
+                </p>
+              </div>
+              <Button type="button" onClick={close}>
+                Done
+              </Button>
+            </div>
+          )}
+
         </div>
       </DialogContent>
     </Dialog>
