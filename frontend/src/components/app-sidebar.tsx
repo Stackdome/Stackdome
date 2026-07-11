@@ -64,11 +64,16 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <NavStacks />
             <NavSecrets />
             <NavObjectStores />
-            <NavAddons />
             {/* Org-scoped, admin-only resources. Hidden for members so they
                 don't see (or fetch) endpoints that return 403 for them. */}
             {isOrgAdmin && <NavClusters />}
             {isOrgAdmin && <NavDomains />}
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
+          <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Integrations</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <NavAddons />
             {isOrgAdmin && <NavGitIntegrations />}
           </SidebarGroupContent>
         </SidebarGroup>
