@@ -76,6 +76,6 @@ describe("PreviewEnvCard", () => {
     const pill = screen.getByRole("link", { name: /web/ });
     expect(pill.getAttribute("href")).toBe("http://pr-128.example.test");
     expect(screen.getByText("895026c")).toBeTruthy();
-    expect(document.querySelector('[data-rail="brand"]')).toBeTruthy();
+    expect(document.querySelector('[data-rail="success"]')).toBeTruthy();
   });
 });

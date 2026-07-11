@@ -1,6 +1,7 @@
 import { GitPullRequest } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
+import { statusVariant } from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 import {
   StatusRail,
@@ -19,10 +20,10 @@ interface PreviewEnvCardProps {
 }
 
 function previewTone(phase: PreviewPhase | undefined): { tone: RailTone; word: string } {
-  // Amber rail is the preview signature — even when ready.
-  if (phase === "Ready") return { tone: "brand", word: "ready" };
-  if (phase === "Failed") return { tone: "danger", word: "failed" };
-  // Provisioning / Deploying / Deleting / not yet reported
+  const v = statusVariant("preview", phase);
+  if (v === "ready") return { tone: "success", word: "ready" };
+  if (v === "error") return { tone: "danger", word: "failed" };
+  // Provisioning / Deploying / Deleting / not yet reported → in flight
   return { tone: "deploying", word: (phase ?? "deploying").toLowerCase() };
 }
 

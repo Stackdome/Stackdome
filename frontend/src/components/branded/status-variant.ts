@@ -21,6 +21,7 @@ export type StatusDomain =
   | "registry"
   | "storage"
   | "build"
+  | "preview"
   | "generic";
 
 export function statusVariant(domain: StatusDomain, state?: string | null): StatusVariant {
@@ -163,6 +164,21 @@ export function statusVariant(domain: StatusDomain, state?: string | null): Stat
           return "error";
         case "cancelled":
           return "neutral";
+        default:
+          return "info";
+      }
+
+    // pkg/models/preview_stack.go — PreviewStackPhase vocabulary
+    case "preview":
+      switch (s) {
+        case "provisioning":
+        case "deploying":
+        case "deleting":
+          return "pending";
+        case "ready":
+          return "ready";
+        case "failed":
+          return "error";
         default:
           return "info";
       }
