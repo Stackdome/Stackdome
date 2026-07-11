@@ -261,21 +261,28 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 	return created, nil
 }
 
-func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
+// getReleaseWithStack fetches a release and its owning stack. GetStack
+// already perm-checks (same team, same stack, auth.ActionRead), so callers
+// don't need a separate permissions.Check.
+func (s *stackReleaseService) getReleaseWithStack(ctx context.Context, releaseID string) (*models.StackRelease, *models.Stack, *errors.ServiceError) {
 	rel, sErr := s.store.GetByID(ctx, releaseID)
 	if sErr != nil {
-		return nil, sErr
+		return nil, nil, sErr
 	}
 
 	stack, sErr := s.stackQuery.GetStack(ctx, rel.StackID)
 	if sErr != nil {
+		return nil, nil, sErr
+	}
+
+	return rel, stack, nil
+}
+
+func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
+	rel, _, sErr := s.getReleaseWithStack(ctx, releaseID)
+	if sErr != nil {
 		return nil, sErr
 	}
-
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, rel.StackID, auth.ActionRead); permErr != nil {
-		return nil, permErr
-	}
-
 	return rel, nil
 }
 
@@ -283,12 +290,7 @@ func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) 
 // from the release's stack. The overlay is nil unless the release is active
 // or is the stack's currently converged (live) release.
 func (s *stackReleaseService) GetReleaseDetail(ctx context.Context, releaseID string) (*models.StackRelease, *models.ReleaseLiveStatus, *errors.ServiceError) {
-	release, sErr := s.GetRelease(ctx, releaseID)
-	if sErr != nil {
-		return nil, nil, sErr
-	}
-
-	stack, sErr := s.stackQuery.GetStack(ctx, release.StackID)
+	release, stack, sErr := s.getReleaseWithStack(ctx, releaseID)
 	if sErr != nil {
 		return nil, nil, sErr
 	}

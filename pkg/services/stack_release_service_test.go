@@ -770,10 +770,7 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 			},
 		}
 		releaseStore.EXPECT().GetByID(ctx, "rel-1").Return(release, nil)
-		// GetReleaseDetail fetches the stack twice: once inside GetRelease for
-		// the permission check, once more to build the live overlay.
-		stackSvc.EXPECT().GetStack(ctx, detailStackID).Return(stack, nil).Times(2)
-		perms.EXPECT().Check(ctx, detailTeamID, auth.ResourceStacks, detailStackID, auth.ActionRead).Return(nil)
+		stackSvc.EXPECT().GetStack(ctx, detailStackID).Return(stack, nil).Times(1)
 
 		rel, live, serr := svc.GetReleaseDetail(ctx, "rel-1")
 		Expect(serr).To(BeNil())
@@ -792,8 +789,7 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 			},
 		}
 		releaseStore.EXPECT().GetByID(ctx, "rel-0").Return(release, nil)
-		stackSvc.EXPECT().GetStack(ctx, detailStackID).Return(stack, nil).Times(2)
-		perms.EXPECT().Check(ctx, detailTeamID, auth.ResourceStacks, detailStackID, auth.ActionRead).Return(nil)
+		stackSvc.EXPECT().GetStack(ctx, detailStackID).Return(stack, nil).Times(1)
 
 		_, live, serr := svc.GetReleaseDetail(ctx, "rel-0")
 		Expect(serr).To(BeNil())
