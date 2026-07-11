@@ -342,7 +342,10 @@ export default function StacksPage() {
                       type="button"
                       className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
                     >
-                      Repo: <span className="normal-case tracking-normal text-foreground">{repoLabel}</span>
+                      Repo:{" "}
+                      <span className={cn("text-foreground", repoFilter && "normal-case tracking-normal")}>
+                        {repoLabel}
+                      </span>
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </DropdownMenuTrigger>
