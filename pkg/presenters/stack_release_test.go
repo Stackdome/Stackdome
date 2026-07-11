@@ -1,6 +1,8 @@
 package presenters_test
 
 import (
+	"time"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -26,6 +28,8 @@ var _ = Describe("PresentStackRelease", func() {
 	})
 
 	It("round-trips health, revisions, conditions, and resources from a populated live status", func() {
+		restartTime := ptr.To(time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC))
+		runTime := ptr.To(time.Date(2024, 1, 1, 0, 5, 0, 0, time.UTC))
 		live := &models.ReleaseLiveStatus{
 			Health:           models.ReleaseHealthOK,
 			TargetRevision:   "5",
@@ -35,12 +39,18 @@ var _ = Describe("PresentStackRelease", func() {
 			},
 			Resources: map[string]*models.StackResourceStatus{
 				"web": {
-					State:              models.StackResourcePhaseReady,
-					Message:            "ready",
-					ObservedCrRevision: "5",
-					Replicas:           2,
-					AvailableReplicas:  2,
-					UpdatedReplicas:    2,
+					State:                         models.StackResourcePhaseReady,
+					Message:                       "ready",
+					ObservedCrRevision:            "5",
+					Replicas:                      2,
+					AvailableReplicas:             2,
+					UpdatedReplicas:               2,
+					PublicIngresses:               []models.Ingress{{URL: "https://web.example.com", TargetPort: 8080}},
+					InternalServiceName:           ptr.To("web-svc"),
+					LastRestartRequestProcessedAt: restartTime,
+					LastRunTime:                   runTime,
+					LastRunSucceeded:              ptr.To(true),
+					Conditions:                    []models.Condition{{Type: "Ready", Status: "True", Reason: "PodsReady", Message: "all pods ready"}},
 				},
 			},
 		}
@@ -54,6 +64,8 @@ var _ = Describe("PresentStackRelease", func() {
 		Expect(out.LiveStatus.Conditions).To(HaveLen(1))
 		Expect(*out.LiveStatus.Conditions[0].Type).To(Equal("Available"))
 		Expect(*out.LiveStatus.Conditions[0].Reason).To(Equal("AllReady"))
+		Expect(*out.LiveStatus.Conditions[0].Status).To(Equal("True"))
+		Expect(*out.LiveStatus.Conditions[0].Message).To(Equal("all resources ready"))
 
 		Expect(out.LiveStatus.Resources).NotTo(BeNil())
 		resources := *out.LiveStatus.Resources
@@ -65,6 +77,18 @@ var _ = Describe("PresentStackRelease", func() {
 		Expect(*web.Replicas).To(Equal(int32(2)))
 		Expect(*web.AvailableReplicas).To(Equal(int32(2)))
 		Expect(*web.UpdatedReplicas).To(Equal(int32(2)))
+		Expect(web.PublicIngress).To(HaveLen(1))
+		Expect(*web.PublicIngress[0].Url).To(Equal("https://web.example.com"))
+		Expect(*web.PublicIngress[0].TargetPort).To(Equal(int32(8080)))
+		Expect(*web.InternalServiceName).To(Equal("web-svc"))
+		Expect(web.LastRestartRequestProcessedAt).To(Equal(restartTime))
+		Expect(web.LastRunTime).To(Equal(runTime))
+		Expect(*web.LastRunSucceeded).To(Equal(true))
+		Expect(web.Conditions).To(HaveLen(1))
+		Expect(*web.Conditions[0].Type).To(Equal("Ready"))
+		Expect(*web.Conditions[0].Status).To(Equal("True"))
+		Expect(*web.Conditions[0].Reason).To(Equal("PodsReady"))
+		Expect(*web.Conditions[0].Message).To(Equal("all pods ready"))
 	})
 
 	It("maps a resource's LastFailure with container, init container, and build detail", func() {
@@ -117,12 +141,16 @@ var _ = Describe("PresentStackRelease", func() {
 
 		Expect(failure.InitContainer).NotTo(BeNil())
 		Expect(*failure.InitContainer.FailureType).To(Equal("Error"))
+		Expect(*failure.InitContainer.Reason).To(Equal("Error"))
 		Expect(*failure.InitContainer.Message).To(Equal("init container failed"))
+		Expect(*failure.InitContainer.RestartCount).To(Equal(int32(1)))
 		Expect(*failure.InitContainer.ExitCode).To(Equal(int32(1)))
 
 		Expect(failure.Build).NotTo(BeNil())
 		Expect(*failure.Build.FailureType).To(Equal("exit_error"))
+		Expect(*failure.Build.Reason).To(Equal("Error"))
 		Expect(*failure.Build.Message).To(Equal("COPY failed: file not found"))
+		Expect(*failure.Build.RestartCount).To(Equal(int32(0)))
 		Expect(*failure.Build.ExitCode).To(Equal(int32(1)))
 	})
 
