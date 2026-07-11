@@ -25,7 +25,7 @@ interface Provider {
 const PROVIDERS: Provider[] = [
   { id: "github", label: "GitHub", hostPrefill: "github.com", hostPlaceholder: "github.com", hint: "Use a fine-grained personal access token with repository read access." },
   { id: "gitlab", label: "GitLab", hostPrefill: "gitlab.com", hostPlaceholder: "gitlab.com or gitlab.example.com", hint: "Use a project or personal access token with read_repository scope." },
-  { id: "bitbucket", label: "Bitbucket", hostPrefill: "bitbucket.org", hostPlaceholder: "bitbucket.org", hint: "Use an app password with repository read permission." },
+  { id: "bitbucket", label: "Bitbucket", hostPrefill: "bitbucket.org", hostPlaceholder: "bitbucket.org", hint: "Use an app password with repository read permission. Fill in the username above — Bitbucket app passwords require basic auth." },
   { id: "gitea", label: "Gitea", hostPrefill: "", hostPlaceholder: "gitea.example.com", hint: "Use an access token with read:repository scope." },
   { id: "other", label: "Other", hostPrefill: "", hostPlaceholder: "git.example.com", hint: "Any git host reachable over HTTPS with token or basic auth." },
 ];
@@ -46,6 +46,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
   const [phase, setPhase] = useState<Phase>("provider");
   const [provider, setProvider] = useState<Provider>(PROVIDERS[0]);
   const [host, setHost] = useState("");
+  const [username, setUsername] = useState("");
   const [token, setToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -53,6 +54,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
   const reset = () => {
     setPhase("provider");
     setHost("");
+    setUsername("");
     setToken("");
     setSubmitError(null);
     setSubmitting(false);
@@ -66,6 +68,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
   const pickProvider = (p: Provider) => {
     setProvider(p);
     setHost(p.hostPrefill);
+    setUsername("");
     setSubmitError(null);
     setPhase(p.id === "github" ? "github" : "credentials");
   };
@@ -76,10 +79,13 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
     setSubmitting(true);
     setSubmitError(null);
     try {
+      const trimmedUsername = username.trim();
       await createGitIntegration(orgId, {
         host: host.trim(),
         type: GIT_INTEGRATION_TYPE_CREDENTIALS,
-        auth: { token: token.trim() },
+        auth: trimmedUsername
+          ? { basic: { username: trimmedUsername, password: token.trim() } }
+          : { token: token.trim() },
       });
       onCreated();
       close();
@@ -204,7 +210,6 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                 onBack={() => setPhase("provider")}
                 onContinue={close}
                 continueLabel="Done"
-                loading={github.state === "waiting"}
               />
             </>
           )}
@@ -220,6 +225,18 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                     value={host}
                     onChange={(e) => setHost(e.target.value)}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="integration-username">Username</Label>
+                  <Input
+                    id="integration-username"
+                    autoComplete="off"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Required for providers using basic auth (e.g. Bitbucket app passwords).
+                  </p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="integration-token">Access token</Label>

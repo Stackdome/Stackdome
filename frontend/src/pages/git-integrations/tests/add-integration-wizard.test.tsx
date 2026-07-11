@@ -121,6 +121,32 @@ describe("AddIntegrationWizard", () => {
     expect(onCreated).toHaveBeenCalledOnce();
   });
 
+  it("waiting state keeps Back and Done enabled while Install button shows a spinner", () => {
+    mockConnectState = "waiting";
+    renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));
+    expect(screen.getByText(/waiting for the github app installation/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /install github app/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /back/i })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /done/i })).toBeEnabled();
+  });
+
+  it("submits basic auth when a username is provided (e.g. Bitbucket app passwords)", async () => {
+    vi.mocked(createGitIntegration).mockResolvedValue({ host: "bitbucket.org" });
+    const onCreated = vi.fn();
+    renderWizard({ onCreated });
+    fireEvent.click(screen.getByRole("button", { name: /Bitbucket/ }));
+    fireEvent.change(screen.getByLabelText(/username/i), { target: { value: "my-user" } });
+    fireEvent.change(screen.getByLabelText(/token/i), { target: { value: "app-password" } });
+    fireEvent.click(screen.getByRole("button", { name: /add integration/i }));
+    await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
+    expect(createGitIntegration).toHaveBeenCalledWith("org-1", {
+      host: "bitbucket.org",
+      type: "git_credentials",
+      auth: { basic: { username: "my-user", password: "app-password" } },
+    });
+  });
+
   it("back from GitHub-credentials returns to method choice", () => {
     renderWizard();
     fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));
