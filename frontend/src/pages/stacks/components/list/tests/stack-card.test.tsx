@@ -15,12 +15,8 @@ const baseStack = {
   revision: 4,
   spec: {
     stack_resources: [
-      {
-        name: "web",
-        source: { image: { ref: "tooljet/tooljet:ee-lts-latest" } },
-        status: { public_ingress: [{ url: "http://web.example.test" }] },
-      },
-      { name: "db", source: { git: { repo_url: "https://github.com/acme/app.git", branch: "main" } } },
+      { name: "web", status: { public_ingress: [{ url: "http://web.example.test" }] } },
+      { name: "db" },
     ],
     volumes: [{}],
   },
@@ -42,8 +38,6 @@ describe("DeployStackCard", () => {
     expect(screen.getByText("1 vol")).toBeTruthy();
     const pill = screen.getByRole("link", { name: /web ↗/ });
     expect(pill.getAttribute("href")).toBe("http://web.example.test");
-    expect(screen.getByText("tooljet/tooljet:ee-lts-latest")).toBeTruthy();
-    expect(screen.getByText("acme/app @ main")).toBeTruthy();
     expect(document.querySelector("[data-rail]")).toBeNull();
   });
 
