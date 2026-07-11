@@ -211,17 +211,12 @@ const FormStackSchema = ApiStackSchema.extend({
  */
 type FormStackData = z.infer<typeof FormStackSchema>;
 type FormStackResourceData = z.infer<typeof FormStackResourceSchema> & {
-  status?: unknown;
   // Server-computed, read-only in the API schema; carried in form data for the
   // Self/Resource output pickers but stripped before any PUT.
   outputs?: unknown;
 };
-type FormVolumeData = z.infer<typeof FormVolumeSchema> & {
-  status?: unknown;
-};
-type FormVolumeExtendedData = z.infer<typeof FormVolumeExtendedSchema> & {
-  status?: unknown;
-};
+type FormVolumeData = z.infer<typeof FormVolumeSchema>;
+type FormVolumeExtendedData = z.infer<typeof FormVolumeExtendedSchema>;
 
 /**
  * Conversion utilities between API and Form schemas
@@ -236,7 +231,6 @@ function convertFormResourceToApiResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
-    status,
     outputs,
     ...rest
   } = resource;
@@ -293,7 +287,7 @@ function convertFormVolumeToApiVolume(
   volume: FormVolumeExtendedData | FormVolumeData
 ): VolumeUpdateRequest {
 
-  const { sourceType, status, ...rest } = volume as FormVolumeExtendedData;
+  const { sourceType, ...rest } = volume as FormVolumeExtendedData;
   // Ensure needs_sync_before_use is always present and boolean
   // Ensure remote_source.current_directory_hash and path are always present and strings if remote_source exists
   let fixedSource = rest.spec?.source;
@@ -325,7 +319,7 @@ function convertFormVolumeToApiVolume(
 
 // Add UI-only fields to a resource from API data for use in forms
 function convertApiResourceToFormResource(
-  resource: z.infer<typeof ApiStackResourceSchema> & { status?: unknown } // API resource may have status
+  resource: z.infer<typeof ApiStackResourceSchema>
 ): FormStackResourceData {
   const git = resource.source?.git;
   const sourceType: "image" | "git" = git ? "git" : "image";
@@ -366,13 +360,12 @@ function convertApiResourceToFormResource(
       ...resource.execution_config,
       environment_variables: processedEnvVars,
     } : undefined,
-    status: resource.status ?? {},
   };
 }
 
 // Add UI-only fields to a volume from API data for use in forms
 function convertApiVolumeToFormVolume(
-  volume: z.infer<typeof ApiVolumeSchema> & { status?: unknown } // API volume may have status
+  volume: z.infer<typeof ApiVolumeSchema>
 ): FormVolumeExtendedData {
   // Determine sourceType based on the volume's source specification
   let sourceType: "None" | "GitRepo" | "RemoteDir" | "BuildArtifact" = "None";
@@ -385,7 +378,6 @@ function convertApiVolumeToFormVolume(
   return {
     ...volume,
     sourceType,
-    status: volume.status ?? {},
   };
 }
 

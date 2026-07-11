@@ -237,10 +237,10 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
-        dotVariant: statusVariant(
-          "resource",
-          (resource.status as { state?: string } | undefined)?.state,
-        ),
+        // Form-data resources carry no status field; the graph-build dot
+        // always starts neutral here — mergeTopology overlays the real
+        // per-resource state from live status / topology once available.
+        dotVariant: statusVariant("resource", undefined),
         summary: pres.summary,
         volumes: volumeChips(resource, knownVolumes),
         dirtyState: serviceDirtyState(idx, input.dirty),

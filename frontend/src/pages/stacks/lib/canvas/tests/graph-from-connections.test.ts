@@ -176,22 +176,16 @@ describe("deriveGraph (connection projection)", () => {
     expect((web?.data as { volumes: { name: string }[] }).volumes.map((v) => v.name)).toEqual(["data"]);
   });
 
-  it("maps live resource status to dotVariant", () => {
+  it("resource dots start neutral — real state comes from mergeTopology's overlay, not form data", () => {
     const g = deriveGraph({
       resources: [
-        { name: "ok", image_spec: { image: "nginx" }, status: { state: "Ready" } },
-        { name: "mid", image_spec: { image: "nginx" }, status: { state: "Pending" } },
-        { name: "bad", image_spec: { image: "nginx" }, status: { state: "Failed" } },
-        { name: "draft", image_spec: { image: "nginx" } }, // no status yet
+        { name: "web", image_spec: { image: "nginx" } },
       ] as never,
       linkedAddonIds: [],
       addonNameById: new Map(),
     });
     const dot = (name: string) => g.nodes.find((n) => n.data.name === name)?.data.dotVariant;
-    expect(dot("ok")).toBe("ready");
-    expect(dot("mid")).toBe("pending");
-    expect(dot("bad")).toBe("error");
-    expect(dot("draft")).toBe("neutral");
+    expect(dot("web")).toBe("neutral");
   });
 
   it("maps addon state to dotVariant via addonStateById", () => {
