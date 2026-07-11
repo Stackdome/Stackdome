@@ -52,7 +52,7 @@ Every topology node declares **outputs** — named values that other resources c
 
 ## API Endpoints
 
-Base path: `/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}`
+Base path: `/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}`
 
 | Method | Path | Description |
 |--------|------|-------------|

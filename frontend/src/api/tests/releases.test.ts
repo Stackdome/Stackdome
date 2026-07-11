@@ -8,42 +8,42 @@ import api from "@/api/client";
 import { listReleases, getRelease, createRelease, rollbackRelease, cancelRelease } from "../releases";
 
 const ORG = "org1";
-const TEAM = "project1";
+const PROJECT = "project1";
 const STACK = "s1";
-const BASE = `/organizations/${ORG}/projects/${TEAM}/stacks/${STACK}/releases`;
+const BASE = `/organizations/${ORG}/projects/${PROJECT}/stacks/${STACK}/releases`;
 
 beforeEach(() => vi.clearAllMocks());
 
 describe("releases api", () => {
   it("lists releases", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { items: [{ id: "r1" }], total: 1 } });
-    const out = await listReleases(ORG, TEAM, STACK);
+    const out = await listReleases(ORG, PROJECT, STACK);
     expect(api.get).toHaveBeenCalledWith(BASE);
     expect(out.items?.[0].id).toBe("r1");
   });
 
   it("gets one release", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "r1" } });
-    const out = await getRelease(ORG, TEAM, STACK, "r1");
+    const out = await getRelease(ORG, PROJECT, STACK, "r1");
     expect(api.get).toHaveBeenCalledWith(`${BASE}/r1`);
     expect(out.id).toBe("r1");
   });
 
   it("creates a deploy release with empty body", async () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "r2" } });
-    await createRelease(ORG, TEAM, STACK);
+    await createRelease(ORG, PROJECT, STACK);
     expect(api.post).toHaveBeenCalledWith(BASE, {});
   });
 
   it("rolls back via from_release_id", async () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "r3" } });
-    await rollbackRelease(ORG, TEAM, STACK, "r1");
+    await rollbackRelease(ORG, PROJECT, STACK, "r1");
     expect(api.post).toHaveBeenCalledWith(BASE, { from_release_id: "r1" });
   });
 
   it("cancels a release", async () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: undefined });
-    await cancelRelease(ORG, TEAM, STACK, "r1");
+    await cancelRelease(ORG, PROJECT, STACK, "r1");
     expect(api.post).toHaveBeenCalledWith(`${BASE}/r1/cancel`);
   });
 });

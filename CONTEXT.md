@@ -8,13 +8,13 @@ nouns; prefer them over synonyms in code, APIs, and docs.
 
 | term | definition | source |
 |---|---|---|
-| Organisation | The top-level tenant that owns all teams, clusters, and resources; the billing and isolation boundary. | `pkg/models/organisation.go` |
-| Team | A named group within an Organisation that owns stacks, secrets, object stores, and addons; the access-scoping unit (one may be the DefaultTeam). | `pkg/models/team.go` |
-| TeamMembership | A user's assignment to a Team with a TeamRole (e.g. Viewer); the join between User and Team. | `pkg/models/team.go` |
-| TeamRole | The permission level a member holds within a Team. | `pkg/models/team.go` |
-| User | An authentication identity that can belong to teams and act within an organisation; carries a UserRole. | `pkg/models/user.go` |
+| Organisation | The top-level tenant that owns all projects, clusters, and resources; the billing and isolation boundary. | `pkg/models/organisation.go` |
+| Project | A named group within an Organisation that owns stacks, secrets, object stores, and addons; the access-scoping unit (one may be the DefaultProject). | `pkg/models/project.go` |
+| ProjectMembership | A user's assignment to a Project with a ProjectRole (e.g. Viewer); the join between User and Project. | `pkg/models/project.go` |
+| ProjectRole | The permission level a member holds within a Project. | `pkg/models/project.go` |
+| User | An authentication identity that can belong to projects and act within an organisation; carries a UserRole. | `pkg/models/user.go` |
 | WorkspaceUser | A reconciled per-cluster identity that projects a User into a workspace namespace so they can access cluster workloads. | `pkg/models/workspace_user.go`, `pkg/controllers/workspaceuser` |
-| OrgInvite | A pending, tokenised invitation for an email to join an Organisation and Team at a given TeamRole. | `pkg/models/org_invite.go` |
+| OrgInvite | A pending, tokenised invitation for an email to join an Organisation and Project at a given ProjectRole. | `pkg/models/org_invite.go` |
 | OrganisationDomain | A DNS domain claimed and verified by an Organisation for use by stack domains. | `pkg/models/organisation_domain.go` |
 
 ## Auth tokens
@@ -30,7 +30,7 @@ nouns; prefer them over synonyms in code, APIs, and docs.
 
 | term | definition | source |
 |---|---|---|
-| Stack | A team-owned deployable application unit (a set of resources) reconciled onto a target cluster; the primary workload aggregate. | `pkg/models/stack.go`, `pkg/controllers/stack` |
+| Stack | A project-owned deployable application unit (a set of resources) reconciled onto a target cluster; the primary workload aggregate. | `pkg/models/stack.go`, `pkg/controllers/stack` |
 | StackResource | An individual deployable component within a Stack (e.g. a service) with its own ports, dependencies, and status. | `pkg/models/stack_resource.go`, `pkg/controllers/stackresource` |
 | StackStatus | The reconciled state of a Stack: state, conditions, observed CR revision, last validation run. | `pkg/models/stack.go` |
 | ValidationRun | The outcome of running validation checks against a Stack revision before/while reconciling. | `pkg/models/stack.go` |
@@ -52,17 +52,17 @@ nouns; prefer them over synonyms in code, APIs, and docs.
 
 | term | definition | source |
 |---|---|---|
-| Volume | A persistent volume owned by a team/org, sized and class-bound, optionally hydrated from a source (remote dir, build artifact, git repo). | `pkg/models/volume.go`, `pkg/controllers/volume` |
+| Volume | A persistent volume owned by a project/org, sized and class-bound, optionally hydrated from a source (remote dir, build artifact, git repo). | `pkg/models/volume.go`, `pkg/controllers/volume` |
 | VolumeMount | A binding that mounts a Volume into a workload at a target path from a source sub-path. | `pkg/models/volume_mount.go` |
-| ObjectStore | A team-owned external object-storage configuration (S3 / Azure / GCS) used to store backups and WAL files. | `pkg/models/object_store.go` |
+| ObjectStore | A project-owned external object-storage configuration (S3 / Azure / GCS) used to store backups and WAL files. | `pkg/models/object_store.go` |
 | Namespace | A reconciled Kubernetes namespace allocated for a tenant's workloads on a cluster. | `pkg/models/namespace.go` |
-| WorkspaceNamespace | The per-organisation/team namespace into which that tenant's resources are reconciled on a cluster. | `pkg/models/workspace_namespace.go` |
+| WorkspaceNamespace | The per-organisation/project namespace into which that tenant's resources are reconciled on a cluster. | `pkg/models/workspace_namespace.go` |
 
 ## Secrets
 
 | term | definition | source |
 |---|---|---|
-| Secret | A team-owned, typed bag of key→value sensitive data referenced by stacks, addons, and object stores. | `pkg/models/secret.go` |
+| Secret | A project-owned, typed bag of key→value sensitive data referenced by stacks, addons, and object stores. | `pkg/models/secret.go` |
 | SecretReference | A pointer to one key within a Secret (secret_id + key); how other resources consume secret data. | `pkg/models/secret.go` |
 | SecretType | The classification of a Secret that governs its expected keys and use. | `pkg/models/secret.go` |
 
@@ -70,7 +70,7 @@ nouns; prefer them over synonyms in code, APIs, and docs.
 
 | term | definition | source |
 |---|---|---|
-| Addon | A managed backing service provisioned for a team (currently PostgreSQL). | `pkg/models/addon.go` |
+| Addon | A managed backing service provisioned for a project (currently PostgreSQL). | `pkg/models/addon.go` |
 | PostgresAddon | A managed PostgreSQL database cluster addon: version, instances, placement, databases, backup config. | `pkg/models/postgres_addon.go`, `pkg/controllers/postgres_addon` |
 | PostgresBackup | A backup of a PostgresAddon (scheduled or on-demand) used for restore. | `pkg/models/postgres_addon.go`, `pkg/controllers/postgres_backup` |
 | PostgresInstances | The replica count and placement (topology, tolerations, node selector) of a PostgresAddon. | `pkg/models/postgres_addon.go` |

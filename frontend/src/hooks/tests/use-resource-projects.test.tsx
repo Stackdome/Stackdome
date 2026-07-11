@@ -8,7 +8,7 @@ vi.mock("@/api/projects", () => ({ listProjects: vi.fn() }));
 import { listProjects } from "@/api/projects";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 
-const TEAMS = {
+const PROJECTS = {
   items: [
     { id: "td", name: "default", default_project: true },
     { id: "tq", name: "quality-eng", default_project: false },
@@ -17,7 +17,7 @@ const TEAMS = {
 
 beforeEach(() => {
   vi.mocked(listProjects).mockReset();
-  vi.mocked(listProjects).mockResolvedValue(TEAMS as never);
+  vi.mocked(listProjects).mockResolvedValue(PROJECTS as never);
 });
 
 describe("useResourceProjects", () => {

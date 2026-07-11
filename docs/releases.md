@@ -106,7 +106,7 @@ The API server's stack controller watches the Stack CR via controller-runtime. W
 
 ## API reference
 
-Base path: `/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases`
+Base path: `/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases`
 
 ### Create release
 
