@@ -21,6 +21,12 @@ export function providerIdFor(integration: GitIntegration): ProviderId {
 
 export type RowTone = "ok" | "attention";
 
+export interface RowMeter {
+  left: string;
+  right: string;
+  fill: "full" | "partial" | "none";
+}
+
 export interface RowViewModel {
   host: string;
   authLabel: string;
@@ -28,7 +34,7 @@ export interface RowViewModel {
   statusLabel: string;
   tone: RowTone;
   banner?: { message: string; ctaLabel: string; ctaHref?: string };
-  accessLine?: string;
+  meter: RowMeter;
 }
 
 function statusFor(integration: GitIntegration): { key: RowViewModel["statusKey"]; label: string; tone: RowTone } {
@@ -58,16 +64,27 @@ function bannerFor(integration: GitIntegration, statusKey: RowViewModel["statusK
   return undefined;
 }
 
-function accessLineFor(integration: GitIntegration, installations?: GitInstallation[]): string | undefined {
-  if (integration.type !== GIT_INTEGRATION_TYPE_GITHUB_APP) return undefined;
-  if (!installations || installations.length === 0) return undefined;
+function meterFor(
+  integration: GitIntegration,
+  statusKey: RowViewModel["statusKey"],
+  installations?: GitInstallation[],
+): RowMeter {
+  if (statusKey === "action_needed") {
+    return { left: "Access blocked", right: "this host", fill: "none" };
+  }
 
-  const count = installations.length;
-  const installationWord = count === 1 ? "installation" : "installations";
-  const hasAll = installations.some((installation) => installation.repository_selection === "all");
-  const scope = hasAll ? "all repositories" : "selected repositories";
+  if (integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP) {
+    if (statusKey === "needs_setup") {
+      return { left: "No repositories yet", right: "finish install", fill: "none" };
+    }
+    const count = installations?.length ?? 0;
+    const installationWord = count === 1 ? "installation" : "installations";
+    const hasAll = installations?.some((installation) => installation.repository_selection === "all") ?? false;
+    const scope = hasAll ? "all repositories" : "selected repositories";
+    return { left: `${count} ${installationWord}`, right: scope, fill: "full" };
+  }
 
-  return `${count} ${installationWord} · ${scope}`;
+  return { left: "Token-scoped access", right: "this host", fill: "partial" };
 }
 
 export function deriveRow(integration: GitIntegration, installations?: GitInstallation[]): RowViewModel {
@@ -80,6 +97,6 @@ export function deriveRow(integration: GitIntegration, installations?: GitInstal
     statusLabel,
     tone,
     banner: bannerFor(integration, statusKey),
-    accessLine: accessLineFor(integration, installations),
+    meter: meterFor(integration, statusKey, installations),
   };
 }

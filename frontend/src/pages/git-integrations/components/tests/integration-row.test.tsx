@@ -74,12 +74,13 @@ describe("IntegrationRow", () => {
     expect(cta).toBeDisabled();
   });
 
-  it("renders the access line derived from installations", async () => {
+  it("renders the access meter derived from installations", async () => {
     vi.mocked(listInstallations).mockResolvedValue({
       items: [{ id: "i1", repository_selection: "all" }],
     });
     renderRow();
-    await waitFor(() => expect(screen.getByText(/1 installation · all repositories/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("1 installation")).toBeInTheDocument());
+    expect(screen.getByText("all repositories")).toBeInTheDocument();
   });
 
   it("opens the kebab menu and dispatches Verify repository access on a credentials row", async () => {

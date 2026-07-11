@@ -1,4 +1,4 @@
-import { EllipsisVertical, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { Ellipsis, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,8 +24,13 @@ export function RowMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Open row menu" className="h-[30px] w-[30px]">
-          <EllipsisVertical className="h-4 w-4" />
+        <Button
+          variant="outline"
+          size="icon"
+          aria-label="Open row menu"
+          className="h-8 w-8 rounded-md border-border"
+        >
+          <Ellipsis className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[236px]">

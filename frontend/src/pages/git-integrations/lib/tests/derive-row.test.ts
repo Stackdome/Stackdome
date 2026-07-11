@@ -95,43 +95,48 @@ describe("deriveRow", () => {
     expect(row.host).toBe("github.acme-corp.com");
   });
 
-  it("builds a singular access line for one all-repositories installation", () => {
+  it("builds a singular-installation meter for one all-repositories installation", () => {
     const row = deriveRow(integration(), [installation({ repository_selection: "all" })]);
-    expect(row.accessLine).toBe("1 installation · all repositories");
+    expect(row.meter).toEqual({ left: "1 installation", right: "all repositories", fill: "full" });
   });
 
-  it("builds a plural access line for multiple installations with selected repositories", () => {
+  it("builds a plural-installation meter for multiple installations with selected repositories", () => {
     const row = deriveRow(integration(), [
       installation({ repository_selection: "selected" }),
       installation({ repository_selection: "selected" }),
     ]);
-    expect(row.accessLine).toBe("2 installations · selected repositories");
+    expect(row.meter).toEqual({ left: "2 installations", right: "selected repositories", fill: "full" });
   });
 
-  it("prefers all repositories when installations are mixed", () => {
+  it("prefers all repositories in the meter when installations are mixed", () => {
     const row = deriveRow(integration(), [
       installation({ repository_selection: "selected" }),
       installation({ repository_selection: "all" }),
     ]);
-    expect(row.accessLine).toBe("2 installations · all repositories");
+    expect(row.meter).toEqual({ left: "2 installations", right: "all repositories", fill: "full" });
   });
 
-  it("omits the access line for credentials-type integrations", () => {
+  it("builds a token-scoped meter for connected credentials-type integrations", () => {
     const row = deriveRow(
       integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, credentials_configured: true }),
       [installation()],
     );
-    expect(row.accessLine).toBeUndefined();
+    expect(row.meter).toEqual({ left: "Token-scoped access", right: "this host", fill: "partial" });
   });
 
-  it("omits the access line when there are zero installations", () => {
+  it("builds a zero-installation meter for connected github_app with no installations yet", () => {
     const row = deriveRow(integration(), []);
-    expect(row.accessLine).toBeUndefined();
+    expect(row.meter).toEqual({ left: "0 installations", right: "selected repositories", fill: "full" });
   });
 
-  it("omits the access line when installations are undefined", () => {
-    const row = deriveRow(integration());
-    expect(row.accessLine).toBeUndefined();
+  it("builds a needs-setup meter for pending_install github_app integrations", () => {
+    const row = deriveRow(integration({ status: STATUS_PENDING_INSTALL }));
+    expect(row.meter).toEqual({ left: "No repositories yet", right: "finish install", fill: "none" });
+  });
+
+  it("builds an access-blocked meter for action_needed integrations regardless of type", () => {
+    const row = deriveRow(integration({ status: STATUS_ACTIVE, credentials_configured: false }));
+    expect(row.meter).toEqual({ left: "Access blocked", right: "this host", fill: "none" });
   });
 });
 
