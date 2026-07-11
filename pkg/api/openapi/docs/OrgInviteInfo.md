@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **OrgName** | Pointer to **string** |  | [optional] 
-**TeamName** | Pointer to **string** |  | [optional] 
+**ProjectName** | Pointer to **string** |  | [optional] 
 **InviterName** | Pointer to **string** |  | [optional] 
 **ExpiresAt** | Pointer to **time.Time** |  | [optional] 
 
@@ -53,30 +53,30 @@ SetOrgName sets OrgName field to given value.
 
 HasOrgName returns a boolean if a field has been set.
 
-### GetTeamName
+### GetProjectName
 
-`func (o *OrgInviteInfo) GetTeamName() string`
+`func (o *OrgInviteInfo) GetProjectName() string`
 
-GetTeamName returns the TeamName field if non-nil, zero value otherwise.
+GetProjectName returns the ProjectName field if non-nil, zero value otherwise.
 
-### GetTeamNameOk
+### GetProjectNameOk
 
-`func (o *OrgInviteInfo) GetTeamNameOk() (*string, bool)`
+`func (o *OrgInviteInfo) GetProjectNameOk() (*string, bool)`
 
-GetTeamNameOk returns a tuple with the TeamName field if it's non-nil, zero value otherwise
+GetProjectNameOk returns a tuple with the ProjectName field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamName
+### SetProjectName
 
-`func (o *OrgInviteInfo) SetTeamName(v string)`
+`func (o *OrgInviteInfo) SetProjectName(v string)`
 
-SetTeamName sets TeamName field to given value.
+SetProjectName sets ProjectName field to given value.
 
-### HasTeamName
+### HasProjectName
 
-`func (o *OrgInviteInfo) HasTeamName() bool`
+`func (o *OrgInviteInfo) HasProjectName() bool`
 
-HasTeamName returns a boolean if a field has been set.
+HasProjectName returns a boolean if a field has been set.
 
 ### GetInviterName
 

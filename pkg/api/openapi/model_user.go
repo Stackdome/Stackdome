@@ -29,8 +29,8 @@ type User struct {
 	Role         *UserRole `json:"role,omitempty"`
 	// OrganisationID
 	OrganisationId *string `json:"organisation_id,omitempty"`
-	// Teams the user belongs to (included in login/signup/current-user responses)
-	Teams []UserTeamMembership `json:"teams,omitempty"`
+	// Projects the user belongs to (included in login/signup/current-user responses)
+	Projects []UserProjectMembership `json:"projects,omitempty"`
 }
 
 // NewUser instantiates a new User object
@@ -274,36 +274,36 @@ func (o *User) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 
-// GetTeams returns the Teams field value if set, zero value otherwise.
-func (o *User) GetTeams() []UserTeamMembership {
-	if o == nil || o.Teams == nil {
-		var ret []UserTeamMembership
+// GetProjects returns the Projects field value if set, zero value otherwise.
+func (o *User) GetProjects() []UserProjectMembership {
+	if o == nil || o.Projects == nil {
+		var ret []UserProjectMembership
 		return ret
 	}
-	return o.Teams
+	return o.Projects
 }
 
-// GetTeamsOk returns a tuple with the Teams field value if set, nil otherwise
+// GetProjectsOk returns a tuple with the Projects field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *User) GetTeamsOk() ([]UserTeamMembership, bool) {
-	if o == nil || o.Teams == nil {
+func (o *User) GetProjectsOk() ([]UserProjectMembership, bool) {
+	if o == nil || o.Projects == nil {
 		return nil, false
 	}
-	return o.Teams, true
+	return o.Projects, true
 }
 
-// HasTeams returns a boolean if a field has been set.
-func (o *User) HasTeams() bool {
-	if o != nil && o.Teams != nil {
+// HasProjects returns a boolean if a field has been set.
+func (o *User) HasProjects() bool {
+	if o != nil && o.Projects != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetTeams gets a reference to the given []UserTeamMembership and assigns it to the Teams field.
-func (o *User) SetTeams(v []UserTeamMembership) {
-	o.Teams = v
+// SetProjects gets a reference to the given []UserProjectMembership and assigns it to the Projects field.
+func (o *User) SetProjects(v []UserProjectMembership) {
+	o.Projects = v
 }
 
 func (o User) MarshalJSON() ([]byte, error) {
@@ -329,8 +329,8 @@ func (o User) MarshalJSON() ([]byte, error) {
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
 	}
-	if o.Teams != nil {
-		toSerialize["teams"] = o.Teams
+	if o.Projects != nil {
+		toSerialize["projects"] = o.Projects
 	}
 	return json.Marshal(toSerialize)
 }

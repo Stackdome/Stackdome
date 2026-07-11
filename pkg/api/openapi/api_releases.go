@@ -24,12 +24,12 @@ import (
 type ReleasesApiService service
 
 type ApiCancelReleaseRequest struct {
-	ctx        context.Context
-	ApiService *ReleasesApiService
-	orgId      string
-	teamName   string
-	id         string
-	releaseId  string
+	ctx         context.Context
+	ApiService  *ReleasesApiService
+	orgId       string
+	projectName string
+	id          string
+	releaseId   string
 }
 
 func (r ApiCancelReleaseRequest) Execute() (*http.Response, error) {
@@ -41,19 +41,19 @@ CancelRelease Cancel a pending or rendering release
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@param releaseId
 	@return ApiCancelReleaseRequest
 */
-func (a *ReleasesApiService) CancelRelease(ctx context.Context, orgId string, teamName string, id string, releaseId string) ApiCancelReleaseRequest {
+func (a *ReleasesApiService) CancelRelease(ctx context.Context, orgId string, projectName string, id string, releaseId string) ApiCancelReleaseRequest {
 	return ApiCancelReleaseRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
-		releaseId:  releaseId,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
+		releaseId:   releaseId,
 	}
 }
 
@@ -70,9 +70,9 @@ func (a *ReleasesApiService) CancelReleaseExecute(r ApiCancelReleaseRequest) (*h
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/cancel"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"release_id"+"}", url.PathEscape(parameterToString(r.releaseId, "")), -1)
 
@@ -129,7 +129,7 @@ type ApiCreateReleaseRequest struct {
 	ctx                  context.Context
 	ApiService           *ReleasesApiService
 	orgId                string
-	teamName             string
+	projectName          string
 	id                   string
 	createReleaseRequest *CreateReleaseRequest
 }
@@ -148,17 +148,17 @@ CreateRelease Create a new release (deploy)
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@return ApiCreateReleaseRequest
 */
-func (a *ReleasesApiService) CreateRelease(ctx context.Context, orgId string, teamName string, id string) ApiCreateReleaseRequest {
+func (a *ReleasesApiService) CreateRelease(ctx context.Context, orgId string, projectName string, id string) ApiCreateReleaseRequest {
 	return ApiCreateReleaseRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
 	}
 }
 
@@ -178,9 +178,9 @@ func (a *ReleasesApiService) CreateReleaseExecute(r ApiCreateReleaseRequest) (*S
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -244,12 +244,12 @@ func (a *ReleasesApiService) CreateReleaseExecute(r ApiCreateReleaseRequest) (*S
 }
 
 type ApiGetReleaseRequest struct {
-	ctx        context.Context
-	ApiService *ReleasesApiService
-	orgId      string
-	teamName   string
-	id         string
-	releaseId  string
+	ctx         context.Context
+	ApiService  *ReleasesApiService
+	orgId       string
+	projectName string
+	id          string
+	releaseId   string
 }
 
 func (r ApiGetReleaseRequest) Execute() (*StackReleaseDetail, *http.Response, error) {
@@ -261,19 +261,19 @@ GetRelease Get a release by ID
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@param releaseId
 	@return ApiGetReleaseRequest
 */
-func (a *ReleasesApiService) GetRelease(ctx context.Context, orgId string, teamName string, id string, releaseId string) ApiGetReleaseRequest {
+func (a *ReleasesApiService) GetRelease(ctx context.Context, orgId string, projectName string, id string, releaseId string) ApiGetReleaseRequest {
 	return ApiGetReleaseRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
-		releaseId:  releaseId,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
+		releaseId:   releaseId,
 	}
 }
 
@@ -293,9 +293,9 @@ func (a *ReleasesApiService) GetReleaseExecute(r ApiGetReleaseRequest) (*StackRe
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"release_id"+"}", url.PathEscape(parameterToString(r.releaseId, "")), -1)
 
@@ -361,7 +361,7 @@ type ApiListReleaseEventsRequest struct {
 	ctx           context.Context
 	ApiService    *ReleasesApiService
 	orgId         string
-	teamName      string
+	projectName   string
 	id            string
 	releaseId     string
 	afterSequence *int32
@@ -387,19 +387,19 @@ ListReleaseEvents List release events ordered by sequence
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@param releaseId
 	@return ApiListReleaseEventsRequest
 */
-func (a *ReleasesApiService) ListReleaseEvents(ctx context.Context, orgId string, teamName string, id string, releaseId string) ApiListReleaseEventsRequest {
+func (a *ReleasesApiService) ListReleaseEvents(ctx context.Context, orgId string, projectName string, id string, releaseId string) ApiListReleaseEventsRequest {
 	return ApiListReleaseEventsRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
-		releaseId:  releaseId,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
+		releaseId:   releaseId,
 	}
 }
 
@@ -419,9 +419,9 @@ func (a *ReleasesApiService) ListReleaseEventsExecute(r ApiListReleaseEventsRequ
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"release_id"+"}", url.PathEscape(parameterToString(r.releaseId, "")), -1)
 
@@ -490,14 +490,14 @@ func (a *ReleasesApiService) ListReleaseEventsExecute(r ApiListReleaseEventsRequ
 }
 
 type ApiListReleasesRequest struct {
-	ctx        context.Context
-	ApiService *ReleasesApiService
-	orgId      string
-	teamName   string
-	id         string
-	state      *StackReleaseState
-	page       *int32
-	pageSize   *int32
+	ctx         context.Context
+	ApiService  *ReleasesApiService
+	orgId       string
+	projectName string
+	id          string
+	state       *StackReleaseState
+	page        *int32
+	pageSize    *int32
 }
 
 // Filter by release state
@@ -527,17 +527,17 @@ ListReleases List releases for a stack
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@return ApiListReleasesRequest
 */
-func (a *ReleasesApiService) ListReleases(ctx context.Context, orgId string, teamName string, id string) ApiListReleasesRequest {
+func (a *ReleasesApiService) ListReleases(ctx context.Context, orgId string, projectName string, id string) ApiListReleasesRequest {
 	return ApiListReleasesRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
 	}
 }
 
@@ -557,9 +557,9 @@ func (a *ReleasesApiService) ListReleasesExecute(r ApiListReleasesRequest) (*Sta
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -633,7 +633,7 @@ type ApiStreamReleaseEventsRequest struct {
 	ctx           context.Context
 	ApiService    *ReleasesApiService
 	orgId         string
-	teamName      string
+	projectName   string
 	id            string
 	releaseId     string
 	afterSequence *int32
@@ -653,19 +653,19 @@ StreamReleaseEvents Stream release events via Server-Sent Events
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@param releaseId
 	@return ApiStreamReleaseEventsRequest
 */
-func (a *ReleasesApiService) StreamReleaseEvents(ctx context.Context, orgId string, teamName string, id string, releaseId string) ApiStreamReleaseEventsRequest {
+func (a *ReleasesApiService) StreamReleaseEvents(ctx context.Context, orgId string, projectName string, id string, releaseId string) ApiStreamReleaseEventsRequest {
 	return ApiStreamReleaseEventsRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
-		releaseId:  releaseId,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
+		releaseId:   releaseId,
 	}
 }
 
@@ -685,9 +685,9 @@ func (a *ReleasesApiService) StreamReleaseEventsExecute(r ApiStreamReleaseEvents
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events/stream"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"release_id"+"}", url.PathEscape(parameterToString(r.releaseId, "")), -1)
 

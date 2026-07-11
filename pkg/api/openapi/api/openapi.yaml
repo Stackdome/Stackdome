@@ -129,15 +129,15 @@ paths:
       security:
       - Bearer: []
       summary: Get the current authenticated user
-  /api/v1/users/current/teams:
+  /api/v1/users/current/projects:
     get:
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamList'
-          description: Teams listed successfully
+                $ref: '#/components/schemas/ProjectList'
+          description: Projects listed successfully
         "401":
           description: Unauthorized
         "500":
@@ -148,7 +148,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List teams for the current authenticated user
+      summary: List projects for the current authenticated user
   /api/v1/auth/login:
     post:
       description: Authenticate user and generate an access token
@@ -488,8 +488,8 @@ paths:
       summary: List all users in an organization
   /api/v1/organizations/{org_id}/secrets:
     get:
-      description: Returns secrets from all teams the user belongs to. OrgAdmins see
-        all secrets in the org.
+      description: Returns secrets from all projects the user belongs to. OrgAdmins
+        see all secrets in the org.
       parameters:
       - description: The ID of the organization
         explode: false
@@ -524,7 +524,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all secrets the user has access to across all teams
+      summary: List all secrets the user has access to across all projects
   /api/v1/organizations/{org_id}/registry-credentials:
     get:
       parameters:
@@ -1265,7 +1265,7 @@ paths:
       summary: Verify a git integration against a repository
   /api/v1/organizations/{org_id}/object-stores:
     get:
-      description: Returns object stores from all teams the user belongs to. OrgAdmins
+      description: Returns object stores from all projects the user belongs to. OrgAdmins
         see all object stores in the org.
       parameters:
       - description: The ID of the organization
@@ -1293,11 +1293,11 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all object stores the user has access to across all teams
+      summary: List all object stores the user has access to across all projects
   /api/v1/organizations/{org_id}/stacks:
     get:
-      description: Returns stacks from all teams the user belongs to. OrgAdmins see
-        all stacks in the org.
+      description: Returns stacks from all projects the user belongs to. OrgAdmins
+        see all stacks in the org.
       parameters:
       - description: The ID of the organization
         explode: false
@@ -1324,7 +1324,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all stacks the user has access to across all teams
+      summary: List all stacks the user has access to across all projects
   /api/v1/organizations/{org_id}/clusters:
     get:
       parameters:
@@ -1617,7 +1617,7 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific image registry
-  /api/v1/organizations/{org_id}/teams:
+  /api/v1/organizations/{org_id}/projects:
     get:
       parameters:
       - description: The ID of the organization
@@ -1633,7 +1633,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamList'
+                $ref: '#/components/schemas/ProjectList'
           description: Successful operation
         "401":
           description: Unauthorized
@@ -1645,7 +1645,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all teams in an organization
+      summary: List all projects in an organization
     post:
       parameters:
       - description: The ID of the organization
@@ -1660,15 +1660,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TeamCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequest'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Team'
-          description: Team created successfully
+                $ref: '#/components/schemas/Project'
+          description: Project created successfully
         "400":
           content:
             application/json:
@@ -1687,8 +1687,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Create a new team
-  /api/v1/organizations/{org_id}/teams/{team_name}:
+      summary: Create a new project
+  /api/v1/organizations/{org_id}/projects/{project_name}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -1699,21 +1699,21 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
         style: simple
       responses:
         "204":
-          description: Team deleted successfully
+          description: Project deleted successfully
         "401":
           description: Unauthorized
         "404":
-          description: Team not found
+          description: Project not found
         "500":
           content:
             application/json:
@@ -1722,7 +1722,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Delete a team
+      summary: Delete a project
     get:
       parameters:
       - description: The ID of the organization
@@ -1733,10 +1733,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -1746,12 +1746,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Team'
+                $ref: '#/components/schemas/Project'
           description: Successful operation
         "401":
           description: Unauthorized
         "404":
-          description: Team not found
+          description: Project not found
         "500":
           content:
             application/json:
@@ -1760,7 +1760,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Get a specific team by name
+      summary: Get a specific project by name
     put:
       parameters:
       - description: The ID of the organization
@@ -1771,10 +1771,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -1783,15 +1783,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TeamUpdateRequest'
+              $ref: '#/components/schemas/ProjectUpdateRequest'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Team'
-          description: Team updated successfully
+                $ref: '#/components/schemas/Project'
+          description: Project updated successfully
         "400":
           content:
             application/json:
@@ -1801,7 +1801,7 @@ paths:
         "401":
           description: Unauthorized
         "404":
-          description: Team not found
+          description: Project not found
         "500":
           content:
             application/json:
@@ -1810,8 +1810,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a team
-  /api/v1/organizations/{org_id}/teams/{team_name}/members:
+      summary: Update a project
+  /api/v1/organizations/{org_id}/projects/{project_name}/members:
     get:
       parameters:
       - description: The ID of the organization
@@ -1822,10 +1822,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -1835,12 +1835,12 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamMembershipList'
+                $ref: '#/components/schemas/ProjectMembershipList'
           description: Successful operation
         "401":
           description: Unauthorized
         "404":
-          description: Team not found
+          description: Project not found
         "500":
           content:
             application/json:
@@ -1849,7 +1849,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List members of a team
+      summary: List members of a project
     post:
       parameters:
       - description: The ID of the organization
@@ -1860,10 +1860,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -1872,14 +1872,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AddTeamMemberRequest'
+              $ref: '#/components/schemas/AddProjectMemberRequest'
         required: true
       responses:
         "201":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamMembership'
+                $ref: '#/components/schemas/ProjectMembership'
           description: Member added successfully
         "400":
           content:
@@ -1890,7 +1890,7 @@ paths:
         "401":
           description: Unauthorized
         "404":
-          description: Team not found
+          description: Project not found
         "500":
           content:
             application/json:
@@ -1899,8 +1899,8 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Add a member to a team
-  /api/v1/organizations/{org_id}/teams/{team_name}/members/{id}:
+      summary: Add a member to a project
+  /api/v1/organizations/{org_id}/projects/{project_name}/members/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -1911,10 +1911,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -1942,7 +1942,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Remove a member from a team
+      summary: Remove a member from a project
     put:
       parameters:
       - description: The ID of the organization
@@ -1953,10 +1953,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -1973,14 +1973,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTeamMemberRoleRequest'
+              $ref: '#/components/schemas/UpdateProjectMemberRoleRequest'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamMembership'
+                $ref: '#/components/schemas/ProjectMembership'
           description: Member role updated successfully
         "400":
           content:
@@ -2000,22 +2000,22 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: Update a team member's role
-  /api/v1/team-roles:
+      summary: Update a project member's role
+  /api/v1/project-roles:
     get:
-      description: Returns the list of roles that can be assigned to team members.
+      description: Returns the list of roles that can be assigned to project members.
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamRoleList'
-          description: List of available team roles
+                $ref: '#/components/schemas/ProjectRoleList'
+          description: List of available project roles
         "401":
           description: Unauthorized
       security:
       - Bearer: []
-      summary: List available team membership roles
+      summary: List available project membership roles
   /api/v1/organizations/{org_id}/admins:
     get:
       parameters:
@@ -2085,7 +2085,7 @@ paths:
       summary: Promote a user to organization admin
   /api/v1/organizations/{org_id}/admins/{user_id}/demote:
     post:
-      description: Demotes an OrgAdmin and places them in the specified team with
+      description: Demotes an OrgAdmin and places them in the specified project with
         the given role (defaults to Viewer).
       parameters:
       - description: The ID of the organization
@@ -2130,7 +2130,7 @@ paths:
       security:
       - Bearer: []
       summary: Demote an organization admin
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks:
     get:
       parameters:
       - description: The ID of the organization
@@ -2141,10 +2141,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2182,7 +2182,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all stacks for a team
+      summary: List all stacks for a project
     post:
       description: "Creates a thin stack shell (name, labels, annotations, settings).\
         \ Any inline\n`stack_resources`, `volumes`, or `connections` in the body are\
@@ -2197,10 +2197,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2241,7 +2241,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a new stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -2252,10 +2252,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2296,10 +2296,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2344,10 +2344,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2390,11 +2390,11 @@ paths:
       security:
       - Bearer: []
       summary: Update a stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/apply:
     put:
       description: "Name-addressed declarative whole-document apply. Stack identity\
-        \ is the\n`name` in the request body (unique per team). If a stack with that\
-        \ name\nexists in the team it is reconciled exactly like the id-addressed\
+        \ is the\n`name` in the request body (unique per project). If a stack with\
+        \ that name\nexists in the project it is reconciled exactly like the id-addressed\
         \ apply\n(resources and connections not present in the body are deleted, volumes\n\
         are add-only); otherwise the stack and its children are created\natomically\
         \ after full validation. Idempotent — clients need not know\nwhether the stack\
@@ -2409,10 +2409,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2454,7 +2454,7 @@ paths:
       security:
       - Bearer: []
       summary: Apply a full stack document by name (declarative upsert)
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/apply:
     put:
       description: "Declarative whole-document apply. Reconciles the stack against\
         \ the supplied\ndocument: resources and connections not present in the body\
@@ -2470,10 +2470,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2517,7 +2517,7 @@ paths:
       security:
       - Bearer: []
       summary: Apply a full stack document (declarative reconcile)
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/logs:
     get:
       parameters:
       - description: The ID of the organization
@@ -2528,10 +2528,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2586,7 +2586,7 @@ paths:
       security:
       - Bearer: []
       summary: Get logs for a stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/metrics:
     get:
       description: "Returns metrics for a stack. If `stream=true` is passed, the server\
         \ responds using Server-Sent Events (SSE).\n"
@@ -2599,10 +2599,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2647,7 +2647,7 @@ paths:
       security:
       - Bearer: []
       summary: Get metrics for a stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources:
     get:
       parameters:
       - description: The ID of the organization
@@ -2658,10 +2658,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2703,10 +2703,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2758,7 +2758,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a stack resource
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}:
     delete:
       operationId: deleteStackResource
       parameters:
@@ -2770,10 +2770,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2820,10 +2820,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2873,10 +2873,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -2930,7 +2930,7 @@ paths:
       security:
       - Bearer: []
       summary: Update a stack resource
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/logs:
     get:
       parameters:
       - description: The ID of the organization
@@ -2941,10 +2941,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3007,7 +3007,7 @@ paths:
       security:
       - Bearer: []
       summary: Get logs for a stack resource
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/metrics:
     get:
       description: "Returns metrics for a stack resource. If `stream=true` is passed,\
         \ the server responds using Server-Sent Events (SSE).\n"
@@ -3020,10 +3020,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3077,7 +3077,7 @@ paths:
       security:
       - Bearer: []
       summary: Get metrics for a stack resource
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/builds:
     get:
       parameters:
       - description: The ID of the organization
@@ -3088,10 +3088,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3130,7 +3130,7 @@ paths:
       security:
       - Bearer: []
       summary: List all builds for a stack resource
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/actions/restart:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/actions/restart:
     post:
       description: Triggers a rolling restart of the stack resource by setting a new
         restart request timestamp.
@@ -3143,10 +3143,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3189,7 +3189,7 @@ paths:
       security:
       - Bearer: []
       summary: Restart a stack resource
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds:
     get:
       parameters:
       - description: The ID of the organization
@@ -3200,10 +3200,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3234,7 +3234,7 @@ paths:
       security:
       - Bearer: []
       summary: List all builds under a stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}:
     get:
       parameters:
       - description: The ID of the organization
@@ -3245,10 +3245,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3289,7 +3289,7 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific build under a stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology:
     get:
       parameters:
       - description: The ID of the organization
@@ -3300,10 +3300,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3336,7 +3336,7 @@ paths:
       security:
       - Bearer: []
       summary: Get stack topology
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections:
     get:
       parameters:
       - description: The ID of the organization
@@ -3347,10 +3347,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3393,10 +3393,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3447,7 +3447,7 @@ paths:
       security:
       - Bearer: []
       summary: Create stack connection
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -3458,10 +3458,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3508,10 +3508,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3564,7 +3564,7 @@ paths:
       security:
       - Bearer: []
       summary: Update stack connection
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/volumes:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes:
     post:
       parameters:
       - description: The ID of the organization
@@ -3575,10 +3575,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3623,7 +3623,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a volume and associate it with the stack
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases:
     get:
       operationId: listReleases
       parameters:
@@ -3635,10 +3635,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3700,10 +3700,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3733,7 +3733,7 @@ paths:
       summary: Create a new release (deploy)
       tags:
       - Releases
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}:
     get:
       operationId: getRelease
       parameters:
@@ -3745,10 +3745,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3780,7 +3780,7 @@ paths:
       summary: Get a release by ID
       tags:
       - Releases
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/cancel:
     post:
       operationId: cancelRelease
       parameters:
@@ -3792,10 +3792,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3823,7 +3823,7 @@ paths:
       summary: Cancel a pending or rendering release
       tags:
       - Releases
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events:
     get:
       operationId: listReleaseEvents
       parameters:
@@ -3835,10 +3835,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3887,7 +3887,7 @@ paths:
       summary: List release events ordered by sequence
       tags:
       - Releases
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events/stream:
     get:
       operationId: streamReleaseEvents
       parameters:
@@ -3899,10 +3899,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3944,7 +3944,7 @@ paths:
       summary: Stream release events via Server-Sent Events
       tags:
       - Releases
-  /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
+  /api/v1/organizations/{org_id}/projects/{project_name}/secrets:
     get:
       parameters:
       - description: The ID of the organization
@@ -3955,10 +3955,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -3986,7 +3986,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all secrets for a team
+      summary: List all secrets for a project
     post:
       parameters:
       - description: The ID of the organization
@@ -3997,10 +3997,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4029,7 +4029,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a new secret
-  /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -4040,10 +4040,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4086,10 +4086,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4130,10 +4130,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4172,7 +4172,7 @@ paths:
       security:
       - Bearer: []
       summary: Update a secret
-  /api/v1/organizations/{org_id}/teams/{team_name}/volumes:
+  /api/v1/organizations/{org_id}/projects/{project_name}/volumes:
     post:
       parameters:
       - description: The ID of the organization
@@ -4183,10 +4183,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4215,7 +4215,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a new volume
-  /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -4226,10 +4226,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4272,10 +4272,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4304,7 +4304,7 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific volume
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres:
     get:
       parameters:
       - description: The ID of the organization
@@ -4315,10 +4315,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4342,7 +4342,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all PostgresAddons for a team
+      summary: List all PostgresAddons for a project
     post:
       description: Create a new PostgreSQL database cluster addon
       parameters:
@@ -4354,10 +4354,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4400,7 +4400,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a new PostgresAddon
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -4411,10 +4411,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4465,10 +4465,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4513,10 +4513,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4563,7 +4563,7 @@ paths:
       security:
       - Bearer: []
       summary: Update a PostgresAddon
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/backup:
     post:
       parameters:
       - description: The ID of the organization
@@ -4574,10 +4574,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4594,13 +4594,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_request'
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_backup_post_request'
       responses:
         "202":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_202_response'
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_backup_post_202_response'
           description: Backup request accepted
         "401":
           description: Unauthorized
@@ -4623,7 +4623,7 @@ paths:
       security:
       - Bearer: []
       summary: Trigger an immediate backup
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/fence:
     post:
       parameters:
       - description: The ID of the organization
@@ -4634,10 +4634,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4654,14 +4654,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_request'
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_fence_post_request'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_200_response'
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_fence_post_200_response'
           description: Fencing operation successful
         "401":
           description: Unauthorized
@@ -4678,7 +4678,7 @@ paths:
       security:
       - Bearer: []
       summary: Fence or unfence the PostgreSQL cluster
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/hibernate:
     post:
       parameters:
       - description: The ID of the organization
@@ -4689,10 +4689,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4709,14 +4709,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_request'
+              $ref: '#/components/schemas/_api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_hibernate_post_request'
         required: true
       responses:
         "200":
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/_api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_200_response'
+                $ref: '#/components/schemas/_api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_hibernate_post_200_response'
           description: Hibernation operation successful
         "401":
           description: Unauthorized
@@ -4733,7 +4733,7 @@ paths:
       security:
       - Bearer: []
       summary: Hibernate or wake the PostgreSQL cluster
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/backups:
     get:
       parameters:
       - description: The ID of the organization
@@ -4744,10 +4744,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4796,7 +4796,7 @@ paths:
       security:
       - Bearer: []
       summary: List backups for a PostgresAddon
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/credentials/{database}:
     get:
       parameters:
       - description: The ID of the organization
@@ -4807,10 +4807,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4874,7 +4874,7 @@ paths:
       security:
       - Bearer: []
       summary: Get JIT credentials for a PostgresAddon database
-  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores:
+  /api/v1/organizations/{org_id}/projects/{project_name}/object-stores:
     get:
       parameters:
       - description: The ID of the organization
@@ -4885,10 +4885,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4910,7 +4910,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List all ObjectStores for a team
+      summary: List all ObjectStores for a project
     post:
       description: Add a new ObjectStore configuration for storing PostgreSQL backups
         and WAL files
@@ -4923,10 +4923,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -4969,7 +4969,7 @@ paths:
       security:
       - Bearer: []
       summary: Add a new ObjectStore for backup storage
-  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/object-stores/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -4980,10 +4980,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5028,10 +5028,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5074,10 +5074,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5122,7 +5122,7 @@ paths:
       security:
       - Bearer: []
       summary: Update an ObjectStore
-  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users:
+  /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users:
     post:
       parameters:
       - description: The ID of the organization
@@ -5133,10 +5133,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5163,7 +5163,7 @@ paths:
       security:
       - Bearer: []
       summary: Create a new workspace user
-  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current:
+  /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/current:
     get:
       parameters:
       - description: The ID of the organization
@@ -5174,10 +5174,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5198,7 +5198,7 @@ paths:
       security:
       - Bearer: []
       summary: Get the workspace user for the current user
-  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id}:
     delete:
       parameters:
       - description: The ID of the organization
@@ -5209,10 +5209,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5247,10 +5247,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5289,10 +5289,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5527,7 +5527,7 @@ paths:
         "410":
           description: Invite expired or revoked
       summary: Get public invite info (unauthenticated)
-  /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs:
     get:
       operationId: listPreviewConfigs
       parameters:
@@ -5539,10 +5539,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5584,7 +5584,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List preview configs for a team
+      summary: List preview configs for a project
       tags:
       - Preview Configs
     post:
@@ -5598,10 +5598,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5646,7 +5646,7 @@ paths:
       summary: Create a new preview config
       tags:
       - Preview Configs
-  /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}:
     delete:
       operationId: deletePreviewConfig
       parameters:
@@ -5658,10 +5658,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5705,10 +5705,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5756,10 +5756,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5808,7 +5808,7 @@ paths:
       summary: Update a preview config
       tags:
       - Preview Configs
-  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks:
+  /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks:
     get:
       operationId: listPreviewStacks
       parameters:
@@ -5820,10 +5820,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5873,7 +5873,7 @@ paths:
           description: Internal server error
       security:
       - Bearer: []
-      summary: List preview stacks for a team
+      summary: List preview stacks for a project
       tags:
       - Preview Stacks
     post:
@@ -5887,10 +5887,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5935,7 +5935,7 @@ paths:
       summary: Create a new preview stack
       tags:
       - Preview Stacks
-  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}:
     delete:
       operationId: deletePreviewStack
       parameters:
@@ -5947,10 +5947,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -5998,10 +5998,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -6038,7 +6038,7 @@ paths:
       summary: Get a specific preview stack
       tags:
       - Preview Stacks
-  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync:
+  /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}/sync:
     post:
       operationId: syncPreviewStack
       parameters:
@@ -6050,10 +6050,10 @@ paths:
         schema:
           type: string
         style: simple
-      - description: The name of the team
+      - description: The name of the project
         explode: false
         in: path
-        name: team_name
+        name: project_name
         required: true
         schema:
           type: string
@@ -6130,11 +6130,11 @@ components:
       schema:
         type: string
       style: simple
-    team_name:
-      description: The name of the team
+    project_name:
+      description: The name of the project
       explode: false
       in: path
-      name: team_name
+      name: project_name
       required: true
       schema:
         type: string
@@ -6242,15 +6242,15 @@ components:
         user:
           organisation_id: organisation_id
           role: null
-          teams:
+          projects:
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           name: name
           organisation: organisation
           id: id
@@ -6270,15 +6270,15 @@ components:
       example:
         organisation_id: organisation_id
         role: null
-        teams:
+        projects:
         - role: Developer
-          default_team: true
-          team_id: team_id
-          team_name: team_name
+          project_id: project_id
+          default_project: true
+          project_name: project_name
         - role: Developer
-          default_team: true
-          team_id: team_id
-          team_name: team_name
+          project_id: project_id
+          default_project: true
+          project_name: project_name
         name: name
         organisation: organisation
         id: id
@@ -6306,30 +6306,30 @@ components:
         organisation_id:
           description: OrganisationID
           type: string
-        teams:
-          description: Teams the user belongs to (included in login/signup/current-user
+        projects:
+          description: Projects the user belongs to (included in login/signup/current-user
             responses)
           items:
-            $ref: '#/components/schemas/UserTeamMembership'
+            $ref: '#/components/schemas/UserProjectMembership'
           type: array
       type: object
-    UserTeamMembership:
+    UserProjectMembership:
       example:
         role: Developer
-        default_team: true
-        team_id: team_id
-        team_name: team_name
+        project_id: project_id
+        default_project: true
+        project_name: project_name
       properties:
-        team_id:
+        project_id:
           type: string
-        team_name:
+        project_name:
           type: string
         role:
           enum:
           - Developer
           - Viewer
           type: string
-        default_team:
+        default_project:
           type: boolean
       type: object
     UserList:
@@ -6340,15 +6340,15 @@ components:
         items:
         - organisation_id: organisation_id
           role: null
-          teams:
+          projects:
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           name: name
           organisation: organisation
           id: id
@@ -6356,15 +6356,15 @@ components:
           username: username
         - organisation_id: organisation_id
           role: null
-          teams:
+          projects:
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           name: name
           organisation: organisation
           id: id
@@ -6476,15 +6476,15 @@ components:
         user:
           organisation_id: organisation_id
           role: null
-          teams:
+          projects:
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           name: name
           organisation: organisation
           id: id
@@ -6505,11 +6505,11 @@ components:
           description: Token expiration time in seconds
           type: integer
       type: object
-    Team:
+    Project:
       example:
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
-        default_team: true
+        default_project: true
         name: name
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
@@ -6522,7 +6522,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        default_team:
+        default_project:
           readOnly: true
           type: boolean
         created_at:
@@ -6536,56 +6536,56 @@ components:
       required:
       - name
       type: object
-    TeamList:
+    ProjectList:
       example:
         total: 0
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
-          default_team: true
+          default_project: true
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
-          default_team: true
+          default_project: true
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
       properties:
         items:
           items:
-            $ref: '#/components/schemas/Team'
+            $ref: '#/components/schemas/Project'
           type: array
         total:
           type: integer
       type: object
-    TeamMembership:
+    ProjectMembership:
       example:
         role: Developer
+        project_id: project_id
         user_id: user_id
-        created_at: 2000-01-23T04:56:07.000+00:00
-        id: id
-        team_id: team_id
-        team:
+        project:
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
-          default_team: true
+          default_project: true
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
+        created_at: 2000-01-23T04:56:07.000+00:00
+        id: id
         user:
           organisation_id: organisation_id
           role: null
-          teams:
+          projects:
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           - role: Developer
-            default_team: true
-            team_id: team_id
-            team_name: team_name
+            project_id: project_id
+            default_project: true
+            project_name: project_name
           name: name
           organisation: organisation
           id: id
@@ -6595,7 +6595,7 @@ components:
         id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           type: string
         user_id:
           type: string
@@ -6604,8 +6604,8 @@ components:
           - Developer
           - Viewer
           type: string
-        team:
-          $ref: '#/components/schemas/Team'
+        project:
+          $ref: '#/components/schemas/Project'
         user:
           $ref: '#/components/schemas/User'
         created_at:
@@ -6613,67 +6613,67 @@ components:
           readOnly: true
           type: string
       required:
+      - project_id
       - role
-      - team_id
       - user_id
       type: object
-    TeamMembershipList:
+    ProjectMembershipList:
       example:
         total: 0
         items:
         - role: Developer
+          project_id: project_id
           user_id: user_id
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          team_id: team_id
-          team:
+          project:
             organisation_id: organisation_id
             updated_at: 2000-01-23T04:56:07.000+00:00
-            default_team: true
+            default_project: true
             name: name
             created_at: 2000-01-23T04:56:07.000+00:00
             id: id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
           user:
             organisation_id: organisation_id
             role: null
-            teams:
+            projects:
             - role: Developer
-              default_team: true
-              team_id: team_id
-              team_name: team_name
+              project_id: project_id
+              default_project: true
+              project_name: project_name
             - role: Developer
-              default_team: true
-              team_id: team_id
-              team_name: team_name
+              project_id: project_id
+              default_project: true
+              project_name: project_name
             name: name
             organisation: organisation
             id: id
             email: email
             username: username
         - role: Developer
+          project_id: project_id
           user_id: user_id
-          created_at: 2000-01-23T04:56:07.000+00:00
-          id: id
-          team_id: team_id
-          team:
+          project:
             organisation_id: organisation_id
             updated_at: 2000-01-23T04:56:07.000+00:00
-            default_team: true
+            default_project: true
             name: name
             created_at: 2000-01-23T04:56:07.000+00:00
             id: id
+          created_at: 2000-01-23T04:56:07.000+00:00
+          id: id
           user:
             organisation_id: organisation_id
             role: null
-            teams:
+            projects:
             - role: Developer
-              default_team: true
-              team_id: team_id
-              team_name: team_name
+              project_id: project_id
+              default_project: true
+              project_name: project_name
             - role: Developer
-              default_team: true
-              team_id: team_id
-              team_name: team_name
+              project_id: project_id
+              default_project: true
+              project_name: project_name
             name: name
             organisation: organisation
             id: id
@@ -6682,32 +6682,32 @@ components:
       properties:
         items:
           items:
-            $ref: '#/components/schemas/TeamMembership'
+            $ref: '#/components/schemas/ProjectMembership'
           type: array
         total:
           type: integer
       type: object
-    TeamCreateRequest:
+    ProjectCreateRequest:
       example:
         name: name
       properties:
         name:
-          description: Team name
+          description: Project name
           type: string
       required:
       - name
       type: object
-    TeamUpdateRequest:
+    ProjectUpdateRequest:
       example:
         name: name
       properties:
         name:
-          description: Updated team name
+          description: Updated project name
           type: string
       required:
       - name
       type: object
-    AddTeamMemberRequest:
+    AddProjectMemberRequest:
       example:
         role: null
         user_id: user_id
@@ -6716,27 +6716,27 @@ components:
           description: The ID of the user to add
           type: string
         role:
-          $ref: '#/components/schemas/TeamRole'
+          $ref: '#/components/schemas/ProjectRole'
       required:
       - role
       - user_id
       type: object
-    UpdateTeamMemberRoleRequest:
+    UpdateProjectMemberRoleRequest:
       example:
         role: null
       properties:
         role:
-          $ref: '#/components/schemas/TeamRole'
+          $ref: '#/components/schemas/ProjectRole'
       required:
       - role
       type: object
-    TeamRole:
-      description: A role that can be assigned to a team member
+    ProjectRole:
+      description: A role that can be assigned to a project member
       enum:
       - Developer
       - Viewer
       type: string
-    TeamRoleList:
+    ProjectRoleList:
       example:
         roles:
         - null
@@ -6744,23 +6744,23 @@ components:
       properties:
         roles:
           items:
-            $ref: '#/components/schemas/TeamRole'
+            $ref: '#/components/schemas/ProjectRole'
           type: array
       type: object
     DemoteAdminRequest:
       example:
         role: ""
-        team_name: team_name
+        project_name: project_name
       properties:
-        team_name:
-          description: The name of the team to place the demoted user in
+        project_name:
+          description: The name of the project to place the demoted user in
           type: string
         role:
           allOf:
-          - $ref: '#/components/schemas/TeamRole'
-          description: The team role to assign (defaults to Viewer)
+          - $ref: '#/components/schemas/ProjectRole'
+          description: The project role to assign (defaults to Viewer)
       required:
-      - team_name
+      - project_name
       type: object
     PromoteAdminRequest:
       example:
@@ -6776,10 +6776,10 @@ components:
       example:
         updated_at: 2000-01-23T04:56:07.000+00:00
         user_id: user_id
+        project_id: project_id
         org_id: org_id
         created_at: 2000-01-23T04:56:07.000+00:00
         id: 046b6c7f-0b8a-43b9-b35d-6489e6daee91
-        team_id: team_id
         workspaces:
         - workspaces
         - workspaces
@@ -6818,7 +6818,7 @@ components:
           type: string
         org_id:
           type: string
-        team_id:
+        project_id:
           type: string
         workspaces:
           items:
@@ -7034,6 +7034,7 @@ components:
     Volume:
       additionalProperties: false
       example:
+        project_id: project_id
         name: name
         annotations:
         - value: value
@@ -7041,7 +7042,6 @@ components:
         - value: value
           key: key
         id: id
-        team_id: team_id
         spec:
           needs_sync_before_use: true
           storage_class: storage_class
@@ -7098,7 +7098,7 @@ components:
         id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         name:
@@ -7357,7 +7357,6 @@ components:
           state: null
           message: message
         created_at: 2000-01-23T04:56:07.000+00:00
-        team_id: team_id
         spec:
           stack_resources:
           - outputs:
@@ -7547,14 +7546,14 @@ components:
               restart_request_time: 2000-01-23T04:56:07.000+00:00
             id: id
           volumes:
-          - name: name
+          - project_id: project_id
+            name: name
             annotations:
             - value: value
               key: key
             - value: value
               key: key
             id: id
-            team_id: team_id
             spec:
               needs_sync_before_use: true
               storage_class: storage_class
@@ -7607,14 +7606,14 @@ components:
                 message: message
                 observed_generation: 1
                 status: status
-          - name: name
+          - project_id: project_id
+            name: name
             annotations:
             - value: value
               key: key
             - value: value
               key: key
             id: id
-            team_id: team_id
             spec:
               needs_sync_before_use: true
               storage_class: storage_class
@@ -7749,6 +7748,7 @@ components:
         lifecycle: null
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
+        project_id: project_id
         user_id: user_id
         name: name
         namespace: namespace
@@ -7760,7 +7760,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         user_id:
@@ -7846,7 +7846,6 @@ components:
             state: null
             message: message
           created_at: 2000-01-23T04:56:07.000+00:00
-          team_id: team_id
           spec:
             stack_resources:
             - outputs:
@@ -8036,14 +8035,14 @@ components:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
               id: id
             volumes:
-            - name: name
+            - project_id: project_id
+              name: name
               annotations:
               - value: value
                 key: key
               - value: value
                 key: key
               id: id
-              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -8096,14 +8095,14 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
-            - name: name
+            - project_id: project_id
+              name: name
               annotations:
               - value: value
                 key: key
               - value: value
                 key: key
               id: id
-              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -8238,6 +8237,7 @@ components:
           lifecycle: null
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           name: name
           namespace: namespace
@@ -8260,7 +8260,6 @@ components:
             state: null
             message: message
           created_at: 2000-01-23T04:56:07.000+00:00
-          team_id: team_id
           spec:
             stack_resources:
             - outputs:
@@ -8450,14 +8449,14 @@ components:
                 restart_request_time: 2000-01-23T04:56:07.000+00:00
               id: id
             volumes:
-            - name: name
+            - project_id: project_id
+              name: name
               annotations:
               - value: value
                 key: key
               - value: value
                 key: key
               id: id
-              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -8510,14 +8509,14 @@ components:
                   message: message
                   observed_generation: 1
                   status: status
-            - name: name
+            - project_id: project_id
+              name: name
               annotations:
               - value: value
                 key: key
               - value: value
                 key: key
               id: id
-              team_id: team_id
               spec:
                 needs_sync_before_use: true
                 storage_class: storage_class
@@ -8652,6 +8651,7 @@ components:
           lifecycle: null
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           name: name
           namespace: namespace
@@ -8930,14 +8930,14 @@ components:
             restart_request_time: 2000-01-23T04:56:07.000+00:00
           id: id
         volumes:
-        - name: name
+        - project_id: project_id
+          name: name
           annotations:
           - value: value
             key: key
           - value: value
             key: key
           id: id
-          team_id: team_id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -8990,14 +8990,14 @@ components:
               message: message
               observed_generation: 1
               status: status
-        - name: name
+        - project_id: project_id
+          name: name
           annotations:
           - value: value
             key: key
           - value: value
             key: key
           id: id
-          team_id: team_id
           spec:
             needs_sync_before_use: true
             storage_class: storage_class
@@ -10223,11 +10223,11 @@ components:
         - value: value
           key: key
         updated_at: 2000-01-23T04:56:07.000+00:00
+        project_id: project_id
         name: name
         description: description
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
-        team_id: team_id
         type: null
       properties:
         id:
@@ -10240,7 +10240,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         type:
@@ -10285,11 +10285,11 @@ components:
           - value: value
             key: key
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           name: name
           description: description
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          team_id: team_id
           type: null
         - outputs:
           - name: name
@@ -10305,11 +10305,11 @@ components:
           - value: value
             key: key
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           name: name
           description: description
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          team_id: team_id
           type: null
       properties:
         items:
@@ -11537,10 +11537,10 @@ components:
       example:
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
+        project_id: project_id
         name: name
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
-        team_id: team_id
         spec:
           destination_path: destination_path
           retention_policy: 7d
@@ -11573,7 +11573,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         name:
@@ -11601,10 +11601,10 @@ components:
         items:
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          team_id: team_id
           spec:
             destination_path: destination_path
             retention_policy: 7d
@@ -11632,10 +11632,10 @@ components:
             message: message
         - organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           name: name
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          team_id: team_id
           spec:
             destination_path: destination_path
             retention_policy: 7d
@@ -11843,7 +11843,6 @@ components:
         - value: value
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
-        team_id: team_id
         spec:
           databases:
           - extensions:
@@ -11923,6 +11922,7 @@ components:
         organisation_id: organisation_id
         cluster_id: cluster_id
         updated_at: 2000-01-23T04:56:07.000+00:00
+        project_id: project_id
         user_id: user_id
         name: name
         namespace: namespace
@@ -11968,7 +11968,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         user_id:
@@ -12032,7 +12032,6 @@ components:
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          team_id: team_id
           spec:
             databases:
             - extensions:
@@ -12112,6 +12111,7 @@ components:
           organisation_id: organisation_id
           cluster_id: cluster_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           name: name
           namespace: namespace
@@ -12163,7 +12163,6 @@ components:
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          team_id: team_id
           spec:
             databases:
             - extensions:
@@ -12243,6 +12242,7 @@ components:
           organisation_id: organisation_id
           cluster_id: cluster_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           name: name
           namespace: namespace
@@ -12999,9 +12999,9 @@ components:
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
         invited_by: invited_by
+        project_name: project_name
         accepted_at: 2000-01-23T04:56:07.000+00:00
         email: email
-        team_name: team_name
         email_error: email_error
         status: null
       properties:
@@ -13013,7 +13013,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_name:
+        project_name:
           type: string
         role:
           enum:
@@ -13043,13 +13043,13 @@ components:
       example:
         role: Developer
         expires_in_days: 3
+        project_name: project_name
         email: email
-        team_name: team_name
       properties:
         email:
           format: email
           type: string
-        team_name:
+        project_name:
           type: string
         role:
           enum:
@@ -13063,8 +13063,8 @@ components:
       required:
       - email
       - expires_in_days
+      - project_name
       - role
-      - team_name
       type: object
     OrgInviteCreateResponse:
       example:
@@ -13075,9 +13075,9 @@ components:
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
         invited_by: invited_by
+        project_name: project_name
         invite_token: invite_token
         email: email
-        team_name: team_name
         status: null
       properties:
         id:
@@ -13086,7 +13086,7 @@ components:
           type: string
         organisation_id:
           type: string
-        team_name:
+        project_name:
           type: string
         role:
           type: string
@@ -13117,9 +13117,9 @@ components:
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
           invited_by: invited_by
+          project_name: project_name
           accepted_at: 2000-01-23T04:56:07.000+00:00
           email: email
-          team_name: team_name
           email_error: email_error
           status: null
         - organisation_id: organisation_id
@@ -13129,9 +13129,9 @@ components:
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
           invited_by: invited_by
+          project_name: project_name
           accepted_at: 2000-01-23T04:56:07.000+00:00
           email: email
-          team_name: team_name
           email_error: email_error
           status: null
       properties:
@@ -13147,11 +13147,11 @@ components:
         inviter_name: inviter_name
         expires_at: 2000-01-23T04:56:07.000+00:00
         org_name: org_name
-        team_name: team_name
+        project_name: project_name
       properties:
         org_name:
           type: string
-        team_name:
+        project_name:
           type: string
         inviter_name:
           type: string
@@ -14062,7 +14062,6 @@ components:
           repo_url: repo_url
           base_branch: base_branch
           integration_id: integration_id
-        team_id: team_id
         labels:
         - value: value
           key: key
@@ -14070,6 +14069,7 @@ components:
           key: key
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
+        project_id: project_id
         user_id: user_id
         name: name
         id: id
@@ -14082,7 +14082,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         user_id:
@@ -14212,7 +14212,6 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
-          team_id: team_id
           labels:
           - value: value
             key: key
@@ -14220,6 +14219,7 @@ components:
             key: key
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           name: name
           id: id
@@ -14236,7 +14236,6 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
-          team_id: team_id
           labels:
           - value: value
             key: key
@@ -14244,6 +14243,7 @@ components:
             key: key
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           name: name
           id: id
@@ -14277,7 +14277,6 @@ components:
         - value: value
           key: key
         created_at: 2000-01-23T04:56:07.000+00:00
-        team_id: team_id
         source: manual
         deletion_timestamp: 2000-01-23T04:56:07.000+00:00
         branch: branch
@@ -14288,6 +14287,7 @@ components:
           key: key
         organisation_id: organisation_id
         updated_at: 2000-01-23T04:56:07.000+00:00
+        project_id: project_id
         user_id: user_id
         config_id: config_id
         stack_id: stack_id
@@ -14314,7 +14314,7 @@ components:
         organisation_id:
           readOnly: true
           type: string
-        team_id:
+        project_id:
           readOnly: true
           type: string
         user_id:
@@ -14425,7 +14425,6 @@ components:
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          team_id: team_id
           source: manual
           deletion_timestamp: 2000-01-23T04:56:07.000+00:00
           branch: branch
@@ -14436,6 +14435,7 @@ components:
             key: key
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           config_id: config_id
           stack_id: stack_id
@@ -14462,7 +14462,6 @@ components:
           - value: value
             key: key
           created_at: 2000-01-23T04:56:07.000+00:00
-          team_id: team_id
           source: manual
           deletion_timestamp: 2000-01-23T04:56:07.000+00:00
           branch: branch
@@ -14473,6 +14472,7 @@ components:
             key: key
           organisation_id: organisation_id
           updated_at: 2000-01-23T04:56:07.000+00:00
+          project_id: project_id
           user_id: user_id
           config_id: config_id
           stack_id: stack_id
@@ -14511,13 +14511,13 @@ components:
           description: Total number of pages
           type: integer
       type: object
-    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_request:
+    _api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_backup_post_request:
       properties:
         description:
           description: Optional description for this backup
           type: string
       type: object
-    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_backup_post_202_response:
+    _api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_backup_post_202_response:
       example:
         backup_id: backup_id
         message: message
@@ -14527,7 +14527,7 @@ components:
         backup_id:
           type: string
       type: object
-    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_request:
+    _api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_fence_post_request:
       properties:
         fence:
           description: "true to fence the cluster, false to unfence"
@@ -14538,7 +14538,7 @@ components:
       required:
       - fence
       type: object
-    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_fence_post_200_response:
+    _api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_fence_post_200_response:
       example:
         fenced: true
         message: message
@@ -14548,7 +14548,7 @@ components:
         fenced:
           type: boolean
       type: object
-    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_request:
+    _api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_hibernate_post_request:
       properties:
         hibernate:
           description: "true to hibernate, false to wake"
@@ -14556,7 +14556,7 @@ components:
       required:
       - hibernate
       type: object
-    _api_v1_organizations__org_id__teams__team_name__addons_postgres__id__actions_hibernate_post_200_response:
+    _api_v1_organizations__org_id__projects__project_name__addons_postgres__id__actions_hibernate_post_200_response:
       example:
         hibernated: true
         message: message
@@ -14824,7 +14824,7 @@ components:
           type: string
         organisation_id:
           type: string
-        team_id:
+        project_id:
           type: string
         cluster_id:
           type: string

@@ -119,18 +119,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/users/current/teams:
+  /api/v1/users/current/projects:
     get:
       security:
         - Bearer: []
-      summary: List teams for the current authenticated user
+      summary: List projects for the current authenticated user
       responses:
         '200':
-          description: Teams listed successfully
+          description: Projects listed successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamList'
+                $ref: '#/components/schemas/ProjectList'
         '401':
           description: Unauthorized
         '500':
@@ -433,11 +433,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Org-scoped secret listing (cross-team)
+  # Org-scoped secret listing (cross-project)
   /api/v1/organizations/{org_id}/secrets:
     get:
-      summary: List all secrets the user has access to across all teams
-      description: Returns secrets from all teams the user belongs to. OrgAdmins see all secrets in the org.
+      summary: List all secrets the user has access to across all projects
+      description: Returns secrets from all projects the user belongs to. OrgAdmins see all secrets in the org.
       security:
         - Bearer: []
       parameters:
@@ -978,11 +978,11 @@ paths:
         '500':
           description: Internal server error
 
-  # Org-scoped object store listing (cross-team)
+  # Org-scoped object store listing (cross-project)
   /api/v1/organizations/{org_id}/object-stores:
     get:
-      summary: List all object stores the user has access to across all teams
-      description: Returns object stores from all teams the user belongs to. OrgAdmins see all object stores in the org.
+      summary: List all object stores the user has access to across all projects
+      description: Returns object stores from all projects the user belongs to. OrgAdmins see all object stores in the org.
       security:
         - Bearer: []
       parameters:
@@ -1003,11 +1003,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Org-scoped stack listing (cross-team)
+  # Org-scoped stack listing (cross-project)
   /api/v1/organizations/{org_id}/stacks:
     get:
-      summary: List all stacks the user has access to across all teams
-      description: Returns stacks from all teams the user belongs to. OrgAdmins see all stacks in the org.
+      summary: List all stacks the user has access to across all projects
+      description: Returns stacks from all projects the user belongs to. OrgAdmins see all stacks in the org.
       security:
         - Bearer: []
       parameters:
@@ -1212,10 +1212,10 @@ paths:
         '500':
           description: Internal server error
 
-  # Team CRUD routes
-  /api/v1/organizations/{org_id}/teams:
+  # Project CRUD routes
+  /api/v1/organizations/{org_id}/projects:
     post:
-      summary: Create a new team
+      summary: Create a new project
       security:
         - Bearer: []
       parameters:
@@ -1225,14 +1225,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TeamCreateRequest'
+              $ref: '#/components/schemas/ProjectCreateRequest'
       responses:
         '201':
-          description: Team created successfully
+          description: Project created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Team'
+                $ref: '#/components/schemas/Project'
         '400':
           description: Invalid request data
           content:
@@ -1250,7 +1250,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all teams in an organization
+      summary: List all projects in an organization
       security:
         - Bearer: []
       parameters:
@@ -1261,7 +1261,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamList'
+                $ref: '#/components/schemas/ProjectList'
         '401':
           description: Unauthorized
         '500':
@@ -1270,25 +1270,25 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}:
+  /api/v1/organizations/{org_id}/projects/{project_name}:
     get:
-      summary: Get a specific team by name
+      summary: Get a specific project by name
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Team'
+                $ref: '#/components/schemas/Project'
         '401':
           description: Unauthorized
         '404':
-          description: Team not found
+          description: Project not found
         '500':
           description: Internal server error
           content:
@@ -1296,25 +1296,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     put:
-      summary: Update a team
+      summary: Update a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TeamUpdateRequest'
+              $ref: '#/components/schemas/ProjectUpdateRequest'
       responses:
         '200':
-          description: Team updated successfully
+          description: Project updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Team'
+                $ref: '#/components/schemas/Project'
         '400':
           description: Invalid request data
           content:
@@ -1324,7 +1324,7 @@ paths:
         '401':
           description: Unauthorized
         '404':
-          description: Team not found
+          description: Project not found
         '500':
           description: Internal server error
           content:
@@ -1332,19 +1332,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     delete:
-      summary: Delete a team
+      summary: Delete a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       responses:
         '204':
-          description: Team deleted successfully
+          description: Project deleted successfully
         '401':
           description: Unauthorized
         '404':
-          description: Team not found
+          description: Project not found
         '500':
           description: Internal server error
           content:
@@ -1352,28 +1352,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Team member management routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/members:
+  # Project member management routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/members:
     post:
-      summary: Add a member to a team
+      summary: Add a member to a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AddTeamMemberRequest'
+              $ref: '#/components/schemas/AddProjectMemberRequest'
       responses:
         '201':
           description: Member added successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamMembership'
+                $ref: '#/components/schemas/ProjectMembership'
         '400':
           description: Invalid request data
           content:
@@ -1383,7 +1383,7 @@ paths:
         '401':
           description: Unauthorized
         '404':
-          description: Team not found
+          description: Project not found
         '500':
           description: Internal server error
           content:
@@ -1391,51 +1391,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List members of a team
+      summary: List members of a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       responses:
         '200':
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamMembershipList'
+                $ref: '#/components/schemas/ProjectMembershipList'
         '401':
           description: Unauthorized
         '404':
-          description: Team not found
+          description: Project not found
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/members/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/members/{id}:
     put:
-      summary: Update a team member's role
+      summary: Update a project member's role
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateTeamMemberRoleRequest'
+              $ref: '#/components/schemas/UpdateProjectMemberRoleRequest'
       responses:
         '200':
           description: Member role updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamMembership'
+                $ref: '#/components/schemas/ProjectMembership'
         '400':
           description: Invalid request data
           content:
@@ -1453,12 +1453,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     delete:
-      summary: Remove a member from a team
+      summary: Remove a member from a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
@@ -1474,20 +1474,20 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Team roles discovery
-  /api/v1/team-roles:
+  # Project roles discovery
+  /api/v1/project-roles:
     get:
-      summary: List available team membership roles
-      description: Returns the list of roles that can be assigned to team members.
+      summary: List available project membership roles
+      description: Returns the list of roles that can be assigned to project members.
       security:
         - Bearer: []
       responses:
         '200':
-          description: List of available team roles
+          description: List of available project roles
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TeamRoleList'
+                $ref: '#/components/schemas/ProjectRoleList'
         '401':
           description: Unauthorized
 
@@ -1548,7 +1548,7 @@ paths:
   /api/v1/organizations/{org_id}/admins/{user_id}/demote:
     post:
       summary: Demote an organization admin
-      description: Demotes an OrgAdmin and places them in the specified team with the given role (defaults to Viewer).
+      description: Demotes an OrgAdmin and places them in the specified project with the given role (defaults to Viewer).
       security:
         - Bearer: []
       parameters:
@@ -1578,8 +1578,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Team-scoped stack routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks:
+  # Project-scoped stack routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks:
     post:
       summary: Create a new stack
       description: |
@@ -1590,7 +1590,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -1625,12 +1625,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all stacks for a team
+      summary: List all stacks for a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - in: query
           name: limit
           schema:
@@ -1656,14 +1656,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}:
     get:
       summary: Get a specific stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -1690,7 +1690,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -1725,7 +1725,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '202':
@@ -1742,13 +1742,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/apply:
     put:
       summary: Apply a full stack document by name (declarative upsert)
       description: |
         Name-addressed declarative whole-document apply. Stack identity is the
-        `name` in the request body (unique per team). If a stack with that name
-        exists in the team it is reconciled exactly like the id-addressed apply
+        `name` in the request body (unique per project). If a stack with that name
+        exists in the project it is reconciled exactly like the id-addressed apply
         (resources and connections not present in the body are deleted, volumes
         are add-only); otherwise the stack and its children are created
         atomically after full validation. Idempotent — clients need not know
@@ -1758,7 +1758,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -1792,7 +1792,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/apply:
     put:
       summary: Apply a full stack document (declarative reconcile)
       description: |
@@ -1805,7 +1805,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -1834,14 +1834,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/logs:
     get:
       summary: Get logs for a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: follow
@@ -1876,7 +1876,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/metrics:
     get:
       summary: Get metrics for a stack
       description: |
@@ -1885,7 +1885,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: stream
@@ -1914,14 +1914,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources:
     get:
       summary: List all stack resources under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -1945,7 +1945,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -1982,14 +1982,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}:
     get:
       summary: Get a specific stack resource by name
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
       responses:
@@ -2014,7 +2014,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
       requestBody:
@@ -2053,7 +2053,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
       responses:
@@ -2069,14 +2069,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/logs:
     get:
       summary: Get logs for a stack resource
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
         - in: query
@@ -2112,7 +2112,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/metrics:
     get:
       summary: Get metrics for a stack resource
       description: |
@@ -2121,7 +2121,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
         - in: query
@@ -2152,14 +2152,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/builds:
     get:
       summary: List all builds for a stack resource
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
       responses:
@@ -2177,7 +2177,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/actions/restart:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/actions/restart:
     post:
       summary: Restart a stack resource
       description: Triggers a rolling restart of the stack resource by setting a new restart request timestamp.
@@ -2185,7 +2185,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/resource_name'
       responses:
@@ -2207,14 +2207,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds:
     get:
       summary: List all builds under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -2231,14 +2231,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}:
     get:
       summary: Get a specific build under a stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/build_id'
       responses:
@@ -2258,14 +2258,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology:
     get:
       summary: Get stack topology
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -2284,14 +2284,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections:
     get:
       summary: List stack connections
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -2316,7 +2316,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -2353,14 +2353,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id}:
     put:
       summary: Update stack connection
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/connection_id'
       requestBody:
@@ -2398,7 +2398,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/connection_id'
       responses:
@@ -2415,14 +2415,14 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/volumes:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes:
     post:
       summary: Create a volume and associate it with the stack
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -2454,7 +2454,7 @@ paths:
         '500':
           description: Internal server error
 
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases:
     post:
       summary: Create a new release (deploy)
       operationId: createRelease
@@ -2464,7 +2464,7 @@ paths:
         - Releases
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         content:
@@ -2487,7 +2487,7 @@ paths:
         - Releases
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: state
@@ -2514,7 +2514,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StackReleaseList'
 
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}:
     get:
       summary: Get a release by ID
       operationId: getRelease
@@ -2524,7 +2524,7 @@ paths:
         - Releases
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - name: release_id
           in: path
@@ -2539,7 +2539,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/StackReleaseDetail'
 
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/cancel:
     post:
       summary: Cancel a pending or rendering release
       operationId: cancelRelease
@@ -2549,7 +2549,7 @@ paths:
         - Releases
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - name: release_id
           in: path
@@ -2560,7 +2560,7 @@ paths:
         '200':
           description: Release cancelled
 
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events:
     get:
       summary: List release events ordered by sequence
       operationId: listReleaseEvents
@@ -2570,7 +2570,7 @@ paths:
         - Releases
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - name: release_id
           in: path
@@ -2598,7 +2598,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReleaseEventList'
 
-  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events/stream:
     get:
       summary: Stream release events via Server-Sent Events
       operationId: streamReleaseEvents
@@ -2608,7 +2608,7 @@ paths:
         - Releases
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - name: release_id
           in: path
@@ -2630,15 +2630,15 @@ paths:
                 type: string
                 format: binary
 
-  # Team-scoped secret routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
+  # Project-scoped secret routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/secrets:
     post:
       summary: Create a new secret
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -2661,12 +2661,12 @@ paths:
         '500':
           description: Internal server error
     get:
-      summary: List all secrets for a team
+      summary: List all secrets for a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - in: query
           name: name
           schema:
@@ -2685,14 +2685,14 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}:
     get:
       summary: Get a specific secret
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -2715,7 +2715,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -2746,7 +2746,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
@@ -2766,15 +2766,15 @@ paths:
         '500':
           description: Internal server error
 
-  # Team-scoped volume routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/volumes:
+  # Project-scoped volume routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/volumes:
     post:
       summary: Create a new volume
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -2796,14 +2796,14 @@ paths:
           description: Forbidden
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}:
     get:
       summary: Get a specific volume
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -2824,7 +2824,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
@@ -2844,8 +2844,8 @@ paths:
         '500':
           description: Internal server error
 
-  # Team-scoped PostgresAddon routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres:
+  # Project-scoped PostgresAddon routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres:
     post:
       summary: Create a new PostgresAddon
       description: Create a new PostgreSQL database cluster addon
@@ -2853,7 +2853,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -2890,12 +2890,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all PostgresAddons for a team
+      summary: List all PostgresAddons for a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       responses:
         '200':
           description: Successful operation
@@ -2913,14 +2913,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}:
     get:
       summary: Get a specific PostgresAddon
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -2947,7 +2947,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -2986,7 +2986,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '202':
@@ -3013,14 +3013,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/backup:
     post:
       summary: Trigger an immediate backup
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         content:
@@ -3061,14 +3061,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/fence:
     post:
       summary: Fence or unfence the PostgreSQL cluster
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -3109,14 +3109,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/hibernate:
     post:
       summary: Hibernate or wake the PostgreSQL cluster
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -3154,14 +3154,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/backups:
     get:
       summary: List backups for a PostgresAddon
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - in: query
           name: limit
@@ -3190,14 +3190,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/credentials/{database}:
     get:
       summary: Get JIT credentials for a PostgresAddon database
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
         - $ref: '#/components/parameters/database'
         - in: query
@@ -3238,8 +3238,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Team-scoped object store routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores:
+  # Project-scoped object store routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/object-stores:
     post:
       summary: Add a new ObjectStore for backup storage
       description: Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files
@@ -3247,7 +3247,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -3284,12 +3284,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List all ObjectStores for a team
+      summary: List all ObjectStores for a project
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       responses:
         '200':
           description: Successful operation
@@ -3305,14 +3305,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/object-stores/{id}:
     get:
       summary: Get a specific ObjectStore
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -3337,7 +3337,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -3374,7 +3374,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
@@ -3396,15 +3396,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
-  # Team-scoped workspace user routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users:
+  # Project-scoped workspace user routes
+  /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users:
     post:
       summary: Create a new workspace user
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -3424,14 +3424,14 @@ paths:
           description: Unauthorized
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current:
+  /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/current:
     get:
       summary: Get the workspace user for the current user
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       responses:
         '200':
           description: WorkspaceUser details
@@ -3445,14 +3445,14 @@ paths:
           description: WorkspaceUser not found
         '500':
           description: Internal server error
-  /api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id}:
     get:
       summary: Get a workspace user by ID
       security:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -3473,7 +3473,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -3502,7 +3502,7 @@ paths:
         - Bearer: []
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
@@ -3658,7 +3658,7 @@ paths:
           description: Invite expired or revoked
 
   # Preview Config routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs:
     post:
       summary: Create a new preview config
       operationId: createPreviewConfig
@@ -3668,7 +3668,7 @@ paths:
         - Preview Configs
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -3705,7 +3705,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List preview configs for a team
+      summary: List preview configs for a project
       operationId: listPreviewConfigs
       security:
         - Bearer: []
@@ -3713,7 +3713,7 @@ paths:
         - Preview Configs
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - in: query
           name: page
           schema:
@@ -3743,7 +3743,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}:
     get:
       summary: Get a specific preview config
       operationId: getPreviewConfig
@@ -3753,7 +3753,7 @@ paths:
         - Preview Configs
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -3783,7 +3783,7 @@ paths:
         - Preview Configs
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         required: true
@@ -3825,7 +3825,7 @@ paths:
         - Preview Configs
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '204':
@@ -3844,7 +3844,7 @@ paths:
                 $ref: '#/components/schemas/Error'
 
   # Preview Stack routes
-  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks:
+  /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks:
     post:
       summary: Create a new preview stack
       operationId: createPreviewStack
@@ -3854,7 +3854,7 @@ paths:
         - Preview Stacks
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
       requestBody:
         required: true
         content:
@@ -3891,7 +3891,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
     get:
-      summary: List preview stacks for a team
+      summary: List preview stacks for a project
       operationId: listPreviewStacks
       security:
         - Bearer: []
@@ -3899,7 +3899,7 @@ paths:
         - Preview Stacks
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - in: query
           name: page
           schema:
@@ -3934,7 +3934,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}:
+  /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}:
     get:
       summary: Get a specific preview stack
       operationId: getPreviewStack
@@ -3944,7 +3944,7 @@ paths:
         - Preview Stacks
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '200':
@@ -3974,7 +3974,7 @@ paths:
         - Preview Stacks
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       responses:
         '202':
@@ -3995,7 +3995,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync:
+  /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}/sync:
     post:
       summary: Sync a preview stack
       operationId: syncPreviewStack
@@ -4005,7 +4005,7 @@ paths:
         - Preview Stacks
       parameters:
         - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/project_name'
         - $ref: '#/components/parameters/id'
       requestBody:
         content:
@@ -4066,13 +4066,13 @@ components:
       schema:
         type: string
       description: The ID of the cluster
-    team_name:
-      name: team_name
+    project_name:
+      name: project_name
       in: path
       required: true
       schema:
         type: string
-      description: The name of the team
+      description: The name of the project
     user_id:
       name: user_id
       in: path
@@ -4178,24 +4178,24 @@ components:
         organisation_id:
           type: string
           description: OrganisationID
-        teams:
+        projects:
           type: array
           items:
-            $ref: '#/components/schemas/UserTeamMembership'
-          description: Teams the user belongs to (included in login/signup/current-user responses)
-    UserTeamMembership:
+            $ref: '#/components/schemas/UserProjectMembership'
+          description: Projects the user belongs to (included in login/signup/current-user responses)
+    UserProjectMembership:
       type: object
       properties:
-        team_id:
+        project_id:
           type: string
-        team_name:
+        project_name:
           type: string
         role:
           type: string
           enum:
             - Developer
             - Viewer
-        default_team:
+        default_project:
           type: boolean
     UserList:
       type: object
@@ -4287,7 +4287,7 @@ components:
         expires_in:
           type: integer
           description: Token expiration time in seconds
-    Team:
+    Project:
       type: object
       properties:
         id:
@@ -4298,7 +4298,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        default_team:
+        default_project:
           type: boolean
           readOnly: true
         created_at:
@@ -4311,22 +4311,22 @@ components:
           readOnly: true
       required:
         - name
-    TeamList:
+    ProjectList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/Team'
+            $ref: '#/components/schemas/Project'
         total:
           type: integer
-    TeamMembership:
+    ProjectMembership:
       type: object
       properties:
         id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
         user_id:
           type: string
@@ -4335,8 +4335,8 @@ components:
           enum:
             - Developer
             - Viewer
-        team:
-          $ref: '#/components/schemas/Team'
+        project:
+          $ref: '#/components/schemas/Project'
         user:
           $ref: '#/components/schemas/User'
         created_at:
@@ -4344,35 +4344,35 @@ components:
           format: date-time
           readOnly: true
       required:
-        - team_id
+        - project_id
         - user_id
         - role
-    TeamMembershipList:
+    ProjectMembershipList:
       type: object
       properties:
         items:
           type: array
           items:
-            $ref: '#/components/schemas/TeamMembership'
+            $ref: '#/components/schemas/ProjectMembership'
         total:
           type: integer
-    TeamCreateRequest:
+    ProjectCreateRequest:
       type: object
       required:
         - name
       properties:
         name:
           type: string
-          description: Team name
-    TeamUpdateRequest:
+          description: Project name
+    ProjectUpdateRequest:
       type: object
       required:
         - name
       properties:
         name:
           type: string
-          description: Updated team name
-    AddTeamMemberRequest:
+          description: Updated project name
+    AddProjectMemberRequest:
       type: object
       required:
         - user_id
@@ -4382,40 +4382,40 @@ components:
           type: string
           description: The ID of the user to add
         role:
-          $ref: '#/components/schemas/TeamRole'
-    UpdateTeamMemberRoleRequest:
+          $ref: '#/components/schemas/ProjectRole'
+    UpdateProjectMemberRoleRequest:
       type: object
       required:
         - role
       properties:
         role:
-          $ref: '#/components/schemas/TeamRole'
-    TeamRole:
+          $ref: '#/components/schemas/ProjectRole'
+    ProjectRole:
       type: string
       enum:
         - Developer
         - Viewer
-      description: A role that can be assigned to a team member
-    TeamRoleList:
+      description: A role that can be assigned to a project member
+    ProjectRoleList:
       type: object
       properties:
         roles:
           type: array
           items:
-            $ref: '#/components/schemas/TeamRole'
+            $ref: '#/components/schemas/ProjectRole'
     DemoteAdminRequest:
       type: object
       required:
-        - team_name
+        - project_name
       properties:
-        team_name:
+        project_name:
           type: string
-          description: The name of the team to place the demoted user in
+          description: The name of the project to place the demoted user in
         role:
           allOf:
-            - $ref: '#/components/schemas/TeamRole'
+            - $ref: '#/components/schemas/ProjectRole'
           default: Viewer
-          description: The team role to assign (defaults to Viewer)
+          description: The project role to assign (defaults to Viewer)
     PromoteAdminRequest:
       type: object
       required:
@@ -4434,7 +4434,7 @@ components:
           type: string
         org_id:
           type: string
-        team_id:
+        project_id:
           type: string
         workspaces:
           type: array
@@ -4538,7 +4538,7 @@ components:
         id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         name:
@@ -4709,7 +4709,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         user_id:
@@ -5262,7 +5262,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         type:
@@ -6104,7 +6104,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         name:
@@ -6248,7 +6248,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         user_id:
@@ -6823,7 +6823,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_name:
+        project_name:
           type: string
         role:
           type: string
@@ -6852,14 +6852,14 @@ components:
       type: object
       required:
         - email
-        - team_name
+        - project_name
         - role
         - expires_in_days
       properties:
         email:
           type: string
           format: email
-        team_name:
+        project_name:
           type: string
         role:
           type: string
@@ -6879,7 +6879,7 @@ components:
           type: string
         organisation_id:
           type: string
-        team_name:
+        project_name:
           type: string
         role:
           type: string
@@ -6912,7 +6912,7 @@ components:
       properties:
         org_name:
           type: string
-        team_name:
+        project_name:
           type: string
         inviter_name:
           type: string
@@ -7071,7 +7071,7 @@ components:
               type: string
             organisation_id:
               type: string
-            team_id:
+            project_id:
               type: string
             cluster_id:
               type: string
@@ -7324,7 +7324,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         user_id:
@@ -7431,7 +7431,7 @@ components:
         organisation_id:
           type: string
           readOnly: true
-        team_id:
+        project_id:
           type: string
           readOnly: true
         user_id:

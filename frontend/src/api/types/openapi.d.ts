@@ -254,14 +254,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/users/current/teams": {
+    "/api/v1/users/current/projects": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List teams for the current authenticated user */
+        /** List projects for the current authenticated user */
         get: {
             parameters: {
                 query?: never;
@@ -271,13 +271,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Teams listed successfully */
+                /** @description Projects listed successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamList"];
+                        "application/json": components["schemas"]["ProjectList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -920,8 +920,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List all secrets the user has access to across all teams
-         * @description Returns secrets from all teams the user belongs to. OrgAdmins see all secrets in the org.
+         * List all secrets the user has access to across all projects
+         * @description Returns secrets from all projects the user belongs to. OrgAdmins see all secrets in the org.
          */
         get: {
             parameters: {
@@ -2229,8 +2229,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List all object stores the user has access to across all teams
-         * @description Returns object stores from all teams the user belongs to. OrgAdmins see all object stores in the org.
+         * List all object stores the user has access to across all projects
+         * @description Returns object stores from all projects the user belongs to. OrgAdmins see all object stores in the org.
          */
         get: {
             parameters: {
@@ -2287,8 +2287,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List all stacks the user has access to across all teams
-         * @description Returns stacks from all teams the user belongs to. OrgAdmins see all stacks in the org.
+         * List all stacks the user has access to across all projects
+         * @description Returns stacks from all projects the user belongs to. OrgAdmins see all stacks in the org.
          */
         get: {
             parameters: {
@@ -2815,14 +2815,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams": {
+    "/api/v1/organizations/{org_id}/projects": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all teams in an organization */
+        /** List all projects in an organization */
         get: {
             parameters: {
                 query?: never;
@@ -2841,7 +2841,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamList"];
+                        "application/json": components["schemas"]["ProjectList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2863,7 +2863,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Create a new team */
+        /** Create a new project */
         post: {
             parameters: {
                 query?: never;
@@ -2876,17 +2876,17 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["TeamCreateRequest"];
+                    "application/json": components["schemas"]["ProjectCreateRequest"];
                 };
             };
             responses: {
-                /** @description Team created successfully */
+                /** @description Project created successfully */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Team"];
+                        "application/json": components["schemas"]["Project"];
                     };
                 };
                 /** @description Invalid request data */
@@ -2929,14 +2929,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get a specific team by name */
+        /** Get a specific project by name */
         get: {
             parameters: {
                 query?: never;
@@ -2944,8 +2944,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -2957,7 +2957,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Team"];
+                        "application/json": components["schemas"]["Project"];
                     };
                 };
                 /** @description Unauthorized */
@@ -2967,7 +2967,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Team not found */
+                /** @description Project not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -2985,7 +2985,7 @@ export interface paths {
                 };
             };
         };
-        /** Update a team */
+        /** Update a project */
         put: {
             parameters: {
                 query?: never;
@@ -2993,24 +2993,24 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["TeamUpdateRequest"];
+                    "application/json": components["schemas"]["ProjectUpdateRequest"];
                 };
             };
             responses: {
-                /** @description Team updated successfully */
+                /** @description Project updated successfully */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["Team"];
+                        "application/json": components["schemas"]["Project"];
                     };
                 };
                 /** @description Invalid request data */
@@ -3029,7 +3029,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Team not found */
+                /** @description Project not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3048,7 +3048,7 @@ export interface paths {
             };
         };
         post?: never;
-        /** Delete a team */
+        /** Delete a project */
         delete: {
             parameters: {
                 query?: never;
@@ -3056,14 +3056,14 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
             requestBody?: never;
             responses: {
-                /** @description Team deleted successfully */
+                /** @description Project deleted successfully */
                 204: {
                     headers: {
                         [name: string]: unknown;
@@ -3077,7 +3077,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Team not found */
+                /** @description Project not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3100,14 +3100,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/members": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/members": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List members of a team */
+        /** List members of a project */
         get: {
             parameters: {
                 query?: never;
@@ -3115,8 +3115,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -3128,7 +3128,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamMembershipList"];
+                        "application/json": components["schemas"]["ProjectMembershipList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -3138,7 +3138,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Team not found */
+                /** @description Project not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3157,7 +3157,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Add a member to a team */
+        /** Add a member to a project */
         post: {
             parameters: {
                 query?: never;
@@ -3165,14 +3165,14 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["AddTeamMemberRequest"];
+                    "application/json": components["schemas"]["AddProjectMemberRequest"];
                 };
             };
             responses: {
@@ -3182,7 +3182,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamMembership"];
+                        "application/json": components["schemas"]["ProjectMembership"];
                     };
                 };
                 /** @description Invalid request data */
@@ -3201,7 +3201,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Team not found */
+                /** @description Project not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -3225,7 +3225,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/members/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/members/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3233,7 +3233,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Update a team member's role */
+        /** Update a project member's role */
         put: {
             parameters: {
                 query?: never;
@@ -3241,8 +3241,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3250,7 +3250,7 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": components["schemas"]["UpdateTeamMemberRoleRequest"];
+                    "application/json": components["schemas"]["UpdateProjectMemberRoleRequest"];
                 };
             };
             responses: {
@@ -3260,7 +3260,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamMembership"];
+                        "application/json": components["schemas"]["ProjectMembership"];
                     };
                 };
                 /** @description Invalid request data */
@@ -3298,7 +3298,7 @@ export interface paths {
             };
         };
         post?: never;
-        /** Remove a member from a team */
+        /** Remove a member from a project */
         delete: {
             parameters: {
                 query?: never;
@@ -3306,8 +3306,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3352,7 +3352,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/team-roles": {
+    "/api/v1/project-roles": {
         parameters: {
             query?: never;
             header?: never;
@@ -3360,8 +3360,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List available team membership roles
-         * @description Returns the list of roles that can be assigned to team members.
+         * List available project membership roles
+         * @description Returns the list of roles that can be assigned to project members.
          */
         get: {
             parameters: {
@@ -3372,13 +3372,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description List of available team roles */
+                /** @description List of available project roles */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["TeamRoleList"];
+                        "application/json": components["schemas"]["ProjectRoleList"];
                     };
                 };
                 /** @description Unauthorized */
@@ -3521,7 +3521,7 @@ export interface paths {
         put?: never;
         /**
          * Demote an organization admin
-         * @description Demotes an OrgAdmin and places them in the specified team with the given role (defaults to Viewer).
+         * @description Demotes an OrgAdmin and places them in the specified project with the given role (defaults to Viewer).
          */
         post: {
             parameters: {
@@ -3593,14 +3593,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all stacks for a team */
+        /** List all stacks for a project */
         get: {
             parameters: {
                 query?: {
@@ -3611,8 +3611,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -3660,8 +3660,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -3722,7 +3722,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -3737,8 +3737,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3787,8 +3787,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3845,8 +3845,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -3886,7 +3886,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/apply": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/apply": {
         parameters: {
             query?: never;
             header?: never;
@@ -3897,8 +3897,8 @@ export interface paths {
         /**
          * Apply a full stack document by name (declarative upsert)
          * @description Name-addressed declarative whole-document apply. Stack identity is the
-         *     `name` in the request body (unique per team). If a stack with that name
-         *     exists in the team it is reconciled exactly like the id-addressed apply
+         *     `name` in the request body (unique per project). If a stack with that name
+         *     exists in the project it is reconciled exactly like the id-addressed apply
          *     (resources and connections not present in the body are deleted, volumes
          *     are add-only); otherwise the stack and its children are created
          *     atomically after full validation. Idempotent — clients need not know
@@ -3913,7 +3913,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/apply": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/apply": {
         parameters: {
             query?: never;
             header?: never;
@@ -3937,7 +3937,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/logs": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/logs": {
         parameters: {
             query?: never;
             header?: never;
@@ -3956,8 +3956,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4000,7 +4000,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/metrics": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/metrics": {
         parameters: {
             query?: never;
             header?: never;
@@ -4021,8 +4021,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4068,7 +4068,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources": {
         parameters: {
             query?: never;
             header?: never;
@@ -4083,8 +4083,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4128,7 +4128,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4143,8 +4143,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the stack resource */
@@ -4191,7 +4191,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/logs": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/logs": {
         parameters: {
             query?: never;
             header?: never;
@@ -4210,8 +4210,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the stack resource */
@@ -4256,7 +4256,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/metrics": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/metrics": {
         parameters: {
             query?: never;
             header?: never;
@@ -4278,8 +4278,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the stack resource */
@@ -4327,7 +4327,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/builds": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/builds": {
         parameters: {
             query?: never;
             header?: never;
@@ -4342,8 +4342,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the stack resource */
@@ -4388,7 +4388,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/resources/{resource_name}/actions/restart": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/actions/restart": {
         parameters: {
             query?: never;
             header?: never;
@@ -4408,8 +4408,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the stack resource */
@@ -4466,7 +4466,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds": {
         parameters: {
             query?: never;
             header?: never;
@@ -4481,8 +4481,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4525,7 +4525,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/builds/{build_id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4540,8 +4540,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The ID of the build */
@@ -4593,7 +4593,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/topology": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology": {
         parameters: {
             query?: never;
             header?: never;
@@ -4608,8 +4608,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4659,7 +4659,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections": {
         parameters: {
             query?: never;
             header?: never;
@@ -4674,8 +4674,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4726,8 +4726,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -4797,7 +4797,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/connections/{connection_id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -4813,8 +4813,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The ID of the stack connection */
@@ -4880,8 +4880,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The ID of the stack connection */
@@ -4928,7 +4928,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/volumes": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes": {
         parameters: {
             query?: never;
             header?: never;
@@ -4945,8 +4945,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5019,7 +5019,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases": {
         parameters: {
             query?: never;
             header?: never;
@@ -5037,7 +5037,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -5054,7 +5054,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/cancel": {
         parameters: {
             query?: never;
             header?: never;
@@ -5071,7 +5071,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events": {
         parameters: {
             query?: never;
             header?: never;
@@ -5088,7 +5088,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events/stream": {
         parameters: {
             query?: never;
             header?: never;
@@ -5105,14 +5105,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/secrets": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/secrets": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all secrets for a team */
+        /** List all secrets for a project */
         get: {
             parameters: {
                 query?: {
@@ -5123,8 +5123,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -5171,8 +5171,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -5227,7 +5227,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/secrets/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -5242,8 +5242,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5298,8 +5298,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5366,8 +5366,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5426,7 +5426,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/volumes": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/volumes": {
         parameters: {
             query?: never;
             header?: never;
@@ -5443,8 +5443,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -5499,7 +5499,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/volumes/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -5514,8 +5514,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5565,8 +5565,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5625,14 +5625,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all PostgresAddons for a team */
+        /** List all PostgresAddons for a project */
         get: {
             parameters: {
                 query?: never;
@@ -5640,8 +5640,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -5693,8 +5693,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -5762,7 +5762,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -5777,8 +5777,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5835,8 +5835,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5907,8 +5907,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -5971,7 +5971,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/backup": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/backup": {
         parameters: {
             query?: never;
             header?: never;
@@ -5988,8 +5988,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6063,7 +6063,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/fence": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/fence": {
         parameters: {
             query?: never;
             header?: never;
@@ -6080,8 +6080,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6148,7 +6148,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/actions/hibernate": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/hibernate": {
         parameters: {
             query?: never;
             header?: never;
@@ -6165,8 +6165,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6231,7 +6231,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/backups": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/backups": {
         parameters: {
             query?: never;
             header?: never;
@@ -6249,8 +6249,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6300,7 +6300,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/addons/postgres/{id}/credentials/{database}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/credentials/{database}": {
         parameters: {
             query?: never;
             header?: never;
@@ -6318,8 +6318,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                     /** @description The name of the database */
@@ -6384,14 +6384,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/object-stores": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/object-stores": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all ObjectStores for a team */
+        /** List all ObjectStores for a project */
         get: {
             parameters: {
                 query?: never;
@@ -6399,8 +6399,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -6445,8 +6445,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -6514,7 +6514,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/object-stores/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/object-stores/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -6529,8 +6529,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6580,8 +6580,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6645,8 +6645,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6700,7 +6700,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/workspace-users": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/workspace-users": {
         parameters: {
             query?: never;
             header?: never;
@@ -6717,8 +6717,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -6766,7 +6766,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/current": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/current": {
         parameters: {
             query?: never;
             header?: never;
@@ -6781,8 +6781,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                 };
                 cookie?: never;
             };
@@ -6828,7 +6828,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/workspace-users/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -6843,8 +6843,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6892,8 +6892,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -6953,8 +6953,8 @@ export interface paths {
                 path: {
                     /** @description The ID of the organization */
                     org_id: components["parameters"]["org_id"];
-                    /** @description The name of the team */
-                    team_name: components["parameters"]["team_name"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
                     /** @description The id of record */
                     id: components["parameters"]["id"];
                 };
@@ -7345,14 +7345,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List preview configs for a team */
+        /** List preview configs for a project */
         get: operations["listPreviewConfigs"];
         put?: never;
         /** Create a new preview config */
@@ -7363,7 +7363,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -7382,14 +7382,14 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List preview stacks for a team */
+        /** List preview stacks for a project */
         get: operations["listPreviewStacks"];
         put?: never;
         /** Create a new preview stack */
@@ -7400,7 +7400,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -7418,7 +7418,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync": {
+    "/api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}/sync": {
         parameters: {
             query?: never;
             header?: never;
@@ -7482,15 +7482,15 @@ export interface components {
             role?: components["schemas"]["UserRole"];
             /** @description OrganisationID */
             organisation_id?: string;
-            /** @description Teams the user belongs to (included in login/signup/current-user responses) */
-            teams?: components["schemas"]["UserTeamMembership"][];
+            /** @description Projects the user belongs to (included in login/signup/current-user responses) */
+            projects?: components["schemas"]["UserProjectMembership"][];
         };
-        UserTeamMembership: {
-            team_id?: string;
-            team_name?: string;
+        UserProjectMembership: {
+            project_id?: string;
+            project_name?: string;
             /** @enum {string} */
             role?: "Developer" | "Viewer";
-            default_team?: boolean;
+            default_project?: boolean;
         };
         UserList: {
             items?: components["schemas"]["User"][];
@@ -7547,67 +7547,67 @@ export interface components {
             /** @description Token expiration time in seconds */
             expires_in?: number;
         };
-        Team: {
+        Project: {
             readonly id?: string;
             name: string;
             readonly organisation_id?: string;
-            readonly default_team?: boolean;
+            readonly default_project?: boolean;
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
             readonly updated_at?: string;
         };
-        TeamList: {
-            items?: components["schemas"]["Team"][];
+        ProjectList: {
+            items?: components["schemas"]["Project"][];
             total?: number;
         };
-        TeamMembership: {
+        ProjectMembership: {
             readonly id?: string;
-            team_id: string;
+            project_id: string;
             user_id: string;
             /** @enum {string} */
             role: "Developer" | "Viewer";
-            team?: components["schemas"]["Team"];
+            project?: components["schemas"]["Project"];
             user?: components["schemas"]["User"];
             /** Format: date-time */
             readonly created_at?: string;
         };
-        TeamMembershipList: {
-            items?: components["schemas"]["TeamMembership"][];
+        ProjectMembershipList: {
+            items?: components["schemas"]["ProjectMembership"][];
             total?: number;
         };
-        TeamCreateRequest: {
-            /** @description Team name */
+        ProjectCreateRequest: {
+            /** @description Project name */
             name: string;
         };
-        TeamUpdateRequest: {
-            /** @description Updated team name */
+        ProjectUpdateRequest: {
+            /** @description Updated project name */
             name: string;
         };
-        AddTeamMemberRequest: {
+        AddProjectMemberRequest: {
             /** @description The ID of the user to add */
             user_id: string;
-            role: components["schemas"]["TeamRole"];
+            role: components["schemas"]["ProjectRole"];
         };
-        UpdateTeamMemberRoleRequest: {
-            role: components["schemas"]["TeamRole"];
+        UpdateProjectMemberRoleRequest: {
+            role: components["schemas"]["ProjectRole"];
         };
         /**
-         * @description A role that can be assigned to a team member
+         * @description A role that can be assigned to a project member
          * @enum {string}
          */
-        TeamRole: "Developer" | "Viewer";
-        TeamRoleList: {
-            roles?: components["schemas"]["TeamRole"][];
+        ProjectRole: "Developer" | "Viewer";
+        ProjectRoleList: {
+            roles?: components["schemas"]["ProjectRole"][];
         };
         DemoteAdminRequest: {
-            /** @description The name of the team to place the demoted user in */
-            team_name: string;
+            /** @description The name of the project to place the demoted user in */
+            project_name: string;
             /**
-             * @description The team role to assign (defaults to Viewer)
+             * @description The project role to assign (defaults to Viewer)
              * @default Viewer
              */
-            role: components["schemas"]["TeamRole"];
+            role: components["schemas"]["ProjectRole"];
         };
         PromoteAdminRequest: {
             /** @description The ID of the user to promote to admin */
@@ -7618,7 +7618,7 @@ export interface components {
             id?: string;
             user_id?: string;
             org_id?: string;
-            team_id?: string;
+            project_id?: string;
             workspaces: string[];
             readonly version?: number;
             status?: components["schemas"]["WorkspaceUserStatus"];
@@ -7659,7 +7659,7 @@ export interface components {
         };
         Volume: {
             readonly id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             name: string;
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
@@ -7724,7 +7724,7 @@ export interface components {
         Stack: {
             readonly id?: string;
             readonly organisation_id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             readonly user_id?: string;
             name: string;
             readonly namespace?: string;
@@ -7987,7 +7987,7 @@ export interface components {
             name: string;
             description?: string;
             readonly organisation_id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             type: components["schemas"]["SecretType"];
             data: components["schemas"]["SecretData"][];
             readonly outputs?: components["schemas"]["OutputDescriptor"][];
@@ -8358,7 +8358,7 @@ export interface components {
         ObjectStore: {
             readonly id?: string;
             readonly organisation_id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             /** @description Unique name for this object store configuration */
             name: string;
             spec: components["schemas"]["ObjectStoreSpec"];
@@ -8428,7 +8428,7 @@ export interface components {
         PostgresAddon: {
             readonly id?: string;
             readonly organisation_id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             readonly user_id?: string;
             readonly cluster_id?: string;
             /** @description Unique name for this PostgreSQL cluster */
@@ -8753,7 +8753,7 @@ export interface components {
             readonly id?: string;
             email?: string;
             readonly organisation_id?: string;
-            team_name?: string;
+            project_name?: string;
             /** @enum {string} */
             role?: "Developer" | "Viewer";
             status?: components["schemas"]["InviteStatus"];
@@ -8770,7 +8770,7 @@ export interface components {
         OrgInviteCreateRequest: {
             /** Format: email */
             email: string;
-            team_name: string;
+            project_name: string;
             /** @enum {string} */
             role: "Developer" | "Viewer";
             expires_in_days: number;
@@ -8779,7 +8779,7 @@ export interface components {
             id?: string;
             email?: string;
             organisation_id?: string;
-            team_name?: string;
+            project_name?: string;
             role?: string;
             status?: components["schemas"]["InviteStatus"];
             /** Format: date-time */
@@ -8797,7 +8797,7 @@ export interface components {
         };
         OrgInviteInfo: {
             org_name?: string;
-            team_name?: string;
+            project_name?: string;
             inviter_name?: string;
             /** Format: date-time */
             expires_at?: string;
@@ -8874,7 +8874,7 @@ export interface components {
             stack?: {
                 id?: string;
                 organisation_id?: string;
-                team_id?: string;
+                project_id?: string;
                 cluster_id?: string;
                 user_id?: string;
                 name?: string;
@@ -8978,7 +8978,7 @@ export interface components {
         StackPreviewConfig: {
             readonly id?: string;
             readonly organisation_id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             readonly user_id?: string;
             name?: string;
             description?: string;
@@ -9023,7 +9023,7 @@ export interface components {
         PreviewStack: {
             readonly id?: string;
             readonly organisation_id?: string;
-            readonly team_id?: string;
+            readonly project_id?: string;
             readonly user_id?: string;
             config_id?: string;
             stack_id?: string;
@@ -9096,8 +9096,8 @@ export interface components {
         org_id: string;
         /** @description The ID of the cluster */
         cluster_id: string;
-        /** @description The name of the team */
-        team_name: string;
+        /** @description The name of the project */
+        project_name: string;
         /** @description The ID of the user */
         user_id: string;
         /** @description The name of the stack resource */
@@ -9122,8 +9122,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
             };
             cookie?: never;
         };
@@ -9185,8 +9185,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9241,8 +9241,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9313,8 +9313,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
                 /** @description The name of the stack resource */
@@ -9378,8 +9378,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
                 /** @description The name of the stack resource */
@@ -9435,8 +9435,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9462,8 +9462,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9493,8 +9493,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
                 release_id: string;
@@ -9521,8 +9521,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
                 release_id: string;
@@ -9550,8 +9550,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
                 release_id: string;
@@ -9580,8 +9580,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
                 release_id: string;
@@ -9613,8 +9613,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
             };
             cookie?: never;
         };
@@ -9661,8 +9661,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
             };
             cookie?: never;
         };
@@ -9731,8 +9731,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9788,8 +9788,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9858,8 +9858,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -9920,8 +9920,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
             };
             cookie?: never;
         };
@@ -9968,8 +9968,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
             };
             cookie?: never;
         };
@@ -10038,8 +10038,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -10095,8 +10095,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };
@@ -10152,8 +10152,8 @@ export interface operations {
             path: {
                 /** @description The ID of the organization */
                 org_id: components["parameters"]["org_id"];
-                /** @description The name of the team */
-                team_name: components["parameters"]["team_name"];
+                /** @description The name of the project */
+                project_name: components["parameters"]["project_name"];
                 /** @description The id of record */
                 id: components["parameters"]["id"];
             };

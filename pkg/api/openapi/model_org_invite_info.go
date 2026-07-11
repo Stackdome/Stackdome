@@ -18,7 +18,7 @@ import (
 // OrgInviteInfo struct for OrgInviteInfo
 type OrgInviteInfo struct {
 	OrgName     *string    `json:"org_name,omitempty"`
-	TeamName    *string    `json:"team_name,omitempty"`
+	ProjectName *string    `json:"project_name,omitempty"`
 	InviterName *string    `json:"inviter_name,omitempty"`
 	ExpiresAt   *time.Time `json:"expires_at,omitempty"`
 }
@@ -72,36 +72,36 @@ func (o *OrgInviteInfo) SetOrgName(v string) {
 	o.OrgName = &v
 }
 
-// GetTeamName returns the TeamName field value if set, zero value otherwise.
-func (o *OrgInviteInfo) GetTeamName() string {
-	if o == nil || o.TeamName == nil {
+// GetProjectName returns the ProjectName field value if set, zero value otherwise.
+func (o *OrgInviteInfo) GetProjectName() string {
+	if o == nil || o.ProjectName == nil {
 		var ret string
 		return ret
 	}
-	return *o.TeamName
+	return *o.ProjectName
 }
 
-// GetTeamNameOk returns a tuple with the TeamName field value if set, nil otherwise
+// GetProjectNameOk returns a tuple with the ProjectName field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OrgInviteInfo) GetTeamNameOk() (*string, bool) {
-	if o == nil || o.TeamName == nil {
+func (o *OrgInviteInfo) GetProjectNameOk() (*string, bool) {
+	if o == nil || o.ProjectName == nil {
 		return nil, false
 	}
-	return o.TeamName, true
+	return o.ProjectName, true
 }
 
-// HasTeamName returns a boolean if a field has been set.
-func (o *OrgInviteInfo) HasTeamName() bool {
-	if o != nil && o.TeamName != nil {
+// HasProjectName returns a boolean if a field has been set.
+func (o *OrgInviteInfo) HasProjectName() bool {
+	if o != nil && o.ProjectName != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetTeamName gets a reference to the given string and assigns it to the TeamName field.
-func (o *OrgInviteInfo) SetTeamName(v string) {
-	o.TeamName = &v
+// SetProjectName gets a reference to the given string and assigns it to the ProjectName field.
+func (o *OrgInviteInfo) SetProjectName(v string) {
+	o.ProjectName = &v
 }
 
 // GetInviterName returns the InviterName field value if set, zero value otherwise.
@@ -173,8 +173,8 @@ func (o OrgInviteInfo) MarshalJSON() ([]byte, error) {
 	if o.OrgName != nil {
 		toSerialize["org_name"] = o.OrgName
 	}
-	if o.TeamName != nil {
-		toSerialize["team_name"] = o.TeamName
+	if o.ProjectName != nil {
+		toSerialize["project_name"] = o.ProjectName
 	}
 	if o.InviterName != nil {
 		toSerialize["inviter_name"] = o.InviterName

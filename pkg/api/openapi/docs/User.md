@@ -11,7 +11,7 @@ Name | Type | Description | Notes
 **Organisation** | Pointer to **string** | User&#39;s organisation | [optional] 
 **Role** | Pointer to [**UserRole**](UserRole.md) |  | [optional] 
 **OrganisationId** | Pointer to **string** | OrganisationID | [optional] 
-**Teams** | Pointer to [**[]UserTeamMembership**](UserTeamMembership.md) | Teams the user belongs to (included in login/signup/current-user responses) | [optional] 
+**Projects** | Pointer to [**[]UserProjectMembership**](UserProjectMembership.md) | Projects the user belongs to (included in login/signup/current-user responses) | [optional] 
 
 ## Methods
 
@@ -207,30 +207,30 @@ SetOrganisationId sets OrganisationId field to given value.
 
 HasOrganisationId returns a boolean if a field has been set.
 
-### GetTeams
+### GetProjects
 
-`func (o *User) GetTeams() []UserTeamMembership`
+`func (o *User) GetProjects() []UserProjectMembership`
 
-GetTeams returns the Teams field if non-nil, zero value otherwise.
+GetProjects returns the Projects field if non-nil, zero value otherwise.
 
-### GetTeamsOk
+### GetProjectsOk
 
-`func (o *User) GetTeamsOk() (*[]UserTeamMembership, bool)`
+`func (o *User) GetProjectsOk() (*[]UserProjectMembership, bool)`
 
-GetTeamsOk returns a tuple with the Teams field if it's non-nil, zero value otherwise
+GetProjectsOk returns a tuple with the Projects field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeams
+### SetProjects
 
-`func (o *User) SetTeams(v []UserTeamMembership)`
+`func (o *User) SetProjects(v []UserProjectMembership)`
 
-SetTeams sets Teams field to given value.
+SetProjects sets Projects field to given value.
 
-### HasTeams
+### HasProjects
 
-`func (o *User) HasTeams() bool`
+`func (o *User) HasProjects() bool`
 
-HasTeams returns a boolean if a field has been set.
+HasProjects returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

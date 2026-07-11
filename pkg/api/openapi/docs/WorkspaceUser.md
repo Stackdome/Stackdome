@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **UserId** | Pointer to **string** |  | [optional] 
 **OrgId** | Pointer to **string** |  | [optional] 
-**TeamId** | Pointer to **string** |  | [optional] 
+**ProjectId** | Pointer to **string** |  | [optional] 
 **Workspaces** | **[]string** |  | 
 **Version** | Pointer to **int32** |  | [optional] [readonly] 
 **Status** | Pointer to [**WorkspaceUserStatus**](WorkspaceUserStatus.md) |  | [optional] 
@@ -110,30 +110,30 @@ SetOrgId sets OrgId field to given value.
 
 HasOrgId returns a boolean if a field has been set.
 
-### GetTeamId
+### GetProjectId
 
-`func (o *WorkspaceUser) GetTeamId() string`
+`func (o *WorkspaceUser) GetProjectId() string`
 
-GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
 
-### GetTeamIdOk
+### GetProjectIdOk
 
-`func (o *WorkspaceUser) GetTeamIdOk() (*string, bool)`
+`func (o *WorkspaceUser) GetProjectIdOk() (*string, bool)`
 
-GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamId
+### SetProjectId
 
-`func (o *WorkspaceUser) SetTeamId(v string)`
+`func (o *WorkspaceUser) SetProjectId(v string)`
 
-SetTeamId sets TeamId field to given value.
+SetProjectId sets ProjectId field to given value.
 
-### HasTeamId
+### HasProjectId
 
-`func (o *WorkspaceUser) HasTeamId() bool`
+`func (o *WorkspaceUser) HasProjectId() bool`
 
-HasTeamId returns a boolean if a field has been set.
+HasProjectId returns a boolean if a field has been set.
 
 ### GetWorkspaces
 

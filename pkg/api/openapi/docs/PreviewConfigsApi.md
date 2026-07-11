@@ -4,17 +4,17 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**CreatePreviewConfig**](PreviewConfigsApi.md#CreatePreviewConfig) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs | Create a new preview config
-[**DeletePreviewConfig**](PreviewConfigsApi.md#DeletePreviewConfig) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Delete a preview config
-[**GetPreviewConfig**](PreviewConfigsApi.md#GetPreviewConfig) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Get a specific preview config
-[**ListPreviewConfigs**](PreviewConfigsApi.md#ListPreviewConfigs) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs | List preview configs for a team
-[**UpdatePreviewConfig**](PreviewConfigsApi.md#UpdatePreviewConfig) | **Put** /api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id} | Update a preview config
+[**CreatePreviewConfig**](PreviewConfigsApi.md#CreatePreviewConfig) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs | Create a new preview config
+[**DeletePreviewConfig**](PreviewConfigsApi.md#DeletePreviewConfig) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id} | Delete a preview config
+[**GetPreviewConfig**](PreviewConfigsApi.md#GetPreviewConfig) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id} | Get a specific preview config
+[**ListPreviewConfigs**](PreviewConfigsApi.md#ListPreviewConfigs) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs | List preview configs for a project
+[**UpdatePreviewConfig**](PreviewConfigsApi.md#UpdatePreviewConfig) | **Put** /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id} | Update a preview config
 
 
 
 ## CreatePreviewConfig
 
-> StackPreviewConfig CreatePreviewConfig(ctx, orgId, teamName).StackPreviewConfigCreate(stackPreviewConfigCreate).Execute()
+> StackPreviewConfig CreatePreviewConfig(ctx, orgId, projectName).StackPreviewConfigCreate(stackPreviewConfigCreate).Execute()
 
 Create a new preview config
 
@@ -32,12 +32,12 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     stackPreviewConfigCreate := *openapiclient.NewStackPreviewConfigCreate("Name_example", *openapiclient.NewPreviewGitRepository("RepoUrl_example")) // StackPreviewConfigCreate | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewConfigsApi.CreatePreviewConfig(context.Background(), orgId, teamName).StackPreviewConfigCreate(stackPreviewConfigCreate).Execute()
+    resp, r, err := apiClient.PreviewConfigsApi.CreatePreviewConfig(context.Background(), orgId, projectName).StackPreviewConfigCreate(stackPreviewConfigCreate).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewConfigsApi.CreatePreviewConfig``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 
 ### Other Parameters
 
@@ -87,7 +87,7 @@ Name | Type | Description  | Notes
 
 ## DeletePreviewConfig
 
-> DeletePreviewConfig(ctx, orgId, teamName, id).Execute()
+> DeletePreviewConfig(ctx, orgId, projectName, id).Execute()
 
 Delete a preview config
 
@@ -105,12 +105,12 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewConfigsApi.DeletePreviewConfig(context.Background(), orgId, teamName, id).Execute()
+    resp, r, err := apiClient.PreviewConfigsApi.DeletePreviewConfig(context.Background(), orgId, projectName, id).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewConfigsApi.DeletePreviewConfig``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -125,7 +125,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
@@ -159,7 +159,7 @@ Name | Type | Description  | Notes
 
 ## GetPreviewConfig
 
-> StackPreviewConfig GetPreviewConfig(ctx, orgId, teamName, id).Execute()
+> StackPreviewConfig GetPreviewConfig(ctx, orgId, projectName, id).Execute()
 
 Get a specific preview config
 
@@ -177,12 +177,12 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewConfigsApi.GetPreviewConfig(context.Background(), orgId, teamName, id).Execute()
+    resp, r, err := apiClient.PreviewConfigsApi.GetPreviewConfig(context.Background(), orgId, projectName, id).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewConfigsApi.GetPreviewConfig``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -199,7 +199,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
@@ -233,9 +233,9 @@ Name | Type | Description  | Notes
 
 ## ListPreviewConfigs
 
-> StackPreviewConfigList ListPreviewConfigs(ctx, orgId, teamName).Page(page).PageSize(pageSize).Execute()
+> StackPreviewConfigList ListPreviewConfigs(ctx, orgId, projectName).Page(page).PageSize(pageSize).Execute()
 
-List preview configs for a team
+List preview configs for a project
 
 ### Example
 
@@ -251,13 +251,13 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     page := int32(56) // int32 | Page number (optional) (default to 1)
     pageSize := int32(56) // int32 | Number of items per page (optional) (default to 20)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewConfigsApi.ListPreviewConfigs(context.Background(), orgId, teamName).Page(page).PageSize(pageSize).Execute()
+    resp, r, err := apiClient.PreviewConfigsApi.ListPreviewConfigs(context.Background(), orgId, projectName).Page(page).PageSize(pageSize).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewConfigsApi.ListPreviewConfigs``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -274,7 +274,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 
 ### Other Parameters
 
@@ -308,7 +308,7 @@ Name | Type | Description  | Notes
 
 ## UpdatePreviewConfig
 
-> StackPreviewConfig UpdatePreviewConfig(ctx, orgId, teamName, id).StackPreviewConfigUpdate(stackPreviewConfigUpdate).Execute()
+> StackPreviewConfig UpdatePreviewConfig(ctx, orgId, projectName, id).StackPreviewConfigUpdate(stackPreviewConfigUpdate).Execute()
 
 Update a preview config
 
@@ -326,13 +326,13 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     stackPreviewConfigUpdate := *openapiclient.NewStackPreviewConfigUpdate() // StackPreviewConfigUpdate | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewConfigsApi.UpdatePreviewConfig(context.Background(), orgId, teamName, id).StackPreviewConfigUpdate(stackPreviewConfigUpdate).Execute()
+    resp, r, err := apiClient.PreviewConfigsApi.UpdatePreviewConfig(context.Background(), orgId, projectName, id).StackPreviewConfigUpdate(stackPreviewConfigUpdate).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewConfigsApi.UpdatePreviewConfig``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -349,7 +349,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters

@@ -4,17 +4,17 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**CreatePreviewStack**](PreviewStacksApi.md#CreatePreviewStack) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks | Create a new preview stack
-[**DeletePreviewStack**](PreviewStacksApi.md#DeletePreviewStack) | **Delete** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id} | Delete a preview stack
-[**GetPreviewStack**](PreviewStacksApi.md#GetPreviewStack) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id} | Get a specific preview stack
-[**ListPreviewStacks**](PreviewStacksApi.md#ListPreviewStacks) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks | List preview stacks for a team
-[**SyncPreviewStack**](PreviewStacksApi.md#SyncPreviewStack) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/preview-stacks/{id}/sync | Sync a preview stack
+[**CreatePreviewStack**](PreviewStacksApi.md#CreatePreviewStack) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks | Create a new preview stack
+[**DeletePreviewStack**](PreviewStacksApi.md#DeletePreviewStack) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id} | Delete a preview stack
+[**GetPreviewStack**](PreviewStacksApi.md#GetPreviewStack) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id} | Get a specific preview stack
+[**ListPreviewStacks**](PreviewStacksApi.md#ListPreviewStacks) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks | List preview stacks for a project
+[**SyncPreviewStack**](PreviewStacksApi.md#SyncPreviewStack) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}/sync | Sync a preview stack
 
 
 
 ## CreatePreviewStack
 
-> PreviewStack CreatePreviewStack(ctx, orgId, teamName).PreviewStackCreate(previewStackCreate).Execute()
+> PreviewStack CreatePreviewStack(ctx, orgId, projectName).PreviewStackCreate(previewStackCreate).Execute()
 
 Create a new preview stack
 
@@ -32,12 +32,12 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     previewStackCreate := *openapiclient.NewPreviewStackCreate("ConfigId_example", "PrNumber_example", "Branch_example") // PreviewStackCreate | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewStacksApi.CreatePreviewStack(context.Background(), orgId, teamName).PreviewStackCreate(previewStackCreate).Execute()
+    resp, r, err := apiClient.PreviewStacksApi.CreatePreviewStack(context.Background(), orgId, projectName).PreviewStackCreate(previewStackCreate).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewStacksApi.CreatePreviewStack``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 
 ### Other Parameters
 
@@ -87,7 +87,7 @@ Name | Type | Description  | Notes
 
 ## DeletePreviewStack
 
-> PreviewStack DeletePreviewStack(ctx, orgId, teamName, id).Execute()
+> PreviewStack DeletePreviewStack(ctx, orgId, projectName, id).Execute()
 
 Delete a preview stack
 
@@ -105,12 +105,12 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewStacksApi.DeletePreviewStack(context.Background(), orgId, teamName, id).Execute()
+    resp, r, err := apiClient.PreviewStacksApi.DeletePreviewStack(context.Background(), orgId, projectName, id).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewStacksApi.DeletePreviewStack``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -127,7 +127,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
@@ -161,7 +161,7 @@ Name | Type | Description  | Notes
 
 ## GetPreviewStack
 
-> PreviewStack GetPreviewStack(ctx, orgId, teamName, id).Execute()
+> PreviewStack GetPreviewStack(ctx, orgId, projectName, id).Execute()
 
 Get a specific preview stack
 
@@ -179,12 +179,12 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewStacksApi.GetPreviewStack(context.Background(), orgId, teamName, id).Execute()
+    resp, r, err := apiClient.PreviewStacksApi.GetPreviewStack(context.Background(), orgId, projectName, id).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewStacksApi.GetPreviewStack``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -201,7 +201,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
@@ -235,9 +235,9 @@ Name | Type | Description  | Notes
 
 ## ListPreviewStacks
 
-> PreviewStackList ListPreviewStacks(ctx, orgId, teamName).Page(page).PageSize(pageSize).ConfigId(configId).Execute()
+> PreviewStackList ListPreviewStacks(ctx, orgId, projectName).Page(page).PageSize(pageSize).ConfigId(configId).Execute()
 
-List preview stacks for a team
+List preview stacks for a project
 
 ### Example
 
@@ -253,14 +253,14 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     page := int32(56) // int32 | Page number (optional) (default to 1)
     pageSize := int32(56) // int32 | Number of items per page (optional) (default to 20)
     configId := "configId_example" // string | Filter by preview config ID (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewStacksApi.ListPreviewStacks(context.Background(), orgId, teamName).Page(page).PageSize(pageSize).ConfigId(configId).Execute()
+    resp, r, err := apiClient.PreviewStacksApi.ListPreviewStacks(context.Background(), orgId, projectName).Page(page).PageSize(pageSize).ConfigId(configId).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewStacksApi.ListPreviewStacks``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -277,7 +277,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 
 ### Other Parameters
 
@@ -312,7 +312,7 @@ Name | Type | Description  | Notes
 
 ## SyncPreviewStack
 
-> PreviewStack SyncPreviewStack(ctx, orgId, teamName, id).PreviewStackSync(previewStackSync).Execute()
+> PreviewStack SyncPreviewStack(ctx, orgId, projectName, id).PreviewStackSync(previewStackSync).Execute()
 
 Sync a preview stack
 
@@ -330,13 +330,13 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     previewStackSync := *openapiclient.NewPreviewStackSync() // PreviewStackSync |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.PreviewStacksApi.SyncPreviewStack(context.Background(), orgId, teamName, id).PreviewStackSync(previewStackSync).Execute()
+    resp, r, err := apiClient.PreviewStacksApi.SyncPreviewStack(context.Background(), orgId, projectName, id).PreviewStackSync(previewStackSync).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `PreviewStacksApi.SyncPreviewStack``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -353,7 +353,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters

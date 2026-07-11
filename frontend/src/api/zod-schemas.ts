@@ -26,12 +26,12 @@ const UserSignupRequest = z
   })
   .passthrough();
 const UserRole = z.enum(["OrgAdmin", "OrgMember"]);
-const UserTeamMembership = z
+const UserProjectMembership = z
   .object({
-    team_id: z.string(),
-    team_name: z.string(),
+    project_id: z.string(),
+    project_name: z.string(),
     role: z.enum(["Developer", "Viewer"]),
-    default_team: z.boolean(),
+    default_project: z.boolean(),
   })
   .partial()
   .passthrough();
@@ -44,7 +44,7 @@ const User = z
     organisation: z.string(),
     role: UserRole,
     organisation_id: z.string(),
-    teams: z.array(UserTeamMembership),
+    projects: z.array(UserProjectMembership),
   })
   .partial()
   .passthrough();
@@ -71,18 +71,18 @@ const AppConfigResponse = z
   .object({ github_oauth: z.boolean() })
   .partial()
   .passthrough();
-const Team = z
+const Project = z
   .object({
     id: z.string().optional(),
     name: z.string(),
     organisation_id: z.string().optional(),
-    default_team: z.boolean().optional(),
+    default_project: z.boolean().optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
     updated_at: z.string().datetime({ offset: true }).optional(),
   })
   .passthrough();
-const TeamList = z
-  .object({ items: z.array(Team), total: z.number().int() })
+const ProjectList = z
+  .object({ items: z.array(Project), total: z.number().int() })
   .partial()
   .passthrough();
 const LoginRequest = z
@@ -187,7 +187,7 @@ const Secret = z.object({
   name: z.string(),
   description: z.string().optional(),
   organisation_id: z.string().optional(),
-  team_id: z.string().optional(),
+  project_id: z.string().optional(),
   type: SecretType,
   data: z.array(SecretData),
   outputs: z.array(OutputDescriptor).optional(),
@@ -344,7 +344,7 @@ const ObjectStore = z
   .object({
     id: z.string().optional(),
     organisation_id: z.string().optional(),
-    team_id: z.string().optional(),
+    project_id: z.string().optional(),
     name: z.string(),
     spec: ObjectStoreSpec,
     status: ObjectStoreStatus.optional(),
@@ -524,7 +524,7 @@ const VolumeStatus = z
   .passthrough();
 const Volume = z.object({
   id: z.string().optional(),
-  team_id: z.string().optional(),
+  project_id: z.string().optional(),
   name: z.string(),
   labels: z.array(Label).optional(),
   annotations: z.array(Annotation).optional(),
@@ -636,7 +636,7 @@ const Stack = z
   .object({
     id: z.string().optional(),
     organisation_id: z.string().optional(),
-    team_id: z.string().optional(),
+    project_id: z.string().optional(),
     user_id: z.string().optional(),
     name: z.string(),
     namespace: z.string().optional(),
@@ -704,37 +704,39 @@ const ClusterImageRegistryList = z
   .object({ items: z.array(ClusterImageRegistry), total: z.number().int() })
   .partial()
   .passthrough();
-const TeamCreateRequest = z.object({ name: z.string() }).passthrough();
-const TeamUpdateRequest = z.object({ name: z.string() }).passthrough();
-const TeamRole = z.enum(["Developer", "Viewer"]);
-const AddTeamMemberRequest = z
-  .object({ user_id: z.string(), role: TeamRole })
+const ProjectCreateRequest = z.object({ name: z.string() }).passthrough();
+const ProjectUpdateRequest = z.object({ name: z.string() }).passthrough();
+const ProjectRole = z.enum(["Developer", "Viewer"]);
+const AddProjectMemberRequest = z
+  .object({ user_id: z.string(), role: ProjectRole })
   .passthrough();
-const TeamMembership = z
+const ProjectMembership = z
   .object({
     id: z.string().optional(),
-    team_id: z.string(),
+    project_id: z.string(),
     user_id: z.string(),
     role: z.enum(["Developer", "Viewer"]),
-    team: Team.optional(),
+    project: Project.optional(),
     user: User.optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
   })
   .passthrough();
-const TeamMembershipList = z
-  .object({ items: z.array(TeamMembership), total: z.number().int() })
+const ProjectMembershipList = z
+  .object({ items: z.array(ProjectMembership), total: z.number().int() })
   .partial()
   .passthrough();
-const UpdateTeamMemberRoleRequest = z.object({ role: TeamRole }).passthrough();
-const TeamRoleList = z
-  .object({ roles: z.array(TeamRole) })
+const UpdateProjectMemberRoleRequest = z
+  .object({ role: ProjectRole })
+  .passthrough();
+const ProjectRoleList = z
+  .object({ roles: z.array(ProjectRole) })
   .partial()
   .passthrough();
 const PromoteAdminRequest = z.object({ user_id: z.string() }).passthrough();
 const DemoteAdminRequest = z
   .object({
-    team_name: z.string(),
-    role: TeamRole.optional().default("Viewer"),
+    project_name: z.string(),
+    role: ProjectRole.optional().default("Viewer"),
   })
   .passthrough();
 const ResourceMetrics = z
@@ -1055,7 +1057,7 @@ const StackReleaseSnapshot = z
       .object({
         id: z.string(),
         organisation_id: z.string(),
-        team_id: z.string(),
+        project_id: z.string(),
         cluster_id: z.string(),
         user_id: z.string(),
         name: z.string(),
@@ -1281,7 +1283,7 @@ const PostgresAddon = z
   .object({
     id: z.string().optional(),
     organisation_id: z.string().optional(),
-    team_id: z.string().optional(),
+    project_id: z.string().optional(),
     user_id: z.string().optional(),
     cluster_id: z.string().optional(),
     name: z.string(),
@@ -1300,7 +1302,7 @@ const PostgresAddonList = z
   .object({ items: z.array(PostgresAddon), total: z.number().int() })
   .partial()
   .passthrough();
-const postApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdactionsfence_Body =
+const postApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdactionsfence_Body =
   z.object({ fence: z.boolean(), reason: z.string().optional() }).passthrough();
 const PostgresBackup = z
   .object({
@@ -1358,7 +1360,7 @@ const WorkspaceUser = z
     id: z.string().uuid().optional(),
     user_id: z.string().optional(),
     org_id: z.string().optional(),
-    team_id: z.string().optional(),
+    project_id: z.string().optional(),
     workspaces: z.array(z.string()).min(1),
     version: z.number().int().optional(),
     status: WorkspaceUserStatus.optional(),
@@ -1371,7 +1373,7 @@ const WorkspaceUser = z
 const OrgInviteCreateRequest = z
   .object({
     email: z.string().email(),
-    team_name: z.string(),
+    project_name: z.string(),
     role: z.enum(["Developer", "Viewer"]),
     expires_in_days: z.number().int().gte(1).lte(30),
   })
@@ -1382,7 +1384,7 @@ const OrgInviteCreateResponse = z
     id: z.string(),
     email: z.string(),
     organisation_id: z.string(),
-    team_name: z.string(),
+    project_name: z.string(),
     role: z.string(),
     status: InviteStatus,
     expires_at: z.string().datetime({ offset: true }),
@@ -1398,7 +1400,7 @@ const OrgInvite = z
     id: z.string(),
     email: z.string(),
     organisation_id: z.string(),
-    team_name: z.string(),
+    project_name: z.string(),
     role: z.enum(["Developer", "Viewer"]),
     status: InviteStatus,
     expires_at: z.string().datetime({ offset: true }),
@@ -1417,7 +1419,7 @@ const OrgInviteList = z
 const OrgInviteInfo = z
   .object({
     org_name: z.string(),
-    team_name: z.string(),
+    project_name: z.string(),
     inviter_name: z.string(),
     expires_at: z.string().datetime({ offset: true }),
   })
@@ -1443,7 +1445,7 @@ const StackPreviewConfig = z
   .object({
     id: z.string(),
     organisation_id: z.string(),
-    team_id: z.string(),
+    project_id: z.string(),
     user_id: z.string(),
     name: z.string(),
     description: z.string(),
@@ -1492,7 +1494,7 @@ const PreviewStack = z
   .object({
     id: z.string(),
     organisation_id: z.string(),
-    team_id: z.string(),
+    project_id: z.string(),
     user_id: z.string(),
     config_id: z.string(),
     stack_id: z.string(),
@@ -1647,14 +1649,14 @@ export const schemas = {
   Organisation,
   UserSignupRequest,
   UserRole,
-  UserTeamMembership,
+  UserProjectMembership,
   User,
   UserSignupResponse,
   ObjectReference,
   Error,
   AppConfigResponse,
-  Team,
-  TeamList,
+  Project,
+  ProjectList,
   LoginRequest,
   LoginResponse,
   RefreshTokenRequest,
@@ -1750,14 +1752,14 @@ export const schemas = {
   Cluster,
   ClusterList,
   ClusterImageRegistryList,
-  TeamCreateRequest,
-  TeamUpdateRequest,
-  TeamRole,
-  AddTeamMemberRequest,
-  TeamMembership,
-  TeamMembershipList,
-  UpdateTeamMemberRoleRequest,
-  TeamRoleList,
+  ProjectCreateRequest,
+  ProjectUpdateRequest,
+  ProjectRole,
+  AddProjectMemberRequest,
+  ProjectMembership,
+  ProjectMembershipList,
+  UpdateProjectMemberRoleRequest,
+  ProjectRoleList,
   PromoteAdminRequest,
   DemoteAdminRequest,
   ResourceMetrics,
@@ -1806,7 +1808,7 @@ export const schemas = {
   PostgresAddonStatus,
   PostgresAddon,
   PostgresAddonList,
-  postApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdactionsfence_Body,
+  postApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdactionsfence_Body,
   PostgresBackup,
   PostgresBackupList,
   PostgresCredentials,
@@ -2244,7 +2246,7 @@ const endpoints = makeApi([
     method: "post",
     path: "/api/v1/organizations/:org_id/admins/:user_id/demote",
     alias: "postApiv1organizationsOrg_idadminsUser_iddemote",
-    description: `Demotes an OrgAdmin and places them in the specified team with the given role (defaults to Viewer).`,
+    description: `Demotes an OrgAdmin and places them in the specified project with the given role (defaults to Viewer).`,
     requestFormat: "json",
     parameters: [
       {
@@ -3321,7 +3323,7 @@ const endpoints = makeApi([
     method: "get",
     path: "/api/v1/organizations/:org_id/object-stores",
     alias: "getApiv1organizationsOrg_idobjectStores",
-    description: `Returns object stores from all teams the user belongs to. OrgAdmins see all object stores in the org.`,
+    description: `Returns object stores from all projects the user belongs to. OrgAdmins see all object stores in the org.`,
     requestFormat: "json",
     parameters: [
       {
@@ -3341,6 +3343,3633 @@ const endpoints = makeApi([
         status: 500,
         description: `Internal server error`,
         schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects",
+    alias: "postApiv1organizationsOrg_idprojects",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ name: z.string() }).passthrough(),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Project,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects",
+    alias: "getApiv1organizationsOrg_idprojects",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ProjectList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name",
+    alias: "getApiv1organizationsOrg_idprojectsProject_name",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Project,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Project not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name",
+    alias: "putApiv1organizationsOrg_idprojectsProject_name",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ name: z.string() }).passthrough(),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Project,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Project not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_name",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Project not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres",
+    alias: "postApiv1organizationsOrg_idprojectsProject_nameaddonspostgres",
+    description: `Create a new PostgreSQL database cluster addon`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PostgresAddon,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PostgresAddon,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `PostgresAddon already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres",
+    alias: "getApiv1organizationsOrg_idprojectsProject_nameaddonspostgres",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PostgresAddonList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id",
+    alias: "getApiv1organizationsOrg_idprojectsProject_nameaddonspostgresId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PostgresAddon,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id",
+    alias: "putApiv1organizationsOrg_idprojectsProject_nameaddonspostgresId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PostgresAddon,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PostgresAddon,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_nameaddonspostgresId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PostgresAddon,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `PostgreSQL addon is in use and cannot be deleted`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id/actions/backup",
+    alias:
+      "postApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdactionsbackup",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ description: z.string() }).partial().passthrough(),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z
+      .object({ message: z.string(), backup_id: z.string() })
+      .partial()
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Backup already in progress`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id/actions/fence",
+    alias:
+      "postApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdactionsfence",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema:
+          postApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdactionsfence_Body,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z
+      .object({ message: z.string(), fenced: z.boolean() })
+      .partial()
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id/actions/hibernate",
+    alias:
+      "postApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdactionshibernate",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ hibernate: z.boolean() }).passthrough(),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z
+      .object({ message: z.string(), hibernated: z.boolean() })
+      .partial()
+      .passthrough(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id/backups",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdbackups",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "limit",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+      {
+        name: "offset",
+        type: "Query",
+        schema: z.number().int().optional().default(0),
+      },
+    ],
+    response: PostgresBackupList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `PostgresAddon not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/addons/postgres/:id/credentials/:database",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_nameaddonspostgresIdcredentialsDatabase",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "database",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "superuser",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+    ],
+    response: PostgresCredentials,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: Error,
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: Error,
+      },
+      {
+        status: 404,
+        description: `Addon or database not found`,
+        schema: Error,
+      },
+      {
+        status: 503,
+        description: `Addon not ready or cluster unreachable`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/members",
+    alias: "postApiv1organizationsOrg_idprojectsProject_namemembers",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: AddProjectMemberRequest,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ProjectMembership,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Project not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/members",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namemembers",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ProjectMembershipList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Project not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/members/:id",
+    alias: "putApiv1organizationsOrg_idprojectsProject_namemembersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateProjectMemberRoleRequest,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ProjectMembership,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Membership not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/members/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_namemembersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Membership not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/object-stores",
+    alias: "postApiv1organizationsOrg_idprojectsProject_nameobjectStores",
+    description: `Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: ObjectStore,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ObjectStore,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `ObjectStore already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/object-stores",
+    alias: "getApiv1organizationsOrg_idprojectsProject_nameobjectStores",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ObjectStoreList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/object-stores/:id",
+    alias: "getApiv1organizationsOrg_idprojectsProject_nameobjectStoresId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ObjectStore,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `ObjectStore not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/object-stores/:id",
+    alias: "putApiv1organizationsOrg_idprojectsProject_nameobjectStoresId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: ObjectStore,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ObjectStore,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `ObjectStore not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/object-stores/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_nameobjectStoresId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `ObjectStore not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `ObjectStore is in use by PostgresAddons`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/preview-stacks",
+    alias: "createPreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PreviewStackCreate,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Preview stack already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/preview-stacks",
+    alias: "listPreviewStacks",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "page_size",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+      {
+        name: "config_id",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: PreviewStackList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/preview-stacks/:id",
+    alias: "getPreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/preview-stacks/:id",
+    alias: "deletePreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/preview-stacks/:id/sync",
+    alias: "syncPreviewStack",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: PreviewStackSync,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: PreviewStack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/secrets",
+    alias: "postApiv1organizationsOrg_idprojectsProject_namesecrets",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Secret,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Secret,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/secrets",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namesecrets",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "name",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: SecretList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/secrets/:id",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namesecretsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Secret,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Secret not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/secrets/:id",
+    alias: "putApiv1organizationsOrg_idprojectsProject_namesecretsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Secret,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Secret,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Secret not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/secrets/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_namesecretsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Secret not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Secret is in use and cannot be deleted`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stack-preview-configs",
+    alias: "createPreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackPreviewConfigCreate,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackPreviewConfig,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Preview config already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stack-preview-configs",
+    alias: "listPreviewConfigs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "page_size",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+    ],
+    response: StackPreviewConfigList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stack-preview-configs/:id",
+    alias: "getPreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackPreviewConfig,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview config not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stack-preview-configs/:id",
+    alias: "updatePreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackPreviewConfigUpdate,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackPreviewConfig,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview config not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stack-preview-configs/:id",
+    alias: "deletePreviewConfig",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Preview config not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks",
+    alias: "postApiv1organizationsOrg_idprojectsProject_namestacks",
+    description: `Creates a thin stack shell (name, labels, annotations, settings). Any inline
+&#x60;stack_resources&#x60;, &#x60;volumes&#x60;, or &#x60;connections&#x60; in the body are ignored — add
+children via &#x60;PUT /stacks/{id}/apply&#x60; or the individual sub-resource endpoints.
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Stack,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Stack already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacks",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "limit",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+      {
+        name: "offset",
+        type: "Query",
+        schema: z.number().int().optional().default(0),
+      },
+    ],
+    response: StackList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id",
+    alias: "putApiv1organizationsOrg_idprojectsProject_namestacksId",
+    description: `Updates only shell fields (name, labels, annotations, settings). &#x60;namespace&#x60; is
+immutable. Child collections (&#x60;stack_resources&#x60;, &#x60;volumes&#x60;, &#x60;connections&#x60;) in the
+body are ignored — use &#x60;PUT /stacks/{id}/apply&#x60; for a full reconcile.
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Stack,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_namestacksId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/apply",
+    alias: "applyStack",
+    description: `Declarative whole-document apply. Reconciles the stack against the supplied
+document: resources and connections not present in the body are deleted, while
+volumes are add-only and are never deleted. This is the only endpoint that
+accepts a full stack document.
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Stack,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/builds",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdbuilds",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ImageBuildList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/builds/:build_id",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_namestacksIdbuildsBuild_id",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "build_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ImageBuild,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Build not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/connections",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdconnections",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackConnectionList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/connections",
+    alias:
+      "postApiv1organizationsOrg_idprojectsProject_namestacksIdconnections",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackConnection,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackConnection,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Stack connection already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/connections/:connection_id",
+    alias:
+      "putApiv1organizationsOrg_idprojectsProject_namestacksIdconnectionsConnection_id",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackConnection,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "connection_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackConnection,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or connection not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/connections/:connection_id",
+    alias:
+      "deleteApiv1organizationsOrg_idprojectsProject_namestacksIdconnectionsConnection_id",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "connection_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or connection not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/logs",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdlogs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "follow",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+      {
+        name: "tail",
+        type: "Query",
+        schema: z.number().int().optional().default(100),
+      },
+      {
+        name: "since",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/metrics",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdmetrics",
+    description: `Returns metrics for a stack. If &#x60;stream&#x3D;true&#x60; is passed, the server responds using Server-Sent Events (SSE).
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "stream",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+    ],
+    response: ResourceMetrics,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/releases",
+    alias: "createRelease",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z
+          .object({ from_release_id: z.string() })
+          .partial()
+          .passthrough(),
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackRelease,
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/releases",
+    alias: "listReleases",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "state",
+        type: "Query",
+        schema: z
+          .enum([
+            "Pending",
+            "InProgress",
+            "Released",
+            "Failed",
+            "Superseded",
+            "Cancelled",
+          ])
+          .optional(),
+      },
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "page_size",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+    ],
+    response: StackReleaseList,
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/releases/:release_id",
+    alias: "getRelease",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackReleaseDetail,
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/releases/:release_id/cancel",
+    alias: "cancelRelease",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/releases/:release_id/events",
+    alias: "listReleaseEvents",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "after_sequence",
+        type: "Query",
+        schema: z.number().int().optional().default(0),
+      },
+      {
+        name: "limit",
+        type: "Query",
+        schema: z.number().int().lte(500).optional().default(100),
+      },
+    ],
+    response: ReleaseEventList,
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/releases/:release_id/events/stream",
+    alias: "streamReleaseEvents",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "release_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "after_sequence",
+        type: "Query",
+        schema: z.number().int().optional().default(0),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdresources",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResourceList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources",
+    alias: "createStackResource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackResource,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Stack resource already exists`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_namestacksIdresourcesResource_name",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name",
+    alias: "updateStackResource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: StackResource,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or resource not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name",
+    alias: "deleteStackResource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack or resource not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name/actions/restart",
+    alias:
+      "postApiv1organizationsOrg_idprojectsProject_namestacksIdresourcesResource_nameactionsrestart",
+    description: `Triggers a rolling restart of the stack resource by setting a new restart request timestamp.`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackResource,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack resource not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name/builds",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_namestacksIdresourcesResource_namebuilds",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ImageBuildList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name/logs",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_namestacksIdresourcesResource_namelogs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "follow",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+      {
+        name: "tail",
+        type: "Query",
+        schema: z.number().int().optional().default(100),
+      },
+      {
+        name: "since",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/resources/:resource_name/metrics",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_namestacksIdresourcesResource_namemetrics",
+    description: `Returns metrics for a stack resource. If &#x60;stream&#x3D;true&#x60; is passed, the server responds using Server-Sent Events (SSE).
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "resource_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "stream",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+    ],
+    response: ResourceMetrics,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/topology",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdtopology",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: StackTopology,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/volumes",
+    alias: "postApiv1organizationsOrg_idprojectsProject_namestacksIdvolumes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Volume,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Volume,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Stack not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `A volume with this name already exists in the stack`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/apply",
+    alias: "applyStackByName",
+    description: `Name-addressed declarative whole-document apply. Stack identity is the
+&#x60;name&#x60; in the request body (unique per project). If a stack with that name
+exists in the project it is reconciled exactly like the id-addressed apply
+(resources and connections not present in the body are deleted, volumes
+are add-only); otherwise the stack and its children are created
+atomically after full validation. Idempotent — clients need not know
+whether the stack already exists.
+`,
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Stack,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Stack,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
+        schema: Error,
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/volumes",
+    alias: "postApiv1organizationsOrg_idprojectsProject_namevolumes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: Volume,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Volume,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/volumes/:id",
+    alias: "getApiv1organizationsOrg_idprojectsProject_namevolumesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: Volume,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/volumes/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_namevolumesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Volume not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Volume is in use and cannot be deleted`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/workspace-users",
+    alias: "postApiv1organizationsOrg_idprojectsProject_nameworkspaceUsers",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: WorkspaceUser,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: WorkspaceUser,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/workspace-users/:id",
+    alias: "getApiv1organizationsOrg_idprojectsProject_nameworkspaceUsersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: WorkspaceUser,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `WorkspaceUser not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/workspace-users/:id",
+    alias: "putApiv1organizationsOrg_idprojectsProject_nameworkspaceUsersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: WorkspaceUser,
+      },
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: WorkspaceUser,
+    errors: [
+      {
+        status: 400,
+        description: `Invalid request payload`,
+        schema: z.void(),
+      },
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `WorkspaceUser not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "delete",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/workspace-users/:id",
+    alias: "deleteApiv1organizationsOrg_idprojectsProject_nameworkspaceUsersId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `WorkspaceUser not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/workspace-users/current",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_nameworkspaceUserscurrent",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: WorkspaceUser,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `WorkspaceUser not found`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
       },
     ],
   },
@@ -3610,7 +7239,7 @@ const endpoints = makeApi([
     method: "get",
     path: "/api/v1/organizations/:org_id/secrets",
     alias: "getApiv1organizationsOrg_idsecrets",
-    description: `Returns secrets from all teams the user belongs to. OrgAdmins see all secrets in the org.`,
+    description: `Returns secrets from all projects the user belongs to. OrgAdmins see all secrets in the org.`,
     requestFormat: "json",
     parameters: [
       {
@@ -3642,7 +7271,7 @@ const endpoints = makeApi([
     method: "get",
     path: "/api/v1/organizations/:org_id/stacks",
     alias: "getApiv1organizationsOrg_idstacks",
-    description: `Returns stacks from all teams the user belongs to. OrgAdmins see all stacks in the org.`,
+    description: `Returns stacks from all projects the user belongs to. OrgAdmins see all stacks in the org.`,
     requestFormat: "json",
     parameters: [
       {
@@ -3662,3629 +7291,6 @@ const endpoints = makeApi([
         status: 500,
         description: `Internal server error`,
         schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams",
-    alias: "postApiv1organizationsOrg_idteams",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ name: z.string() }).passthrough(),
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Team,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams",
-    alias: "getApiv1organizationsOrg_idteams",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: TeamList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name",
-    alias: "getApiv1organizationsOrg_idteamsTeam_name",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Team,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Team not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name",
-    alias: "putApiv1organizationsOrg_idteamsTeam_name",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ name: z.string() }).passthrough(),
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Team,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Team not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_name",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Team not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres",
-    alias: "postApiv1organizationsOrg_idteamsTeam_nameaddonspostgres",
-    description: `Create a new PostgreSQL database cluster addon`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: PostgresAddon,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PostgresAddon,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `PostgresAddon already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameaddonspostgres",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PostgresAddonList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameaddonspostgresId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PostgresAddon,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id",
-    alias: "putApiv1organizationsOrg_idteamsTeam_nameaddonspostgresId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: PostgresAddon,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PostgresAddon,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_nameaddonspostgresId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PostgresAddon,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `PostgreSQL addon is in use and cannot be deleted`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id/actions/backup",
-    alias:
-      "postApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdactionsbackup",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ description: z.string() }).partial().passthrough(),
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z
-      .object({ message: z.string(), backup_id: z.string() })
-      .partial()
-      .passthrough(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Backup already in progress`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id/actions/fence",
-    alias:
-      "postApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdactionsfence",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema:
-          postApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdactionsfence_Body,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z
-      .object({ message: z.string(), fenced: z.boolean() })
-      .partial()
-      .passthrough(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id/actions/hibernate",
-    alias:
-      "postApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdactionshibernate",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z.object({ hibernate: z.boolean() }).passthrough(),
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z
-      .object({ message: z.string(), hibernated: z.boolean() })
-      .partial()
-      .passthrough(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id/backups",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdbackups",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "limit",
-        type: "Query",
-        schema: z.number().int().optional().default(20),
-      },
-      {
-        name: "offset",
-        type: "Query",
-        schema: z.number().int().optional().default(0),
-      },
-    ],
-    response: PostgresBackupList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `PostgresAddon not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/addons/postgres/:id/credentials/:database",
-    alias:
-      "getApiv1organizationsOrg_idteamsTeam_nameaddonspostgresIdcredentialsDatabase",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "database",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "superuser",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
-      },
-    ],
-    response: PostgresCredentials,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: Error,
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: Error,
-      },
-      {
-        status: 404,
-        description: `Addon or database not found`,
-        schema: Error,
-      },
-      {
-        status: 503,
-        description: `Addon not ready or cluster unreachable`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/members",
-    alias: "postApiv1organizationsOrg_idteamsTeam_namemembers",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: AddTeamMemberRequest,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: TeamMembership,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Team not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/members",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namemembers",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: TeamMembershipList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Team not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/members/:id",
-    alias: "putApiv1organizationsOrg_idteamsTeam_namemembersId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: UpdateTeamMemberRoleRequest,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: TeamMembership,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Membership not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/members/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_namemembersId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Membership not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/object-stores",
-    alias: "postApiv1organizationsOrg_idteamsTeam_nameobjectStores",
-    description: `Add a new ObjectStore configuration for storing PostgreSQL backups and WAL files`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: ObjectStore,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ObjectStore,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `ObjectStore already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/object-stores",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameobjectStores",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ObjectStoreList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/object-stores/:id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameobjectStoresId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ObjectStore,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `ObjectStore not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/object-stores/:id",
-    alias: "putApiv1organizationsOrg_idteamsTeam_nameobjectStoresId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: ObjectStore,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ObjectStore,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `ObjectStore not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/object-stores/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_nameobjectStoresId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `ObjectStore not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `ObjectStore is in use by PostgresAddons`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks",
-    alias: "createPreviewStack",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: PreviewStackCreate,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PreviewStack,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Preview stack already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks",
-    alias: "listPreviewStacks",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "page",
-        type: "Query",
-        schema: z.number().int().optional().default(1),
-      },
-      {
-        name: "page_size",
-        type: "Query",
-        schema: z.number().int().optional().default(20),
-      },
-      {
-        name: "config_id",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-    ],
-    response: PreviewStackList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks/:id",
-    alias: "getPreviewStack",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PreviewStack,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Preview stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks/:id",
-    alias: "deletePreviewStack",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PreviewStack,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Preview stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/preview-stacks/:id/sync",
-    alias: "syncPreviewStack",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: PreviewStackSync,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: PreviewStack,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Preview stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/secrets",
-    alias: "postApiv1organizationsOrg_idteamsTeam_namesecrets",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Secret,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Secret,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/secrets",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namesecrets",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "name",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-    ],
-    response: SecretList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/secrets/:id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namesecretsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Secret,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Secret not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/secrets/:id",
-    alias: "putApiv1organizationsOrg_idteamsTeam_namesecretsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Secret,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Secret,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Secret not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/secrets/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_namesecretsId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Secret not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Secret is in use and cannot be deleted`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs",
-    alias: "createPreviewConfig",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: StackPreviewConfigCreate,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackPreviewConfig,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Preview config already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs",
-    alias: "listPreviewConfigs",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "page",
-        type: "Query",
-        schema: z.number().int().optional().default(1),
-      },
-      {
-        name: "page_size",
-        type: "Query",
-        schema: z.number().int().optional().default(20),
-      },
-    ],
-    response: StackPreviewConfigList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs/:id",
-    alias: "getPreviewConfig",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackPreviewConfig,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Preview config not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs/:id",
-    alias: "updatePreviewConfig",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: StackPreviewConfigUpdate,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackPreviewConfig,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Preview config not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stack-preview-configs/:id",
-    alias: "deletePreviewConfig",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Preview config not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks",
-    alias: "postApiv1organizationsOrg_idteamsTeam_namestacks",
-    description: `Creates a thin stack shell (name, labels, annotations, settings). Any inline
-&#x60;stack_resources&#x60;, &#x60;volumes&#x60;, or &#x60;connections&#x60; in the body are ignored — add
-children via &#x60;PUT /stacks/{id}/apply&#x60; or the individual sub-resource endpoints.
-`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Stack,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Stack,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Stack already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacks",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "limit",
-        type: "Query",
-        schema: z.number().int().optional().default(20),
-      },
-      {
-        name: "offset",
-        type: "Query",
-        schema: z.number().int().optional().default(0),
-      },
-    ],
-    response: StackList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Stack,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id",
-    alias: "putApiv1organizationsOrg_idteamsTeam_namestacksId",
-    description: `Updates only shell fields (name, labels, annotations, settings). &#x60;namespace&#x60; is
-immutable. Child collections (&#x60;stack_resources&#x60;, &#x60;volumes&#x60;, &#x60;connections&#x60;) in the
-body are ignored — use &#x60;PUT /stacks/{id}/apply&#x60; for a full reconcile.
-`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Stack,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Stack,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_namestacksId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Stack,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/apply",
-    alias: "applyStack",
-    description: `Declarative whole-document apply. Reconciles the stack against the supplied
-document: resources and connections not present in the body are deleted, while
-volumes are add-only and are never deleted. This is the only endpoint that
-accepts a full stack document.
-`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Stack,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Stack,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/builds",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdbuilds",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ImageBuildList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/builds/:build_id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdbuildsBuild_id",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "build_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ImageBuild,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Build not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdconnections",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackConnectionList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections",
-    alias: "postApiv1organizationsOrg_idteamsTeam_namestacksIdconnections",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: StackConnection,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackConnection,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Stack connection already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections/:connection_id",
-    alias:
-      "putApiv1organizationsOrg_idteamsTeam_namestacksIdconnectionsConnection_id",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: StackConnection,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "connection_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackConnection,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack or connection not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/connections/:connection_id",
-    alias:
-      "deleteApiv1organizationsOrg_idteamsTeam_namestacksIdconnectionsConnection_id",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "connection_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack or connection not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/logs",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdlogs",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "follow",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
-      },
-      {
-        name: "tail",
-        type: "Query",
-        schema: z.number().int().optional().default(100),
-      },
-      {
-        name: "since",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/metrics",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdmetrics",
-    description: `Returns metrics for a stack. If &#x60;stream&#x3D;true&#x60; is passed, the server responds using Server-Sent Events (SSE).
-`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "stream",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
-      },
-    ],
-    response: ResourceMetrics,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases",
-    alias: "createRelease",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: z
-          .object({ from_release_id: z.string() })
-          .partial()
-          .passthrough(),
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackRelease,
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases",
-    alias: "listReleases",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "state",
-        type: "Query",
-        schema: z
-          .enum([
-            "Pending",
-            "InProgress",
-            "Released",
-            "Failed",
-            "Superseded",
-            "Cancelled",
-          ])
-          .optional(),
-      },
-      {
-        name: "page",
-        type: "Query",
-        schema: z.number().int().optional().default(1),
-      },
-      {
-        name: "page_size",
-        type: "Query",
-        schema: z.number().int().optional().default(20),
-      },
-    ],
-    response: StackReleaseList,
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id",
-    alias: "getRelease",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "release_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackReleaseDetail,
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id/cancel",
-    alias: "cancelRelease",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "release_id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id/events",
-    alias: "listReleaseEvents",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "release_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "after_sequence",
-        type: "Query",
-        schema: z.number().int().optional().default(0),
-      },
-      {
-        name: "limit",
-        type: "Query",
-        schema: z.number().int().lte(500).optional().default(100),
-      },
-    ],
-    response: ReleaseEventList,
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/releases/:release_id/events/stream",
-    alias: "streamReleaseEvents",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "release_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "after_sequence",
-        type: "Query",
-        schema: z.number().int().optional().default(0),
-      },
-    ],
-    response: z.void(),
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdresources",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackResourceList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources",
-    alias: "createStackResource",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: StackResource,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackResource,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Stack resource already exists`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
-    alias:
-      "getApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_name",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackResource,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
-    alias: "updateStackResource",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: StackResource,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackResource,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack or resource not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name",
-    alias: "deleteStackResource",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack or resource not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name/actions/restart",
-    alias:
-      "postApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_nameactionsrestart",
-    description: `Triggers a rolling restart of the stack resource by setting a new restart request timestamp.`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackResource,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack resource not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name/builds",
-    alias:
-      "getApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_namebuilds",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: ImageBuildList,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name/logs",
-    alias:
-      "getApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_namelogs",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "follow",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
-      },
-      {
-        name: "tail",
-        type: "Query",
-        schema: z.number().int().optional().default(100),
-      },
-      {
-        name: "since",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/resources/:resource_name/metrics",
-    alias:
-      "getApiv1organizationsOrg_idteamsTeam_namestacksIdresourcesResource_namemetrics",
-    description: `Returns metrics for a stack resource. If &#x60;stream&#x3D;true&#x60; is passed, the server responds using Server-Sent Events (SSE).
-`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "resource_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "stream",
-        type: "Query",
-        schema: z.boolean().optional().default(false),
-      },
-    ],
-    response: ResourceMetrics,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/topology",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namestacksIdtopology",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: StackTopology,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/:id/volumes",
-    alias: "postApiv1organizationsOrg_idteamsTeam_namestacksIdvolumes",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Volume,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Volume,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Stack not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `A volume with this name already exists in the stack`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/stacks/apply",
-    alias: "applyStackByName",
-    description: `Name-addressed declarative whole-document apply. Stack identity is the
-&#x60;name&#x60; in the request body (unique per team). If a stack with that name
-exists in the team it is reconciled exactly like the id-addressed apply
-(resources and connections not present in the body are deleted, volumes
-are add-only); otherwise the stack and its children are created
-atomically after full validation. Idempotent — clients need not know
-whether the stack already exists.
-`,
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Stack,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Stack,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request data. &#x60;details&#x60; carries a &#x60;ValidationErrorDetail&#x60; payload when the failure is an aggregated field validation error.`,
-        schema: Error,
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: Error,
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/volumes",
-    alias: "postApiv1organizationsOrg_idteamsTeam_namevolumes",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Volume,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Volume,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/volumes/:id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_namevolumesId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Volume,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/volumes/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_namevolumesId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `Volume not found`,
-        schema: z.void(),
-      },
-      {
-        status: 409,
-        description: `Volume is in use and cannot be deleted`,
-        schema: Error,
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/workspace-users",
-    alias: "postApiv1organizationsOrg_idteamsTeam_nameworkspaceUsers",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: WorkspaceUser,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: WorkspaceUser,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/workspace-users/:id",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameworkspaceUsersId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: WorkspaceUser,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `WorkspaceUser not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "put",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/workspace-users/:id",
-    alias: "putApiv1organizationsOrg_idteamsTeam_nameworkspaceUsersId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: WorkspaceUser,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: WorkspaceUser,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `WorkspaceUser not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "delete",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/workspace-users/:id",
-    alias: "deleteApiv1organizationsOrg_idteamsTeam_nameworkspaceUsersId",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "id",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: z.void(),
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `WorkspaceUser not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
-    method: "get",
-    path: "/api/v1/organizations/:org_id/teams/:team_name/workspace-users/current",
-    alias: "getApiv1organizationsOrg_idteamsTeam_nameworkspaceUserscurrent",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "team_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: WorkspaceUser,
-    errors: [
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 404,
-        description: `WorkspaceUser not found`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
       },
     ],
   },
@@ -7331,11 +7337,11 @@ whether the stack already exists.
   },
   {
     method: "get",
-    path: "/api/v1/team-roles",
-    alias: "getApiv1teamRoles",
-    description: `Returns the list of roles that can be assigned to team members.`,
+    path: "/api/v1/project-roles",
+    alias: "getApiv1projectRoles",
+    description: `Returns the list of roles that can be assigned to project members.`,
     requestFormat: "json",
-    response: TeamRoleList,
+    response: ProjectRoleList,
     errors: [
       {
         status: 401,
@@ -7434,10 +7440,10 @@ whether the stack already exists.
   },
   {
     method: "get",
-    path: "/api/v1/users/current/teams",
-    alias: "getApiv1userscurrentteams",
+    path: "/api/v1/users/current/projects",
+    alias: "getApiv1userscurrentprojects",
     requestFormat: "json",
-    response: TeamList,
+    response: ProjectList,
     errors: [
       {
         status: 401,

@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] [readonly] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
-**TeamId** | Pointer to **string** |  | [optional] [readonly] 
+**ProjectId** | Pointer to **string** |  | [optional] [readonly] 
 **UserId** | Pointer to **string** |  | [optional] [readonly] 
 **ConfigId** | Pointer to **string** |  | [optional] 
 **StackId** | Pointer to **string** |  | [optional] 
@@ -92,30 +92,30 @@ SetOrganisationId sets OrganisationId field to given value.
 
 HasOrganisationId returns a boolean if a field has been set.
 
-### GetTeamId
+### GetProjectId
 
-`func (o *PreviewStack) GetTeamId() string`
+`func (o *PreviewStack) GetProjectId() string`
 
-GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
 
-### GetTeamIdOk
+### GetProjectIdOk
 
-`func (o *PreviewStack) GetTeamIdOk() (*string, bool)`
+`func (o *PreviewStack) GetProjectIdOk() (*string, bool)`
 
-GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamId
+### SetProjectId
 
-`func (o *PreviewStack) SetTeamId(v string)`
+`func (o *PreviewStack) SetProjectId(v string)`
 
-SetTeamId sets TeamId field to given value.
+SetProjectId sets ProjectId field to given value.
 
-### HasTeamId
+### HasProjectId
 
-`func (o *PreviewStack) HasTeamId() bool`
+`func (o *PreviewStack) HasProjectId() bool`
 
-HasTeamId returns a boolean if a field has been set.
+HasProjectId returns a boolean if a field has been set.
 
 ### GetUserId
 

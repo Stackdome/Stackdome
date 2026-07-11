@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] [readonly] 
-**TeamId** | Pointer to **string** |  | [optional] [readonly] 
+**ProjectId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** |  | 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
@@ -56,30 +56,30 @@ SetId sets Id field to given value.
 
 HasId returns a boolean if a field has been set.
 
-### GetTeamId
+### GetProjectId
 
-`func (o *Volume) GetTeamId() string`
+`func (o *Volume) GetProjectId() string`
 
-GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
 
-### GetTeamIdOk
+### GetProjectIdOk
 
-`func (o *Volume) GetTeamIdOk() (*string, bool)`
+`func (o *Volume) GetProjectIdOk() (*string, bool)`
 
-GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamId
+### SetProjectId
 
-`func (o *Volume) SetTeamId(v string)`
+`func (o *Volume) SetProjectId(v string)`
 
-SetTeamId sets TeamId field to given value.
+SetProjectId sets ProjectId field to given value.
 
-### HasTeamId
+### HasProjectId
 
-`func (o *Volume) HasTeamId() bool`
+`func (o *Volume) HasProjectId() bool`
 
-HasTeamId returns a boolean if a field has been set.
+HasProjectId returns a boolean if a field has been set.
 
 ### GetName
 

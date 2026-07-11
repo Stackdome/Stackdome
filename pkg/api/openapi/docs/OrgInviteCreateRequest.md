@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Email** | **string** |  | 
-**TeamName** | **string** |  | 
+**ProjectName** | **string** |  | 
 **Role** | **string** |  | 
 **ExpiresInDays** | **int32** |  | 
 
@@ -13,7 +13,7 @@ Name | Type | Description | Notes
 
 ### NewOrgInviteCreateRequest
 
-`func NewOrgInviteCreateRequest(email string, teamName string, role string, expiresInDays int32, ) *OrgInviteCreateRequest`
+`func NewOrgInviteCreateRequest(email string, projectName string, role string, expiresInDays int32, ) *OrgInviteCreateRequest`
 
 NewOrgInviteCreateRequest instantiates a new OrgInviteCreateRequest object
 This constructor will assign default values to properties that have it defined,
@@ -48,24 +48,24 @@ and a boolean to check if the value has been set.
 SetEmail sets Email field to given value.
 
 
-### GetTeamName
+### GetProjectName
 
-`func (o *OrgInviteCreateRequest) GetTeamName() string`
+`func (o *OrgInviteCreateRequest) GetProjectName() string`
 
-GetTeamName returns the TeamName field if non-nil, zero value otherwise.
+GetProjectName returns the ProjectName field if non-nil, zero value otherwise.
 
-### GetTeamNameOk
+### GetProjectNameOk
 
-`func (o *OrgInviteCreateRequest) GetTeamNameOk() (*string, bool)`
+`func (o *OrgInviteCreateRequest) GetProjectNameOk() (*string, bool)`
 
-GetTeamNameOk returns a tuple with the TeamName field if it's non-nil, zero value otherwise
+GetProjectNameOk returns a tuple with the ProjectName field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamName
+### SetProjectName
 
-`func (o *OrgInviteCreateRequest) SetTeamName(v string)`
+`func (o *OrgInviteCreateRequest) SetProjectName(v string)`
 
-SetTeamName sets TeamName field to given value.
+SetProjectName sets ProjectName field to given value.
 
 
 ### GetRole
