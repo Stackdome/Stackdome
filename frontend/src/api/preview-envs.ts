@@ -34,6 +34,20 @@ export async function listPreviewEnvs(
   return res.data as PreviewStackList;
 }
 
+/** Fetches every page so callers see the complete env set, not the first 20. */
+export async function listAllPreviewEnvs(orgId: string, teamName: string, configId?: string): Promise<PreviewStack[]> {
+  const pageSize = 100;
+  const items: PreviewStack[] = [];
+  for (let page = 1; ; page++) {
+    const res = await listPreviewEnvs(orgId, teamName, { configId, page, pageSize });
+    const batch = res.items ?? [];
+    items.push(...batch);
+    const total = res.total ?? items.length;
+    if (batch.length === 0 || items.length >= total) break;
+  }
+  return items;
+}
+
 export async function getPreviewEnv(
   orgId: string,
   teamName: string,

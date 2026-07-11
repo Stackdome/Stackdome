@@ -7,6 +7,7 @@ vi.mock("@/api/client", () => ({
 import api from "@/api/client";
 import {
   listPreviewEnvs,
+  listAllPreviewEnvs,
   getPreviewEnv,
   createPreviewEnv,
   deletePreviewEnv,
@@ -21,6 +22,19 @@ const BASE = `/organizations/${ORG}/teams/${TEAM}/preview-stacks`;
 beforeEach(() => vi.clearAllMocks());
 
 describe("preview-envs api", () => {
+  it("listAllPreviewEnvs walks every page", async () => {
+    const pageOf = (n: number, count: number) => ({
+      data: { items: Array.from({ length: count }, (_, i) => ({ id: `p${n}-${i}` })), total: 120 },
+    });
+    (api.get as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(pageOf(1, 100))
+      .mockResolvedValueOnce(pageOf(2, 20));
+    const out = await listAllPreviewEnvs(ORG, TEAM);
+    expect(out).toHaveLength(120);
+    expect(api.get).toHaveBeenCalledTimes(2);
+    expect(api.get).toHaveBeenNthCalledWith(2, BASE, { params: { page: 2, page_size: 100 } });
+  });
+
   it("lists envs filtered by config", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { items: [], total: 0 } });
     await listPreviewEnvs(ORG, TEAM, { configId: "c1", page: 1, pageSize: 20 });

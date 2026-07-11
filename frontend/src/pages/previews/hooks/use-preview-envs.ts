@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  listPreviewEnvs,
+  listAllPreviewEnvs,
   TERMINAL_PHASES,
   type PreviewStack,
 } from "@/api/preview-envs";
@@ -34,8 +34,8 @@ export function usePreviewEnvs(configId?: string): UsePreviewEnvs {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !defaultTeamName) return;
     try {
-      const list = await listPreviewEnvs(orgId, defaultTeamName, { configId });
-      setEnvs(list.items ?? []);
+      const list = await listAllPreviewEnvs(orgId, defaultTeamName, configId);
+      setEnvs(list);
       setError(null);
     } catch (e) {
       setError(getErrorMessage(e));
