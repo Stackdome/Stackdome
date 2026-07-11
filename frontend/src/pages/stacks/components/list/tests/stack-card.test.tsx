@@ -20,7 +20,7 @@ const baseStack = {
 afterEach(cleanup);
 
 describe("DeployStackCard", () => {
-  it("renders ready card with success rail, namespace chip, and footer meta", () => {
+  it("renders ready card with success rail and footer meta", () => {
     render(
       <MemoryRouter>
         <DeployStackCard stack={{ ...baseStack, status: { state: "Ready" } } as Stack} />
@@ -28,8 +28,6 @@ describe("DeployStackCard", () => {
     );
     expect(screen.getByText("tooljet")).toBeTruthy();
     expect(screen.getByText("ready")).toBeTruthy();
-    expect(screen.getByText("ns-tooljet")).toBeTruthy();
-    expect(screen.getByText("rev 4")).toBeTruthy();
     expect(screen.getByText("2 res")).toBeTruthy();
     expect(screen.getByText("1 vol")).toBeTruthy();
     expect(document.querySelector('[data-rail="success"]')).toBeTruthy();

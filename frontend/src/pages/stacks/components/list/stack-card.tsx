@@ -119,7 +119,7 @@ function deployTone(state?: string | null): { tone: RailTone; word: string } {
 /**
  * Deployed-stack dashboard card, "Status Strip" design. Cluster name,
  * endpoint URLs, and commit hash are not in the stacks list payload, so the
- * card degrades to namespace chip + revision-based footer.
+ * card keeps the middle empty and shows counts + age in the footer.
  */
 export function DeployStackCard({ stack }: { stack: Stack }) {
   const Icon = inferStackIcon(stack);
@@ -144,21 +144,8 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
             {stack.status?.state && <StatusWord tone={tone}>{word}</StatusWord>}
           </div>
 
-          {stack.namespace && (
-            <div className="flex flex-wrap gap-1.5">
-              <span className="rounded-sm border border-border bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground">
-                {stack.namespace}
-              </span>
-            </div>
-          )}
-
           <CardFooterMeta
-            items={[
-              stack.revision != null && `rev ${stack.revision}`,
-              `${resourceCount} res`,
-              `${volumeCount} vol`,
-              age,
-            ]}
+            items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
           />
         </div>
       </Card>
