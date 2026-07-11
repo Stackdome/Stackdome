@@ -15,7 +15,7 @@ func createStackPreviewConfigsTable() *gormigrate.Migration {
 CREATE TABLE stack_preview_configs (
     id                  TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     organisation_id     TEXT NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
-    team_id             TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    project_id             TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     user_id             TEXT NOT NULL REFERENCES users(id),
     name                TEXT NOT NULL,
     description         TEXT,
@@ -26,9 +26,9 @@ CREATE TABLE stack_preview_configs (
     annotations         JSONB DEFAULT '[]',
     created_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (team_id, name)
+    UNIQUE (project_id, name)
 );
-CREATE INDEX idx_stack_preview_configs_team_id ON stack_preview_configs (team_id);
+CREATE INDEX idx_stack_preview_configs_project_id ON stack_preview_configs (project_id);
 CREATE INDEX idx_stack_preview_configs_organisation_id ON stack_preview_configs (organisation_id);
 `
 			if err := tx.Exec(sql).Error; err != nil {

@@ -15,7 +15,7 @@ func createPreviewStacksTable() *gormigrate.Migration {
 CREATE TABLE preview_stacks (
     id                       TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
     organisation_id          TEXT NOT NULL REFERENCES organisations(id) ON DELETE CASCADE,
-    team_id                  TEXT NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    project_id                  TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
     user_id                  TEXT NOT NULL REFERENCES users(id),
     stack_preview_config_id  TEXT NOT NULL REFERENCES stack_preview_configs(id) ON DELETE CASCADE,
     stack_id                 TEXT REFERENCES stacks(id) ON DELETE SET NULL,
@@ -39,7 +39,7 @@ CREATE TABLE preview_stacks (
 );
 CREATE INDEX idx_preview_stacks_config_id ON preview_stacks (stack_preview_config_id);
 CREATE INDEX idx_preview_stacks_stack_id ON preview_stacks (stack_id);
-CREATE INDEX idx_preview_stacks_team_id ON preview_stacks (team_id);
+CREATE INDEX idx_preview_stacks_project_id ON preview_stacks (project_id);
 CREATE INDEX idx_preview_stacks_org_id ON preview_stacks (organisation_id);
 `
 			if err := tx.Exec(sql).Error; err != nil {
