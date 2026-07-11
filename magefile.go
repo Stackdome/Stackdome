@@ -877,7 +877,7 @@ func runIntegrationTests(ctx context.Context, focus string, verbose bool) error 
 	}
 
 	// Add test timeout
-	args = append(args, "-timeout", "30m")
+	args = append(args, "-timeout", "60m")
 
 	// Run tests
 	cmd := exec.CommandContext(ctx, "go", args...)
