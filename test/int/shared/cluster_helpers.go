@@ -349,6 +349,9 @@ func WaitForStackReady(apiClient *openapi.APIClient, orgID, teamName, stackID st
 
 		state, stateOk := current.GetStateOk()
 		g.Expect(stateOk).To(BeTrue(), "current_release should have a state")
+		if *state == openapi.RELEASE_STATE_FAILED {
+			StopTrying(fmt.Sprintf("stack %s release %s went terminal Failed while waiting for Released", stackID, current.GetId())).Now()
+		}
 		g.Expect(*state).To(Equal(openapi.RELEASE_STATE_RELEASED), "current release should be Released, got: %s", *state)
 
 		health, healthOk := current.GetHealthOk()
