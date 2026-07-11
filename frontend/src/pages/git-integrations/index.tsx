@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Github, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { GitBranch, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { AddIntegrationWizard } from "./add-integration-wizard";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -19,7 +21,6 @@ import {
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 
 function IntegrationInstallations({ integration }: { integration: GitIntegration }) {
   const { toast } = useToast();
@@ -132,11 +133,11 @@ function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyIntegratio
 
 export default function GitIntegrationsPage() {
   const { toast } = useToast();
-  const { state: connectState, error: connectError, connect } = useGithubConnect();
   const [integrations, setIntegrations] = useState<GitIntegration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<GitIntegration | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
@@ -156,10 +157,6 @@ export default function GitIntegrationsPage() {
     void refresh();
   }, [refresh]);
 
-  useEffect(() => {
-    if (connectState === "connected") void refresh();
-  }, [connectState, refresh]);
-
   const remove = async (integration: GitIntegration) => {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !integration.id) return;
@@ -173,85 +170,91 @@ export default function GitIntegrationsPage() {
   };
 
   const hasGithubApp = integrations.some((i) => i.type === "github_app");
+  const addButton = (
+    <Button onClick={() => setWizardOpen(true)}>
+      <Plus className="h-4 w-4" />
+      Add integration
+    </Button>
+  );
 
   return (
     <div className="space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-semibold">Git integrations</h1>
-          <p className="text-sm text-muted-foreground">
-            Access to your repositories for preview environments and builds.
-          </p>
-        </div>
-        {!loading && !hasGithubApp && (
-          <Button onClick={() => void connect()}>
-            <Github className="h-4 w-4" />
-            Connect GitHub
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Git integrations"
+        subtitle="Access to your repositories for preview environments and builds."
+        actions={addButton}
+      />
 
-      {connectState === "waiting" && (
-        <p className="text-sm text-muted-foreground">
-          Waiting for the GitHub App installation to finish in the popup…
-        </p>
-      )}
-      {connectError && <p className="text-sm text-destructive">{connectError}</p>}
       {error && <p className="text-sm text-destructive">{error}</p>}
       {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
-      <div className="space-y-3">
-        {integrations.map((integration) => (
-          <div key={integration.id} className="rounded-lg border p-4">
-            <div className="flex items-center gap-3">
-              <span className="font-mono text-sm">{integration.host}</span>
-              <Badge variant="outline">{integration.type}</Badge>
-              <Badge variant={integration.status === "pending_install" ? "secondary" : "default"}>
-                {integration.status}
-              </Badge>
-              {integration.credentials_configured && (
-                <Badge variant="outline" className="text-muted-foreground">credentials set</Badge>
-              )}
-              <span className="flex-1" />
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={`Verify ${integration.host} integration`}
-                onClick={() => setVerifying(integration)}
-              >
-                <ShieldCheck className="h-4 w-4" />
-              </Button>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label={`Delete ${integration.host} integration`}>
-                    <Trash2 className="h-4 w-4" />
+      {!loading && integrations.length === 0 && !error && (
+        <EmptyState
+          icon={<GitBranch className="h-8 w-8" />}
+          title="No git integrations"
+          description="Connect a git provider so Stackdome can clone repositories and trigger preview environments."
+          action={addButton}
+        />
+      )}
+
+      {integrations.length > 0 && (
+        <Panel title="All integrations" count={integrations.length}>
+          <div className="space-y-3">
+            {integrations.map((integration) => (
+              <div key={integration.id} className="rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-sm">{integration.host}</span>
+                  <Badge variant="outline">{integration.type}</Badge>
+                  <Badge variant={integration.status === "pending_install" ? "secondary" : "default"}>
+                    {integration.status}
+                  </Badge>
+                  {integration.credentials_configured && (
+                    <Badge variant="outline" className="text-muted-foreground">credentials set</Badge>
+                  )}
+                  <span className="flex-1" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Verify ${integration.host} integration`}
+                    onClick={() => setVerifying(integration)}
+                  >
+                    <ShieldCheck className="h-4 w-4" />
                   </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Delete this integration?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Repositories using this integration lose access for clones.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => void remove(integration)}>Delete</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </div>
-            {integration.type === "github_app" && (
-              <IntegrationInstallations integration={integration} />
-            )}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="ghost" size="icon" aria-label={`Delete ${integration.host} integration`}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete this integration?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Repositories using this integration lose access for clones.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => void remove(integration)}>Delete</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+                {integration.type === "github_app" && (
+                  <IntegrationInstallations integration={integration} />
+                )}
+              </div>
+            ))}
           </div>
-        ))}
-        {!loading && integrations.length === 0 && (
-          <p className="rounded-md border border-dashed px-3 py-6 text-center text-sm text-muted-foreground">
-            No git integrations yet. Connect GitHub to get started.
-          </p>
-        )}
-      </div>
+        </Panel>
+      )}
+
+      <AddIntegrationWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        hasGithubApp={hasGithubApp}
+        onCreated={() => void refresh()}
+      />
 
       <VerifyIntegrationDialog
         integration={verifying}
