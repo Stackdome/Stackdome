@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, Circle, GitBranch, Github, KeyRound, Loader2 } from "lucide-react";
+import { CheckCircle2, Circle, GitBranch, Github, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -300,20 +300,34 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                 </div>
               ) : (
                 <>
-                  <ul className="w-full space-y-2 text-left">
-                    {CONNECTING_CHECKLIST.map((step) => (
-                      <li key={step} className="flex items-center gap-2 text-xs text-muted-foreground">
-                        {github.state === "connected"
-                          ? <CheckCircle2 className="h-3.5 w-3.5 text-success" />
-                          : <Circle className="h-3.5 w-3.5 animate-pulse text-primary" />}
-                        {step}
-                      </li>
-                    ))}
+                  <ul className="mx-auto w-full max-w-[320px] space-y-2.5 rounded-md border bg-card p-4 text-left">
+                    {CONNECTING_CHECKLIST.map((step, i) => {
+                      // Popup already opened when this phase renders, so step 0
+                      // is done while waiting; everything completes on connect.
+                      const status: "done" | "active" | "pending" =
+                        github.state === "connected" ? "done" : i === 0 ? "done" : i === 1 ? "active" : "pending";
+                      return (
+                        <li
+                          key={step}
+                          className={cn(
+                            "flex items-center gap-2.5 text-xs",
+                            status === "done" && "text-muted-foreground",
+                            status === "active" && "text-foreground",
+                            status === "pending" && "text-muted-foreground/50",
+                          )}
+                        >
+                          {status === "done" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />}
+                          {status === "active" && (
+                            <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center motion-safe:animate-pulse">
+                              <span className="h-2 w-2 rounded-full bg-primary" />
+                            </span>
+                          )}
+                          {status === "pending" && <Circle className="h-3.5 w-3.5 shrink-0 text-border" />}
+                          {step}
+                        </li>
+                      );
+                    })}
                   </ul>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    Waiting for the GitHub App installation to finish…
-                  </div>
                   <Button
                     type="button"
                     variant="outline"
