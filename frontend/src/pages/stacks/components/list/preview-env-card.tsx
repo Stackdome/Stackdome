@@ -59,7 +59,7 @@ export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
       )}
     >
       <StatusRail tone={tone} />
-      <div className="flex flex-1 flex-col gap-[18px] p-5">
+      <div className="flex flex-1 flex-col gap-3.5 p-5">
         <div className="flex items-center gap-[11px]">
           <GitPullRequest className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
           <span className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand">
@@ -69,17 +69,17 @@ export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
         </div>
 
         {/* Identity: repo / branch rows */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-[9px]">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1.5">
           {(configName ?? env.name) && (
             <>
-              <span className="font-mono text-[9.5px] uppercase tracking-[1.2px] text-fg-muted">repo</span>
-              <span className="truncate font-mono text-xs text-fg-2">{configName ?? env.name}</span>
+              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">repo</span>
+              <span className="truncate font-mono text-[11px] text-fg-2">{configName ?? env.name}</span>
             </>
           )}
           {env.branch && (
             <>
-              <span className="font-mono text-[9.5px] uppercase tracking-[1.2px] text-fg-muted">branch</span>
-              <span className="truncate font-mono text-xs text-brand">{env.branch}</span>
+              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">branch</span>
+              <span className="truncate font-mono text-[11px] text-brand">{env.branch}</span>
             </>
           )}
         </div>

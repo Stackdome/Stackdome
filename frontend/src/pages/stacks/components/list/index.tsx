@@ -341,8 +341,13 @@ export default function StacksPage() {
                     type="button"
                     className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
                   >
-                      Repo:{" "}
-                    <span className={cn("text-foreground", repoFilter && "normal-case tracking-normal")}>
+                    Repo:{" "}
+                    <span
+                      className={cn(
+                        "max-w-[180px] truncate text-foreground",
+                        repoFilter && "normal-case tracking-normal",
+                      )}
+                    >
                       {repoLabel}
                     </span>
                     <ChevronDown className="h-3 w-3" />
