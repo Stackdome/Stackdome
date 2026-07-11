@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
-import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries } from "../derive";
-import type { FailingResource, Stack } from "../derive";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "../derive";
+import type { FailingResource, Stack, StackResource } from "../derive";
 import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 
 function release(partial: Partial<StackRelease>): StackRelease {
@@ -354,5 +354,38 @@ describe("shouldRefetchStackSummaries", () => {
       release({ id: "r2", state: "Released" }),
       latest({ id: "r1", state: "Released" }),
     )).toBe(true);
+  });
+});
+
+describe("stripUnpinnedGitRevisions", () => {
+  function gitResource(name: string, git: Record<string, unknown>): StackResource {
+    return { name, source: { git } } as unknown as StackResource;
+  }
+
+  it("strips resolver-written branch/commit/tag when the saved spec pins nothing, keeping other git fields", () => {
+    const snapshot = [gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123", dockerfile_path: "Dockerfile" })];
+    const saved = [gitResource("api", { repo_url: "https://x/y", dockerfile_path: "Dockerfile" })];
+    const [out] = stripUnpinnedGitRevisions(snapshot, saved);
+    expect(out.source?.git).toEqual({ repo_url: "https://x/y", dockerfile_path: "Dockerfile" });
+  });
+
+  it("passes a snapshot resource through unchanged (same object reference) when the saved spec pins a branch", () => {
+    const pinned = gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123" });
+    const saved = [gitResource("api", { repo_url: "https://x/y", branch: "main" })];
+    const [out] = stripUnpinnedGitRevisions([pinned], saved);
+    expect(out).toBe(pinned);
+  });
+
+  it("leaves a non-git-sourced resource untouched", () => {
+    const image = { name: "redis", source: { image: { image: "redis:7" } } } as unknown as StackResource;
+    const saved = [{ name: "redis", source: { image: { image: "redis:7" } } } as unknown as StackResource];
+    const [out] = stripUnpinnedGitRevisions([image], saved);
+    expect(out).toBe(image);
+  });
+
+  it("leaves a snapshot resource untouched when it has no counterpart in the saved spec", () => {
+    const orphan = gitResource("gone", { repo_url: "https://x/y", branch: "main", commit: "abc123" });
+    const [out] = stripUnpinnedGitRevisions([orphan], []);
+    expect(out).toBe(orphan);
   });
 });

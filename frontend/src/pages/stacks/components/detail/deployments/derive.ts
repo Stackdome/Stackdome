@@ -27,6 +27,26 @@ export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
 }
 
 /**
+ * The deployed snapshot stores the RESOLVED git revision (branch/commit written by
+ * the pin resolver at deploy time). When the saved spec doesn't pin one, those are
+ * deploy-time facts, not config drift — strip them so the diff baseline compares
+ * intent with intent instead of reading every unpinned git resource as dirty.
+ */
+export function stripUnpinnedGitRevisions(
+  snapshotResources: StackResource[],
+  savedResources: StackResource[],
+): StackResource[] {
+  const savedByName = new Map(savedResources.map((r) => [r.name, r]));
+  return snapshotResources.map((r) => {
+    const git = r.source?.git;
+    const savedGit = savedByName.get(r.name)?.source?.git;
+    if (!git || !savedGit || savedGit.branch || savedGit.commit || savedGit.tag) return r;
+    const { branch: _b, commit: _c, tag: _t, ...unpinned } = git;
+    return { ...r, source: { ...r.source, git: unpinned } };
+  });
+}
+
+/**
  * True when the latest release failed AND a different release is currently live —
  * the header's secondary "deploy failed" hint. Mutually exclusive with the main pill
  * by construction: fires only when deriveHeaderHealth is showing something other than

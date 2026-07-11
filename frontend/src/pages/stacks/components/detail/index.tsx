@@ -27,7 +27,7 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries } from "@/pages/stacks/components/detail/deployments/derive";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/detail/deployments/derive";
 import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
@@ -312,18 +312,11 @@ export default function StackDetailPage() {
   // intent with intent instead of reading every unpinned git resource as dirty.
   const snapshotResources = useMemo<FormStackResourceData[] | null>(() => {
     if (!deployedSnapshot) return null;
-    const savedByName = new Map(
-      (stackToShow?.spec?.stack_resources ?? []).map((r) => [r.name, r]),
-    );
-    const resources = ((deployedSnapshot.resources ?? []) as StackResource[]).map((r) => {
-      const git = r.source?.git;
-      const savedGit = savedByName.get(r.name)?.source?.git;
-      if (!git || !savedGit || savedGit.branch || savedGit.commit || savedGit.tag) return r;
-      const { branch: _b, commit: _c, tag: _t, ...unpinned } = git;
-      return { ...r, source: { ...r.source, git: unpinned } };
-    });
     return formResourcesFromSpec(
-      resources,
+      stripUnpinnedGitRevisions(
+        (deployedSnapshot.resources ?? []) as StackResource[],
+        stackToShow?.spec?.stack_resources ?? [],
+      ),
       deployedSnapshot.connections as StackConnection[] | undefined,
     );
   }, [deployedSnapshot, stackToShow?.spec?.stack_resources]);
