@@ -161,7 +161,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		return resultNil, fmt.Errorf("provision transaction failed: %w", txErr)
 	}
 
-	r.logger.Infof("preview %s provisioned, stack %s created", preview.ID, created.ID)
+	r.logger.Info(ctx, "preview %s provisioned, stack %s created", preview.ID, created.ID)
 	return resultRequeueAfter(convergePollInterval), nil
 }
 
@@ -226,6 +226,6 @@ func (r *provisionReconciler) fail(ctx context.Context, preview *models.PreviewS
 	if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 		return resultNil, fmt.Errorf("failed to mark preview %s as failed: %w", preview.ID, sErr)
 	}
-	r.logger.Errorf("preview %s failed: %s: %s", preview.ID, reason, message)
+	r.logger.Error(ctx, "preview %s failed: %s: %s", preview.ID, reason, message)
 	return resultStop, nil
 }

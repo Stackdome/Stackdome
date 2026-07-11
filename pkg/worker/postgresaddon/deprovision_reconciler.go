@@ -41,11 +41,11 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.Pos
 		return resultNil, fmt.Errorf("failed to check addon usage: %w", err)
 	}
 	if inUse {
-		r.logger.Infof("Postgres addon '%s' is still in use by stacks, requeueing", addon.Name)
+		r.logger.Info(ctx, "Postgres addon '%s' is still in use by stacks, requeueing", addon.Name)
 		return resultRequeueAfter(30 * time.Second), nil
 	}
 
-	r.logger.Infof("Deprovisioning postgres addon '%s' in namespace '%s'", addon.Name, addon.Namespace)
+	r.logger.Info(ctx, "Deprovisioning postgres addon '%s' in namespace '%s'", addon.Name, addon.Namespace)
 
 	clusterClient, cerr := r.clusterManager.GetClient(addon.ClusterID)
 	if cerr != nil {
@@ -68,6 +68,6 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.Pos
 		return resultNil, fmt.Errorf("failed to delete postgres addon from DB: %w", serr)
 	}
 
-	r.logger.Infof("Successfully deprovisioned postgres addon '%s'", addon.Name)
+	r.logger.Info(ctx, "Successfully deprovisioned postgres addon '%s'", addon.Name)
 	return resultStop, nil
 }

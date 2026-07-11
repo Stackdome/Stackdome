@@ -59,7 +59,7 @@ func (r *ImageBuildReconciler) reconcileGitTokenRefresh(ctx context.Context, ima
 	}
 	expiresAt, err := time.Parse(time.RFC3339, expiresRaw)
 	if err != nil {
-		r.Logger.Errorf("build %s/%s: malformed token expiry annotation %q: %v", imageBuild.Namespace, imageBuild.Name, expiresRaw, err)
+		r.Logger.Error(ctx, "build %s/%s: malformed token expiry annotation %q: %v", imageBuild.Namespace, imageBuild.Name, expiresRaw, err)
 		return ctrl.Result{}, nil
 	}
 
@@ -70,7 +70,7 @@ func (r *ImageBuildReconciler) reconcileGitTokenRefresh(ctx context.Context, ima
 
 	integrationID := secret.Annotations[models.GitIntegrationIDAnnotation]
 	if integrationID == "" {
-		r.Logger.Errorf("build %s/%s: token-backed git secret '%s' has no integration annotation", imageBuild.Namespace, imageBuild.Name, secretName)
+		r.Logger.Error(ctx, "build %s/%s: token-backed git secret '%s' has no integration annotation", imageBuild.Namespace, imageBuild.Name, secretName)
 		return ctrl.Result{}, nil
 	}
 
@@ -78,7 +78,7 @@ func (r *ImageBuildReconciler) reconcileGitTokenRefresh(ctx context.Context, ima
 	if serr != nil {
 		// The app may have been uninstalled mid-build. Record the failure on
 		// the build and stop refreshing; never crash the reconcile loop.
-		r.Logger.Errorf("build %s/%s: failed to refresh GitHub App token: %v", imageBuild.Namespace, imageBuild.Name, serr)
+		r.Logger.Error(ctx, "build %s/%s: failed to refresh GitHub App token: %v", imageBuild.Namespace, imageBuild.Name, serr)
 		r.recordTokenRefreshFailure(ctx, dbBuild, serr.Error())
 		return ctrl.Result{}, nil
 	}
@@ -97,7 +97,7 @@ func (r *ImageBuildReconciler) reconcileGitTokenRefresh(ctx context.Context, ima
 		return ctrl.Result{}, err
 	}
 
-	r.Logger.Infof("build %s/%s: refreshed GitHub App token for secret '%s'", imageBuild.Namespace, imageBuild.Name, secretName)
+	r.Logger.Info(ctx, "build %s/%s: refreshed GitHub App token for secret '%s'", imageBuild.Namespace, imageBuild.Name, secretName)
 	return ctrl.Result{RequeueAfter: floorRequeue(time.Until(mint.ExpiresAt) - tokenRefreshWindow)}, nil
 }
 
@@ -117,7 +117,7 @@ func (r *ImageBuildReconciler) recordTokenRefreshFailure(ctx context.Context, db
 		Message:            message,
 	})
 	if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbBuild.ID, status); serr != nil {
-		r.Logger.Errorf("failed to record token refresh failure for build '%s': %v", dbBuild.ID, serr)
+		r.Logger.Error(ctx, "failed to record token refresh failure for build '%s': %v", dbBuild.ID, serr)
 	}
 }
 

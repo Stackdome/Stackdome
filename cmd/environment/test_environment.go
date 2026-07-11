@@ -596,8 +596,9 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 	te.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag:      leadershipFlag,
 		CredentialDecryptor: te.EncryptionService,
+		Logger:              applogger.NewLoggerWithPrefix(ctx, "cluster-manager").SetLevel(te.Logger.GetLevel()),
 		ControllersToRegister: []clustermanager.ControllerFn{
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
 					Log:            applogger.NewLoggerWithPrefix(ctx, "test-volume-controller").SetLevel(te.Logger.GetLevel()),
 					StorageService: te.Services.StackStorageService,
@@ -605,7 +606,7 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					Env:            te.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
 					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-workspace-user-controller").SetLevel(te.Logger.GetLevel()),
 					WorkspaceUserService: te.Services.WorkspaceUserService,
@@ -613,7 +614,7 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					Env:                  te.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
 					Log:            applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()),
 					StackService:   te.Services.StackService,
@@ -622,7 +623,7 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					Enqueuer:       te.WorkerManager,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
 					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-stack-resource-controller").SetLevel(te.Logger.GetLevel()),
 					StackService:         te.Services.StackService,
@@ -632,7 +633,7 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					EventRecorder:        te.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()),
 					DBImageBuildService:   te.Services.ImageBuildService,
@@ -642,20 +643,20 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 					EventRecorder:         te.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
 					Logger:                 applogger.NewLoggerWithPrefix(ctx, "test-cluster-image-registry-controller").SetLevel(te.Logger.GetLevel()),
 					DBImageRegistryService: te.Services.ClusterImageRegistryService,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
 					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-postgres-addon-controller").SetLevel(te.Logger.GetLevel()),
 					PostgresAddonService: te.Services.PostgresAddonService,
 					Env:                  te.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()),
 					PostgresBackupService: te.Services.PostgresBackupService,

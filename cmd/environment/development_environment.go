@@ -249,35 +249,36 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag:      leadershipFlag,
 		CredentialDecryptor: d.EncryptionService,
+		Logger:              applogger.NewLoggerWithPrefix(ctx, "cluster-manager").SetLevel(d.Logger.GetLevel()),
 		ControllersToRegister: []clustermanager.ControllerFn{
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
-					Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()),
+					Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StorageService: d.Services.StackStorageService,
 					VolumeService:  d.Services.VolumeService,
 					Env:            d.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					WorkspaceUserService: d.Services.WorkspaceUserService,
 					ClusterService:       d.Services.ClusterService,
 					Env:                  d.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-					Log:            applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
+					Log:            applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StackService:   d.Services.StackService,
 					Env:            d.Name,
 					ReleaseChecker: d.Services.StackReleaseService,
 					Enqueuer:       d.WorkerManager,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StackService:         d.Services.StackService,
 					StackResourceService: d.Services.StackResourceService,
 					Env:                  d.Name,
@@ -285,9 +286,9 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					EventRecorder:        d.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
-					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
@@ -295,22 +296,22 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 					EventRecorder:         d.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
-					Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()),
+					Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					DBImageRegistryService: d.Services.ClusterImageRegistryService,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresAddonService: d.Services.PostgresAddonService,
 					Env:                  d.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
-					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresBackupService: d.Services.PostgresBackupService,
 				})
 			},

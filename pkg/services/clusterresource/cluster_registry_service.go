@@ -44,14 +44,14 @@ func (s *clusterImageRegistryService) CreateImageRegistryInCluster(ctx context.C
 	}
 	clusterClient, clientGetErr := s.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
-		s.logger.Errorf("failed to get cluster client: %v", clientGetErr)
+		s.logger.Error(ctx, "failed to get cluster client: %v", clientGetErr)
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
 	desiredObjectInCluster := s.desiredObjectInCluster(registry)
 
 	if err := clusterClient.Create(ctx, desiredObjectInCluster); err != nil {
-		s.logger.Errorf("failed to create imageregistry in cluster: %v", err)
+		s.logger.Error(ctx, "failed to create imageregistry in cluster: %v", err)
 		return newError("failed to create image registry in cluster", err)
 	}
 	return nil
@@ -64,7 +64,7 @@ func (s *clusterImageRegistryService) DeleteImageRegistryInCluster(ctx context.C
 	}
 	clusterClient, clientGetErr := s.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
-		s.logger.Errorf("failed to get cluster client: %v", clientGetErr)
+		s.logger.Error(ctx, "failed to get cluster client: %v", clientGetErr)
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
@@ -75,7 +75,7 @@ func (s *clusterImageRegistryService) DeleteImageRegistryInCluster(ctx context.C
 			s.logger.Warn(ctx, "image registry '%s' not found in cluster", registry.ID)
 			return nil
 		}
-		s.logger.Errorf("failed to delete imageregistry in cluster: %v", err)
+		s.logger.Error(ctx, "failed to delete imageregistry in cluster: %v", err)
 		return newError("failed to delete image registry in cluster", err)
 	}
 	return nil

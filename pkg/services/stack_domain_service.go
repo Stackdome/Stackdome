@@ -61,7 +61,7 @@ func (s *stackDomainService) InternalCreateWithTx(ctx context.Context, spec *mod
 	}
 	existing, err := s.domainsStore.GetByFqdn(ctx, spec.Fqdn)
 	if err != nil && err.Code != errors.ErrorNotFound {
-		s.logger.Errorf("failed to check if domain exists: %v", err)
+		s.logger.Error(ctx, "failed to check if domain exists: %v", err)
 		return nil, err
 	}
 	if existing != nil {
@@ -84,7 +84,7 @@ func (s *stackDomainService) InternalCreateWithTx(ctx context.Context, spec *mod
 	}
 	createdDomain, err := s.domainsStore.CreateWithTx(ctx, spec)
 	if err != nil {
-		s.logger.Errorf("failed to create domain: %v", err)
+		s.logger.Error(ctx, "failed to create domain: %v", err)
 		return nil, err
 	}
 	return createdDomain, nil
@@ -97,7 +97,7 @@ func (s *stackDomainService) InternalDeleteWithTx(ctx context.Context, id string
 func (s *stackDomainService) DomainToUseForStack(ctx context.Context, stack *models.Stack) (*models.OrganisationDomain, *errors.ServiceError) {
 	domains, err := s.organisationDomainStore.ListByOrganisationID(ctx, stack.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to list domains for organisation %s: %v", stack.OrganisationID, err)
+		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", stack.OrganisationID, err)
 		return nil, err
 	}
 	if len(domains) == 0 {
@@ -210,7 +210,7 @@ func (s *stackDomainService) Create(ctx context.Context, spec *models.StackDomai
 	}
 	existing, err := s.domainsStore.GetByFqdn(ctx, spec.Fqdn)
 	if err != nil && err.Code != errors.ErrorNotFound {
-		s.logger.Errorf("failed to check if domain exists: %v", err)
+		s.logger.Error(ctx, "failed to check if domain exists: %v", err)
 		return nil, err
 	}
 	if !isValidDomain(spec.Fqdn) {

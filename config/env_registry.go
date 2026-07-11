@@ -4,6 +4,7 @@ var (
 	// Application
 	EnvJWTSecret     = StringVar("JWT_SECRET", "JWT token signing secret", nil, true)
 	EnvLogLevel      = StringVar("LOG_LEVEL", "Logging level (debug, info, warn, error)", ptr("info"), false)
+	EnvLogFormat     = StringVar("LOG_FORMAT", "Log output format (json or text)", ptr("json"), false)
 	EnvEncryptionKey = StringVar("ENCRYPTION_KEY", "Master encryption key (64-1024 chars)", nil, true)
 	// GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are used for GitHub OAuth login
 	EnvGitHubClientID     = StringVar("GITHUB_CLIENT_ID", "GitHub OAuth app client ID", nil, false)

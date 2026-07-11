@@ -4,6 +4,7 @@ import (
 	"context"
 
 	apperrors "github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,6 +34,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 		ctx = context.Background()
 
 		svc = &postgresAddonService{
+			logger:             logger.NewLogger(),
 			postgresAddonStore: addonStore,
 			referenceService:   refs,
 			permissions:        permissions,

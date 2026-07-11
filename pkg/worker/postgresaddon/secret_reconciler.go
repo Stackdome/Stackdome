@@ -76,7 +76,7 @@ func (r *secretReconciler) Reconcile(ctx context.Context, addon *models.Postgres
 		Namespace: addon.Namespace,
 	}, existing); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			r.logger.Infof("Creating import password secret '%s'", secretName)
+			r.logger.Info(ctx, "Creating import password secret '%s'", secretName)
 			return resultNil, clusterClient.Create(ctx, k8sSecret)
 		}
 		return resultNil, fmt.Errorf("failed to get secret '%s': %w", secretName, err)

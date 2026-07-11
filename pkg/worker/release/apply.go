@@ -112,7 +112,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 
 	if err := r.syncHubSecrets(ctx, clusterClient, effectiveStack); err != nil {
 		if isTransientClusterError(err) {
-			r.logger.Warnf("release %s: transient error syncing hub secrets, requeueing: %v", release.ID, err)
+			r.logger.Warn(ctx, "release %s: transient error syncing hub secrets, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
 		return resultNil, fmt.Errorf("failed to sync hub secrets: %w", err)
@@ -120,7 +120,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 
 	if err := r.syncPostgresCredentialSecrets(ctx, clusterClient, effectiveStack); err != nil {
 		if isTransientClusterError(err) {
-			r.logger.Warnf("release %s: transient error syncing postgres secrets, requeueing: %v", release.ID, err)
+			r.logger.Warn(ctx, "release %s: transient error syncing postgres secrets, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
 		return resultNil, fmt.Errorf("failed to sync postgres credential secrets: %w", err)
@@ -128,7 +128,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 
 	if err := r.syncGenericSecrets(ctx, clusterClient, effectiveStack); err != nil {
 		if isTransientClusterError(err) {
-			r.logger.Warnf("release %s: transient error syncing generic secrets, requeueing: %v", release.ID, err)
+			r.logger.Warn(ctx, "release %s: transient error syncing generic secrets, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
 		return resultNil, fmt.Errorf("failed to sync generic secrets: %w", err)
@@ -149,7 +149,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 			return resultStop, nil
 		}
 		if isTransient(err) {
-			r.logger.Warnf("release %s: transient error applying stack CR, requeueing: %v", release.ID, err)
+			r.logger.Warn(ctx, "release %s: transient error applying stack CR, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
 		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
@@ -157,7 +157,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 	}
 	if err := r.applyStackResourceCRs(ctx, clusterClient, release, stackCR); err != nil {
 		if isTransient(err) {
-			r.logger.Warnf("release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
+			r.logger.Warn(ctx, "release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
 		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack resource CRs: %v", err))
@@ -165,7 +165,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 	}
 
 	if err := r.pruneStackResources(ctx, clusterClient, stack, release.Manifest.ResourceNames); err != nil {
-		r.logger.Errorf("release %s: prune error (non-fatal): %v", release.ID, err)
+		r.logger.Error(ctx, "release %s: prune error (non-fatal): %v", release.ID, err)
 	}
 
 	return resultNil, nil
@@ -193,7 +193,7 @@ func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *c
 	if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
 		return false, fmt.Errorf("failed to mark release superseded: %w", err)
 	}
-	r.logger.Infof("release %s: %s", release.ID, reason)
+	r.logger.Info(ctx, "release %s: %s", release.ID, reason)
 	return true, nil
 }
 
@@ -233,7 +233,7 @@ func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client
 		return desired, nil
 	}
 
-	r.logger.Infof("stack CR '%s': updating", desired.Name)
+	r.logger.Info(ctx, "stack CR '%s': updating", desired.Name)
 	desired.ResourceVersion = existing.ResourceVersion
 	if err := clusterClient.Update(ctx, desired); err != nil {
 		return nil, wrapIfTransient(fmt.Errorf("failed to update stack CR: %w", err))
@@ -275,7 +275,7 @@ func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClie
 				if err := clusterClient.Create(ctx, desired); err != nil {
 					return wrapIfTransient(fmt.Errorf("failed to create StackResource CR '%s': %w", name, err))
 				}
-				r.logger.Infof("resource '%s': created", name)
+				r.logger.Info(ctx, "resource '%s': created", name)
 				continue
 			}
 			return wrapIfTransient(fmt.Errorf("failed to get StackResource CR '%s': %w", name, err))
@@ -287,7 +287,7 @@ func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClie
 			continue
 		}
 
-		r.logger.Infof("resource '%s': updating", name)
+		r.logger.Info(ctx, "resource '%s': updating", name)
 		desired.ResourceVersion = existing.ResourceVersion
 		if err := clusterClient.Update(ctx, desired); err != nil {
 			return wrapIfTransient(fmt.Errorf("failed to update StackResource CR '%s': %w", name, err))
@@ -312,7 +312,7 @@ func (r *applyReconciler) pruneStackResources(ctx context.Context, clusterClient
 	for i := range srList.Items {
 		resourceName := srList.Items[i].Labels[corev1alpha1.LabelResourceName]
 		if _, keep := activeSet[resourceName]; !keep {
-			r.logger.Infof("pruning orphaned StackResource CR '%s'", srList.Items[i].Name)
+			r.logger.Info(ctx, "pruning orphaned StackResource CR '%s'", srList.Items[i].Name)
 			if err := clusterClient.Delete(ctx, &srList.Items[i], client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
 				if k8sapierrors.IsNotFound(err) {
 					continue

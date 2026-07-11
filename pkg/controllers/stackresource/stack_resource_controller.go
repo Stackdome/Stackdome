@@ -98,12 +98,12 @@ func (w *stackResourceReconciler) Name() string {
 }
 
 func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	w.logger.Infof("Reconciling stack resource: %v", req.NamespacedName)
+	w.logger.Info(ctx, "Reconciling stack resource: %v", req.NamespacedName)
 
 	stackResourceCr := &corev1alpha1.StackResource{}
 	if err := w.client.Get(ctx, req.NamespacedName, stackResourceCr); err != nil {
 		if errors.IsNotFound(err) {
-			w.logger.Infof("StackResource %v not found", req.NamespacedName)
+			w.logger.Info(ctx, "StackResource %v not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -112,14 +112,14 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	stackID, ok := stackResourceCr.Labels[corev1alpha1.LabelStackID]
 	if !ok {
 		// How are we here? The predicate should have prevented this.
-		w.logger.Errorf("StackResource %s does not have a stack id label", stackResourceCr.Name)
+		w.logger.Error(ctx, "StackResource %s does not have a stack id label", stackResourceCr.Name)
 		return ctrl.Result{}, nil
 	}
 
 	dbStackResource, serr := w.stackResourceService.InternalGetByStackIDAndResourceName(ctx, stackID, stackResourceCr.Name)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			w.logger.Infof("StackResource %s not found in DB", stackResourceCr.Name)
+			w.logger.Info(ctx, "StackResource %s not found in DB", stackResourceCr.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get stack resource from db: %w", serr)
@@ -130,6 +130,10 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if serr := w.stackResourceService.UpdateStatus(ctx, dbStackResource.ID, dbStackResource.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update stack resource status: %w", serr)
 		}
+		w.logger.WithFields(map[string]interface{}{
+			logger.FieldStackID:  stackID,
+			logger.FieldResource: stackResourceCr.Name,
+		}).Debug(ctx, "synced stack resource status from cluster")
 		w.recordResourceEvent(ctx, stackID, dbStackResource, stackResourceCr)
 		return ctrl.Result{}, nil
 	}
@@ -151,11 +155,11 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 	}
 	active, serr := w.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
 	if serr != nil || active == nil {
-		w.logger.Debugf("no active release for stack %s; skipping resource event for %s", stackID, resource.Name)
+		w.logger.Debug(ctx, "no active release for stack %s; skipping resource event for %s", stackID, resource.Name)
 		return
 	}
 	if recErr := w.eventRecorder.RecordResourceEvent(ctx, active, resource.Name, eventType, reason, message); recErr != nil {
-		w.logger.Errorf("failed to record resource event for %s: %v", resource.Name, recErr)
+		w.logger.Error(ctx, "failed to record resource event for %s: %v", resource.Name, recErr)
 	}
 }
 

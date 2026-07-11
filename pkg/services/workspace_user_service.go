@@ -73,7 +73,7 @@ func (s *workspaceUserService) InjectClusterResourceService(clusterResourceServi
 func (s *workspaceUserService) GetByID(ctx context.Context, ID string) (*models.WorkspaceUser, *errors.ServiceError) {
 	request, err := s.workspaceUserStore.GetByID(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to get workspace user: %v", err)
+		s.logger.Error(ctx, "failed to get workspace user: %v", err)
 		return nil, err
 	}
 	if permErr := s.permissions.Check(ctx, request.TeamID, auth.ResourceWorkspaceUsers, ID, auth.ActionRead); permErr != nil {
@@ -89,7 +89,7 @@ func (s *workspaceUserService) InternalGetByID(ctx context.Context, ID string) (
 func (s *workspaceUserService) GetWorkspaceUser(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError) {
 	request, err := s.workspaceUserStore.GetByUserID(ctx, userID)
 	if err != nil {
-		s.logger.Errorf("failed to get workspace user: %v", err)
+		s.logger.Error(ctx, "failed to get workspace user: %v", err)
 		return nil, err
 	}
 	if permErr := s.permissions.Check(ctx, request.TeamID, auth.ResourceWorkspaceUsers, request.ID, auth.ActionRead); permErr != nil {
@@ -101,7 +101,7 @@ func (s *workspaceUserService) GetWorkspaceUser(ctx context.Context, userID stri
 func (s *workspaceUserService) InternalList(ctx context.Context, query string, args ...any) ([]*models.WorkspaceUser, *errors.ServiceError) {
 	requests, err := s.workspaceUserStore.InternalList(ctx, query, args...)
 	if err != nil {
-		s.logger.Errorf("failed to internal list workspace users: %v", err)
+		s.logger.Error(ctx, "failed to internal list workspace users: %v", err)
 		return nil, err
 	}
 	return requests, nil
@@ -116,7 +116,7 @@ func (s *workspaceUserService) Create(ctx context.Context, spec *models.Workspac
 	s.setNamespacesForCreate(spec, user)
 	cluster, serr := s.dbClusterService.GetClusterForOrg(ctx, user.OrganisationID)
 	if serr != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", serr)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", serr)
 		return nil, serr
 	}
 	spec.ClusterID = cluster.ID
@@ -140,7 +140,7 @@ func (s *workspaceUserService) Create(ctx context.Context, spec *models.Workspac
 func (s *workspaceUserService) Update(ctx context.Context, id string, spec *models.WorkspaceUser, user *models.User) (*models.WorkspaceUser, *errors.ServiceError) {
 	current, err := s.workspaceUserStore.GetByID(ctx, id)
 	if err != nil {
-		s.logger.Errorf("failed to get workspace user: %v", err)
+		s.logger.Error(ctx, "failed to get workspace user: %v", err)
 		return nil, err
 	}
 	if permErr := s.permissions.Check(ctx, current.TeamID, auth.ResourceWorkspaceUsers, id, auth.ActionWrite); permErr != nil {
@@ -149,7 +149,7 @@ func (s *workspaceUserService) Update(ctx context.Context, id string, spec *mode
 	s.setNamespacesForUpdate(spec, current, user)
 	cluster, serr := s.dbClusterService.GetClusterForOrg(ctx, user.OrganisationID)
 	if serr != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", serr)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", serr)
 		return nil, serr
 	}
 	spec.ClusterID = cluster.ID
@@ -158,10 +158,10 @@ func (s *workspaceUserService) Update(ctx context.Context, id string, spec *mode
 	updateErr := s.workspaceUserStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		updatedWorkspaceUser, serr = s.workspaceUserStore.UpdateWithTx(ctx, id, spec)
 		if serr != nil {
-			s.logger.Errorf("failed to update workspace user: %v", serr)
+			s.logger.Error(ctx, "failed to update workspace user: %v", serr)
 			return serr
 		}
-		s.logger.Infof("updated workspace user: %s", updatedWorkspaceUser.ID)
+		s.logger.Info(ctx, "updated workspace user: %s", updatedWorkspaceUser.ID)
 		if err := s.clusterResourceService.UpdateWorkspaceUserInCluster(ctx, updatedWorkspaceUser); err != nil {
 			return errors.GeneralError("failed to update workspace user in cluster: %s", err.Error())
 		}
@@ -173,7 +173,7 @@ func (s *workspaceUserService) Update(ctx context.Context, id string, spec *mode
 func (s *workspaceUserService) UpdateStatus(ctx context.Context, id string, WorkspaceUser *models.WorkspaceUser) *errors.ServiceError {
 	_, err := s.workspaceUserStore.PatchStatus(ctx, id, WorkspaceUser.Status)
 	if err != nil {
-		s.logger.Errorf("failed to update workspace user: %v", err)
+		s.logger.Error(ctx, "failed to update workspace user: %v", err)
 		return err
 	}
 	return nil
@@ -182,7 +182,7 @@ func (s *workspaceUserService) UpdateStatus(ctx context.Context, id string, Work
 func (s *workspaceUserService) InternalUpdate(ctx context.Context, id string, spec *models.WorkspaceUser) *errors.ServiceError {
 	_, err := s.workspaceUserStore.Update(ctx, id, spec)
 	if err != nil {
-		s.logger.Errorf("failed to update workspace user: %v", err)
+		s.logger.Error(ctx, "failed to update workspace user: %v", err)
 		return err
 	}
 	return nil
@@ -191,7 +191,7 @@ func (s *workspaceUserService) InternalUpdate(ctx context.Context, id string, sp
 func (s *workspaceUserService) InternalDelete(ctx context.Context, id string) *errors.ServiceError {
 	err := s.workspaceUserStore.Delete(ctx, id)
 	if err != nil {
-		s.logger.Errorf("failed to delete workspace user: %v", err)
+		s.logger.Error(ctx, "failed to delete workspace user: %v", err)
 		return err
 	}
 	return nil

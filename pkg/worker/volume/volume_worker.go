@@ -59,13 +59,13 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	vol, serr := w.volumeService.InternalGet(ctx, volumeRef.ID)
 	if serr != nil {
 		if serr.Is404() {
-			w.Logger().Infof("volume %s not found, skipping", volumeRef.ID)
+			w.Logger().Info(ctx, "volume %s not found, skipping", volumeRef.ID)
 			return worker.Result{}, nil
 		}
 		return worker.Result{}, serr
 	}
 
-	w.Logger().Infof("processing volume: %s", vol.ID)
+	w.Logger().Info(ctx, "processing volume: %s", vol.ID)
 
 	if err := w.resolveGitRevision(ctx, vol); err != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to resolve git revision for volume '%s': %v", vol.ID, err)

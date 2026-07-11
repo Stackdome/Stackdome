@@ -71,7 +71,7 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 
 	org, err := s.organisationStore.Create(ctx, spec)
 	if err != nil {
-		s.logger.Errorf("failed to create organisation: %v", err)
+		s.logger.Error(ctx, "failed to create organisation: %v", err)
 		return nil, err
 	}
 
@@ -91,7 +91,7 @@ func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organ
 	}
 	org, err := s.organisationStore.Get(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to get organisation: %v", err)
+		s.logger.Error(ctx, "failed to get organisation: %v", err)
 		return nil, err
 	}
 	return org, nil
@@ -111,7 +111,7 @@ func (s *organisationService) Delete(ctx context.Context, ID string) *errors.Ser
 	}
 	err = s.organisationStore.Delete(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to delete organisation: %v", err)
+		s.logger.Error(ctx, "failed to delete organisation: %v", err)
 		return err
 	}
 	return nil
@@ -130,7 +130,7 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 	if spec.Name != "" && existing.Name != spec.Name {
 		nameExists, err := s.organisationStore.OrganisationNameExists(ctx, spec.Name)
 		if err != nil {
-			s.logger.Errorf("failed to check if organisation name exists: %v", err)
+			s.logger.Error(ctx, "failed to check if organisation name exists: %v", err)
 			return nil, errors.GeneralError("failed to update organisation")
 		}
 		if nameExists {
@@ -143,7 +143,7 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 	}
 	org, err := s.organisationStore.Update(ctx, ID, spec)
 	if err != nil {
-		s.logger.Errorf("failed to update organisation: %v", err)
+		s.logger.Error(ctx, "failed to update organisation: %v", err)
 		return nil, err
 	}
 
@@ -204,7 +204,7 @@ func (s *organisationService) PromoteToOrgAdmin(ctx context.Context, orgID, user
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
-		s.logger.Errorf("failed to add OrgAdmin grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to add OrgAdmin grouping: %s", err.Error())
 		return errors.InternalServerError("failed to add OrgAdmin grouping")
 	}
 
@@ -244,12 +244,12 @@ func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID,
 		}
 
 		if _, serr := s.teamService.InternalAddMember(txCtx, teamID, userID, role); serr != nil {
-			s.logger.Errorf("failed to add demoted user to team: %s", serr.Error())
+			s.logger.Error(ctx, "failed to add demoted user to team: %s", serr.Error())
 			return serr
 		}
 
 		if err := s.policyMgr.RemoveGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
-			s.logger.Errorf("failed to remove OrgAdmin grouping: %s", err.Error())
+			s.logger.Error(ctx, "failed to remove OrgAdmin grouping: %s", err.Error())
 			return errors.InternalServerError("failed to remove OrgAdmin grouping")
 		}
 
