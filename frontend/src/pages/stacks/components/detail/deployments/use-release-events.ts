@@ -71,8 +71,12 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
       setStatus("polling");
       pollTimer = setInterval(() => {
         void listReleaseEvents(orgId, teamName, stackId, releaseId, lastSeq.current)
-          .then((page) => ingest(page.items ?? []))
-          .catch(() => setStatus("error"));
+          .then((page) => {
+            if (disposed) return;
+            ingest(page.items ?? []);
+            setStatus("polling");
+          })
+          .catch(() => { if (!disposed) setStatus("error"); });
       }, POLL_MS);
     };
 
