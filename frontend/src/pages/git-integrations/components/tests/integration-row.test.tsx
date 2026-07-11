@@ -82,15 +82,25 @@ describe("IntegrationRow", () => {
     await waitFor(() => expect(screen.getByText(/1 installation · all repositories/i)).toBeInTheDocument());
   });
 
-  it("opens the kebab menu and dispatches Verify repository access", async () => {
+  it("opens the kebab menu and dispatches Verify repository access on a credentials row", async () => {
     const user = userEvent.setup();
     const onVerify = vi.fn();
-    const row = integration();
-    renderRow({ onVerify });
-    await waitFor(() => expect(listInstallations).toHaveBeenCalled());
+    const row = integration({ type: "git_credentials", status: "active", host: "gitlab.com" });
+    renderRow({ onVerify, integration: row });
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText(/verify repository access/i), { pointerEventsCheck: 0 });
     await waitFor(() => expect(onVerify).toHaveBeenCalledWith(row));
+    // Sync only applies to GitHub App integrations.
+    expect(screen.queryByText(/sync from github/i)).not.toBeInTheDocument();
+  });
+
+  it("hides Verify on GitHub App rows (backend only verifies credentials-type directly) but shows Sync", async () => {
+    const user = userEvent.setup();
+    renderRow();
+    await waitFor(() => expect(listInstallations).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
+    expect(await screen.findByText(/sync from github/i)).toBeInTheDocument();
+    expect(screen.queryByText(/verify repository access/i)).not.toBeInTheDocument();
   });
 
   it("dispatches Remove integration from the kebab menu", async () => {

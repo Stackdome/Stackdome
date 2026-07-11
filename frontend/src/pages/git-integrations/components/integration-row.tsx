@@ -94,6 +94,7 @@ export function IntegrationRow({
   }, [load]);
 
   const row = deriveRow(integration, installations);
+  const isGithubApp = integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP;
 
   const sync = useCallback(async () => {
     await load(true);
@@ -107,7 +108,7 @@ export function IntegrationRow({
           <ProviderLogo providerId={providerIdFor(integration)} className="h-5 w-5 shrink-0" />
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold text-foreground">
-              {integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP ? "GitHub App" : "Git credentials"}
+              {isGithubApp ? "GitHub App" : "Git credentials"}
             </p>
             <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
           </div>
@@ -143,8 +144,8 @@ export function IntegrationRow({
         </div>
 
         <RowMenu
-          onVerify={() => onVerify(integration)}
-          onSync={() => void sync()}
+          onVerify={isGithubApp ? undefined : () => onVerify(integration)}
+          onSync={isGithubApp ? () => void sync() : undefined}
           onRemove={() => onRemove(integration)}
         />
       </div>

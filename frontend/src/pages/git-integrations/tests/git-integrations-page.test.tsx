@@ -91,7 +91,7 @@ describe("GitIntegrationsPage", () => {
 
   it("verifies a repository URL through the verify dialog", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({
-      items: [{ id: "g1", host: "github.com", type: "github_app", status: "installed", credentials_configured: true }],
+      items: [{ id: "g1", host: "github.com", type: "git_credentials", status: "active", credentials_configured: true }],
     });
     vi.mocked(verifyGitIntegration).mockResolvedValue(undefined);
 
