@@ -290,6 +290,7 @@ export default function StacksPage() {
     <TooltipProvider>
       <div className="flex flex-1 flex-col p-8 space-y-6 h-full">
         <PageHeader
+          className="border-b-0 pb-0"
           eyebrow="Platform"
           title="Stacks"
           subtitle={
