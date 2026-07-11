@@ -20,7 +20,7 @@ const baseStack = {
 afterEach(cleanup);
 
 describe("DeployStackCard", () => {
-  it("renders ready card with success rail and footer meta", () => {
+  it("renders ready card with footer meta and no rail", () => {
     render(
       <MemoryRouter>
         <DeployStackCard stack={{ ...baseStack, status: { state: "Ready" } } as Stack} />
@@ -30,7 +30,7 @@ describe("DeployStackCard", () => {
     expect(screen.getByText("ready")).toBeTruthy();
     expect(screen.getByText("2 res")).toBeTruthy();
     expect(screen.getByText("1 vol")).toBeTruthy();
-    expect(document.querySelector('[data-rail="success"]')).toBeTruthy();
+    expect(document.querySelector("[data-rail]")).toBeNull();
   });
 
   it("renders animated deploying rail for in-flight states", () => {
@@ -61,7 +61,7 @@ describe("PreviewEnvCard", () => {
     updated_at: new Date().toISOString(),
   } as unknown as PreviewStack;
 
-  it("renders brand rail, repo/branch rows, endpoint pill, and commit footer", () => {
+  it("renders repo/branch rows, endpoint pill, and commit footer without a rail", () => {
     render(
       <MemoryRouter>
         <PreviewEnvCard env={env} configName="stackdome-preview-demo" />
@@ -74,6 +74,6 @@ describe("PreviewEnvCard", () => {
     const pill = screen.getByRole("link", { name: /web/ });
     expect(pill.getAttribute("href")).toBe("http://pr-128.example.test");
     expect(screen.getByText("895026c")).toBeTruthy();
-    expect(document.querySelector('[data-rail="success"]')).toBeTruthy();
+    expect(document.querySelector("[data-rail]")).toBeNull();
   });
 });

@@ -9,30 +9,17 @@ import type { Stack } from "@/pages/stacks/types";
 export type RailTone = "success" | "brand" | "danger" | "deploying";
 
 /**
- * 4px full-bleed status rail across the card's top edge — the primary status
- * indicator of the "Status Strip" card design. `deploying` renders a soft
- * track with an animated amber segment (static partial fill under
- * prefers-reduced-motion).
+ * 4px full-bleed rail across the card's top edge, shown only while a deploy
+ * is in flight: a soft track with an animated amber segment (static partial
+ * fill under prefers-reduced-motion). Settled states render no rail — the
+ * colored status word carries the state.
  */
 export function StatusRail({ tone }: { tone: RailTone }) {
-  if (tone === "deploying") {
-    return (
-      <div className="h-1 w-full overflow-hidden bg-warn-bg" role="presentation" data-rail="deploying">
-        <div className="h-full w-[34%] bg-brand animate-rail-sweep" />
-      </div>
-    );
-  }
+  if (tone !== "deploying") return null;
   return (
-    <div
-      role="presentation"
-      data-rail={tone}
-      className={cn(
-        "h-1 w-full",
-        tone === "success" && "bg-success",
-        tone === "brand" && "bg-brand",
-        tone === "danger" && "bg-danger",
-      )}
-    />
+    <div className="h-1 w-full overflow-hidden bg-warn-bg" role="presentation" data-rail="deploying">
+      <div className="h-full w-[34%] bg-brand animate-rail-sweep" />
+    </div>
   );
 }
 
