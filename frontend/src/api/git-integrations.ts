@@ -19,6 +19,11 @@ export async function listGitIntegrations(orgId: string): Promise<GitIntegration
   return res.data as GitIntegrationList;
 }
 
+export async function createGitIntegration(orgId: string, body: GitIntegration): Promise<GitIntegration> {
+  const res = await api.post(base(orgId), body);
+  return res.data as GitIntegration;
+}
+
 export async function getGitIntegration(orgId: string, id: string): Promise<GitIntegration> {
   const res = await api.get(`${base(orgId)}/${id}`);
   return res.data as GitIntegration;
