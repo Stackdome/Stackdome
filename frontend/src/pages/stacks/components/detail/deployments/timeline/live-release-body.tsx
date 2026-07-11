@@ -22,7 +22,7 @@ export interface LiveReleaseBodyProps {
   detail?: ReleaseDetail;
   prevReleaseId?: string;
   prevSeq?: number;
-  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
 }
 
 /**
@@ -51,8 +51,9 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const liveResources = Object.entries(liveStatus?.resources ?? {});
   const sourceByName = new Map((releaseSnapshot?.resources ?? stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const failureMsg = release.state === ReleaseState.Failed && failing.length === 0 ? release.message : undefined;
+  const bannerResources = stack.spec?.stack_resources ?? [];
   const validationItems = release.state === ReleaseState.Failed
-    ? releaseValidationBannerItems(release, stack.spec?.stack_resources ?? [])
+    ? releaseValidationBannerItems(release, bannerResources)
     : [];
   const rows: ResourceRowVM[] = liveResources.map(([name, s]) => ({
     name,
@@ -73,7 +74,12 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
       {!validationDismissed && validationItems.length > 0 && (
         <ValidationBanner
           items={validationItems}
-          onJump={onJumpToResource}
+          onJump={onJumpToResource && ((idx, tab) => {
+            // Round-trip index → name via the SAME list the items were built
+            // against; the receiver re-resolves the name at click time.
+            const name = bannerResources[idx]?.name;
+            if (name) onJumpToResource(name, tab);
+          })}
           onDismiss={() => setValidationDismissed(true)}
         />
       )}

@@ -16,7 +16,7 @@ export interface TimelineRailProps {
   stack: Stack;
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
-  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
   banner?: React.ReactNode;
   /** Optional draft node, rendered at the head of the rail (saved-but-undeployed). */
   draftNode?: React.ReactNode;

@@ -13,6 +13,7 @@ import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/u
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
+import { jumpTargetIndex } from "@/pages/stacks/components/detail/deployments/release-errors";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
 import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
 import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
@@ -927,7 +928,15 @@ export default function StackDetailPage() {
       stackId={effectiveStack.id}
       stack={effectiveStack}
       onOpenLogs={() => setActiveTab("logs")}
-      onJumpToResource={(index, tab) => {
+      onJumpToResource={(resourceName, tab) => {
+        // Resolve against the list the canvas drawer actually indexes into
+        // (the live draft while a session is active), at click time — the
+        // banner's render-time list may have drifted.
+        const index = jumpTargetIndex(
+          resourceName,
+          session.isActive ? session.draft.resources : draftResources,
+        );
+        if (index === undefined) return;
         setActiveTab("architecture");
         setOpenResourceSignal({ index, tab, nonce: Date.now() });
       }}

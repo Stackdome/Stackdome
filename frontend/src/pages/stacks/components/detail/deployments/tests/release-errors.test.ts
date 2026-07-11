@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { releaseValidationBannerItems } from "../release-errors";
+import { releaseValidationBannerItems, jumpTargetIndex } from "../release-errors";
 import type { StackRelease } from "@/api/releases";
 import type { StackResource } from "@/api/stacks";
 
@@ -51,5 +51,24 @@ describe("releaseValidationBannerItems", () => {
       resources,
     );
     expect(items[0].tab).toBe("environment");
+  });
+});
+
+describe("jumpTargetIndex", () => {
+  it("resolves a name to its index in the given list", () => {
+    expect(jumpTargetIndex("worker", resources)).toBe(1);
+  });
+
+  it("resolves against the list it is given, not any earlier ordering", () => {
+    // The draft may have reordered/added resources since the banner rendered.
+    expect(jumpTargetIndex("web", [{ name: "new" }, { name: "worker" }, { name: "web" }])).toBe(2);
+  });
+
+  it("returns undefined when the resource is gone from the list", () => {
+    expect(jumpTargetIndex("web", [{ name: "worker" }])).toBeUndefined();
+  });
+
+  it("returns undefined for an empty name", () => {
+    expect(jumpTargetIndex("", resources)).toBeUndefined();
   });
 });

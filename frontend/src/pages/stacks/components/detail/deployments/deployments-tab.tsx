@@ -14,7 +14,7 @@ export interface DeploymentsTabProps {
   stack: Stack;
   onOpenLogs?: (resourceName?: string) => void;
   /** Opens the canvas resource drawer (release-error banner "jump to error"). */
-  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
   // Deploy lifecycle + release data are owned by the page (the status bar owns
   // deploy); this tab is presentational.
   releases: StackRelease[];

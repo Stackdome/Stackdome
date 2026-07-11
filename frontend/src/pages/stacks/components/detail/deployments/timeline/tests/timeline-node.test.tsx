@@ -85,6 +85,6 @@ describe("TimelineNode", () => {
       />,
     );
     await userEvent.click(screen.getByText(/image_not_found/));
-    expect(onJumpToResource).toHaveBeenCalledWith(0, "configuration");
+    expect(onJumpToResource).toHaveBeenCalledWith("web", "configuration");
   });
 });

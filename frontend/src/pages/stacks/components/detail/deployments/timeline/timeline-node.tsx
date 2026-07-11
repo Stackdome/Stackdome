@@ -28,7 +28,7 @@ export interface TimelineNodeProps {
   stack: Stack;
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
-  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
 }
 
 /**

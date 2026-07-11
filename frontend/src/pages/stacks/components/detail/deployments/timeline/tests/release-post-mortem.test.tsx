@@ -78,6 +78,6 @@ describe("ReleasePostMortem", () => {
     );
     await waitFor(() => expect(screen.getByText(/image_not_found/)).toBeInTheDocument());
     await userEvent.click(screen.getByText(/image_not_found/));
-    expect(onJumpToResource).toHaveBeenCalledWith(0, "configuration");
+    expect(onJumpToResource).toHaveBeenCalledWith("web", "configuration");
   });
 });
