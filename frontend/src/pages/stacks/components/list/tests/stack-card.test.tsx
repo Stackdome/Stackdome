@@ -41,13 +41,13 @@ describe("DeployStackCard", () => {
     expect(document.querySelector("[data-rail]")).toBeNull();
   });
 
-  it("renders animated deploying rail for in-flight states", () => {
+  it("renders animated rail and pending word for in-flight states", () => {
     render(
       <MemoryRouter>
-        <DeployStackCard stack={{ ...baseStack, status: { state: "Deploying" } } as Stack} />
+        <DeployStackCard stack={{ ...baseStack, status: { state: "Progressing" } } as Stack} />
       </MemoryRouter>,
     );
-    expect(screen.getByText("deploying")).toBeTruthy();
+    expect(screen.getByText("pending")).toBeTruthy();
     const rail = document.querySelector('[data-rail="deploying"]');
     expect(rail).toBeTruthy();
     expect(rail?.querySelector(".animate-rail-sweep")).toBeTruthy();

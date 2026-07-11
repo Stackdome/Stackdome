@@ -1,7 +1,11 @@
 import { GitPullRequest } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { statusVariant } from "@/components/branded/status-variant";
+import {
+  statusVariant,
+  statusVariantLabel,
+  statusVariantTone,
+} from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 import {
   StatusRail,
@@ -21,10 +25,7 @@ interface PreviewEnvCardProps {
 
 function previewTone(phase: PreviewPhase | undefined): { tone: RailTone; word: string } {
   const v = statusVariant("preview", phase);
-  if (v === "ready") return { tone: "success", word: "ready" };
-  if (v === "error") return { tone: "danger", word: "failed" };
-  // Provisioning / Deploying / Deleting / not yet reported → in flight
-  return { tone: "deploying", word: (phase ?? "deploying").toLowerCase() };
+  return { tone: statusVariantTone[v], word: statusVariantLabel[v] };
 }
 
 /**

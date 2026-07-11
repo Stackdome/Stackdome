@@ -2,11 +2,16 @@ import { Box, GitBranch, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Card } from "@/components/ui/card";
-import { statusVariant } from "@/components/branded/status-variant";
+import {
+  statusVariant,
+  statusVariantLabel,
+  statusVariantTone,
+  type StatusTone,
+} from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 import type { Stack } from "@/pages/stacks/types";
 
-export type RailTone = "success" | "brand" | "danger" | "deploying";
+export type RailTone = StatusTone;
 
 /**
  * 4px full-bleed rail across the card's top edge, shown only while a deploy
@@ -98,9 +103,7 @@ function inferStackIcon(stack: Stack) {
 
 function deployTone(state?: string | null): { tone: RailTone; word: string } {
   const v = statusVariant("stack", state);
-  if (v === "ready") return { tone: "success", word: "ready" };
-  if (v === "error") return { tone: "danger", word: "failed" };
-  return { tone: "deploying", word: "deploying" };
+  return { tone: statusVariantTone[v], word: statusVariantLabel[v] };
 }
 
 /**
