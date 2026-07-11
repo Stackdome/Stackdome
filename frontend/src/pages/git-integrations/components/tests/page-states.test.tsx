@@ -26,7 +26,7 @@ describe("IntegrationsEmptyState", () => {
 
     expect(screen.getByText("No git integrations yet")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /connect a provider/i }));
+    fireEvent.click(screen.getByRole("button", { name: /connect provider/i }));
     expect(onAdd).toHaveBeenCalledTimes(1);
   });
 });

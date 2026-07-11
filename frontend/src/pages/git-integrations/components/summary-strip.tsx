@@ -31,7 +31,7 @@ export function SummaryStrip({ rows }: { rows: RowViewModel[] }) {
       <StatCard
         dotClassName={attentionCount > 0 ? "bg-warn" : "bg-muted-foreground"}
         count={attentionCount}
-        caption="Need your attention"
+        caption="Needs attention"
       />
     </div>
   );

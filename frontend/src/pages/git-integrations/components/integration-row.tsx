@@ -8,7 +8,7 @@ import {
   type GitInstallation,
 } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, type RowViewModel } from "../lib/derive-row";
+import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, type ProviderId, type RowViewModel } from "../lib/derive-row";
 import { RowMenu } from "./row-menu";
 import { ProviderLogo } from "./provider-logo";
 
@@ -16,6 +16,14 @@ function statusPillClasses(tone: RowViewModel["tone"]) {
   if (tone === "ok") return "";
   return "border-warn-border bg-warn-bg text-warn";
 }
+
+const PROVIDER_TITLES: Record<ProviderId, string> = {
+  github: "GitHub",
+  gitlab: "GitLab",
+  bitbucket: "Bitbucket",
+  gitea: "Gitea",
+  other: "Git host",
+};
 
 function Banner({
   banner,
@@ -108,7 +116,7 @@ export function IntegrationRow({
           <ProviderLogo providerId={providerIdFor(integration)} className="h-5 w-5 shrink-0" />
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold text-foreground">
-              {isGithubApp ? "GitHub App" : "Git credentials"}
+              {PROVIDER_TITLES[providerIdFor(integration)]}
             </p>
             <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
           </div>

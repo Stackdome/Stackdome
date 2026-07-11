@@ -32,7 +32,7 @@ describe("SummaryStrip", () => {
     ];
     render(<SummaryStrip rows={rows} />);
     expect(screen.getByText("Connected & ready")).toBeInTheDocument();
-    expect(screen.getByText("Need your attention")).toBeInTheDocument();
+    expect(screen.getByText("Needs attention")).toBeInTheDocument();
     expect(screen.getByText("2")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
   });

@@ -46,10 +46,10 @@ function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyIntegratio
     setVerifying(true);
     try {
       await verifyGitIntegration(orgId, integration.id, repoUrl.trim());
-      toast({ title: "Verification succeeded" });
+      toast({ title: "Repository access verified" });
       onOpenChange(false);
     } catch (e) {
-      toast({ title: "Verification failed", description: getErrorMessage(e), variant: "destructive" });
+      toast({ title: "Couldn't verify repository access", description: getErrorMessage(e), variant: "destructive" });
     } finally {
       setVerifying(false);
     }
@@ -120,11 +120,11 @@ export default function GitIntegrationsPage() {
     if (!orgId || !integration.id) return;
     try {
       await deleteGitIntegration(orgId, integration.id);
-      toast({ title: "Integration deleted" });
+      toast({ title: "Integration removed" });
       setRemoving(null);
       await refresh();
     } catch (e) {
-      toast({ title: "Delete failed", description: getErrorMessage(e), variant: "destructive" });
+      toast({ title: "Remove failed", description: getErrorMessage(e), variant: "destructive" });
     }
   };
 
@@ -132,7 +132,7 @@ export default function GitIntegrationsPage() {
   const addButton = (
     <Button onClick={() => setWizardOpen(true)}>
       <Plus className="h-4 w-4" />
-      Add integration
+      Connect provider
     </Button>
   );
 
@@ -186,14 +186,14 @@ export default function GitIntegrationsPage() {
       <AlertDialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this integration?</AlertDialogTitle>
+            <AlertDialogTitle>Remove this integration?</AlertDialogTitle>
             <AlertDialogDescription>
               Repositories using this integration lose access for clones.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => removing && void remove(removing)}>Delete</AlertDialogAction>
+            <AlertDialogAction onClick={() => removing && void remove(removing)}>Remove</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

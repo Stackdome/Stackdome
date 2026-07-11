@@ -69,14 +69,14 @@ describe("deriveRow", () => {
       }),
     );
     expect(row.statusKey).toBe("action_needed");
-    expect(row.statusLabel).toBe("Action needed");
+    expect(row.statusLabel).toBe("Needs attention");
     expect(row.tone).toBe("attention");
   });
 
   it("marks credentials-missing integration as action_needed even when active", () => {
     const row = deriveRow(integration({ status: STATUS_ACTIVE, credentials_configured: false }));
     expect(row.statusKey).toBe("action_needed");
-    expect(row.statusLabel).toBe("Action needed");
+    expect(row.statusLabel).toBe("Needs attention");
     expect(row.tone).toBe("attention");
   });
 

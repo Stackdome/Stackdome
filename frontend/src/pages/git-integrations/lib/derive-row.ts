@@ -33,7 +33,7 @@ export interface RowViewModel {
 
 function statusFor(integration: GitIntegration): { key: RowViewModel["statusKey"]; label: string; tone: RowTone } {
   if (integration.credentials_configured === false) {
-    return { key: "action_needed", label: "Action needed", tone: "attention" };
+    return { key: "action_needed", label: "Needs attention", tone: "attention" };
   }
   if (integration.status === STATUS_PENDING_INSTALL) {
     return { key: "needs_setup", label: "Needs setup", tone: "attention" };
@@ -51,7 +51,7 @@ function bannerFor(integration: GitIntegration, statusKey: RowViewModel["statusK
   }
   if (statusKey === "action_needed") {
     return {
-      message: "Credentials for this integration need attention before Stackdome can clone repositories.",
+      message: "No credentials are stored for this integration, so clones will fail.",
       ctaLabel: "Update credentials →",
     };
   }

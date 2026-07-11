@@ -30,7 +30,7 @@ export function IntegrationsEmptyState({ onAdd }: { onAdd: () => void }) {
       action={
         <Button onClick={onAdd}>
           <Plus className="h-4 w-4" />
-          Connect a provider
+          Connect provider
         </Button>
       }
     />

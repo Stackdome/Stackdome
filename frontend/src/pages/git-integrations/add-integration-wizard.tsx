@@ -165,7 +165,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? onOpenChange(true) : close())}>
       <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[540px]">
-        <DialogTitle className="sr-only">Add git integration</DialogTitle>
+        <DialogTitle className="sr-only">Connect provider</DialogTitle>
         <DialogDescription className="sr-only">
           Connect a git provider so Stackdome can clone repositories and trigger preview environments
         </DialogDescription>
@@ -174,7 +174,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
             <GitBranch className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
-            Add git integration
+            Connect provider
           </span>
         </div>
 
@@ -225,7 +225,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                 <div className="mb-4 text-center">
                   <h2 className="mb-2 text-2xl font-medium tracking-tight">Connect GitHub</h2>
                   <p className="text-sm text-muted-foreground">
-                    Two ways in — the app install is the low-maintenance one.
+                    Install the GitHub App, or paste an access token.
                   </p>
                 </div>
                 <button

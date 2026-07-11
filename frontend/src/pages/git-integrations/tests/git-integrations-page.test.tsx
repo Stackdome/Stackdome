@@ -29,19 +29,20 @@ import { listGitIntegrations, deleteGitIntegration, verifyGitIntegration } from 
 describe("GitIntegrationsPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("renders branded empty state with an Add integration action when list is empty", async () => {
+  it("renders branded empty state with a Connect provider action when list is empty", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({ items: [] });
     render(<GitIntegrationsPage />);
     await waitFor(() => expect(screen.getByText(/no git integrations yet/i)).toBeInTheDocument());
-    // Header + empty-state both expose an add CTA.
-    expect(screen.getAllByRole("button", { name: /add integration|connect a provider/i }).length).toBeGreaterThanOrEqual(1);
+    // Header + empty-state both expose a connect CTA.
+    expect(screen.getAllByRole("button", { name: /connect provider/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("opens the wizard from the empty-state action", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({ items: [] });
     render(<GitIntegrationsPage />);
     await waitFor(() => expect(screen.getByText(/no git integrations yet/i)).toBeInTheDocument());
-    fireEvent.click(screen.getByRole("button", { name: /connect a provider/i }));
+    const [, emptyStateButton] = screen.getAllByRole("button", { name: /connect provider/i });
+    fireEvent.click(emptyStateButton);
     expect(screen.getByText(/GitLab/)).toBeInTheDocument(); // provider grid visible
   });
 
@@ -70,7 +71,7 @@ describe("GitIntegrationsPage", () => {
     render(<GitIntegrationsPage />);
     await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
     expect(screen.getByText(/connected & ready/i)).toBeInTheDocument();
-    expect(screen.getByText(/need your attention/i)).toBeInTheDocument();
+    expect(screen.getByText(/needs attention/i)).toBeInTheDocument();
   });
 
   it("shows the error state and retries the fetch on Retry", async () => {
@@ -108,7 +109,7 @@ describe("GitIntegrationsPage", () => {
     await waitFor(() =>
       expect(verifyGitIntegration).toHaveBeenCalledWith("org-1", "g1", "https://github.com/acme/webapp"),
     );
-    expect(toastMock).toHaveBeenCalledWith({ title: "Verification succeeded" });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Repository access verified" });
   });
 
   it("removes an integration via the row menu and confirm dialog", async () => {
@@ -126,10 +127,10 @@ describe("GitIntegrationsPage", () => {
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText(/remove integration/i), { pointerEventsCheck: 0 });
 
-    expect(await screen.findByText(/delete this integration/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Delete" }), { pointerEventsCheck: 0 });
+    expect(await screen.findByText(/remove this integration/i)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove" }), { pointerEventsCheck: 0 });
 
     await waitFor(() => expect(deleteGitIntegration).toHaveBeenCalledWith("org-1", "g1"));
-    expect(toastMock).toHaveBeenCalledWith({ title: "Integration deleted" });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Integration removed" });
   });
 });
