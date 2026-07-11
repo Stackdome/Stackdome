@@ -1,5 +1,5 @@
 import { Box, GitBranch, Layers } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { statusVariant } from "@/components/branded/status-variant";
@@ -104,38 +104,51 @@ function deployTone(state?: string | null): { tone: RailTone; word: string } {
 }
 
 /**
- * Deployed-stack dashboard card, "Status Strip" design. Cluster name,
- * endpoint URLs, and commit hash are not in the stacks list payload, so the
- * card keeps the middle empty and shows counts + age in the footer.
+ * Deployed-stack dashboard card, "Status Strip" design. Endpoint pills come
+ * from each resource's public_ingress in the list payload. Not wrapped in a
+ * Link because the pills are real anchors — nested <a> is invalid HTML.
  */
 export function DeployStackCard({ stack }: { stack: Stack }) {
+  const navigate = useNavigate();
   const Icon = inferStackIcon(stack);
   const { tone, word } = deployTone(stack.status?.state);
   const resourceCount = stack.spec?.stack_resources?.length || 0;
   const volumeCount = stack.spec?.volumes?.length || 0;
   const age = relativeAge(stack.updated_at || stack.created_at);
+  const urls: EndpointUrl[] = (stack.spec?.stack_resources ?? []).flatMap((res) =>
+    (res.status?.public_ingress ?? []).map((ingress) => ({ resource: res.name, url: ingress.url })),
+  );
 
   return (
-    <Link to={`/stacks/${stack.id}`} className="block group h-full">
-      <Card className="flex h-full min-h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20">
-        <StatusRail tone={tone} />
-        <div className="flex flex-1 flex-col gap-[18px] p-5">
-          <div className="flex items-center gap-[11px]">
-            <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
-            <span
-              className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand"
-              title={stack.name}
-            >
-              {stack.name}
-            </span>
-            {stack.status?.state && <StatusWord tone={tone}>{word}</StatusWord>}
-          </div>
-
-          <CardFooterMeta
-            items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
-          />
+    <Card
+      role="link"
+      tabIndex={0}
+      aria-label={`${stack.name} stack`}
+      onClick={() => navigate(`/stacks/${stack.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") navigate(`/stacks/${stack.id}`);
+      }}
+      className="group flex h-full min-h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20"
+    >
+      <StatusRail tone={tone} />
+      <div className="flex flex-1 flex-col gap-[18px] p-5">
+        <div className="flex items-center gap-[11px]">
+          <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
+          <span
+            className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand"
+            title={stack.name}
+          >
+            {stack.name}
+          </span>
+          {stack.status?.state && <StatusWord tone={tone}>{word}</StatusWord>}
         </div>
-      </Card>
-    </Link>
+
+        <EndpointPills urls={urls} />
+
+        <CardFooterMeta
+          items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
+        />
+      </div>
+    </Card>
   );
 }

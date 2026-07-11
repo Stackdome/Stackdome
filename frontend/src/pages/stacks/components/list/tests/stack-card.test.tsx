@@ -13,7 +13,13 @@ const baseStack = {
   name: "tooljet",
   namespace: "ns-tooljet",
   revision: 4,
-  spec: { stack_resources: [{}, {}], volumes: [{}] },
+  spec: {
+    stack_resources: [
+      { name: "web", status: { public_ingress: [{ url: "http://web.example.test" }] } },
+      {},
+    ],
+    volumes: [{}],
+  },
   updated_at: new Date().toISOString(),
 } as unknown as Stack;
 
@@ -30,6 +36,8 @@ describe("DeployStackCard", () => {
     expect(screen.getByText("ready")).toBeTruthy();
     expect(screen.getByText("2 res")).toBeTruthy();
     expect(screen.getByText("1 vol")).toBeTruthy();
+    const pill = screen.getByRole("link", { name: /web/ });
+    expect(pill.getAttribute("href")).toBe("http://web.example.test");
     expect(document.querySelector("[data-rail]")).toBeNull();
   });
 
