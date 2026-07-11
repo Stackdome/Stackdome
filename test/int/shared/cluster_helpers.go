@@ -317,6 +317,22 @@ func WaitForStackCRExists(ctx context.Context, clusterClient client.Client, name
 	return &cr
 }
 
+// WaitForStackActive polls the stack API until it responds 200 with an
+// active lifecycle. The wait for stacks that never deploy (e.g. skip-cluster-
+// provisioning fixtures): they have no releases, so WaitForStackReady's
+// current_release gate would never pass.
+func WaitForStackActive(apiClient *openapi.APIClient, orgID, teamName, stackID string, timeout time.Duration) *openapi.Stack {
+	var stack *openapi.Stack
+	Eventually(func(g Gomega) {
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(context.Background(), orgID, teamName, stackID).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+		g.Expect(resp.GetLifecycle()).To(Equal(openapi.STACK_LIFECYCLE_ACTIVE))
+		stack = resp
+	}, timeout, 2*time.Second).Should(Succeed())
+	return stack
+}
+
 // WaitForStackReady polls the stack API until the current release has
 // converged (Released) and its live status is healthy (Ok) — the
 // release-centric equivalent of the old "stack.status.state == Ready" wait.

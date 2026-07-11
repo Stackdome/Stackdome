@@ -36,7 +36,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-conn-crud", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID = created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 
 		It("should create an env connection (resource-to-resource)", func() {
@@ -80,7 +80,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-vol-conn", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			volStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, volStackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, volStackID, 1*time.Minute)
 
 			conn := shared.VolumeMountConn("data", "api", "/mnt/data", "subdir")
 			createdConn := shared.CreateStackConnection(client, orgID, teamName, volStackID, &conn)
@@ -141,7 +141,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-upd-cfg", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			cfgStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, cfgStackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, cfgStackID, 1*time.Minute)
 
 			conn := shared.VolumeMountConn("cfg-data", "api", "/mnt/data", "")
 			createdConn := shared.CreateStackConnection(client, orgID, teamName, cfgStackID, &conn)
@@ -219,7 +219,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-empty", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetNodes()).To(HaveLen(2))
@@ -239,7 +239,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-topo-r2r", []openapi.StackResource{api, web}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetEdges()).To(HaveLen(1))
@@ -256,7 +256,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-deps", []openapi.StackResource{db, app})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetEdges()).To(HaveLen(1))
@@ -272,7 +272,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-topo-mixed", []openapi.StackResource{api, worker}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(len(topology.GetEdges())).To(BeNumerically(">=", 2))
@@ -297,7 +297,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-labels", []openapi.StackResource{svc, bg})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			labels := map[string]bool{}
@@ -314,7 +314,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-mutate", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Topology should start with no edges")
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
@@ -356,7 +356,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-multi-db-conn", []openapi.StackResource{web})
 			createdStack := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := createdStack.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Creating first connection targeting appdb")
 			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
@@ -409,7 +409,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-dup-db-conn", []openapi.StackResource{web})
 			createdStack := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := createdStack.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Creating first connection targeting appdb")
 			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
@@ -445,7 +445,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-conn-neg", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID = created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 
 		It("should reject duplicate connection (same kind, from, to) with 409", func() {
@@ -537,7 +537,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-no-mountpath", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			volStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, volStackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, volStackID, 1*time.Minute)
 
 			from := openapi.NewTopologyNodeRef("volume")
 			from.SetName("test-vol")
@@ -573,7 +573,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-conn-upd-neg", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID = created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 
 		It("should return 404 when updating non-existent connection", func() {
@@ -626,7 +626,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-conn-persist", []openapi.StackResource{api, web}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Fetching persisted connection with its server-assigned ID")
 			connections := shared.ListStackConnections(client, orgID, teamName, stackID)
@@ -658,7 +658,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-conn-wipe", []openapi.StackResource{api, web}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Verifying connection exists")
 			Expect(shared.ListStackConnections(client, orgID, teamName, stackID)).To(HaveLen(1))
@@ -678,7 +678,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-multi-kinds", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			secret := shared.CreateGenericSecret("test-multi-kind-secret", map[string]string{"token": "abc"})
 			createdSecret := shared.CreateSecret(client, orgID, teamName, secret)
