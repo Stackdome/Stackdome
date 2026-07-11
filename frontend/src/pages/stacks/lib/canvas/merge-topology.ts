@@ -71,14 +71,20 @@ function mergeServer(
 
   // Runtime-state overlay: the live-status map (when it covers this node) wins
   // over the topology endpoint's own node state, which in turn wins over the
-  // dot colour derived at graph-build time.
+  // dot colour derived at graph-build time. A provided live map is exactly the
+  // release snapshot's resource set, so a resource node missing from it is not
+  // part of the live release and renders neutral rather than falling back to
+  // (possibly stale) topology state.
   for (const [id, serverNode] of serverNodeByListId) {
-    const state = liveStateByNodeId?.has(id!) ? liveStateByNodeId.get(id!) : serverNode.state;
-    if (!state) continue;
+    const coveredByLiveMap = liveStateByNodeId?.has(id!) ?? false;
+    const excludedFromLiveRelease =
+      liveStateByNodeId !== undefined && id!.startsWith(NODE_ID_PREFIX.resource) && !coveredByLiveMap;
+    const state = coveredByLiveMap ? liveStateByNodeId!.get(id!) : serverNode.state;
+    if (!excludedFromLiveRelease && !state) continue;
     const idx = nodes.findIndex((n) => n.id === id && n.type === "resource");
     if (idx === -1) continue;
     const node = nodes[idx];
-    const dotVariant = statusVariant("resource", state);
+    const dotVariant = statusVariant("resource", excludedFromLiveRelease ? undefined : state);
     if ((node.data as ResourceNodeData).dotVariant === dotVariant) continue;
     const next: CanvasNode = { ...node, data: { ...node.data, dotVariant } };
     nodes[idx] = next;

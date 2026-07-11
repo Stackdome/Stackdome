@@ -137,14 +137,20 @@ describe("mergeTopology live-status overlay", () => {
     expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
   });
 
-  it("nodes not covered by the live map fall back to topology state", () => {
+  it("a resource node absent from a provided live map renders neutral, not the stale topology state", () => {
     const live = new Map([["resource:api", "Failed"]]);
     const merged = mergeTopology(localGraph(), serverReady(), false, live);
-    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("ready");
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
   });
 
   it("release-in-flight pending still overrides a live Ready", () => {
     const live = new Map([["resource:web", "Ready"]]);
+    const merged = mergeTopology(localGraph(), serverReady(), true, live);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+  });
+
+  it("release-in-flight pending still overrides a resource node excluded from the live map", () => {
+    const live = new Map([["resource:api", "Ready"]]);
     const merged = mergeTopology(localGraph(), serverReady(), true, live);
     expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
   });
