@@ -6,6 +6,19 @@ export const STATUS_PENDING_INSTALL = "pending_install" as const;
 export const STATUS_INSTALLED = "installed" as const;
 export const STATUS_ACTIVE = "active" as const;
 
+export type ProviderId = "github" | "gitlab" | "bitbucket" | "gitea" | "other";
+
+/** Detects the git host provider from the integration type/host, for logo selection. */
+export function providerIdFor(integration: GitIntegration): ProviderId {
+  if (integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP) return "github";
+  const host = (integration.host ?? "").toLowerCase();
+  if (host.includes("github")) return "github";
+  if (host.includes("gitlab")) return "gitlab";
+  if (host.includes("bitbucket")) return "bitbucket";
+  if (host.includes("gitea")) return "gitea";
+  return "other";
+}
+
 export type RowTone = "ok" | "attention";
 
 export interface RowViewModel {

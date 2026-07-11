@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { GitIntegration, GitInstallation } from "@/api/git-integrations";
 import {
   deriveRow,
+  providerIdFor,
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   GIT_INTEGRATION_TYPE_CREDENTIALS,
   STATUS_PENDING_INSTALL,
@@ -131,5 +132,43 @@ describe("deriveRow", () => {
   it("omits the access line when installations are undefined", () => {
     const row = deriveRow(integration());
     expect(row.accessLine).toBeUndefined();
+  });
+});
+
+describe("providerIdFor", () => {
+  it("identifies github_app integrations as github regardless of host", () => {
+    expect(providerIdFor(integration({ type: GIT_INTEGRATION_TYPE_GITHUB_APP, host: "example.com" }))).toBe(
+      "github",
+    );
+  });
+
+  it("identifies a github.com host as github", () => {
+    expect(
+      providerIdFor(integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, host: "github.com" })),
+    ).toBe("github");
+  });
+
+  it("identifies a gitlab host as gitlab", () => {
+    expect(
+      providerIdFor(integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, host: "gitlab.example.com" })),
+    ).toBe("gitlab");
+  });
+
+  it("identifies a bitbucket host as bitbucket", () => {
+    expect(
+      providerIdFor(integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, host: "bitbucket.org" })),
+    ).toBe("bitbucket");
+  });
+
+  it("identifies a gitea host as gitea", () => {
+    expect(
+      providerIdFor(integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, host: "gitea.mycorp.io" })),
+    ).toBe("gitea");
+  });
+
+  it("falls back to other for unrecognized hosts", () => {
+    expect(
+      providerIdFor(integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, host: "git.mycorp.internal" })),
+    ).toBe("other");
   });
 });

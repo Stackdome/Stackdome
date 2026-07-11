@@ -8,8 +8,9 @@ import {
   type GitInstallation,
 } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { deriveRow, GIT_INTEGRATION_TYPE_GITHUB_APP, type RowViewModel } from "../lib/derive-row";
+import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, type RowViewModel } from "../lib/derive-row";
 import { RowMenu } from "./row-menu";
+import { ProviderLogo } from "./provider-logo";
 
 function statusPillClasses(tone: RowViewModel["tone"]) {
   if (tone === "ok") return "";
@@ -102,11 +103,14 @@ export function IntegrationRow({
   return (
     <div className={cn(row.tone === "attention" && "bg-warn/[0.03]")}>
       <div className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
-        <div className="w-[180px] min-w-0">
-          <p className="truncate text-[15px] font-semibold text-foreground">
-            {integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP ? "GitHub App" : "Git credentials"}
-          </p>
-          <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
+        <div className="flex w-[180px] min-w-0 items-center gap-2">
+          <ProviderLogo providerId={providerIdFor(integration)} className="h-5 w-5 shrink-0" />
+          <div className="min-w-0">
+            <p className="truncate text-[15px] font-semibold text-foreground">
+              {integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP ? "GitHub App" : "Git credentials"}
+            </p>
+            <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
+          </div>
         </div>
 
         <div className="w-[130px]">

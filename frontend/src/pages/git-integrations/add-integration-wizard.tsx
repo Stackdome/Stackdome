@@ -10,10 +10,10 @@ import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 import { cn } from "@/lib/utils";
+import type { ProviderId } from "./lib/derive-row";
+import { ProviderLogo } from "./components/provider-logo";
 
 type Phase = "provider" | "github" | "credentials" | "connecting" | "done";
-
-type ProviderId = "github" | "gitlab" | "bitbucket" | "gitea" | "other";
 
 interface Provider {
   id: ProviderId;
@@ -193,9 +193,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                     "hover:border-primary focus-visible:border-primary focus-visible:outline-none",
                   )}
                 >
-                  {p.id === "github"
-                    ? <Github className="h-5 w-5 text-muted-foreground" />
-                    : <GitBranch className="h-5 w-5 text-muted-foreground" />}
+                  <ProviderLogo providerId={p.id} className="h-5 w-5 text-muted-foreground" />
                   <span className="text-sm font-medium">{p.label}</span>
                   <span className="text-xs text-muted-foreground">
                     {p.id === "github" ? "App install or access token" : "Access token"}
