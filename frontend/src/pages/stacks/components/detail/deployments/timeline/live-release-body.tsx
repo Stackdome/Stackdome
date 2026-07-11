@@ -50,6 +50,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
     name,
     phase: s.state ?? "",
     replicas: replicaLabel(s.available_replicas, s.replicas),
+    msg: s.message,
     tag: recoveredNames.has(name) ? "RECOVERED" : undefined,
     failure: failingByName.get(name),
     source: resourceSource(sourceByName.get(name)),

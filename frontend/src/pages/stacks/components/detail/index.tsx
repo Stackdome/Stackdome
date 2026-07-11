@@ -26,7 +26,8 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
 import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { deriveHeaderHealth, shouldRefetchStackSummaries } from "@/pages/stacks/components/detail/deployments/derive";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries } from "@/pages/stacks/components/detail/deployments/derive";
+import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
@@ -237,6 +238,27 @@ export default function StackDetailPage() {
     if (currentReleaseId) releaseDetail.ensure(currentReleaseId);
   }, [currentReleaseId, releaseDetail]);
   const currentReleaseDetail = releaseDetail.peek(currentReleaseId).data;
+
+  // "Status" release: the active non-terminal release when a deploy is under way
+  // (so the canvas/drawer reflect the in-flight rollout, not stale current-release
+  // data), else the live current_release. Distinct from currentReleaseId above,
+  // which stays pinned to what's actually serving traffic for the header's PUBLIC row.
+  const nonTerminalRelease = releasesResult.releases.find((r) => !isTerminal(r.state));
+  const statusReleaseId = nonTerminalRelease?.id ?? stackToShow?.current_release?.id;
+  const statusReleaseState = nonTerminalRelease?.state ?? stackToShow?.current_release?.state;
+  // Refetch on every id/state change (mount, and each transition — including the
+  // terminal one, since statusReleaseState is a dep) plus a 5s poll while non-terminal.
+  useEffect(() => {
+    if (statusReleaseId) releaseDetail.refresh(statusReleaseId);
+  }, [statusReleaseId, statusReleaseState, releaseDetail]);
+  useEffect(() => {
+    if (!statusReleaseId || isTerminal(statusReleaseState)) return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== "hidden") releaseDetail.refresh(statusReleaseId);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [statusReleaseId, statusReleaseState, releaseDetail]);
+  const statusLiveStatus = releaseDetail.peek(statusReleaseId).data?.live_status;
 
   // Publicly exposed services → best live ingress URL, for the header's
   // PUBLIC row. Drafts have no live ingress, so the row stays empty.
@@ -873,6 +895,7 @@ export default function StackDetailPage() {
   }
 
   const headerHealth = effectiveStack ? deriveHeaderHealth(effectiveStack) : undefined;
+  const showDeployFailedHint = !!effectiveStack && latestDeployFailed(effectiveStack);
 
   const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
@@ -958,6 +981,7 @@ export default function StackDetailPage() {
         onNameChange={handleNameChange}
         nameError={nameError}
         headerHealth={headerHealth}
+        latestDeployFailed={showDeployFailedHint}
         lifecycle={effectiveStack?.lifecycle}
         subtitle={subtitleText}
         activeTab={activeTab}
@@ -1009,6 +1033,7 @@ export default function StackDetailPage() {
               deletingVolume={volumeDelete.deleting}
               persistedVolumeNames={persistedVolumeNames}
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
+              liveStatusResources={statusLiveStatus?.resources}
             />
           </>
         }

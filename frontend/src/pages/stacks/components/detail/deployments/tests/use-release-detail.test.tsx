@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
 vi.mock("@/api/releases", () => ({ getRelease: vi.fn() }));
 import { getRelease } from "@/api/releases";
 import { useReleaseDetail } from "../use-release-detail";
@@ -38,5 +38,37 @@ describe("useReleaseDetail", () => {
     function E() { const d = useReleaseDetail("o", "t", "s"); d.ensure("rx"); return <span>{d.peek("rx").error ?? ""}</span>; }
     render(<E />);
     await waitFor(() => expect(screen.getByText("boom")).toBeInTheDocument());
+  });
+
+  it("refresh refetches a cached id, keeping old data while loading", async () => {
+    let seq = 1;
+    (getRelease as ReturnType<typeof vi.fn>).mockImplementation(() => Promise.resolve({ id: "r1", sequence: seq++ }));
+    function R() {
+      const d = useReleaseDetail("o", "t", "s");
+      d.ensure("r1");
+      const s = d.peek("r1");
+      return (
+        <button onClick={() => d.refresh("r1")}>
+          {s.data?.sequence ?? "—"}{s.loading ? "*" : ""}
+        </button>
+      );
+    }
+    render(<R />);
+    await waitFor(() => expect(screen.getByRole("button")).toHaveTextContent("1"));
+    fireEvent.click(screen.getByRole("button"));
+    // stale data stays visible while the refetch is in flight
+    await waitFor(() => expect(screen.getByRole("button")).toHaveTextContent("1*"));
+    await waitFor(() => expect(screen.getByRole("button")).toHaveTextContent("2"));
+    expect(getRelease).toHaveBeenCalledTimes(2);
+  });
+
+  it("refresh dedupes while a fetch for the same id is in flight", async () => {
+    let resolve!: (v: unknown) => void;
+    (getRelease as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise((r) => { resolve = r; }));
+    function R() { const d = useReleaseDetail("o", "t", "s"); d.ensure("r1"); d.refresh("r1"); return <span>{d.peek("r1").data?.sequence ?? "—"}</span>; }
+    render(<R />);
+    expect(getRelease).toHaveBeenCalledTimes(1);
+    resolve({ id: "r1", sequence: 5 });
+    await waitFor(() => expect(screen.getByText("5")).toBeInTheDocument());
   });
 });

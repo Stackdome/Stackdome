@@ -994,6 +994,7 @@ const StackResourceStatus = z
     internal_service_name: z.string(),
     last_restart_request_processed_at: z.string().datetime({ offset: true }),
     state: z.string(),
+    message: z.string(),
     observed_revision: z.string(),
     conditions: z.array(Condition),
     last_failure: StackResourceFailure,

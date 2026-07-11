@@ -5628,6 +5628,8 @@ components:
           format: date-time
         state:
           type: string
+        message:
+          type: string
         observed_revision:
           type: string
         conditions:

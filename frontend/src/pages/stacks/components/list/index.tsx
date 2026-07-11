@@ -20,7 +20,7 @@ import { statusVariant } from "@/components/branded/status-variant";
 import { formatDistanceToNow } from "date-fns";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/pages/stacks/types";
-import { deriveHeaderHealth } from "@/pages/stacks/components/detail/deployments/derive";
+import { deriveHeaderHealth, latestDeployFailed } from "@/pages/stacks/components/detail/deployments/derive";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
@@ -264,6 +264,7 @@ export default function StacksPage() {
                 {filtered.map((stack) => {
                   const Icon = inferStackIcon(stack);
                   const { label: statusLabel, variant } = headerStatus(stack);
+                  const deployFailedHint = latestDeployFailed(stack);
                   const resourceCount = stack.spec?.stack_resources?.length || 0;
                   const volumeCount = stack.spec?.volumes?.length || 0;
                   const updatedAt = stack.updated_at || stack.created_at;
@@ -307,6 +308,21 @@ export default function StacksPage() {
                                 </span>
                               </TooltipContent>
                             </Tooltip>
+                            {deployFailedHint && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <AlertTriangle
+                                    className="mt-1.5 h-3 w-3 shrink-0 text-danger"
+                                    aria-label="Latest deploy failed"
+                                  />
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                  <span className="font-mono text-[11px] uppercase tracking-[1.5px]">
+                                    Deploy failed
+                                  </span>
+                                </TooltipContent>
+                              </Tooltip>
+                            )}
                           </div>
                         </div>
 

@@ -2,7 +2,11 @@ import { useCallback, useRef, useState } from "react";
 import { getRelease, type StackReleaseDetail } from "@/api/releases";
 
 export interface DetailState { data?: StackReleaseDetail; loading: boolean; error?: string; }
-export interface ReleaseDetail { ensure: (id: string) => void; peek: (id?: string) => DetailState; }
+export interface ReleaseDetail {
+  ensure: (id: string) => void;
+  peek: (id?: string) => DetailState;
+  refresh: (id: string) => void;
+}
 
 const EMPTY: DetailState = { loading: false };
 
@@ -26,6 +30,16 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
       .finally(() => inFlight.current.delete(id));
   }, [orgId, teamName, stackId]);
 
+  const refresh = useCallback((id: string) => {
+    if (!id || inFlight.current.has(id)) return;
+    inFlight.current.add(id);
+    setCache((c) => ({ ...c, [id]: { ...(c[id] ?? {}), loading: true } }));
+    getRelease(orgId, teamName, stackId, id)
+      .then((data) => setCache((c) => ({ ...c, [id]: { loading: false, data } })))
+      .catch((e) => setCache((c) => ({ ...c, [id]: { loading: false, error: e instanceof Error ? e.message : "Failed to load release" } })))
+      .finally(() => inFlight.current.delete(id));
+  }, [orgId, teamName, stackId]);
+
   const peek = useCallback((id?: string): DetailState => (id ? cache[id] ?? EMPTY : EMPTY), [cache]);
-  return { ensure, peek };
+  return { ensure, peek, refresh };
 }

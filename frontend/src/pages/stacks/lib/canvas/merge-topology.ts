@@ -30,8 +30,12 @@ export function mergeTopology(
   local: CanvasGraph,
   server: StackTopology | null | undefined,
   releaseInFlight = false,
+  /** node id ("resource:<name>") → live state, sourced from the status release's
+   *  live_status.resources. Takes priority over the topology endpoint's own
+   *  (possibly stale/unscoped) node state for any resource it covers. */
+  liveStateByNodeId?: ReadonlyMap<string, string | undefined>,
 ): CanvasGraph {
-  const merged = server ? mergeServer(local, server) : local;
+  const merged = server ? mergeServer(local, server, liveStateByNodeId) : local;
   return releaseInFlight ? overlayReleaseInFlight(merged) : merged;
 }
 
@@ -53,7 +57,11 @@ function overlayReleaseInFlight(graph: CanvasGraph): CanvasGraph {
   return changed ? { nodes, edges: graph.edges } : graph;
 }
 
-function mergeServer(local: CanvasGraph, server: StackTopology): CanvasGraph {
+function mergeServer(
+  local: CanvasGraph,
+  server: StackTopology,
+  liveStateByNodeId?: ReadonlyMap<string, string | undefined>,
+): CanvasGraph {
   const nodes = [...local.nodes];
   const nodeById = new Map(nodes.map((n) => [n.id, n]));
   const serverNodeByListId = new Map(
@@ -61,14 +69,16 @@ function mergeServer(local: CanvasGraph, server: StackTopology): CanvasGraph {
   );
   let changed = false;
 
-  // Runtime-state overlay: the fresher server topology state wins over the
+  // Runtime-state overlay: the live-status map (when it covers this node) wins
+  // over the topology endpoint's own node state, which in turn wins over the
   // dot colour derived at graph-build time.
   for (const [id, serverNode] of serverNodeByListId) {
-    if (!serverNode.state) continue;
+    const state = liveStateByNodeId?.has(id!) ? liveStateByNodeId.get(id!) : serverNode.state;
+    if (!state) continue;
     const idx = nodes.findIndex((n) => n.id === id && n.type === "resource");
     if (idx === -1) continue;
     const node = nodes[idx];
-    const dotVariant = statusVariant("resource", serverNode.state);
+    const dotVariant = statusVariant("resource", state);
     if ((node.data as ResourceNodeData).dotVariant === dotVariant) continue;
     const next: CanvasNode = { ...node, data: { ...node.data, dotVariant } };
     nodes[idx] = next;

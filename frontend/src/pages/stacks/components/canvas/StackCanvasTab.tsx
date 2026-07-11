@@ -16,6 +16,7 @@ import type {
 } from "@/pages/stacks/schemas/form-schema";
 import type { EditSessionDraft, EditSessionTab, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
+import type { ReleaseLiveStatus } from "@/api/releases";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
 import { layoutGraph, NEW_NODE_GAP_X, NEW_NODE_OFFSET_Y } from "@/pages/stacks/lib/canvas/layout-graph";
@@ -93,6 +94,9 @@ interface StackCanvasTabProps {
   /** A release is in flight — node status dots show pending until it terminates
    *  (per-resource server state lags the deploy and would flash a stale Ready). */
   releaseInFlight?: boolean;
+  /** Live per-resource status, keyed by resource name — from the status
+   *  release's live_status.resources. Drives node dots + the resource drawer. */
+  liveStatusResources?: ReleaseLiveStatus["resources"];
   /** Bumped by the parent to request opening a resource drawer (banner "jump to
    *  error") on the tab holding the field; the nonce distinguishes repeat jumps
    *  to the same resource. */
@@ -117,6 +121,7 @@ function StackCanvasFlow({
   deletingVolume,
   persistedVolumeNames,
   releaseInFlight,
+  liveStatusResources,
   openResourceSignal,
 }: StackCanvasTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
@@ -144,10 +149,18 @@ function StackCanvasFlow({
     () => deriveGraph({ resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty }),
     [resources, linkedAddonIds, addonNameById, addonStateById, volumeNames, dirty],
   );
+  // Live status keyed by canvas node id, so it wins over the topology
+  // endpoint's own (possibly unscoped) per-node state.
+  const liveStateByNodeId = useMemo(() => {
+    const entries = Object.entries(liveStatusResources ?? {});
+    if (entries.length === 0) return undefined;
+    return new Map(entries.map(([name, s]) => [NODE_ID_PREFIX.resource + name, s.state]));
+  }, [liveStatusResources]);
+
   // Local graph enhanced with server-derived edges + runtime status.
   const mergedGraph = useMemo(
-    () => mergeTopology(dataGraph, topology, releaseInFlight),
-    [dataGraph, topology, releaseInFlight],
+    () => mergeTopology(dataGraph, topology, releaseInFlight, liveStateByNodeId),
+    [dataGraph, topology, releaseInFlight, liveStateByNodeId],
   );
   // Signature of the node/edge id-set — changes only when topology changes.
   const topologySignature = useMemo(
@@ -606,6 +619,7 @@ function StackCanvasFlow({
         onRemove={removeResource}
         onViewLogs={onViewLogs}
         onOpenVolume={openVolume}
+        liveStatusResources={liveStatusResources}
       />
     ) : frontEntry ? (
       <VolumeDrawer

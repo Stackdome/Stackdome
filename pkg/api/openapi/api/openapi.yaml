@@ -10896,7 +10896,6 @@ components:
     StackResourceStatus:
       example:
         updated_replicas: 3
-        last_run_succeeded: true
         last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
         last_failure:
           container:
@@ -10918,9 +10917,17 @@ components:
             exit_code: 2
             message: message
           type: runtime_crash
+        replicas: 7
+        message: message
+        public_ingress:
+        - target_port: 5
+          url: url
+        - target_port: 5
+          url: url
+        last_run_time: 2000-01-23T04:56:07.000+00:00
+        last_run_succeeded: true
         available_replicas: 9
         internal_service_name: internal_service_name
-        replicas: 7
         state: state
         conditions:
         - reason: reason
@@ -10936,12 +10943,6 @@ components:
           observed_generation: 1
           status: status
         observed_revision: observed_revision
-        public_ingress:
-        - target_port: 5
-          url: url
-        - target_port: 5
-          url: url
-        last_run_time: 2000-01-23T04:56:07.000+00:00
       properties:
         public_ingress:
           items:
@@ -10953,6 +10954,8 @@ components:
           format: date-time
           type: string
         state:
+          type: string
+        message:
           type: string
         observed_revision:
           type: string
@@ -13234,7 +13237,6 @@ components:
         resources:
           key:
             updated_replicas: 3
-            last_run_succeeded: true
             last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
             last_failure:
               container:
@@ -13256,9 +13258,17 @@ components:
                 exit_code: 2
                 message: message
               type: runtime_crash
+            replicas: 7
+            message: message
+            public_ingress:
+            - target_port: 5
+              url: url
+            - target_port: 5
+              url: url
+            last_run_time: 2000-01-23T04:56:07.000+00:00
+            last_run_succeeded: true
             available_replicas: 9
             internal_service_name: internal_service_name
-            replicas: 7
             state: state
             conditions:
             - reason: reason
@@ -13274,12 +13284,6 @@ components:
               observed_generation: 1
               status: status
             observed_revision: observed_revision
-            public_ingress:
-            - target_port: 5
-              url: url
-            - target_port: 5
-              url: url
-            last_run_time: 2000-01-23T04:56:07.000+00:00
         target_revision: target_revision
         conditions:
         - reason: reason
@@ -13379,7 +13383,6 @@ components:
           resources:
             key:
               updated_replicas: 3
-              last_run_succeeded: true
               last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
               last_failure:
                 container:
@@ -13401,9 +13404,17 @@ components:
                   exit_code: 2
                   message: message
                 type: runtime_crash
+              replicas: 7
+              message: message
+              public_ingress:
+              - target_port: 5
+                url: url
+              - target_port: 5
+                url: url
+              last_run_time: 2000-01-23T04:56:07.000+00:00
+              last_run_succeeded: true
               available_replicas: 9
               internal_service_name: internal_service_name
-              replicas: 7
               state: state
               conditions:
               - reason: reason
@@ -13419,12 +13430,6 @@ components:
                 observed_generation: 1
                 status: status
               observed_revision: observed_revision
-              public_ingress:
-              - target_port: 5
-                url: url
-              - target_port: 5
-                url: url
-              last_run_time: 2000-01-23T04:56:07.000+00:00
           target_revision: target_revision
           conditions:
           - reason: reason
@@ -13559,7 +13564,6 @@ components:
             resources:
               key:
                 updated_replicas: 3
-                last_run_succeeded: true
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 last_failure:
                   container:
@@ -13581,9 +13585,17 @@ components:
                     exit_code: 2
                     message: message
                   type: runtime_crash
+                replicas: 7
+                message: message
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
+                last_run_succeeded: true
                 available_replicas: 9
                 internal_service_name: internal_service_name
-                replicas: 7
                 state: state
                 conditions:
                 - reason: reason
@@ -13599,12 +13611,6 @@ components:
                   observed_generation: 1
                   status: status
                 observed_revision: observed_revision
-                public_ingress:
-                - target_port: 5
-                  url: url
-                - target_port: 5
-                  url: url
-                last_run_time: 2000-01-23T04:56:07.000+00:00
             target_revision: target_revision
             conditions:
             - reason: reason
@@ -13664,7 +13670,6 @@ components:
             resources:
               key:
                 updated_replicas: 3
-                last_run_succeeded: true
                 last_restart_request_processed_at: 2000-01-23T04:56:07.000+00:00
                 last_failure:
                   container:
@@ -13686,9 +13691,17 @@ components:
                     exit_code: 2
                     message: message
                   type: runtime_crash
+                replicas: 7
+                message: message
+                public_ingress:
+                - target_port: 5
+                  url: url
+                - target_port: 5
+                  url: url
+                last_run_time: 2000-01-23T04:56:07.000+00:00
+                last_run_succeeded: true
                 available_replicas: 9
                 internal_service_name: internal_service_name
-                replicas: 7
                 state: state
                 conditions:
                 - reason: reason
@@ -13704,12 +13717,6 @@ components:
                   observed_generation: 1
                   status: status
                 observed_revision: observed_revision
-                public_ingress:
-                - target_port: 5
-                  url: url
-                - target_port: 5
-                  url: url
-                last_run_time: 2000-01-23T04:56:07.000+00:00
             target_revision: target_revision
             conditions:
             - reason: reason

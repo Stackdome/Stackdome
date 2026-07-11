@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
-import { deriveHeaderHealth, shouldRefetchStackSummaries } from "../derive";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries } from "../derive";
 import type { FailingResource, Stack } from "../derive";
 import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 
@@ -285,6 +285,26 @@ describe("deriveHeaderHealth", () => {
   it("cancelled/superseded-only history (nothing ever ran) stays undefined → 'Not deployed'", () => {
     expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Cancelled" }))).toBeUndefined();
     expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Superseded" }))).toBeUndefined();
+  });
+});
+
+describe("latestDeployFailed", () => {
+  it("true when the latest release failed while a different release stays live", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r2", state: "Failed" }))).toBe(true);
+  });
+
+  it("false when nothing is live (failed first deploy — main pill already reads failed)", () => {
+    expect(latestDeployFailed(stackWithReleases(undefined, { id: "r1", state: "Failed" }))).toBe(false);
+  });
+
+  it("false when the live release itself is the failed latest", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "failed" }, { id: "r1", state: "Failed" }))).toBe(false);
+  });
+
+  it("false for non-failed latest states and never-deployed stacks", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r2", state: "InProgress" }))).toBe(false);
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r1", state: "Released" }))).toBe(false);
+    expect(latestDeployFailed(stackWithReleases(undefined, undefined))).toBe(false);
   });
 });
 

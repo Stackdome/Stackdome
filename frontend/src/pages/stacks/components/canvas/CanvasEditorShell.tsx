@@ -36,6 +36,9 @@ export interface CanvasEditorShellProps {
   /** Health off the current/latest release (ReleaseHealth: "ok" | "progressing" | "degraded" |
    *  "failed"). Undefined → nothing ever deployed → a neutral "Not deployed" pill. */
   headerHealth?: string;
+  /** The latest release failed while a different (healthy) release stays live — the
+   *  main pill shows that release's health, so this drives a secondary error hint. */
+  latestDeployFailed?: boolean;
   /** Stack entity lifecycle — "deleting" overrides health with a pending "Deleting" pill. */
   lifecycle?: StackLifecycle;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
@@ -103,6 +106,7 @@ export function CanvasEditorShell({
   stackName,
   stackId,
   headerHealth,
+  latestDeployFailed,
   lifecycle,
   subtitle,
   hasResources,
@@ -238,6 +242,13 @@ export function CanvasEditorShell({
               )}
             />
           )}
+          {latestDeployFailed && (
+            <span
+              aria-label="Latest deploy failed"
+              title="Latest deploy failed"
+              className="size-2 flex-none rounded-full bg-danger"
+            />
+          )}
           <div className="mx-2 flex items-center gap-1">
             {EDITOR_TABS.map(({ id, label, Icon }) => (
               <button
@@ -296,6 +307,18 @@ export function CanvasEditorShell({
                 <StatusPill variant={pillVariant} className="flex-none">
                   {pillLabel}
                 </StatusPill>
+              )}
+              {latestDeployFailed && (
+                <button
+                  type="button"
+                  onClick={() => onTabChange("deployments")}
+                  className="flex-none"
+                  aria-label="Latest deploy failed — view deployments"
+                >
+                  <StatusPill variant="error" pulse={false} className="cursor-pointer hover:opacity-80">
+                    Deploy failed
+                  </StatusPill>
+                </button>
               )}
               <div className="flex-1" />
             </div>

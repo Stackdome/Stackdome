@@ -5,6 +5,7 @@ import { X, ScrollText, Trash2 } from "lucide-react";
 import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
+import type { ReleaseLiveStatus } from "@/api/releases";
 import type { UseStackEditSession, EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 import { StackResourceConfigurationTab } from "@/pages/stacks/components/shared/stack-resource-configuration-tab";
@@ -40,6 +41,9 @@ interface ResourceDrawerProps {
   onViewLogs?: () => void;
   /** Push a volume's drawer onto the floating drawer stack. */
   onOpenVolume?: (name: string) => void;
+  /** Live per-resource status, keyed by resource name — from the status
+   *  release's live_status.resources. Absent for drafts/never-deployed stacks. */
+  liveStatusResources?: ReleaseLiveStatus["resources"];
 }
 
 /**
@@ -59,9 +63,11 @@ export function ResourceDrawer({
   onRemove,
   onViewLogs,
   onOpenVolume,
+  liveStatusResources,
 }: ResourceDrawerProps) {
   const resource = session.draft.resources[resourceIndex] ?? {};
   const baselineResource = baselineResources[resourceIndex];
+  const liveStatus = resource.name ? liveStatusResources?.[resource.name] : undefined;
 
   const secrets = useSecrets();
   const { addons: allAddons } = usePostgresAddons();
@@ -107,6 +113,7 @@ export function ResourceDrawer({
       index: resourceIndex,
       baselineResource,
       onChange,
+      liveStatus,
       context: {
         errors,
         // Draft volumes, not baseline: an inline-added volume must be pickable

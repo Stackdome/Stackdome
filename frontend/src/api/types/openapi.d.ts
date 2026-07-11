@@ -8160,6 +8160,7 @@ export interface components {
             /** Format: date-time */
             last_restart_request_processed_at?: string;
             state?: string;
+            message?: string;
             observed_revision?: string;
             conditions?: components["schemas"]["Condition"][];
             last_failure?: components["schemas"]["StackResourceFailure"];

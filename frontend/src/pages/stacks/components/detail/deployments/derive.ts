@@ -27,6 +27,20 @@ export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
 }
 
 /**
+ * True when the latest release failed AND a different release is currently live —
+ * the header's secondary "deploy failed" hint. When nothing is live yet (never
+ * deployed successfully), deriveHeaderHealth's own pill already reads "failed", so
+ * this only fires for the "healthy current, failed latest attempt" case the main
+ * pill formula intentionally masks.
+ */
+export function latestDeployFailed(stack: Stack): boolean {
+  const latest = stack.latest_release;
+  if (!latest || latest.state !== ReleaseState.Failed) return false;
+  if (!stack.current_release) return false;
+  return latest.id !== stack.current_release.id;
+}
+
+/**
  * True when the polled releases list shows a release newly settled into a terminal
  * state that the stack's own latest_release summary doesn't reflect yet — the signal
  * to refetch the stack so its release summaries stay fresh.
