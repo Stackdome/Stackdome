@@ -28,16 +28,15 @@ export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
 
 /**
  * True when the latest release failed AND a different release is currently live —
- * the header's secondary "deploy failed" hint. When nothing is live yet (never
- * deployed successfully), deriveHeaderHealth's own pill already reads "failed", so
- * this only fires for the "healthy current, failed latest attempt" case the main
- * pill formula intentionally masks.
+ * the header's secondary "deploy failed" hint. Mutually exclusive with the main pill
+ * by construction: fires only when deriveHeaderHealth is showing something other than
+ * "failed" (a live release masking the failed attempt), never doubling up the error.
  */
 export function latestDeployFailed(stack: Stack): boolean {
   const latest = stack.latest_release;
   if (!latest || latest.state !== ReleaseState.Failed) return false;
-  if (!stack.current_release) return false;
-  return latest.id !== stack.current_release.id;
+  if (!stack.current_release || latest.id === stack.current_release.id) return false;
+  return deriveHeaderHealth(stack) !== "failed";
 }
 
 /**

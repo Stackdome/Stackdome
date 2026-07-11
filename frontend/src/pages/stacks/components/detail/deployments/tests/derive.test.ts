@@ -306,6 +306,11 @@ describe("latestDeployFailed", () => {
     expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r1", state: "Released" }))).toBe(false);
     expect(latestDeployFailed(stackWithReleases(undefined, undefined))).toBe(false);
   });
+
+  it("false when the main pill already reads failed (no double error)", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "failed" }, { id: "r2", state: "Failed" }))).toBe(false);
+    expect(latestDeployFailed(stackWithReleases({ id: "r1" }, { id: "r2", state: "Failed" }))).toBe(false);
+  });
 });
 
 describe("shouldRefetchStackSummaries", () => {

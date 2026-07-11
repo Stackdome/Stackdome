@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { getRelease, type StackReleaseDetail } from "@/api/releases";
 
 export interface DetailState { data?: StackReleaseDetail; loading: boolean; error?: string; }
@@ -41,5 +41,7 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
   }, [orgId, teamName, stackId]);
 
   const peek = useCallback((id?: string): DetailState => (id ? cache[id] ?? EMPTY : EMPTY), [cache]);
-  return { ensure, peek, refresh };
+  // Memoized: peek still changes identity on cache updates, but ensure/refresh stay
+  // stable, so effects can safely depend on the callbacks they use.
+  return useMemo(() => ({ ensure, peek, refresh }), [ensure, peek, refresh]);
 }

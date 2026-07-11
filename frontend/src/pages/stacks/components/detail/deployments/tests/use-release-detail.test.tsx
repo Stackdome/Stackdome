@@ -62,6 +62,22 @@ describe("useReleaseDetail", () => {
     expect(getRelease).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps ensure/refresh identities stable across cache updates (effect-dep safety)", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 1 });
+    const seen: Array<{ ensure: unknown; refresh: unknown }> = [];
+    function S() {
+      const d = useReleaseDetail("o", "t", "s");
+      seen.push({ ensure: d.ensure, refresh: d.refresh });
+      d.ensure("r1");
+      return <span>{d.peek("r1").data?.sequence ?? "—"}</span>;
+    }
+    render(<S />);
+    await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument());
+    expect(seen.length).toBeGreaterThan(1); // cache updates re-rendered
+    expect(new Set(seen.map((s) => s.ensure)).size).toBe(1);
+    expect(new Set(seen.map((s) => s.refresh)).size).toBe(1);
+  });
+
   it("refresh dedupes while a fetch for the same id is in flight", async () => {
     let resolve!: (v: unknown) => void;
     (getRelease as ReturnType<typeof vi.fn>).mockImplementation(() => new Promise((r) => { resolve = r; }));

@@ -248,16 +248,19 @@ export default function StackDetailPage() {
   const statusReleaseState = nonTerminalRelease?.state ?? stackToShow?.current_release?.state;
   // Refetch on every id/state change (mount, and each transition — including the
   // terminal one, since statusReleaseState is a dep) plus a 5s poll while non-terminal.
+  // Depend on the stable refresh callback, NOT the releaseDetail object (rebuilt every
+  // render): refresh has no cached-data short-circuit, so an object dep would loop.
+  const refreshRelease = releaseDetail.refresh;
   useEffect(() => {
-    if (statusReleaseId) releaseDetail.refresh(statusReleaseId);
-  }, [statusReleaseId, statusReleaseState, releaseDetail]);
+    if (statusReleaseId) refreshRelease(statusReleaseId);
+  }, [statusReleaseId, statusReleaseState, refreshRelease]);
   useEffect(() => {
     if (!statusReleaseId || isTerminal(statusReleaseState)) return;
     const t = setInterval(() => {
-      if (document.visibilityState !== "hidden") releaseDetail.refresh(statusReleaseId);
+      if (document.visibilityState !== "hidden") refreshRelease(statusReleaseId);
     }, 5000);
     return () => clearInterval(t);
-  }, [statusReleaseId, statusReleaseState, releaseDetail]);
+  }, [statusReleaseId, statusReleaseState, refreshRelease]);
   const statusLiveStatus = releaseDetail.peek(statusReleaseId).data?.live_status;
 
   // Publicly exposed services → best live ingress URL, for the header's
