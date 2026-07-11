@@ -71,4 +71,15 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 		stack.Status.Conditions = []Condition{{Type: string(StackConditionDegraded), Status: string(ConditionTrue)}}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthDegraded))
 	})
+
+	ginkgo.It("rolls up progressing when any resource is unknown", func() {
+		stack.StackResources[1].Status.State = StackResourcePhaseUnknown
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
+	})
+
+	ginkgo.It("rolls up failed when unknown and failed resources are both present", func() {
+		stack.StackResources[0].Status.State = StackResourcePhaseUnknown
+		stack.StackResources[1].Status.State = StackResourcePhaseFailed
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthFailed))
+	})
 })

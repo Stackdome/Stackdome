@@ -57,11 +57,11 @@ func rollupHealth(release *StackRelease, stack *Stack) ReleaseHealth {
 	health := ReleaseHealthOK
 	for _, r := range stack.StackResources {
 		switch {
-		case r.Status == nil || r.Status.State == StackResourcePhasePending:
+		case r.Status == nil || r.Status.State == StackResourcePhasePending || r.Status.State == StackResourcePhaseUnknown:
 			if health == ReleaseHealthOK {
 				health = ReleaseHealthProgressing
 			}
-		case r.Status.State == StackResourcePhaseFailed, r.Status.State == StackResourcePhaseUnknown:
+		case r.Status.State == StackResourcePhaseFailed:
 			return ReleaseHealthFailed
 		}
 	}
