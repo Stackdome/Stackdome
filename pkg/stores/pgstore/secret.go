@@ -177,31 +177,31 @@ func (s *secretStore) ListByOrganisation(ctx context.Context, organisationID str
 	return secrets, nil
 }
 
-func (s *secretStore) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
+func (s *secretStore) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
 	var secrets []*models.Secret
 
 	query := s.sessionFactory.New(ctx).
-		Where("team_id = ?", teamID).
+		Where("project_id = ?", projectID).
 		Order("created_at DESC")
 	query = params.ApplyFiltersOnly(query)
 	if err := query.Find(&secrets).Error; err != nil {
-		return nil, errors.GeneralError("failed to list secrets by team: %s", err.Error())
+		return nil, errors.GeneralError("failed to list secrets by project: %s", err.Error())
 	}
 
 	return secrets, nil
 }
 
-func (s *secretStore) ListByTeamIDs(ctx context.Context, teamIDs []string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
-	if len(teamIDs) == 0 {
+func (s *secretStore) ListByProjectIDs(ctx context.Context, projectIDs []string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
+	if len(projectIDs) == 0 {
 		return []*models.Secret{}, nil
 	}
 	var secrets []*models.Secret
 	query := s.sessionFactory.New(ctx).
-		Where("team_id IN ?", teamIDs).
+		Where("project_id IN ?", projectIDs).
 		Order("created_at DESC")
 	query = params.ApplyFiltersOnly(query)
 	if err := query.Find(&secrets).Error; err != nil {
-		return nil, errors.GeneralError("failed to list secrets by teams: %s", err.Error())
+		return nil, errors.GeneralError("failed to list secrets by projects: %s", err.Error())
 	}
 	return secrets, nil
 }

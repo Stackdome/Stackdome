@@ -218,7 +218,7 @@ func (te *testEnvironment) initializeResourceAccessPolicyManager(ctx context.Con
 func (te *testEnvironment) initializePermissionService(ctx context.Context) error {
 	te.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
 		PolicyManager: te.ResourceAccessPolicyManager,
-		TeamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+		ProjectStore: pgstore.NewProjectStore(pgstore.ProjectStoreSpec{
 			SessionFactory: te.DBSession,
 		}),
 		Logger: te.Logger,
@@ -246,7 +246,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
-	teamService := services.NewTeamService(services.TeamServiceSpec{
+	projectService := services.NewProjectService(services.ProjectServiceSpec{
 		SessionFactory: te.DBSession,
 		PolicyManager:  te.ResourceAccessPolicyManager,
 		Permissions:    te.PermissionService,
@@ -257,7 +257,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OrganisationDomainService: organisationDomainService,
 		StackQueryService:         te.Services.StackService,
 		SessionFactory:            te.DBSession,
-		TeamService:               teamService,
+		ProjectService:               projectService,
 		PolicyManager:             te.ResourceAccessPolicyManager,
 		Logger:                    te.Logger,
 		Permissions:               te.PermissionService,
@@ -274,7 +274,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory:    te.DBSession,
 		Logger:            te.Logger,
 		EncryptionService: encryptionService,
-		TeamService:       teamService,
+		ProjectService:       projectService,
 		Permissions:       te.PermissionService,
 		ReferenceService:  referenceService,
 	})
@@ -330,7 +330,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
 		OrganisationService:         organisationService,
 		Permissions:                 te.PermissionService,
-		TeamService:                 teamService,
+		ProjectService:                 projectService,
 		RefreshTokenStore:           te.RefreshTokenStore,
 	})
 
@@ -410,7 +410,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: te.DBSession,
 		SecretService:  secretService,
-		TeamService:    teamService,
+		ProjectService:    projectService,
 		ClusterManager: te.ClusterManager,
 		Logger:         te.Logger,
 		Permissions:    te.PermissionService,
@@ -428,7 +428,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
-		TeamService:           teamService,
+		ProjectService:           projectService,
 		ClusterManager:        te.ClusterManager,
 		Logger:                te.Logger,
 		Permissions:           te.PermissionService,
@@ -445,7 +445,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:      namespaceService,
 		SecretService:         secretService,
 		PostgresAddonService:  postgresAddonService,
-		TeamService:           teamService,
+		ProjectService:           projectService,
 		Permissions:           te.PermissionService,
 		ReferenceService:      referenceService,
 		CredentialResolver:    credentialResolver,
@@ -471,7 +471,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 	orgInviteService := services.NewOrgInviteService(services.OrgInviteServiceSpec{
 		InviteStore:       orgInviteStore,
-		TeamService:       teamService,
+		ProjectService:       projectService,
 		UserService:       userService,
 		EncryptionService: encryptionService,
 		Permissions:       te.PermissionService,
@@ -482,7 +482,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		UserService:         userService,
 		OrgInviteService:    orgInviteService,
 		OrganisationService: organisationService,
-		TeamService:         teamService,
+		ProjectService:         projectService,
 		PolicyManager:       te.ResourceAccessPolicyManager,
 		RefreshTokenStore:   te.RefreshTokenStore,
 		JWTSecretKey:        te.Config.JwtSecret,
@@ -566,7 +566,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
 		APITokenService:             apiTokenService,
-		TeamService:                 teamService,
+		ProjectService:                 projectService,
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,

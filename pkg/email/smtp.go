@@ -34,20 +34,20 @@ func (s *smtpEmailService) SendInviteEmail(ctx context.Context, params InviteEma
 
 	orgName := html.EscapeString(params.OrgName)
 	inviterName := html.EscapeString(params.InviterName)
-	teamName := html.EscapeString(params.TeamName)
+	projectName := html.EscapeString(params.ProjectName)
 
 	subjectOrgName := strings.NewReplacer("\r", "", "\n", "").Replace(params.OrgName)
 	subject := fmt.Sprintf("You've been invited to join %s", subjectOrgName)
 	body := fmt.Sprintf(`<html><body>
 <h2>You've been invited to join %s</h2>
-<p>%s has invited you to join the <strong>%s</strong> team in the <strong>%s</strong> organization.</p>
+<p>%s has invited you to join the <strong>%s</strong> project in the <strong>%s</strong> organization.</p>
 <p><a href="%s">Accept Invitation</a></p>
 <p>This invitation expires on %s.</p>
 <p>If you didn't expect this invitation, you can safely ignore this email.</p>
 </body></html>`,
 		orgName,
 		inviterName,
-		teamName,
+		projectName,
 		orgName,
 		html.EscapeString(inviteURL),
 		params.ExpiresAt.Format("January 2, 2006"),

@@ -27,7 +27,7 @@ type PreviewStackService interface {
 	Sync(ctx context.Context, previewStackID string, opts PreviewSyncOpts) *errors.ServiceError
 	Delete(ctx context.Context, previewStackID string) *errors.ServiceError
 	Get(ctx context.Context, previewStackID string) (*models.PreviewStack, *errors.ServiceError)
-	List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError)
+	List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError)
 	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) (content []byte, hash string, opErr *errors.OperationError)
 	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError)
 }
@@ -78,12 +78,12 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, config.TeamID, auth.ResourcePreviewStacks, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, config.ProjectID, auth.ResourcePreviewStacks, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
-	if preview.TeamID != "" && preview.TeamID != config.TeamID {
-		return nil, errors.BadRequest("preview stack team does not match config team")
+	if preview.ProjectID != "" && preview.ProjectID != config.ProjectID {
+		return nil, errors.BadRequest("preview stack project does not match config project")
 	}
 
 	if preview.PRNumber == "" {
@@ -126,7 +126,7 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 	}
 
 	preview.OrganisationID = config.OrganisationID
-	preview.TeamID = config.TeamID
+	preview.ProjectID = config.ProjectID
 	preview.Name = sanitizePreviewName(fmt.Sprintf("pr-%s-%s", preview.PRNumber, config.Name))
 	preview.Status = models.PreviewStackStatus{Phase: models.PreviewStackPhaseProvisioning, Reason: "Created"}
 
@@ -148,7 +148,7 @@ func (s *previewStackService) Sync(ctx context.Context, previewStackID string, o
 		return sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, preview.TeamID, auth.ResourcePreviewStacks, previewStackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, preview.ProjectID, auth.ResourcePreviewStacks, previewStackID, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
 
@@ -247,7 +247,7 @@ func (s *previewStackService) Delete(ctx context.Context, previewStackID string)
 		return sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, preview.TeamID, auth.ResourcePreviewStacks, previewStackID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, preview.ProjectID, auth.ResourcePreviewStacks, previewStackID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 
@@ -270,19 +270,19 @@ func (s *previewStackService) Get(ctx context.Context, previewStackID string) (*
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, preview.TeamID, auth.ResourcePreviewStacks, previewStackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, preview.ProjectID, auth.ResourcePreviewStacks, previewStackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 
 	return preview, nil
 }
 
-func (s *previewStackService) List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, teamID, auth.ResourcePreviewStacks, "", auth.ActionList); permErr != nil {
+func (s *previewStackService) List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, projectID, auth.ResourcePreviewStacks, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
 
-	return s.store.ListByTeamID(ctx, teamID, params)
+	return s.store.ListByProjectID(ctx, projectID, params)
 }
 
 func (s *previewStackService) gitClientForConfig(ctx context.Context, config *models.StackPreviewConfig) (gitclient.GitClient, error) {
@@ -361,7 +361,7 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	s.applyIntegrationFromConfig(model, config)
 	model.Name = preview.Name
 	model.OrganisationID = config.OrganisationID
-	model.TeamID = config.TeamID
+	model.ProjectID = config.ProjectID
 	model.UserID = preview.UserID
 	model.Labels = append(model.Labels,
 		models.Label{Key: models.PreviewStackLabel, Value: models.LabelValueTrue},

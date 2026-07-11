@@ -22,7 +22,7 @@ import (
 
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
-	GetUserFromContext(ctx context.Context) (*models.User, []*models.TeamMembership, *errors.ServiceError)
+	GetUserFromContext(ctx context.Context) (*models.User, []*models.ProjectMembership, *errors.ServiceError)
 	ListByOrgID(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
@@ -52,7 +52,7 @@ func NewUserService(spec UserServiceSpec) UserService {
 		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
 		organisationService:     spec.OrganisationService,
 		permissions:             spec.Permissions,
-		teamService:             spec.TeamService,
+		projectService:             spec.ProjectService,
 		refreshTokenStore:       spec.RefreshTokenStore,
 	}
 }
@@ -65,7 +65,7 @@ type UserServiceSpec struct {
 	JWTClaimsBuilder            jwtClaimsBuilder
 	OrganisationService         OrganisationService
 	Permissions                 auth.PermissionService
-	TeamService                 TeamService
+	ProjectService                 ProjectService
 	RefreshTokenStore           stores.RefreshTokenStore
 }
 
@@ -77,7 +77,7 @@ type usersService struct {
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
 	jwtClaimsBuilder        jwtClaimsBuilder
 	permissions             auth.PermissionService
-	teamService             TeamService
+	projectService             ProjectService
 	refreshTokenStore       stores.RefreshTokenStore
 }
 
@@ -104,7 +104,7 @@ func (u usersService) InternalGet(ctx context.Context, ID string) (*models.User,
 	return u.userStore.GetByID(ctx, ID)
 }
 
-func (u usersService) GetUserFromContext(ctx context.Context) (*models.User, []*models.TeamMembership, *errors.ServiceError) {
+func (u usersService) GetUserFromContext(ctx context.Context) (*models.User, []*models.ProjectMembership, *errors.ServiceError) {
 	identity := auth.GetIdentityFromCtx(ctx)
 	if identity == nil || identity.UserID == "" {
 		return nil, nil, errors.Unauthorized("failed to fetch user")
@@ -113,9 +113,9 @@ func (u usersService) GetUserFromContext(ctx context.Context) (*models.User, []*
 	if serr != nil {
 		return nil, nil, serr
 	}
-	memberships, membErr := u.teamService.InternalListUserTeams(ctx, user.ID, user.OrganisationID)
+	memberships, membErr := u.projectService.InternalListUserProjects(ctx, user.ID, user.OrganisationID)
 	if membErr != nil {
-		u.logger.Errorf("failed to list user teams: %s", membErr.Error())
+		u.logger.Errorf("failed to list user projects: %s", membErr.Error())
 	}
 	return user, memberships, nil
 }
@@ -147,9 +147,9 @@ func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, 
 		return nil, fmt.Errorf("failed to create organisation for oauth user: %w", serr)
 	}
 
-	if u.teamService != nil {
-		if _, teamErr := u.teamService.InternalCreateDefaultTeam(ctx, createdOrg.ID); teamErr != nil {
-			return nil, fmt.Errorf("failed to create default team for oauth user: %w", teamErr)
+	if u.projectService != nil {
+		if _, projectErr := u.projectService.InternalCreateDefaultProject(ctx, createdOrg.ID); projectErr != nil {
+			return nil, fmt.Errorf("failed to create default project for oauth user: %w", projectErr)
 		}
 	}
 
@@ -196,9 +196,9 @@ func (u usersService) InternalCreateInvitedUser(ctx context.Context, user *model
 		return nil, serr
 	}
 
-	if _, teamErr := u.teamService.InternalAddMember(ctx, invite.TeamID, createdUser.ID, invite.TeamRole); teamErr != nil {
-		u.logger.Errorf("failed to add invited user to team: %s", teamErr.Error())
-		return nil, errors.GeneralError("failed to add user to team")
+	if _, projectErr := u.projectService.InternalAddMember(ctx, invite.ProjectID, createdUser.ID, invite.ProjectRole); projectErr != nil {
+		u.logger.Errorf("failed to add invited user to project: %s", projectErr.Error())
+		return nil, errors.GeneralError("failed to add user to project")
 	}
 
 	return createdUser, nil
@@ -219,9 +219,9 @@ func (u usersService) InternalCreateInvitedOAuthUser(ctx context.Context, email,
 		return nil, fmt.Errorf("failed to create invited oauth user: %w", serr)
 	}
 
-	if _, teamErr := u.teamService.InternalAddMember(ctx, invite.TeamID, createdUser.ID, invite.TeamRole); teamErr != nil {
-		u.logger.Errorf("failed to add invited oauth user to team: %s", teamErr.Error())
-		return nil, fmt.Errorf("failed to add user to team: %w", teamErr)
+	if _, projectErr := u.projectService.InternalAddMember(ctx, invite.ProjectID, createdUser.ID, invite.ProjectRole); projectErr != nil {
+		u.logger.Errorf("failed to add invited oauth user to project: %s", projectErr.Error())
+		return nil, fmt.Errorf("failed to add user to project: %w", projectErr)
 	}
 
 	return createdUser, nil
@@ -254,15 +254,15 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 		return nil, errors.GeneralError("failed to generate refresh token")
 	}
 
-	memberships, membErr := u.teamService.InternalListUserTeams(ctx, userInDB.ID, userInDB.OrganisationID)
+	memberships, membErr := u.projectService.InternalListUserProjects(ctx, userInDB.ID, userInDB.OrganisationID)
 	if membErr != nil {
-		u.logger.Errorf("failed to list user teams: %s", membErr.Error())
-		return nil, errors.GeneralError("failed to list user teams")
+		u.logger.Errorf("failed to list user projects: %s", membErr.Error())
+		return nil, errors.GeneralError("failed to list user projects")
 	}
 
 	res := openapi.NewLoginResponse()
 	res.SetToken(tokenString)
 	res.SetRefreshToken(refreshToken)
-	res.SetUser(presenters.PresentUserWithTeams(userInDB, memberships))
+	res.SetUser(presenters.PresentUserWithProjects(userInDB, memberships))
 	return res, nil
 }

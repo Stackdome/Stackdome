@@ -15,7 +15,7 @@ import (
 var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 	var client *openapi.APIClient
 	var orgID string
-	teamName := models.DefaultTeamName
+	projectName := models.DefaultProjectName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -31,20 +31,20 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 	buildThin := func(name string) *openapi.Stack {
 		fat := shared.CreateMultiResourceStack(name)
 
-		shell := shared.CreateShellStack(client, orgID, teamName, openapi.NewStack(name, *openapi.NewStackSpec()))
+		shell := shared.CreateShellStack(client, orgID, projectName, openapi.NewStack(name, *openapi.NewStackSpec()))
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, shell.GetId())
-			shared.WaitForStackDeleted(client, orgID, teamName, shell.GetId(), 2*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, shell.GetId())
+			shared.WaitForStackDeleted(client, orgID, projectName, shell.GetId(), 2*time.Minute)
 		})
 
 		// Resources must exist before connections that reference them.
 		for i := range fat.Spec.StackResources {
 			res := fat.Spec.StackResources[i]
-			shared.CreateStackResource(client, orgID, teamName, shell.GetId(), &res)
+			shared.CreateStackResource(client, orgID, projectName, shell.GetId(), &res)
 		}
 		for i := range fat.Spec.Connections {
 			conn := fat.Spec.Connections[i]
-			shared.CreateStackConnection(client, orgID, teamName, shell.GetId(), &conn)
+			shared.CreateStackConnection(client, orgID, projectName, shell.GetId(), &conn)
 		}
 
 		return shell
@@ -63,33 +63,33 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		shell := buildThin("dual-thin")
 
 		By("Releasing the incrementally-built stack")
-		shared.CreateRelease(client, orgID, teamName, shell.GetId())
+		shared.CreateRelease(client, orgID, projectName, shell.GetId())
 
 		By("Waiting for the stack to become Ready")
-		ready := shared.WaitForStackReady(client, orgID, teamName, shell.GetId(), 5*time.Minute)
+		ready := shared.WaitForStackReady(client, orgID, projectName, shell.GetId(), 5*time.Minute)
 
 		currentRelease, ok := ready.GetCurrentReleaseOk()
 		Expect(ok).To(BeTrue(), "ready stack should have a current_release")
 		Expect(currentRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
 		Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
 
-		releaseDetail := shared.GetRelease(client, orgID, teamName, shell.GetId(), currentRelease.GetId())
+		releaseDetail := shared.GetRelease(client, orgID, projectName, shell.GetId(), currentRelease.GetId())
 		liveStatus, ok := releaseDetail.GetLiveStatusOk()
 		Expect(ok).To(BeTrue())
 		Expect(liveStatus.GetConditions()).NotTo(BeEmpty(), "ready stack should have conditions")
 	})
 
 	It("fat flow: apply full document deploys to Ready", func() {
-		created, _ := shared.CreateStackAndDeploy(client, orgID, teamName, shared.CreateMultiResourceStack("dual-fat"))
+		created, _ := shared.CreateStackAndDeploy(client, orgID, projectName, shared.CreateMultiResourceStack("dual-fat"))
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 2*time.Minute)
 		})
 
 		By("Waiting for the stack to become Ready")
-		ready := shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
+		ready := shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
 
 		currentRelease, ok := ready.GetCurrentReleaseOk()
 		Expect(ok).To(BeTrue(), "ready stack should have a current_release")
@@ -102,14 +102,14 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		thin := buildThin("dual-thin-topo")
 
 		By("Building an equivalent stack via the fat flow")
-		fat := shared.CreateStack(client, orgID, teamName, shared.CreateMultiResourceStack("dual-fat2"))
+		fat := shared.CreateStack(client, orgID, projectName, shared.CreateMultiResourceStack("dual-fat2"))
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, fat.GetId())
-			shared.WaitForStackDeleted(client, orgID, teamName, fat.GetId(), 2*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, fat.GetId())
+			shared.WaitForStackDeleted(client, orgID, projectName, fat.GetId(), 2*time.Minute)
 		})
 
-		thinTopology := shared.GetStackTopology(client, orgID, teamName, thin.GetId())
-		fatTopology := shared.GetStackTopology(client, orgID, teamName, fat.GetId())
+		thinTopology := shared.GetStackTopology(client, orgID, projectName, thin.GetId())
+		fatTopology := shared.GetStackTopology(client, orgID, projectName, fat.GetId())
 
 		By("Comparing node identities")
 		Expect(nodeLabels(thinTopology)).To(Equal(nodeLabels(fatTopology)), "both flows should yield the same node set")
@@ -133,39 +133,39 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 			func() openapi.EnvVar { v := openapi.NewEnvVar("EXTRA"); v.SetValue("value"); return *v }(),
 		})
 		updated.SetExecutionConfig(*exec)
-		shared.UpdateStackResourceH(client, orgID, teamName, thin.GetId(), shared.MultiResourceBackendName, updated)
+		shared.UpdateStackResourceH(client, orgID, projectName, thin.GetId(), shared.MultiResourceBackendName, updated)
 
 		By("Verifying both resource nodes are still present")
-		topology := shared.GetStackTopology(client, orgID, teamName, thin.GetId())
+		topology := shared.GetStackTopology(client, orgID, projectName, thin.GetId())
 		Expect(topology.GetNodes()).To(HaveLen(2), "updating one resource must not drop the others")
 		Expect(nodeLabels(topology)).To(Equal([]string{shared.MultiResourceBackendName, shared.MultiResourceFrontendName}))
 	})
 
 	It("fat update: apply with a resource removed deletes it", func() {
 		fatDoc := shared.CreateMultiResourceStack("dual-fat-del")
-		created := shared.CreateStack(client, orgID, teamName, fatDoc)
+		created := shared.CreateStack(client, orgID, projectName, fatDoc)
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 2*time.Minute)
 		})
 
 		By("Confirming the full stack has two resources and one connection")
-		Expect(shared.GetStackTopology(client, orgID, teamName, stackID).GetNodes()).To(HaveLen(2))
-		Expect(shared.ListStackConnections(client, orgID, teamName, stackID)).To(HaveLen(1))
+		Expect(shared.GetStackTopology(client, orgID, projectName, stackID).GetNodes()).To(HaveLen(2))
+		Expect(shared.ListStackConnections(client, orgID, projectName, stackID)).To(HaveLen(1))
 
 		By("Applying a document containing only the backend resource and no connections")
 		backend := fatDoc.Spec.StackResources[0]
 		reducedSpec := openapi.NewStackSpec()
 		reducedSpec.SetStackResources([]openapi.StackResource{backend})
 		reduced := openapi.NewStack("dual-fat-del", *reducedSpec)
-		shared.UpdateStack(client, orgID, teamName, stackID, reduced)
+		shared.UpdateStack(client, orgID, projectName, stackID, reduced)
 
 		By("Verifying the frontend node and the connection were delete-missing'd")
-		topology := shared.GetStackTopology(client, orgID, teamName, stackID)
+		topology := shared.GetStackTopology(client, orgID, projectName, stackID)
 		Expect(topology.GetNodes()).To(HaveLen(1), "frontend resource should be removed")
 		Expect(topology.GetNodes()[0].GetLabel()).To(Equal(shared.MultiResourceBackendName))
-		Expect(shared.ListStackConnections(client, orgID, teamName, stackID)).To(BeEmpty(), "connection referencing the removed resource should be gone")
+		Expect(shared.ListStackConnections(client, orgID, projectName, stackID)).To(BeEmpty(), "connection referencing the removed resource should be gone")
 	})
 })

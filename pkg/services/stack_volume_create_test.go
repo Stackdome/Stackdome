@@ -15,8 +15,8 @@ import (
 func TestStackService_CreateStackVolume(t *testing.T) {
 	ctx := context.Background()
 	stackID := "stack-123"
-	teamID := "team-456"
-	stack := &models.Stack{ID: stackID, TeamID: teamID, Volumes: []*models.Volume{{ID: "v-0", Name: "existing-data"}}}
+	projectID := "project-456"
+	stack := &models.Stack{ID: stackID, ProjectID: projectID, Volumes: []*models.Volume{{ID: "v-0", Name: "existing-data"}}}
 	newVolume := &models.Volume{Name: "web-data"}
 
 	t.Run("creates, associates and enqueues the volume", func(t *testing.T) {
@@ -38,8 +38,8 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 				return fn(ctx)
@@ -65,8 +65,8 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		svc := &stackService{stackStore: mockStackStore, permissions: mockPermissions}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 				return fn(ctx)

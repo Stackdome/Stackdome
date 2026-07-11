@@ -14,7 +14,7 @@ import (
 var _ = Describe("Stack", func() {
 	var client *openapi.APIClient
 	var orgID string
-	teamName := models.DefaultTeamName
+	projectName := models.DefaultProjectName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -26,7 +26,7 @@ var _ = Describe("Stack", func() {
 	Context("CRUD Operations", func() {
 		It("should create a minimal stack", func() {
 			stack := shared.CreateSimpleStack("test-create")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created := shared.CreateStack(client, orgID, projectName, stack)
 
 			Expect(created.GetId()).NotTo(BeEmpty(), "stack should have an ID")
 			Expect(created.GetName()).To(Equal("test-create"))
@@ -39,9 +39,9 @@ var _ = Describe("Stack", func() {
 
 		It("should get a stack by ID", func() {
 			stack := shared.CreateSimpleStack("test-get")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created := shared.CreateStack(client, orgID, projectName, stack)
 
-			fetched := shared.GetStack(client, orgID, teamName, created.GetId())
+			fetched := shared.GetStack(client, orgID, projectName, created.GetId())
 
 			Expect(fetched.GetId()).To(Equal(created.GetId()))
 			Expect(fetched.GetName()).To(Equal("test-get"))
@@ -64,7 +64,7 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*api, *web})
 			stack := openapi.NewStack("test-connections", *spec)
 
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created := shared.CreateStack(client, orgID, projectName, stack)
 
 			from := openapi.NewTopologyNodeRef("stack_resource")
 			from.SetName("api")
@@ -79,20 +79,20 @@ var _ = Describe("Stack", func() {
 			mapping := openapi.NewConnectionMapping(*target, *value)
 			connection.SetMappings([]openapi.ConnectionMapping{*mapping})
 
-			createdConnection := shared.CreateStackConnection(client, orgID, teamName, created.GetId(), connection)
+			createdConnection := shared.CreateStackConnection(client, orgID, projectName, created.GetId(), connection)
 			Expect(createdConnection.GetId()).NotTo(BeEmpty())
 			Expect(createdConnection.GetMappings()).To(HaveLen(1))
 			connectionID := createdConnection.GetId()
 
-			fetched := shared.GetStack(client, orgID, teamName, created.GetId())
+			fetched := shared.GetStack(client, orgID, projectName, created.GetId())
 			Expect(fetched.Spec.GetConnections()).To(HaveLen(1))
 			Expect(fetched.Spec.GetConnections()[0].GetId()).To(Equal(connectionID))
 
-			listedConnections := shared.ListStackConnections(client, orgID, teamName, created.GetId())
+			listedConnections := shared.ListStackConnections(client, orgID, projectName, created.GetId())
 			Expect(listedConnections).To(HaveLen(1))
 			Expect(listedConnections[0].GetMappings()[0].Target.GetName()).To(Equal("API_HOST"))
 
-			topology := shared.GetStackTopology(client, orgID, teamName, created.GetId())
+			topology := shared.GetStackTopology(client, orgID, projectName, created.GetId())
 			Expect(topology.GetEdges()).To(HaveLen(1))
 			Expect(topology.GetEdges()[0].GetId()).To(Equal(connectionID))
 			Expect(topology.GetEdges()[0].GetSourceOfTruth()).To(Equal("connection"))
@@ -102,33 +102,33 @@ var _ = Describe("Stack", func() {
 			updatedMapping := openapi.NewConnectionMapping(*updatedTarget, *value)
 			connection.SetMappings([]openapi.ConnectionMapping{*updatedMapping})
 
-			updatedConnection := shared.UpdateStackConnection(client, orgID, teamName, created.GetId(), connectionID, connection)
+			updatedConnection := shared.UpdateStackConnection(client, orgID, projectName, created.GetId(), connectionID, connection)
 			Expect(updatedConnection.GetMappings()).To(HaveLen(1))
 			Expect(updatedConnection.GetMappings()[0].Target.GetName()).To(Equal("UPSTREAM_HOST"))
 
-			listedConnections = shared.ListStackConnections(client, orgID, teamName, created.GetId())
+			listedConnections = shared.ListStackConnections(client, orgID, projectName, created.GetId())
 			Expect(listedConnections).To(HaveLen(1))
 			Expect(listedConnections[0].GetMappings()[0].Target.GetName()).To(Equal("UPSTREAM_HOST"))
 
-			shared.DeleteStackConnection(client, orgID, teamName, created.GetId(), connectionID)
+			shared.DeleteStackConnection(client, orgID, projectName, created.GetId(), connectionID)
 
-			Expect(shared.ListStackConnections(client, orgID, teamName, created.GetId())).To(BeEmpty())
-			Expect(shared.GetStackTopology(client, orgID, teamName, created.GetId()).GetEdges()).To(BeEmpty())
+			Expect(shared.ListStackConnections(client, orgID, projectName, created.GetId())).To(BeEmpty())
+			Expect(shared.GetStackTopology(client, orgID, projectName, created.GetId()).GetEdges()).To(BeEmpty())
 		})
 
 		It("should list stacks by organization", func() {
 			stack1 := shared.CreateSimpleStack("test-list-1")
 			stack2 := shared.CreateSimpleStack("test-list-2")
-			shared.CreateStack(client, orgID, teamName, stack1)
-			shared.CreateStack(client, orgID, teamName, stack2)
+			shared.CreateStack(client, orgID, projectName, stack1)
+			shared.CreateStack(client, orgID, projectName, stack2)
 
-			list := shared.ListStacks(client, orgID, teamName)
+			list := shared.ListStacks(client, orgID, projectName)
 			Expect(len(list.GetItems())).To(BeNumerically(">=", 2))
 		})
 
 		It("should update a stack", func() {
 			stack := shared.CreateSimpleStack("test-update")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created := shared.CreateStack(client, orgID, projectName, stack)
 
 			updateStack := shared.CreateSimpleStack("test-update")
 			exec := openapi.NewExecutionConfig()
@@ -141,7 +141,7 @@ var _ = Describe("Stack", func() {
 				*openapi.NewPort("https", 443, false),
 			})
 
-			updated := shared.UpdateStack(client, orgID, teamName, created.GetId(), updateStack)
+			updated := shared.UpdateStack(client, orgID, projectName, created.GetId(), updateStack)
 
 			Expect(updated.GetId()).To(Equal(created.GetId()))
 			Expect(updated.Spec.StackResources[0].ExecutionConfig).NotTo(BeNil())
@@ -151,9 +151,9 @@ var _ = Describe("Stack", func() {
 
 		It("should delete a stack", func() {
 			stack := shared.CreateSimpleStack("test-delete")
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created := shared.CreateStack(client, orgID, projectName, stack)
 
-			deleted := shared.DeleteStack(client, orgID, teamName, created.GetId())
+			deleted := shared.DeleteStack(client, orgID, projectName, created.GetId())
 
 			lifecycle, ok := deleted.GetLifecycleOk()
 			Expect(ok).To(BeTrue())
@@ -169,19 +169,19 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*resource})
 			stack := openapi.NewStack("", *spec)
 
-			_ = shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
+			_ = shared.CreateStackExpectError(client, orgID, projectName, stack, http.StatusBadRequest)
 		})
 
 		It("should allow creating a stack with no resources", func() {
 			spec := openapi.NewStackSpec()
 			stack := openapi.NewStack("test-no-resources", *spec)
 
-			created := shared.CreateStack(client, orgID, teamName, stack)
+			created := shared.CreateStack(client, orgID, projectName, stack)
 			Expect(created.Spec.StackResources).To(BeEmpty())
 		})
 
 		It("should reject a resource with neither build nor image spec", func() {
-			created := shared.CreateShellStack(client, orgID, teamName,
+			created := shared.CreateShellStack(client, orgID, projectName,
 				openapi.NewStack("test-no-image", *openapi.NewStackSpec()))
 
 			resource := openapi.NewStackResource("web")
@@ -189,11 +189,11 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*resource})
 			badStack := openapi.NewStack("test-no-image", *spec)
 
-			_ = shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
+			_ = shared.ApplyStackExpectError(client, orgID, projectName, created.GetId(), badStack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate resource names", func() {
-			created := shared.CreateShellStack(client, orgID, teamName,
+			created := shared.CreateShellStack(client, orgID, projectName,
 				openapi.NewStack("test-dup-resources", *openapi.NewStackSpec()))
 
 			resource1 := openapi.NewStackResource("web")
@@ -205,33 +205,33 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*resource1, *resource2})
 			badStack := openapi.NewStack("test-dup-resources", *spec)
 
-			_ = shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
+			_ = shared.ApplyStackExpectError(client, orgID, projectName, created.GetId(), badStack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate stack names", func() {
 			stack := shared.CreateSimpleStack("test-dup-name")
-			shared.CreateStack(client, orgID, teamName, stack)
+			shared.CreateStack(client, orgID, projectName, stack)
 
 			duplicate := shared.CreateSimpleStack("test-dup-name")
-			_ = shared.CreateStackExpectError(client, orgID, teamName, duplicate, http.StatusConflict)
+			_ = shared.CreateStackExpectError(client, orgID, projectName, duplicate, http.StatusConflict)
 		})
 	})
 
 	Context("Shell-only update", func() {
 		It("PUT /stacks/{id} preserves children", func() {
 			By("Creating a fat stack with two resources and a connection")
-			created := shared.CreateStack(client, orgID, teamName, shared.CreateMultiResourceStack("shell-preserve"))
+			created := shared.CreateStack(client, orgID, projectName, shared.CreateMultiResourceStack("shell-preserve"))
 			stackID := created.GetId()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.DeleteStack(client, orgID, projectName, stackID)
 			})
 
 			By("PUT-ing a shell-only body with a new label and empty resources/connections")
 			shellUpdate := openapi.NewStack("shell-preserve", *openapi.NewStackSpec())
 			shellUpdate.SetLabels([]openapi.Label{*openapi.NewLabel("tier", "shell-only")})
 
-			updated := shared.UpdateStackShellH(client, orgID, teamName, stackID, shellUpdate)
+			updated := shared.UpdateStackShellH(client, orgID, projectName, stackID, shellUpdate)
 
 			By("Verifying the label change is reflected")
 			hasLabel := false
@@ -244,23 +244,23 @@ var _ = Describe("Stack", func() {
 			Expect(hasLabel).To(BeTrue(), "shell PUT should apply the label change")
 
 			By("Verifying children were preserved, not wiped")
-			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
+			topology := shared.GetStackTopology(client, orgID, projectName, stackID)
 			Expect(topology.GetNodes()).To(HaveLen(2), "shell PUT must not drop resources")
 			Expect(topology.GetEdges()).To(HaveLen(1), "shell PUT must not drop the connection edge")
-			Expect(shared.ListStackConnections(client, orgID, teamName, stackID)).To(HaveLen(1), "shell PUT must preserve connections")
+			Expect(shared.ListStackConnections(client, orgID, projectName, stackID)).To(HaveLen(1), "shell PUT must preserve connections")
 		})
 
 		It("POST /stacks/{id}/resources with invalid source returns 400", func() {
-			shell := shared.CreateShellStack(client, orgID, teamName,
+			shell := shared.CreateShellStack(client, orgID, projectName,
 				openapi.NewStack("shell-bad-resource", *openapi.NewStackSpec()))
 			stackID := shell.GetId()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, teamName, stackID)
+				shared.DeleteStack(client, orgID, projectName, stackID)
 			})
 
 			resource := openapi.NewStackResource("bad")
-			_ = shared.CreateStackResourceExpectError(client, orgID, teamName, stackID, resource, http.StatusBadRequest)
+			_ = shared.CreateStackResourceExpectError(client, orgID, projectName, stackID, resource, http.StatusBadRequest)
 		})
 	})
 })

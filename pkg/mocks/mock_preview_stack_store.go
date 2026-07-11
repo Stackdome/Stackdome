@@ -132,19 +132,19 @@ func (mr *MockPreviewStackStoreMockRecorder) ListByConfigID(ctx, configID, param
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByConfigID", reflect.TypeOf((*MockPreviewStackStore)(nil).ListByConfigID), ctx, configID, params)
 }
 
-// ListByTeamID mocks base method.
-func (m *MockPreviewStackStore) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
+// ListByProjectID mocks base method.
+func (m *MockPreviewStackStore) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamID", ctx, teamID, params)
+	ret := m.ctrl.Call(m, "ListByProjectID", ctx, projectID, params)
 	ret0, _ := ret[0].(*stores.PaginatedResult[*models.PreviewStack])
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamID indicates an expected call of ListByTeamID.
-func (mr *MockPreviewStackStoreMockRecorder) ListByTeamID(ctx, teamID, params any) *gomock.Call {
+// ListByProjectID indicates an expected call of ListByProjectID.
+func (mr *MockPreviewStackStoreMockRecorder) ListByProjectID(ctx, projectID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockPreviewStackStore)(nil).ListByTeamID), ctx, teamID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockPreviewStackStore)(nil).ListByProjectID), ctx, projectID, params)
 }
 
 // ListNeedingReconciliation mocks base method.

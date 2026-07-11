@@ -106,19 +106,19 @@ func (s *previewStackStore) ListByConfigID(ctx context.Context, configID string,
 	}, nil
 }
 
-func (s *previewStackStore) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
+func (s *previewStackStore) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError) {
 	params = params.WithDefaultOrder("created_at DESC")
 
 	var total int64
 	countQuery := s.sessionFactory.New(ctx).Model(&models.PreviewStack{}).
-		Where("team_id = ?", teamID)
+		Where("project_id = ?", projectID)
 	if err := params.ApplyFiltersOnly(countQuery).Count(&total).Error; err != nil {
 		return nil, errors.GeneralError("failed to count preview stacks: %s", err.Error())
 	}
 
 	var previews []*models.PreviewStack
 	dataQuery := s.sessionFactory.New(ctx).
-		Where("team_id = ?", teamID)
+		Where("project_id = ?", projectID)
 	if err := params.Apply(dataQuery).Find(&previews).Error; err != nil {
 		return nil, errors.GeneralError("failed to list preview stacks: %s", err.Error())
 	}

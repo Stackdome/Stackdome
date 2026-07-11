@@ -50,7 +50,7 @@ func (s SecretKeys) Value() (driver.Value, error) {
 type Secret struct {
 	ID             string `gorm:"primary_key;default:gen_random_uuid()"`
 	OrganisationID string `gorm:"not null;index"`
-	TeamID         string `gorm:"index" json:"team_id"`
+	ProjectID         string `gorm:"index" json:"project_id"`
 	UserID         string `gorm:"not null;index"`
 	Name           string `gorm:"not null"`
 	Description    string

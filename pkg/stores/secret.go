@@ -16,8 +16,8 @@ type SecretStore interface {
 	UpdateEncryptedData(ctx context.Context, secretID string, encryptedData string, keys []string, dataHash string) *errors.ServiceError
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string, params ListParams) ([]*models.Secret, *errors.ServiceError)
-	ListByTeamID(ctx context.Context, teamID string, params ListParams) ([]*models.Secret, *errors.ServiceError)
-	ListByTeamIDs(ctx context.Context, teamIDs []string, params ListParams) ([]*models.Secret, *errors.ServiceError)
+	ListByProjectID(ctx context.Context, projectID string, params ListParams) ([]*models.Secret, *errors.ServiceError)
+	ListByProjectIDs(ctx context.Context, projectIDs []string, params ListParams) ([]*models.Secret, *errors.ServiceError)
 	ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError)
 	ListByType(ctx context.Context, organisationID, secretType models.SecretType) ([]*models.Secret, *errors.ServiceError)
 	ValidateSecretExists(ctx context.Context, secretID string) (bool, *errors.ServiceError)

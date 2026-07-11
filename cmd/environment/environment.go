@@ -76,7 +76,7 @@ type Services struct {
 	PostgresAddonService        services.PostgresAddonService
 	PostgresBackupService       services.PostgresBackupService
 	APITokenService             services.APITokenService
-	TeamService                 services.TeamService
+	ProjectService                 services.ProjectService
 	OrgInviteService            services.OrgInviteService
 	SignupService               services.SignupService
 	StackReleaseService         services.StackReleaseService

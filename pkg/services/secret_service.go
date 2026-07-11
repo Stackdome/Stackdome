@@ -28,7 +28,7 @@ type SecretService interface {
 	Update(ctx context.Context, id string, secret *models.Secret) (*models.Secret, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
-	ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
+	ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
 	ListSecretsForCurrentUser(ctx context.Context, orgID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError)
 	ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError)
 	ListByType(ctx context.Context, organisationID, secretType models.SecretType) ([]*models.Secret, *errors.ServiceError)
@@ -46,7 +46,7 @@ type SecretServiceSpec struct {
 	EncryptionService   EncryptionService
 	ReferenceService    ReferenceService
 	ClusterClientGetter ClusterClientGetter
-	TeamService         TeamService
+	ProjectService         ProjectService
 	Logger              logger.Logger
 	Permissions         auth.PermissionService
 }
@@ -57,7 +57,7 @@ type secretService struct {
 	encryptionService   EncryptionService
 	validator           validator.SecretValidator
 	clusterClientGetter ClusterClientGetter
-	teamService         TeamService
+	projectService         ProjectService
 	logger              logger.Logger
 	permissions         auth.PermissionService
 }
@@ -71,7 +71,7 @@ func NewSecretService(spec SecretServiceSpec) SecretService {
 		validator:           secret.NewSecretValidator(),
 		encryptionService:   spec.EncryptionService,
 		clusterClientGetter: spec.ClusterClientGetter,
-		teamService:         spec.TeamService,
+		projectService:         spec.ProjectService,
 		logger:              spec.Logger,
 		permissions:         spec.Permissions,
 	}
@@ -79,7 +79,7 @@ func NewSecretService(spec SecretServiceSpec) SecretService {
 }
 
 func (s *secretService) Create(ctx context.Context, secret *models.Secret) (*models.Secret, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, secret.ProjectID, auth.ResourceSecrets, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
@@ -111,7 +111,7 @@ func (s *secretService) GetByID(ctx context.Context, ID string) (*models.Secret,
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, secret.ProjectID, auth.ResourceSecrets, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return secret, nil
@@ -139,7 +139,7 @@ func (s *secretService) GetByName(ctx context.Context, organisationID, name stri
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, secret.ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, secret.ProjectID, auth.ResourceSecrets, secret.ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return secret, nil
@@ -150,13 +150,13 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, existingSecret.TeamID, auth.ResourceSecrets, id, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, existingSecret.ProjectID, auth.ResourceSecrets, id, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 	secret.ID = existingSecret.ID
 	secret.OrganisationID = existingSecret.OrganisationID
 	secret.UserID = existingSecret.UserID
-	secret.TeamID = existingSecret.TeamID
+	secret.ProjectID = existingSecret.ProjectID
 	// If data is provided, validate and re-encrypt
 	if secret.Data != nil {
 		if err := s.validator.ValidateSecretData(secret); err != nil {
@@ -190,7 +190,7 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 	if sErr != nil {
 		return sErr
 	}
-	if permErr := s.permissions.Check(ctx, secret.TeamID, auth.ResourceSecrets, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, secret.ProjectID, auth.ResourceSecrets, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 
@@ -221,11 +221,11 @@ func (s *secretService) ListByOrganisation(ctx context.Context, organisationID s
 	return secrets, nil
 }
 
-func (s *secretService) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
+func (s *secretService) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, projectID, auth.ResourceSecrets, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	return s.secretStore.ListByTeamID(ctx, teamID, params)
+	return s.secretStore.ListByProjectID(ctx, projectID, params)
 }
 
 func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
@@ -238,19 +238,19 @@ func (s *secretService) ListSecretsForCurrentUser(ctx context.Context, orgID str
 		return s.secretStore.ListByOrganisation(ctx, orgID, params)
 	}
 
-	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
+	memberships, serr := s.projectService.InternalListUserProjects(ctx, identity.UserID, orgID)
 	if serr != nil {
 		return nil, serr
 	}
 
-	var allowedTeamIDs []string
+	var allowedProjectIDs []string
 	for _, m := range memberships {
-		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceSecrets, "", auth.ActionList); permErr == nil {
-			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		if permErr := s.permissions.Check(ctx, m.ProjectID, auth.ResourceSecrets, "", auth.ActionList); permErr == nil {
+			allowedProjectIDs = append(allowedProjectIDs, m.ProjectID)
 		}
 	}
 
-	return s.secretStore.ListByTeamIDs(ctx, allowedTeamIDs, params)
+	return s.secretStore.ListByProjectIDs(ctx, allowedProjectIDs, params)
 }
 
 func (s *secretService) ListByUser(ctx context.Context, organisationID, userID string) ([]*models.Secret, *errors.ServiceError) {

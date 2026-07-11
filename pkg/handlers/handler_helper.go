@@ -265,15 +265,15 @@ func parseOptionalIntQuery(r *http.Request, name string, def int) (int, error) {
 	return strconv.Atoi(raw)
 }
 
-func resolveTeamID(r *http.Request, teamService services.TeamService) (string, *errors.ServiceError) {
+func resolveProjectID(r *http.Request, projectService services.ProjectService) (string, *errors.ServiceError) {
 	orgID := mux.Vars(r)["org_id"]
-	teamName := mux.Vars(r)["team_name"]
-	if teamName == "" {
-		return "", errors.BadRequest("team_name is required")
+	projectName := mux.Vars(r)["project_name"]
+	if projectName == "" {
+		return "", errors.BadRequest("project_name is required")
 	}
-	team, serr := teamService.GetTeamByOrgAndName(r.Context(), orgID, teamName)
+	project, serr := projectService.GetProjectByOrgAndName(r.Context(), orgID, projectName)
 	if serr != nil {
 		return "", serr
 	}
-	return team.ID, nil
+	return project.ID, nil
 }

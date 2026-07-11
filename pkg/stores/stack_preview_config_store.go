@@ -12,8 +12,8 @@ type StackPreviewConfigStore interface {
 	AtomicExecutor
 	Create(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError)
-	GetByTeamAndName(ctx context.Context, teamID, name string) (*models.StackPreviewConfig, *errors.ServiceError)
+	GetByProjectAndName(ctx context.Context, projectID, name string) (*models.StackPreviewConfig, *errors.ServiceError)
 	Update(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
-	ListByTeamID(ctx context.Context, teamID string, params ListParams) (*PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError)
+	ListByProjectID(ctx context.Context, projectID string, params ListParams) (*PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError)
 }

@@ -39,14 +39,14 @@ type testEnv struct {
 	ctrl        *gomock.Controller
 }
 
-func newTestEnv(t gomock.TestReporter, teams map[string]*models.Team) *testEnv {
+func newTestEnv(t gomock.TestReporter, projects map[string]*models.Project) *testEnv {
 	ctrl := gomock.NewController(t)
 
-	mockTeam := mocks.NewMockTeamStore(ctrl)
-	for id, team := range teams {
-		mockTeam.EXPECT().GetByID(gomock.Any(), id).Return(team, nil).AnyTimes()
+	mockProject := mocks.NewMockProjectStore(ctrl)
+	for id, project := range projects {
+		mockProject.EXPECT().GetByID(gomock.Any(), id).Return(project, nil).AnyTimes()
 	}
-	mockTeam.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(nil, errors.NotFound("team not found")).AnyTimes()
+	mockProject.EXPECT().GetByID(gomock.Any(), gomock.Any()).Return(nil, errors.NotFound("project not found")).AnyTimes()
 
 	mockLog := mocks.NewMockLogger(ctrl)
 	mockLog.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
@@ -55,7 +55,7 @@ func newTestEnv(t gomock.TestReporter, teams map[string]*models.Team) *testEnv {
 	pm := newTestPolicyManager()
 	ps := auth.NewPermissionService(auth.PermissionServiceSpec{
 		PolicyManager: pm,
-		TeamStore:     mockTeam,
+		ProjectStore:     mockProject,
 		Logger:        mockLog,
 	})
 	return &testEnv{policyMgr: pm, permService: ps, ctrl: ctrl}

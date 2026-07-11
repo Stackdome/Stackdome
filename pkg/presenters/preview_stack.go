@@ -64,7 +64,7 @@ func PresentPreviewStack(p *models.PreviewStack) openapi.PreviewStack {
 	result := openapi.PreviewStack{
 		Id:                &p.ID,
 		OrganisationId:    &p.OrganisationID,
-		TeamId:            &p.TeamID,
+		ProjectId:            &p.ProjectID,
 		UserId:            &p.UserID,
 		ConfigId:          &p.StackPreviewConfigID,
 		StackId:           p.StackID,

@@ -19,20 +19,20 @@ type PermissionService interface {
 
 type permissionService struct {
 	policyMgr resourceaccess.ResourceAccessPolicyManager
-	teamStore stores.TeamStore
+	projectStore stores.ProjectStore
 	logger    logger.Logger
 }
 
 type PermissionServiceSpec struct {
 	PolicyManager resourceaccess.ResourceAccessPolicyManager
-	TeamStore     stores.TeamStore
+	ProjectStore     stores.ProjectStore
 	Logger        logger.Logger
 }
 
 func NewPermissionService(spec PermissionServiceSpec) PermissionService {
 	return &permissionService{
 		policyMgr: spec.PolicyManager,
-		teamStore: spec.TeamStore,
+		projectStore: spec.ProjectStore,
 		logger:    spec.Logger,
 	}
 }
@@ -78,7 +78,7 @@ func (p *permissionService) Check(ctx context.Context, domain, resource, resourc
 		return nil
 	}
 
-	// OrgAdmin fallback: OrgAdmin grouping is on orgID, but team resources use teamID as domain.
+	// OrgAdmin fallback: OrgAdmin grouping is on orgID, but project resources use projectID as domain.
 	if p.isOrgAdminViaPolicy(ctx, identity.UserID, domain) {
 		return nil
 	}
@@ -86,16 +86,16 @@ func (p *permissionService) Check(ctx context.Context, domain, resource, resourc
 	return errors.Forbidden("insufficient permissions")
 }
 
-func (p *permissionService) isOrgAdminViaPolicy(ctx context.Context, userID, teamID string) bool {
-	if teamID == "" {
+func (p *permissionService) isOrgAdminViaPolicy(ctx context.Context, userID, projectID string) bool {
+	if projectID == "" {
 		return false
 	}
-	team, err := p.teamStore.GetByID(ctx, teamID)
+	project, err := p.projectStore.GetByID(ctx, projectID)
 	if err != nil {
-		p.logger.Errorf("failed to fetch team for OrgAdmin check: %s", err.Error())
+		p.logger.Errorf("failed to fetch project for OrgAdmin check: %s", err.Error())
 		return false
 	}
-	has, policyErr := p.policyMgr.HasGroupingPolicy(userID, models.OrgAdminRole.String(), team.OrganisationID)
+	has, policyErr := p.policyMgr.HasGroupingPolicy(userID, models.OrgAdminRole.String(), project.OrganisationID)
 	if policyErr != nil {
 		p.logger.Errorf("failed to check OrgAdmin grouping policy: %s", policyErr.Error())
 		return false

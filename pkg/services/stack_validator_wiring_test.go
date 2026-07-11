@@ -47,7 +47,7 @@ const secretsTableDDL = `
 	CREATE TABLE IF NOT EXISTS secrets (
 		id TEXT PRIMARY KEY,
 		organisation_id TEXT NOT NULL,
-		team_id TEXT,
+		project_id TEXT,
 		user_id TEXT NOT NULL,
 		name TEXT NOT NULL,
 		description TEXT,

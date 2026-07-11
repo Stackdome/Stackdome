@@ -10,7 +10,7 @@ func PresentWorkspaceUser(in *models.WorkspaceUser) openapi.WorkspaceUser {
 	res.SetCreatedAt(in.CreatedAt)
 	res.SetUpdatedAt(in.UpdatedAt)
 	res.SetOrgId(in.OrganisationID)
-	res.SetTeamId(in.TeamID)
+	res.SetProjectId(in.ProjectID)
 	res.SetId(in.ID)
 	res.SetUserId(in.UserID)
 	res.SetVersion(int32(in.Version))

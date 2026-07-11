@@ -11,8 +11,8 @@ const (
 )
 
 // UserRole represents org-level roles stored on the User model.
-// OrgAdmin = full org access. Empty string = permissions derived from team memberships.
-// OrgMemberRole is not stored on User.Role; it is a Casbin-only grouping auto-managed by team membership lifecycle.
+// OrgAdmin = full org access. Empty string = permissions derived from project memberships.
+// OrgMemberRole is not stored on User.Role; it is a Casbin-only grouping auto-managed by project membership lifecycle.
 type UserRole string
 
 func (r UserRole) String() string {

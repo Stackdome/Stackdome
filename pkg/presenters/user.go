@@ -18,20 +18,20 @@ func PresentUser(in *models.User) openapi.User {
 	return res
 }
 
-func PresentUserWithTeams(in *models.User, memberships []*models.TeamMembership) openapi.User {
+func PresentUserWithProjects(in *models.User, memberships []*models.ProjectMembership) openapi.User {
 	res := PresentUser(in)
-	teams := make([]openapi.UserTeamMembership, len(memberships))
+	projects := make([]openapi.UserProjectMembership, len(memberships))
 	for i, m := range memberships {
-		tm := openapi.UserTeamMembership{}
-		tm.SetTeamId(m.TeamID)
+		tm := openapi.UserProjectMembership{}
+		tm.SetProjectId(m.ProjectID)
 		tm.SetRole(string(m.Role))
-		if m.Team != nil {
-			tm.SetTeamName(m.Team.Name)
-			tm.SetDefaultTeam(m.Team.DefaultTeam)
+		if m.Project != nil {
+			tm.SetProjectName(m.Project.Name)
+			tm.SetDefaultProject(m.Project.DefaultProject)
 		}
-		teams[i] = tm
+		projects[i] = tm
 	}
-	res.SetTeams(teams)
+	res.SetProjects(projects)
 	return res
 }
 

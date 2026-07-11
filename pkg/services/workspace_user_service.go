@@ -76,7 +76,7 @@ func (s *workspaceUserService) GetByID(ctx context.Context, ID string) (*models.
 		s.logger.Errorf("failed to get workspace user: %v", err)
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, request.TeamID, auth.ResourceWorkspaceUsers, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, request.ProjectID, auth.ResourceWorkspaceUsers, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return request, nil
@@ -92,7 +92,7 @@ func (s *workspaceUserService) GetWorkspaceUser(ctx context.Context, userID stri
 		s.logger.Errorf("failed to get workspace user: %v", err)
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, request.TeamID, auth.ResourceWorkspaceUsers, request.ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, request.ProjectID, auth.ResourceWorkspaceUsers, request.ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return request, nil
@@ -108,7 +108,7 @@ func (s *workspaceUserService) InternalList(ctx context.Context, query string, a
 }
 
 func (s *workspaceUserService) Create(ctx context.Context, spec *models.WorkspaceUser, user *models.User) (*models.WorkspaceUser, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceWorkspaceUsers, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, spec.ProjectID, auth.ResourceWorkspaceUsers, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 	spec.Status.State = models.WorkspaceUserProvisionPending
@@ -143,7 +143,7 @@ func (s *workspaceUserService) Update(ctx context.Context, id string, spec *mode
 		s.logger.Errorf("failed to get workspace user: %v", err)
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, current.TeamID, auth.ResourceWorkspaceUsers, id, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, current.ProjectID, auth.ResourceWorkspaceUsers, id, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 	s.setNamespacesForUpdate(spec, current, user)
@@ -202,7 +202,7 @@ func (s *workspaceUserService) Delete(ctx context.Context, ID string) *errors.Se
 	if serr != nil {
 		return serr
 	}
-	if permErr := s.permissions.Check(ctx, workspaceUser.TeamID, auth.ResourceWorkspaceUsers, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, workspaceUser.ProjectID, auth.ResourceWorkspaceUsers, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 	workspaceUser.DeletionTimeStamp = ptr.To(time.Now().UTC())

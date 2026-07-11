@@ -87,10 +87,10 @@ func TestSyncHubSecrets_OrgPullPushDistinctNames(t *testing.T) {
 		DataHash:     "hash-push",
 	}
 	resolver.EXPECT().
-		RegistryCredentials(gomock.Any(), applySecretsTestOrgID, "reg.example.com/team/app:v1", credentials.RegistryPurposePull, gomock.Any()).
+		RegistryCredentials(gomock.Any(), applySecretsTestOrgID, "reg.example.com/project/app:v1", credentials.RegistryPurposePull, gomock.Any()).
 		Return(pull, nil)
 	resolver.EXPECT().
-		RegistryCredentials(gomock.Any(), applySecretsTestOrgID, "reg.example.com/team/app", credentials.RegistryPurposePush, gomock.Any()).
+		RegistryCredentials(gomock.Any(), applySecretsTestOrgID, "reg.example.com/project/app", credentials.RegistryPurposePush, gomock.Any()).
 		Return(push, nil)
 
 	r := &applyReconciler{
@@ -106,12 +106,12 @@ func TestSyncHubSecrets_OrgPullPushDistinctNames(t *testing.T) {
 		StackResources: []*models.StackResource{
 			{
 				Name:        "web",
-				ImageConfig: &models.ImageConfigSpec{Image: "reg.example.com/team/app:v1"},
+				ImageConfig: &models.ImageConfigSpec{Image: "reg.example.com/project/app:v1"},
 			},
 			{
 				Name: "builder",
 				BuildConfig: &models.BuildConfigSpec{
-					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "reg.example.com/team/app"},
+					BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "reg.example.com/project/app"},
 				},
 			},
 		},

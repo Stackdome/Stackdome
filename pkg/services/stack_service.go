@@ -47,8 +47,8 @@ type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
-	// GetStacksByUserID(ctx context.Context, teamID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
-	GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError)
+	// GetStacksByUserID(ctx context.Context, projectID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
+	GetStacksByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
 	ListStacksForCurrentUser(ctx context.Context, orgID string) ([]*models.Stack, *errors.ServiceError)
 }
@@ -67,7 +67,7 @@ type StackServiceSpec struct {
 	NamespaceService      NamespaceService
 	SecretService         SecretService
 	PostgresAddonService  PostgresAddonService
-	TeamService           TeamService
+	ProjectService           ProjectService
 	Permissions           auth.PermissionService
 	Logger                logger.Logger
 	ReferenceService      ReferenceService
@@ -87,7 +87,7 @@ type stackService struct {
 	clusterService       ClusterService
 	secretService        SecretService
 	postgresAddonService PostgresAddonService
-	teamService          TeamService
+	projectService          ProjectService
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
@@ -143,7 +143,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		namespaceService:     spec.NamespaceService,
 		secretService:        spec.SecretService,
 		postgresAddonService: spec.PostgresAddonService,
-		teamService:          spec.TeamService,
+		projectService:          spec.ProjectService,
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
 		defaultingService:    NewStackDefaultingService(),
@@ -155,24 +155,24 @@ func (s *stackService) SetReleaseService(rs releaseServiceForStack) {
 }
 
 func (s *stackService) CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, spec.ProjectID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 	return s.InternalCreateStack(ctx, spec)
 }
 
-// ApplyStack upserts a stack by name within its team scope (stack names are
-// unique per team). When a stack with spec.Name exists in spec.TeamID it is
+// ApplyStack upserts a stack by name within its project scope (stack names are
+// unique per project). When a stack with spec.Name exists in spec.ProjectID it is
 // fully replaced through the same path as the id-addressed apply; otherwise
 // the stack and its children are created atomically after full validation.
 // The returned bool is true when a new stack was created.
 func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*models.Stack, bool, *errors.ServiceError) {
-	existingStack, lookupErr := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
+	existingStack, lookupErr := s.stackStore.GetByNameAndProjectID(ctx, spec.Name, spec.ProjectID)
 	if lookupErr != nil && !lookupErr.Is404() {
 		return nil, false, lookupErr
 	}
 	if existingStack != nil {
-		if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, existingStack.ID, auth.ActionWrite); permErr != nil {
+		if permErr := s.permissions.Check(ctx, existingStack.ProjectID, auth.ResourceStacks, existingStack.ID, auth.ActionWrite); permErr != nil {
 			return nil, false, permErr
 		}
 		updatedStack, serr := s.InternalUpdateStack(ctx, existingStack.ID, spec)
@@ -181,7 +181,7 @@ func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*mod
 		}
 		return updatedStack, false, nil
 	}
-	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, spec.ProjectID, auth.ResourceStacks, "", auth.ActionCreate); permErr != nil {
 		return nil, false, permErr
 	}
 	createdStack, serr := s.InternalCreateStack(ctx, spec)
@@ -192,7 +192,7 @@ func (s *stackService) ApplyStack(ctx context.Context, spec *models.Stack) (*mod
 }
 
 func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
-	existingStack, _ := s.stackStore.GetByNameAndTeamID(ctx, spec.Name, spec.TeamID)
+	existingStack, _ := s.stackStore.GetByNameAndProjectID(ctx, spec.Name, spec.ProjectID)
 	if existingStack != nil {
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
@@ -292,7 +292,7 @@ func (s *stackService) UpdateStack(ctx context.Context, ID string, spec *models.
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, existingStack.ProjectID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 	return s.InternalUpdateStack(ctx, ID, spec)
@@ -309,7 +309,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID
 	spec.OrganisationID = existingStack.OrganisationID
-	spec.TeamID = existingStack.TeamID
+	spec.ProjectID = existingStack.ProjectID
 	spec.UserID = existingStack.UserID
 
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
@@ -351,7 +351,7 @@ func (s *stackService) UpdateStackShell(ctx context.Context, ID string, spec *mo
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, existingStack.TeamID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, existingStack.ProjectID, auth.ResourceStacks, ID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 	return s.InternalUpdateShellStack(ctx, ID, spec)
@@ -374,7 +374,7 @@ func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, 
 	spec.Namespace = existingStack.Namespace
 	spec.ClusterID = existingStack.ClusterID
 	spec.OrganisationID = existingStack.OrganisationID
-	spec.TeamID = existingStack.TeamID
+	spec.ProjectID = existingStack.ProjectID
 	spec.UserID = existingStack.UserID
 
 	// Strip children so only the stack's own columns are updated; connections
@@ -448,7 +448,7 @@ func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, 
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return stack, nil
@@ -469,7 +469,7 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 	var created *models.Volume
@@ -599,7 +599,7 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 	if err != nil {
 		return nil, nil, err
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, nil, permErr
 	}
 
@@ -666,11 +666,11 @@ func (s *stackService) InternalList(ctx context.Context, query string, args ...a
 	return stacks, nil
 }
 
-func (s *stackService) GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
+func (s *stackService) GetStacksByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, projectID, auth.ResourceStacks, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	stacks, err := s.stackStore.ListByTeamID(ctx, teamID)
+	stacks, err := s.stackStore.ListByProjectID(ctx, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -694,19 +694,19 @@ func (s *stackService) ListStacksForCurrentUser(ctx context.Context, orgID strin
 		return s.stackStore.ListByOrganisationID(ctx, orgID)
 	}
 
-	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
+	memberships, serr := s.projectService.InternalListUserProjects(ctx, identity.UserID, orgID)
 	if serr != nil {
 		return nil, serr
 	}
 
-	var allowedTeamIDs []string
+	var allowedProjectIDs []string
 	for _, m := range memberships {
-		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceStacks, "", auth.ActionList); permErr == nil {
-			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		if permErr := s.permissions.Check(ctx, m.ProjectID, auth.ResourceStacks, "", auth.ActionList); permErr == nil {
+			allowedProjectIDs = append(allowedProjectIDs, m.ProjectID)
 		}
 	}
 
-	return s.stackStore.ListByTeamIDs(ctx, allowedTeamIDs)
+	return s.stackStore.ListByProjectIDs(ctx, allowedProjectIDs)
 }
 
 func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
@@ -715,7 +715,7 @@ func (s *stackService) DeleteStack(ctx context.Context, ID string) (*models.Stac
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, ID, auth.ActionDelete); permErr != nil {
 		return nil, permErr
 	}
 	return s.InternalDeleteStack(ctx, stack)

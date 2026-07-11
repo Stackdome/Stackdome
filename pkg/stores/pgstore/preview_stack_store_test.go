@@ -20,8 +20,8 @@ var _ = Describe("PreviewStackStore", func() {
 
 	const (
 		orgID   = "org-1"
-		teamID  = "team-1"
-		teamID2 = "team-2"
+		projectID  = "project-1"
+		projectID2 = "project-2"
 		userID  = "user-1"
 		configA = "config-a"
 		configB = "config-b"
@@ -32,7 +32,7 @@ var _ = Describe("PreviewStackStore", func() {
 			CREATE TABLE IF NOT EXISTS preview_stacks (
 				id TEXT PRIMARY KEY,
 				organisation_id TEXT NOT NULL,
-				team_id TEXT NOT NULL,
+				project_id TEXT NOT NULL,
 				user_id TEXT NOT NULL,
 				stack_preview_config_id TEXT NOT NULL,
 				stack_id TEXT,
@@ -62,7 +62,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-1",
 				OrganisationID:       orgID,
-				TeamID:               teamID,
+				ProjectID:               projectID,
 				UserID:               userID,
 				StackPreviewConfigID: configA,
 				Name:                 "preview-pr-10",
@@ -76,7 +76,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-2",
 				OrganisationID:       orgID,
-				TeamID:               teamID,
+				ProjectID:               projectID,
 				UserID:               userID,
 				StackPreviewConfigID: configB,
 				Name:                 "preview-pr-20",
@@ -90,7 +90,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-3",
 				OrganisationID:       orgID,
-				TeamID:               teamID,
+				ProjectID:               projectID,
 				UserID:               userID,
 				StackPreviewConfigID: configA,
 				Name:                 "preview-pr-30",
@@ -104,7 +104,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-4",
 				OrganisationID:       orgID,
-				TeamID:               teamID2,
+				ProjectID:               projectID2,
 				UserID:               userID,
 				StackPreviewConfigID: configA,
 				Name:                 "preview-pr-40",
@@ -121,18 +121,18 @@ var _ = Describe("PreviewStackStore", func() {
 		}
 	})
 
-	Describe("ListByTeamID", func() {
+	Describe("ListByProjectID", func() {
 		Context("with stack_preview_config_id filter", func() {
 			It("returns only previews matching the config", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "stack_preview_config_id", Value: configA}},
 				}
-				result, err := store.ListByTeamID(ctx, teamID, params)
+				result, err := store.ListByProjectID(ctx, projectID, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(2))
 				for _, item := range result.Items {
 					Expect(item.StackPreviewConfigID).To(Equal(configA))
-					Expect(item.TeamID).To(Equal(teamID))
+					Expect(item.ProjectID).To(Equal(projectID))
 				}
 			})
 
@@ -140,7 +140,7 @@ var _ = Describe("PreviewStackStore", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "stack_preview_config_id", Value: configB}},
 				}
-				result, err := store.ListByTeamID(ctx, teamID, params)
+				result, err := store.ListByProjectID(ctx, projectID, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(1))
 				Expect(result.Items[0].StackPreviewConfigID).To(Equal(configB))
@@ -149,15 +149,15 @@ var _ = Describe("PreviewStackStore", func() {
 		})
 
 		Context("without filter", func() {
-			It("returns all previews for the team", func() {
-				result, err := store.ListByTeamID(ctx, teamID, stores.ListParams{})
+			It("returns all previews for the project", func() {
+				result, err := store.ListByProjectID(ctx, projectID, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(3))
 				Expect(result.Total).To(Equal(int64(3)))
 			})
 
-			It("does not return previews from other teams", func() {
-				result, err := store.ListByTeamID(ctx, teamID2, stores.ListParams{})
+			It("does not return previews from other projects", func() {
+				result, err := store.ListByProjectID(ctx, projectID2, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(1))
 				Expect(result.Items[0].ID).To(Equal("ps-4"))
@@ -169,7 +169,7 @@ var _ = Describe("PreviewStackStore", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "stack_preview_config_id", Value: "config-nonexistent"}},
 				}
-				result, err := store.ListByTeamID(ctx, teamID, params)
+				result, err := store.ListByProjectID(ctx, projectID, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(BeEmpty())
 				Expect(result.Total).To(Equal(int64(0)))
@@ -181,7 +181,7 @@ var _ = Describe("PreviewStackStore", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "name", Value: "preview-pr-10"}},
 				}
-				result, err := store.ListByTeamID(ctx, teamID, params)
+				result, err := store.ListByProjectID(ctx, projectID, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(1))
 				Expect(result.Items[0].ID).To(Equal("ps-1"))
@@ -196,7 +196,7 @@ var _ = Describe("PreviewStackStore", func() {
 						{Field: "name", Value: "preview-pr-10"},
 					},
 				}
-				result, err := store.ListByTeamID(ctx, teamID, params)
+				result, err := store.ListByProjectID(ctx, projectID, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(1))
 				Expect(result.Items[0].ID).To(Equal("ps-1"))
@@ -205,7 +205,7 @@ var _ = Describe("PreviewStackStore", func() {
 
 		Context("pagination metadata", func() {
 			It("populates total and page info", func() {
-				result, err := store.ListByTeamID(ctx, teamID, stores.ListParams{Page: 1, PageSize: 2})
+				result, err := store.ListByProjectID(ctx, projectID, stores.ListParams{Page: 1, PageSize: 2})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(2))
 				Expect(result.Total).To(Equal(int64(3)))
@@ -218,7 +218,7 @@ var _ = Describe("PreviewStackStore", func() {
 
 	Describe("ListByConfigID", func() {
 		Context("without filter", func() {
-			It("returns all previews for the config across teams", func() {
+			It("returns all previews for the config across projects", func() {
 				result, err := store.ListByConfigID(ctx, configA, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(result.Items).To(HaveLen(3))

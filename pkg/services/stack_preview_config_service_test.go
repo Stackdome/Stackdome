@@ -28,10 +28,10 @@ func TestPreviewConfigDeleteRemovesRow(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	svc, store, previewStore, permissions := newPreviewConfigDeleteService(ctrl)
-	config := &models.StackPreviewConfig{ID: "cfg-1", TeamID: "team-1"}
+	config := &models.StackPreviewConfig{ID: "cfg-1", ProjectID: "project-1"}
 
 	store.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
-	permissions.EXPECT().Check(gomock.Any(), config.TeamID, auth.ResourcePreviewConfigs, "cfg-1", auth.ActionDelete).Return(nil)
+	permissions.EXPECT().Check(gomock.Any(), config.ProjectID, auth.ResourcePreviewConfigs, "cfg-1", auth.ActionDelete).Return(nil)
 	previewStore.EXPECT().CountActiveByConfigID(gomock.Any(), "cfg-1").Return(int64(0), nil)
 	store.EXPECT().Delete(gomock.Any(), "cfg-1").Return(nil)
 
@@ -45,10 +45,10 @@ func TestPreviewConfigDeleteBlockedByActivePreviews(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	svc, store, previewStore, permissions := newPreviewConfigDeleteService(ctrl)
-	config := &models.StackPreviewConfig{ID: "cfg-1", TeamID: "team-1"}
+	config := &models.StackPreviewConfig{ID: "cfg-1", ProjectID: "project-1"}
 
 	store.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil)
-	permissions.EXPECT().Check(gomock.Any(), config.TeamID, auth.ResourcePreviewConfigs, "cfg-1", auth.ActionDelete).Return(nil)
+	permissions.EXPECT().Check(gomock.Any(), config.ProjectID, auth.ResourcePreviewConfigs, "cfg-1", auth.ActionDelete).Return(nil)
 	previewStore.EXPECT().CountActiveByConfigID(gomock.Any(), "cfg-1").Return(int64(2), nil)
 
 	if err := svc.Delete(context.Background(), "cfg-1"); err == nil || err.Code != errors.ErrorConflict {
@@ -61,10 +61,10 @@ func TestPreviewConfigDeleteRowDeleteFailureRetrySucceeds(t *testing.T) {
 	t.Cleanup(ctrl.Finish)
 
 	svc, store, previewStore, permissions := newPreviewConfigDeleteService(ctrl)
-	config := &models.StackPreviewConfig{ID: "cfg-1", TeamID: "team-1"}
+	config := &models.StackPreviewConfig{ID: "cfg-1", ProjectID: "project-1"}
 
 	store.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(config, nil).Times(2)
-	permissions.EXPECT().Check(gomock.Any(), config.TeamID, auth.ResourcePreviewConfigs, "cfg-1", auth.ActionDelete).Return(nil).Times(2)
+	permissions.EXPECT().Check(gomock.Any(), config.ProjectID, auth.ResourcePreviewConfigs, "cfg-1", auth.ActionDelete).Return(nil).Times(2)
 	previewStore.EXPECT().CountActiveByConfigID(gomock.Any(), "cfg-1").Return(int64(0), nil).Times(2)
 	gomock.InOrder(
 		store.EXPECT().Delete(gomock.Any(), "cfg-1").Return(errors.GeneralError("delete boom")),

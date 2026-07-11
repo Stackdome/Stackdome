@@ -26,7 +26,7 @@ type SignupServiceSpec struct {
 	UserService         UserService
 	OrgInviteService    OrgInviteService
 	OrganisationService OrganisationService
-	TeamService         TeamService
+	ProjectService         ProjectService
 	PolicyManager       resourceaccess.ResourceAccessPolicyManager
 	RefreshTokenStore   stores.RefreshTokenStore
 	JWTSecretKey        string
@@ -38,7 +38,7 @@ type signupService struct {
 	userService         UserService
 	orgInviteService    OrgInviteService
 	organisationService OrganisationService
-	teamService         TeamService
+	projectService         ProjectService
 	policyManager       resourceaccess.ResourceAccessPolicyManager
 	refreshTokenStore   stores.RefreshTokenStore
 	jwtSecretKey        string
@@ -51,7 +51,7 @@ func NewSignupService(spec SignupServiceSpec) SignupService {
 		userService:         spec.UserService,
 		orgInviteService:    spec.OrgInviteService,
 		organisationService: spec.OrganisationService,
-		teamService:         spec.TeamService,
+		projectService:         spec.ProjectService,
 		policyManager:       spec.PolicyManager,
 		refreshTokenStore:   spec.RefreshTokenStore,
 		jwtSecretKey:        spec.JWTSecretKey,
@@ -108,9 +108,9 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 	user.OrganisationID = createdOrganisation.ID
 	user.Role = models.OrgAdminRole
 
-	if _, teamErr := s.teamService.InternalCreateDefaultTeam(ctx, createdOrganisation.ID); teamErr != nil {
-		s.logger.Errorf("failed to create default team: %s", teamErr.Error())
-		return nil, errors.GeneralError("failed to create default team")
+	if _, projectErr := s.projectService.InternalCreateDefaultProject(ctx, createdOrganisation.ID); projectErr != nil {
+		s.logger.Errorf("failed to create default project: %s", projectErr.Error())
+		return nil, errors.GeneralError("failed to create default project")
 	}
 
 	createdUser, serr := s.userService.InternalCreate(ctx, user)

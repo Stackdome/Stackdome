@@ -144,19 +144,19 @@ func (mr *MockStackStoreMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockStackStore)(nil).GetByID), ctx, id)
 }
 
-// GetByNameAndTeamID mocks base method.
-func (m *MockStackStore) GetByNameAndTeamID(ctx context.Context, name, teamID string) (*models.Stack, *errors.ServiceError) {
+// GetByNameAndProjectID mocks base method.
+func (m *MockStackStore) GetByNameAndProjectID(ctx context.Context, name, projectID string) (*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByNameAndTeamID", ctx, name, teamID)
+	ret := m.ctrl.Call(m, "GetByNameAndProjectID", ctx, name, projectID)
 	ret0, _ := ret[0].(*models.Stack)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetByNameAndTeamID indicates an expected call of GetByNameAndTeamID.
-func (mr *MockStackStoreMockRecorder) GetByNameAndTeamID(ctx, name, teamID any) *gomock.Call {
+// GetByNameAndProjectID indicates an expected call of GetByNameAndProjectID.
+func (mr *MockStackStoreMockRecorder) GetByNameAndProjectID(ctx, name, projectID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndTeamID", reflect.TypeOf((*MockStackStore)(nil).GetByNameAndTeamID), ctx, name, teamID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByNameAndProjectID", reflect.TypeOf((*MockStackStore)(nil).GetByNameAndProjectID), ctx, name, projectID)
 }
 
 // InternalList mocks base method.
@@ -194,34 +194,34 @@ func (mr *MockStackStoreMockRecorder) ListByOrganisationID(ctx, organisationID a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganisationID", reflect.TypeOf((*MockStackStore)(nil).ListByOrganisationID), ctx, organisationID)
 }
 
-// ListByTeamID mocks base method.
-func (m *MockStackStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
+// ListByProjectID mocks base method.
+func (m *MockStackStore) ListByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamID", ctx, teamID)
+	ret := m.ctrl.Call(m, "ListByProjectID", ctx, projectID)
 	ret0, _ := ret[0].([]*models.Stack)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamID indicates an expected call of ListByTeamID.
-func (mr *MockStackStoreMockRecorder) ListByTeamID(ctx, teamID any) *gomock.Call {
+// ListByProjectID indicates an expected call of ListByProjectID.
+func (mr *MockStackStoreMockRecorder) ListByProjectID(ctx, projectID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockStackStore)(nil).ListByTeamID), ctx, teamID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockStackStore)(nil).ListByProjectID), ctx, projectID)
 }
 
-// ListByTeamIDs mocks base method.
-func (m *MockStackStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.Stack, *errors.ServiceError) {
+// ListByProjectIDs mocks base method.
+func (m *MockStackStore) ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamIDs", ctx, teamIDs)
+	ret := m.ctrl.Call(m, "ListByProjectIDs", ctx, projectIDs)
 	ret0, _ := ret[0].([]*models.Stack)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamIDs indicates an expected call of ListByTeamIDs.
-func (mr *MockStackStoreMockRecorder) ListByTeamIDs(ctx, teamIDs any) *gomock.Call {
+// ListByProjectIDs indicates an expected call of ListByProjectIDs.
+func (mr *MockStackStoreMockRecorder) ListByProjectIDs(ctx, projectIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamIDs", reflect.TypeOf((*MockStackStore)(nil).ListByTeamIDs), ctx, teamIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectIDs", reflect.TypeOf((*MockStackStore)(nil).ListByProjectIDs), ctx, projectIDs)
 }
 
 // ListByUserID mocks base method.

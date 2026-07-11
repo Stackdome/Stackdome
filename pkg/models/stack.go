@@ -132,7 +132,7 @@ type StackResourceConvergenceRecord struct {
 type Stack struct {
 	ID                string      `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	OrganisationID    string      `gorm:"not null"`
-	TeamID            string      `gorm:"index" json:"team_id"`
+	ProjectID            string      `gorm:"index" json:"project_id"`
 	ClusterID         string      `gorm:"not null"`
 	UserID            string      `gorm:"not null"`
 	Name              string      `gorm:"not null;<-:create"`

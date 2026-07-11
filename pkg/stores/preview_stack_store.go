@@ -16,7 +16,7 @@ type PreviewStackStore interface {
 	GetByConfigAndPR(ctx context.Context, configID string, prNumber string) (*models.PreviewStack, *errors.ServiceError)
 	CountActiveByConfigID(ctx context.Context, configID string) (int64, *errors.ServiceError)
 	ListByConfigID(ctx context.Context, configID string, params ListParams) (*PaginatedResult[*models.PreviewStack], *errors.ServiceError)
-	ListByTeamID(ctx context.Context, teamID string, params ListParams) (*PaginatedResult[*models.PreviewStack], *errors.ServiceError)
+	ListByProjectID(ctx context.Context, projectID string, params ListParams) (*PaginatedResult[*models.PreviewStack], *errors.ServiceError)
 	ListNeedingReconciliation(ctx context.Context, page, pageSize int) ([]*models.PreviewStack, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
 }

@@ -16,7 +16,7 @@ type StackPreviewConfigService interface {
 	Get(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError)
 	Update(ctx context.Context, id string, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
-	List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError)
+	List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError)
 }
 
 type StackPreviewConfigServiceSpec struct {
@@ -43,7 +43,7 @@ func NewStackPreviewConfigService(spec StackPreviewConfigServiceSpec) StackPrevi
 }
 
 func (s *stackPreviewConfigService) Create(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, config.TeamID, auth.ResourcePreviewConfigs, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, config.ProjectID, auth.ResourcePreviewConfigs, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 	if config.MaxActivePreviews <= 0 {
@@ -74,7 +74,7 @@ func (s *stackPreviewConfigService) Get(ctx context.Context, id string) (*models
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, config.TeamID, auth.ResourcePreviewConfigs, id, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, config.ProjectID, auth.ResourcePreviewConfigs, id, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 
@@ -87,12 +87,12 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, existing.TeamID, auth.ResourcePreviewConfigs, id, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, existing.ProjectID, auth.ResourcePreviewConfigs, id, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 	updated.ID = existing.ID
 	updated.OrganisationID = existing.OrganisationID
-	updated.TeamID = existing.TeamID
+	updated.ProjectID = existing.ProjectID
 	updated.UserID = existing.UserID
 	updated.Name = existing.Name
 
@@ -117,7 +117,7 @@ func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *erro
 		return sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, config.TeamID, auth.ResourcePreviewConfigs, id, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, config.ProjectID, auth.ResourcePreviewConfigs, id, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 
@@ -135,12 +135,12 @@ func (s *stackPreviewConfigService) Delete(ctx context.Context, id string) *erro
 	return nil
 }
 
-func (s *stackPreviewConfigService) List(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, teamID, auth.ResourcePreviewConfigs, "", auth.ActionList); permErr != nil {
+func (s *stackPreviewConfigService) List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, projectID, auth.ResourcePreviewConfigs, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
 
-	return s.store.ListByTeamID(ctx, teamID, params)
+	return s.store.ListByProjectID(ctx, projectID, params)
 }
 
 func (s *stackPreviewConfigService) validate(ctx context.Context, config *models.StackPreviewConfig) *errors.ServiceError {

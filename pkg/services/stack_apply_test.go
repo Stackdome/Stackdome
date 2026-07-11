@@ -57,25 +57,25 @@ func newApplyStackTestEnv(ctrl *gomock.Controller) *applyStackTestEnv {
 }
 
 // TestApplyStack_CreatesWhenMissing: no stack with the spec's name exists in
-// the team, so apply creates the stack (and children) atomically and reports
+// the project, so apply creates the stack (and children) atomically and reports
 // created=true.
 func TestApplyStack_CreatesWhenMissing(t *testing.T) {
 	ctx := context.Background()
-	teamID := "team-1"
+	projectID := "project-1"
 	orgID := "org-1"
 	userID := "user-1"
-	spec := &models.Stack{Name: "demo", TeamID: teamID, OrganisationID: orgID, UserID: userID}
+	spec := &models.Stack{Name: "demo", ProjectID: projectID, OrganisationID: orgID, UserID: userID}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
 
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).
 		Return(nil, errors.NotFound("stack with name demo not found"))
-	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
+	env.permissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
 
-	// InternalCreateStack path: its own team-scoped duplicate re-check.
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
+	// InternalCreateStack path: its own project-scoped duplicate re-check.
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).
 		Return(nil, errors.NotFound("stack with name demo not found"))
 	env.validator.EXPECT().ValidateForCreate(ctx, spec).Return(nil)
 	namespace := &models.Namespace{Name: "ns-demo"}
@@ -87,10 +87,10 @@ func TestApplyStack_CreatesWhenMissing(t *testing.T) {
 		})
 	env.namespaceService.EXPECT().CreateInDBWithTx(ctx, namespace).
 		Return(&models.Namespace{ID: "ns-1", Name: "ns-demo"}, nil)
-	createdShell := &models.Stack{ID: "stack-1", Name: "demo", TeamID: teamID}
+	createdShell := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: projectID}
 	env.stackStore.EXPECT().CreateWithTx(ctx, gomock.Any()).Return(createdShell, nil)
 	env.referenceService.EXPECT().ReprojectSpec(ctx, "stack-1").Return(nil)
-	created := &models.Stack{ID: "stack-1", Name: "demo", TeamID: teamID}
+	created := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: projectID}
 	env.stackStore.EXPECT().GetByID(ctx, "stack-1").Return(created, nil)
 	env.backgroundEnqueue.EXPECT().EnqueueAfterCommit(ctx, &models.Stack{ID: "stack-1"}).Return(nil)
 
@@ -101,21 +101,21 @@ func TestApplyStack_CreatesWhenMissing(t *testing.T) {
 }
 
 // TestApplyStack_UpdatesWhenExists: a stack with the spec's name exists in the
-// team, so apply resolves its ID and delegates to the full-replacement update
+// project, so apply resolves its ID and delegates to the full-replacement update
 // path, reporting created=false.
 func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 	ctx := context.Background()
-	teamID := "team-1"
+	projectID := "project-1"
 	stackID := "stack-1"
-	existing := &models.Stack{ID: stackID, Name: "demo", TeamID: teamID, Namespace: "ns-demo", ClusterID: "cluster-1"}
-	spec := &models.Stack{Name: "demo", TeamID: teamID}
+	existing := &models.Stack{ID: stackID, Name: "demo", ProjectID: projectID, Namespace: "ns-demo", ClusterID: "cluster-1"}
+	spec := &models.Stack{Name: "demo", ProjectID: projectID}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
 
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).Return(existing, nil)
-	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).Return(existing, nil)
+	env.permissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 
 	// InternalUpdateStack path, addressed by the resolved existing ID.
 	env.stackStore.EXPECT().GetByID(ctx, stackID).Return(existing, nil)
@@ -129,13 +129,13 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 		func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 			return fn(ctx)
 		})
-	updatedShell := &models.Stack{ID: stackID, Name: "demo", TeamID: teamID}
+	updatedShell := &models.Stack{ID: stackID, Name: "demo", ProjectID: projectID}
 	env.stackStore.EXPECT().UpdateWithTx(ctx, stackID, gomock.Any()).Return(updatedShell, nil)
 	env.volumeService.EXPECT().InternalSyncVolumesWithTx(ctx, updatedShell, existing, gomock.Any()).Return(nil)
 	env.volumeService.EXPECT().ListVolumesUsedByStack(ctx, stackID).Return(nil, nil)
 	env.resourceService.EXPECT().InternalSyncResourcesWithTx(ctx, updatedShell, existing, gomock.Any()).Return(nil)
 	env.referenceService.EXPECT().ReprojectSpec(ctx, stackID).Return(nil)
-	updated := &models.Stack{ID: stackID, Name: "demo", TeamID: teamID}
+	updated := &models.Stack{ID: stackID, Name: "demo", ProjectID: projectID}
 	env.stackStore.EXPECT().GetByID(ctx, stackID).Return(updated, nil)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
@@ -144,27 +144,27 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 	assert.Equal(t, updated, got)
 }
 
-// TestApplyStack_ConflictOnDuplicateNameRecheck: the apply-level team-scoped
+// TestApplyStack_ConflictOnDuplicateNameRecheck: the apply-level project-scoped
 // lookup misses, but the create path's own sequential duplicate re-check finds
-// a stack with the same name in the team — the Conflict propagates untouched.
+// a stack with the same name in the project — the Conflict propagates untouched.
 // (The true concurrent race is covered by the DB unique index on
-// stacks(team_id, name); see the StackStore Create/CreateWithTx Conflict
+// stacks(project_id, name); see the StackStore Create/CreateWithTx Conflict
 // mapping tests in pkg/stores/pgstore.)
 func TestApplyStack_ConflictOnDuplicateNameRecheck(t *testing.T) {
 	ctx := context.Background()
-	teamID := "team-1"
+	projectID := "project-1"
 	userID := "user-1"
-	spec := &models.Stack{Name: "demo", TeamID: teamID, UserID: userID}
+	spec := &models.Stack{Name: "demo", ProjectID: projectID, UserID: userID}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
 
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).
 		Return(nil, errors.NotFound("stack with name demo not found"))
-	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
-		Return(&models.Stack{ID: "stack-raced", Name: "demo", TeamID: teamID}, nil)
+	env.permissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).
+		Return(&models.Stack{ID: "stack-raced", Name: "demo", ProjectID: projectID}, nil)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
 	assert.Nil(t, got)
@@ -177,17 +177,17 @@ func TestApplyStack_ConflictOnDuplicateNameRecheck(t *testing.T) {
 // permission short-circuits before any write.
 func TestApplyStack_PermissionDeniedOnCreate(t *testing.T) {
 	ctx := context.Background()
-	teamID := "team-1"
-	spec := &models.Stack{Name: "demo", TeamID: teamID}
+	projectID := "project-1"
+	spec := &models.Stack{Name: "demo", ProjectID: projectID}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
 
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).
 		Return(nil, errors.NotFound("stack with name demo not found"))
 	denied := errors.Forbidden("missing stacks:create")
-	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, "", auth.ActionCreate).Return(denied)
+	env.permissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, "", auth.ActionCreate).Return(denied)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
 	assert.Nil(t, got)
@@ -199,18 +199,18 @@ func TestApplyStack_PermissionDeniedOnCreate(t *testing.T) {
 // permission short-circuits before any write.
 func TestApplyStack_PermissionDeniedOnUpdate(t *testing.T) {
 	ctx := context.Background()
-	teamID := "team-1"
+	projectID := "project-1"
 	stackID := "stack-1"
-	existing := &models.Stack{ID: stackID, Name: "demo", TeamID: teamID}
-	spec := &models.Stack{Name: "demo", TeamID: teamID}
+	existing := &models.Stack{ID: stackID, Name: "demo", ProjectID: projectID}
+	spec := &models.Stack{Name: "demo", ProjectID: projectID}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
 
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).Return(existing, nil)
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).Return(existing, nil)
 	denied := errors.Forbidden("missing stacks:write")
-	env.permissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(denied)
+	env.permissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(denied)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
 	assert.Nil(t, got)
@@ -222,15 +222,15 @@ func TestApplyStack_PermissionDeniedOnUpdate(t *testing.T) {
 // apply instead of being misread as "stack missing".
 func TestApplyStack_LookupErrorPropagates(t *testing.T) {
 	ctx := context.Background()
-	teamID := "team-1"
-	spec := &models.Stack{Name: "demo", TeamID: teamID}
+	projectID := "project-1"
+	spec := &models.Stack{Name: "demo", ProjectID: projectID}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
 
 	lookupErr := errors.GeneralError("db unavailable")
-	env.stackStore.EXPECT().GetByNameAndTeamID(ctx, "demo", teamID).Return(nil, lookupErr)
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).Return(nil, lookupErr)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
 	assert.Nil(t, got)

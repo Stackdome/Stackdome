@@ -15,8 +15,8 @@ import (
 func TestStackResourceService_Create_Validation(t *testing.T) {
 	ctx := context.Background()
 	stackID := "stack-123"
-	teamID := "team-456"
-	stack := &models.Stack{ID: stackID, TeamID: teamID}
+	projectID := "project-456"
+	stack := &models.Stack{ID: stackID, ProjectID: projectID}
 
 	t.Run("field errors from the validator are returned as a 400 ValidationFailed", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -38,7 +38,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 		siblings := []*models.StackResource{{StackID: stackID, Name: "worker"}}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockResourceStore.EXPECT().GetByStackID(ctx, stackID).Return(siblings, nil)
 		fieldErrs := []errors.FieldError{
 			{Field: "ports[0].expose_to_public", Code: errors.VErrPublicPortNotHTTP},
@@ -81,7 +81,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockResourceStore.EXPECT().GetByStackID(ctx, stackID).Return(nil, nil)
 		mockValidator.EXPECT().Validate(ctx, stack, resource, ([]*models.StackResource)(nil)).Return(nil, nil)
 
@@ -123,7 +123,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 		infraErr := errors.GeneralError("db unreachable")
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockResourceStore.EXPECT().GetByStackID(ctx, stackID).Return(nil, nil)
 		mockValidator.EXPECT().Validate(ctx, stack, resource, ([]*models.StackResource)(nil)).Return(nil, infraErr)
 		// CreateWithTx must never be called.
@@ -139,9 +139,9 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 func TestStackResourceService_Update_Validation(t *testing.T) {
 	ctx := context.Background()
 	stackID := "stack-123"
-	teamID := "team-456"
+	projectID := "project-456"
 	resourceName := "web"
-	stack := &models.Stack{ID: stackID, TeamID: teamID}
+	stack := &models.Stack{ID: stackID, ProjectID: projectID}
 
 	t.Run("siblings passed to the validator exclude the resource being updated", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -167,7 +167,7 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 		all := []*models.StackResource{existing, worker}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-		mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockResourceStore.EXPECT().GetByStackIDAndResourceName(ctx, stackID, resourceName).Return(existing, nil)
 		mockResourceStore.EXPECT().GetByStackID(ctx, stackID).Return(all, nil)
 

@@ -25,7 +25,7 @@ type VolumeService interface {
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError
-	ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError)
+	ListByUserID(ctx context.Context, projectID, userID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError
 	UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
 	UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError)
@@ -79,7 +79,7 @@ func (s *volumeService) Get(ctx context.Context, ID string) (*models.Volume, *er
 		s.logger.Errorf("failed to get volume: %v", err)
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, volume.ProjectID, auth.ResourceVolumes, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return volume, nil
@@ -101,7 +101,7 @@ func (s *volumeService) ListVolumesUsedByStack(ctx context.Context, stackID stri
 func (s *volumeService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, volume *models.Volume) (*models.Volume, *errors.ServiceError) {
 	volume.NamespaceID = stack.NamespaceID
 	volume.OrganisationID = stack.OrganisationID
-	volume.TeamID = stack.TeamID
+	volume.ProjectID = stack.ProjectID
 	volume.UserID = stack.UserID
 	volume.Namespace = stack.Namespace
 
@@ -147,8 +147,8 @@ func (s *volumeService) GetByVolumeNameAndNamespace(ctx context.Context, volumeN
 	return volume, nil
 }
 
-func (s *volumeService) ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceVolumes, "", auth.ActionList); permErr != nil {
+func (s *volumeService) ListByUserID(ctx context.Context, projectID, userID string) ([]*models.Volume, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, projectID, auth.ResourceVolumes, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
 	volumes, err := s.volumeStore.GetByUserID(ctx, userID)
@@ -231,7 +231,7 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 }
 
 func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, spec.TeamID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, spec.ProjectID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
@@ -319,7 +319,7 @@ func (s *volumeService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return err
 	}
 
-	if permErr := s.permissions.Check(ctx, volume.TeamID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, volume.ProjectID, auth.ResourceVolumes, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 	inUse, refs, refErr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volume.ID)

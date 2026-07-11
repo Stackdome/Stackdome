@@ -155,14 +155,14 @@ func (s *objectStoreStore) ListByOrganisation(ctx context.Context, organisationI
 	return objectStores, nil
 }
 
-func (s *objectStoreStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.ObjectStore, *errors.ServiceError) {
+func (s *objectStoreStore) ListByProjectID(ctx context.Context, projectID string) ([]*models.ObjectStore, *errors.ServiceError) {
 	var objectStores []*models.ObjectStore
 
 	if err := s.sessionFactory.New(ctx).
-		Where("team_id = ?", teamID).
+		Where("project_id = ?", projectID).
 		Order("created_at DESC").
 		Find(&objectStores).Error; err != nil {
-		return nil, errors.GeneralError("failed to list object stores by team: %s", err.Error())
+		return nil, errors.GeneralError("failed to list object stores by project: %s", err.Error())
 	}
 
 	return objectStores, nil
@@ -178,16 +178,16 @@ func (s *objectStoreStore) ValidateObjectStoreExists(ctx context.Context, object
 	return count > 0, nil
 }
 
-func (s *objectStoreStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.ObjectStore, *errors.ServiceError) {
-	if len(teamIDs) == 0 {
+func (s *objectStoreStore) ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.ObjectStore, *errors.ServiceError) {
+	if len(projectIDs) == 0 {
 		return []*models.ObjectStore{}, nil
 	}
 	var objectStores []*models.ObjectStore
 	if err := s.sessionFactory.New(ctx).
-		Where("team_id IN ?", teamIDs).
+		Where("project_id IN ?", projectIDs).
 		Order("created_at DESC").
 		Find(&objectStores).Error; err != nil {
-		return nil, errors.GeneralError("failed to list object stores by teams: %s", err.Error())
+		return nil, errors.GeneralError("failed to list object stores by projects: %s", err.Error())
 	}
 	return objectStores, nil
 }

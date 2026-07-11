@@ -132,34 +132,34 @@ func (mr *MockSecretStoreMockRecorder) ListByOrganisation(ctx, organisationID, p
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganisation", reflect.TypeOf((*MockSecretStore)(nil).ListByOrganisation), ctx, organisationID, params)
 }
 
-// ListByTeamID mocks base method.
-func (m *MockSecretStore) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
+// ListByProjectID mocks base method.
+func (m *MockSecretStore) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamID", ctx, teamID, params)
+	ret := m.ctrl.Call(m, "ListByProjectID", ctx, projectID, params)
 	ret0, _ := ret[0].([]*models.Secret)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamID indicates an expected call of ListByTeamID.
-func (mr *MockSecretStoreMockRecorder) ListByTeamID(ctx, teamID, params any) *gomock.Call {
+// ListByProjectID indicates an expected call of ListByProjectID.
+func (mr *MockSecretStoreMockRecorder) ListByProjectID(ctx, projectID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockSecretStore)(nil).ListByTeamID), ctx, teamID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockSecretStore)(nil).ListByProjectID), ctx, projectID, params)
 }
 
-// ListByTeamIDs mocks base method.
-func (m *MockSecretStore) ListByTeamIDs(ctx context.Context, teamIDs []string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
+// ListByProjectIDs mocks base method.
+func (m *MockSecretStore) ListByProjectIDs(ctx context.Context, projectIDs []string, params stores.ListParams) ([]*models.Secret, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamIDs", ctx, teamIDs, params)
+	ret := m.ctrl.Call(m, "ListByProjectIDs", ctx, projectIDs, params)
 	ret0, _ := ret[0].([]*models.Secret)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamIDs indicates an expected call of ListByTeamIDs.
-func (mr *MockSecretStoreMockRecorder) ListByTeamIDs(ctx, teamIDs, params any) *gomock.Call {
+// ListByProjectIDs indicates an expected call of ListByProjectIDs.
+func (mr *MockSecretStoreMockRecorder) ListByProjectIDs(ctx, projectIDs, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamIDs", reflect.TypeOf((*MockSecretStore)(nil).ListByTeamIDs), ctx, teamIDs, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectIDs", reflect.TypeOf((*MockSecretStore)(nil).ListByProjectIDs), ctx, projectIDs, params)
 }
 
 // ListByType mocks base method.

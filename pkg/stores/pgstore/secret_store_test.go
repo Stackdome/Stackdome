@@ -21,8 +21,8 @@ var _ = Describe("SecretStore", func() {
 	const (
 		orgID  = "org-1"
 		orgID2 = "org-2"
-		teamA  = "team-a"
-		teamB  = "team-b"
+		projectA  = "project-a"
+		projectB  = "project-b"
 		userID = "user-1"
 	)
 
@@ -31,7 +31,7 @@ var _ = Describe("SecretStore", func() {
 			CREATE TABLE IF NOT EXISTS secrets (
 				id TEXT PRIMARY KEY,
 				organisation_id TEXT NOT NULL,
-				team_id TEXT,
+				project_id TEXT,
 				user_id TEXT NOT NULL,
 				name TEXT NOT NULL,
 				description TEXT,
@@ -55,7 +55,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-1",
 				OrganisationID: orgID,
-				TeamID:         teamA,
+				ProjectID:         projectA,
 				UserID:         userID,
 				Name:           "github-pat",
 				Type:           models.SecretTypeToken,
@@ -67,7 +67,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-2",
 				OrganisationID: orgID,
-				TeamID:         teamA,
+				ProjectID:         projectA,
 				UserID:         userID,
 				Name:           "docker-creds",
 				Type:           models.SecretTypeDockerRegistry,
@@ -79,7 +79,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-3",
 				OrganisationID: orgID,
-				TeamID:         teamB,
+				ProjectID:         projectB,
 				UserID:         userID,
 				Name:           "ssh-deploy-key",
 				Type:           models.SecretTypeSSHKey,
@@ -91,7 +91,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-4",
 				OrganisationID: orgID2,
-				TeamID:         teamA,
+				ProjectID:         projectA,
 				UserID:         userID,
 				Name:           "other-org-secret",
 				Type:           models.SecretTypeGeneric,
@@ -184,13 +184,13 @@ var _ = Describe("SecretStore", func() {
 		})
 	})
 
-	Describe("ListByTeamID", func() {
+	Describe("ListByProjectID", func() {
 		Context("with name filter", func() {
-			It("returns only the matching secret within the team", func() {
+			It("returns only the matching secret within the project", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "name", Value: "docker-creds"}},
 				}
-				results, err := store.ListByTeamID(ctx, teamA, params)
+				results, err := store.ListByProjectID(ctx, projectA, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
 				Expect(results[0].Name).To(Equal("docker-creds"))
@@ -198,14 +198,14 @@ var _ = Describe("SecretStore", func() {
 		})
 
 		Context("without filter", func() {
-			It("returns all secrets for the team", func() {
-				results, err := store.ListByTeamID(ctx, teamA, stores.ListParams{})
+			It("returns all secrets for the project", func() {
+				results, err := store.ListByProjectID(ctx, projectA, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(3))
 			})
 
-			It("returns only secrets for the specified team", func() {
-				results, err := store.ListByTeamID(ctx, teamB, stores.ListParams{})
+			It("returns only secrets for the specified project", func() {
+				results, err := store.ListByProjectID(ctx, projectB, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
 				Expect(results[0].Name).To(Equal("ssh-deploy-key"))
@@ -217,20 +217,20 @@ var _ = Describe("SecretStore", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "name", Value: "nonexistent"}},
 				}
-				results, err := store.ListByTeamID(ctx, teamA, params)
+				results, err := store.ListByProjectID(ctx, projectA, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeEmpty())
 			})
 		})
 	})
 
-	Describe("ListByTeamIDs", func() {
+	Describe("ListByProjectIDs", func() {
 		Context("with name filter", func() {
-			It("returns only matching secrets across teams", func() {
+			It("returns only matching secrets across projects", func() {
 				params := stores.ListParams{
 					Filters: []stores.Filter{{Field: "name", Value: "github-pat"}},
 				}
-				results, err := store.ListByTeamIDs(ctx, []string{teamA, teamB}, params)
+				results, err := store.ListByProjectIDs(ctx, []string{projectA, projectB}, params)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
 				Expect(results[0].Name).To(Equal("github-pat"))
@@ -238,24 +238,24 @@ var _ = Describe("SecretStore", func() {
 		})
 
 		Context("without filter", func() {
-			It("returns all secrets across the specified teams", func() {
-				results, err := store.ListByTeamIDs(ctx, []string{teamA, teamB}, stores.ListParams{})
+			It("returns all secrets across the specified projects", func() {
+				results, err := store.ListByProjectIDs(ctx, []string{projectA, projectB}, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(4))
 			})
 		})
 
-		Context("with empty team IDs", func() {
+		Context("with empty project IDs", func() {
 			It("returns empty result", func() {
-				results, err := store.ListByTeamIDs(ctx, []string{}, stores.ListParams{})
+				results, err := store.ListByProjectIDs(ctx, []string{}, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(BeEmpty())
 			})
 		})
 
-		Context("with single team ID", func() {
-			It("returns only secrets for that team", func() {
-				results, err := store.ListByTeamIDs(ctx, []string{teamB}, stores.ListParams{})
+		Context("with single project ID", func() {
+			It("returns only secrets for that project", func() {
+				results, err := store.ListByProjectIDs(ctx, []string{projectB}, stores.ListParams{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(results).To(HaveLen(1))
 				Expect(results[0].ID).To(Equal("sec-3"))

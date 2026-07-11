@@ -152,7 +152,7 @@ func presentStackReleaseSnapshot(s *models.StackSnapshot) *openapi.StackReleaseS
 		Stack: &openapi.StackReleaseSnapshotStack{
 			Id:             &s.Stack.ID,
 			OrganisationId: &s.Stack.OrganisationID,
-			TeamId:         &s.Stack.TeamID,
+			ProjectId:         &s.Stack.ProjectID,
 			ClusterId:      &s.Stack.ClusterID,
 			UserId:         &s.Stack.UserID,
 			Name:           &s.Stack.Name,

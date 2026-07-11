@@ -29,7 +29,7 @@ type ObjectStoreService interface {
 	Update(ctx context.Context, id string, objectStore *models.ObjectStore) (*models.ObjectStore, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.ObjectStore, *errors.ServiceError)
-	ListByTeamID(ctx context.Context, teamID string) ([]*models.ObjectStore, *errors.ServiceError)
+	ListByProjectID(ctx context.Context, projectID string) ([]*models.ObjectStore, *errors.ServiceError)
 	ListObjectStoresForCurrentUser(ctx context.Context, orgID string) ([]*models.ObjectStore, *errors.ServiceError)
 	ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError)
 	TestConnection(ctx context.Context, objectStoreID string) *errors.ServiceError
@@ -39,7 +39,7 @@ type ObjectStoreService interface {
 type ObjectStoreServiceSpec struct {
 	SessionFactory db.SessionFactory
 	SecretService  SecretService
-	TeamService    TeamService
+	ProjectService    ProjectService
 	ClusterManager clustermanager.ClusterManager
 	Permissions    auth.PermissionService
 	Logger         logger.Logger
@@ -48,7 +48,7 @@ type ObjectStoreServiceSpec struct {
 type objectStoreService struct {
 	objectStoreStore stores.ObjectStoreStore
 	secretService    SecretService
-	teamService      TeamService
+	projectService      ProjectService
 	clusterManager   clustermanager.ClusterManager
 	validator        validator.ObjectStoreValidator
 	permissions      auth.PermissionService
@@ -61,7 +61,7 @@ func NewObjectStoreService(spec ObjectStoreServiceSpec) ObjectStoreService {
 			SessionFactory: spec.SessionFactory,
 		}),
 		secretService:  spec.SecretService,
-		teamService:    spec.TeamService,
+		projectService:    spec.ProjectService,
 		clusterManager: spec.ClusterManager,
 		validator:      objectstore.NewObjectStoreValidator(),
 		permissions:    spec.Permissions,
@@ -115,7 +115,7 @@ func (s *objectStoreService) validateSecretReferences(ctx context.Context, confi
 }
 
 func (s *objectStoreService) Create(ctx context.Context, objectStore *models.ObjectStore) (*models.ObjectStore, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, objectStore.TeamID, auth.ResourceObjectStores, "", auth.ActionCreate); permErr != nil {
+	if permErr := s.permissions.Check(ctx, objectStore.ProjectID, auth.ResourceObjectStores, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
 
@@ -147,7 +147,7 @@ func (s *objectStoreService) GetByID(ctx context.Context, ID string) (*models.Ob
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, objectStore.TeamID, auth.ResourceObjectStores, ID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, objectStore.ProjectID, auth.ResourceObjectStores, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return objectStore, nil
@@ -170,7 +170,7 @@ func (s *objectStoreService) Update(ctx context.Context, id string, objectStore 
 	if err != nil {
 		return nil, err
 	}
-	if permErr := s.permissions.Check(ctx, existingObjectStore.TeamID, auth.ResourceObjectStores, id, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, existingObjectStore.ProjectID, auth.ResourceObjectStores, id, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -207,7 +207,7 @@ func (s *objectStoreService) Delete(ctx context.Context, ID string) *errors.Serv
 	if err != nil {
 		return err
 	}
-	if permErr := s.permissions.Check(ctx, objectStore.TeamID, auth.ResourceObjectStores, ID, auth.ActionDelete); permErr != nil {
+	if permErr := s.permissions.Check(ctx, objectStore.ProjectID, auth.ResourceObjectStores, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
 
@@ -265,11 +265,11 @@ func (s *objectStoreService) ListByOrganisation(ctx context.Context, organisatio
 	return objectStores, nil
 }
 
-func (s *objectStoreService) ListByTeamID(ctx context.Context, teamID string) ([]*models.ObjectStore, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, teamID, auth.ResourceObjectStores, "", auth.ActionList); permErr != nil {
+func (s *objectStoreService) ListByProjectID(ctx context.Context, projectID string) ([]*models.ObjectStore, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, projectID, auth.ResourceObjectStores, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	return s.objectStoreStore.ListByTeamID(ctx, teamID)
+	return s.objectStoreStore.ListByProjectID(ctx, projectID)
 }
 
 func (s *objectStoreService) ListObjectStoresForCurrentUser(ctx context.Context, orgID string) ([]*models.ObjectStore, *errors.ServiceError) {
@@ -282,19 +282,19 @@ func (s *objectStoreService) ListObjectStoresForCurrentUser(ctx context.Context,
 		return s.objectStoreStore.ListByOrganisation(ctx, orgID)
 	}
 
-	memberships, serr := s.teamService.InternalListUserTeams(ctx, identity.UserID, orgID)
+	memberships, serr := s.projectService.InternalListUserProjects(ctx, identity.UserID, orgID)
 	if serr != nil {
 		return nil, serr
 	}
 
-	var allowedTeamIDs []string
+	var allowedProjectIDs []string
 	for _, m := range memberships {
-		if permErr := s.permissions.Check(ctx, m.TeamID, auth.ResourceObjectStores, "", auth.ActionList); permErr == nil {
-			allowedTeamIDs = append(allowedTeamIDs, m.TeamID)
+		if permErr := s.permissions.Check(ctx, m.ProjectID, auth.ResourceObjectStores, "", auth.ActionList); permErr == nil {
+			allowedProjectIDs = append(allowedProjectIDs, m.ProjectID)
 		}
 	}
 
-	return s.objectStoreStore.ListByTeamIDs(ctx, allowedTeamIDs)
+	return s.objectStoreStore.ListByProjectIDs(ctx, allowedProjectIDs)
 }
 
 func (s *objectStoreService) ValidateObjectStoreExists(ctx context.Context, objectStoreID string) (bool, *errors.ServiceError) {

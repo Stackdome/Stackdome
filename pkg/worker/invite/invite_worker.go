@@ -93,9 +93,9 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	if invite.Organisation != nil {
 		orgName = invite.Organisation.Name
 	}
-	teamName := ""
-	if invite.Team != nil {
-		teamName = invite.Team.Name
+	projectName := ""
+	if invite.Project != nil {
+		projectName = invite.Project.Name
 	}
 	inviterName := ""
 	if invite.InvitedBy != nil {
@@ -111,7 +111,7 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		if emailErr := w.emailService.SendInviteEmail(txCtx, emailpkg.InviteEmailParams{
 			ToEmail:     invite.Email,
 			OrgName:     orgName,
-			TeamName:    teamName,
+			ProjectName:    projectName,
 			InviterName: inviterName,
 			InviteToken: rawToken,
 			ExpiresAt:   invite.ExpiresAt,

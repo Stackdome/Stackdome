@@ -112,7 +112,7 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, errors.BadRequest("cannot create releases on preview-managed stacks; use the preview sync API")
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -200,7 +200,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, errors.BadRequest("can only roll back to a successfully released deployment (#%d is %s)", src.Sequence, src.State)
 	}
 
-	// Permission check via the stack's team.
+	// Permission check via the stack's project.
 	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
 	if sErr != nil {
 		return nil, sErr
@@ -210,7 +210,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, errors.BadRequest("cannot roll back a stack that is managed by preview sync")
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -262,7 +262,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 }
 
 // getReleaseWithStack fetches a release and its owning stack. GetStack
-// already perm-checks (same team, same stack, auth.ActionRead), so callers
+// already perm-checks (same project, same stack, auth.ActionRead), so callers
 // don't need a separate permissions.Check.
 func (s *stackReleaseService) getReleaseWithStack(ctx context.Context, releaseID string) (*models.StackRelease, *models.Stack, *errors.ServiceError) {
 	rel, sErr := s.store.GetByID(ctx, releaseID)
@@ -362,7 +362,7 @@ func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, 
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 
@@ -403,7 +403,7 @@ func (s *stackReleaseService) ListReleaseEvents(ctx context.Context, stackID, re
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 
@@ -445,7 +445,7 @@ func (s *stackReleaseService) StreamReleaseEvents(ctx context.Context, stackID, 
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 
@@ -471,7 +471,7 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 		return sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, rel.StackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, rel.StackID, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
 

@@ -16,18 +16,18 @@ import (
 func NewVolumeHandler(spec VolumeHandlerSpec) *volumeHandler {
 	return &volumeHandler{
 		volumeService: spec.VolumeService,
-		teamService:   spec.TeamService,
+		projectService:   spec.ProjectService,
 	}
 }
 
 type VolumeHandlerSpec struct {
 	VolumeService services.VolumeService
-	TeamService   services.TeamService
+	ProjectService   services.ProjectService
 }
 
 type volumeHandler struct {
 	volumeService services.VolumeService
-	teamService   services.TeamService
+	projectService   services.ProjectService
 }
 
 func (h *volumeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +36,7 @@ func (h *volumeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
 			id := mux.Vars(r)["id"]
 			if id == "current" {
-				teamID, serr := resolveTeamID(r, h.teamService)
+				projectID, serr := resolveProjectID(r, h.projectService)
 				if serr != nil {
 					return nil, serr
 				}
@@ -44,7 +44,7 @@ func (h *volumeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					return nil, errors.Unauthorized("failed to fetch current user")
 				}
-				objs, serr := h.volumeService.ListByUserID(ctx, teamID, currentUser.ID)
+				objs, serr := h.volumeService.ListByUserID(ctx, projectID, currentUser.ID)
 				if serr != nil {
 					return nil, serr
 				}
@@ -71,7 +71,7 @@ func (h *volumeHandler) Create(w http.ResponseWriter, r *http.Request) {
 		validation.ValidateVolume(&ws),
 		func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -82,7 +82,7 @@ func (h *volumeHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = currentUser.ID
 
 			obj, serr := h.volumeService.Create(ctx, convertedObject)

@@ -15,8 +15,8 @@ type OrgInvite struct {
 	ID             string       `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	Email          string       `gorm:"not null" json:"email"`
 	OrganisationID string       `gorm:"not null" json:"organisationId"`
-	TeamID         string       `gorm:"not null" json:"teamId"`
-	TeamRole       TeamRole     `gorm:"not null;column:team_role" json:"teamRole"`
+	ProjectID         string       `gorm:"not null" json:"project_id"`
+	ProjectRole       ProjectRole     `gorm:"not null;column:project_role" json:"projectRole"`
 	TokenHash      string       `gorm:"not null" json:"-"`
 	EncryptedToken string       `gorm:"not null" json:"-"`
 	Status         InviteStatus `gorm:"not null;default:pending" json:"status"`
@@ -29,6 +29,6 @@ type OrgInvite struct {
 	CreatedAt      time.Time    `gorm:"not null" json:"createdAt"`
 
 	Organisation *Organisation `gorm:"foreignKey:OrganisationID" json:"organisation,omitempty"`
-	Team         *Team         `gorm:"foreignKey:TeamID" json:"team,omitempty"`
+	Project         *Project         `gorm:"foreignKey:ProjectID" json:"project,omitempty"`
 	InvitedBy    *User         `gorm:"foreignKey:InvitedByID" json:"invitedBy,omitempty"`
 }

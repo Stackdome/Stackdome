@@ -208,33 +208,33 @@ func (s *postgresAddonStore) ListByOrganisation(ctx context.Context, organisatio
 	return addons, nil
 }
 
-func (s *postgresAddonStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+func (s *postgresAddonStore) ListByProjectID(ctx context.Context, projectID string) ([]*models.PostgresAddon, *errors.ServiceError) {
 	var addons []*models.PostgresAddon
 
 	if err := s.sessionFactory.New(ctx).
 		Preload("Databases").
 		Preload("Backups").
-		Where("team_id = ?", teamID).
+		Where("project_id = ?", projectID).
 		Order("created_at DESC").
 		Find(&addons).Error; err != nil {
-		return nil, errors.GeneralError("failed to list postgres addons by team: %s", err.Error())
+		return nil, errors.GeneralError("failed to list postgres addons by project: %s", err.Error())
 	}
 
 	return addons, nil
 }
 
-func (s *postgresAddonStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.PostgresAddon, *errors.ServiceError) {
-	if len(teamIDs) == 0 {
+func (s *postgresAddonStore) ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.PostgresAddon, *errors.ServiceError) {
+	if len(projectIDs) == 0 {
 		return []*models.PostgresAddon{}, nil
 	}
 	var addons []*models.PostgresAddon
 	if err := s.sessionFactory.New(ctx).
 		Preload("Databases").
 		Preload("Backups").
-		Where("team_id IN ?", teamIDs).
+		Where("project_id IN ?", projectIDs).
 		Order("created_at DESC").
 		Find(&addons).Error; err != nil {
-		return nil, errors.GeneralError("failed to list postgres addons by teams: %s", err.Error())
+		return nil, errors.GeneralError("failed to list postgres addons by projects: %s", err.Error())
 	}
 	return addons, nil
 }
