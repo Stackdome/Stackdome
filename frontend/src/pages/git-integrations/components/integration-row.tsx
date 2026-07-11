@@ -8,7 +8,7 @@ import {
   type GitInstallation,
 } from "@/api/git-integrations";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, type ProviderId, type RowViewModel } from "../lib/derive-row";
+import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, PROVIDER_DISPLAY_NAMES, type RowViewModel } from "../lib/derive-row";
 import { RowMenu } from "./row-menu";
 import { ProviderLogo } from "./provider-logo";
 
@@ -16,14 +16,6 @@ function statusPillClasses(statusKey: RowViewModel["statusKey"]) {
   if (statusKey === "action_needed") return "border-danger-border bg-danger-bg text-danger";
   return "border-warn-border bg-warn-bg text-warn";
 }
-
-const PROVIDER_TITLES: Record<ProviderId, string> = {
-  github: "GitHub",
-  gitlab: "GitLab",
-  bitbucket: "Bitbucket",
-  gitea: "Gitea",
-  other: "Git host",
-};
 
 function Banner({
   banner,
@@ -121,7 +113,7 @@ export function IntegrationRow({
           </div>
           <div className="min-w-0">
             <p className="truncate text-[15px] font-semibold text-foreground">
-              {PROVIDER_TITLES[providerIdFor(integration)]}
+              {PROVIDER_DISPLAY_NAMES[providerIdFor(integration)]}
             </p>
             <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
           </div>
@@ -136,8 +128,8 @@ export function IntegrationRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[11.5px] text-muted-foreground">{row.meter.left}</span>
-            <span className="shrink-0 font-mono text-[11px] text-fg-muted">{row.meter.right}</span>
+            <span className="truncate text-[11.5px] text-muted-foreground">{row.access.label}</span>
+            <span className="shrink-0 font-mono text-[11px] text-fg-muted">{row.access.hint}</span>
           </div>
         </div>
 

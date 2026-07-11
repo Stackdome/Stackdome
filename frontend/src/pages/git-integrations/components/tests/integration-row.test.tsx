@@ -73,7 +73,7 @@ describe("IntegrationRow", () => {
     expect(cta).toBeDisabled();
   });
 
-  it("renders the access meter derived from installations", async () => {
+  it("renders the access summary derived from installations", async () => {
     vi.mocked(listInstallations).mockResolvedValue({
       items: [{ id: "i1", repository_selection: "all" }],
     });

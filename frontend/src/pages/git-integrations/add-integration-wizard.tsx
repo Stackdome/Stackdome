@@ -5,12 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
-import { createGitIntegration, type GitIntegration } from "@/api/git-integrations";
+import { createGitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 import { cn } from "@/lib/utils";
-import type { ProviderId } from "./lib/derive-row";
+import { GIT_INTEGRATION_TYPE_CREDENTIALS, type ProviderId } from "./lib/derive-row";
 import { ProviderLogo } from "./components/provider-logo";
 
 type Phase = "provider" | "github" | "credentials" | "connecting" | "done";
@@ -30,8 +30,6 @@ const PROVIDERS: Provider[] = [
   { id: "gitea", label: "Gitea", hostPrefill: "", hostPlaceholder: "gitea.example.com", hint: "Use an access token with read:repository scope." },
   { id: "other", label: "Other", hostPrefill: "", hostPlaceholder: "git.example.com", hint: "Any git host reachable over HTTPS with token or basic auth." },
 ];
-
-const GIT_INTEGRATION_TYPE_CREDENTIALS: GitIntegration["type"] = "git_credentials";
 
 const STEPS: { phase: Phase; label: string }[] = [
   { phase: "provider", label: "Provider" },
