@@ -3,7 +3,6 @@ import { Link } from "react-router-dom"
 import { StackdomeMark } from "@/components/branded"
 
 import { NavStacks } from "@/components/nav-stacks"
-import { NavPreviews } from "@/components/nav-previews"
 import { NavClusters } from "@/components/nav-clusters"
 import { NavSecrets } from "@/components/nav-secrets"
 import { NavObjectStores } from "@/components/nav-object-stores"
@@ -63,7 +62,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavStacks />
-            <NavPreviews />
             <NavSecrets />
             <NavObjectStores />
             <NavAddons />

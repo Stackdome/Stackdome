@@ -36,6 +36,8 @@ export interface CanvasEditorShellProps {
   statusState?: string | null;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
   subtitle: string;
+  /** Optional contextual banner under the header (e.g. preview-environment notice). */
+  notice?: ReactNode;
   /** At least one resource exists on the canvas — gates the draft deploy pill. */
   hasResources: boolean;
   /** Draft (unsaved) stack — Deploy creates the stack and starts the first release in one go. */
@@ -100,6 +102,7 @@ export function CanvasEditorShell({
   stackId,
   statusState,
   subtitle,
+  notice,
   hasResources,
   isDraft,
   nameEditable,
@@ -291,6 +294,7 @@ export function CanvasEditorShell({
             )}
             <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
             <PublicEndpointRow endpoints={publicEndpoints ?? []} statusState={statusState} />
+            {notice}
           </div>
 
           {/* Tab + action rail */}

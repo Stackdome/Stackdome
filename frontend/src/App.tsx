@@ -12,7 +12,6 @@ import AddonsPage from "@/pages/addons"
 import PostgresFormPage from "@/pages/addons/components/postgres-create-page"
 import PostgresDetailPage from "@/pages/addons/postgres-detail-page"
 import ObjectStoresPage from "@/pages/object-stores"
-import PreviewsPage from "@/pages/previews"
 import PreviewConfigDetailPage from "@/pages/previews/config-detail"
 import GitIntegrationsPage from "@/pages/git-integrations"
 import NotFoundPage from "@/pages/not-found"
@@ -62,7 +61,7 @@ const router = createBrowserRouter(
           <Route path="/clusters/:id" element={<ClusterDetailPage />} />
           <Route path="/domains" element={<DomainsPage />} />
         </Route>
-        <Route path="/previews" element={<PreviewsPage />} />
+        <Route path="/previews" element={<Navigate to="/stacks?view=previews" replace />} />
         <Route path="/previews/:configId" element={<PreviewConfigDetailPage />} />
         <Route path="/git-integrations" element={<GitIntegrationsPage />} />
         {/* Workspace collaboration (Users + Teams) shelved — redirect home. */}

@@ -16,6 +16,20 @@ export async function listPreviewConfigs(orgId: string, teamName: string, page =
   return res.data as StackPreviewConfigList;
 }
 
+/** Fetches every page so callers see the complete config set, not the first 20. */
+export async function listAllPreviewConfigs(orgId: string, teamName: string): Promise<StackPreviewConfig[]> {
+  const pageSize = 100;
+  const items: StackPreviewConfig[] = [];
+  for (let page = 1; ; page++) {
+    const res = await listPreviewConfigs(orgId, teamName, page, pageSize);
+    const batch = res.items ?? [];
+    items.push(...batch);
+    const total = res.total ?? items.length;
+    if (batch.length === 0 || items.length >= total) break;
+  }
+  return items;
+}
+
 export async function getPreviewConfig(orgId: string, teamName: string, id: string): Promise<StackPreviewConfig> {
   const res = await api.get(`${base(orgId, teamName)}/${id}`);
   return res.data as StackPreviewConfig;
