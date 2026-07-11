@@ -99,6 +99,28 @@ describe("AddIntegrationWizard", () => {
     expect(screen.getByLabelText(/host/i)).toHaveValue("gitlab.com");
   });
 
+  it("fires onCreated when GitHub connect completes after the wizard was closed", () => {
+    const onCreated = vi.fn();
+    const onOpenChange = vi.fn();
+    const { rerender } = render(
+      <AddIntegrationWizard open onOpenChange={onOpenChange} hasGithubApp={false} onCreated={onCreated} />,
+    );
+
+    // User closes the wizard while the GitHub popup is still pending.
+    rerender(
+      <AddIntegrationWizard open={false} onOpenChange={onOpenChange} hasGithubApp={false} onCreated={onCreated} />,
+    );
+    expect(onCreated).not.toHaveBeenCalled();
+
+    // The popup finishes in the background after the dialog is already closed.
+    mockConnectState = "connected";
+    rerender(
+      <AddIntegrationWizard open={false} onOpenChange={onOpenChange} hasGithubApp={false} onCreated={onCreated} />,
+    );
+
+    expect(onCreated).toHaveBeenCalledOnce();
+  });
+
   it("back from GitHub-credentials returns to method choice", () => {
     renderWizard();
     fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));

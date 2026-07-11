@@ -96,9 +96,11 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
     });
   };
 
-  // Surface GitHub connect completion to the parent, then close.
+  // Surface GitHub connect completion to the parent, then close — even if the
+  // wizard was closed while the popup finished in the background, so the
+  // parent's list refresh isn't dropped.
   useEffect(() => {
-    if (github.state === "connected" && open) {
+    if (github.state === "connected") {
       onCreated();
       close();
     }
