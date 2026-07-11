@@ -1,4 +1,4 @@
-import { Box, GitBranch, Layers } from "lucide-react";
+import { Box, GitBranch, GitCommitHorizontal, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Card } from "@/components/ui/card";
@@ -72,17 +72,37 @@ export function EndpointPills({ urls }: { urls: EndpointUrl[] }) {
   );
 }
 
-/** Footer meta row: mono, middot-separated, absent items dropped. */
-export function CardFooterMeta({ items }: { items: Array<string | null | undefined | false> }) {
+interface CardFooterMetaProps {
+  /** Short commit SHA, rendered with a commit glyph at the left edge. */
+  commit?: string | null;
+  /** Middot-separated stats (absent items dropped). */
+  items?: Array<string | null | undefined | false>;
+  /** Relative age, uppercase at the right edge. */
+  age?: string | null;
+}
+
+/** Footer meta row: commit · stats · age spread across the card width. */
+export function CardFooterMeta({ commit, items = [], age }: CardFooterMetaProps) {
   const present = items.filter((i): i is string => Boolean(i));
   return (
-    <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 font-mono text-[11.5px] text-fg-muted whitespace-nowrap">
-      {present.map((item, i) => (
-        <span key={item} className="inline-flex items-center gap-2 tabular-nums">
-          {i > 0 && <span aria-hidden>·</span>}
-          {item}
+    <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-4 font-mono text-[11.5px] text-fg-muted whitespace-nowrap">
+      {commit && (
+        <span className="inline-flex items-center gap-1.5 tabular-nums">
+          <GitCommitHorizontal className="h-3.5 w-3.5 flex-none" strokeWidth={1.6} />
+          {commit}
         </span>
-      ))}
+      )}
+      {present.length > 0 && (
+        <span className="inline-flex items-center gap-2 tabular-nums">
+          {present.map((item, i) => (
+            <span key={item} className="inline-flex items-center gap-2">
+              {i > 0 && <span aria-hidden>·</span>}
+              {item}
+            </span>
+          ))}
+        </span>
+      )}
+      {age && <span className="uppercase tracking-[0.5px] text-right">{age}</span>}
     </div>
   );
 }
@@ -148,9 +168,7 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
         {/* Bottom-anchored group: pills sit just above the footer in every card variant. */}
         <div className="mt-auto flex flex-col gap-3.5">
           <EndpointPills urls={urls} />
-          <CardFooterMeta
-            items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
-          />
+          <CardFooterMeta items={[`${resourceCount} res`, `${volumeCount} vol`]} age={age} />
         </div>
       </div>
     </Card>

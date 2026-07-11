@@ -88,7 +88,7 @@ export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
         {/* Bottom-anchored group: pills sit just above the footer in every card variant. */}
         <div className="mt-auto flex flex-col gap-3.5">
           <EndpointPills urls={urls} />
-          <CardFooterMeta items={[env.commit ? env.commit.slice(0, 7) : null, age]} />
+          <CardFooterMeta commit={env.commit ? env.commit.slice(0, 7) : null} age={age} />
         </div>
       </div>
     </Card>
