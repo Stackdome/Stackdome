@@ -221,12 +221,17 @@ export default function StacksPage() {
       return true;
     });
     out = [...out].sort((a, b) => {
-      const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
-      const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
+      if (sortKey === "name") return (a.name || "").localeCompare(b.name || "");
+      const aTime = sortKey === "created"
+        ? new Date(a.created_at || 0).getTime()
+        : new Date(a.updated_at || a.created_at || 0).getTime();
+      const bTime = sortKey === "created"
+        ? new Date(b.created_at || 0).getTime()
+        : new Date(b.updated_at || b.created_at || 0).getTime();
       return bTime - aTime;
     });
     return out;
-  }, [envs, repoFilter, statusFilter, query, configNameById]);
+  }, [envs, repoFilter, statusFilter, query, sortKey, configNameById]);
 
   if (isLoading) {
     return (
@@ -337,7 +342,7 @@ export default function StacksPage() {
                       type="button"
                       className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
                     >
-                      Repo: <span className="text-foreground">{repoLabel}</span>
+                      Repo: <span className="normal-case tracking-normal text-foreground">{repoLabel}</span>
                       <ChevronDown className="h-3 w-3" />
                     </button>
                   </DropdownMenuTrigger>
@@ -360,7 +365,7 @@ export default function StacksPage() {
                         key={c.id}
                         onClick={() => setRepoFilter(c.id ?? null)}
                         className={cn(
-                          "font-mono text-[11px] uppercase tracking-[1.5px]",
+                          "font-mono text-[11px]",
                           repoFilter === c.id && "text-brand"
                         )}
                       >
@@ -370,37 +375,35 @@ export default function StacksPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}
-              {view === "deployed" && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                    >
-                      Sort: <span className="text-foreground">{sortLabel}</span>
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="min-w-[200px]"
-                    onCloseAutoFocus={(e) => e.preventDefault()}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
                   >
-                    {SORT_OPTIONS.map((o) => (
-                      <DropdownMenuItem
-                        key={o.key}
-                        onClick={() => setSortKey(o.key)}
-                        className={cn(
-                          "font-mono text-[11px] uppercase tracking-[1.5px]",
-                          sortKey === o.key && "text-brand"
-                        )}
-                      >
-                        {o.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+                      Sort: <span className="text-foreground">{sortLabel}</span>
+                    <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[200px]"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <DropdownMenuItem
+                      key={o.key}
+                      onClick={() => setSortKey(o.key)}
+                      className={cn(
+                        "font-mono text-[11px] uppercase tracking-[1.5px]",
+                        sortKey === o.key && "text-brand"
+                      )}
+                    >
+                      {o.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </>
           )}
         </div>

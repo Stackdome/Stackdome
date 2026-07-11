@@ -47,8 +47,8 @@ export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
         onKeyDown={
           clickable
             ? (e) => {
-                if (e.key === "Enter") navigate(`/stacks/${env.stack_id}`);
-              }
+              if (e.key === "Enter") navigate(`/stacks/${env.stack_id}`);
+            }
             : undefined
         }
         className={cn(
