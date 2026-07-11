@@ -1,118 +1,92 @@
-import { ExternalLink, GitPullRequest } from "lucide-react";
+import { GitPullRequest } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
+import {
+  StatusRail,
+  StatusWord,
+  EndpointPills,
+  CardFooterMeta,
+  relativeAge,
+  type RailTone,
+} from "./stack-card";
 import type { PreviewStack, PreviewPhase } from "@/api/preview-envs";
 
 interface PreviewEnvCardProps {
   env: PreviewStack;
-  /** Repository configuration name shown as the card subtitle. */
+  /** Repository configuration name shown in the identity block. */
   configName?: string;
 }
 
-function phaseDotClass(phase: PreviewPhase | undefined): string {
-  switch (phase) {
-    case "Ready":
-      return "bg-success";
-    case "Failed":
-      return "bg-danger";
-    default:
-      // Provisioning / Deploying / Deleting / not yet reported
-      return "bg-warn";
-  }
+function previewTone(phase: PreviewPhase | undefined): { tone: RailTone; word: string } {
+  // Amber rail is the preview signature — even when ready.
+  if (phase === "Ready") return { tone: "brand", word: "ready" };
+  if (phase === "Failed") return { tone: "danger", word: "failed" };
+  // Provisioning / Deploying / Deleting / not yet reported
+  return { tone: "deploying", word: (phase ?? "deploying").toLowerCase() };
 }
 
 /**
- * Read-only preview environment card for the stacks dashboard. The card
+ * Read-only preview environment card, "Status Strip" design. The card
  * navigates to the underlying stack; env management (sync/delete) lives on
- * the stack show page. Not wrapped in a Link because the URL outputs inside
- * are real anchors — nested <a> is invalid HTML.
+ * the stack show page. Not wrapped in a Link because the endpoint pills
+ * inside are real anchors — nested <a> is invalid HTML.
  */
 export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
   const navigate = useNavigate();
-  const phase = env.status?.phase;
+  const { tone, word } = previewTone(env.status?.phase);
   const urls = env.status?.outputs?.urls ?? [];
-  const updatedAt = env.updated_at || env.created_at;
+  const age = relativeAge(env.updated_at || env.created_at);
   const clickable = Boolean(env.stack_id);
 
   return (
-    <TooltipProvider>
-      <Card
-        role={clickable ? "link" : undefined}
-        tabIndex={clickable ? 0 : undefined}
-        aria-label={`PR #${env.pr_number} preview environment`}
-        onClick={clickable ? () => navigate(`/stacks/${env.stack_id}`) : undefined}
-        onKeyDown={
-          clickable
-            ? (e) => {
-              if (e.key === "Enter") navigate(`/stacks/${env.stack_id}`);
-            }
-            : undefined
-        }
-        className={cn(
-          "group flex flex-col w-full h-full min-h-[180px] p-5 gap-5 transition-colors duration-150",
-          clickable && "cursor-pointer hover:border-brand-border hover:bg-muted/20",
-        )}
-      >
-        {/* Header: icon + PR title + phase dot */}
-        <div className="flex items-start gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg text-brand">
-            <GitPullRequest className="h-[18px] w-[18px]" />
+    <Card
+      role={clickable ? "link" : undefined}
+      tabIndex={clickable ? 0 : undefined}
+      aria-label={`PR #${env.pr_number} preview environment`}
+      onClick={clickable ? () => navigate(`/stacks/${env.stack_id}`) : undefined}
+      onKeyDown={
+        clickable
+          ? (e) => {
+            if (e.key === "Enter") navigate(`/stacks/${env.stack_id}`);
+          }
+          : undefined
+      }
+      className={cn(
+        "group flex h-full min-h-[180px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150",
+        clickable && "cursor-pointer hover:border-brand-border hover:bg-muted/20",
+      )}
+    >
+      <StatusRail tone={tone} />
+      <div className="flex flex-1 flex-col gap-[18px] p-5">
+        <div className="flex items-center gap-[11px]">
+          <GitPullRequest className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
+          <span className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand">
+            PR #{env.pr_number}
           </span>
-          <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <span className="block font-medium text-base leading-tight group-hover:text-brand transition-colors truncate">
-                PR #{env.pr_number}
-              </span>
-              <span className="block truncate font-mono text-[11px] text-muted-foreground mt-0.5">
-                {configName ?? env.name}{env.branch ? ` · ${env.branch}` : ""}
-              </span>
-            </div>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span
-                  className={cn("mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full", phaseDotClass(phase))}
-                  aria-label={phase ?? "Unknown"}
-                />
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <span className="font-mono text-[11px] uppercase tracking-[1.5px]">{phase ?? "Unknown"}</span>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <StatusWord tone={tone}>{word}</StatusWord>
         </div>
 
-        {/* URLs */}
-        {urls.length > 0 && (
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {urls.map((u) => (
-              <a
-                key={u.url}
-                href={u.url}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-              >
-                <ExternalLink className="h-3 w-3" />
-                {u.resource}
-              </a>
-            ))}
-          </div>
-        )}
-
-        {/* Footer: commit on left, relative time on right */}
-        <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border/60 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
-          <span className="tabular-nums">{env.commit ? env.commit.slice(0, 7) : "—"}</span>
-          <span className="uppercase tracking-[0.5px] text-right">
-            {updatedAt
-              ? formatDistanceToNow(new Date(updatedAt), { addSuffix: true }).replace(/^about\s/, "")
-              : "—"}
-          </span>
+        {/* Identity: repo / branch rows */}
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-[9px]">
+          {(configName ?? env.name) && (
+            <>
+              <span className="font-mono text-[9.5px] uppercase tracking-[1.2px] text-fg-muted">repo</span>
+              <span className="truncate font-mono text-xs text-fg-2">{configName ?? env.name}</span>
+            </>
+          )}
+          {env.branch && (
+            <>
+              <span className="font-mono text-[9.5px] uppercase tracking-[1.2px] text-fg-muted">branch</span>
+              <span className="truncate font-mono text-xs text-brand">{env.branch}</span>
+            </>
+          )}
         </div>
-      </Card>
-    </TooltipProvider>
+
+        <EndpointPills urls={urls} />
+
+        <CardFooterMeta items={[env.commit ? env.commit.slice(0, 7) : null, age]} />
+      </div>
+    </Card>
   );
 }

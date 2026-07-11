@@ -1,12 +1,11 @@
-import { Layers, PlusCircle, Loader2, AlertTriangle, Search, Box, GitBranch, GitPullRequest, ChevronDown, ArrowDown } from "lucide-react";
+import { Layers, PlusCircle, Loader2, AlertTriangle, Search, GitPullRequest, ChevronDown, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getStacksByOrg } from "@/api/stacks";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -14,17 +13,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { PageHeader, EmptyState, type StatusVariant } from "@/components/branded";
 import { statusVariant } from "@/components/branded/status-variant";
-import { formatDistanceToNow } from "date-fns";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import { EnableRepoWizard } from "@/pages/previews/components/enable-repo-wizard/enable-repo-wizard";
 import { PreviewEnvCard } from "./preview-env-card";
+import { DeployStackCard } from "./stack-card";
 import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
 import { listAllPreviewConfigs, type StackPreviewConfig } from "@/api/preview-configs";
 import type { PreviewPhase } from "@/api/preview-envs";
-import type { Stack } from "@/pages/stacks/types";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
 import { cn } from "@/lib/utils";
@@ -50,15 +47,6 @@ const VIEW_MODES: { key: ViewMode; label: string }[] = [
   { key: "deployed", label: "Deployed" },
   { key: "previews", label: "Previews" },
 ];
-
-function inferStackIcon(stack: Stack) {
-  // Pick an icon based on the first resource's source type
-  const first = stack.spec?.stack_resources?.[0];
-  if (!first) return Layers;
-  if (first.source?.git) return GitBranch;
-  if (first.source?.image) return Box;
-  return Layers;
-}
 
 function bucketStatus(state?: string | null): StatusFilter {
   const v = statusVariant("stack", state);
@@ -287,117 +275,76 @@ export default function StacksPage() {
   );
 
   return (
-    <TooltipProvider>
-      <div className="flex flex-1 flex-col p-8 space-y-6 h-full">
-        <PageHeader
-          className="border-b-0 pb-0"
-          eyebrow="Platform"
-          title="Stacks"
-          subtitle={
-            view === "deployed"
-              ? "Provision and manage your application stacks"
-              : "Preview environments deployed from pull requests"
-          }
-          actions={
-            view === "deployed" && canWriteAnyTeam ? (
-              <Button onClick={() => setWizardOpen(true)}>
-                <PlusCircle className="h-4 w-4" />
+    <div className="flex flex-1 flex-col p-8 space-y-6 h-full">
+      <PageHeader
+        className="border-b-0 pb-0"
+        eyebrow="Platform"
+        title="Stacks"
+        subtitle={
+          view === "deployed"
+            ? "Provision and manage your application stacks"
+            : "Preview environments deployed from pull requests"
+        }
+        actions={
+          view === "deployed" && canWriteAnyTeam ? (
+            <Button onClick={() => setWizardOpen(true)}>
+              <PlusCircle className="h-4 w-4" />
                 New Stack
-              </Button>
-            ) : undefined
-          }
-        />
+            </Button>
+          ) : undefined
+        }
+      />
 
-        {viewTabs}
+      {viewTabs}
 
-        {/* Filter / sort toolbar */}
-        <div className="flex flex-wrap items-center gap-3">
-          {showToolbar && (
-            <>
-              <div className="relative w-[300px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={view === "deployed" ? "Filter stacks…" : "Filter previews…"}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  className="pl-9 h-9"
-                />
-              </div>
-              <div className="flex items-stretch overflow-hidden rounded-md border border-border">
-                {STATUS_FILTERS.map((f, i) => {
-                  const active = statusFilter === f.key;
-                  const count = counts[f.key];
-                  return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => setStatusFilter(f.key)}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
-                        i > 0 && "border-l border-border",
-                        active
-                          ? "bg-brand-bg text-brand"
-                          : "text-muted-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      <span>{f.label}</span>
-                      <span className="tabular-nums opacity-80">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-              <div className="flex-1" />
-              {view === "previews" && configs.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
-                    >
-                      Repo:{" "}
-                      <span className={cn("text-foreground", repoFilter && "normal-case tracking-normal")}>
-                        {repoLabel}
-                      </span>
-                      <ChevronDown className="h-3 w-3" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="min-w-[200px]"
-                    onCloseAutoFocus={(e) => e.preventDefault()}
+      {/* Filter / sort toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        {showToolbar && (
+          <>
+            <div className="relative w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder={view === "deployed" ? "Filter stacks…" : "Filter previews…"}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <div className="flex items-stretch overflow-hidden rounded-md border border-border">
+              {STATUS_FILTERS.map((f, i) => {
+                const active = statusFilter === f.key;
+                const count = counts[f.key];
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setStatusFilter(f.key)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
+                      i > 0 && "border-l border-border",
+                      active
+                        ? "bg-brand-bg text-brand"
+                        : "text-muted-foreground hover:bg-muted/50"
+                    )}
                   >
-                    <DropdownMenuItem
-                      onClick={() => setRepoFilter(null)}
-                      className={cn(
-                        "font-mono text-[11px] uppercase tracking-[1.5px]",
-                        !repoFilter && "text-brand"
-                      )}
-                    >
-                      All repos
-                    </DropdownMenuItem>
-                    {configs.map((c) => (
-                      <DropdownMenuItem
-                        key={c.id}
-                        onClick={() => setRepoFilter(c.id ?? null)}
-                        className={cn(
-                          "font-mono text-[11px]",
-                          repoFilter === c.id && "text-brand"
-                        )}
-                      >
-                        {c.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
+                    <span>{f.label}</span>
+                    <span className="tabular-nums opacity-80">{count}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex-1" />
+            {view === "previews" && configs.length > 0 && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
                   >
-                    <ArrowDown className="h-3 w-3" />
-                    {sortLabel}
+                      Repo:{" "}
+                    <span className={cn("text-foreground", repoFilter && "normal-case tracking-normal")}>
+                      {repoLabel}
+                    </span>
                     <ChevronDown className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
@@ -406,166 +353,141 @@ export default function StacksPage() {
                   className="min-w-[200px]"
                   onCloseAutoFocus={(e) => e.preventDefault()}
                 >
-                  {SORT_OPTIONS.map((o) => (
+                  <DropdownMenuItem
+                    onClick={() => setRepoFilter(null)}
+                    className={cn(
+                      "font-mono text-[11px] uppercase tracking-[1.5px]",
+                      !repoFilter && "text-brand"
+                    )}
+                  >
+                      All repos
+                  </DropdownMenuItem>
+                  {configs.map((c) => (
                     <DropdownMenuItem
-                      key={o.key}
-                      onClick={() => setSortKey(o.key)}
+                      key={c.id}
+                      onClick={() => setRepoFilter(c.id ?? null)}
                       className={cn(
-                        "font-mono text-[11px] uppercase tracking-[1.5px]",
-                        sortKey === o.key && "text-brand"
+                        "font-mono text-[11px]",
+                        repoFilter === c.id && "text-brand"
                       )}
                     >
-                      {o.label}
+                      {c.name}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
-            </>
-          )}
-        </div>
-
-        {view === "deployed" ? (
-          deployedStacks.length === 0 ? (
-            <EmptyState
-              icon={<Layers className="h-8 w-8" />}
-              title="No stacks deployed yet"
-              description="Deploy your first stack to get started."
-              action={
-                canWriteAnyTeam ? (
-                  <Button onClick={() => setWizardOpen(true)}>
-                    <PlusCircle className="h-4 w-4" />
-                    Create New Stack
-                  </Button>
-                ) : undefined
-              }
-            />
-          ) : filtered.length === 0 ? (
-            <EmptyState
-              icon={<Search className="h-8 w-8" />}
-              title="No stacks match"
-              description="Try a different search or status filter."
-            />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-              {filtered.map((stack) => {
-                const Icon = inferStackIcon(stack);
-                const variant = statusVariant("stack", stack.status?.state);
-                const resourceCount = stack.spec?.stack_resources?.length || 0;
-                const volumeCount = stack.spec?.volumes?.length || 0;
-                const updatedAt = stack.updated_at || stack.created_at;
-
-                return (
-                  <Link
-                    key={stack.id || stack.name}
-                    to={`/stacks/${stack.id}`}
-                    className="block group"
+            )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
+                >
+                  <ArrowDown className="h-3 w-3" />
+                  {sortLabel}
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="min-w-[200px]"
+                onCloseAutoFocus={(e) => e.preventDefault()}
+              >
+                {SORT_OPTIONS.map((o) => (
+                  <DropdownMenuItem
+                    key={o.key}
+                    onClick={() => setSortKey(o.key)}
+                    className={cn(
+                      "font-mono text-[11px] uppercase tracking-[1.5px]",
+                      sortKey === o.key && "text-brand"
+                    )}
                   >
-                    <Card className="flex flex-col w-full h-full min-h-[180px] hover:border-brand-border hover:bg-muted/20 transition-colors duration-150 p-5 gap-5">
-                      {/* Header: icon + name + namespace + status pill */}
-                      <div className="flex items-start gap-3">
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg text-brand">
-                          <Icon className="h-[18px] w-[18px]" />
-                        </span>
-                        <div className="flex-1 min-w-0 flex items-start justify-between gap-2">
-                          <span
-                            className="font-medium text-base leading-tight group-hover:text-brand transition-colors break-words line-clamp-2 [overflow-wrap:anywhere]"
-                            title={stack.name}
-                          >
-                            {stack.name}
-                          </span>
-                          {stack.status?.state && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span
-                                  className={cn(
-                                    "mt-1.5 inline-block h-2 w-2 shrink-0 rounded-full",
-                                    variant === "ready" && "bg-success",
-                                    variant === "pending" && "bg-warn",
-                                    variant === "error" && "bg-danger",
-                                    variant === "info" && "bg-info",
-                                    variant === "neutral" && "bg-fg-muted",
-                                  )}
-                                  aria-label={stack.status.state}
-                                />
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <span className="font-mono text-[11px] uppercase tracking-[1.5px]">
-                                  {stack.status.state}
-                                </span>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      </div>
+                    {o.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
+        )}
+      </div>
 
-                      {/* Footer: counts on left, relative time on right */}
-                      <div className="flex items-end justify-between gap-2 mt-auto pt-4 border-t border-border/60 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
-                        <div className="flex flex-col gap-1 tabular-nums">
-                          <span>{resourceCount} {resourceCount === 1 ? "resource" : "resources"}</span>
-                          <span>{volumeCount} {volumeCount === 1 ? "volume" : "volumes"}</span>
-                        </div>
-                        <span className="uppercase tracking-[0.5px] text-right">
-                          {updatedAt
-                            ? formatDistanceToNow(new Date(updatedAt), { addSuffix: true }).replace(/^about\s/, "")
-                            : "—"}
-                        </span>
-                      </div>
-                    </Card>
-                  </Link>
-                );
-              })}
-            </div>
-          )
-        ) : envsLoading ? (
-          <div className="flex flex-1 items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-        ) : configs.length === 0 ? (
+      {view === "deployed" ? (
+        deployedStacks.length === 0 ? (
           <EmptyState
-            icon={<GitPullRequest className="h-8 w-8" />}
-            title="Preview every pull request"
-            description="Connect GitHub and enable a repository — each pull request can get its own temporary environment with a shareable URL."
+            icon={<Layers className="h-8 w-8" />}
+            title="No stacks deployed yet"
+            description="Deploy your first stack to get started."
             action={
               canWriteAnyTeam ? (
-                <Button onClick={() => setEnableRepoOpen(true)}>
+                <Button onClick={() => setWizardOpen(true)}>
                   <PlusCircle className="h-4 w-4" />
-                  Enable repository
+                    Create New Stack
                 </Button>
               ) : undefined
             }
           />
-        ) : filteredEnvs.length === 0 ? (
+        ) : filtered.length === 0 ? (
           <EmptyState
-            icon={<GitPullRequest className="h-8 w-8" />}
-            title="No preview environments"
-            description={
-              envs.length === 0
-                ? "Open a pull request, or create one from a repository configuration."
-                : "Try a different search, status, or repo filter."
-            }
+            icon={<Search className="h-8 w-8" />}
+            title="No stacks match"
+            description="Try a different search or status filter."
           />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-            {filteredEnvs.map((env) => (
-              <PreviewEnvCard
-                key={env.id}
-                env={env}
-                configName={env.config_id ? configNameById.get(env.config_id) : undefined}
-              />
+            {filtered.map((stack) => (
+              <DeployStackCard key={stack.id || stack.name} stack={stack} />
             ))}
           </div>
-        )}
-
-        <StackCreateWizard open={wizardOpen} onOpenChange={setWizardOpen} />
-        <EnableRepoWizard
-          open={enableRepoOpen}
-          onOpenChange={setEnableRepoOpen}
-          onCreated={() => {
-            void refreshConfigs();
-            void refreshEnvs();
-          }}
+        )
+      ) : envsLoading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      ) : configs.length === 0 ? (
+        <EmptyState
+          icon={<GitPullRequest className="h-8 w-8" />}
+          title="Preview every pull request"
+          description="Connect GitHub and enable a repository — each pull request can get its own temporary environment with a shareable URL."
+          action={
+            canWriteAnyTeam ? (
+              <Button onClick={() => setEnableRepoOpen(true)}>
+                <PlusCircle className="h-4 w-4" />
+                  Enable repository
+              </Button>
+            ) : undefined
+          }
         />
-      </div>
-    </TooltipProvider>
+      ) : filteredEnvs.length === 0 ? (
+        <EmptyState
+          icon={<GitPullRequest className="h-8 w-8" />}
+          title="No preview environments"
+          description={
+            envs.length === 0
+              ? "Open a pull request, or create one from a repository configuration."
+              : "Try a different search, status, or repo filter."
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+          {filteredEnvs.map((env) => (
+            <PreviewEnvCard
+              key={env.id}
+              env={env}
+              configName={env.config_id ? configNameById.get(env.config_id) : undefined}
+            />
+          ))}
+        </div>
+      )}
+
+      <StackCreateWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <EnableRepoWizard
+        open={enableRepoOpen}
+        onOpenChange={setEnableRepoOpen}
+        onCreated={() => {
+          void refreshConfigs();
+          void refreshEnvs();
+        }}
+      />
+    </div>
   );
 }

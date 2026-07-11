@@ -303,6 +303,17 @@ body {
   @media (prefers-reduced-motion: reduce) {
     .animate-breathe { animation: none; }
   }
+
+  @keyframes rail-sweep {
+    0% { transform: translateX(-12%); }
+    100% { transform: translateX(280%); }
+  }
+  .animate-rail-sweep {
+    animation: rail-sweep 1.5s cubic-bezier(0.2, 0.6, 0.2, 1) infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rail-sweep { animation: none; }
+  }
 }
 
 @layer base {

@@ -105,7 +105,8 @@ describe("StacksPage views", () => {
     renderPage("/stacks?view=previews");
     await waitFor(() => expect(screen.getByText("PR #1")).toBeTruthy());
     expect(screen.getByText("PR #2")).toBeTruthy();
-    expect(screen.getByText(/demo-repo · feat\/x/)).toBeTruthy();
+    expect(screen.getByText("demo-repo")).toBeTruthy();
+    expect(screen.getByText("feat/x")).toBeTruthy();
     expect(screen.queryByRole("button", { name: /new stack/i })).toBeNull();
     expect(screen.queryByRole("button", { name: /enable repository/i })).toBeNull();
   });
