@@ -29,12 +29,20 @@ function statusFor(integration: GitIntegration): { key: RowViewModel["statusKey"
 }
 
 function bannerFor(integration: GitIntegration, statusKey: RowViewModel["statusKey"]): RowViewModel["banner"] {
-  if (statusKey !== "needs_setup") return undefined;
-  return {
-    message: "The app is created but not installed on any account yet, so Stackdome can't see your repositories.",
-    ctaLabel: "Finish install →",
-    ctaHref: integration.install_url,
-  };
+  if (statusKey === "needs_setup") {
+    return {
+      message: "The app is created but not installed on any account yet, so Stackdome can't see your repositories.",
+      ctaLabel: "Finish install →",
+      ctaHref: integration.install_url,
+    };
+  }
+  if (statusKey === "action_needed") {
+    return {
+      message: "Credentials for this integration need attention before Stackdome can clone repositories.",
+      ctaLabel: "Update credentials →",
+    };
+  }
+  return undefined;
 }
 
 function accessLineFor(integration: GitIntegration, installations?: GitInstallation[]): string | undefined {
