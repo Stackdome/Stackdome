@@ -121,7 +121,7 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
         <StatusRail tone={tone} />
         <div className="flex flex-1 flex-col gap-[18px] p-5">
           <div className="flex items-center gap-[11px]">
-            <Icon className="h-[18px] w-[18px] flex-none text-fg-2" strokeWidth={1.6} />
+            <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
             <span
               className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand"
               title={stack.name}
