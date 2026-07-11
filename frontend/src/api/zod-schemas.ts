@@ -434,78 +434,6 @@ const Port = z
     subdomain_prefix: z.string().optional(),
   })
   .passthrough();
-const Ingress = z
-  .object({ url: z.string(), target_port: z.number().int() })
-  .partial()
-  .passthrough();
-const Condition = z
-  .object({
-    type: z.string(),
-    status: z.string(),
-    observed_generation: z.number().int(),
-    last_transition_time: z.string().datetime({ offset: true }),
-    reason: z.string(),
-    message: z.string(),
-  })
-  .partial();
-const ContainerFailureDetail = z
-  .object({
-    failure_type: z.enum([
-      "crash_loop",
-      "out_of_memory",
-      "image_pull_failed",
-      "create_container_error",
-      "exit_error",
-    ]),
-    reason: z.string(),
-    message: z.string(),
-    restart_count: z.number().int(),
-    exit_code: z.number().int(),
-  })
-  .partial()
-  .passthrough();
-const BuildFailureDetail = z
-  .object({
-    failure_type: z.enum([
-      "crash_loop",
-      "out_of_memory",
-      "image_pull_failed",
-      "create_container_error",
-      "exit_error",
-    ]),
-    reason: z.string(),
-    message: z.string(),
-    restart_count: z.number().int(),
-    exit_code: z.number().int(),
-  })
-  .partial()
-  .passthrough();
-const StackResourceFailure = z
-  .object({
-    type: z.enum(["runtime_crash", "build_failure"]),
-    container: ContainerFailureDetail,
-    init_container: ContainerFailureDetail,
-    build: BuildFailureDetail,
-  })
-  .partial()
-  .passthrough();
-const StackResourceStatus = z
-  .object({
-    public_ingress: z.array(Ingress),
-    internal_service_name: z.string(),
-    last_restart_request_processed_at: z.string().datetime({ offset: true }),
-    state: z.string(),
-    observed_revision: z.string(),
-    conditions: z.array(Condition),
-    last_failure: StackResourceFailure,
-    replicas: z.number().int(),
-    available_replicas: z.number().int(),
-    updated_replicas: z.number().int(),
-    last_run_time: z.string().datetime({ offset: true }),
-    last_run_succeeded: z.boolean(),
-  })
-  .partial()
-  .passthrough();
 const StackResource = z
   .object({
     id: z.string().optional(),
@@ -528,7 +456,6 @@ const StackResource = z
       .default("Service"),
     schedule: z.string().optional(),
     replicas: z.number().int().gte(0).optional(),
-    status: StackResourceStatus.optional(),
   })
   .passthrough();
 const VolumeAccessMode = z.enum([
@@ -567,6 +494,16 @@ const VolumeSpec = z.object({
   access_mode: VolumeAccessMode,
   source: VolumeSource.optional(),
 });
+const Condition = z
+  .object({
+    type: z.string(),
+    status: z.string(),
+    observed_generation: z.number().int(),
+    last_transition_time: z.string().datetime({ offset: true }),
+    reason: z.string(),
+    message: z.string(),
+  })
+  .partial();
 const BuildArtifactSyncInfo = z
   .object({
     resource_name: z.string(),
@@ -673,37 +610,25 @@ const StackSettings = z
   })
   .partial()
   .passthrough();
-const StackConvergenceRecord = z
+const StackLifecycle = z.enum(["active", "deleting"]);
+const StackReleaseState = z.enum([
+  "Pending",
+  "InProgress",
+  "Released",
+  "Failed",
+  "Superseded",
+  "Cancelled",
+]);
+const ReleaseHealth = z.enum(["ok", "progressing", "degraded", "failed"]);
+const ReleaseSummary = z
   .object({
-    revision: z.string(),
-    release_id: z.string(),
-    at: z.string().datetime({ offset: true }),
-  })
-  .partial()
-  .passthrough();
-const StackResourceSummary = z
-  .object({
-    name: z.string(),
-    phase: z.string(),
-    observed_revision: z.string(),
-    converged_revision: z.string(),
-    available_replicas: z.number().int(),
-    updated_replicas: z.number().int(),
-    replicas: z.number().int(),
-    missing: z.boolean(),
+    id: z.string(),
+    sequence: z.number().int(),
+    state: StackReleaseState,
+    health: ReleaseHealth,
     message: z.string(),
-  })
-  .partial()
-  .passthrough();
-const StackStatus = z
-  .object({
-    state: z.string(),
-    message: z.string(),
-    observed_revision: z.string(),
-    target_revision: z.string(),
-    last_converged: StackConvergenceRecord,
-    resources: z.array(StackResourceSummary),
-    conditions: z.array(Condition),
+    created_at: z.string().datetime({ offset: true }),
+    completed_at: z.string().datetime({ offset: true }),
   })
   .partial()
   .passthrough();
@@ -720,7 +645,9 @@ const Stack = z
     revision: z.string().optional(),
     spec: StackSpec,
     settings: StackSettings.optional(),
-    status: StackStatus.optional(),
+    lifecycle: StackLifecycle.optional(),
+    current_release: ReleaseSummary.optional(),
+    latest_release: ReleaseSummary.optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
     updated_at: z.string().datetime({ offset: true }).optional(),
   })
@@ -852,6 +779,22 @@ const BuildSourceContext = z
   })
   .partial()
   .passthrough();
+const BuildFailureDetail = z
+  .object({
+    failure_type: z.enum([
+      "crash_loop",
+      "out_of_memory",
+      "image_pull_failed",
+      "create_container_error",
+      "exit_error",
+    ]),
+    reason: z.string(),
+    message: z.string(),
+    restart_count: z.number().int(),
+    exit_code: z.number().int(),
+  })
+  .partial()
+  .passthrough();
 const ImageBuildStatus = z
   .object({
     state: z.string(),
@@ -916,14 +859,6 @@ const CreateReleaseRequest = z
   .object({ from_release_id: z.string() })
   .partial()
   .passthrough();
-const StackReleaseState = z.enum([
-  "Pending",
-  "InProgress",
-  "Released",
-  "Failed",
-  "Superseded",
-  "Cancelled",
-]);
 const ReleaseCauseKind = z.enum([
   "manual",
   "rollback",
@@ -1024,6 +959,63 @@ const ReleaseValidationError = z
   })
   .partial()
   .passthrough();
+const Ingress = z
+  .object({ url: z.string(), target_port: z.number().int() })
+  .partial()
+  .passthrough();
+const ContainerFailureDetail = z
+  .object({
+    failure_type: z.enum([
+      "crash_loop",
+      "out_of_memory",
+      "image_pull_failed",
+      "create_container_error",
+      "exit_error",
+    ]),
+    reason: z.string(),
+    message: z.string(),
+    restart_count: z.number().int(),
+    exit_code: z.number().int(),
+  })
+  .partial()
+  .passthrough();
+const StackResourceFailure = z
+  .object({
+    type: z.enum(["runtime_crash", "build_failure"]),
+    container: ContainerFailureDetail,
+    init_container: ContainerFailureDetail,
+    build: BuildFailureDetail,
+  })
+  .partial()
+  .passthrough();
+const StackResourceStatus = z
+  .object({
+    public_ingress: z.array(Ingress),
+    internal_service_name: z.string(),
+    last_restart_request_processed_at: z.string().datetime({ offset: true }),
+    state: z.string(),
+    message: z.string(),
+    observed_revision: z.string(),
+    conditions: z.array(Condition),
+    last_failure: StackResourceFailure,
+    replicas: z.number().int(),
+    available_replicas: z.number().int(),
+    updated_replicas: z.number().int(),
+    last_run_time: z.string().datetime({ offset: true }),
+    last_run_succeeded: z.boolean(),
+  })
+  .partial()
+  .passthrough();
+const ReleaseLiveStatus = z
+  .object({
+    health: ReleaseHealth,
+    resources: z.record(StackResourceStatus),
+    conditions: z.array(Condition),
+    target_revision: z.string(),
+    observed_revision: z.string(),
+  })
+  .partial()
+  .passthrough();
 const StackRelease = z
   .object({
     id: z.string(),
@@ -1043,6 +1035,7 @@ const StackRelease = z
     rendered_at: z.string().datetime({ offset: true }),
     completed_at: z.string().datetime({ offset: true }),
     validation_errors: z.array(ReleaseValidationError),
+    live_status: ReleaseLiveStatus,
   })
   .partial()
   .passthrough();
@@ -1719,12 +1712,6 @@ export const schemas = {
   VolumeMount,
   LifecycleConfig,
   Port,
-  Ingress,
-  Condition,
-  ContainerFailureDetail,
-  BuildFailureDetail,
-  StackResourceFailure,
-  StackResourceStatus,
   StackResource,
   VolumeAccessMode,
   GitRepoRevision,
@@ -1734,6 +1721,7 @@ export const schemas = {
   BuildArtifact,
   VolumeSource,
   VolumeSpec,
+  Condition,
   BuildArtifactSyncInfo,
   VolumeStatus,
   Volume,
@@ -1749,9 +1737,10 @@ export const schemas = {
   StackConnection,
   StackSpec,
   StackSettings,
-  StackConvergenceRecord,
-  StackResourceSummary,
-  StackStatus,
+  StackLifecycle,
+  StackReleaseState,
+  ReleaseHealth,
+  ReleaseSummary,
   Stack,
   StackList,
   ClusterImageRegistrySpec,
@@ -1775,6 +1764,7 @@ export const schemas = {
   StackResourceList,
   BuildSourceRevision,
   BuildSourceContext,
+  BuildFailureDetail,
   ImageBuildStatus,
   ImageBuild,
   ImageBuildList,
@@ -1783,7 +1773,6 @@ export const schemas = {
   StackTopology,
   StackConnectionList,
   CreateReleaseRequest,
-  StackReleaseState,
   ReleaseCauseKind,
   ReleaseCause,
   ResourcePins,
@@ -1791,6 +1780,11 @@ export const schemas = {
   ResourceOutcome,
   ReleaseOutcome,
   ReleaseValidationError,
+  Ingress,
+  ContainerFailureDetail,
+  StackResourceFailure,
+  StackResourceStatus,
+  ReleaseLiveStatus,
   StackRelease,
   StackReleaseList,
   StackReleaseSnapshot,

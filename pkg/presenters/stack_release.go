@@ -7,7 +7,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
+func PresentStackRelease(r *models.StackRelease, live *models.ReleaseLiveStatus) openapi.StackRelease {
 	state := openapi.StackReleaseState(r.State)
 	result := openapi.StackRelease{
 		Id:               &r.ID,
@@ -23,6 +23,7 @@ func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
 		UpdatedAt:        &r.UpdatedAt,
 		RenderedAt:       r.RenderedAt,
 		CompletedAt:      r.CompletedAt,
+		LiveStatus:       presentReleaseLiveStatus(live),
 	}
 
 	causeKind := openapi.ReleaseCauseKind(r.Cause.Kind)
@@ -44,6 +45,25 @@ func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
 	}
 
 	return result
+}
+
+func presentReleaseLiveStatus(live *models.ReleaseLiveStatus) *openapi.ReleaseLiveStatus {
+	if live == nil {
+		return nil
+	}
+	resources := make(map[string]openapi.StackResourceStatus, len(live.Resources))
+	for name, status := range live.Resources {
+		if presented := presentStackResourceStatus(status); presented != nil {
+			resources[name] = *presented
+		}
+	}
+	return &openapi.ReleaseLiveStatus{
+		Health:           ptr.To(openapi.ReleaseHealth(live.Health)),
+		Resources:        &resources,
+		Conditions:       presentConditions(live.Conditions),
+		TargetRevision:   &live.TargetRevision,
+		ObservedRevision: &live.ObservedRevision,
+	}
 }
 
 func presentReleaseValidationErrors(verrs models.ReleaseValidationErrors) []openapi.ReleaseValidationError {
@@ -96,8 +116,8 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 	return result
 }
 
-func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetail {
-	base := PresentStackRelease(r)
+func PresentStackReleaseDetail(r *models.StackRelease, live *models.ReleaseLiveStatus) openapi.StackReleaseDetail {
+	base := PresentStackRelease(r, live)
 	detail := openapi.StackReleaseDetail{
 		Id:               base.Id,
 		StackId:          base.StackId,
@@ -116,6 +136,7 @@ func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetai
 		UpdatedAt:        base.UpdatedAt,
 		RenderedAt:       base.RenderedAt,
 		CompletedAt:      base.CompletedAt,
+		LiveStatus:       base.LiveStatus,
 		Snapshot:         presentStackReleaseSnapshot(&r.Snapshot),
 	}
 	return detail
@@ -198,7 +219,7 @@ func PresentReleaseEventList(events []*models.ReleaseEvent, nextAfterSequence in
 func PresentStackReleaseList(result *stores.PaginatedResult[*models.StackRelease]) openapi.StackReleaseList {
 	items := make([]openapi.StackRelease, len(result.Items))
 	for i, r := range result.Items {
-		items[i] = PresentStackRelease(r)
+		items[i] = PresentStackRelease(r, nil)
 	}
 	return openapi.StackReleaseList{
 		Items:      items,

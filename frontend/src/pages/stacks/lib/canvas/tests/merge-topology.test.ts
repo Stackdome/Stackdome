@@ -117,3 +117,41 @@ describe("mergeTopology release-in-flight overlay", () => {
     expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
   });
 });
+
+describe("mergeTopology live-status overlay", () => {
+  const serverReady = () =>
+    ({
+      nodes: [{ ref: { type: "stack_resource", name: "web" }, label: "web", state: "Ready" }],
+      edges: [],
+    }) as unknown as StackTopology;
+
+  it("live state wins over the topology endpoint's node state", () => {
+    const live = new Map([["resource:web", "Failed"]]);
+    const merged = mergeTopology(localGraph(), serverReady(), false, live);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("error");
+  });
+
+  it("a live entry with an empty state suppresses the topology state (map has priority)", () => {
+    const live = new Map<string, string | undefined>([["resource:web", undefined]]);
+    const merged = mergeTopology(localGraph(), serverReady(), false, live);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
+  });
+
+  it("a resource node absent from a provided live map renders neutral, not the stale topology state", () => {
+    const live = new Map([["resource:api", "Failed"]]);
+    const merged = mergeTopology(localGraph(), serverReady(), false, live);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("neutral");
+  });
+
+  it("release-in-flight pending still overrides a live Ready", () => {
+    const live = new Map([["resource:web", "Ready"]]);
+    const merged = mergeTopology(localGraph(), serverReady(), true, live);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+  });
+
+  it("release-in-flight pending still overrides a resource node excluded from the live map", () => {
+    const live = new Map([["resource:api", "Ready"]]);
+    const merged = mergeTopology(localGraph(), serverReady(), true, live);
+    expect(merged.nodes.find((n) => n.id === "resource:web")?.data.dotVariant).toBe("pending");
+  });
+});

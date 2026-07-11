@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { stateTone } from "../derive";
 import { isDeploying } from "../release-states";
-import { useReleaseDetail } from "../use-release-detail";
+import { useReleaseDetailContext } from "../use-release-detail";
 import { RailNode, type RailDotShape } from "./rail-node";
 import { TimelineNode } from "./timeline-node";
 import type { LogContext } from "./resource-row";
@@ -15,6 +16,8 @@ export interface TimelineRailProps {
   stack: Stack;
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  refetchReleases?: () => void;
   banner?: React.ReactNode;
   /** Optional draft node, rendered at the head of the rail (saved-but-undeployed). */
   draftNode?: React.ReactNode;
@@ -37,13 +40,22 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
  * opens by default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onOpenLogs, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
-  const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
-  const liveReleaseId = stack.status?.last_converged?.release_id;
+  const { releases, activeRelease, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
+  const detail = useReleaseDetailContext();
+  const liveReleaseId = stack.current_release?.id;
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
   );
   const [windowN, setWindowN] = useState(initialWindow);
+
+  // The initializer only runs on mount, so a release created later (user deploys while
+  // sitting on this tab) would render collapsed — hiding its own StageTracker, activity
+  // feed, and failure banner. Auto-open the active release whenever it changes.
+  const activeId = activeRelease?.id;
+  useEffect(() => {
+    if (!activeId) return;
+    setOpenIds((cur) => (cur.has(activeId) ? cur : new Set(cur).add(activeId)));
+  }, [activeId]);
 
   // Multiple release details can be open at once — not an accordion.
   const toggle = (id: string) =>
@@ -91,6 +103,8 @@ export function TimelineRail(props: TimelineRailProps) {
                 stack={stack}
                 logContext={logContext}
                 onOpenLogs={onOpenLogs}
+                onJumpToResource={onJumpToResource}
+                refetchReleases={refetchReleases}
               />
             </RailNode>
           );

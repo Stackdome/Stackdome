@@ -9,7 +9,6 @@ func ValidateStack(in *openapi.Stack) Validate {
 	return ValidateAll([]Validate{
 		validateEmpty(in, "Id", "id"),
 		validateEmpty(in, "OrganisationId", "organisation_id"),
-		validateEmpty(in, "Status", "status"),
 		validateLabels(&in.Labels),
 		validateAnnotations(&in.Annotations),
 		validateNotEmpty(in, "Name", "name"),
@@ -25,7 +24,6 @@ func ValidateStackShell(in *openapi.Stack) Validate {
 	return ValidateAll([]Validate{
 		validateEmpty(in, "Id", "id"),
 		validateEmpty(in, "OrganisationId", "organisation_id"),
-		validateEmpty(in, "Status", "status"),
 		validateLabels(&in.Labels),
 		validateAnnotations(&in.Annotations),
 		validateNotEmpty(in, "Name", "name"),

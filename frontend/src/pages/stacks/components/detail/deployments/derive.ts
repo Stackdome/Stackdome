@@ -1,15 +1,79 @@
 import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
-import type { StackRelease } from "@/api/releases";
+import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
-import { ReleaseState } from "./release-states";
+import { ReleaseState, isTerminal } from "./release-states";
 
 export type Stack = components["schemas"]["Stack"];
+export type ReleaseHealth = components["schemas"]["ReleaseHealth"];
 export type StackResource = components["schemas"]["StackResource"];
 export type StackResourceFailure = components["schemas"]["StackResourceFailure"];
 export type ReleaseCause = components["schemas"]["ReleaseCause"];
 export type FailureStage = "build" | "runtime" | "init" | "validation";
+
+/**
+ * Health driving the stack header pill: an in-flight latest release always reads
+ * "progressing"; otherwise the live release's rollup, falling back to "failed" for a
+ * Failed latest with nothing live. Undefined → nothing ever deployed (no releases,
+ * or only cancelled/superseded attempts) → callers render a neutral "Not deployed".
+ */
+export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
+  const latest = stack.latest_release;
+  if (!latest) return undefined;
+  if (!isTerminal(latest.state)) return "progressing";
+  if (stack.current_release?.health) return stack.current_release.health;
+  return latest.state === ReleaseState.Failed ? "failed" : undefined;
+}
+
+/**
+ * The deployed snapshot stores the RESOLVED git revision (branch/commit written by
+ * the pin resolver at deploy time). When the saved spec doesn't pin one, those are
+ * deploy-time facts, not config drift — strip them so the diff baseline compares
+ * intent with intent instead of reading every unpinned git resource as dirty.
+ */
+export function stripUnpinnedGitRevisions(
+  snapshotResources: StackResource[],
+  savedResources: StackResource[],
+): StackResource[] {
+  const savedByName = new Map(savedResources.map((r) => [r.name, r]));
+  return snapshotResources.map((r) => {
+    const git = r.source?.git;
+    const savedGit = savedByName.get(r.name)?.source?.git;
+    if (!git || !savedGit || savedGit.branch || savedGit.commit || savedGit.tag) return r;
+    const { branch: _b, commit: _c, tag: _t, ...unpinned } = git;
+    return { ...r, source: { ...r.source, git: unpinned } };
+  });
+}
+
+/**
+ * True when the latest release failed AND a different release is currently live —
+ * the header's secondary "deploy failed" hint. Mutually exclusive with the main pill
+ * by construction: fires only when deriveHeaderHealth is showing something other than
+ * "failed" (a live release masking the failed attempt), never doubling up the error.
+ */
+export function latestDeployFailed(stack: Stack): boolean {
+  const latest = stack.latest_release;
+  if (!latest || latest.state !== ReleaseState.Failed) return false;
+  if (!stack.current_release || latest.id === stack.current_release.id) return false;
+  return deriveHeaderHealth(stack) !== "failed";
+}
+
+/**
+ * True when the polled releases list shows a release newly settled into a terminal
+ * state that the stack's own latest_release summary doesn't reflect yet — the signal
+ * to refetch the stack so its release summaries stay fresh.
+ */
+export function shouldRefetchStackSummaries(
+  prev: { id?: string; state?: string } | undefined,
+  active: StackRelease | undefined,
+  latest: ReleaseSummary | undefined,
+): boolean {
+  if (!active || !isTerminal(active.state)) return false;
+  if (prev && prev.id === active.id && prev.state === active.state) return false; // already handled
+  if (latest && latest.id === active.id && latest.state === active.state) return false; // already fresh
+  return true;
+}
 
 export interface ResourceSource {
   kind: "image" | "git";
@@ -34,9 +98,16 @@ export function resourceSource(r?: StackResource): ResourceSource | undefined {
   return image ? { kind: "image", label: image } : undefined;
 }
 
+/** The generated `StackResourceFailure.type` is a types-only union; this is its runtime mirror. */
+export type ResourceFailureTypeValue = NonNullable<StackResourceFailure["type"]>;
+export const ResourceFailureType = {
+  Build: "build_failure",
+  Runtime: "runtime_crash",
+} as const satisfies Record<string, ResourceFailureTypeValue>;
+
 export interface FailingResource {
   name: string;
-  type: "build_failure" | "runtime_crash";
+  type: ResourceFailureTypeValue;
   stage: FailureStage;
   reason: string;
   message?: string;
@@ -66,23 +137,26 @@ export function humanizeFailureType(failureType?: string): string {
 
 /** Pick the active detail block from a last_failure (build vs container vs init). */
 function failureDetail(f: StackResourceFailure) {
-  if (f.type === "build_failure") return { detail: f.build, stage: "build" as const };
+  if (f.type === ResourceFailureType.Build) return { detail: f.build, stage: "build" as const };
   if (f.init_container) return { detail: f.init_container, stage: "init" as const };
   return { detail: f.container, stage: "runtime" as const };
 }
 
-export function deriveFailingResources(stack: Stack): FailingResource[] {
-  const resources = stack.spec?.stack_resources ?? [];
+/** Live per-resource statuses come from the release's live_status (present only while the
+ *  release is live/converged or actively deploying); undefined until that's wired in.
+ *  `_release` isn't read yet — kept for signature parity with deriveStages/deriveRecovered. */
+export function deriveFailingResources(_release: StackRelease, liveStatus?: ReleaseLiveStatus): FailingResource[] {
+  const resources = liveStatus?.resources ?? {};
   const out: FailingResource[] = [];
-  for (const r of resources) {
-    const f = r.status?.last_failure;
-    const state = r.status?.state ?? "";
+  for (const [name, r] of Object.entries(resources)) {
+    const f = r.last_failure;
+    const state = r.state ?? "";
     // Only surface as ACTIVE failure when the resource is not currently healthy.
     if (!f || isHealthyState(state)) continue;
     const { detail, stage } = failureDetail(f);
     out.push({
-      name: r.name ?? "",
-      type: (f.type ?? "runtime_crash") as FailingResource["type"],
+      name,
+      type: f.type ?? ResourceFailureType.Runtime,
       stage,
       reason: detail?.reason ?? humanizeFailureType(detail?.failure_type),
       message: detail?.message,
@@ -94,22 +168,23 @@ export function deriveFailingResources(stack: Stack): FailingResource[] {
   return out;
 }
 
-export function deriveRecovered(stack: Stack): RecoveredResource[] {
-  const resources = stack.spec?.stack_resources ?? [];
+export function deriveRecovered(_release: StackRelease, liveStatus?: ReleaseLiveStatus): RecoveredResource[] {
+  const resources = liveStatus?.resources ?? {};
   const out: RecoveredResource[] = [];
-  for (const r of resources) {
-    const f = r.status?.last_failure;
-    const state = r.status?.state ?? "";
+  for (const [name, r] of Object.entries(resources)) {
+    const f = r.last_failure;
+    const state = r.state ?? "";
     if (!f || !isHealthyState(state)) continue;
     const { detail } = failureDetail(f);
-    out.push({ name: r.name ?? "", reason: detail?.reason ?? humanizeFailureType(detail?.failure_type), restartCount: detail?.restart_count });
+    out.push({ name, reason: detail?.reason ?? humanizeFailureType(detail?.failure_type), restartCount: detail?.restart_count });
   }
   return out;
 }
 
+// Delegate to the single word→variant brain so "healthy" can't drift from the rest
+// of the app. Resource live_status.state is the cluster-agent rollout vocabulary.
 function isHealthyState(state: string): boolean {
-  const s = state.toLowerCase();
-  return s === "ready" || s === "available" || s === "running" || s === "healthy";
+  return statusVariant("resource", state) === "ready";
 }
 
 export function causeLabel(cause?: ReleaseCause): string {
@@ -163,18 +238,19 @@ function hasBuildResources(release: StackRelease): boolean {
 
 /**
  * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
- * deriveFailingResources(stack) — recovered resources excluded, so any failure here is CURRENT.
+ * deriveFailingResources(release, liveStatus) — recovered resources excluded, so any
+ * failure here is CURRENT. Convergence is keyed on release state alone: live_status
+ * is present for ACTIVE releases too (overlay presence rule), so its mere presence
+ * says nothing about being converged.
  */
-export function deriveStages(stack: Stack, release: StackRelease, failing: FailingResource[]): Stages {
-  const converged = stack.status?.last_converged?.release_id != null
-    && stack.status?.last_converged?.release_id === release.id;
-  const buildFailed = failing.some((f) => f.type === "build_failure");
-  const runtimeFailed = failing.some((f) => f.type === "runtime_crash");
+export function deriveStages(release: StackRelease, failing: FailingResource[], _liveStatus?: ReleaseLiveStatus): Stages {
+  const buildFailed = failing.some((f) => f.type === ResourceFailureType.Build);
+  const runtimeFailed = failing.some((f) => f.type === ResourceFailureType.Runtime);
   const hasBuild = hasBuildResources(release);
   const state = release.state;
 
   // Image-only stack has no build step → Build "skipped" (inert), not "todo".
-  if (converged || state === ReleaseState.Released) {
+  if (state === ReleaseState.Released) {
     return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "done" };
   }
   if (buildFailed) return { build: "failed", deploy: "todo", ready: "todo" };
@@ -212,8 +288,8 @@ export function deriveStages(stack: Stack, release: StackRelease, failing: Faili
 /** Short title after the sequence on the live release card, e.g. "Runtime crash — tooljet", "Build queued". */
 export function deriveReleaseTitle(release: StackRelease, failing: FailingResource[], stages: Stages): string {
   const state = release.state ?? "";
-  const build = failing.find((f) => f.type === "build_failure");
-  const crash = failing.find((f) => f.type === "runtime_crash");
+  const build = failing.find((f) => f.type === ResourceFailureType.Build);
+  const crash = failing.find((f) => f.type === ResourceFailureType.Runtime);
   if (build) return `Build failed: ${build.name}`;
   // A terminal Failed crash reads as "Deploy failed"; an in-flight one names the resource.
   if (crash && state !== ReleaseState.Failed) return `Runtime crash: ${crash.name}`;

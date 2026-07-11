@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Copy, Check } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { statusVariant } from "@/components/branded/status-variant";
+import type { StatusVariant } from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
 
-/** Stack status variant → endpoint dot colour (semantic tokens only). */
-const DOT_CLASS: Record<ReturnType<typeof statusVariant>, string> = {
+/** Header status variant → endpoint dot colour (semantic tokens only). */
+const DOT_CLASS: Record<StatusVariant, string> = {
   ready: "bg-success",
   pending: "bg-warn",
   error: "bg-danger",
@@ -46,14 +46,14 @@ async function copyText(text: string): Promise<void> {
 /** Header row mapping each publicly exposed service to its best live URL. */
 export function PublicEndpointRow({
   endpoints,
-  statusState,
+  variant,
 }: {
   endpoints: PublicEndpoint[];
-  /** Raw stack status state (mapped to the dot colour), e.g. "Ready". */
-  statusState?: string | null;
+  /** Resolved header status variant (mapped to the dot colour). */
+  variant?: StatusVariant;
 }) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const dotClass = DOT_CLASS[statusVariant("stack", statusState)];
+  const dotClass = DOT_CLASS[variant ?? "neutral"];
   const timer = useRef<ReturnType<typeof setTimeout>>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 

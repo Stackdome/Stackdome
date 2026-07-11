@@ -9,7 +9,7 @@ interface StackContextType {
   // required for write-through from async callbacks (avoids clobbering the
   // list with a stale render-closure snapshot).
   setStacks: Dispatch<SetStateAction<Stack[]>>;
-  addStack: (stack: Omit<Stack, 'id' | 'created_at' | 'status'>) => void;
+  addStack: (stack: Omit<Stack, 'id' | 'created_at' | 'lifecycle' | 'current_release' | 'latest_release'>) => void;
   removeStack: (id: string) => void;
 }
 
@@ -21,12 +21,12 @@ export function StackProvider({ children }: { children: ReactNode }) {
   const [stacks, setStacks] = useState<Stack[]>([]);
 
   // Add a new stack
-  const addStack = (stackData: Omit<Stack, 'id' | 'created_at' | 'status'>) => {
-    // id, created_at, and status are always set here; spec comes from stackData
+  const addStack = (stackData: Omit<Stack, 'id' | 'created_at' | 'lifecycle' | 'current_release' | 'latest_release'>) => {
+    // id, created_at, and lifecycle are always set here; spec comes from stackData
     const newStack: Stack = {
       id: `stack-${Date.now()}`,
       created_at: new Date().toISOString(),
-      status: { state: 'running' },
+      lifecycle: 'active',
       ...stackData,
     };
 

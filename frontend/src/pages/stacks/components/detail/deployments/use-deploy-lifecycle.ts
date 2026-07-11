@@ -28,7 +28,7 @@ export interface DeriveDeployLifecycleArgs {
   unsaved: boolean;
   /** The latest release attempt (releases[0]). */
   activeRelease?: StackRelease;
-  /** The release currently serving traffic (stack.status.last_converged). */
+  /** The release currently serving traffic (stack.current_release). */
   liveRelease?: StackRelease;
   /** Snapshot of the latest attempt — what an in-flight deploy is shipping. */
   activeSnapshot?: StackReleaseSnapshot;
@@ -55,7 +55,7 @@ function baselineSnapshot(args: DeriveDeployLifecycleArgs): StackReleaseSnapshot
   const deploying = !!activeRelease && !isTerminal(activeRelease.state);
   if (deploying) return activeSnapshot;
   if (liveSnapshot) return liveSnapshot;
-  if (!stack?.status?.last_converged?.release_id) return EMPTY_SNAPSHOT;
+  if (!stack?.current_release?.id) return EMPTY_SNAPSHOT;
   return undefined;
 }
 
@@ -109,7 +109,7 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
       : { phase: "staged", stagedDiff: d, vsSeq: liveSeq, nextSeq };
   }
 
-  const liveReleaseId = stack.status?.last_converged?.release_id;
+  const liveReleaseId = stack.current_release?.id;
   if (!liveReleaseId) {
     // Never converged a release — the whole saved spec is staged for the first deploy,
     // so diff against an empty baseline (every resource/volume/connection reads as added).
@@ -146,14 +146,15 @@ export interface UseDeployLifecycleArgs {
  * snapshots, and derives the lifecycle phase.
  */
 export function useDeployLifecycle({ stack, unsaved, releases, activeRelease, detail }: UseDeployLifecycleArgs): DeployLifecycle {
-  const liveReleaseId = stack?.status?.last_converged?.release_id;
+  const liveReleaseId = stack?.current_release?.id;
   const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
   const activeId = activeRelease?.id;
 
+  const ensure = detail.ensure;
   useEffect(() => {
-    if (liveReleaseId) detail.ensure(liveReleaseId);
-    if (activeId) detail.ensure(activeId);
-  }, [detail, liveReleaseId, activeId]);
+    if (liveReleaseId) ensure(liveReleaseId);
+    if (activeId) ensure(activeId);
+  }, [ensure, liveReleaseId, activeId]);
 
   const liveSnapshot = detail.peek(liveReleaseId).data?.snapshot;
   const activeSnapshot = detail.peek(activeId).data?.snapshot;

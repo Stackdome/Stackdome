@@ -1,61 +1,69 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import type { Stack } from "@/api/stacks";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
-import type { FailingResource } from "../derive";
-import type { StackRelease } from "@/api/releases";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "../derive";
+import type { FailingResource, Stack, StackResource } from "../derive";
+import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 
 function release(partial: Partial<StackRelease>): StackRelease {
   return { id: "r1", ...partial } as StackRelease;
 }
 
-function stackWith(resources: Array<Record<string, unknown>>): Stack {
-  return { spec: { stack_resources: resources } } as unknown as Stack;
+function liveStatusWith(resources: Record<string, Record<string, unknown>>): ReleaseLiveStatus {
+  return { resources } as unknown as ReleaseLiveStatus;
+}
+
+function stackWithReleases(current?: Partial<ReleaseSummary>, latest?: Partial<ReleaseSummary>): Stack {
+  return { current_release: current, latest_release: latest } as unknown as Stack;
 }
 
 describe("deriveFailingResources", () => {
-  it("joins last_failure from spec.stack_resources[].status", () => {
-    const stack = stackWith([
-      { name: "tooljet", status: { state: "CrashLoopBackOff", last_failure: {
-        type: "runtime_crash", container: { failure_type: "crash_loop", reason: "CrashLoopBackOff", message: "exit 1", exit_code: 1, restart_count: 5 } } } },
-      { name: "redis", status: { state: "Ready" } },
-    ]);
-    const out = deriveFailingResources(stack);
+  it("joins last_failure from live_status.resources", () => {
+    const liveStatus = liveStatusWith({
+      tooljet: { state: "CrashLoopBackOff", last_failure: {
+        type: "runtime_crash", container: { failure_type: "crash_loop", reason: "CrashLoopBackOff", message: "exit 1", exit_code: 1, restart_count: 5 } } },
+      redis: { state: "Ready" },
+    });
+    const out = deriveFailingResources(release({}), liveStatus);
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ name: "tooljet", type: "runtime_crash", stage: "runtime", reason: "CrashLoopBackOff", exitCode: 1, restartCount: 5 });
   });
 
   it("classifies a build failure to the build stage", () => {
-    const stack = stackWith([
-      { name: "api", status: { state: "Error", last_failure: {
-        type: "build_failure", build: { failure_type: "image_pull_failed", reason: "ErrImagePull", message: "manifest unknown" } } } },
-    ]);
-    expect(deriveFailingResources(stack)[0]).toMatchObject({ name: "api", type: "build_failure", stage: "build", reason: "ErrImagePull" });
+    const liveStatus = liveStatusWith({
+      api: { state: "Error", last_failure: {
+        type: "build_failure", build: { failure_type: "image_pull_failed", reason: "ErrImagePull", message: "manifest unknown" } } },
+    });
+    expect(deriveFailingResources(release({}), liveStatus)[0]).toMatchObject({ name: "api", type: "build_failure", stage: "build", reason: "ErrImagePull" });
   });
 
   it("classifies an init-container failure to the init stage", () => {
-    const stack = stackWith([
-      { name: "migrate", status: { state: "Error", last_failure: {
-        type: "runtime_crash", init_container: { failure_type: "exit_error", reason: "InitFailed", exit_code: 2 } } } },
-    ]);
-    expect(deriveFailingResources(stack)[0]).toMatchObject({ name: "migrate", stage: "init", reason: "InitFailed", exitCode: 2 });
+    const liveStatus = liveStatusWith({
+      migrate: { state: "Error", last_failure: {
+        type: "runtime_crash", init_container: { failure_type: "exit_error", reason: "InitFailed", exit_code: 2 } } },
+    });
+    expect(deriveFailingResources(release({}), liveStatus)[0]).toMatchObject({ name: "migrate", stage: "init", reason: "InitFailed", exitCode: 2 });
+  });
+
+  it("returns nothing without a live status (not live or active)", () => {
+    expect(deriveFailingResources(release({}))).toEqual([]);
   });
 });
 
 describe("deriveRecovered", () => {
   it("flags a Ready resource that still carries last_failure", () => {
-    const stack = stackWith([
-      { name: "tooljet", status: { state: "Ready", last_failure: {
-        type: "runtime_crash", container: { reason: "CrashLoopBackOff", restart_count: 5 } } } },
-    ]);
-    expect(deriveRecovered(stack)).toEqual([{ name: "tooljet", reason: "CrashLoopBackOff", restartCount: 5 }]);
+    const liveStatus = liveStatusWith({
+      tooljet: { state: "Ready", last_failure: {
+        type: "runtime_crash", container: { reason: "CrashLoopBackOff", restart_count: 5 } } },
+    });
+    expect(deriveRecovered(release({}), liveStatus)).toEqual([{ name: "tooljet", reason: "CrashLoopBackOff", restartCount: 5 }]);
   });
 
   it("does not flag a failing resource as recovered", () => {
-    const stack = stackWith([
-      { name: "tooljet", status: { state: "CrashLoopBackOff", last_failure: { type: "runtime_crash", container: { reason: "x" } } } },
-    ]);
-    expect(deriveRecovered(stack)).toEqual([]);
+    const liveStatus = liveStatusWith({
+      tooljet: { state: "CrashLoopBackOff", last_failure: { type: "runtime_crash", container: { reason: "x" } } },
+    });
+    expect(deriveRecovered(release({}), liveStatus)).toEqual([]);
   });
 });
 
@@ -139,75 +147,70 @@ describe("formatDuration", () => {
 describe("deriveStages", () => {
   const imagePins = { resources: { api: { git_sha: "9c69af2" } } };
 
-  it("all done when converged to the active release", () => {
-    const stack = { status: { last_converged: { release_id: "r1" } } } as unknown as import("../derive").Stack;
-    expect(deriveStages(stack, release({ id: "r1", state: "Released", pins: imagePins }), []))
+  it("all done when the release is Released", () => {
+    expect(deriveStages(release({ id: "r1", state: "Released", pins: imagePins }), []))
       .toEqual({ build: "done", deploy: "done", ready: "done" });
   });
 
+  it("live status presence does NOT mark an in-flight release converged (overlay is present for active releases too)", () => {
+    const liveStatus = { resources: {} } as ReleaseLiveStatus;
+    expect(deriveStages(release({ id: "r1", state: "InProgress", pins: imagePins }), [], liveStatus))
+      .toEqual({ build: "done", deploy: "active", ready: "todo" });
+  });
+
   it("build active while Pending with build pins", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
-    expect(deriveStages(stack, release({ state: "Pending", pins: imagePins }), []))
+    expect(deriveStages(release({ state: "Pending", pins: imagePins }), []))
       .toEqual({ build: "active", deploy: "todo", ready: "todo" });
   });
 
   it("build failed when a resource reports build_failure", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
     const failing = [{ name: "api", type: "build_failure" as const, stage: "build" as const, reason: "x" }];
-    expect(deriveStages(stack, release({ state: "InProgress", pins: imagePins }), failing))
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), failing))
       .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
   });
 
   it("deploy failed when a runtime crash occurs (build already done)", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
     const failing = [{ name: "api", type: "runtime_crash" as const, stage: "runtime" as const, reason: "x" }];
-    expect(deriveStages(stack, release({ state: "InProgress", pins: imagePins }), failing))
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), failing))
       .toEqual({ build: "done", deploy: "failed", ready: "todo" });
   });
 
   it("terminal Failed runtime crash maps to Deploy done / Ready ✕", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
     const failing = [{ name: "api", type: "runtime_crash" as const, stage: "runtime" as const, reason: "CrashLoopBackOff" }];
-    expect(deriveStages(stack, release({ state: "Failed", pins: imagePins }), failing))
+    expect(deriveStages(release({ state: "Failed", pins: imagePins }), failing))
       .toEqual({ build: "done", deploy: "done", ready: "failed" });
   });
 
   it("pre-cluster Failed with no resource failure maps to Build ✕", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
-    expect(deriveStages(stack, release({ state: "Failed", pins: imagePins }), []))
+    expect(deriveStages(release({ state: "Failed", pins: imagePins }), []))
       .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
   });
 
   it("convergence timeout (outcome recorded) maps to Deploy done / Ready ✕, Build skipped for image-only", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
     const rel = release({ state: "Failed", message: "timed out waiting for convergence after 15m0s",
       pins: { resources: { web: { image_digest: "sha256:..." } } },
       outcome: { resources: { web: { phase: "Ready", ready_replicas: 1, replicas: 2 } } } });
-    expect(deriveStages(stack, rel, [])).toEqual({ build: "skipped", deploy: "done", ready: "failed" });
+    expect(deriveStages(rel, [])).toEqual({ build: "skipped", deploy: "done", ready: "failed" });
   });
 
   it("pre-cluster Failed on an image-only stack lands on Deploy, never Build", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
     const rel = release({ state: "Failed", pins: { resources: { web: { image_digest: "sha256:..." } } } });
-    expect(deriveStages(stack, rel, [])).toEqual({ build: "skipped", deploy: "failed", ready: "todo" });
+    expect(deriveStages(rel, [])).toEqual({ build: "skipped", deploy: "failed", ready: "todo" });
   });
 
   it("image-only stack (no build pins) skips Build and starts at Deploy", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
-    expect(deriveStages(stack, release({ state: "InProgress", pins: { resources: { api: { image_digest: "sha256:..." } } } }), []))
+    expect(deriveStages(release({ state: "InProgress", pins: { resources: { api: { image_digest: "sha256:..." } } } }), []))
       .toEqual({ build: "skipped", deploy: "active", ready: "todo" });
   });
 
   it("Superseded returns all todo", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
-    expect(deriveStages(stack, release({ state: "Superseded", pins: imagePins }), []))
+    expect(deriveStages(release({ state: "Superseded", pins: imagePins }), []))
       .toEqual({ build: "todo", deploy: "todo", ready: "todo" });
   });
 
   it("build failed even while Pending", () => {
-    const stack = { status: {} } as unknown as import("../derive").Stack;
     const failing = [{ name: "api", type: "build_failure" as const, stage: "build" as const, reason: "x" }];
-    expect(deriveStages(stack, release({ state: "Pending", pins: imagePins }), failing))
+    expect(deriveStages(release({ state: "Pending", pins: imagePins }), failing))
       .toEqual({ build: "failed", deploy: "todo", ready: "todo" });
   });
 });
@@ -253,5 +256,136 @@ describe("phaseTone", () => {
     expect(toneTextClass("err")).toBe("text-danger");
     expect(toneTextClass("amber")).toBe("text-warn");
     expect(toneDotClass("muted")).toBe("bg-fg-muted");
+  });
+});
+
+describe("deriveHeaderHealth", () => {
+  it("undefined when no releases exist (never deployed)", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, undefined))).toBeUndefined();
+  });
+
+  it("progressing while the latest release is in flight", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "InProgress" }))).toBe("progressing");
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r0", health: "ok" }, { id: "r1", state: "Pending" }))).toBe("progressing");
+  });
+
+  it("live release health once the latest is terminal", () => {
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r1", health: "ok" }, { id: "r1", state: "Released" }))).toBe("ok");
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r1", health: "degraded" }, { id: "r1", state: "Released" }))).toBe("degraded");
+  });
+
+  it("live health wins over a newer failed attempt (healthy current + failed latest)", () => {
+    expect(deriveHeaderHealth(stackWithReleases({ id: "r1", health: "ok" }, { id: "r2", state: "Failed" }))).toBe("ok");
+  });
+
+  it("failed first deploy (no live release) falls back to 'failed'", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Failed" }))).toBe("failed");
+  });
+
+  it("cancelled/superseded-only history (nothing ever ran) stays undefined → 'Not deployed'", () => {
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Cancelled" }))).toBeUndefined();
+    expect(deriveHeaderHealth(stackWithReleases(undefined, { id: "r1", state: "Superseded" }))).toBeUndefined();
+  });
+});
+
+describe("latestDeployFailed", () => {
+  it("true when the latest release failed while a different release stays live", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r2", state: "Failed" }))).toBe(true);
+  });
+
+  it("false when nothing is live (failed first deploy — main pill already reads failed)", () => {
+    expect(latestDeployFailed(stackWithReleases(undefined, { id: "r1", state: "Failed" }))).toBe(false);
+  });
+
+  it("false when the live release itself is the failed latest", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "failed" }, { id: "r1", state: "Failed" }))).toBe(false);
+  });
+
+  it("false for non-failed latest states and never-deployed stacks", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r2", state: "InProgress" }))).toBe(false);
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "ok" }, { id: "r1", state: "Released" }))).toBe(false);
+    expect(latestDeployFailed(stackWithReleases(undefined, undefined))).toBe(false);
+  });
+
+  it("false when the main pill already reads failed (no double error)", () => {
+    expect(latestDeployFailed(stackWithReleases({ id: "r1", health: "failed" }, { id: "r2", state: "Failed" }))).toBe(false);
+    expect(latestDeployFailed(stackWithReleases({ id: "r1" }, { id: "r2", state: "Failed" }))).toBe(false);
+  });
+});
+
+describe("shouldRefetchStackSummaries", () => {
+  const latest = (partial: Partial<ReleaseSummary>): ReleaseSummary => partial as ReleaseSummary;
+
+  it("false with no active release or a non-terminal one", () => {
+    expect(shouldRefetchStackSummaries(undefined, undefined, undefined)).toBe(false);
+    expect(shouldRefetchStackSummaries(undefined, release({ state: "InProgress" }), undefined)).toBe(false);
+    expect(shouldRefetchStackSummaries({ id: "r1", state: "Pending" }, release({ state: "Pending" }), undefined)).toBe(false);
+  });
+
+  it("true on a transition into any terminal state with a stale summary", () => {
+    for (const state of ["Released", "Failed", "Cancelled", "Superseded"] as const) {
+      expect(shouldRefetchStackSummaries(
+        { id: "r2", state: "InProgress" },
+        release({ id: "r2", state }),
+        latest({ id: "r2", state: "InProgress" }),
+      )).toBe(true);
+    }
+  });
+
+  it("false when the same terminal transition was already handled", () => {
+    expect(shouldRefetchStackSummaries(
+      { id: "r2", state: "Failed" },
+      release({ id: "r2", state: "Failed" }),
+      latest({ id: "r1", state: "Released" }),
+    )).toBe(false);
+  });
+
+  it("false when the stack's latest_release summary is already fresh", () => {
+    expect(shouldRefetchStackSummaries(
+      undefined,
+      release({ id: "r2", state: "Failed" }),
+      latest({ id: "r2", state: "Failed" }),
+    )).toBe(false);
+  });
+
+  it("true on first observation of a terminal release the summary doesn't know", () => {
+    expect(shouldRefetchStackSummaries(
+      undefined,
+      release({ id: "r2", state: "Released" }),
+      latest({ id: "r1", state: "Released" }),
+    )).toBe(true);
+  });
+});
+
+describe("stripUnpinnedGitRevisions", () => {
+  function gitResource(name: string, git: Record<string, unknown>): StackResource {
+    return { name, source: { git } } as unknown as StackResource;
+  }
+
+  it("strips resolver-written branch/commit/tag when the saved spec pins nothing, keeping other git fields", () => {
+    const snapshot = [gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123", dockerfile_path: "Dockerfile" })];
+    const saved = [gitResource("api", { repo_url: "https://x/y", dockerfile_path: "Dockerfile" })];
+    const [out] = stripUnpinnedGitRevisions(snapshot, saved);
+    expect(out.source?.git).toEqual({ repo_url: "https://x/y", dockerfile_path: "Dockerfile" });
+  });
+
+  it("passes a snapshot resource through unchanged (same object reference) when the saved spec pins a branch", () => {
+    const pinned = gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123" });
+    const saved = [gitResource("api", { repo_url: "https://x/y", branch: "main" })];
+    const [out] = stripUnpinnedGitRevisions([pinned], saved);
+    expect(out).toBe(pinned);
+  });
+
+  it("leaves a non-git-sourced resource untouched", () => {
+    const image = { name: "redis", source: { image: { image: "redis:7" } } } as unknown as StackResource;
+    const saved = [{ name: "redis", source: { image: { image: "redis:7" } } } as unknown as StackResource];
+    const [out] = stripUnpinnedGitRevisions([image], saved);
+    expect(out).toBe(image);
+  });
+
+  it("leaves a snapshot resource untouched when it has no counterpart in the saved spec", () => {
+    const orphan = gitResource("gone", { repo_url: "https://x/y", branch: "main", commit: "abc123" });
+    const [out] = stripUnpinnedGitRevisions([orphan], []);
+    expect(out).toBe(orphan);
   });
 });

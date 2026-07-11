@@ -725,6 +725,133 @@ var _ = Describe("stackReleaseService.MarkFailedWithValidationErrors records fai
 	})
 })
 
+var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
+	const (
+		detailStackID = "stack-1"
+		detailTeamID  = "team-1"
+	)
+
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		stackSvc     *MockStackService
+		perms        *mocks.MockPermissionService
+		svc          *stackReleaseService
+		ctx          context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		stackSvc = NewMockStackService(ctrl)
+		perms = mocks.NewMockPermissionService(ctrl)
+		svc = &stackReleaseService{
+			store:       releaseStore,
+			stackQuery:  stackSvc,
+			permissions: perms,
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("returns the live overlay for the converged release", func() {
+		release := &models.StackRelease{ID: "rel-1", StackID: detailStackID, State: models.ReleaseStateReleased}
+		stack := &models.Stack{
+			ID:     detailStackID,
+			TeamID: detailTeamID,
+			Status: &models.StackStatus{
+				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1", Revision: "rev-1"},
+			},
+			StackResources: []*models.StackResource{
+				{Name: "web", Status: &models.StackResourceStatus{State: models.StackResourcePhaseReady}},
+			},
+		}
+		releaseStore.EXPECT().GetByID(ctx, "rel-1").Return(release, nil)
+		stackSvc.EXPECT().GetStack(ctx, detailStackID).Return(stack, nil).Times(1)
+
+		rel, live, serr := svc.GetReleaseDetail(ctx, "rel-1")
+		Expect(serr).To(BeNil())
+		Expect(rel.ID).To(Equal("rel-1"))
+		Expect(live).NotTo(BeNil())
+		Expect(live.Health).To(Equal(models.ReleaseHealthOK))
+	})
+
+	It("returns nil overlay for a terminal non-live release", func() {
+		release := &models.StackRelease{ID: "rel-0", StackID: detailStackID, State: models.ReleaseStateSuperseded}
+		stack := &models.Stack{
+			ID:     detailStackID,
+			TeamID: detailTeamID,
+			Status: &models.StackStatus{
+				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1"},
+			},
+		}
+		releaseStore.EXPECT().GetByID(ctx, "rel-0").Return(release, nil)
+		stackSvc.EXPECT().GetStack(ctx, detailStackID).Return(stack, nil).Times(1)
+
+		_, live, serr := svc.GetReleaseDetail(ctx, "rel-0")
+		Expect(serr).To(BeNil())
+		Expect(live).To(BeNil())
+	})
+})
+
+var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
+	var (
+		ctrl         *gomock.Controller
+		releaseStore *mocks.MockStackReleaseStore
+		svc          *stackReleaseService
+		ctx          context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
+		svc = &stackReleaseService{
+			store: releaseStore,
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	It("resolves latest and current per stack in a batch", func() {
+		stacks := []*models.Stack{
+			{ID: "s1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "r-live"}}},
+			{ID: "s2"}, // never deployed
+		}
+		latest := &models.StackRelease{ID: "r-new", StackID: "s1", Sequence: 9}
+		liveRel := &models.StackRelease{ID: "r-live", StackID: "s1", Sequence: 8}
+		releaseStore.EXPECT().GetLatestByStackIDs(ctx, []string{"s1", "s2"}).
+			Return(map[string]*models.StackRelease{"s1": latest}, nil)
+		releaseStore.EXPECT().GetByIDs(ctx, []string{"r-live"}).
+			Return(map[string]*models.StackRelease{"r-live": liveRel}, nil)
+
+		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
+		Expect(serr).To(BeNil())
+		Expect(refs["s1"].Latest.ID).To(Equal("r-new"))
+		Expect(refs["s1"].Current.ID).To(Equal("r-live"))
+		Expect(refs["s2"].Latest).To(BeNil())
+		Expect(refs["s2"].Current).To(BeNil())
+	})
+
+	It("skips the by-ids query when latest already covers current", func() {
+		stacks := []*models.Stack{
+			{ID: "s1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "r-new"}}},
+		}
+		latest := &models.StackRelease{ID: "r-new", StackID: "s1", Sequence: 9}
+		releaseStore.EXPECT().GetLatestByStackIDs(ctx, []string{"s1"}).
+			Return(map[string]*models.StackRelease{"s1": latest}, nil)
+
+		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
+		Expect(serr).To(BeNil())
+		Expect(refs["s1"].Current).To(BeIdenticalTo(refs["s1"].Latest))
+	})
+})
+
 var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
 	const (
 		streamStackID   = "stack-1"

@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/branded";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { DeployLifecycle } from "./use-deploy-lifecycle";
 import { TimelineRail } from "./timeline/timeline-rail";
 import { DraftNode } from "./timeline/draft-node";
@@ -12,6 +13,10 @@ export interface DeploymentsTabProps {
   stackId: string;
   stack: Stack;
   onOpenLogs?: (resourceName?: string) => void;
+  /** Opens the canvas resource drawer (release-error banner "jump to error"). */
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  /** Hybrid progress driver: bound to the page's releases-list refetch. */
+  refetchReleases?: () => void;
   // Deploy lifecycle + release data are owned by the page (the status bar owns
   // deploy); this tab is presentational.
   releases: StackRelease[];
@@ -24,7 +29,7 @@ export interface DeploymentsTabProps {
   onCopyId: (id: string) => void;
 }
 
-export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const logContext = { orgId, teamName, stackId };
@@ -35,7 +40,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
     : undefined;
 
   // Anchor the live release at the top only when it's buried (not already the newest node).
-  const liveReleaseId = stack.status?.last_converged?.release_id;
+  const liveReleaseId = stack.current_release?.id;
   const liveIdx = liveReleaseId ? releases.findIndex((r) => r.id === liveReleaseId) : -1;
   const liveRelease = liveIdx >= 0 ? releases[liveIdx] : undefined;
   const liverev = liveIdx >= 0 ? releases[liveIdx + 1] : undefined;
@@ -66,6 +71,8 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
             stack={stack}
             logContext={logContext}
             onOpenLogs={openLogs}
+            onJumpToResource={onJumpToResource}
+            refetchReleases={refetchReleases}
             draftNode={draftNode}
             onRollback={onRollback}
             onCancel={onCancel}

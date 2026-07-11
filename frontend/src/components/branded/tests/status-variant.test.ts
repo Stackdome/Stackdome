@@ -64,6 +64,11 @@ const CASES: [StatusDomain, string, StatusVariant][] = [
   ["build", "Success", "ready"],
   ["build", "Failed", "error"],
   ["build", "Cancelled", "neutral"],
+  // health
+  ["health", "ok", "ready"],
+  ["health", "progressing", "pending"],
+  ["health", "degraded", "pending"],
+  ["health", "failed", "error"],
 ];
 
 describe("statusVariant vocabulary", () => {
@@ -85,6 +90,14 @@ describe("statusVariant vocabulary", () => {
     expect(statusVariant("stack", "")).toBe("neutral");
     expect(statusVariant("stack", null)).toBe("neutral");
     expect(statusVariant("stack", undefined)).toBe("neutral");
+  });
+
+  it("maps release health to variants", () => {
+    expect(statusVariant("health", "ok")).toBe("ready");
+    expect(statusVariant("health", "progressing")).toBe("pending");
+    expect(statusVariant("health", "degraded")).toBe("pending");
+    expect(statusVariant("health", "failed")).toBe("error");
+    expect(statusVariant("health", undefined)).toBe("neutral");
   });
 
   it("generic keeps the legacy sets plus failure enums", () => {

@@ -3,6 +3,7 @@ import type { components } from "./types/openapi";
 import type { StackList } from "@/pages/stacks/types";
 
 export type Stack = components["schemas"]["Stack"];
+export type StackLifecycle = components["schemas"]["StackLifecycle"];
 export type StackResource = components["schemas"]["StackResource"];
 export type StackResourceList = components["schemas"]["StackResourceList"];
 export type Volume = components["schemas"]["Volume"];
@@ -14,7 +15,7 @@ export type VolumeMountUpdateRequest = Omit<VolumeMount,
 >;
 
 export type StackResourceUpdateRequest = Omit<StackResource,
-  'id' | 'stack_id' | 'revision' | 'status'
+  'id' | 'stack_id' | 'revision'
 > & {
   volume_mounts?: VolumeMountUpdateRequest[];
 };
@@ -24,7 +25,7 @@ export type VolumeUpdateRequest = Omit<Volume,
 >;
 
 export type StackUpdateRequest = Omit<Stack,
-  'id' | 'organisation_id' | 'user_id' | 'namespace' | 'revision' | 'status' | 'created_at' | 'updated_at'
+  'id' | 'organisation_id' | 'user_id' | 'namespace' | 'revision' | 'lifecycle' | 'current_release' | 'latest_release' | 'created_at' | 'updated_at'
 > & {
   spec: {
     stack_resources: StackResourceUpdateRequest[];

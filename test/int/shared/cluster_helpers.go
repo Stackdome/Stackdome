@@ -317,6 +317,25 @@ func WaitForStackCRExists(ctx context.Context, clusterClient client.Client, name
 	return &cr
 }
 
+// WaitForStackActive polls the stack API until it responds 200 with an
+// active lifecycle. The wait for stacks that never deploy (e.g. skip-cluster-
+// provisioning fixtures): they have no releases, so WaitForStackReady's
+// current_release gate would never pass.
+func WaitForStackActive(apiClient *openapi.APIClient, orgID, teamName, stackID string, timeout time.Duration) *openapi.Stack {
+	var stack *openapi.Stack
+	Eventually(func(g Gomega) {
+		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(context.Background(), orgID, teamName, stackID).Execute()
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(httpResp.StatusCode).To(Equal(200))
+		g.Expect(resp.GetLifecycle()).To(Equal(openapi.STACK_LIFECYCLE_ACTIVE))
+		stack = resp
+	}, timeout, 2*time.Second).Should(Succeed())
+	return stack
+}
+
+// WaitForStackReady polls the stack API until the current release has
+// converged (Released) and its live status is healthy (Ok) — the
+// release-centric equivalent of the old "stack.status.state == Ready" wait.
 func WaitForStackReady(apiClient *openapi.APIClient, orgID, teamName, stackID string, timeout time.Duration) *openapi.Stack {
 	var stack *openapi.Stack
 	Eventually(func(g Gomega) {
@@ -325,12 +344,20 @@ func WaitForStackReady(apiClient *openapi.APIClient, orgID, teamName, stackID st
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(200))
 
-		status, ok := resp.GetStatusOk()
-		g.Expect(ok).To(BeTrue(), "stack should have status")
+		current, ok := resp.GetCurrentReleaseOk()
+		g.Expect(ok).To(BeTrue(), "stack should have a current_release")
 
-		state, stateOk := status.GetStateOk()
-		g.Expect(stateOk).To(BeTrue(), "status should have state")
-		g.Expect(*state).To(Equal("Ready"), "stack should be Ready, got: %s", *state)
+		state, stateOk := current.GetStateOk()
+		g.Expect(stateOk).To(BeTrue(), "current_release should have a state")
+		if *state == openapi.RELEASE_STATE_FAILED {
+			StopTrying(fmt.Sprintf("stack %s release %s went terminal Failed while waiting for Released", stackID, current.GetId())).Now()
+		}
+		g.Expect(*state).To(Equal(openapi.RELEASE_STATE_RELEASED), "current release should be Released, got: %s", *state)
+
+		health, healthOk := current.GetHealthOk()
+		g.Expect(healthOk).To(BeTrue(), "current_release should have health")
+		g.Expect(*health).To(Equal(openapi.RELEASE_HEALTH_OK), "current release should be healthy, got: %s", *health)
+
 		stack = resp
 	}, timeout, 5*time.Second).Should(Succeed())
 	return stack
@@ -566,22 +593,55 @@ func GetIngressForStackResource(ctx context.Context, clusterClient client.Client
 	return &ingress, nil
 }
 
-// WaitForStackResourceFailed polls the API until the named resource reaches Failed state.
-func WaitForStackResourceFailed(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResource {
-	var resource *openapi.StackResource
-	Eventually(func(g Gomega) {
-		ctx := context.Background()
-		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgID, teamName, stackID, resourceName).Execute()
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(httpResp.StatusCode).To(Equal(200))
+// getStackResourceLiveStatus resolves the named resource's live status by fetching
+// the stack's release (current if already converged, otherwise latest, since a
+// resource can be crash-looping without its release ever converging) and reading
+// live_status.resources[name] off the release detail.
+func getStackResourceLiveStatus(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string) (*openapi.StackResourceStatus, bool) {
+	ctx := context.Background()
+	stack, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(httpResp.StatusCode).To(Equal(200))
 
-		status, ok := resp.GetStatusOk()
-		g.Expect(ok).To(BeTrue(), "resource should have status")
+	releaseID := ""
+	if current, ok := stack.GetCurrentReleaseOk(); ok {
+		releaseID = current.GetId()
+	} else if latest, ok := stack.GetLatestReleaseOk(); ok {
+		releaseID = latest.GetId()
+	} else {
+		return nil, false
+	}
+
+	release, httpResp, err := apiClient.ReleasesApi.GetRelease(ctx, orgID, teamName, stackID, releaseID).Execute()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(httpResp.StatusCode).To(Equal(200))
+
+	liveStatus, ok := release.GetLiveStatusOk()
+	if !ok {
+		return nil, false
+	}
+	resources, ok := liveStatus.GetResourcesOk()
+	if !ok {
+		return nil, false
+	}
+	status, found := (*resources)[resourceName]
+	if !found {
+		return nil, false
+	}
+	return &status, true
+}
+
+// WaitForStackResourceFailed polls the API until the named resource reaches Failed state.
+func WaitForStackResourceFailed(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResourceStatus {
+	var resource *openapi.StackResourceStatus
+	Eventually(func(g Gomega) {
+		status, ok := getStackResourceLiveStatus(apiClient, orgID, teamName, stackID, resourceName)
+		g.Expect(ok).To(BeTrue(), "resource should have live status")
 
 		state, stateOk := status.GetStateOk()
 		g.Expect(stateOk).To(BeTrue(), "status should have state")
-		g.Expect(*state).To(Equal("Failed"), "resource should be Failed, got: %s", *state)
-		resource = resp
+		g.Expect(*state).To(Equal(string(models.StackResourcePhaseFailed)), "resource should be Failed, got: %s", *state)
+		resource = status
 	}, timeout, 5*time.Second).Should(Succeed())
 	return resource
 }
@@ -590,13 +650,8 @@ func WaitForStackResourceFailed(apiClient *openapi.APIClient, orgID, teamName, s
 func WaitForStackResourceLastFailure(apiClient *openapi.APIClient, orgID, teamName, stackID, resourceName string, timeout time.Duration) *openapi.StackResourceFailure {
 	var lastFailure *openapi.StackResourceFailure
 	Eventually(func(g Gomega) {
-		ctx := context.Background()
-		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdResourcesResourceNameGet(ctx, orgID, teamName, stackID, resourceName).Execute()
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(httpResp.StatusCode).To(Equal(200))
-
-		status, ok := resp.GetStatusOk()
-		g.Expect(ok).To(BeTrue())
+		status, ok := getStackResourceLiveStatus(apiClient, orgID, teamName, stackID, resourceName)
+		g.Expect(ok).To(BeTrue(), "resource should have live status")
 
 		failure, failureOk := status.GetLastFailureOk()
 		g.Expect(failureOk).To(BeTrue(), "last_failure should be set on resource status")
@@ -648,10 +703,19 @@ func DumpBuildSourceDebugInfo(ctx context.Context, apiClient *openapi.APIClient,
 	resp, _, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameStacksIdGet(ctx, orgID, teamName, stackID).Execute()
 	if err != nil {
 		fmt.Printf("[Stack API] error fetching stack: %v\n", err)
-	} else if status, ok := resp.GetStatusOk(); ok {
-		fmt.Printf("[Stack API] state=%s message=%q\n", status.GetState(), status.GetMessage())
-		for _, c := range status.GetConditions() {
-			fmt.Printf("[Stack API]   condition: type=%s status=%s reason=%s\n", c.GetType(), c.GetStatus(), c.GetReason())
+	} else {
+		fmt.Printf("[Stack API] lifecycle=%s\n", resp.GetLifecycle())
+		if latest, ok := resp.GetLatestReleaseOk(); ok {
+			fmt.Printf("[Stack API] latest_release id=%s state=%s health=%s message=%q\n",
+				latest.GetId(), latest.GetState(), latest.GetHealth(), latest.GetMessage())
+			release, _, releaseErr := apiClient.ReleasesApi.GetRelease(ctx, orgID, teamName, stackID, latest.GetId()).Execute()
+			if releaseErr != nil {
+				fmt.Printf("[Release API] error fetching release %s: %v\n", latest.GetId(), releaseErr)
+			} else if liveStatus, liveOk := release.GetLiveStatusOk(); liveOk {
+				for _, c := range liveStatus.GetConditions() {
+					fmt.Printf("[Release API]   condition: type=%s status=%s reason=%s\n", c.GetType(), c.GetStatus(), c.GetReason())
+				}
+			}
 		}
 	}
 

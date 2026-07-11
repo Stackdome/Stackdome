@@ -4735,9 +4735,12 @@ components:
           $ref: '#/components/schemas/StackSpec'
         settings:
           $ref: '#/components/schemas/StackSettings'
-        status:
-          $ref: '#/components/schemas/StackStatus'
-          readOnly: true
+        lifecycle:
+          $ref: '#/components/schemas/StackLifecycle'
+        current_release:
+          $ref: '#/components/schemas/ReleaseSummary'
+        latest_release:
+          $ref: '#/components/schemas/ReleaseSummary'
         created_at:
           type: string
           format: date-time
@@ -4802,28 +4805,6 @@ components:
           items:
             $ref: '#/components/schemas/StackConnection'
 
-    StackStatus:
-      type: object
-      properties:
-        state:
-          type: string
-        message:
-          type: string
-        observed_revision:
-          type: string
-        target_revision:
-          type: string
-        last_converged:
-          $ref: '#/components/schemas/StackConvergenceRecord'
-        resources:
-          type: array
-          items:
-            $ref: '#/components/schemas/StackResourceSummary'
-        conditions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Condition'
-
     StackResource:
       type: object
       properties:
@@ -4886,9 +4867,6 @@ components:
           type: integer
           format: int32
           minimum: 0
-        status:
-          $ref: '#/components/schemas/StackResourceStatus'
-          readOnly: true
       required:
         - name
 
@@ -5649,6 +5627,8 @@ components:
           type: string
           format: date-time
         state:
+          type: string
+        message:
           type: string
         observed_revision:
           type: string
@@ -6951,6 +6931,65 @@ components:
         - RELEASE_STATE_SUPERSEDED
         - RELEASE_STATE_CANCELLED
 
+    StackLifecycle:
+      type: string
+      readOnly: true
+      description: Coarse stack entity lifecycle. Deploy/runtime status lives on releases.
+      enum: [active, deleting]
+      x-enum-varnames: [STACK_LIFECYCLE_ACTIVE, STACK_LIFECYCLE_DELETING]
+
+    ReleaseHealth:
+      type: string
+      description: Computed runtime health rollup of a live/active release.
+      enum: [ok, progressing, degraded, failed]
+      x-enum-varnames: [RELEASE_HEALTH_OK, RELEASE_HEALTH_PROGRESSING, RELEASE_HEALTH_DEGRADED, RELEASE_HEALTH_FAILED]
+
+    ReleaseSummary:
+      type: object
+      readOnly: true
+      description: Lightweight release reference embedded in the stack for list views.
+      properties:
+        id:
+          type: string
+        sequence:
+          type: integer
+          format: int32
+        state:
+          $ref: '#/components/schemas/StackReleaseState'
+        health:
+          $ref: '#/components/schemas/ReleaseHealth'
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    ReleaseLiveStatus:
+      type: object
+      readOnly: true
+      description: >-
+        Current runtime status overlaid onto a release at read time. Present only when
+        the release is live (currently converged) or active (Pending/InProgress).
+        Never stored; recomputed per request.
+      properties:
+        health:
+          $ref: '#/components/schemas/ReleaseHealth'
+        resources:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/StackResourceStatus'
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        target_revision:
+          type: string
+        observed_revision:
+          type: string
+
     ReleaseCauseKind:
       type: string
       enum: [manual, rollback, webhook_push, preview_sync]
@@ -7011,6 +7050,8 @@ components:
           readOnly: true
           items:
             $ref: '#/components/schemas/ReleaseValidationError'
+        live_status:
+          $ref: '#/components/schemas/ReleaseLiveStatus'
 
     StackReleaseDetail:
       allOf:
@@ -7257,39 +7298,6 @@ components:
           type: integer
         replicas:
           type: integer
-        message:
-          type: string
-
-    StackConvergenceRecord:
-      type: object
-      properties:
-        revision:
-          type: string
-        release_id:
-          type: string
-        at:
-          type: string
-          format: date-time
-
-    StackResourceSummary:
-      type: object
-      properties:
-        name:
-          type: string
-        phase:
-          type: string
-        observed_revision:
-          type: string
-        converged_revision:
-          type: string
-        available_replicas:
-          type: integer
-        updated_replicas:
-          type: integer
-        replicas:
-          type: integer
-        missing:
-          type: boolean
         message:
           type: string
 

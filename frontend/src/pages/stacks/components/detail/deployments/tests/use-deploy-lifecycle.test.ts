@@ -6,7 +6,7 @@ import type { StackRelease, StackReleaseSnapshot } from "@/api/releases";
 const mkStack = (image: string, updatedAt?: string): Stack =>
   ({
     spec: { stack_resources: [{ name: "web", source: { image: { ref: image } } }] },
-    status: { last_converged: { release_id: "live-1" } },
+    current_release: { id: "live-1" },
     updated_at: updatedAt,
   } as unknown as Stack);
 
@@ -95,7 +95,7 @@ describe("deriveDeployLifecycle", () => {
 
   it("staged (first deploy) — never deployed, saved resources present, no snapshot", () => {
     const r = deriveDeployLifecycle({
-      stack: { spec: { stack_resources: [{ name: "web", source: { image: { ref: "nginx:1.27" } } }] }, status: {} } as unknown as Stack,
+      stack: { spec: { stack_resources: [{ name: "web", source: { image: { ref: "nginx:1.27" } } }] } } as unknown as Stack,
       unsaved: false,
       activeRelease: undefined,
       liveRelease: undefined,

@@ -5,6 +5,7 @@
 // shape. Env keys must be exact because the env tab looks them up directly (no
 // prefix-walk); everything else is matched by getError's prefix walk.
 import type { ParsedFieldError } from "@/api/errors";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 
 export type MapDialect =
   | { dialect: "fat" }
@@ -36,6 +37,14 @@ function toEditorKey(barePath: string): string {
     return `${ENV_TAB_KEY}.${env[1]}.${leaf}`;
   }
   return dotted;
+}
+
+// Resource-drawer tab holding a given backend field path. Env fields land on
+// the environment tab; everything else (including unrecognized paths) opens
+// on configuration. Same prefix-walk as toEditorKey — reused so a jump target
+// (e.g. the release-error banner) always agrees with the inline error map.
+export function fieldTab(field: string): EditSessionTab {
+  return toEditorKey(field).startsWith(ENV_TAB_KEY) ? "environment" : "configuration";
 }
 
 function put(resources: Record<number, Record<string, string>>, index: number, key: string, message: string) {

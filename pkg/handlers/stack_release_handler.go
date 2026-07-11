@@ -36,7 +36,7 @@ func (h *stackReleaseHandler) Create(w http.ResponseWriter, r *http.Request) {
 				if err != nil {
 					return nil, err
 				}
-				return presenters.PresentStackRelease(release), nil
+				return presenters.PresentStackRelease(release, nil), nil
 			}
 
 			identity := auth.GetIdentityFromCtx(r.Context())
@@ -52,7 +52,7 @@ func (h *stackReleaseHandler) Create(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStackRelease(release), nil
+			return presenters.PresentStackRelease(release, nil), nil
 		},
 		ErrorHandler: handleError,
 	}
@@ -78,11 +78,11 @@ func (h *stackReleaseHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			releaseID := mux.Vars(r)["release_id"]
-			release, err := h.releaseService.GetRelease(r.Context(), releaseID)
+			release, live, err := h.releaseService.GetReleaseDetail(r.Context(), releaseID)
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStackReleaseDetail(release), nil
+			return presenters.PresentStackReleaseDetail(release, live), nil
 		},
 	}
 	handleGet(w, r, cfg)

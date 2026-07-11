@@ -60,10 +60,13 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			By("Waiting for stack to become Ready via API")
 			readyStack := shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
-			By("Verifying status has conditions")
-			status, ok := readyStack.GetStatusOk()
+			By("Verifying current release is healthy with conditions")
+			currentRelease, ok := readyStack.GetCurrentReleaseOk()
 			Expect(ok).To(BeTrue())
-			Expect(status.GetConditions()).NotTo(BeEmpty())
+			releaseDetail := shared.GetRelease(client, orgID, teamName, stackID, currentRelease.GetId())
+			liveStatus, ok := releaseDetail.GetLiveStatusOk()
+			Expect(ok).To(BeTrue())
+			Expect(liveStatus.GetConditions()).NotTo(BeEmpty())
 
 			By("Verifying StackResource CR is Available in the cluster")
 			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, "web", namespace, 5*time.Minute)

@@ -68,10 +68,15 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		By("Waiting for the stack to become Ready")
 		ready := shared.WaitForStackReady(client, orgID, teamName, shell.GetId(), 5*time.Minute)
 
-		status, ok := ready.GetStatusOk()
-		Expect(ok).To(BeTrue(), "ready stack should have status")
-		Expect(status.GetState()).To(Equal(string(models.StackReady)))
-		Expect(status.GetConditions()).NotTo(BeEmpty(), "ready stack should have conditions")
+		currentRelease, ok := ready.GetCurrentReleaseOk()
+		Expect(ok).To(BeTrue(), "ready stack should have a current_release")
+		Expect(currentRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
+		Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
+
+		releaseDetail := shared.GetRelease(client, orgID, teamName, shell.GetId(), currentRelease.GetId())
+		liveStatus, ok := releaseDetail.GetLiveStatusOk()
+		Expect(ok).To(BeTrue())
+		Expect(liveStatus.GetConditions()).NotTo(BeEmpty(), "ready stack should have conditions")
 	})
 
 	It("fat flow: apply full document deploys to Ready", func() {
@@ -86,9 +91,10 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		By("Waiting for the stack to become Ready")
 		ready := shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
-		status, ok := ready.GetStatusOk()
-		Expect(ok).To(BeTrue(), "ready stack should have status")
-		Expect(status.GetState()).To(Equal(string(models.StackReady)))
+		currentRelease, ok := ready.GetCurrentReleaseOk()
+		Expect(ok).To(BeTrue(), "ready stack should have a current_release")
+		Expect(currentRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
+		Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
 	})
 
 	It("both flows produce the same topology", func() {

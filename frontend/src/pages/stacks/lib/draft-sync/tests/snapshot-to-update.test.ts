@@ -90,7 +90,6 @@ describe("stackToUpdateRequest", () => {
           id: "r1",
           name: "web",
           revision: "3",
-          status: { state: "Ready" },
           outputs: [{ name: "url" }],
           ports: [{ number: 80, exposed_to_public: true }],
         },
