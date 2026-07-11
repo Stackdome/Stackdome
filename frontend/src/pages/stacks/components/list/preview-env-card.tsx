@@ -55,7 +55,7 @@ export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
           : undefined
       }
       className={cn(
-        "group flex h-full min-h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40",
+        "group flex h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40",
         clickable && "cursor-pointer hover:border-brand-border hover:bg-muted/20",
       )}
     >

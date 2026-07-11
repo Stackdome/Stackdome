@@ -139,7 +139,9 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
   const sources = (stack.spec?.stack_resources ?? [])
     .map((res) => ({ name: res.name, source: resourceSource(res) }))
     .filter((r): r is { name: string; source: string } => Boolean(r.name && r.source));
-  const shownSources = sources.slice(0, 3);
+  // Two rows keep the card at the fixed height; the footer's res count
+  // already communicates the total.
+  const shownSources = sources.slice(0, 2);
 
   return (
     <Card
@@ -150,10 +152,10 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
       onKeyDown={(e) => {
         if (e.key === "Enter") navigate(`/stacks/${stack.id}`);
       }}
-      className="group flex h-full min-h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40"
+      className="group flex h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40"
     >
       <StatusRail tone={tone} />
-      <div className="flex flex-1 flex-col gap-[18px] p-5">
+      <div className="flex flex-1 flex-col gap-3.5 p-5">
         <div className="flex items-center gap-[11px]">
           <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
           <span
@@ -174,17 +176,11 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
                 <span className="truncate font-mono text-[11px] text-fg-2" title={r.source}>{r.source}</span>
               </div>
             ))}
-            {sources.length > shownSources.length && (
-              <>
-                <span />
-                <span className="font-mono text-[10px] text-fg-muted">+{sources.length - shownSources.length} more</span>
-              </>
-            )}
           </div>
         )}
 
         {/* Bottom-anchored group: pills sit just above the footer in every card variant. */}
-        <div className="mt-auto flex flex-col gap-[18px]">
+        <div className="mt-auto flex flex-col gap-3.5">
           <EndpointPills urls={urls} />
           <CardFooterMeta
             items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
