@@ -152,10 +152,10 @@ describe("deriveStages", () => {
       .toEqual({ build: "done", deploy: "done", ready: "done" });
   });
 
-  it("all done when a live status is present even off-state (converged)", () => {
+  it("live status presence does NOT mark an in-flight release converged (overlay is present for active releases too)", () => {
     const liveStatus = { resources: {} } as ReleaseLiveStatus;
     expect(deriveStages(release({ id: "r1", state: "InProgress", pins: imagePins }), [], liveStatus))
-      .toEqual({ build: "done", deploy: "done", ready: "done" });
+      .toEqual({ build: "done", deploy: "active", ready: "todo" });
   });
 
   it("build active while Pending with build pins", () => {

@@ -211,18 +211,18 @@ function hasBuildResources(release: StackRelease): boolean {
 /**
  * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
  * deriveFailingResources(release, liveStatus) — recovered resources excluded, so any
- * failure here is CURRENT. `liveStatus` is only ever present while a release is live
- * (converged) or actively deploying, so its presence alone marks convergence.
+ * failure here is CURRENT. Convergence is keyed on release state alone: live_status
+ * is present for ACTIVE releases too (overlay presence rule), so its mere presence
+ * says nothing about being converged.
  */
-export function deriveStages(release: StackRelease, failing: FailingResource[], liveStatus?: ReleaseLiveStatus): Stages {
-  const converged = liveStatus != null;
+export function deriveStages(release: StackRelease, failing: FailingResource[], _liveStatus?: ReleaseLiveStatus): Stages {
   const buildFailed = failing.some((f) => f.type === "build_failure");
   const runtimeFailed = failing.some((f) => f.type === "runtime_crash");
   const hasBuild = hasBuildResources(release);
   const state = release.state;
 
   // Image-only stack has no build step → Build "skipped" (inert), not "todo".
-  if (converged || state === ReleaseState.Released) {
+  if (state === ReleaseState.Released) {
     return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "done" };
   }
   if (buildFailed) return { build: "failed", deploy: "todo", ready: "todo" };
