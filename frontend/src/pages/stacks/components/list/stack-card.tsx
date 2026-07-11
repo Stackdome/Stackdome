@@ -71,7 +71,7 @@ export function EndpointPills({ urls }: { urls: EndpointUrl[] }) {
 export function CardFooterMeta({ items }: { items: Array<string | null | undefined | false> }) {
   const present = items.filter((i): i is string => Boolean(i));
   return (
-    <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 font-mono text-[11.5px] text-fg-muted whitespace-nowrap">
+    <div className="flex flex-wrap items-center gap-2 border-t border-border/60 pt-4 font-mono text-[11.5px] text-fg-muted whitespace-nowrap">
       {present.map((item, i) => (
         <span key={item} className="inline-flex items-center gap-2 tabular-nums">
           {i > 0 && <span aria-hidden>·</span>}
@@ -143,11 +143,13 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
           {stack.status?.state && <StatusWord tone={tone}>{word}</StatusWord>}
         </div>
 
-        <EndpointPills urls={urls} />
-
-        <CardFooterMeta
-          items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
-        />
+        {/* Bottom-anchored group: pills sit just above the footer in every card variant. */}
+        <div className="mt-auto flex flex-col gap-[18px]">
+          <EndpointPills urls={urls} />
+          <CardFooterMeta
+            items={[`${resourceCount} res`, `${volumeCount} vol`, age]}
+          />
+        </div>
       </div>
     </Card>
   );
