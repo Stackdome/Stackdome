@@ -22,10 +22,10 @@ export function NavSettings() {
         </SidebarMenuButton>
       </SidebarMenuItem>
       <SidebarMenuItem>
-        <SidebarMenuButton tooltip="Teams" asChild isActive={location.pathname.startsWith("/settings/teams")}>
-          <Link to="/settings/teams">
+        <SidebarMenuButton tooltip="Projects" asChild isActive={location.pathname.startsWith("/settings/projects")}>
+          <Link to="/settings/projects">
             <FolderKanban />
-            <span>Teams</span>
+            <span>Projects</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { LogEntry, ConnectionStatus, LogFilters } from './types';
 import { parseLogEntry, getLogStreamParams } from './utils';
 import { buildStackLogStreamUrl, buildStackResourceLogStreamUrl } from '@/api/observability';
-import { useResourceTeams } from '@/hooks/use-resource-teams';
+import { useResourceProjects } from '@/hooks/use-resource-projects';
 
 interface UseLogStreamProps {
   stackId: string;
@@ -29,12 +29,12 @@ export function useLogStream({
   const [error, setError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const eventSourcesRef = useRef<EventSource[]>([]);
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
 
   const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 
   useEffect(() => {
-    if (!enabled || !stackId || !organizationId || !defaultTeamName) {
+    if (!enabled || !stackId || !organizationId || !defaultProjectName) {
       return;
     }
 
@@ -70,7 +70,7 @@ export function useLogStream({
       if (filters.sources.length === 0) {
         // No specific sources selected, get logs from the entire stack
         activeConnections = 1;
-        const url = buildStackLogStreamUrl(organizationId, defaultTeamName, stackId, streamParams);
+        const url = buildStackLogStreamUrl(organizationId, defaultProjectName, stackId, streamParams);
         const eventSource = new EventSource(url);
         eventSourcesRef.current.push(eventSource);
 
@@ -100,7 +100,7 @@ export function useLogStream({
         activeConnections = filters.sources.length;
 
         filters.sources.forEach(resourceName => {
-          const url = buildStackResourceLogStreamUrl(organizationId, defaultTeamName, stackId, resourceName, streamParams);
+          const url = buildStackResourceLogStreamUrl(organizationId, defaultProjectName, stackId, resourceName, streamParams);
           const eventSource = new EventSource(url);
           eventSourcesRef.current.push(eventSource);
 
@@ -139,7 +139,7 @@ export function useLogStream({
       eventSourcesRef.current.forEach(source => source.close());
       eventSourcesRef.current = [];
     };
-  }, [stackId, organizationId, defaultTeamName, filters.timeRange, filters.sources, enabled, retryNonce]);
+  }, [stackId, organizationId, defaultProjectName, filters.timeRange, filters.sources, enabled, retryNonce]);
 
   return {
     logs,

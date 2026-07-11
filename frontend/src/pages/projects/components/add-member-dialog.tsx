@@ -150,7 +150,7 @@ export function AddMemberDialog({
 
           {/* Role radio group */}
           <div className="space-y-1.5">
-            <p className="text-sm font-medium">Team role</p>
+            <p className="text-sm font-medium">Project role</p>
             <RadioGroup
               value={role}
               onValueChange={(v) => setRole(v as Role)}

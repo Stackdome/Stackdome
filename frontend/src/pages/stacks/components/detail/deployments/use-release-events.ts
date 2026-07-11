@@ -14,14 +14,14 @@ export interface UseReleaseEventsResult {
 
 export interface UseReleaseEventsArgs {
   orgId: string;
-  teamName: string;
+  projectName: string;
   stackId: string;
   releaseId?: string;
   terminal: boolean;
   onEvent?: (e: ReleaseEvent) => void;
 }
 
-export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal, onEvent }: UseReleaseEventsArgs): UseReleaseEventsResult {
+export function useReleaseEvents({ orgId, projectName, stackId, releaseId, terminal, onEvent }: UseReleaseEventsArgs): UseReleaseEventsResult {
   const [events, setEvents] = useState<ReleaseEvent[]>([]);
   const [status, setStatus] = useState<UseReleaseEventsStatus>("idle");
   const lastSeq = useRef<number>(0);
@@ -66,7 +66,7 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
       const all: ReleaseEvent[] = [];
       let cursor = after;
       for (;;) {
-        const page = await listReleaseEvents(orgId, teamName, stackId, releaseId, cursor);
+        const page = await listReleaseEvents(orgId, projectName, stackId, releaseId, cursor);
         if (disposed) break;
         const items = page.items ?? [];
         all.push(...items);
@@ -110,7 +110,7 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
 
     const connect = () => {
       setStatus("connecting");
-      es = new EventSource(buildReleaseEventStreamUrl(orgId, teamName, stackId, releaseId, lastSeq.current || undefined));
+      es = new EventSource(buildReleaseEventStreamUrl(orgId, projectName, stackId, releaseId, lastSeq.current || undefined));
       es.onopen = () => { reconnects = 0; setStatus("streaming"); }; // a clean reopen clears the budget — MAX_RECONNECTS means N failures in a row, not over the stream's life
       es.onmessage = (msg) => {
         try {
@@ -138,7 +138,7 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
       if (pollTimer) clearInterval(pollTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
     };
-  }, [orgId, teamName, stackId, releaseId, terminal]);
+  }, [orgId, projectName, stackId, releaseId, terminal]);
 
   return { events, status };
 }

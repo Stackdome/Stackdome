@@ -10,14 +10,14 @@ export interface ActiveRow {
   name: string;
   email: string;
   role: User["role"];
-  teams: NonNullable<User["teams"]>;
+  projects: NonNullable<User["projects"]>;
   user: User;
 }
 export interface PendingRow {
   kind: "pending";
   id: string;
   email: string;
-  team_name?: string;
+  project_name?: string;
   role?: OrgInvite["role"];
   invited_by?: string;
   expires_at?: string;
@@ -44,7 +44,7 @@ export function useUsers() {
         name: u.name ?? u.email ?? "",
         email: u.email ?? "",
         role: u.role,
-        teams: u.teams ?? [],
+        projects: u.projects ?? [],
         user: u,
       }));
       let pending: PendingRow[] = [];
@@ -54,7 +54,7 @@ export function useUsers() {
           kind: "pending",
           id: i.id ?? "",
           email: i.email ?? "",
-          team_name: i.team_name,
+          project_name: i.project_name,
           role: i.role,
           invited_by: i.invited_by,
           expires_at: i.expires_at,

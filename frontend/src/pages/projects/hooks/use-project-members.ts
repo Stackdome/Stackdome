@@ -2,25 +2,25 @@ import { useCallback, useEffect, useState } from "react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import {
-  listTeamMembers, addTeamMember, updateTeamMemberRole, removeTeamMember,
-  type TeamMembership,
-} from "@/api/teams";
+  listProjectMembers, addProjectMember, updateProjectMemberRole, removeProjectMember,
+  type ProjectMembership,
+} from "@/api/projects";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 type Role = "Developer" | "Viewer";
 
-export function useTeamMembers(teamName: string) {
+export function useProjectMembers(projectName: string) {
   const orgId = getCurrentOrganizationId();
-  const [members, setMembers] = useState<TeamMembership[]>([]);
+  const [members, setMembers] = useState<ProjectMembership[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchMembers = useCallback(async () => {
-    if (!orgId || !teamName) return;
+    if (!orgId || !projectName) return;
     setLoading(true);
     setError(null);
     try {
-      const res = await listTeamMembers(orgId, teamName);
+      const res = await listProjectMembers(orgId, projectName);
       setMembers(res.items ?? []);
     } catch (e) {
       setError(getErrorMessage(e));
@@ -28,28 +28,28 @@ export function useTeamMembers(teamName: string) {
     } finally {
       setLoading(false);
     }
-  }, [orgId, teamName]);
+  }, [orgId, projectName]);
 
   const refetch = useCallback(() => { void fetchMembers(); }, [fetchMembers]);
   useEffect(() => { void fetchMembers(); }, [fetchMembers]);
 
   const addMember = useCallback(async (userId: string, role: Role): Promise<ActionResult> => {
     if (!orgId) return { ok: false, error: "no organisation" };
-    try { await addTeamMember(orgId, teamName, { user_id: userId, role }); await fetchMembers(); return { ok: true }; }
+    try { await addProjectMember(orgId, projectName, { user_id: userId, role }); await fetchMembers(); return { ok: true }; }
     catch (e) { return { ok: false, error: getErrorMessage(e) }; }
-  }, [orgId, teamName, fetchMembers]);
+  }, [orgId, projectName, fetchMembers]);
 
   const changeRole = useCallback(async (membershipId: string, role: Role): Promise<ActionResult> => {
     if (!orgId) return { ok: false, error: "no organisation" };
-    try { await updateTeamMemberRole(orgId, teamName, membershipId, { role }); await fetchMembers(); return { ok: true }; }
+    try { await updateProjectMemberRole(orgId, projectName, membershipId, { role }); await fetchMembers(); return { ok: true }; }
     catch (e) { return { ok: false, error: getErrorMessage(e) }; }
-  }, [orgId, teamName, fetchMembers]);
+  }, [orgId, projectName, fetchMembers]);
 
   const removeMember = useCallback(async (membershipId: string): Promise<ActionResult> => {
     if (!orgId) return { ok: false, error: "no organisation" };
-    try { await removeTeamMember(orgId, teamName, membershipId); await fetchMembers(); return { ok: true }; }
+    try { await removeProjectMember(orgId, projectName, membershipId); await fetchMembers(); return { ok: true }; }
     catch (e) { return { ok: false, error: getErrorMessage(e) }; }
-  }, [orgId, teamName, fetchMembers]);
+  }, [orgId, projectName, fetchMembers]);
 
   return { members, loading, error, refetch, addMember, changeRole, removeMember };
 }

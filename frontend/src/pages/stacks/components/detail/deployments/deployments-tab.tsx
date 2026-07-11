@@ -9,7 +9,7 @@ import { LiveReleaseSummary } from "./timeline/live-release-summary";
 
 export interface DeploymentsTabProps {
   orgId: string;
-  teamName: string;
+  projectName: string;
   stackId: string;
   stack: Stack;
   onOpenLogs?: (resourceName?: string) => void;
@@ -29,10 +29,10 @@ export interface DeploymentsTabProps {
   onCopyId: (id: string) => void;
 }
 
-export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, projectName, stackId, stack, onOpenLogs, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
-  const logContext = { orgId, teamName, stackId };
+  const logContext = { orgId, projectName, stackId };
   const openLogs = onOpenLogs ? (name: string) => onOpenLogs(name) : undefined;
 
   const draftNode = lifecycle.phase === "editing" || lifecycle.phase === "staged"

@@ -10,19 +10,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldShell } from "@/components/branded";
 
-interface DeleteTeamDialogProps {
+interface DeleteProjectDialogProps {
   open: boolean;
-  teamName: string;
+  projectName: string;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
 }
 
-export function DeleteTeamDialog({
+export function DeleteProjectDialog({
   open,
-  teamName,
+  projectName,
   onOpenChange,
   onConfirm,
-}: DeleteTeamDialogProps) {
+}: DeleteProjectDialogProps) {
   const [typed, setTyped] = useState("");
 
   // Reset typed value when dialog opens/closes
@@ -30,33 +30,33 @@ export function DeleteTeamDialog({
     if (!open) setTyped("");
   }, [open]);
 
-  const canConfirm = typed === teamName;
+  const canConfirm = typed === projectName;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-danger">Delete team</DialogTitle>
+          <DialogTitle className="text-danger">Delete project</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
             This action is <span className="font-semibold text-foreground">irreversible</span>.
-            The team <span className="font-semibold text-foreground">&ldquo;{teamName}&rdquo;</span> will
+            The project <span className="font-semibold text-foreground">&ldquo;{projectName}&rdquo;</span> will
             be permanently deleted.
           </p>
 
           <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
-            Deleting this team cannot be undone.
+            Deleting this project cannot be undone.
           </div>
 
           <FieldShell
-            label="Type the team name to confirm"
-            htmlFor="delete-team-confirm"
+            label="Type the project name to confirm"
+            htmlFor="delete-project-confirm"
           >
             <Input
-              id="delete-team-confirm"
-              placeholder={teamName}
+              id="delete-project-confirm"
+              placeholder={projectName}
               value={typed}
               onChange={(e) => setTyped(e.target.value)}
             />
@@ -74,7 +74,7 @@ export function DeleteTeamDialog({
             }}
             className="bg-danger text-white hover:bg-danger/90"
           >
-            Delete team
+            Delete project
           </Button>
         </DialogFooter>
       </DialogContent>

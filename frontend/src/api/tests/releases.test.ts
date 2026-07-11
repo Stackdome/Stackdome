@@ -8,9 +8,9 @@ import api from "@/api/client";
 import { listReleases, getRelease, createRelease, rollbackRelease, cancelRelease } from "../releases";
 
 const ORG = "org1";
-const TEAM = "team1";
+const TEAM = "project1";
 const STACK = "s1";
-const BASE = `/organizations/${ORG}/teams/${TEAM}/stacks/${STACK}/releases`;
+const BASE = `/organizations/${ORG}/projects/${TEAM}/stacks/${STACK}/releases`;
 
 beforeEach(() => vi.clearAllMocks());
 

@@ -5,7 +5,7 @@ import { fetchLogSnapshot } from "@/api/observability";
 import type { FailingResource, ResourceSource } from "../derive";
 import { phaseTone, toneTextClass, toneDotClass } from "../derive";
 
-export interface LogContext { orgId: string; teamName: string; stackId: string; }
+export interface LogContext { orgId: string; projectName: string; stackId: string; }
 export interface ResourceRowVM { name: string; phase: string; replicas?: string; msg?: string; tag?: string; failure?: FailingResource; source?: ResourceSource; }
 export interface ResourceRowProps { vm: ResourceRowVM; logContext?: LogContext; onOpenLogs?: (name: string) => void; }
 
@@ -17,9 +17,9 @@ function CrashLog({ ctx, name }: { ctx: LogContext; name: string }) {
   const [lines, setLines] = useState<string[]>([]);
   useEffect(() => {
     let alive = true;
-    void fetchLogSnapshot(ctx.orgId, ctx.teamName, ctx.stackId, name, 50).then((l) => { if (alive) setLines(l); });
+    void fetchLogSnapshot(ctx.orgId, ctx.projectName, ctx.stackId, name, 50).then((l) => { if (alive) setLines(l); });
     return () => { alive = false; };
-  }, [ctx.orgId, ctx.teamName, ctx.stackId, name]);
+  }, [ctx.orgId, ctx.projectName, ctx.stackId, name]);
   if (!lines.length) return null;
   return <div className="mt-2.5"><LogSnapshot lines={lines} /></div>;
 }

@@ -36,7 +36,7 @@ import {
 } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useOrgDomains } from "@/hooks/use-org-domains";
 import { pickBestIngress } from "@/pages/stacks/lib/public-endpoints";
@@ -144,15 +144,15 @@ export default function StackDetailPage() {
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
-  const { teamNameById, defaultTeamName } = useResourceTeams();
+  const { projectNameById, defaultProjectName } = useResourceProjects();
   const { canWrite } = useCurrentUser();
 
   // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
 
-  // Viewer read-only gating: only OrgAdmin / team Developer may mutate this stack.
-  const stackTeamId = fetchedStack?.team_id ?? currentStack?.team_id;
-  const canWriteStack = canWrite(stackTeamId ?? "");
+  // Viewer read-only gating: only OrgAdmin / project Developer may mutate this stack.
+  const stackProjectId = fetchedStack?.project_id ?? currentStack?.project_id;
+  const canWriteStack = canWrite(stackProjectId ?? "");
 
   // Update breadcrumb with stack name
   useEffect(() => {
@@ -175,12 +175,12 @@ export default function StackDetailPage() {
 
       setLoading(true);
       setError(null);
-      // Single-stack read is team-scoped; wait for the default team to resolve
+      // Single-stack read is project-scoped; wait for the default project to resolve
       // (this effect re-runs once it does).
-      if (!defaultTeamName) {
+      if (!defaultProjectName) {
         return;
       }
-      getStackById(orgId, defaultTeamName, id)
+      getStackById(orgId, defaultProjectName, id)
         .then((data) => {
           setFetchedStack(data);
           setLoading(false);
@@ -194,7 +194,7 @@ export default function StackDetailPage() {
           setPathLoading(path, false);
         });
     }
-  }, [currentStack, id, defaultTeamName, setCustomLabel, setPathLoading, isDraft]);
+  }, [currentStack, id, defaultProjectName, setCustomLabel, setPathLoading, isDraft]);
 
   const stackToShow = currentStack || fetchedStack;
 
@@ -217,12 +217,12 @@ export default function StackDetailPage() {
   // latest release's snapshot, not the autosaved server state) ──
   const deployIds = useMemo(() => ({
     orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
-    teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
+    projectName: (stackToShow ? projectNameById(stackToShow.project_id) : "") || defaultProjectName || "",
     stackId: stackToShow?.id || "",
-  }), [stackToShow, teamNameById, defaultTeamName]);
-  const idsReady = !!deployIds.stackId && !!deployIds.teamName;
+  }), [stackToShow, projectNameById, defaultProjectName]);
+  const idsReady = !!deployIds.stackId && !!deployIds.projectName;
   const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
-  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+  const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.projectName, deployIds.stackId);
 
   // Diff anchor: the latest release (the config last shipped via Deploy), falling
   // back to the live (currently converged) release until the releases list loads.
@@ -584,7 +584,7 @@ export default function StackDetailPage() {
   // keyed on the polled releases list (not on the stack's own pointer).
   const refetchStack = useCallback(() => {
     if (!deployIds.stackId) return;
-    void getStackById(deployIds.orgId, deployIds.teamName, deployIds.stackId).then((fresh) => {
+    void getStackById(deployIds.orgId, deployIds.projectName, deployIds.stackId).then((fresh) => {
       setFetchedStack(fresh);
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       // Server topology may have changed with the new release; re-derive edges.
@@ -707,14 +707,14 @@ export default function StackDetailPage() {
       });
       return;
     }
-    runDeploy(() => createRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId), "Deploy started");
+    runDeploy(() => createRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId), "Deploy started");
   }, [draftSync, deployIds, runDeploy, toast]);
   const onCancelDeploy = useCallback(
-    (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Release cancelled"),
+    (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId, releaseId), "Release cancelled"),
     [runDeploy, deployIds],
   );
   const onRollback = useCallback(
-    (releaseId: string) => runDeploy(() => rollbackRelease(deployIds.orgId, deployIds.teamName, deployIds.stackId, releaseId), "Rollback started"),
+    (releaseId: string) => runDeploy(() => rollbackRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId, releaseId), "Rollback started"),
     [runDeploy, deployIds],
   );
   const onCopyId = useCallback((releaseId: string) => {
@@ -794,11 +794,11 @@ export default function StackDetailPage() {
         return;
       }
 
-      const teamName = defaultTeamName;
-      if (!teamName) {
+      const projectName = defaultProjectName;
+      if (!projectName) {
         toast({
-          title: "No team available",
-          description: "Could not resolve a team to save into.",
+          title: "No project available",
+          description: "Could not resolve a project to save into.",
           variant: "destructive",
         });
         setDraftDeploying(false);
@@ -810,7 +810,7 @@ export default function StackDetailPage() {
       // document server-side and creates the stack + children in one
       // transaction, so a validation failure persists nothing and retrying
       // after a fix cannot 409 on an orphaned shell.
-      const created = await applyStackByName(orgId, teamName, apiData);
+      const created = await applyStackByName(orgId, projectName, apiData);
       if (!created.id) {
         throw new Error("Created stack is missing an id");
       }
@@ -818,7 +818,7 @@ export default function StackDetailPage() {
       // The stack exists from here on — the show page is the source of truth,
       // so navigate regardless of whether the first release starts cleanly.
       try {
-        await createRelease(orgId, teamName, created.id);
+        await createRelease(orgId, projectName, created.id);
         toast({ title: "Deploy started", variant: "success" });
       } catch (releaseErr) {
         toast({
@@ -846,7 +846,7 @@ export default function StackDetailPage() {
     if (!deployIds) return;
     setDeleting(true);
     try {
-      await deleteStack(deployIds.orgId, deployIds.teamName, deployIds.stackId);
+      await deleteStack(deployIds.orgId, deployIds.projectName, deployIds.stackId);
       setStacks((prev) => prev.filter((s) => s.id !== deployIds.stackId));
       toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.`, variant: "success" });
       navigate("/stacks");
@@ -929,7 +929,7 @@ export default function StackDetailPage() {
   const deploymentsBody = isDraft ? <DraftTabPlaceholder label="Deployments" /> : effectiveStack?.id ? (
     <DeploymentsTab
       orgId={deployIds.orgId}
-      teamName={deployIds.teamName}
+      projectName={deployIds.projectName}
       stackId={effectiveStack.id}
       stack={effectiveStack}
       onOpenLogs={() => setActiveTab("logs")}

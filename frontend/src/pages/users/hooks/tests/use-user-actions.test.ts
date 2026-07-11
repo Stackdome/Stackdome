@@ -30,7 +30,7 @@ describe("useUserActions", () => {
     const { result } = renderHook(() => useUserActions());
     let r: unknown;
     await act(async () => { r = await result.current.demote("u1", "engineering", "Viewer"); });
-    expect(demoteAdmin).toHaveBeenCalledWith("org-1", "u1", { team_name: "engineering", role: "Viewer" });
+    expect(demoteAdmin).toHaveBeenCalledWith("org-1", "u1", { project_name: "engineering", role: "Viewer" });
     expect(r).toEqual({ ok: false, error: "denied" });
   });
 });

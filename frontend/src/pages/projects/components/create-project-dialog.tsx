@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,14 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldShell } from "@/components/branded";
+import type { Project } from "@/api/projects";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
-interface RenameTeamDialogProps {
+interface CreateProjectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  currentName: string;
-  onRename: (newName: string) => Promise<ActionResult>;
+  onCreate: (name: string) => Promise<ActionResult>;
 }
 
 function toSlug(name: string): string {
@@ -27,26 +27,17 @@ function toSlug(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
-export function RenameTeamDialog({ open, onOpenChange, currentName, onRename }: RenameTeamDialogProps) {
-  const [name, setName] = useState(currentName);
+export function CreateProjectDialog({ open, onOpenChange, onCreate }: CreateProjectDialogProps) {
+  const [name, setName] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Re-seed the field whenever a different team is opened for rename.
-  useEffect(() => {
-    if (open) {
-      setName(currentName);
-      setError(null);
-      setSubmitting(false);
-    }
-  }, [open, currentName]);
-
-  const trimmed = name.trim();
   const slug = toSlug(name);
-  const canSubmit = trimmed.length > 0 && trimmed !== currentName && !submitting;
+  const canSubmit = name.trim().length > 0 && !submitting;
 
   function handleOpenChange(val: boolean) {
     if (!val) {
+      setName("");
       setError(null);
       setSubmitting(false);
     }
@@ -57,7 +48,7 @@ export function RenameTeamDialog({ open, onOpenChange, currentName, onRename }: 
     if (!canSubmit) return;
     setSubmitting(true);
     setError(null);
-    const result = await onRename(trimmed);
+    const result = await onCreate(name.trim());
     if (result.ok) {
       handleOpenChange(false);
     } else {
@@ -70,7 +61,7 @@ export function RenameTeamDialog({ open, onOpenChange, currentName, onRename }: 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Rename team</DialogTitle>
+          <DialogTitle>Create project</DialogTitle>
         </DialogHeader>
 
         {error && (
@@ -80,9 +71,9 @@ export function RenameTeamDialog({ open, onOpenChange, currentName, onRename }: 
         )}
 
         <div className="space-y-4">
-          <FieldShell label="Name" htmlFor="rename-team-name" required>
+          <FieldShell label="Name" htmlFor="project-name" required>
             <Input
-              id="rename-team-name"
+              id="project-name"
               placeholder="e.g. Platform"
               value={name}
               onChange={(e) => {
@@ -108,10 +99,13 @@ export function RenameTeamDialog({ open, onOpenChange, currentName, onRename }: 
             Cancel
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={!canSubmit}>
-            {submitting ? "Renaming…" : "Rename team"}
+            {submitting ? "Creating…" : "Create project"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
+
+// Re-export Project type for convenience (avoids importing api/projects in the page just for type)
+export type { Project };

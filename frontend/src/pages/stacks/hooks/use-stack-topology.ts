@@ -6,7 +6,7 @@ import { getStackTopology, type StackTopology } from "@/api/topology";
 
 export interface UseStackTopologyArgs {
   /** Null disables the fetch (draft stacks have no server topology). */
-  ids: { orgId: string; teamName: string; stackId: string } | null;
+  ids: { orgId: string; projectName: string; stackId: string } | null;
   /** Bump to refetch — wired to autosave refreshes. */
   refreshKey: number;
 }
@@ -20,7 +20,7 @@ export function useStackTopology({ ids, refreshKey }: UseStackTopologyArgs): { t
       return;
     }
     let cancelled = false;
-    getStackTopology(ids.orgId, ids.teamName, ids.stackId)
+    getStackTopology(ids.orgId, ids.projectName, ids.stackId)
       .then((t) => {
         if (!cancelled) setTopology(t);
       })
@@ -31,7 +31,7 @@ export function useStackTopology({ ids, refreshKey }: UseStackTopologyArgs): { t
     return () => {
       cancelled = true;
     };
-  }, [ids?.orgId, ids?.teamName, ids?.stackId, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed on primitive id parts
+  }, [ids?.orgId, ids?.projectName, ids?.stackId, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps -- keyed on primitive id parts
 
   return { topology };
 }

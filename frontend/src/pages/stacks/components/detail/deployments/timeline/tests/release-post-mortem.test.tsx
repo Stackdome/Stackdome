@@ -29,7 +29,7 @@ function Wrap(props: { release: StackRelease; prevId?: string; onJumpToResource?
       stack={stack}
       prevReleaseId={prevId}
       prevSeq={12}
-      logContext={{ orgId: "o", teamName: "t", stackId: "s" }}
+      logContext={{ orgId: "o", projectName: "t", stackId: "s" }}
       onJumpToResource={onJumpToResource}
     />
   );

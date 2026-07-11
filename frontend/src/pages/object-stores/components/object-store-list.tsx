@@ -14,7 +14,7 @@ interface ObjectStoreListProps {
   objectStores: ObjectStore[];
   onEdit: (store: ObjectStore) => void;
   onDelete: (store: ObjectStore) => void;
-  canWrite?: (teamId?: string) => boolean;
+  canWrite?: (projectId?: string) => boolean;
 }
 
 function providerLabel(store: ObjectStore): string {
@@ -50,7 +50,7 @@ export function ObjectStoreList({ objectStores, onEdit, onDelete, canWrite }: Ob
         </TableHeader>
         <TableBody>
           {objectStores.map((store) => {
-            const rowCanWrite = canWrite ? canWrite(store.team_id) : true;
+            const rowCanWrite = canWrite ? canWrite(store.project_id) : true;
             return (
               <TableRow key={store.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">{store.name}</TableCell>

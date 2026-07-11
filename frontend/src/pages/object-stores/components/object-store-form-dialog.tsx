@@ -16,7 +16,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { createObjectStore, updateObjectStore } from "@/api/object-stores";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   objectStoreFormSchema,
   toApiPayload,
@@ -102,7 +102,7 @@ function fromObjectStore(store: ObjectStore): ObjectStoreFormValues | null {
 
 export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: Props) {
   const { toast } = useToast();
-  const { teamNameById, defaultTeamName } = useResourceTeams();
+  const { projectNameById, defaultProjectName } = useResourceProjects();
   const [values, setValues] = useState<ObjectStoreFormValues>(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -167,19 +167,19 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
     try {
       const payload = toApiPayload(parsed.data);
       if (editing?.id) {
-        const teamName = teamNameById(editing.team_id);
-        if (!teamName) {
-          toast({ title: "Failed to save Object Store", description: "Could not resolve the team for this object store.", variant: "destructive" });
+        const projectName = projectNameById(editing.project_id);
+        if (!projectName) {
+          toast({ title: "Failed to save Object Store", description: "Could not resolve the project for this object store.", variant: "destructive" });
           return;
         }
-        await updateObjectStore(orgId, teamName, editing.id, payload);
+        await updateObjectStore(orgId, projectName, editing.id, payload);
         toast({ title: "Object store updated", variant: "success" });
       } else {
-        if (!defaultTeamName) {
-          toast({ title: "Failed to save Object Store", description: "You don't have a team to create object stores in.", variant: "destructive" });
+        if (!defaultProjectName) {
+          toast({ title: "Failed to save Object Store", description: "You don't have a project to create object stores in.", variant: "destructive" });
           return;
         }
-        await createObjectStore(orgId, defaultTeamName, payload);
+        await createObjectStore(orgId, defaultProjectName, payload);
         toast({ title: "Object store created", variant: "success" });
       }
       onSaved();

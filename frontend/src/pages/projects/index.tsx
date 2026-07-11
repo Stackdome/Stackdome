@@ -2,11 +2,11 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { Users } from "lucide-react";
-import { useTeams } from "./hooks/use-teams";
-import { CreateTeamDialog } from "./components/create-team-dialog";
-import { RenameTeamDialog } from "./components/rename-team-dialog";
-import { DeleteTeamDialog } from "./components/delete-team-dialog";
-import { TeamRowMenu } from "./components/team-row-menu";
+import { useProjects } from "./hooks/use-projects";
+import { CreateProjectDialog } from "./components/create-project-dialog";
+import { RenameProjectDialog } from "./components/rename-project-dialog";
+import { DeleteProjectDialog } from "./components/delete-project-dialog";
+import { ProjectRowMenu } from "./components/project-row-menu";
 import { PageHeader, EmptyState, StackdomeMark } from "@/components/branded";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,20 +20,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import type { Team } from "@/api/teams";
+import type { Project } from "@/api/projects";
 
-export default function TeamsPage() {
-  const { teams, loading, error, refetch, create, rename, remove, onlyDefault } = useTeams();
+export default function ProjectsPage() {
+  const { projects, loading, error, refetch, create, rename, remove, onlyDefault } = useProjects();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<Team | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<Team | null>(null);
+  const [renameTarget, setRenameTarget] = useState<Project | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
 
   async function handleCreate(name: string) {
     const result = await create(name);
     if (result.ok) {
       toast({
-        title: "Team created",
+        title: "Project created",
         description: `"${name}" has been created successfully.`,
         variant: "success",
       });
@@ -45,11 +45,11 @@ export default function TeamsPage() {
     <div className="p-8 space-y-8">
       <PageHeader
         eyebrow="Settings"
-        title="Teams"
+        title="Projects"
         actionsAlign="center"
         actions={
           <Button onClick={() => setCreateOpen(true)}>
-            Create team
+            Create project
           </Button>
         }
       />
@@ -59,7 +59,7 @@ export default function TeamsPage() {
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="font-medium">Team</TableHead>
+                <TableHead className="font-medium">Project</TableHead>
                 <TableHead className="font-medium">Members</TableHead>
                 <TableHead className="font-medium">Created</TableHead>
                 <TableHead />
@@ -85,7 +85,7 @@ export default function TeamsPage() {
       ) : error ? (
         <EmptyState
           icon={<Users className="h-8 w-8" />}
-          title="Couldn't load teams"
+          title="Couldn't load projects"
           description={error}
           action={
             <Button variant="outline" onClick={refetch}>
@@ -99,40 +99,40 @@ export default function TeamsPage() {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="font-medium">Team</TableHead>
+                  <TableHead className="font-medium">Project</TableHead>
                   <TableHead className="font-medium">Members</TableHead>
                   <TableHead className="font-medium">Created</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {teams.map((team) => (
-                  <TableRow key={team.id}>
+                {projects.map((project) => (
+                  <TableRow key={project.id}>
                     <TableCell className="p-2">
                       <div className="flex items-center gap-2">
                         <StackdomeMark size={18} />
-                        <span className="font-medium text-sm">{team.name}</span>
-                        {team.default_team && (
+                        <span className="font-medium text-sm">{project.name}</span>
+                        {project.default_project && (
                           <Badge variant="secondary" className="text-[10px]">default</Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="p-2">
                       <Link
-                        to={`/settings/teams/${encodeURIComponent(team.name)}`}
+                        to={`/settings/projects/${encodeURIComponent(project.name)}`}
                         className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Manage members
                       </Link>
                     </TableCell>
                     <TableCell className="p-2 text-sm text-muted-foreground">
-                      {team.created_at
-                        ? format(new Date(team.created_at), "MMM d, yyyy")
+                      {project.created_at
+                        ? format(new Date(project.created_at), "MMM d, yyyy")
                         : "—"}
                     </TableCell>
                     <TableCell className="p-2 text-right">
-                      <TeamRowMenu
-                        team={team}
+                      <ProjectRowMenu
+                        project={project}
                         onRename={(t) => setRenameTarget(t)}
                         onDelete={(t) => setDeleteTarget(t)}
                       />
@@ -146,11 +146,11 @@ export default function TeamsPage() {
           {onlyDefault && (
             <EmptyState
               icon={<Users className="h-8 w-8" />}
-              title="No additional teams"
-              description="Create teams to organize members and control access to resources across your organization."
+              title="No additional projects"
+              description="Create projects to organize members and control access to resources across your organization."
               action={
                 <Button variant="outline" onClick={() => setCreateOpen(true)}>
-                  Create team
+                  Create project
                 </Button>
               }
             />
@@ -158,23 +158,23 @@ export default function TeamsPage() {
         </>
       )}
 
-      <CreateTeamDialog
+      <CreateProjectDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
         onCreate={handleCreate}
       />
 
-      <RenameTeamDialog
+      <RenameProjectDialog
         open={!!renameTarget}
         currentName={renameTarget?.name ?? ""}
         onOpenChange={(o) => { if (!o) setRenameTarget(null); }}
         onRename={async (newName) => {
-          if (!renameTarget) return { ok: false as const, error: "No team selected" };
+          if (!renameTarget) return { ok: false as const, error: "No project selected" };
           const oldName = renameTarget.name;
           const result = await rename(oldName, newName);
           if (result.ok) {
             toast({
-              title: "Team renamed",
+              title: "Project renamed",
               description: `"${oldName}" is now "${newName}".`,
               variant: "success",
             });
@@ -184,9 +184,9 @@ export default function TeamsPage() {
         }}
       />
 
-      <DeleteTeamDialog
+      <DeleteProjectDialog
         open={!!deleteTarget}
-        teamName={deleteTarget?.name ?? ""}
+        projectName={deleteTarget?.name ?? ""}
         onOpenChange={(o) => { if (!o) setDeleteTarget(null); }}
         onConfirm={async () => {
           if (!deleteTarget) return;
@@ -194,14 +194,14 @@ export default function TeamsPage() {
           const result = await remove(name);
           if (result.ok) {
             toast({
-              title: "Team deleted",
+              title: "Project deleted",
               description: `"${name}" has been deleted.`,
               variant: "success",
             });
             setDeleteTarget(null);
           } else {
             toast({
-              title: "Failed to delete team",
+              title: "Failed to delete project",
               description: result.error,
               variant: "destructive",
             });

@@ -81,7 +81,7 @@ interface StackCanvasTabProps {
   /** Switch the editor to the Logs tab (from the drawer's "View logs"). */
   onViewLogs?: () => void;
   /** Null for draft (unsaved) stacks — no server topology exists yet. */
-  topologyIds: { orgId: string; teamName: string; stackId: string } | null;
+  topologyIds: { orgId: string; projectName: string; stackId: string } | null;
   /** Bump to force a topology refetch (wired to autosave refreshes). */
   topologyRefreshKey: number;
   /** Immediate, confirm-gated server-side volume deletion. Undefined for draft

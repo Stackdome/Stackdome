@@ -75,8 +75,8 @@ export function MemberRowMenu({
         toast({
           title: "Member removed",
           description: memberName
-            ? `${memberName} has been removed from the team.`
-            : "Member removed from the team.",
+            ? `${memberName} has been removed from the project.`
+            : "Member removed from the project.",
           variant: "success",
         });
       } else {
@@ -111,7 +111,7 @@ export function MemberRowMenu({
           className="text-destructive focus:text-destructive"
           onSelect={() => void handleRemove()}
         >
-          Remove from team
+          Remove from project
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

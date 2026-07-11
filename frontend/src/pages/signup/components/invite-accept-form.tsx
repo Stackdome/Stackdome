@@ -121,12 +121,12 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
   return (
     <div>
       <FormHead
-        step="join team"
+        step="join project"
         title={`Join ${info.org_name}`}
         trailing={
           <>
             <span className="text-foreground">{info.inviter_name}</span> invited you to the{" "}
-            <span className="text-foreground">{info.team_name}</span> team
+            <span className="text-foreground">{info.project_name}</span> project
             {" · "}
             <span className="text-muted-foreground/60">Expires {expiresFormatted}</span>
           </>

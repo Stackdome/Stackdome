@@ -13,7 +13,7 @@ function isVisible(): boolean {
 
 export interface UseReleasesArgs {
   orgId: string;
-  teamName: string;
+  projectName: string;
   stackId: string;
   enabled: boolean;
 }
@@ -30,7 +30,7 @@ function bySequenceDesc(a: StackRelease, b: StackRelease): number {
   return (b.sequence ?? 0) - (a.sequence ?? 0);
 }
 
-export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesArgs): UseReleasesResult {
+export function useReleases({ orgId, projectName, stackId, enabled }: UseReleasesArgs): UseReleasesResult {
   const [releases, setReleases] = useState<StackRelease[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +47,7 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
     inFlight.current = true;
     setLoading(true);
     try {
-      const data = await listReleases(orgId, teamName, stackId);
+      const data = await listReleases(orgId, projectName, stackId);
       if (!mounted.current) return;
       const sorted = [...(data.items ?? [])].sort(bySequenceDesc);
       setReleases(sorted);
@@ -59,7 +59,7 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
       inFlight.current = false;
       if (rerunQueued.current && mounted.current) { rerunQueued.current = false; void fetchOnce(); }
     }
-  }, [orgId, teamName, stackId, enabled]);
+  }, [orgId, projectName, stackId, enabled]);
 
   useEffect(() => {
     mounted.current = true;

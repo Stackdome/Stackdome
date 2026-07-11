@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage, isNotFoundError } from "@/api/client";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import * as addonsApi from "@/api/addons";
 import type { PostgresAddon } from "@/api/addons";
 
@@ -28,12 +28,12 @@ export function usePostgresAddons() {
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const orgId = getCurrentOrganizationId();
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
 
   const fetchAddons = useCallback(async () => {
-    if (!orgId || !defaultTeamName) return;
+    if (!orgId || !defaultProjectName) return;
     try {
-      const data = await addonsApi.listPostgresAddons(orgId, defaultTeamName);
+      const data = await addonsApi.listPostgresAddons(orgId, defaultProjectName);
       setAddons(data.items || []);
       setError(null);
     } catch (e: unknown) {
@@ -44,7 +44,7 @@ export function usePostgresAddons() {
         setError(getErrorMessage(e));
       }
     }
-  }, [orgId, defaultTeamName]);
+  }, [orgId, defaultProjectName]);
 
   const initialFetch = useCallback(async () => {
     setLoading(true);

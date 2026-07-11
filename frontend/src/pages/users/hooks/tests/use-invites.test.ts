@@ -22,7 +22,7 @@ describe("useInvites", () => {
     vi.mocked(createInvite).mockResolvedValue({ id: "i1", email: "a@b.io", email_sent: true, invite_token: "tok_123" } as never);
     const { result } = renderHook(() => useInvites());
     let out: unknown;
-    await act(async () => { out = await result.current.create({ email: "a@b.io", team_name: "engineering", role: "Developer" }); });
+    await act(async () => { out = await result.current.create({ email: "a@b.io", project_name: "engineering", role: "Developer" }); });
     expect(result.current.result).toBe("sent");
     expect((out as { token: string }).token).toBe("tok_123");
   });
@@ -30,7 +30,7 @@ describe("useInvites", () => {
   it("create() with email_sent=false yields result 'failed'", async () => {
     vi.mocked(createInvite).mockResolvedValue({ id: "i2", email: "a@b.io", email_sent: false, invite_token: "tok_x" } as never);
     const { result } = renderHook(() => useInvites());
-    await act(async () => { await result.current.create({ email: "a@b.io", team_name: "engineering", role: "Developer" }); });
+    await act(async () => { await result.current.create({ email: "a@b.io", project_name: "engineering", role: "Developer" }); });
     expect(result.current.result).toBe("failed");
   });
 
@@ -38,7 +38,7 @@ describe("useInvites", () => {
     vi.mocked(createInvite).mockRejectedValue(new Error("x"));
     const { result } = renderHook(() => useInvites());
     await act(async () => {
-      await expect(result.current.create({ email: "a@b.io", team_name: "engineering", role: "Developer" })).rejects.toBeTruthy();
+      await expect(result.current.create({ email: "a@b.io", project_name: "engineering", role: "Developer" })).rejects.toBeTruthy();
     });
     await waitFor(() => expect(result.current.serverError).toBe("server fail"));
   });

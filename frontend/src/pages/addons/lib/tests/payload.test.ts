@@ -187,11 +187,11 @@ describe("buildCreateInput", () => {
   it("labels and annotations from advanced JSON appear at top level", () => {
     const advancedJson = JSON.stringify({
       labels: [{ key: "env", value: "prod" }],
-      annotations: [{ key: "team", value: "platform" }],
+      annotations: [{ key: "project", value: "platform" }],
     });
     const input = buildCreateInput(baseValues({ advancedJson }));
     expect(input.labels).toEqual([{ key: "env", value: "prod" }]);
-    expect(input.annotations).toEqual([{ key: "team", value: "platform" }]);
+    expect(input.annotations).toEqual([{ key: "project", value: "platform" }]);
   });
 
   it("empty labels/annotations arrays are omitted", () => {

@@ -7,7 +7,7 @@ import { deleteVolume } from "@/api/volumes";
 export type VolumeDeleteToast = (t: { title: string; description?: string; variant?: "destructive" | "success" }) => void;
 
 export interface UseVolumeDeleteArgs {
-  ids: { orgId: string; teamName: string; stackId: string } | null;
+  ids: { orgId: string; projectName: string; stackId: string } | null;
   draftSync: { flush(): Promise<boolean>; notifyExternalUpdate(stack: Stack): void };
   /** Same setter revert's onReverted uses — keeps the page's stack state truthful. */
   onServerRefresh: (fresh: Stack) => void;
@@ -43,7 +43,7 @@ export function useVolumeDelete({
     async (name: string): Promise<void> => {
       if (!ids) return;
       try {
-        const fresh = await getStackById(ids.orgId, ids.teamName, ids.stackId);
+        const fresh = await getStackById(ids.orgId, ids.projectName, ids.stackId);
         draftSync.notifyExternalUpdate(fresh);
         const vol = (fresh.spec?.volumes ?? []).find((v) => v.name === name);
         if (vol) onRestoreVolume(vol as Volume);
@@ -79,7 +79,7 @@ export function useVolumeDelete({
           return false;
         }
 
-        const fresh = await getStackById(ids.orgId, ids.teamName, ids.stackId);
+        const fresh = await getStackById(ids.orgId, ids.projectName, ids.stackId);
         const id = fresh.spec?.volumes?.find((v) => v.name === name)?.id;
         if (id == null) {
           // Never persisted server-side (or already gone) — the local delete is
@@ -88,9 +88,9 @@ export function useVolumeDelete({
           return true;
         }
 
-        await deleteVolume(ids.orgId, ids.teamName, id);
+        await deleteVolume(ids.orgId, ids.projectName, id);
 
-        const fresh2 = await getStackById(ids.orgId, ids.teamName, ids.stackId);
+        const fresh2 = await getStackById(ids.orgId, ids.projectName, ids.stackId);
         draftSync.notifyExternalUpdate(fresh2);
         onServerRefresh(fresh2);
         toast({ title: "Volume deleted", description: `"${name}" and its data were deleted.`, variant: "success" });

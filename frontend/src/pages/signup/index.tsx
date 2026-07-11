@@ -77,11 +77,11 @@ function InviteSignup({ token }: { token: string }) {
     },
     expired: {
       title: "Invite expired",
-      body: "This invite link has expired. Ask your team admin to send a new one.",
+      body: "This invite link has expired. Ask your project admin to send a new one.",
     },
     revoked: {
       title: "Invite revoked",
-      body: "This invite has been revoked. Ask your team admin to send a new one.",
+      body: "This invite has been revoked. Ask your project admin to send a new one.",
     },
     "already-used": {
       title: "Invite already used",

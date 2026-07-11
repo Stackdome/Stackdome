@@ -8,25 +8,25 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { Team } from "@/api/teams";
+import type { Project } from "@/api/projects";
 
-interface TeamRowMenuProps {
-  team: Team;
-  onRename?: (team: Team) => void;
-  onDelete?: (team: Team) => void;
+interface ProjectRowMenuProps {
+  project: Project;
+  onRename?: (project: Project) => void;
+  onDelete?: (project: Project) => void;
 }
 
-export function TeamRowMenu({ team, onRename, onDelete }: TeamRowMenuProps) {
+export function ProjectRowMenu({ project, onRename, onDelete }: ProjectRowMenuProps) {
   const navigate = useNavigate();
 
   function handleManageMembers() {
-    void navigate("/settings/teams/" + encodeURIComponent(team.name));
+    void navigate("/settings/projects/" + encodeURIComponent(project.name));
   }
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Team actions">
+        <Button variant="ghost" size="icon" aria-label="Project actions">
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
@@ -35,19 +35,19 @@ export function TeamRowMenu({ team, onRename, onDelete }: TeamRowMenuProps) {
           Manage members
         </DropdownMenuItem>
         <DropdownMenuItem
-          disabled={team.default_team}
+          disabled={project.default_project}
           onSelect={() => {
-            if (!team.default_team && onRename) onRename(team);
+            if (!project.default_project && onRename) onRename(project);
           }}
         >
           Rename
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          disabled={team.default_team}
+          disabled={project.default_project}
           className="text-destructive focus:text-destructive"
           onSelect={() => {
-            if (!team.default_team && onDelete) onDelete(team);
+            if (!project.default_project && onDelete) onDelete(project);
           }}
         >
           Delete

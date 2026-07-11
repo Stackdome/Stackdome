@@ -76,7 +76,7 @@ export default function StacksPage() {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { canWriteAnyTeam } = useCurrentUser();
+  const { canWriteAnyProject } = useCurrentUser();
 
   useEffect(() => {
     const currentOrgId = getCurrentOrganizationId();
@@ -164,7 +164,7 @@ export default function StacksPage() {
           title="Stacks"
           subtitle="Provision and manage your application stacks"
           actions={
-            canWriteAnyTeam ? (
+            canWriteAnyProject ? (
               <Button onClick={() => setWizardOpen(true)}>
                 <PlusCircle className="h-4 w-4" />
                 New Stack
@@ -179,7 +179,7 @@ export default function StacksPage() {
             title="No stacks deployed yet"
             description="Deploy your first stack to get started."
             action={
-              canWriteAnyTeam ? (
+              canWriteAnyProject ? (
                 <Button onClick={() => setWizardOpen(true)}>
                   <PlusCircle className="h-4 w-4" />
                   Create New Stack

@@ -32,7 +32,7 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
   // mounts once its timeline node is expanded (TimelineNode gates on isOpen).
   const { events } = useReleaseEvents({
     orgId: logContext?.orgId ?? "",
-    teamName: logContext?.teamName ?? "",
+    projectName: logContext?.projectName ?? "",
     stackId: logContext?.stackId ?? "",
     releaseId: release.id,
     terminal: true,

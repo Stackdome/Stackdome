@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, Users, UserX } from "lucide-react";
 import { useUsers } from "./hooks/use-users";
-import { useTeamOptions } from "./hooks/use-team-options";
+import { useProjectOptions } from "./hooks/use-project-options";
 import { InviteDialog } from "./components/invite-dialog";
 import type { UserRowModel } from "./hooks/use-users";
 import { UserRow } from "./components/user-row";
@@ -35,15 +35,15 @@ import {
 
 type RoleTab = "all" | "active" | "invited";
 
-function hasActiveFilters(search: string, roleTab: RoleTab, team: string): boolean {
-  return search.trim() !== "" || roleTab !== "all" || team !== "all";
+function hasActiveFilters(search: string, roleTab: RoleTab, project: string): boolean {
+  return search.trim() !== "" || roleTab !== "all" || project !== "all";
 }
 
 function filterRows(
   rows: UserRowModel[],
   search: string,
   roleTab: RoleTab,
-  team: string,
+  project: string,
 ): UserRowModel[] {
   const q = search.trim().toLowerCase();
   return rows.filter((row) => {
@@ -62,12 +62,12 @@ function filterRows(
       }
     }
 
-    // Team filter
-    if (team !== "all") {
+    // Project filter
+    if (project !== "all") {
       if (row.kind === "active") {
-        if (!row.teams.some((t) => t.team_name === team)) return false;
+        if (!row.projects.some((t) => t.project_name === project)) return false;
       } else {
-        if (row.team_name !== team) return false;
+        if (row.project_name !== project) return false;
       }
     }
 
@@ -83,35 +83,35 @@ function TabCount({ count }: { count: number }) {
 
 export default function UsersPage() {
   const { rows, loading, error, refetch } = useUsers();
-  const { teams: teamOptions } = useTeamOptions();
+  const { projects: projectOptions } = useProjectOptions();
   const [search, setSearch] = useState("");
   const [roleTab, setRoleTab] = useState<RoleTab>("all");
-  const [team, setTeam] = useState("all");
+  const [project, setProject] = useState("all");
   const [inviteOpen, setInviteOpen] = useState(false);
 
-  const allTeams = teamOptions.map((t) => t.name).sort();
-  const filtered = filterRows(rows, search, roleTab, team);
-  const filtersActive = hasActiveFilters(search, roleTab, team);
+  const allProjects = projectOptions.map((t) => t.name).sort();
+  const filtered = filterRows(rows, search, roleTab, project);
+  const filtersActive = hasActiveFilters(search, roleTab, project);
 
   // Tab counts
   const countAll = rows.length;
   const countActive = rows.filter((r) => r.kind === "active").length;
   const countInvited = rows.filter((r) => r.kind === "pending").length;
 
-  // Default team name for chip star
-  const defaultTeamName = teamOptions.find((t) => t.default_team)?.name;
+  // Default project name for chip star
+  const defaultProjectName = projectOptions.find((t) => t.default_project)?.name;
 
   function clearFilters() {
     setSearch("");
     setRoleTab("all");
-    setTeam("all");
+    setProject("all");
   }
 
   const tableHeader = (
     <TableRow className="hover:bg-transparent">
       <TableHead className={COLUMN_HEAD_CLASS}>User</TableHead>
       <TableHead className={COLUMN_HEAD_CLASS}>Org role</TableHead>
-      <TableHead className={COLUMN_HEAD_CLASS}>Teams</TableHead>
+      <TableHead className={COLUMN_HEAD_CLASS}>Projects</TableHead>
       <TableHead className={COLUMN_HEAD_CLASS}>Last active</TableHead>
       <TableHead />
     </TableRow>
@@ -121,7 +121,7 @@ export default function UsersPage() {
     <div className="p-8 space-y-6">
       <PageHeader
         title="Users"
-        subtitle="Everyone in this organisation. Org-admins can manage roles and team memberships."
+        subtitle="Everyone in this organisation. Org-admins can manage roles and project memberships."
         actions={
           <Button onClick={() => setInviteOpen(true)}>
             Invite user
@@ -178,7 +178,7 @@ export default function UsersPage() {
         <EmptyState
           icon={<Users className="h-8 w-8" />}
           title="No users yet"
-          description="Invite your first teammate to get started."
+          description="Invite your first projectmate to get started."
           action={
             <Button variant="outline" onClick={() => setInviteOpen(true)}>
               Invite user
@@ -215,14 +215,14 @@ export default function UsersPage() {
               </TabsList>
             </Tabs>
 
-            {/* Team filter */}
-            <Select value={team} onValueChange={setTeam}>
+            {/* Project filter */}
+            <Select value={project} onValueChange={setProject}>
               <SelectTrigger className="h-9 w-[180px]">
-                <SelectValue placeholder="All teams" />
+                <SelectValue placeholder="All projects" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All teams</SelectItem>
-                {allTeams.map((t) => (
+                <SelectItem value="all">All projects</SelectItem>
+                {allProjects.map((t) => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>
@@ -248,14 +248,14 @@ export default function UsersPage() {
                       <PendingRow
                         key={row.id}
                         row={row}
-                        defaultTeamName={defaultTeamName}
+                        defaultProjectName={defaultProjectName}
                         actions={<PendingRowMenu row={row} onChanged={refetch} />}
                       />
                     ) : (
                       <UserRow
                         key={row.id}
                         row={row}
-                        defaultTeamName={defaultTeamName}
+                        defaultProjectName={defaultProjectName}
                         actions={<UserRowMenu row={row} onChanged={refetch} />}
                       />
                     ),

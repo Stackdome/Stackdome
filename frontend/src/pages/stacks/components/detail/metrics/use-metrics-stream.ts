@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ResourceMetrics } from './types';
-import { useResourceTeams } from '@/hooks/use-resource-teams';
+import { useResourceProjects } from '@/hooks/use-resource-projects';
 import { API_BASE_URL } from '@/api/base-url';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
@@ -39,7 +39,7 @@ export function useMetricsStream({
   const eventSourcesRef = useRef<EventSource[]>([]);
   const resourcesRef = useRef<string[]>([]);
   const enabledRef = useRef(enabled);
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
 
   // Update enabled ref when prop changes
   useEffect(() => {
@@ -48,13 +48,13 @@ export function useMetricsStream({
 
   const buildStackMetricsStreamUrl = useCallback(() => {
     const baseUrl = API_BASE_URL;
-    return `${baseUrl}/organizations/${organizationId}/teams/${defaultTeamName}/stacks/${stackId}/metrics?stream=true`;
-  }, [organizationId, defaultTeamName, stackId]);
+    return `${baseUrl}/organizations/${organizationId}/projects/${defaultProjectName}/stacks/${stackId}/metrics?stream=true`;
+  }, [organizationId, defaultProjectName, stackId]);
 
   const buildResourceMetricsStreamUrl = useCallback((resourceName: string) => {
     const baseUrl = API_BASE_URL;
-    return `${baseUrl}/organizations/${organizationId}/teams/${defaultTeamName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
-  }, [organizationId, defaultTeamName, stackId]);
+    return `${baseUrl}/organizations/${organizationId}/projects/${defaultProjectName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
+  }, [organizationId, defaultProjectName, stackId]);
 
   const parseMetricsData = useCallback((data: string): ResourceMetrics | null => {
     try {
@@ -91,7 +91,7 @@ export function useMetricsStream({
     if (isStreaming) {
       return;
     }
-    if (!defaultTeamName) {
+    if (!defaultProjectName) {
       return;
     }
 
@@ -161,7 +161,7 @@ export function useMetricsStream({
         handleConnectionError();
       };
     });
-  }, [isStreaming, defaultTeamName, buildStackMetricsStreamUrl, buildResourceMetricsStreamUrl, parseMetricsData, handleConnectionError]);
+  }, [isStreaming, defaultProjectName, buildStackMetricsStreamUrl, buildResourceMetricsStreamUrl, parseMetricsData, handleConnectionError]);
 
   // Update resources list - simplified to avoid infinite loops
   const updateResources = useCallback((resources: string[]) => {

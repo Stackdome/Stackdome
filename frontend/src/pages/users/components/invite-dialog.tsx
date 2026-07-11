@@ -19,7 +19,7 @@ import {
 import { FieldShell } from "@/components/branded";
 import { inviteSchema } from "../schemas/invite-schema";
 import { useInvites } from "../hooks/use-invites";
-import { useTeamOptions } from "../hooks/use-team-options";
+import { useProjectOptions } from "../hooks/use-project-options";
 import { getErrorMessage } from "@/api/client";
 
 type Phase = "form" | "submitting" | "success-sent" | "success-failed";
@@ -30,7 +30,7 @@ interface InviteDialogProps {
   onCreated: () => void;
 }
 
-// Default badge pill shown next to default team
+// Default badge pill shown next to default project
 function DefaultPill() {
   return (
     <span className="inline-flex items-center px-1.5 py-px text-[9px] font-mono uppercase tracking-wider rounded text-brand bg-brand-bg border border-brand-border">
@@ -53,8 +53,8 @@ function RoleCard({
 }) {
   const description =
     role === "Developer"
-      ? "Create, edit, deploy, and remove resources in this team."
-      : "Read-only access to this team’s resources and configuration.";
+      ? "Create, edit, deploy, and remove resources in this project."
+      : "Read-only access to this project’s resources and configuration.";
 
   return (
     <button
@@ -123,17 +123,17 @@ function ServerErrorBanner({
 
 export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProps) {
   const { create, submitting } = useInvites();
-  const { teams } = useTeamOptions();
+  const { projects } = useProjectOptions();
 
-  // FIX 4: memoize default-team lookup
-  const defaultTeam = useMemo(() => teams.find((t) => t.default_team)?.name ?? teams[0]?.name ?? "", [teams]);
+  // FIX 4: memoize default-project lookup
+  const defaultProject = useMemo(() => projects.find((t) => t.default_project)?.name ?? projects[0]?.name ?? "", [projects]);
 
   const [phase, setPhase] = useState<Phase>("form");
   const [email, setEmail] = useState("");
-  const [teamName, setTeamName] = useState("");
+  const [projectName, setProjectName] = useState("");
   const [role, setRole] = useState<"Developer" | "Viewer">("Developer");
   const [emailError, setEmailError] = useState("");
-  const [teamError, setTeamError] = useState("");
+  const [projectError, setProjectError] = useState("");
   const [resultToken, setResultToken] = useState("");
   const [resultEmail, setResultEmail] = useState("");
   const [resultEmailError, setResultEmailError] = useState<string | null>(null);
@@ -150,17 +150,17 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
     };
   }, []);
 
-  const resolvedTeam = teamName || defaultTeam;
-  const resolvedDefaultTeam = teams.find((t) => t.default_team)?.name ?? "";
-  const isDefaultTeamSelected = resolvedTeam === resolvedDefaultTeam;
+  const resolvedProject = projectName || defaultProject;
+  const resolvedDefaultProject = projects.find((t) => t.default_project)?.name ?? "";
+  const isDefaultProjectSelected = resolvedProject === resolvedDefaultProject;
 
   function resetForm() {
     setPhase("form");
     setEmail("");
-    setTeamName("");
+    setProjectName("");
     setRole("Developer");
     setEmailError("");
-    setTeamError("");
+    setProjectError("");
     setResultToken("");
     setResultEmail("");
     setResultEmailError(null);
@@ -180,12 +180,12 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
 
   async function handleSubmit() {
     setEmailError("");
-    setTeamError("");
+    setProjectError("");
     setLocalServerError(null);
 
     const parsed = inviteSchema.safeParse({
       email,
-      team_name: resolvedTeam,
+      project_name: resolvedProject,
       role,
     });
 
@@ -193,7 +193,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
       // FIX 5: remove redundant `as ZodError` cast
       for (const issue of parsed.error.issues) {
         if (issue.path[0] === "email") setEmailError(issue.message);
-        if (issue.path[0] === "team_name") setTeamError(issue.message);
+        if (issue.path[0] === "project_name") setProjectError(issue.message);
       }
       return;
     }
@@ -283,7 +283,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                 <Input
                   id="invite-email"
                   type="email"
-                  placeholder="teammate@example.com"
+                  placeholder="projectmate@example.com"
                   value={email}
                   onChange={(e) => {
                     setEmail(e.target.value);
@@ -300,26 +300,26 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                 )}
               </FieldShell>
 
-              {/* Team field */}
-              <FieldShell label="Team" htmlFor="invite-team" error={teamError} required>
+              {/* Project field */}
+              <FieldShell label="Project" htmlFor="invite-project" error={projectError} required>
                 <Select
-                  value={resolvedTeam}
+                  value={resolvedProject}
                   onValueChange={(v) => {
-                    setTeamName(v);
-                    if (teamError) setTeamError("");
+                    setProjectName(v);
+                    if (projectError) setProjectError("");
                   }}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id="invite-team" className="w-full">
-                    <SelectValue placeholder="Select a team">
-                      {resolvedTeam && (
+                  <SelectTrigger id="invite-project" className="w-full">
+                    <SelectValue placeholder="Select a project">
+                      {resolvedProject && (
                         <span className="flex items-center gap-1.5">
-                          {isDefaultTeamSelected && resolvedTeam === "default" ? (
+                          {isDefaultProjectSelected && resolvedProject === "default" ? (
                             <DefaultPill />
                           ) : (
                             <>
-                              <span className="font-mono text-sm">{resolvedTeam}</span>
-                              {isDefaultTeamSelected && <DefaultPill />}
+                              <span className="font-mono text-sm">{resolvedProject}</span>
+                              {isDefaultProjectSelected && <DefaultPill />}
                             </>
                           )}
                         </span>
@@ -327,15 +327,15 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    {teams.map((t) => (
+                    {projects.map((t) => (
                       <SelectItem key={t.name} value={t.name}>
                         <span className="flex items-center gap-1.5">
-                          {t.default_team && t.name === "default" ? (
+                          {t.default_project && t.name === "default" ? (
                             <DefaultPill />
                           ) : (
                             <>
                               <span className="font-mono text-sm">{t.name}</span>
-                              {t.default_team && <DefaultPill />}
+                              {t.default_project && <DefaultPill />}
                             </>
                           )}
                         </span>
@@ -344,13 +344,13 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground leading-snug">
-                  The invite is scoped to one team. The workspace default team is preselected
+                  The invite is scoped to one project. The workspace default project is preselected
                   — change it if they should land somewhere else.
                 </p>
               </FieldShell>
 
               {/* Role field */}
-              <FieldShell label="Role on this team" required>
+              <FieldShell label="Role on this project" required>
                 <div className="grid grid-cols-2 gap-2.5">
                   {(["Developer", "Viewer"] as const).map((r) => (
                     <RoleCard

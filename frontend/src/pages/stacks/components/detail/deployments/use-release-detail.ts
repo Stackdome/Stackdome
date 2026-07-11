@@ -15,7 +15,7 @@ const EMPTY: DetailState = { loading: false };
 // forever. Cool down between auto-retries so ensure() can't hammer a hard 4xx.
 const RETRY_AFTER_ERROR_MS = 10000;
 
-export function useReleaseDetail(orgId: string, teamName: string, stackId: string): ReleaseDetail {
+export function useReleaseDetail(orgId: string, projectName: string, stackId: string): ReleaseDetail {
   const [cache, setCache] = useState<Record<string, DetailState>>({});
   // Keep a ref to the latest cache so ensure() can read it without being in deps
   const cacheRef = useRef(cache);
@@ -24,23 +24,23 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
   const erroredAt = useRef<Map<string, number>>(new Map());
   const refreshQueued = useRef<Set<string>>(new Set());
 
-  // teamName resolves asynchronously (org team list fetch) after stackId is
-  // already known — no-op until all three ids are in, to avoid /teams//... calls.
-  const ready = !!orgId && !!teamName && !!stackId;
+  // projectName resolves asynchronously (org project list fetch) after stackId is
+  // already known — no-op until all three ids are in, to avoid /projects//... calls.
+  const ready = !!orgId && !!projectName && !!stackId;
 
   // Shared fetch. On settle, drain a refresh queued while this was in flight — whichever
   // caller (ensure or refresh) held the slot, the trailing refresh must run once.
   const fetchInto = useCallback((id: string) => {
     inFlight.current.add(id);
     setCache((c) => ({ ...c, [id]: { ...(c[id] ?? {}), loading: true } }));
-    getRelease(orgId, teamName, stackId, id)
+    getRelease(orgId, projectName, stackId, id)
       .then((data) => { erroredAt.current.delete(id); setCache((c) => ({ ...c, [id]: { loading: false, data } })); })
       .catch((e) => { erroredAt.current.set(id, Date.now()); setCache((c) => ({ ...c, [id]: { loading: false, error: e instanceof Error ? e.message : "Failed to load release" } })); })
       .finally(() => {
         inFlight.current.delete(id);
         if (refreshQueued.current.has(id) && ready) { refreshQueued.current.delete(id); fetchInto(id); }
       });
-  }, [ready, orgId, teamName, stackId]);
+  }, [ready, orgId, projectName, stackId]);
 
   const ensure = useCallback((id: string) => {
     if (!ready || !id) return;
