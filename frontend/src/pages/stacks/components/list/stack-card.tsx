@@ -101,6 +101,21 @@ function inferStackIcon(stack: Stack) {
   return Layers;
 }
 
+/**
+ * Human-readable source identity for a resource: image ref as-is, or git
+ * repo tail plus branch/tag when git-built.
+ */
+function resourceSource(res: NonNullable<Stack["spec"]>["stack_resources"] extends (infer R)[] | undefined ? R : never): string | null {
+  if (res.source?.image?.ref) return res.source.image.ref;
+  const git = res.source?.git;
+  if (git?.repo_url) {
+    const repo = git.repo_url.replace(/\.git$/, "").split("/").slice(-2).join("/");
+    const ref = git.branch || git.tag;
+    return ref ? `${repo} @ ${ref}` : repo;
+  }
+  return null;
+}
+
 function deployTone(state?: string | null): { tone: RailTone; word: string } {
   const v = statusVariant("stack", state);
   return { tone: statusVariantTone[v], word: statusVariantLabel[v] };
@@ -121,6 +136,10 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
   const urls: EndpointUrl[] = (stack.spec?.stack_resources ?? []).flatMap((res) =>
     (res.status?.public_ingress ?? []).map((ingress) => ({ resource: res.name, url: ingress.url })),
   );
+  const sources = (stack.spec?.stack_resources ?? [])
+    .map((res) => ({ name: res.name, source: resourceSource(res) }))
+    .filter((r): r is { name: string; source: string } => Boolean(r.name && r.source));
+  const shownSources = sources.slice(0, 3);
 
   return (
     <Card
@@ -145,6 +164,24 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
           </span>
           {stack.status?.state && <StatusWord tone={tone}>{word}</StatusWord>}
         </div>
+
+        {/* Identity: resource → source rows, mirroring the preview card's repo/branch grid */}
+        {shownSources.length > 0 && (
+          <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1.5">
+            {shownSources.map((r) => (
+              <div key={r.name} className="contents">
+                <span className="truncate font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">{r.name}</span>
+                <span className="truncate font-mono text-[11px] text-fg-2" title={r.source}>{r.source}</span>
+              </div>
+            ))}
+            {sources.length > shownSources.length && (
+              <>
+                <span />
+                <span className="font-mono text-[10px] text-fg-muted">+{sources.length - shownSources.length} more</span>
+              </>
+            )}
+          </div>
+        )}
 
         {/* Bottom-anchored group: pills sit just above the footer in every card variant. */}
         <div className="mt-auto flex flex-col gap-[18px]">
