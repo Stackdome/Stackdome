@@ -33,7 +33,6 @@ function renderRow(props: Partial<Parameters<typeof IntegrationRow>[0]> = {}) {
       integration={integration()}
       onVerify={vi.fn()}
       onRemove={vi.fn()}
-      onChanged={vi.fn()}
       {...props}
     />,
   );
@@ -91,16 +90,14 @@ describe("IntegrationRow", () => {
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText(/verify repository access/i), { pointerEventsCheck: 0 });
     await waitFor(() => expect(onVerify).toHaveBeenCalledWith(row));
-    // Sync only applies to GitHub App integrations.
-    expect(screen.queryByText(/sync from github/i)).not.toBeInTheDocument();
   });
 
-  it("hides Verify on GitHub App rows (backend only verifies credentials-type directly) but shows Sync", async () => {
+  it("hides Verify on GitHub App rows (backend only verifies credentials-type directly)", async () => {
     const user = userEvent.setup();
     renderRow();
     await waitFor(() => expect(listInstallations).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
-    expect(await screen.findByText(/sync from github/i)).toBeInTheDocument();
+    expect(await screen.findByText(/remove integration/i)).toBeInTheDocument();
     expect(screen.queryByText(/verify repository access/i)).not.toBeInTheDocument();
   });
 
@@ -137,18 +134,9 @@ describe("IntegrationRow", () => {
     expect(document.body.style.pointerEvents).not.toBe("none");
   });
 
-  it("Sync from GitHub refetches installations with refresh=true then calls onChanged", async () => {
-    const user = userEvent.setup();
-    const onChanged = vi.fn();
-    renderRow({ onChanged });
+  it("loads installations with refresh=true so missed-webhook state self-heals on every visit", async () => {
+    renderRow();
     await waitFor(() => expect(listInstallations).toHaveBeenCalledTimes(1));
-    expect(listInstallations).toHaveBeenNthCalledWith(1, "org-1", "int-1", false);
-
-    await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
-    expect(await screen.findByText(/re-check access now/i)).toBeInTheDocument();
-    await user.click(screen.getByText(/sync from github/i), { pointerEventsCheck: 0 });
-
-    await waitFor(() => expect(listInstallations).toHaveBeenNthCalledWith(2, "org-1", "int-1", true));
-    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(listInstallations).toHaveBeenCalledWith("org-1", "int-1", true);
   });
 });

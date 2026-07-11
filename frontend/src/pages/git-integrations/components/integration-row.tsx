@@ -88,42 +88,35 @@ export function IntegrationRow({
   integration,
   onVerify,
   onRemove,
-  onChanged,
 }: {
   integration: GitIntegration;
   onVerify: (integration: GitIntegration) => void;
   onRemove: (integration: GitIntegration) => void;
-  onChanged: () => void;
 }) {
   const [installations, setInstallations] = useState<GitInstallation[]>([]);
   const requestSeq = useRef(0);
 
-  const load = useCallback(
-    async (refresh: boolean) => {
-      const orgId = getCurrentOrganizationId();
-      if (!orgId || !integration.id) return;
-      const seq = ++requestSeq.current;
-      try {
-        const list = await listInstallations(orgId, integration.id, refresh);
-        if (seq === requestSeq.current) setInstallations(list.items ?? []);
-      } catch {
-        // Row keeps its last-known installations on failure; the menu action can be retried.
-      }
-    },
-    [integration.id],
-  );
+  const load = useCallback(async () => {
+    const orgId = getCurrentOrganizationId();
+    if (!orgId || !integration.id) return;
+    const seq = ++requestSeq.current;
+    try {
+      // refresh=true re-lists installations from GitHub, so state lost to a
+      // missed webhook (backend downtime, local dev without a public URL)
+      // self-heals on every page visit — no manual sync action needed.
+      const list = await listInstallations(orgId, integration.id, true);
+      if (seq === requestSeq.current) setInstallations(list.items ?? []);
+    } catch {
+      // Row keeps its last-known installations on failure; reload retries.
+    }
+  }, [integration.id]);
 
   useEffect(() => {
-    void load(false);
+    void load();
   }, [load]);
 
   const row = deriveRow(integration, installations);
   const isGithubApp = integration.type === GIT_INTEGRATION_TYPE_GITHUB_APP;
-
-  const sync = useCallback(async () => {
-    await load(true);
-    onChanged();
-  }, [load, onChanged]);
 
   return (
     <div className={cn(row.tone === "attention" && "bg-warn/[0.03]")}>
@@ -183,7 +176,6 @@ export function IntegrationRow({
 
         <RowMenu
           onVerify={isGithubApp ? undefined : () => onVerify(integration)}
-          onSync={isGithubApp ? () => void sync() : undefined}
           onRemove={() => onRemove(integration)}
         />
       </div>

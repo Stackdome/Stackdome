@@ -163,7 +163,6 @@ export default function GitIntegrationsPage() {
                   integration={integration}
                   onVerify={setVerifying}
                   onRemove={setRemoving}
-                  onChanged={() => void refresh()}
                 />
               ))}
             </div>

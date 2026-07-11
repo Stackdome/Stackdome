@@ -1,4 +1,4 @@
-import { Ellipsis, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
+import { Ellipsis, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,15 +10,12 @@ import {
 
 export function RowMenu({
   onVerify,
-  onSync,
   onRemove,
 }: {
   /** Direct verification only works for credentials-type integrations
       (backend rejects github_app: access there flows through per-installation
       tokens, not stored credentials). Omit to hide the item. */
   onVerify?: () => void;
-  /** Installation sync only applies to GitHub App integrations. Omit to hide. */
-  onSync?: () => void;
   onRemove: () => void;
 }) {
   return (
@@ -46,16 +43,7 @@ export function RowMenu({
             Verify repository access
           </DropdownMenuItem>
         )}
-        {onSync && (
-          <DropdownMenuItem onSelect={() => onSync()}>
-            <RefreshCw className="h-4 w-4" />
-            <div className="flex flex-col">
-              <span>Sync from GitHub</span>
-              <span className="text-xs text-muted-foreground">Re-check access now</span>
-            </div>
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
+        {onVerify && <DropdownMenuSeparator />}
         <DropdownMenuItem variant="destructive" onSelect={() => setTimeout(() => onRemove(), 0)}>
           <Trash2 className="h-4 w-4" />
           Remove integration
