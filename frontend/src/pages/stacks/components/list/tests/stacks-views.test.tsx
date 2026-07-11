@@ -119,7 +119,7 @@ describe("StacksPage views", () => {
   it("toggle switches from deployed to previews", async () => {
     renderPage();
     await waitFor(() => expect(screen.getByText("tooljet")).toBeTruthy());
-    await userEvent.click(screen.getByRole("button", { name: /^previews$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^previews ·/i }));
     await waitFor(() => expect(screen.getByText("PR #1")).toBeTruthy());
     expect(screen.queryByText("tooljet")).toBeNull();
   });

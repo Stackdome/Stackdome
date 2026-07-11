@@ -1,4 +1,4 @@
-import { Layers, PlusCircle, Loader2, AlertTriangle, Search, Box, GitBranch, GitPullRequest, ChevronDown } from "lucide-react";
+import { Layers, PlusCircle, Loader2, AlertTriangle, Search, Box, GitBranch, GitPullRequest, ChevronDown, ArrowDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -257,8 +257,13 @@ export default function StacksPage() {
   const repoLabel = repoFilter ? configNameById.get(repoFilter) ?? "Repo" : "All repos";
   const showToolbar = view === "deployed" ? deployedStacks.length > 0 : envs.length > 0;
 
-  const viewToggle = (
-    <div className="inline-flex items-center rounded-md border border-border p-0.5">
+  // Design 1a: views are navigation (underlined tabs with counts), filters are tools.
+  const viewCounts: Record<ViewMode, number> = {
+    deployed: deployedStacks.length,
+    previews: envs.length,
+  };
+  const viewTabs = (
+    <div className="flex gap-7 border-b border-border">
       {VIEW_MODES.map((m) => {
         const active = view === m.key;
         return (
@@ -267,11 +272,14 @@ export default function StacksPage() {
             type="button"
             onClick={() => setView(m.key)}
             className={cn(
-              "inline-flex items-center rounded-[5px] px-3 h-7 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
-              active ? "bg-brand text-primary-foreground" : "text-muted-foreground hover:bg-muted/50",
+              "-mb-px inline-flex items-center gap-1.5 border-b-2 px-0.5 py-2.5 font-mono text-[12px] uppercase tracking-[1px] transition-colors",
+              active
+                ? "border-brand text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
-            {m.label}
+            {m.label} <span className="text-muted-foreground">·</span>{" "}
+            <span className="tabular-nums">{viewCounts[m.key]}</span>
           </button>
         );
       })}
@@ -299,12 +307,13 @@ export default function StacksPage() {
           }
         />
 
+        {viewTabs}
+
         {/* Filter / sort toolbar */}
         <div className="flex flex-wrap items-center gap-3">
-          {viewToggle}
           {showToolbar && (
             <>
-              <div className="relative flex-1 min-w-[220px]">
+              <div className="relative w-[300px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={view === "deployed" ? "Filter stacks…" : "Filter previews…"}
@@ -313,8 +322,8 @@ export default function StacksPage() {
                   className="pl-9 h-9"
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                {STATUS_FILTERS.map((f) => {
+              <div className="flex items-stretch overflow-hidden rounded-md border border-border">
+                {STATUS_FILTERS.map((f, i) => {
                   const active = statusFilter === f.key;
                   const count = counts[f.key];
                   return (
@@ -323,10 +332,11 @@ export default function StacksPage() {
                       type="button"
                       onClick={() => setStatusFilter(f.key)}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-md border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
+                        "inline-flex items-center gap-1.5 px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
+                        i > 0 && "border-l border-border",
                         active
-                          ? "border-brand-border bg-brand-bg text-brand"
-                          : "border-border text-muted-foreground hover:bg-muted/50"
+                          ? "bg-brand-bg text-brand"
+                          : "text-muted-foreground hover:bg-muted/50"
                       )}
                     >
                       <span>{f.label}</span>
@@ -335,12 +345,13 @@ export default function StacksPage() {
                   );
                 })}
               </div>
+              <div className="flex-1" />
               {view === "previews" && configs.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
+                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
                     >
                       Repo:{" "}
                       <span className={cn("text-foreground", repoFilter && "normal-case tracking-normal")}>
@@ -382,9 +393,10 @@ export default function StacksPage() {
                 <DropdownMenuTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
                   >
-                      Sort: <span className="text-foreground">{sortLabel}</span>
+                    <ArrowDown className="h-3 w-3" />
+                    {sortLabel}
                     <ChevronDown className="h-3 w-3" />
                   </button>
                 </DropdownMenuTrigger>
