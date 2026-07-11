@@ -646,6 +646,33 @@ export default function StackDetailPage() {
     toast,
   });
 
+  // Shared validation-failure handler for release actions (draft deploy, deploy,
+  // cancel, rollback). Rich (fieldErrors-bearing) 400s paint inline field errors
+  // and the summary banner instead of a generic toast. Returns true when the
+  // error was consumed this way, so the caller can skip its own fallback toast.
+  const applyValidationFailure = useCallback((err: unknown): boolean => {
+    const parsed = parseApiError(err);
+    if (parsed.fieldErrors.length === 0) return false;
+    const mapped = mapFieldErrors(parsed.fieldErrors, { dialect: "fat" });
+    if (mapped.stackName) setNameError(mapped.stackName);
+    setServerFieldErrors((prev) => {
+      const next = { ...prev };
+      for (const [idxStr, fields] of Object.entries(mapped.resources)) {
+        const nm = session.draft.resources[Number(idxStr)]?.name;
+        if (nm) next[nm] = { ...(next[nm] ?? {}), ...fields };
+      }
+      return next;
+    });
+    setDeployFieldErrors(parsed.fieldErrors);
+    setBannerDismissed(false);
+    toast({
+      title: "Deploy failed",
+      description: `${parsed.fieldErrors.length} validation ${parsed.fieldErrors.length === 1 ? "error" : "errors"}`,
+      variant: "destructive",
+    });
+    return true;
+  }, [session.draft.resources, toast]);
+
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
   const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
@@ -655,11 +682,13 @@ export default function StackDetailPage() {
       toast({ title: ok, variant: "success" });
       refetchReleases();
     } catch (e) {
-      toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      if (!applyValidationFailure(e)) {
+        toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      }
     } finally {
       setDeployBusy(false);
     }
-  }, [toast, refetchReleases]);
+  }, [toast, refetchReleases, applyValidationFailure]);
 
   const onDeploy = useCallback(async () => {
     if (!draftSync || !deployIds.stackId) return;
@@ -795,30 +824,10 @@ export default function StackDetailPage() {
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
-      const parsed = parseApiError(err);
-      if (parsed.fieldErrors.length > 0) {
-        // Rich validation failure: paint each field inline and summarize in the banner.
-        const mapped = mapFieldErrors(parsed.fieldErrors, { dialect: "fat" });
-        if (mapped.stackName) setNameError(mapped.stackName);
-        setServerFieldErrors((prev) => {
-          const next = { ...prev };
-          for (const [idxStr, fields] of Object.entries(mapped.resources)) {
-            const nm = session.draft.resources[Number(idxStr)]?.name;
-            if (nm) next[nm] = { ...(next[nm] ?? {}), ...fields };
-          }
-          return next;
-        });
-        setDeployFieldErrors(parsed.fieldErrors);
-        setBannerDismissed(false);
-        toast({
-          title: "Deploy failed",
-          description: `${parsed.fieldErrors.length} validation ${parsed.fieldErrors.length === 1 ? "error" : "errors"}`,
-          variant: "destructive",
-        });
-      } else {
+      if (!applyValidationFailure(err)) {
         toast({
           title: "Failed to create stack",
-          description: parsed.topLevel,
+          description: parseApiError(err).topLevel,
           variant: "destructive",
         });
       }
