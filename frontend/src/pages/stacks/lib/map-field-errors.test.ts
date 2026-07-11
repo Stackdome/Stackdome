@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mapFieldErrors } from "./map-field-errors";
+import { mapFieldErrors, fieldTab } from "./map-field-errors";
 import type { ParsedFieldError } from "@/api/errors";
 
 function fe(field: string, message = "msg", code = "x"): ParsedFieldError {
@@ -78,5 +78,16 @@ describe("mapFieldErrors — thin dialect", () => {
     const out = mapFieldErrors([err], { dialect: "thin", resourceIndex: 0 });
     expect(out.unmapped).toEqual([err]);
     expect(out.resources).toEqual({});
+  });
+});
+
+describe("fieldTab", () => {
+  it("routes env paths to the environment tab", () => {
+    expect(fieldTab("execution_config.env[0].name")).toBe("environment");
+  });
+
+  it("routes everything else to configuration", () => {
+    expect(fieldTab("source.image.ref")).toBe("configuration");
+    expect(fieldTab("ports[0].protocol")).toBe("configuration");
   });
 });

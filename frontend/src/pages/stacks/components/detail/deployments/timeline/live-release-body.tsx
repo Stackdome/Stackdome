@@ -1,11 +1,14 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { StageTracker } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { ValidationBanner } from "@/pages/stacks/components/detail/ValidationBanner";
 import { deriveStages, deriveFailingResources, deriveRecovered, resourceSource, replicaLabel } from "../derive";
 import { ReleaseState } from "../release-states";
 import { diffSnapshots } from "../release-snapshot-diff";
 import type { ReleaseDetail } from "../use-release-detail";
+import { releaseValidationBannerItems } from "../release-errors";
 import { type ResourceRowVM, type LogContext } from "./resource-row";
 import { ResourceOutcomeList } from "./resource-outcome-list";
 import { ConfigChangesToggle } from "./config-changes-toggle";
@@ -19,13 +22,15 @@ export interface LiveReleaseBodyProps {
   detail?: ReleaseDetail;
   prevReleaseId?: string;
   prevSeq?: number;
+  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
 }
 
 /**
  * Detail-card body for the latest deploy (releases[0]). Renders LIVE progress from
  * release.live_status.resources + the derived tracker (vs a historical node's stored outcome).
  */
-export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq }: LiveReleaseBodyProps) {
+export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq, onJumpToResource }: LiveReleaseBodyProps) {
+  const [validationDismissed, setValidationDismissed] = useState(false);
   // Source image/repo from THIS release's snapshot (the frozen spec it ships), not the
   // live stack spec which may have been edited after deploy. Also prefetch prev snapshot for the diff.
   useEffect(() => {
@@ -46,6 +51,9 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const liveResources = Object.entries(liveStatus?.resources ?? {});
   const sourceByName = new Map((releaseSnapshot?.resources ?? stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const failureMsg = release.state === ReleaseState.Failed && failing.length === 0 ? release.message : undefined;
+  const validationItems = release.state === ReleaseState.Failed
+    ? releaseValidationBannerItems(release, stack.spec?.stack_resources ?? [])
+    : [];
   const rows: ResourceRowVM[] = liveResources.map(([name, s]) => ({
     name,
     phase: s.state ?? "",
@@ -61,6 +69,14 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
       <StageTracker stages={stages} />
 
       {failureMsg && <DeployFailedBanner message={failureMsg} />}
+
+      {!validationDismissed && validationItems.length > 0 && (
+        <ValidationBanner
+          items={validationItems}
+          onJump={onJumpToResource}
+          onDismiss={() => setValidationDismissed(true)}
+        />
+      )}
 
       <ResourceOutcomeList rows={rows} logContext={logContext} onOpenLogs={onOpenLogs} />
 

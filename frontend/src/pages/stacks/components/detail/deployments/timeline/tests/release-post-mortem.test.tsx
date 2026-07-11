@@ -2,17 +2,31 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 vi.mock("@/api/releases", () => ({ getRelease: vi.fn() }));
 import { getRelease } from "@/api/releases";
 import { useReleaseDetail } from "../../use-release-detail";
 import { ReleasePostMortem } from "../release-post-mortem";
 import type { StackRelease } from "@/api/releases";
+import type { Stack } from "@/api/stacks";
 
 afterEach(cleanup);
 
-function Wrap({ release, prevId }: { release: StackRelease; prevId?: string }) {
+const stack = { spec: { stack_resources: [{ name: "web" }] } } as unknown as Stack;
+
+function Wrap(props: { release: StackRelease; prevId?: string; onJumpToResource?: React.ComponentProps<typeof ReleasePostMortem>["onJumpToResource"] }) {
+  const { release, prevId, onJumpToResource } = props;
   const detail = useReleaseDetail("o", "t", "s");
-  return <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevId} prevSeq={12} />;
+  return (
+    <ReleasePostMortem
+      detail={detail}
+      release={release}
+      stack={stack}
+      prevReleaseId={prevId}
+      prevSeq={12}
+      onJumpToResource={onJumpToResource}
+    />
+  );
 }
 
 describe("ReleasePostMortem", () => {
@@ -45,5 +59,25 @@ describe("ReleasePostMortem", () => {
     (getRelease as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("nope"));
     render(<Wrap release={{ id: "r-cur", sequence: 5, state: "Released" } as StackRelease} />);
     await waitFor(() => expect(screen.getByText(/nope/)).toBeInTheDocument());
+  });
+
+  it("renders async validation errors and jumps to the offending resource", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r-cur", sequence: 9, outcome: { resources: {} }, snapshot: { resources: [] } });
+    const onJumpToResource = vi.fn();
+    render(
+      <Wrap
+        release={{
+          id: "r-cur",
+          sequence: 9,
+          state: "Failed",
+          message: "validation failed",
+          validation_errors: [{ resource_name: "web", field: "source.image.ref", code: "image_not_found", message: "not found" }],
+        } as StackRelease}
+        onJumpToResource={onJumpToResource}
+      />,
+    );
+    await waitFor(() => expect(screen.getByText(/image_not_found/)).toBeInTheDocument());
+    await userEvent.click(screen.getByText(/image_not_found/));
+    expect(onJumpToResource).toHaveBeenCalledWith(0, "configuration");
   });
 });

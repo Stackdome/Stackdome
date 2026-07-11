@@ -66,4 +66,25 @@ describe("TimelineNode", () => {
     render(<Wrap release={{ id: "r1", sequence: 13, state: "Released" } as StackRelease} isOpen prevReleaseId="r0" prevSeq={12} />);
     expect(await screen.findByText(/vs #12/i)).toBeInTheDocument();
   });
+
+  it("renders async validation errors on the live body and jumps to the offending resource", async () => {
+    const onJumpToResource = vi.fn();
+    const stackWithResource = { spec: { stack_resources: [{ name: "web" }] } } as unknown as Stack;
+    render(
+      <Wrap
+        release={{
+          id: "r1",
+          sequence: 9,
+          state: "Failed",
+          validation_errors: [{ resource_name: "web", field: "source.image.ref", code: "image_not_found", message: "not found" }],
+        } as StackRelease}
+        isActive
+        isOpen
+        stack={stackWithResource}
+        onJumpToResource={onJumpToResource}
+      />,
+    );
+    await userEvent.click(screen.getByText(/image_not_found/));
+    expect(onJumpToResource).toHaveBeenCalledWith(0, "configuration");
+  });
 });

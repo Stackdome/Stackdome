@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { StatusPill } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { causeLabel, releaseGitSha, formatDuration, formatReleaseTime } from "../derive";
 import { ReleaseState, isDeploying } from "../release-states";
 import type { ReleaseDetail } from "../use-release-detail";
@@ -27,6 +28,7 @@ export interface TimelineNodeProps {
   stack: Stack;
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
+  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
 }
 
 /**
@@ -34,7 +36,7 @@ export interface TimelineNodeProps {
  * release; only the body differs (live progress for the latest, stored post-mortem for earlier).
  */
 export function TimelineNode(props: TimelineNodeProps) {
-  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs } = props;
+  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs, onJumpToResource } = props;
   const id = release.id ?? "";
   const state = release.state ?? "";
   const deploying = isDeploying(state);
@@ -88,9 +90,17 @@ export function TimelineNode(props: TimelineNodeProps) {
               detail={detail}
               prevReleaseId={prevReleaseId}
               prevSeq={prevSeq}
+              onJumpToResource={onJumpToResource}
             />
           ) : (
-            <ReleasePostMortem detail={detail} release={release} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
+            <ReleasePostMortem
+              detail={detail}
+              release={release}
+              stack={stack}
+              prevReleaseId={prevReleaseId}
+              prevSeq={prevSeq}
+              onJumpToResource={onJumpToResource}
+            />
           )}
         </div>
       )}

@@ -927,6 +927,10 @@ export default function StackDetailPage() {
       stackId={effectiveStack.id}
       stack={effectiveStack}
       onOpenLogs={() => setActiveTab("logs")}
+      onJumpToResource={(index, tab) => {
+        setActiveTab("architecture");
+        setOpenResourceSignal({ index, tab, nonce: Date.now() });
+      }}
       releases={releasesResult.releases}
       activeRelease={releasesResult.activeRelease}
       loading={releasesResult.loading}

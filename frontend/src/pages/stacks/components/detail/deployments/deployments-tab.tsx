@@ -1,6 +1,7 @@
 import { EmptyState } from "@/components/branded";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { DeployLifecycle } from "./use-deploy-lifecycle";
 import { TimelineRail } from "./timeline/timeline-rail";
 import { DraftNode } from "./timeline/draft-node";
@@ -12,6 +13,8 @@ export interface DeploymentsTabProps {
   stackId: string;
   stack: Stack;
   onOpenLogs?: (resourceName?: string) => void;
+  /** Opens the canvas resource drawer (release-error banner "jump to error"). */
+  onJumpToResource?: (resourceIndex: number, tab: EditSessionTab) => void;
   // Deploy lifecycle + release data are owned by the page (the status bar owns
   // deploy); this tab is presentational.
   releases: StackRelease[];
@@ -24,7 +27,7 @@ export interface DeploymentsTabProps {
   onCopyId: (id: string) => void;
 }
 
-export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, onJumpToResource, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const logContext = { orgId, teamName, stackId };
@@ -66,6 +69,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, re
             stack={stack}
             logContext={logContext}
             onOpenLogs={openLogs}
+            onJumpToResource={onJumpToResource}
             draftNode={draftNode}
             onRollback={onRollback}
             onCancel={onCancel}
