@@ -2,7 +2,7 @@ import { GitPullRequest } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import {
-  statusVariant,
+  previewStatusVariant,
   statusVariantLabel,
   statusVariantTone,
 } from "@/components/branded/status-variant";
@@ -24,7 +24,7 @@ interface PreviewEnvCardProps {
 }
 
 function previewTone(phase: PreviewPhase | undefined): { tone: RailTone; word: string } {
-  const v = statusVariant("preview", phase);
+  const v = previewStatusVariant(phase);
   return { tone: statusVariantTone[v], word: statusVariantLabel[v] };
 }
 
@@ -55,7 +55,7 @@ export function PreviewEnvCard({ env, configName }: PreviewEnvCardProps) {
           : undefined
       }
       className={cn(
-        "group flex h-full min-h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150",
+        "group flex h-full min-h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40",
         clickable && "cursor-pointer hover:border-brand-border hover:bg-muted/20",
       )}
     >

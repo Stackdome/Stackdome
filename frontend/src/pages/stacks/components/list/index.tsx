@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageHeader, EmptyState, type StatusVariant } from "@/components/branded";
-import { statusVariant } from "@/components/branded/status-variant";
+import { statusVariant, statusVariantLabel, previewStatusVariant } from "@/components/branded/status-variant";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import { EnableRepoWizard } from "@/pages/previews/components/enable-repo-wizard/enable-repo-wizard";
 import { PreviewEnvCard } from "./preview-env-card";
@@ -32,9 +32,9 @@ type ViewMode = "deployed" | "previews";
 
 const STATUS_FILTERS: { key: StatusFilter; label: string; variant: StatusVariant | "neutral" }[] = [
   { key: "all", label: "All", variant: "neutral" },
-  { key: "ready", label: "Ready", variant: "ready" },
-  { key: "pending", label: "Pending", variant: "pending" },
-  { key: "error", label: "Failed", variant: "error" },
+  { key: "ready", label: statusVariantLabel.ready, variant: "ready" },
+  { key: "pending", label: statusVariantLabel.pending, variant: "pending" },
+  { key: "error", label: statusVariantLabel.error, variant: "error" },
 ];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
@@ -57,10 +57,11 @@ function bucketStatus(state?: string | null): StatusFilter {
 }
 
 function bucketPhase(phase?: PreviewPhase | null): StatusFilter {
-  if (phase === "Ready") return "ready";
-  if (phase === "Failed") return "error";
-  // Provisioning / Deploying / Deleting / not yet reported → in flight
-  return "pending";
+  const v = previewStatusVariant(phase);
+  if (v === "ready") return "ready";
+  if (v === "pending") return "pending";
+  if (v === "error") return "error";
+  return "all";
 }
 
 export default function StacksPage() {

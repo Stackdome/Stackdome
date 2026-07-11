@@ -55,9 +55,9 @@ export function EndpointPills({ urls }: { urls: EndpointUrl[] }) {
   if (valid.length === 0) return null;
   return (
     <div className="flex flex-wrap gap-1.5">
-      {valid.map((u) => (
+      {valid.map((u, i) => (
         <a
-          key={u.url}
+          key={`${u.resource}-${u.url}-${i}`}
           href={u.url}
           target="_blank"
           rel="noopener noreferrer"
@@ -131,7 +131,7 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
       onKeyDown={(e) => {
         if (e.key === "Enter") navigate(`/stacks/${stack.id}`);
       }}
-      className="group flex h-full min-h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20"
+      className="group flex h-full min-h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40"
     >
       <StatusRail tone={tone} />
       <div className="flex flex-1 flex-col gap-[18px] p-5">

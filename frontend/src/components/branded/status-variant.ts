@@ -38,6 +38,16 @@ export const statusVariantTone: Record<StatusVariant, StatusTone> = {
   neutral: "brand",
 };
 
+/**
+ * Preview envs with no reported phase are still provisioning — treat a
+ * missing phase as pending, not neutral. All preview status surfaces (cards,
+ * filter buckets) must go through this so they agree.
+ */
+export function previewStatusVariant(phase?: string | null): StatusVariant {
+  if (!(phase ?? "").trim()) return "pending";
+  return statusVariant("preview", phase);
+}
+
 export type StatusDomain =
   | "stack"
   | "resource"
