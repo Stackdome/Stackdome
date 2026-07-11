@@ -76,7 +76,7 @@ function mapStackResourceToFormData(resource: StackResource): FormStackResourceD
     volume_mounts: cleanedVolumeMounts
   };
 
-  return convertApiResourceToFormResource(resourceWithCleanedMounts as z.infer<typeof ApiStackResourceSchema> & { status?: unknown });
+  return convertApiResourceToFormResource(resourceWithCleanedMounts as z.infer<typeof ApiStackResourceSchema>);
 }
 
 function mapVolumeToFormData(volume: Volume): VolumeFormData {

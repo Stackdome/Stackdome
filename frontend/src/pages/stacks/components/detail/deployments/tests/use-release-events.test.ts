@@ -98,6 +98,23 @@ describe("useReleaseEvents", () => {
     expect(FakeEventSource.instances[1].url).toContain("after_sequence=5");
   });
 
+  it("resets the reconnect budget on a successful open — blips that recover never fall back to polling", async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() =>
+      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: false }),
+    );
+    // 15 > MAX_RECONNECTS: each blip reconnects and re-opens cleanly, so the counter
+    // never accumulates past the cap. Without the reset this would flip to polling.
+    for (let i = 0; i < 15; i++) {
+      const es = FakeEventSource.instances[FakeEventSource.instances.length - 1];
+      act(() => es.open());
+      act(() => es.error());
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    }
+    act(() => FakeEventSource.instances[FakeEventSource.instances.length - 1].open());
+    expect(result.current.status).toBe("streaming");
+  });
+
   it("terminal release: one-shot list fetch, no EventSource, ends closed", async () => {
     vi.mocked(listReleaseEvents).mockResolvedValue({ items: [ev(1), ev(2)] });
     const { result } = renderHook(() =>
@@ -108,7 +125,22 @@ describe("useReleaseEvents", () => {
     expect(result.current.events.map((e) => e.sequence)).toEqual([1, 2]);
     expect(FakeEventSource.instances).toHaveLength(0);
     expect(listReleaseEvents).toHaveBeenCalledTimes(1);
-    expect(listReleaseEvents).toHaveBeenCalledWith("o", "t", "s", "r1");
+    expect(listReleaseEvents).toHaveBeenCalledWith("o", "t", "s", "r1", undefined);
+  });
+
+  it("terminal release: follows next_after_sequence so the event tail is not dropped", async () => {
+    vi.mocked(listReleaseEvents)
+      .mockResolvedValueOnce({ items: [ev(1), ev(2)], next_after_sequence: 2 })
+      .mockResolvedValueOnce({ items: [ev(3)] });
+    const { result } = renderHook(() =>
+      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: true }),
+    );
+
+    await waitFor(() => expect(result.current.status).toBe("closed"));
+    expect(result.current.events.map((e) => e.sequence)).toEqual([1, 2, 3]);
+    expect(listReleaseEvents).toHaveBeenCalledTimes(2);
+    expect(listReleaseEvents).toHaveBeenNthCalledWith(1, "o", "t", "s", "r1", undefined);
+    expect(listReleaseEvents).toHaveBeenNthCalledWith(2, "o", "t", "s", "r1", 2);
   });
 
   it("closes the stream on unmount", async () => {

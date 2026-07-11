@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { EmptyState } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
@@ -47,6 +47,15 @@ export function TimelineRail(props: TimelineRailProps) {
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
   );
   const [windowN, setWindowN] = useState(initialWindow);
+
+  // The initializer only runs on mount, so a release created later (user deploys while
+  // sitting on this tab) would render collapsed — hiding its own StageTracker, activity
+  // feed, and failure banner. Auto-open the active release whenever it changes.
+  const activeId = activeRelease?.id;
+  useEffect(() => {
+    if (!activeId) return;
+    setOpenIds((cur) => (cur.has(activeId) ? cur : new Set(cur).add(activeId)));
+  }, [activeId]);
 
   // Multiple release details can be open at once — not an accordion.
   const toggle = (id: string) =>

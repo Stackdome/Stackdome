@@ -150,10 +150,11 @@ export function useDeployLifecycle({ stack, unsaved, releases, activeRelease, de
   const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
   const activeId = activeRelease?.id;
 
+  const ensure = detail.ensure;
   useEffect(() => {
-    if (liveReleaseId) detail.ensure(liveReleaseId);
-    if (activeId) detail.ensure(activeId);
-  }, [detail, liveReleaseId, activeId]);
+    if (liveReleaseId) ensure(liveReleaseId);
+    if (activeId) ensure(activeId);
+  }, [ensure, liveReleaseId, activeId]);
 
   const liveSnapshot = detail.peek(liveReleaseId).data?.snapshot;
   const activeSnapshot = detail.peek(activeId).data?.snapshot;

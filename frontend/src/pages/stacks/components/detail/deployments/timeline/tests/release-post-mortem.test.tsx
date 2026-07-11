@@ -102,6 +102,6 @@ describe("ReleasePostMortem", () => {
     render(<Wrap release={{ id: "r-cur", sequence: 9, state: "Released" } as StackRelease} />);
     expect(await screen.findByText("Build succeeded")).toBeInTheDocument();
     expect(screen.queryByText("live")).not.toBeInTheDocument();
-    expect(listReleaseEvents).toHaveBeenCalledWith("o", "t", "s", "r-cur");
+    expect(listReleaseEvents).toHaveBeenCalledWith("o", "t", "s", "r-cur", undefined);
   });
 });

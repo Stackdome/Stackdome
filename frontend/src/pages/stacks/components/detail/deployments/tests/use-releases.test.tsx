@@ -43,6 +43,25 @@ describe("useReleases", () => {
     expect(listReleases).toHaveBeenCalledTimes(2);
   });
 
+  it("coalesces a refetch requested while one is in flight (terminal event isn't dropped)", async () => {
+    const mock = listReleases as ReturnType<typeof vi.fn>;
+    let resolveFirst!: (v: unknown) => void;
+    mock
+      .mockImplementationOnce(() => new Promise((res) => { resolveFirst = res; }))
+      .mockResolvedValue({ items: [{ id: "r1", sequence: 1, state: "Released" }] });
+
+    const { result } = renderHook(() => useReleases(ARGS));
+    await waitFor(() => expect(mock).toHaveBeenCalledTimes(1)); // mount fetch, still in flight
+
+    // Event-driven refetch lands mid-flight — must queue, not vanish.
+    result.current.refetch();
+    expect(mock).toHaveBeenCalledTimes(1);
+
+    resolveFirst({ items: [] });
+    await waitFor(() => expect(mock).toHaveBeenCalledTimes(2)); // queued refetch runs after settle
+    await waitFor(() => expect(result.current.releases).toHaveLength(1));
+  });
+
   it("still does a slow idle poll when everything is terminal (catches external deploys)", async () => {
     vi.useFakeTimers();
     const mock = listReleases as ReturnType<typeof vi.fn>;

@@ -75,6 +75,23 @@ describe("TimelineRail", () => {
     expect(screen.getByText("#1")).toBeInTheDocument();
   });
 
+  it("auto-opens a release that first appears after mount (deploy while the tab is open)", () => {
+    const r1 = { id: "r1", sequence: 1, state: "Released", cause: { kind: "manual" } } as StackRelease;
+    const r2 = { id: "r2", sequence: 2, state: "Released", cause: { kind: "manual" } } as StackRelease;
+    const r3 = { id: "r3", sequence: 3, state: "Released", cause: { kind: "manual" } } as StackRelease;
+    const { container, rerender } = renderRail(<TimelineRail releases={[r2, r1]} activeRelease={r2} {...base} />);
+    // r3 doesn't exist at mount, so the open-set initializer can't have opened it.
+    expect(container.querySelector("#deploy-node-r3")).toBeNull();
+
+    rerender(
+      <ReleaseDetailProvider value={stubDetail}>
+        <TimelineRail releases={[r3, r2, r1]} activeRelease={r3} {...base} />
+      </ReleaseDetailProvider>,
+    );
+    // The new release's node is expanded (chevron rotated) — its live progress isn't hidden in a collapsed row.
+    expect(container.querySelector("#deploy-node-r3")?.querySelector(".rotate-180")).toBeTruthy();
+  });
+
   it("keeps multiple release details open at once (not an accordion)", async () => {
     const r = rels(4); // active #4, earlier #3 #2 #1
     renderRail(<TimelineRail releases={r} activeRelease={r[0]} {...base} />);

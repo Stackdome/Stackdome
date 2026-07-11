@@ -35,10 +35,15 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
+  const rerunQueued = useRef(false);
   const mounted = useRef(true);
 
   const fetchOnce = useCallback(async () => {
-    if (!enabled || inFlight.current) return;
+    if (!enabled) return;
+    // A refetch requested while one is in flight (e.g. the terminal SSE event landing
+    // during the 30s idle poll) must not be dropped — the in-flight response predates
+    // the event. Remember it and re-run once the current fetch settles.
+    if (inFlight.current) { rerunQueued.current = true; return; }
     inFlight.current = true;
     setLoading(true);
     try {
@@ -52,6 +57,7 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
     } finally {
       if (mounted.current) setLoading(false);
       inFlight.current = false;
+      if (rerunQueued.current && mounted.current) { rerunQueued.current = false; void fetchOnce(); }
     }
   }, [orgId, teamName, stackId, enabled]);
 

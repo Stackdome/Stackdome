@@ -59,12 +59,29 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
       fresh.forEach((e) => onEventRef.current?.(e));
     };
 
+    // The events endpoint is paginated (default 100/page). Follow next_after_sequence
+    // so a release with many events keeps its tail — the release-completed / failure
+    // events land last and are exactly what a post-mortem or catch-up poll needs.
+    const fetchAllSince = async (after?: number): Promise<ReleaseEvent[]> => {
+      const all: ReleaseEvent[] = [];
+      let cursor = after;
+      for (;;) {
+        const page = await listReleaseEvents(orgId, teamName, stackId, releaseId, cursor);
+        if (disposed) break;
+        const items = page.items ?? [];
+        all.push(...items);
+        if (items.length === 0 || page.next_after_sequence === undefined) break;
+        cursor = page.next_after_sequence;
+      }
+      return all;
+    };
+
     if (terminal) {
       setStatus("polling");
-      void listReleaseEvents(orgId, teamName, stackId, releaseId)
-        .then((page) => {
+      void fetchAllSince()
+        .then((items) => {
           if (disposed) return;
-          ingest(page.items ?? []);
+          ingest(items);
           setStatus("closed");
         })
         .catch(() => { if (!disposed) setStatus("error"); });
@@ -76,23 +93,25 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
+    const poll = () => {
+      void fetchAllSince(lastSeq.current)
+        .then((items) => {
+          if (disposed) return;
+          ingest(items);
+          setStatus("polling");
+        })
+        .catch(() => { if (!disposed) setStatus("error"); });
+    };
     const startPolling = () => {
       setStatus("polling");
-      pollTimer = setInterval(() => {
-        void listReleaseEvents(orgId, teamName, stackId, releaseId, lastSeq.current)
-          .then((page) => {
-            if (disposed) return;
-            ingest(page.items ?? []);
-            setStatus("polling");
-          })
-          .catch(() => { if (!disposed) setStatus("error"); });
-      }, POLL_MS);
+      poll(); // fire once immediately — don't make the user wait a full POLL_MS after giving up on SSE
+      pollTimer = setInterval(poll, POLL_MS);
     };
 
     const connect = () => {
       setStatus("connecting");
       es = new EventSource(buildReleaseEventStreamUrl(orgId, teamName, stackId, releaseId, lastSeq.current || undefined));
-      es.onopen = () => setStatus("streaming");
+      es.onopen = () => { reconnects = 0; setStatus("streaming"); }; // a clean reopen clears the budget — MAX_RECONNECTS means N failures in a row, not over the stream's life
       es.onmessage = (msg) => {
         try {
           ingest([JSON.parse(msg.data) as ReleaseEvent]);

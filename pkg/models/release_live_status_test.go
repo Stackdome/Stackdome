@@ -78,6 +78,15 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthDegraded))
 	})
 
+	ginkgo.It("prefers progressing over degraded while any resource is still coming up", func() {
+		// A resource mid-rollout makes the whole release progressing; the Degraded
+		// condition is only surfaced once nothing is progressing, so the transient
+		// state wins and degraded doesn't fire early.
+		stack.StackResources[1].Status.State = StackResourcePhasePending
+		stack.Status.Conditions = []Condition{{Type: string(StackConditionDegraded), Status: string(ConditionTrue)}}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
+	})
+
 	ginkgo.It("rolls up progressing when any resource is unknown", func() {
 		stack.StackResources[1].Status.State = StackResourcePhaseUnknown
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))

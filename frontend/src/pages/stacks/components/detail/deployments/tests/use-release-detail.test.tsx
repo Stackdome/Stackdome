@@ -2,12 +2,12 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { useEffect } from "react";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, fireEvent, act } from "@testing-library/react";
 vi.mock("@/api/releases", () => ({ getRelease: vi.fn() }));
 import { getRelease } from "@/api/releases";
 import { useReleaseDetail, ReleaseDetailProvider, useReleaseDetailContext } from "../use-release-detail";
 
-afterEach(() => { cleanup(); vi.clearAllMocks(); });
+afterEach(() => { cleanup(); vi.clearAllMocks(); vi.useRealTimers(); });
 
 function Harness({ ids }: { ids: string[] }) {
   const detail = useReleaseDetail("o", "t", "s");
@@ -89,6 +89,52 @@ describe("useReleaseDetail", () => {
     await waitFor(() => expect(screen.getByText("5")).toBeInTheDocument());
   });
 
+  it("coalesces refreshes requested while a fetch is in flight into one trailing run (terminal refresh not dropped)", async () => {
+    const mock = getRelease as ReturnType<typeof vi.fn>;
+    let resolveFirst!: (v: unknown) => void;
+    mock
+      .mockImplementationOnce(() => new Promise((r) => { resolveFirst = r; })) // ensure fetch, held in flight
+      .mockResolvedValue({ id: "r1", sequence: 2 });
+    function R() {
+      const d = useReleaseDetail("o", "t", "s");
+      d.ensure("r1");
+      return <button onClick={() => d.refresh("r1")}>{d.peek("r1").data?.sequence ?? "—"}</button>;
+    }
+    render(<R />);
+    expect(mock).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button")); // refresh mid-flight → queued
+    fireEvent.click(screen.getByRole("button")); // second refresh → coalesced, still one queued run
+    expect(mock).toHaveBeenCalledTimes(1);
+
+    resolveFirst({ id: "r1", sequence: 1 });
+    await waitFor(() => expect(mock).toHaveBeenCalledTimes(2)); // exactly one trailing refresh, not two
+    await waitFor(() => expect(screen.getByRole("button")).toHaveTextContent("2"));
+  });
+
+  it("retries a cached error after the cooldown instead of stranding it forever", async () => {
+    vi.useFakeTimers();
+    const mock = getRelease as ReturnType<typeof vi.fn>;
+    mock.mockRejectedValueOnce(new Error("boom")).mockResolvedValue({ id: "r1", sequence: 9 });
+    function E({ tick }: { tick: number }) {
+      const d = useReleaseDetail("o", "t", "s");
+      d.ensure("r1");
+      return <span data-tick={tick}>{d.peek("r1").data?.sequence ?? d.peek("r1").error ?? "—"}</span>;
+    }
+    const { rerender } = render(<E tick={0} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); }); // settle the rejected mount fetch
+    expect(mock).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("boom")).toBeInTheDocument();
+
+    rerender(<E tick={1} />); // within cooldown → no refetch
+    expect(mock).toHaveBeenCalledTimes(1);
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(10001); }); // past cooldown
+    rerender(<E tick={2} />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(mock).toHaveBeenCalledTimes(2); // one retry, now succeeds
+    expect(screen.getByText("9")).toBeInTheDocument();
+  });
+
   it("no-ops ensure/refresh until teamName resolves, then fetches once teamName lands", async () => {
     (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 1 });
     function T({ teamName }: { teamName: string }) {
@@ -104,7 +150,8 @@ describe("useReleaseDetail", () => {
 
     rerender(<T teamName="t" />);
     await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument());
-    expect(getRelease).toHaveBeenCalledTimes(1);
+    // ensure loads, then the refresh queued behind it runs once it settles (coalesced trailing refresh).
+    await waitFor(() => expect(getRelease).toHaveBeenCalledTimes(2));
   });
 
   it("shares one cache across consumers via ReleaseDetailProvider", async () => {

@@ -98,9 +98,16 @@ export function resourceSource(r?: StackResource): ResourceSource | undefined {
   return image ? { kind: "image", label: image } : undefined;
 }
 
+/** The generated `StackResourceFailure.type` is a types-only union; this is its runtime mirror. */
+export type ResourceFailureTypeValue = NonNullable<StackResourceFailure["type"]>;
+export const ResourceFailureType = {
+  Build: "build_failure",
+  Runtime: "runtime_crash",
+} as const satisfies Record<string, ResourceFailureTypeValue>;
+
 export interface FailingResource {
   name: string;
-  type: "build_failure" | "runtime_crash";
+  type: ResourceFailureTypeValue;
   stage: FailureStage;
   reason: string;
   message?: string;
@@ -130,7 +137,7 @@ export function humanizeFailureType(failureType?: string): string {
 
 /** Pick the active detail block from a last_failure (build vs container vs init). */
 function failureDetail(f: StackResourceFailure) {
-  if (f.type === "build_failure") return { detail: f.build, stage: "build" as const };
+  if (f.type === ResourceFailureType.Build) return { detail: f.build, stage: "build" as const };
   if (f.init_container) return { detail: f.init_container, stage: "init" as const };
   return { detail: f.container, stage: "runtime" as const };
 }
@@ -149,7 +156,7 @@ export function deriveFailingResources(_release: StackRelease, liveStatus?: Rele
     const { detail, stage } = failureDetail(f);
     out.push({
       name,
-      type: (f.type ?? "runtime_crash") as FailingResource["type"],
+      type: f.type ?? ResourceFailureType.Runtime,
       stage,
       reason: detail?.reason ?? humanizeFailureType(detail?.failure_type),
       message: detail?.message,
@@ -174,9 +181,10 @@ export function deriveRecovered(_release: StackRelease, liveStatus?: ReleaseLive
   return out;
 }
 
+// Delegate to the single word→variant brain so "healthy" can't drift from the rest
+// of the app. Resource live_status.state is the cluster-agent rollout vocabulary.
 function isHealthyState(state: string): boolean {
-  const s = state.toLowerCase();
-  return s === "ready" || s === "available" || s === "running" || s === "healthy";
+  return statusVariant("resource", state) === "ready";
 }
 
 export function causeLabel(cause?: ReleaseCause): string {
@@ -236,8 +244,8 @@ function hasBuildResources(release: StackRelease): boolean {
  * says nothing about being converged.
  */
 export function deriveStages(release: StackRelease, failing: FailingResource[], _liveStatus?: ReleaseLiveStatus): Stages {
-  const buildFailed = failing.some((f) => f.type === "build_failure");
-  const runtimeFailed = failing.some((f) => f.type === "runtime_crash");
+  const buildFailed = failing.some((f) => f.type === ResourceFailureType.Build);
+  const runtimeFailed = failing.some((f) => f.type === ResourceFailureType.Runtime);
   const hasBuild = hasBuildResources(release);
   const state = release.state;
 
@@ -280,8 +288,8 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
 /** Short title after the sequence on the live release card, e.g. "Runtime crash — tooljet", "Build queued". */
 export function deriveReleaseTitle(release: StackRelease, failing: FailingResource[], stages: Stages): string {
   const state = release.state ?? "";
-  const build = failing.find((f) => f.type === "build_failure");
-  const crash = failing.find((f) => f.type === "runtime_crash");
+  const build = failing.find((f) => f.type === ResourceFailureType.Build);
+  const crash = failing.find((f) => f.type === ResourceFailureType.Runtime);
   if (build) return `Build failed: ${build.name}`;
   // A terminal Failed crash reads as "Deploy failed"; an in-flight one names the resource.
   if (crash && state !== ReleaseState.Failed) return `Runtime crash: ${crash.name}`;
