@@ -305,16 +305,27 @@ export default function StackDetailPage() {
   // Diff baseline: the deployed snapshot when one exists, so autosaved edits stay
   // visibly dirty/revertable until deployed. Never-deployed stacks fall back to
   // the server state (everything reads as staged for the first deploy).
-  const snapshotResources = useMemo<FormStackResourceData[] | null>(
-    () =>
-      deployedSnapshot
-        ? formResourcesFromSpec(
-          deployedSnapshot.resources as StackResource[] | undefined,
-          deployedSnapshot.connections as StackConnection[] | undefined,
-        )
-        : null,
-    [deployedSnapshot],
-  );
+  // The snapshot stores the RESOLVED git revision (branch/commit written by the
+  // pin resolver at deploy time). When the saved spec doesn't pin one, those are
+  // deploy-time facts, not config drift — strip them so the baseline compares
+  // intent with intent instead of reading every unpinned git resource as dirty.
+  const snapshotResources = useMemo<FormStackResourceData[] | null>(() => {
+    if (!deployedSnapshot) return null;
+    const savedByName = new Map(
+      (stackToShow?.spec?.stack_resources ?? []).map((r) => [r.name, r]),
+    );
+    const resources = ((deployedSnapshot.resources ?? []) as StackResource[]).map((r) => {
+      const git = r.source?.git;
+      const savedGit = savedByName.get(r.name)?.source?.git;
+      if (!git || !savedGit || savedGit.branch || savedGit.commit || savedGit.tag) return r;
+      const { branch: _b, commit: _c, tag: _t, ...unpinned } = git;
+      return { ...r, source: { ...r.source, git: unpinned } };
+    });
+    return formResourcesFromSpec(
+      resources,
+      deployedSnapshot.connections as StackConnection[] | undefined,
+    );
+  }, [deployedSnapshot, stackToShow?.spec?.stack_resources]);
   const snapshotVolumes = useMemo<VolumeFormData[] | null>(
     () => (deployedSnapshot ? ((deployedSnapshot.volumes ?? []) as Volume[]).map(mapVolumeToFormData) : null),
     [deployedSnapshot],
