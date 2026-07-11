@@ -4,7 +4,7 @@ import { StatusPill } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import { causeLabel, formatReleaseTime } from "../derive";
-import { useReleaseDetail } from "../use-release-detail";
+import { useReleaseDetailContext } from "../use-release-detail";
 import { LiveReleaseBody } from "./live-release-body";
 import type { LogContext } from "./resource-row";
 
@@ -26,7 +26,7 @@ export interface LiveReleaseSummaryProps {
  */
 export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, logContext, onOpenLogs }: LiveReleaseSummaryProps) {
   const [open, setOpen] = useState(false);
-  const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
+  const detail = useReleaseDetailContext();
   const ts = formatReleaseTime(release.completed_at ?? release.created_at);
 
   return (

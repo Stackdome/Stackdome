@@ -10,6 +10,8 @@ vi.mock("@/api/releases", () => ({
   ReleaseEventScope: { Release: "release", Resource: "resource" },
 }));
 import { DeploymentsTab } from "../deployments-tab";
+import { ReleaseDetailProvider } from "../use-release-detail";
+import type { ReleaseDetail } from "../use-release-detail";
 import type { DeployLifecycle } from "../use-deploy-lifecycle";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
@@ -35,6 +37,11 @@ const releases: StackRelease[] = [{ id: "r1", sequence: 14, state: "Released", c
 const handlers = { onRollback: vi.fn(), onCancel: vi.fn(), onCopyId: vi.fn() };
 const base = { orgId: "o", teamName: "t", stackId: "s", stack, loading: false, error: null, ...handlers };
 
+const stubDetail: ReleaseDetail = { ensure: vi.fn(), peek: () => ({ loading: false }), refresh: vi.fn() };
+function renderTab(ui: React.ReactElement) {
+  return render(<ReleaseDetailProvider value={stubDetail}>{ui}</ReleaseDetailProvider>);
+}
+
 const stagedDiff: SnapshotDiff = {
   resources: [{ name: "web-server", change: "modified", sections: [{ kind: "configuration", rows: [{ key: "image", from: "nginx:1.25", to: "nginx:1.27", kind: "changed" }] }] }],
   volumes: [],
@@ -44,7 +51,7 @@ const stagedDiff: SnapshotDiff = {
 describe("DeploymentsTab", () => {
   it("renders the timeline with no in-tab Deploy button (deploy is owned by the status bar)", () => {
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
-    render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
+    renderTab(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.getByText("#14")).toBeInTheDocument();
     expect(screen.getByText("Deploy timeline")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^deploy$/i })).not.toBeInTheDocument();
@@ -52,19 +59,19 @@ describe("DeploymentsTab", () => {
 
   it("leads the rail with a draft node when staged", () => {
     const lifecycle: DeployLifecycle = { phase: "staged", stagedDiff, vsSeq: 14, nextSeq: 15 };
-    render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
+    renderTab(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
   });
 
   it("does not show a draft node when clean", () => {
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
-    render(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
+    renderTab(<DeploymentsTab {...base} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.queryByText("Draft")).not.toBeInTheDocument();
   });
 
   it("renders an error state", () => {
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 1 };
-    render(<DeploymentsTab {...base} error="boom" releases={[]} lifecycle={lifecycle} />);
+    renderTab(<DeploymentsTab {...base} error="boom" releases={[]} lifecycle={lifecycle} />);
     expect(screen.getByText("Could not load deployments")).toBeInTheDocument();
   });
 
@@ -75,14 +82,14 @@ describe("DeploymentsTab", () => {
       { id: "r14", sequence: 14, state: "Released", cause: { kind: "manual" } } as StackRelease,
     ];
     const lifecycle: DeployLifecycle = { phase: "deploying", nextSeq: 16 };
-    render(<DeploymentsTab {...base} stack={buriedStack} releases={buried} activeRelease={buried[0]} lifecycle={lifecycle} />);
+    renderTab(<DeploymentsTab {...base} stack={buriedStack} releases={buried} activeRelease={buried[0]} lifecycle={lifecycle} />);
     expect(screen.getByRole("button", { name: /Live release #14/ })).toBeInTheDocument();
   });
 
   it("does not pin a live anchor when the live release is already the newest node", () => {
     const liveTopStack = { current_release: { id: "r14" }, spec: { stack_resources: [] } } as unknown as Stack;
     const lifecycle: DeployLifecycle = { phase: "clean", nextSeq: 15, vsSeq: 14 };
-    render(<DeploymentsTab {...base} stack={liveTopStack} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
+    renderTab(<DeploymentsTab {...base} stack={liveTopStack} releases={releases} activeRelease={releases[0]} lifecycle={lifecycle} />);
     expect(screen.queryByRole("button", { name: /Live release/ })).not.toBeInTheDocument();
   });
 });

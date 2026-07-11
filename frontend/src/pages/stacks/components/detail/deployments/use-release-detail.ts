@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { createContext, createElement, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 import { getRelease, type StackReleaseDetail } from "@/api/releases";
 
 export interface DetailState { data?: StackReleaseDetail; loading: boolean; error?: string; }
@@ -44,4 +44,14 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
   // Memoized: peek still changes identity on cache updates, but ensure/refresh stay
   // stable, so effects can safely depend on the callbacks they use.
   return useMemo(() => ({ ensure, peek, refresh }), [ensure, peek, refresh]);
+}
+
+const ReleaseDetailContext = createContext<ReleaseDetail | null>(null);
+
+export function ReleaseDetailProvider({ value, children }: { value: ReleaseDetail; children: ReactNode }) {
+  return createElement(ReleaseDetailContext.Provider, { value }, children);
+}
+
+export function useReleaseDetailContext(): ReleaseDetail {
+  return useContext(ReleaseDetailContext)!;
 }

@@ -5,7 +5,7 @@ import type { Stack } from "@/api/stacks";
 import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { stateTone } from "../derive";
 import { isDeploying } from "../release-states";
-import { useReleaseDetail } from "../use-release-detail";
+import { useReleaseDetailContext } from "../use-release-detail";
 import { RailNode, type RailDotShape } from "./rail-node";
 import { TimelineNode } from "./timeline-node";
 import type { LogContext } from "./resource-row";
@@ -41,7 +41,7 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
  */
 export function TimelineRail(props: TimelineRailProps) {
   const { releases, activeRelease, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
-  const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
+  const detail = useReleaseDetailContext();
   const liveReleaseId = stack.current_release?.id;
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),

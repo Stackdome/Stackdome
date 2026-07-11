@@ -26,7 +26,7 @@ import { applyStackByName, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
-import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
+import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/detail/deployments/use-release-detail";
 import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries } from "@/pages/stacks/components/detail/deployments/derive";
 import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
@@ -1009,7 +1009,7 @@ export default function StackDetailPage() {
     : stagedCount ?? dirtyTotal;
 
   return (
-    <>
+    <ReleaseDetailProvider value={releaseDetail}>
       <CanvasEditorShell
         stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
         stackId={effectiveStack?.id}
@@ -1151,6 +1151,6 @@ export default function StackDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </ReleaseDetailProvider>
   );
 }

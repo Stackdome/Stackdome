@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
+import { useEffect } from "react";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, waitFor, fireEvent } from "@testing-library/react";
 vi.mock("@/api/releases", () => ({ getRelease: vi.fn() }));
 import { getRelease } from "@/api/releases";
-import { useReleaseDetail } from "../use-release-detail";
+import { useReleaseDetail, ReleaseDetailProvider, useReleaseDetailContext } from "../use-release-detail";
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 
@@ -86,5 +87,28 @@ describe("useReleaseDetail", () => {
     expect(getRelease).toHaveBeenCalledTimes(1);
     resolve({ id: "r1", sequence: 5 });
     await waitFor(() => expect(screen.getByText("5")).toBeInTheDocument());
+  });
+
+  it("shares one cache across consumers via ReleaseDetailProvider", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 7 });
+
+    function Provider({ children }: { children: React.ReactNode }) {
+      const detail = useReleaseDetail("o", "t", "s");
+      return <ReleaseDetailProvider value={detail}>{children}</ReleaseDetailProvider>;
+    }
+    function Consumer() {
+      const detail = useReleaseDetailContext();
+      useEffect(() => detail.ensure("r1"), [detail]);
+      return <span>{detail.peek("r1").data?.sequence ?? "—"}</span>;
+    }
+
+    render(
+      <Provider>
+        <Consumer />
+        <Consumer />
+      </Provider>,
+    );
+    await waitFor(() => expect(screen.getAllByText("7")).toHaveLength(2));
+    expect(getRelease).toHaveBeenCalledTimes(1); // one shared fetch, not one per consumer
   });
 });
