@@ -111,11 +111,29 @@ describe("AddIntegrationWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));
     fireEvent.click(screen.getByRole("button", { name: /install github app/i }));
 
-    expect(screen.getByText(/couldn't verify the token/i)).toBeInTheDocument();
+    expect(screen.getByText(/couldn't connect to github/i)).toBeInTheDocument();
     expect(screen.getByText(/popup blocked/i)).toBeInTheDocument();
     mockConnect.mockClear();
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(mockConnect).toHaveBeenCalledOnce();
+  });
+
+  it("allows leaving the connecting phase via Close without firing onCreated", () => {
+    mockConnectState = "waiting";
+    const onCreated = vi.fn();
+    const onOpenChange = vi.fn();
+    renderWizard({ onCreated, onOpenChange });
+    fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));
+    fireEvent.click(screen.getByRole("button", { name: /install github app/i }));
+
+    expect(screen.getByText(/installing the github app/i)).toBeInTheDocument();
+
+    const closeButton = screen.getByRole("button", { name: /close/i });
+    expect(closeButton).toBeEnabled();
+    fireEvent.click(closeButton);
+
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
   it("GitLab tile opens credentials form with host prefilled", () => {

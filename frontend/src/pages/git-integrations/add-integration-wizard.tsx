@@ -272,7 +272,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
               {github.error ? (
                 <div className="w-full space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-left">
-                  <p className="text-sm font-medium text-destructive">Couldn&apos;t verify the token</p>
+                  <p className="text-sm font-medium text-destructive">Couldn&apos;t connect to GitHub</p>
                   <p className="text-xs text-muted-foreground">{github.error}</p>
                   <Button type="button" variant="outline" size="sm" onClick={() => void github.connect()}>
                     Retry
