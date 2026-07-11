@@ -182,30 +182,52 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
         <div className="flex h-[480px] max-h-[80vh] flex-col overflow-hidden">
           {phase === "provider" && (
-            <div className="grid flex-1 grid-cols-2 content-start gap-3 overflow-y-auto p-5 sm:grid-cols-3">
-              {PROVIDERS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => pickProvider(p)}
-                  className={cn(
-                    "flex flex-col items-start gap-2 rounded-md border bg-card p-4 text-left",
-                    "hover:border-primary focus-visible:border-primary focus-visible:outline-none",
-                  )}
-                >
-                  <ProviderLogo providerId={p.id} className="h-5 w-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{p.label}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {p.id === "github" ? "App install or access token" : "Access token"}
-                  </span>
-                </button>
-              ))}
+            <div className="flex flex-1 items-center justify-center overflow-y-auto p-8">
+              <div className="w-full">
+                <div className="mb-7 text-center">
+                  <h2 className="mb-2 text-2xl font-medium tracking-tight">
+                    Where does your code live?
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Pick a provider. You can add more later.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {PROVIDERS.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => pickProvider(p)}
+                      className={cn(
+                        "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
+                        "hover:border-primary focus-visible:border-primary focus-visible:outline-none",
+                      )}
+                    >
+                      <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+                        <ProviderLogo providerId={p.id} className="h-[18px] w-[18px]" />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="mb-0.5 block text-sm font-medium text-foreground">{p.label}</span>
+                        <span className="block text-xs text-muted-foreground">
+                          {p.id === "github" ? "App install or access token" : "Access token"}
+                        </span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
           {phase === "github" && (
             <>
-              <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-5">
+              <div className="flex flex-1 flex-col justify-center gap-3 overflow-y-auto p-8">
+                <div className="mb-4 text-center">
+                  <h2 className="mb-2 text-2xl font-medium tracking-tight">Connect GitHub</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Two ways in — the app install is the low-maintenance one.
+                  </p>
+                </div>
                 <button
                   type="button"
                   disabled={hasGithubApp}
@@ -307,7 +329,15 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
           {phase === "credentials" && (
             <>
-              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
+              <div className="flex flex-1 flex-col justify-center gap-4 overflow-y-auto p-8">
+                <div className="mb-2 text-center">
+                  <h2 className="mb-2 text-2xl font-medium tracking-tight">
+                    Connect {provider.id === "other" ? "your git host" : provider.label}
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Stackdome stores the credentials encrypted and uses them only for clones.
+                  </p>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="integration-host">Host</Label>
                   <Input
