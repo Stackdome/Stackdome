@@ -28,11 +28,20 @@ export function useReleaseEvents({ orgId, teamName, stackId, releaseId, terminal
   const seen = useRef<Set<number>>(new Set());
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
+  const prevReleaseId = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    setEvents([]);
-    lastSeq.current = 0;
-    seen.current = new Set();
+    // Only clear when the release itself changes. `terminal` flipping false→true for the
+    // SAME release (deploy just completed) must not wipe the feed — the one-shot fetch below
+    // re-fetches from sequence 0 and `ingest` dedupes against what's already shown, so keeping
+    // the prior list avoids a flash-of-empty while that fetch is in flight.
+    const isNewRelease = prevReleaseId.current !== releaseId;
+    prevReleaseId.current = releaseId;
+    if (isNewRelease) {
+      setEvents([]);
+      lastSeq.current = 0;
+      seen.current = new Set();
+    }
     if (!releaseId) {
       setStatus("idle");
       return;

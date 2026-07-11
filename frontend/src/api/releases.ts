@@ -12,6 +12,13 @@ export type ReleaseEvent = components["schemas"]["ReleaseEvent"];
 export type ReleaseEventList = components["schemas"]["ReleaseEventList"];
 export type ReleaseSummary = components["schemas"]["ReleaseSummary"];
 
+/** The generated `ReleaseEvent.scope` is a types-only union; this is its runtime mirror. */
+export type ReleaseEventScopeValue = NonNullable<ReleaseEvent["scope"]>;
+export const ReleaseEventScope = {
+  Release: "release",
+  Resource: "resource",
+} as const satisfies Record<string, ReleaseEventScopeValue>;
+
 function releasesPath(orgId: string, teamName: string, stackId: string): string {
   return `/organizations/${orgId}/teams/${teamName}/stacks/${stackId}/releases`;
 }

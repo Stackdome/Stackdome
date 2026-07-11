@@ -29,6 +29,8 @@ export interface TimelineNodeProps {
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
   onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  /** Hybrid progress driver: forwarded to the live body's release-scoped event handler. */
+  refetchReleases?: () => void;
 }
 
 /**
@@ -36,7 +38,7 @@ export interface TimelineNodeProps {
  * release; only the body differs (live progress for the latest, stored post-mortem for earlier).
  */
 export function TimelineNode(props: TimelineNodeProps) {
-  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs, onJumpToResource } = props;
+  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases } = props;
   const id = release.id ?? "";
   const state = release.state ?? "";
   const deploying = isDeploying(state);
@@ -91,6 +93,7 @@ export function TimelineNode(props: TimelineNodeProps) {
               prevReleaseId={prevReleaseId}
               prevSeq={prevSeq}
               onJumpToResource={onJumpToResource}
+              refetchReleases={refetchReleases}
             />
           ) : (
             <ReleasePostMortem
@@ -99,6 +102,7 @@ export function TimelineNode(props: TimelineNodeProps) {
               stack={stack}
               prevReleaseId={prevReleaseId}
               prevSeq={prevSeq}
+              logContext={logContext}
               onJumpToResource={onJumpToResource}
             />
           )}

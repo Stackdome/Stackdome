@@ -121,6 +121,51 @@ describe("useReleaseEvents", () => {
     expect(source.closed).toBe(true);
   });
 
+  it("keeps prior events visible across a non-terminal→terminal transition (no flash of empty)", async () => {
+    let resolveList!: (v: { items: ReleaseEvent[] }) => void;
+    vi.mocked(listReleaseEvents).mockImplementation(
+      () => new Promise((res) => { resolveList = res; }),
+    );
+
+    const { result, rerender } = renderHook(
+      ({ terminal }) => useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal }),
+      { initialProps: { terminal: false } },
+    );
+    await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+    const source = FakeEventSource.instances[0];
+    act(() => {
+      source.open();
+      source.emit(ev(1));
+      source.emit(ev(2));
+    });
+    expect(result.current.events.map((e) => e.sequence)).toEqual([1, 2]);
+
+    // Deploy completes: terminal flips true for the SAME releaseId.
+    rerender({ terminal: true });
+    // Still showing the streamed events while the one-shot terminal fetch is in flight.
+    expect(result.current.events.map((e) => e.sequence)).toEqual([1, 2]);
+
+    await act(async () => { resolveList({ items: [ev(1), ev(2), ev(3)] }); });
+    await waitFor(() => expect(result.current.status).toBe("closed"));
+    expect(result.current.events.map((e) => e.sequence)).toEqual([1, 2, 3]);
+  });
+
+  it("resets events when the releaseId itself changes", async () => {
+    const { result, rerender } = renderHook(
+      ({ releaseId }) => useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId, terminal: false }),
+      { initialProps: { releaseId: "r1" } },
+    );
+    await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
+    act(() => {
+      FakeEventSource.instances[0].open();
+      FakeEventSource.instances[0].emit(ev(1));
+    });
+    expect(result.current.events.map((e) => e.sequence)).toEqual([1]);
+
+    rerender({ releaseId: "r2" });
+    expect(result.current.events).toEqual([]);
+  });
+
   it("falls back to polling once MAX_RECONNECTS is exceeded", async () => {
     vi.useFakeTimers();
     const { result } = renderHook(() =>

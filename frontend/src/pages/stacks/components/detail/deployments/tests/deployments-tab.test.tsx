@@ -3,17 +3,31 @@ import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
-vi.mock("@/api/releases", () => ({ getRelease: vi.fn().mockResolvedValue({ id: "r1", sequence: 14, outcome: { resources: {} }, snapshot: { resources: [] } }) }));
+vi.mock("@/api/releases", () => ({
+  getRelease: vi.fn().mockResolvedValue({ id: "r1", sequence: 14, outcome: { resources: {} }, snapshot: { resources: [] } }),
+  listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
+  buildReleaseEventStreamUrl: vi.fn(() => ""),
+  ReleaseEventScope: { Release: "release", Resource: "resource" },
+}));
 import { DeploymentsTab } from "../deployments-tab";
 import type { DeployLifecycle } from "../use-deploy-lifecycle";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease } from "@/api/releases";
 import type { SnapshotDiff } from "../release-snapshot-diff";
 
+class FakeEventSource {
+  onopen: (() => void) | null = null;
+  onmessage: ((ev: { data: string }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  constructor(public url: string) {}
+  close() { /* noop */ }
+}
+
 afterEach(cleanup);
 beforeAll(() => {
   const stubs: Record<string, () => unknown> = { hasPointerCapture: () => false, setPointerCapture: () => undefined, releasePointerCapture: () => undefined, scrollIntoView: () => undefined };
   for (const [k, v] of Object.entries(stubs)) (Element.prototype as unknown as Record<string, unknown>)[k] = v;
+  vi.stubGlobal("EventSource", FakeEventSource as unknown as typeof EventSource);
 });
 
 const stack = { spec: { stack_resources: [] } } as unknown as Stack;

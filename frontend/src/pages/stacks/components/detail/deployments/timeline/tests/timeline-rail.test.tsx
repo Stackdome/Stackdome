@@ -4,7 +4,12 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
-vi.mock("@/api/releases", () => ({ getRelease: vi.fn().mockResolvedValue({ id: "x", sequence: 1, outcome: { resources: {} }, snapshot: { resources: [] } }) }));
+vi.mock("@/api/releases", () => ({
+  getRelease: vi.fn().mockResolvedValue({ id: "x", sequence: 1, outcome: { resources: {} }, snapshot: { resources: [] } }),
+  listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
+  buildReleaseEventStreamUrl: vi.fn(() => ""),
+  ReleaseEventScope: { Release: "release", Resource: "resource" },
+}));
 import { TimelineRail } from "../timeline-rail";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";

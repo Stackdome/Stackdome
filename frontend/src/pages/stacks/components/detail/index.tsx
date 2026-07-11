@@ -940,6 +940,7 @@ export default function StackDetailPage() {
         setActiveTab("architecture");
         setOpenResourceSignal({ index, tab, nonce: Date.now() });
       }}
+      refetchReleases={refetchReleases}
       releases={releasesResult.releases}
       activeRelease={releasesResult.activeRelease}
       loading={releasesResult.loading}

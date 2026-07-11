@@ -15,6 +15,8 @@ export interface DeploymentsTabProps {
   onOpenLogs?: (resourceName?: string) => void;
   /** Opens the canvas resource drawer (release-error banner "jump to error"). */
   onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  /** Hybrid progress driver: bound to the page's releases-list refetch. */
+  refetchReleases?: () => void;
   // Deploy lifecycle + release data are owned by the page (the status bar owns
   // deploy); this tab is presentational.
   releases: StackRelease[];
@@ -27,7 +29,7 @@ export interface DeploymentsTabProps {
   onCopyId: (id: string) => void;
 }
 
-export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, onJumpToResource, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const logContext = { orgId, teamName, stackId };
@@ -70,6 +72,7 @@ export function DeploymentsTab({ orgId, teamName, stackId, stack, onOpenLogs, on
             logContext={logContext}
             onOpenLogs={openLogs}
             onJumpToResource={onJumpToResource}
+            refetchReleases={refetchReleases}
             draftNode={draftNode}
             onRollback={onRollback}
             onCancel={onCancel}

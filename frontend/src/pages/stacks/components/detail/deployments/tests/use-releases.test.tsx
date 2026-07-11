@@ -29,43 +29,18 @@ describe("useReleases", () => {
     expect(listReleases).not.toHaveBeenCalled();
   });
 
-  it("polls while the active release is non-terminal", async () => {
+  it("does not fast-poll while a release is non-terminal — events drive updates instead", async () => {
     vi.useFakeTimers();
     (listReleases as ReturnType<typeof vi.fn>).mockResolvedValue({ items: [{ id: "r1", sequence: 1, state: "InProgress" }] });
     renderHook(() => useReleases(ARGS));
     await vi.advanceTimersByTimeAsync(0);
     expect(listReleases).toHaveBeenCalledTimes(1);
+    // No 5s fast poll left — only the 30s idle poll remains.
+    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(20000);
+    expect(listReleases).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(5000);
     expect(listReleases).toHaveBeenCalledTimes(2);
-  });
-
-  it("keeps polling while an earlier release is still non-terminal, even after the latest is terminal", async () => {
-    vi.useFakeTimers();
-    const mock = listReleases as ReturnType<typeof vi.fn>;
-    // latest #2 already Released, but #1 is still InProgress (not yet superseded)
-    mock.mockResolvedValue({ items: [{ id: "r2", sequence: 2, state: "Released" }, { id: "r1", sequence: 1, state: "InProgress" }] });
-    renderHook(() => useReleases(ARGS));
-    await vi.advanceTimersByTimeAsync(0);
-    expect(mock).toHaveBeenCalledTimes(1);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(mock).toHaveBeenCalledTimes(2); // still polling because #1 hasn't settled
-  });
-
-  it("stops polling once the active release becomes terminal", async () => {
-    vi.useFakeTimers();
-    const mock = listReleases as ReturnType<typeof vi.fn>;
-    mock.mockResolvedValueOnce({ items: [{ id: "r1", sequence: 1, state: "InProgress" }] });
-    renderHook(() => useReleases(ARGS));
-    await vi.advanceTimersByTimeAsync(0);
-    expect(mock).toHaveBeenCalledTimes(1);
-    // next poll returns a terminal state
-    mock.mockResolvedValueOnce({ items: [{ id: "r1", sequence: 1, state: "Released" }] });
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(mock).toHaveBeenCalledTimes(2);
-    // now terminal — the fast poll must NOT fetch
-    await vi.advanceTimersByTimeAsync(5000);
-    await vi.advanceTimersByTimeAsync(5000);
-    expect(mock).toHaveBeenCalledTimes(2);
   });
 
   it("still does a slow idle poll when everything is terminal (catches external deploys)", async () => {

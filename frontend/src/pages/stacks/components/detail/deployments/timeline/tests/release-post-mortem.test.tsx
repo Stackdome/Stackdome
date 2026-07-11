@@ -3,8 +3,13 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-vi.mock("@/api/releases", () => ({ getRelease: vi.fn() }));
-import { getRelease } from "@/api/releases";
+vi.mock("@/api/releases", () => ({
+  getRelease: vi.fn(),
+  listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
+  buildReleaseEventStreamUrl: vi.fn(() => ""),
+  ReleaseEventScope: { Release: "release", Resource: "resource" },
+}));
+import { getRelease, listReleaseEvents } from "@/api/releases";
 import { useReleaseDetail } from "../../use-release-detail";
 import { ReleasePostMortem } from "../release-post-mortem";
 import type { StackRelease } from "@/api/releases";
@@ -24,6 +29,7 @@ function Wrap(props: { release: StackRelease; prevId?: string; onJumpToResource?
       stack={stack}
       prevReleaseId={prevId}
       prevSeq={12}
+      logContext={{ orgId: "o", teamName: "t", stackId: "s" }}
       onJumpToResource={onJumpToResource}
     />
   );
@@ -79,5 +85,16 @@ describe("ReleasePostMortem", () => {
     await waitFor(() => expect(screen.getByText(/image_not_found/)).toBeInTheDocument());
     await userEvent.click(screen.getByText(/image_not_found/));
     expect(onJumpToResource).toHaveBeenCalledWith("web", "configuration");
+  });
+
+  it("fetches release activity events once (one-shot, no streaming) for a historical node", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r-cur", sequence: 9, outcome: { resources: {} }, snapshot: { resources: [] } });
+    (listReleaseEvents as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      items: [{ id: "e1", sequence: 1, type: "build_succeeded", level: "success", message: "Build succeeded", resource_name: "web" }],
+    });
+    render(<Wrap release={{ id: "r-cur", sequence: 9, state: "Released" } as StackRelease} />);
+    expect(await screen.findByText("Build succeeded")).toBeInTheDocument();
+    expect(screen.queryByText("live")).not.toBeInTheDocument();
+    expect(listReleaseEvents).toHaveBeenCalledWith("o", "t", "s", "r-cur");
   });
 });

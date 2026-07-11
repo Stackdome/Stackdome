@@ -17,6 +17,7 @@ export interface TimelineRailProps {
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
   onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  refetchReleases?: () => void;
   banner?: React.ReactNode;
   /** Optional draft node, rendered at the head of the rail (saved-but-undeployed). */
   draftNode?: React.ReactNode;
@@ -39,7 +40,7 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
  * opens by default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onOpenLogs, onJumpToResource, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
+  const { releases, activeRelease, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetail(logContext?.orgId ?? "", logContext?.teamName ?? "", logContext?.stackId ?? "");
   const liveReleaseId = stack.current_release?.id;
   const [openIds, setOpenIds] = useState<Set<string>>(
@@ -94,6 +95,7 @@ export function TimelineRail(props: TimelineRailProps) {
                 logContext={logContext}
                 onOpenLogs={onOpenLogs}
                 onJumpToResource={onJumpToResource}
+                refetchReleases={refetchReleases}
               />
             </RailNode>
           );

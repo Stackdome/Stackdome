@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { listReleases, type StackRelease } from "@/api/releases";
-import { isTerminal } from "./release-states";
 
-const POLL_MS = 5000;
 // Slow background refresh so a deploy started elsewhere (webhook push, another
-// user) shows up while the page sits idle with everything terminal.
+// user) shows up while the page sits idle. Non-terminal releases no longer need
+// a fast poll of their own — the release events stream (useReleaseEvents) pushes
+// refetches on release-scoped events instead.
 const IDLE_POLL_MS = 30000;
 
 function isVisible(): boolean {
@@ -36,10 +36,6 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
   const [error, setError] = useState<string | null>(null);
   const inFlight = useRef(false);
   const mounted = useRef(true);
-  // True while ANY release is non-terminal, so polling continues until every release settles.
-  // Catches trailing supersessions of earlier releases; gating on the latest alone would
-  // strand a still-resolving earlier Pending release on a stale state until manual refresh.
-  const hasPendingWork = useRef(false);
 
   const fetchOnce = useCallback(async () => {
     if (!enabled || inFlight.current) return;
@@ -49,7 +45,6 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
       const data = await listReleases(orgId, teamName, stackId);
       if (!mounted.current) return;
       const sorted = [...(data.items ?? [])].sort(bySequenceDesc);
-      hasPendingWork.current = sorted.some((r) => !isTerminal(r.state));
       setReleases(sorted);
       setError(null);
     } catch (e) {
@@ -70,16 +65,13 @@ export function useReleases({ orgId, teamName, stackId, enabled }: UseReleasesAr
     void fetchOnce();
   }, [enabled, fetchOnce]);
 
-  // Two cadences, paused while hidden: fast (POLL_MS) only while a release settles; slow
-  // (IDLE_POLL_MS) always, so external/idle changes surface. Returning to the tab refetches at once.
+  // Idle safety net, paused while hidden, plus an immediate refetch on returning to the tab.
   useEffect(() => {
     if (!enabled) return;
-    const fast = setInterval(() => { if (hasPendingWork.current && isVisible()) void fetchOnce(); }, POLL_MS);
     const slow = setInterval(() => { if (isVisible()) void fetchOnce(); }, IDLE_POLL_MS);
     const onVisible = () => { if (isVisible()) void fetchOnce(); };
     document.addEventListener("visibilitychange", onVisible);
     return () => {
-      clearInterval(fast);
       clearInterval(slow);
       document.removeEventListener("visibilitychange", onVisible);
     };

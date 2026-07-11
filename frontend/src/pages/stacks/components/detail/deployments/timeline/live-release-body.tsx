@@ -1,18 +1,20 @@
 import { useState, useEffect } from "react";
 import { StageTracker } from "@/components/branded";
-import type { StackRelease } from "@/api/releases";
+import { ReleaseEventScope, type StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { ValidationBanner } from "@/pages/stacks/components/detail/ValidationBanner";
 import { deriveStages, deriveFailingResources, deriveRecovered, resourceSource, replicaLabel } from "../derive";
-import { ReleaseState } from "../release-states";
+import { ReleaseState, isTerminal } from "../release-states";
 import { diffSnapshots } from "../release-snapshot-diff";
 import type { ReleaseDetail } from "../use-release-detail";
 import { releaseValidationBannerItems } from "../release-errors";
+import { useReleaseEvents } from "../use-release-events";
 import { type ResourceRowVM, type LogContext } from "./resource-row";
 import { ResourceOutcomeList } from "./resource-outcome-list";
 import { ConfigChangesToggle } from "./config-changes-toggle";
 import { DeployFailedBanner } from "./deploy-failed-banner";
+import { ReleaseActivityFeed } from "./release-activity-feed";
 
 export interface LiveReleaseBodyProps {
   release: StackRelease;
@@ -23,14 +25,32 @@ export interface LiveReleaseBodyProps {
   prevReleaseId?: string;
   prevSeq?: number;
   onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  /** Refetches the releases list — bound by the page to the releases-list refetch. */
+  refetchReleases?: () => void;
 }
 
 /**
  * Detail-card body for the latest deploy (releases[0]). Renders LIVE progress from
  * release.live_status.resources + the derived tracker (vs a historical node's stored outcome).
  */
-export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq, onJumpToResource }: LiveReleaseBodyProps) {
+export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq, onJumpToResource, refetchReleases }: LiveReleaseBodyProps) {
   const [validationDismissed, setValidationDismissed] = useState(false);
+  // Hybrid progress driver: the event stream pushes release-scoped state changes instead
+  // of a fast poll — a resource-scoped event only updates the feed, a release-scoped one
+  // (e.g. the deploy completing) also refreshes the releases list + this release's detail.
+  const { events, status: eventsStatus } = useReleaseEvents({
+    orgId: logContext?.orgId ?? "",
+    teamName: logContext?.teamName ?? "",
+    stackId: logContext?.stackId ?? "",
+    releaseId: release.id,
+    terminal: isTerminal(release.state),
+    onEvent: (e) => {
+      if (e.scope === ReleaseEventScope.Release) {
+        refetchReleases?.();
+        if (release.id) detail?.refresh(release.id);
+      }
+    },
+  });
   // Source image/repo from THIS release's snapshot (the frozen spec it ships), not the
   // live stack spec which may have been edited after deploy. Also prefetch prev snapshot for the diff.
   useEffect(() => {
@@ -85,6 +105,10 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
       )}
 
       <ResourceOutcomeList rows={rows} logContext={logContext} onOpenLogs={onOpenLogs} />
+
+      <div className="mt-4">
+        <ReleaseActivityFeed events={events} streaming={eventsStatus === "streaming"} />
+      </div>
 
       {canDiff && <ConfigChangesToggle diff={diff} prevSeq={prevSeq} loading={!prevLoaded} />}
 
