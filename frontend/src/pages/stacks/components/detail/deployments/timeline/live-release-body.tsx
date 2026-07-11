@@ -45,10 +45,11 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
     releaseId: release.id,
     terminal: isTerminal(release.state),
     onEvent: (e) => {
-      if (e.scope === ReleaseEventScope.Release) {
-        refetchReleases?.();
-        if (release.id) detail?.refresh(release.id);
-      }
+      // Every event refreshes this release's detail — resource-scoped events are
+      // exactly when live_status.resources moves. Release-scoped ones also refresh
+      // the releases list (state transitions).
+      if (release.id) detail?.refresh(release.id);
+      if (e.scope === ReleaseEventScope.Release) refetchReleases?.();
     },
   });
   // Source image/repo from THIS release's snapshot (the frozen spec it ships), not the
@@ -57,8 +58,11 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
     if (release.id) detail?.ensure(release.id);
     if (prevReleaseId) detail?.ensure(prevReleaseId);
   }, [detail, release.id, prevReleaseId]);
-  const releaseSnapshot = detail?.peek(release.id).data?.snapshot;
-  const liveStatus = release.live_status;
+  // List items carry no live_status overlay (detail only) — read the fresher
+  // detail-cache copy, which the event driver above keeps refreshed.
+  const detailData = detail?.peek(release.id).data;
+  const releaseSnapshot = detailData?.snapshot;
+  const liveStatus = detailData?.live_status ?? release.live_status;
   const failing = deriveFailingResources(release, liveStatus);
   const canDiff = !!prevReleaseId && !!detail;
   // Suppress empty "no changes" until prev snapshot resolves — else the diff briefly lies.
@@ -72,8 +76,9 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   const sourceByName = new Map((releaseSnapshot?.resources ?? stack.spec?.stack_resources ?? []).map((r) => [r.name, r]));
   const failureMsg = release.state === ReleaseState.Failed && failing.length === 0 ? release.message : undefined;
   const bannerResources = stack.spec?.stack_resources ?? [];
+  // validation_errors also live on the detail payload, not list items.
   const validationItems = release.state === ReleaseState.Failed
-    ? releaseValidationBannerItems(release, bannerResources)
+    ? releaseValidationBannerItems(detailData ?? release, bannerResources)
     : [];
   const rows: ResourceRowVM[] = liveResources.map(([name, s]) => ({
     name,

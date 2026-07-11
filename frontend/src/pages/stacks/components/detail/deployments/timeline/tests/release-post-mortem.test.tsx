@@ -68,7 +68,15 @@ describe("ReleasePostMortem", () => {
   });
 
   it("renders async validation errors and jumps to the offending resource", async () => {
-    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r-cur", sequence: 9, outcome: { resources: {} }, snapshot: { resources: [] } });
+    // validation_errors ride the DETAIL payload; list items carry none.
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "r-cur",
+      sequence: 9,
+      state: "Failed",
+      outcome: { resources: {} },
+      snapshot: { resources: [] },
+      validation_errors: [{ resource_name: "web", field: "source.image.ref", code: "image_not_found", message: "not found" }],
+    });
     const onJumpToResource = vi.fn();
     render(
       <Wrap
@@ -77,7 +85,6 @@ describe("ReleasePostMortem", () => {
           sequence: 9,
           state: "Failed",
           message: "validation failed",
-          validation_errors: [{ resource_name: "web", field: "source.image.ref", code: "image_not_found", message: "not found" }],
         } as StackRelease}
         onJumpToResource={onJumpToResource}
       />,

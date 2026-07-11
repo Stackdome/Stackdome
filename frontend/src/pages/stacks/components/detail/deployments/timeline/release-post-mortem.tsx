@@ -67,8 +67,9 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
   // Empty failure set: an old node must not surface current cluster crashes.
   const stages = deriveStages(release, [], release.live_status);
   const bannerResources = stack.spec?.stack_resources ?? [];
+  // validation_errors live on the detail payload, not list items.
   const validationItems = release.state === ReleaseState.Failed
-    ? releaseValidationBannerItems(release, bannerResources)
+    ? releaseValidationBannerItems(data ?? release, bannerResources)
     : [];
 
   return (

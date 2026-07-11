@@ -90,24 +90,28 @@ describe("TimelineNode", () => {
   });
 
   it("renders async validation errors on the live body and jumps to the offending resource", async () => {
+    // validation_errors ride the DETAIL payload; list items carry none.
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "r1",
+      sequence: 9,
+      state: "Failed",
+      snapshot: { resources: [] },
+      validation_errors: [{ resource_name: "web", field: "source.image.ref", code: "image_not_found", message: "not found" }],
+    });
     const onJumpToResource = vi.fn();
     const stackWithResource = { spec: { stack_resources: [{ name: "web" }] } } as unknown as Stack;
     render(
       <Wrap
-        release={{
-          id: "r1",
-          sequence: 9,
-          state: "Failed",
-          validation_errors: [{ resource_name: "web", field: "source.image.ref", code: "image_not_found", message: "not found" }],
-        } as StackRelease}
+        release={{ id: "r1", sequence: 9, state: "Failed" } as StackRelease}
         isActive
         isOpen
         stack={stackWithResource}
         onJumpToResource={onJumpToResource}
       />,
     );
-    await userEvent.click(screen.getByText(/image_not_found/));
+    await userEvent.click(await screen.findByText(/image_not_found/));
     expect(onJumpToResource).toHaveBeenCalledWith("web", "configuration");
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 13, outcome: { resources: {} }, snapshot: { resources: [] } });
   });
 
   it("renders release activity events fetched for a terminal release's live body", async () => {
