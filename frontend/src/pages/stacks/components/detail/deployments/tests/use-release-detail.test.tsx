@@ -89,6 +89,24 @@ describe("useReleaseDetail", () => {
     await waitFor(() => expect(screen.getByText("5")).toBeInTheDocument());
   });
 
+  it("no-ops ensure/refresh until teamName resolves, then fetches once teamName lands", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 1 });
+    function T({ teamName }: { teamName: string }) {
+      const d = useReleaseDetail("o", teamName, "s");
+      // Depend on the stable ensure/refresh identities, not the whole `d` object —
+      // peek's identity changes with every cache update, which would re-fire this
+      // effect (and refetch) on every render.
+      useEffect(() => { d.ensure("r1"); d.refresh("r1"); }, [d.ensure, d.refresh]);
+      return <span>{d.peek("r1").data?.sequence ?? "—"}</span>;
+    }
+    const { rerender } = render(<T teamName="" />);
+    expect(getRelease).not.toHaveBeenCalled();
+
+    rerender(<T teamName="t" />);
+    await waitFor(() => expect(screen.getByText("1")).toBeInTheDocument());
+    expect(getRelease).toHaveBeenCalledTimes(1);
+  });
+
   it("shares one cache across consumers via ReleaseDetailProvider", async () => {
     (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r1", sequence: 7 });
 

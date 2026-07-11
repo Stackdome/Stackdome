@@ -220,7 +220,8 @@ export default function StackDetailPage() {
     teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
     stackId: stackToShow?.id || "",
   }), [stackToShow, teamNameById, defaultTeamName]);
-  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
+  const idsReady = !!deployIds.stackId && !!deployIds.teamName;
+  const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
 
   // Diff anchor: the latest release (the config last shipped via Deploy), falling
@@ -474,7 +475,7 @@ export default function StackDetailPage() {
     enabled: !isDraft && canWriteStack,
     stack: stackToShow ?? undefined,
     session,
-    ids: deployIds.stackId ? deployIds : null,
+    ids: idsReady ? deployIds : null,
     onStackRefreshed: (fresh) => {
       setFetchedStack(fresh);
       // Context write-through: stale currentStack must not win after a remote refresh.
@@ -621,7 +622,7 @@ export default function StackDetailPage() {
   const [deleting, setDeleting] = useState(false);
 
   const stackRevert = useStackRevert({
-    ids: deployIds.stackId ? deployIds : null,
+    ids: idsReady ? deployIds : null,
     stack: stackToShow ?? undefined,
     liveSnapshot,
     onReverted: (fresh) => {
@@ -645,7 +646,7 @@ export default function StackDetailPage() {
   // Immediate, confirm-gated volume deletion (canvas). Only wired for saved
   // stacks — the wizard (`/stacks/new`) has nothing server-side to delete yet.
   const volumeDelete = useVolumeDelete({
-    ids: deployIds.stackId ? deployIds : null,
+    ids: idsReady ? deployIds : null,
     draftSync,
     onServerRefresh: (fresh) => {
       setFetchedStack(fresh);
@@ -1064,9 +1065,9 @@ export default function StackDetailPage() {
               addonStateById={addonStateById}
               errors={mergedResourceErrors}
               onViewLogs={() => setActiveTab("logs")}
-              topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
+              topologyIds={!isDraft && idsReady ? deployIds : null}
               topologyRefreshKey={topologyRefreshKey}
-              onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
+              onDeleteVolume={idsReady ? volumeDelete.deleteVolume : undefined}
               deletingVolume={volumeDelete.deleting}
               persistedVolumeNames={persistedVolumeNames}
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}

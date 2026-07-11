@@ -17,8 +17,12 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
   cacheRef.current = cache;
   const inFlight = useRef<Set<string>>(new Set());
 
+  // teamName resolves asynchronously (org team list fetch) after stackId is
+  // already known — no-op until all three ids are in, to avoid /teams//... calls.
+  const ready = !!orgId && !!teamName && !!stackId;
+
   const ensure = useCallback((id: string) => {
-    if (!id) return;
+    if (!ready || !id) return;
     const current = cacheRef.current[id];
     // Already cached (data or error), loading, or in-flight — no-op
     if (current?.data || current?.error || current?.loading || inFlight.current.has(id)) return;
@@ -28,17 +32,17 @@ export function useReleaseDetail(orgId: string, teamName: string, stackId: strin
       .then((data) => setCache((c) => ({ ...c, [id]: { loading: false, data } })))
       .catch((e) => setCache((c) => ({ ...c, [id]: { loading: false, error: e instanceof Error ? e.message : "Failed to load release" } })))
       .finally(() => inFlight.current.delete(id));
-  }, [orgId, teamName, stackId]);
+  }, [ready, orgId, teamName, stackId]);
 
   const refresh = useCallback((id: string) => {
-    if (!id || inFlight.current.has(id)) return;
+    if (!ready || !id || inFlight.current.has(id)) return;
     inFlight.current.add(id);
     setCache((c) => ({ ...c, [id]: { ...(c[id] ?? {}), loading: true } }));
     getRelease(orgId, teamName, stackId, id)
       .then((data) => setCache((c) => ({ ...c, [id]: { loading: false, data } })))
       .catch((e) => setCache((c) => ({ ...c, [id]: { loading: false, error: e instanceof Error ? e.message : "Failed to load release" } })))
       .finally(() => inFlight.current.delete(id));
-  }, [orgId, teamName, stackId]);
+  }, [ready, orgId, teamName, stackId]);
 
   const peek = useCallback((id?: string): DetailState => (id ? cache[id] ?? EMPTY : EMPTY), [cache]);
   // Memoized: peek still changes identity on cache updates, but ensure/refresh stay
