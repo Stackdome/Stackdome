@@ -39,13 +39,24 @@ func BuildReleaseLiveStatus(release *StackRelease, stack *Stack) *ReleaseLiveSta
 		return nil
 	}
 
-	resources := make(map[string]*StackResourceStatus, len(stack.StackResources))
+	members := make(map[string]struct{}, len(release.Snapshot.Resources))
+	for _, r := range release.Snapshot.Resources {
+		members[r.Name] = struct{}{}
+	}
+	liveResources := make([]*StackResource, 0, len(stack.StackResources))
 	for _, r := range stack.StackResources {
+		if _, ok := members[r.Name]; ok {
+			liveResources = append(liveResources, r)
+		}
+	}
+
+	resources := make(map[string]*StackResourceStatus, len(liveResources))
+	for _, r := range liveResources {
 		resources[r.Name] = r.Status
 	}
 
 	return &ReleaseLiveStatus{
-		Health:           rollupHealth(release, stack),
+		Health:           rollupHealth(release, stack, liveResources),
 		Resources:        resources,
 		Conditions:       stack.Status.Conditions,
 		TargetRevision:   stack.Status.TargetRevision,
@@ -53,9 +64,9 @@ func BuildReleaseLiveStatus(release *StackRelease, stack *Stack) *ReleaseLiveSta
 	}
 }
 
-func rollupHealth(release *StackRelease, stack *Stack) ReleaseHealth {
+func rollupHealth(release *StackRelease, stack *Stack, resources []*StackResource) ReleaseHealth {
 	health := ReleaseHealthOK
-	for _, r := range stack.StackResources {
+	for _, r := range resources {
 		switch {
 		case r.Status == nil || r.Status.State == StackResourcePhasePending || r.Status.State == StackResourcePhaseUnknown:
 			if health == ReleaseHealthOK {

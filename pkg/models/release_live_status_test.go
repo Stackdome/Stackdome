@@ -10,7 +10,13 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 	var release *StackRelease
 
 	ginkgo.BeforeEach(func() {
-		release = &StackRelease{ID: "rel-1", State: ReleaseStateReleased}
+		release = &StackRelease{
+			ID:    "rel-1",
+			State: ReleaseStateReleased,
+			Snapshot: StackSnapshot{
+				Resources: []*StackResource{{Name: "web"}, {Name: "worker"}},
+			},
+		}
 		stack = &Stack{
 			Status: &StackStatus{
 				TargetRevision:     "rev-2",
@@ -35,14 +41,14 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 	})
 
 	ginkgo.It("overlays an active release even when another release is converged", func() {
-		release = &StackRelease{ID: "rel-2", State: ReleaseStateInProgress}
+		release = &StackRelease{ID: "rel-2", State: ReleaseStateInProgress, Snapshot: release.Snapshot}
 		ls := BuildReleaseLiveStatus(release, stack)
 		gomega.Expect(ls).NotTo(gomega.BeNil())
 		gomega.Expect(ls.Health).To(gomega.Equal(ReleaseHealthProgressing))
 	})
 
 	ginkgo.It("returns nil for a terminal, non-live release", func() {
-		release = &StackRelease{ID: "rel-0", State: ReleaseStateSuperseded}
+		release = &StackRelease{ID: "rel-0", State: ReleaseStateSuperseded, Snapshot: release.Snapshot}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack)).To(gomega.BeNil())
 	})
 
@@ -81,5 +87,28 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 		stack.StackResources[0].Status.State = StackResourcePhaseUnknown
 		stack.StackResources[1].Status.State = StackResourcePhaseFailed
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthFailed))
+	})
+
+	ginkgo.It("scopes live_status.resources to only the release's snapshot members", func() {
+		release.Snapshot = StackSnapshot{Resources: []*StackResource{{Name: "web"}}}
+		stack.StackResources = append(stack.StackResources, &StackResource{
+			Name:   "busybox",
+			Status: &StackResourceStatus{State: StackResourcePhaseReady},
+		})
+
+		ls := BuildReleaseLiveStatus(release, stack)
+		gomega.Expect(ls.Resources).To(gomega.HaveLen(1))
+		gomega.Expect(ls.Resources).To(gomega.HaveKey("web"))
+		gomega.Expect(ls.Resources).NotTo(gomega.HaveKey("busybox"))
+	})
+
+	ginkgo.It("ignores a resource's failed status when it is absent from the release snapshot", func() {
+		release.Snapshot = StackSnapshot{Resources: []*StackResource{{Name: "web"}}}
+		stack.StackResources = append(stack.StackResources, &StackResource{
+			Name:   "busybox",
+			Status: &StackResourceStatus{State: StackResourcePhaseFailed},
+		})
+
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthOK))
 	})
 })
