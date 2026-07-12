@@ -74,11 +74,11 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
   if (step === "pick") {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-[640px] space-y-4">
-            <div className="text-center">
-              <h3 className="text-lg font-medium">Where does your code live?</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+        <div className="flex-1 overflow-y-auto px-6 py-12">
+          <div className="mx-auto max-w-[640px]">
+            <div className="mb-8 text-center">
+              <h3 className="mb-2 text-2xl font-medium tracking-tight">Where does your code live?</h3>
+              <p className="text-sm text-muted-foreground">
                 Pick a repository — the stack builds straight from it.
               </p>
             </div>
@@ -97,11 +97,12 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 overflow-y-auto px-6 py-12">
         <div className="mx-auto max-w-[520px] space-y-5">
-          <div>
-            <h3 className="font-mono text-xs">{repo?.fullName}</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+          <div className="mb-8 text-center">
+            <p className="mb-2 font-mono text-[11px] uppercase tracking-[1.5px] text-brand">{repo?.fullName}</p>
+            <h3 className="mb-2 text-2xl font-medium tracking-tight">Configure your service</h3>
+            <p className="text-sm text-muted-foreground">
               The image is built from this repository&apos;s Dockerfile on every deploy.
             </p>
           </div>

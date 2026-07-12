@@ -89,8 +89,7 @@ export function WizardChooser({
             How do you want to start?
           </h2>
           <p className="text-sm text-muted-foreground">
-            Let&apos;s get something running. Pick a starting point. You can
-            change anything later.
+            Let&apos;s get something running.
           </p>
         </div>
 
