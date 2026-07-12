@@ -38,7 +38,7 @@ func (s apiServer) routes() *mux.Router {
 
 	organizationHandler := handlers.NewOrganisationHandler(handlers.OrganisationHandlerSpec{
 		OrganisationService: services.OrganisationService,
-		ProjectService:         services.ProjectService,
+		ProjectService:      services.ProjectService,
 	})
 
 	projectHandler := handlers.NewProjectHandler(handlers.ProjectHandlerSpec{
@@ -47,12 +47,12 @@ func (s apiServer) routes() *mux.Router {
 
 	workspaceUserHandler := handlers.NewWorkspaceUserHandler(handlers.WorkspaceUserHandlerSpec{
 		WorkspaceUserService: services.WorkspaceUserService,
-		ProjectService:          services.ProjectService,
+		ProjectService:       services.ProjectService,
 	})
 
 	volumeHandler := handlers.NewVolumeHandler(handlers.VolumeHandlerSpec{
-		VolumeService: services.VolumeService,
-		ProjectService:   services.ProjectService,
+		VolumeService:  services.VolumeService,
+		ProjectService: services.ProjectService,
 	})
 
 	stackHandler := handlers.NewStackHandler(handlers.StackHandlerSpec{
@@ -62,7 +62,7 @@ func (s apiServer) routes() *mux.Router {
 		ImageBuildService:    services.ImageBuildService,
 		LoggingService:       services.LoggingService,
 		MetricsService:       services.MetricsService,
-		ProjectService:          services.ProjectService,
+		ProjectService:       services.ProjectService,
 		Logger:               logger,
 	})
 
@@ -87,9 +87,9 @@ func (s apiServer) routes() *mux.Router {
 	})
 
 	secretHandler := handlers.NewSecretHandler(handlers.SecretHandlerSpec{
-		SecretService: services.SecretService,
-		ProjectService:   services.ProjectService,
-		Logger:        logger,
+		SecretService:  services.SecretService,
+		ProjectService: services.ProjectService,
+		Logger:         logger,
 	})
 
 	registryCredentialHandler := handlers.NewRegistryCredentialHandler(handlers.RegistryCredentialHandlerSpec{
@@ -104,13 +104,13 @@ func (s apiServer) routes() *mux.Router {
 
 	postgresAddonHandler := handlers.NewPostgresAddonHandler(handlers.PostgresAddonHandlerSpec{
 		PostgresAddonService: services.PostgresAddonService,
-		ProjectService:          services.ProjectService,
+		ProjectService:       services.ProjectService,
 		Logger:               logger,
 	})
 
 	objectStoreHandler := handlers.NewObjectStoreHandler(handlers.ObjectStoreHandlerSpec{
 		ObjectStoreService: services.ObjectStoreService,
-		ProjectService:        services.ProjectService,
+		ProjectService:     services.ProjectService,
 	})
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
@@ -334,7 +334,7 @@ func (s apiServer) routes() *mux.Router {
 
 	// Preview configs (project-scoped)
 	previewConfigHandler := handlers.NewStackPreviewConfigHandler(handlers.StackPreviewConfigHandlerSpec{
-		Service:     services.StackPreviewConfigService,
+		Service:        services.StackPreviewConfigService,
 		ProjectService: services.ProjectService,
 	})
 	projectResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.Create).Methods(http.MethodPost)
@@ -345,7 +345,7 @@ func (s apiServer) routes() *mux.Router {
 
 	// Preview stacks (project-scoped)
 	previewStackHandler := handlers.NewPreviewStackHandler(handlers.PreviewStackHandlerSpec{
-		Service:     services.PreviewStackService,
+		Service:        services.PreviewStackService,
 		ProjectService: services.ProjectService,
 	})
 	projectResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.Create).Methods(http.MethodPost)

@@ -18,14 +18,14 @@ func TestPermissionService(t *testing.T) {
 }
 
 const (
-	projectABC   = "project-abc"
-	projectXYZ   = "project-xyz"
-	orgABC    = "org-abc"
-	orgXYZ    = "org-xyz"
-	userDev   = "user-dev"
-	userView  = "user-view"
-	userMem   = "user-mem"
-	userAdmin = "user-admin"
+	projectABC = "project-abc"
+	projectXYZ = "project-xyz"
+	orgABC     = "org-abc"
+	orgXYZ     = "org-xyz"
+	userDev    = "user-dev"
+	userView   = "user-view"
+	userMem    = "user-mem"
+	userAdmin  = "user-admin"
 )
 
 type permCheck struct {

@@ -67,7 +67,7 @@ type StackServiceSpec struct {
 	NamespaceService      NamespaceService
 	SecretService         SecretService
 	PostgresAddonService  PostgresAddonService
-	ProjectService           ProjectService
+	ProjectService        ProjectService
 	Permissions           auth.PermissionService
 	Logger                logger.Logger
 	ReferenceService      ReferenceService
@@ -87,7 +87,7 @@ type stackService struct {
 	clusterService       ClusterService
 	secretService        SecretService
 	postgresAddonService PostgresAddonService
-	projectService          ProjectService
+	projectService       ProjectService
 	permissions          auth.PermissionService
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
@@ -143,7 +143,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		namespaceService:     spec.NamespaceService,
 		secretService:        spec.SecretService,
 		postgresAddonService: spec.PostgresAddonService,
-		projectService:          spec.ProjectService,
+		projectService:       spec.ProjectService,
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
 		defaultingService:    NewStackDefaultingService(),

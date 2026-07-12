@@ -8,7 +8,7 @@ import (
 type InviteEmailParams struct {
 	ToEmail     string
 	OrgName     string
-	ProjectName    string
+	ProjectName string
 	InviterName string
 	InviteToken string
 	ExpiresAt   time.Time

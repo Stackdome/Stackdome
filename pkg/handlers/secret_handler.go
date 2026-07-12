@@ -14,22 +14,22 @@ import (
 )
 
 type SecretHandlerSpec struct {
-	SecretService services.SecretService
-	ProjectService   services.ProjectService
-	Logger        logger.Logger
+	SecretService  services.SecretService
+	ProjectService services.ProjectService
+	Logger         logger.Logger
 }
 
 type secretHandler struct {
-	secretService services.SecretService
-	projectService   services.ProjectService
-	logger        logger.Logger
+	secretService  services.SecretService
+	projectService services.ProjectService
+	logger         logger.Logger
 }
 
 func NewSecretHandler(spec SecretHandlerSpec) *secretHandler {
 	return &secretHandler{
-		secretService: spec.SecretService,
-		projectService:   spec.ProjectService,
-		logger:        spec.Logger,
+		secretService:  spec.SecretService,
+		projectService: spec.ProjectService,
+		logger:         spec.Logger,
 	}
 }
 

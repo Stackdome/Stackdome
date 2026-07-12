@@ -64,7 +64,7 @@ type PostgresAddonServiceSpec struct {
 	SecretService         SecretService
 	PostgresBackupService PostgresBackupService
 	ClusterManager        clustermanager.ClusterManager
-	ProjectService           ProjectService
+	ProjectService        ProjectService
 	Logger                logger.Logger
 	Permissions           auth.PermissionService
 }
@@ -78,7 +78,7 @@ type postgresAddonService struct {
 	clusterService     ClusterService
 	objectStoreService ObjectStoreService
 	secretService      SecretService
-	projectService        ProjectService
+	projectService     ProjectService
 	clusterManager     clustermanager.ClusterManager
 	validator          validator.PostgresAddonValidator
 	logger             logger.Logger
@@ -108,7 +108,7 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		namespaceService:   spec.NamespaceService,
 		objectStoreService: spec.ObjectStoreService,
 		secretService:      spec.SecretService,
-		projectService:        spec.ProjectService,
+		projectService:     spec.ProjectService,
 		clusterManager:     spec.ClusterManager,
 		validator:          postgresaddon.NewPostgresAddonValidator(),
 		logger:             spec.Logger,

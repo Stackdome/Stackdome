@@ -15,19 +15,19 @@ import (
 
 func NewVolumeHandler(spec VolumeHandlerSpec) *volumeHandler {
 	return &volumeHandler{
-		volumeService: spec.VolumeService,
-		projectService:   spec.ProjectService,
+		volumeService:  spec.VolumeService,
+		projectService: spec.ProjectService,
 	}
 }
 
 type VolumeHandlerSpec struct {
-	VolumeService services.VolumeService
-	ProjectService   services.ProjectService
+	VolumeService  services.VolumeService
+	ProjectService services.ProjectService
 }
 
 type volumeHandler struct {
-	volumeService services.VolumeService
-	projectService   services.ProjectService
+	volumeService  services.VolumeService
+	projectService services.ProjectService
 }
 
 func (h *volumeHandler) GetByID(w http.ResponseWriter, r *http.Request) {

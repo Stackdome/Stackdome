@@ -111,7 +111,7 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		if emailErr := w.emailService.SendInviteEmail(txCtx, emailpkg.InviteEmailParams{
 			ToEmail:     invite.Email,
 			OrgName:     orgName,
-			ProjectName:    projectName,
+			ProjectName: projectName,
 			InviterName: inviterName,
 			InviteToken: rawToken,
 			ExpiresAt:   invite.ExpiresAt,

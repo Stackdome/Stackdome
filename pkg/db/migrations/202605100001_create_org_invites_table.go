@@ -13,8 +13,8 @@ func createOrgInvitesTable() *gormigrate.Migration {
 		ID             string    `gorm:"primary_key;default:gen_random_uuid()"`
 		Email          string    `gorm:"not null;index:idx_org_invites_email"`
 		OrganisationID string    `gorm:"not null;index:idx_org_invites_org_id"`
-		ProjectID         string    `gorm:"not null"`
-		ProjectRole       string    `gorm:"not null"`
+		ProjectID      string    `gorm:"not null"`
+		ProjectRole    string    `gorm:"not null"`
 		TokenHash      string    `gorm:"not null;uniqueIndex:idx_org_invites_token_hash"`
 		EncryptedToken string    `gorm:"not null"`
 		Status         string    `gorm:"not null;default:pending"`

@@ -59,7 +59,7 @@ func TestVolumeStoreListByProjectIDOrdersByCreatedAtDesc(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-old",
 		OrganisationID: "org-1",
-		ProjectID:         "project-1",
+		ProjectID:      "project-1",
 		UserID:         "u-1",
 		Name:           "older",
 		NamespaceID:    "ns-1",
@@ -74,7 +74,7 @@ func TestVolumeStoreListByProjectIDOrdersByCreatedAtDesc(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-new",
 		OrganisationID: "org-1",
-		ProjectID:         "project-1",
+		ProjectID:      "project-1",
 		UserID:         "u-1",
 		Name:           "newer",
 		NamespaceID:    "ns-1",
@@ -111,7 +111,7 @@ func TestVolumeStoreListByProjectIDFiltersByProject(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-a",
 		OrganisationID: "org-1",
-		ProjectID:         "project-1",
+		ProjectID:      "project-1",
 		UserID:         "u-1",
 		Name:           "a",
 		NamespaceID:    "ns-1",
@@ -126,7 +126,7 @@ func TestVolumeStoreListByProjectIDFiltersByProject(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-b",
 		OrganisationID: "org-1",
-		ProjectID:         "project-2",
+		ProjectID:      "project-2",
 		UserID:         "u-1",
 		Name:           "b",
 		NamespaceID:    "ns-1",
@@ -161,7 +161,7 @@ var _ = Describe("VolumeStore InternalListNotReady", func() {
 		Expect(sf.db.Create(&models.Volume{
 			ID:             id,
 			OrganisationID: "org-1",
-			ProjectID:         "project-1",
+			ProjectID:      "project-1",
 			UserID:         "u-1",
 			Name:           id,
 			NamespaceID:    "ns-1",

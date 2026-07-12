@@ -26,7 +26,7 @@ type SignupServiceSpec struct {
 	UserService         UserService
 	OrgInviteService    OrgInviteService
 	OrganisationService OrganisationService
-	ProjectService         ProjectService
+	ProjectService      ProjectService
 	PolicyManager       resourceaccess.ResourceAccessPolicyManager
 	RefreshTokenStore   stores.RefreshTokenStore
 	JWTSecretKey        string
@@ -38,7 +38,7 @@ type signupService struct {
 	userService         UserService
 	orgInviteService    OrgInviteService
 	organisationService OrganisationService
-	projectService         ProjectService
+	projectService      ProjectService
 	policyManager       resourceaccess.ResourceAccessPolicyManager
 	refreshTokenStore   stores.RefreshTokenStore
 	jwtSecretKey        string
@@ -51,7 +51,7 @@ func NewSignupService(spec SignupServiceSpec) SignupService {
 		userService:         spec.UserService,
 		orgInviteService:    spec.OrgInviteService,
 		organisationService: spec.OrganisationService,
-		projectService:         spec.ProjectService,
+		projectService:      spec.ProjectService,
 		policyManager:       spec.PolicyManager,
 		refreshTokenStore:   spec.RefreshTokenStore,
 		jwtSecretKey:        spec.JWTSecretKey,

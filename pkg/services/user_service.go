@@ -52,7 +52,7 @@ func NewUserService(spec UserServiceSpec) UserService {
 		jwtClaimsBuilder:        spec.JWTClaimsBuilder,
 		organisationService:     spec.OrganisationService,
 		permissions:             spec.Permissions,
-		projectService:             spec.ProjectService,
+		projectService:          spec.ProjectService,
 		refreshTokenStore:       spec.RefreshTokenStore,
 	}
 }
@@ -65,7 +65,7 @@ type UserServiceSpec struct {
 	JWTClaimsBuilder            jwtClaimsBuilder
 	OrganisationService         OrganisationService
 	Permissions                 auth.PermissionService
-	ProjectService                 ProjectService
+	ProjectService              ProjectService
 	RefreshTokenStore           stores.RefreshTokenStore
 }
 
@@ -77,7 +77,7 @@ type usersService struct {
 	resourceAccessPolicyMgr resourceaccess.ResourceAccessPolicyManager
 	jwtClaimsBuilder        jwtClaimsBuilder
 	permissions             auth.PermissionService
-	projectService             ProjectService
+	projectService          ProjectService
 	refreshTokenStore       stores.RefreshTokenStore
 }
 

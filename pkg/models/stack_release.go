@@ -130,7 +130,7 @@ func (c *ReleaseCause) Scan(value interface{}) error {
 type StackShellSnapshot struct {
 	ID             string      `json:"id"`
 	OrganisationID string      `json:"organisation_id"`
-	ProjectID         string      `json:"project_id"`
+	ProjectID      string      `json:"project_id"`
 	ClusterID      string      `json:"cluster_id"`
 	UserID         string      `json:"user_id"`
 	Name           string      `json:"name"`
@@ -165,7 +165,7 @@ func NewStackSnapshot(stack *Stack) (StackSnapshot, error) {
 	shell := StackShellSnapshot{
 		ID:             stack.ID,
 		OrganisationID: stack.OrganisationID,
-		ProjectID:         stack.ProjectID,
+		ProjectID:      stack.ProjectID,
 		ClusterID:      stack.ClusterID,
 		UserID:         stack.UserID,
 		Name:           stack.Name,
@@ -204,7 +204,7 @@ func (s *StackSnapshot) ToStack() *Stack {
 	return &Stack{
 		ID:             s.Stack.ID,
 		OrganisationID: s.Stack.OrganisationID,
-		ProjectID:         s.Stack.ProjectID,
+		ProjectID:      s.Stack.ProjectID,
 		ClusterID:      s.Stack.ClusterID,
 		UserID:         s.Stack.UserID,
 		Name:           s.Stack.Name,

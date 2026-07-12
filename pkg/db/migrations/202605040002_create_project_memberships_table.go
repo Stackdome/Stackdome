@@ -11,7 +11,7 @@ import (
 func createProjectMembershipsTable() *gormigrate.Migration {
 	type ProjectMembership struct {
 		ID        string    `gorm:"primary_key;default:gen_random_uuid()"`
-		ProjectID    string    `gorm:"not null;uniqueIndex:idx_project_memberships_project_user"`
+		ProjectID string    `gorm:"not null;uniqueIndex:idx_project_memberships_project_user"`
 		UserID    string    `gorm:"not null;uniqueIndex:idx_project_memberships_project_user"`
 		Role      string    `gorm:"not null"`
 		CreatedAt time.Time `gorm:"not null;default:now()"`

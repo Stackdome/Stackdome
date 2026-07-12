@@ -39,7 +39,7 @@ type ObjectStoreService interface {
 type ObjectStoreServiceSpec struct {
 	SessionFactory db.SessionFactory
 	SecretService  SecretService
-	ProjectService    ProjectService
+	ProjectService ProjectService
 	ClusterManager clustermanager.ClusterManager
 	Permissions    auth.PermissionService
 	Logger         logger.Logger
@@ -48,7 +48,7 @@ type ObjectStoreServiceSpec struct {
 type objectStoreService struct {
 	objectStoreStore stores.ObjectStoreStore
 	secretService    SecretService
-	projectService      ProjectService
+	projectService   ProjectService
 	clusterManager   clustermanager.ClusterManager
 	validator        validator.ObjectStoreValidator
 	permissions      auth.PermissionService
@@ -61,7 +61,7 @@ func NewObjectStoreService(spec ObjectStoreServiceSpec) ObjectStoreService {
 			SessionFactory: spec.SessionFactory,
 		}),
 		secretService:  spec.SecretService,
-		projectService:    spec.ProjectService,
+		projectService: spec.ProjectService,
 		clusterManager: spec.ClusterManager,
 		validator:      objectstore.NewObjectStoreValidator(),
 		permissions:    spec.Permissions,

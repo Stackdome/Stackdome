@@ -15,7 +15,7 @@ const (
 	ResourceClusters            = "clusters"
 	ResourceImageRegistries     = "image-registries"
 	ResourceOrgs                = "orgs"
-	ResourceProjects               = "projects"
+	ResourceProjects            = "projects"
 	ResourceObjectStores        = "object-stores"
 	ResourceUsers               = "users"
 	ResourceWorkspaceUsers      = "workspace-users"

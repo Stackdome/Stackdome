@@ -55,7 +55,7 @@ func newTestEnv(t gomock.TestReporter, projects map[string]*models.Project) *tes
 	pm := newTestPolicyManager()
 	ps := auth.NewPermissionService(auth.PermissionServiceSpec{
 		PolicyManager: pm,
-		ProjectStore:     mockProject,
+		ProjectStore:  mockProject,
 		Logger:        mockLog,
 	})
 	return &testEnv{policyMgr: pm, permService: ps, ctrl: ctrl}

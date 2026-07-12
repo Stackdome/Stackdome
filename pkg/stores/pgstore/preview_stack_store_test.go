@@ -19,12 +19,12 @@ var _ = Describe("PreviewStackStore", func() {
 	)
 
 	const (
-		orgID   = "org-1"
+		orgID      = "org-1"
 		projectID  = "project-1"
 		projectID2 = "project-2"
-		userID  = "user-1"
-		configA = "config-a"
-		configB = "config-b"
+		userID     = "user-1"
+		configA    = "config-a"
+		configB    = "config-b"
 	)
 
 	BeforeEach(func() {
@@ -62,7 +62,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-1",
 				OrganisationID:       orgID,
-				ProjectID:               projectID,
+				ProjectID:            projectID,
 				UserID:               userID,
 				StackPreviewConfigID: configA,
 				Name:                 "preview-pr-10",
@@ -76,7 +76,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-2",
 				OrganisationID:       orgID,
-				ProjectID:               projectID,
+				ProjectID:            projectID,
 				UserID:               userID,
 				StackPreviewConfigID: configB,
 				Name:                 "preview-pr-20",
@@ -90,7 +90,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-3",
 				OrganisationID:       orgID,
-				ProjectID:               projectID,
+				ProjectID:            projectID,
 				UserID:               userID,
 				StackPreviewConfigID: configA,
 				Name:                 "preview-pr-30",
@@ -104,7 +104,7 @@ var _ = Describe("PreviewStackStore", func() {
 			{
 				ID:                   "ps-4",
 				OrganisationID:       orgID,
-				ProjectID:               projectID2,
+				ProjectID:            projectID2,
 				UserID:               userID,
 				StackPreviewConfigID: configA,
 				Name:                 "preview-pr-40",

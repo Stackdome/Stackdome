@@ -11,7 +11,7 @@ func PresentStackPreviewConfig(c *models.StackPreviewConfig) openapi.StackPrevie
 	result := openapi.StackPreviewConfig{
 		Id:                &c.ID,
 		OrganisationId:    &c.OrganisationID,
-		ProjectId:            &c.ProjectID,
+		ProjectId:         &c.ProjectID,
 		UserId:            &c.UserID,
 		Name:              &c.Name,
 		Description:       &c.Description,

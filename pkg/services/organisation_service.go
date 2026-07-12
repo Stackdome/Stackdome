@@ -29,7 +29,7 @@ type organisationService struct {
 	organisationDomainService OrganisationDomainsService
 	stackQueryService         StackQueryService
 	userStore                 stores.UserStore
-	projectService               ProjectService
+	projectService            ProjectService
 	atomicExecutor            stores.AtomicExecutor
 	policyMgr                 resourceaccess.ResourceAccessPolicyManager
 	permissions               auth.PermissionService
@@ -46,7 +46,7 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		}),
 		stackQueryService:         spec.StackQueryService,
 		organisationDomainService: spec.OrganisationDomainService,
-		projectService:               spec.ProjectService,
+		projectService:            spec.ProjectService,
 		atomicExecutor:            pgstore.NewAtomicExecutor(spec.SessionFactory),
 		policyMgr:                 spec.PolicyManager,
 		permissions:               spec.Permissions,
@@ -58,7 +58,7 @@ type OrganisationServiceSpec struct {
 	SessionFactory            db.SessionFactory
 	OrganisationDomainService OrganisationDomainsService
 	StackQueryService         StackQueryService
-	ProjectService               ProjectService
+	ProjectService            ProjectService
 	PolicyManager             resourceaccess.ResourceAccessPolicyManager
 	Permissions               auth.PermissionService
 	Logger                    logger.Logger

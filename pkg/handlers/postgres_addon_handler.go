@@ -15,20 +15,20 @@ import (
 
 type PostgresAddonHandlerSpec struct {
 	PostgresAddonService services.PostgresAddonService
-	ProjectService          services.ProjectService
+	ProjectService       services.ProjectService
 	Logger               logger.Logger
 }
 
 type postgresAddonHandler struct {
 	postgresAddonService services.PostgresAddonService
-	projectService          services.ProjectService
+	projectService       services.ProjectService
 	logger               logger.Logger
 }
 
 func NewPostgresAddonHandler(spec PostgresAddonHandlerSpec) *postgresAddonHandler {
 	return &postgresAddonHandler{
 		postgresAddonService: spec.PostgresAddonService,
-		projectService:          spec.ProjectService,
+		projectService:       spec.ProjectService,
 		logger:               spec.Logger,
 	}
 }

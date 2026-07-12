@@ -23,7 +23,7 @@ type StackHandlerSpec struct {
 	ImageBuildService    services.ImageBuildService
 	LoggingService       services.LoggingService
 	MetricsService       services.MetricsService
-	ProjectService          services.ProjectService
+	ProjectService       services.ProjectService
 	Logger               logger.Logger
 }
 
@@ -34,7 +34,7 @@ type stackHandler struct {
 	imageBuildService    services.ImageBuildService
 	loggingService       services.LoggingService
 	metricsService       services.MetricsService
-	projectService          services.ProjectService
+	projectService       services.ProjectService
 	logger               logger.Logger
 }
 
@@ -46,7 +46,7 @@ func NewStackHandler(spec StackHandlerSpec) *stackHandler {
 		imageBuildService:    spec.ImageBuildService,
 		loggingService:       spec.LoggingService,
 		metricsService:       spec.MetricsService,
-		projectService:          spec.ProjectService,
+		projectService:       spec.ProjectService,
 		logger:               spec.Logger,
 	}
 }

@@ -20,7 +20,7 @@ var _ = Describe("StackStore", func() {
 
 	const (
 		orgID     = "org-1"
-		projectA     = "project-a"
+		projectA  = "project-a"
 		userID    = "user-1"
 		clusterID = "cluster-1"
 		stackName = "demo"
@@ -30,7 +30,7 @@ var _ = Describe("StackStore", func() {
 		return &models.Stack{
 			ID:             id,
 			OrganisationID: orgID,
-			ProjectID:         projectID,
+			ProjectID:      projectID,
 			ClusterID:      clusterID,
 			UserID:         userID,
 			Name:           name,

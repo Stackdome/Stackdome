@@ -12,18 +12,18 @@ import (
 )
 
 type StackPreviewConfigHandlerSpec struct {
-	Service     services.StackPreviewConfigService
+	Service        services.StackPreviewConfigService
 	ProjectService services.ProjectService
 }
 
 type stackPreviewConfigHandler struct {
-	service     services.StackPreviewConfigService
+	service        services.StackPreviewConfigService
 	projectService services.ProjectService
 }
 
 func NewStackPreviewConfigHandler(spec StackPreviewConfigHandlerSpec) *stackPreviewConfigHandler {
 	return &stackPreviewConfigHandler{
-		service:     spec.Service,
+		service:        spec.Service,
 		projectService: spec.ProjectService,
 	}
 }

@@ -43,7 +43,7 @@ type OrgInviteService interface {
 
 type OrgInviteServiceSpec struct {
 	InviteStore       stores.OrgInviteStore
-	ProjectService       ProjectService
+	ProjectService    ProjectService
 	UserService       UserService
 	EncryptionService EncryptionService
 	Permissions       auth.PermissionService
@@ -52,7 +52,7 @@ type OrgInviteServiceSpec struct {
 
 type orgInviteService struct {
 	inviteStore       stores.OrgInviteStore
-	projectService       ProjectService
+	projectService    ProjectService
 	userService       UserService
 	encryptionService EncryptionService
 	permissions       auth.PermissionService
@@ -63,7 +63,7 @@ type orgInviteService struct {
 func NewOrgInviteService(spec OrgInviteServiceSpec) OrgInviteService {
 	return &orgInviteService{
 		inviteStore:       spec.InviteStore,
-		projectService:       spec.ProjectService,
+		projectService:    spec.ProjectService,
 		userService:       spec.UserService,
 		encryptionService: spec.EncryptionService,
 		permissions:       spec.Permissions,
@@ -134,8 +134,8 @@ func (s *orgInviteService) Create(ctx context.Context, email, projectName string
 	invite := &models.OrgInvite{
 		Email:          email,
 		OrganisationID: identity.OrgID,
-		ProjectID:         project.ID,
-		ProjectRole:       role,
+		ProjectID:      project.ID,
+		ProjectRole:    role,
 		TokenHash:      tokenHash,
 		EncryptedToken: encryptedToken,
 		Status:         models.InviteStatusPending,

@@ -183,11 +183,11 @@ var _ = Describe("stackReleaseService.resolvePins", func() {
 
 var _ = Describe("stackReleaseService release creation records release_created", func() {
 	const (
-		createEventsStackID = "stack-1"
-		createEventsOrgID   = "org-1"
-		createEventsProjectID  = "project-1"
-		createEventsUserID  = "user-1"
-		rollbackFromRelID   = "rel-src"
+		createEventsStackID   = "stack-1"
+		createEventsOrgID     = "org-1"
+		createEventsProjectID = "project-1"
+		createEventsUserID    = "user-1"
+		rollbackFromRelID     = "rel-src"
 	)
 
 	var (
@@ -302,7 +302,7 @@ var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", 
 	const (
 		cancelStackID   = "stack-1"
 		cancelReleaseID = "rel-1"
-		cancelProjectID    = "project-1"
+		cancelProjectID = "project-1"
 	)
 
 	var (
@@ -379,7 +379,7 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 	const (
 		listEventsStackID   = "stack-1"
 		listEventsReleaseID = "rel-1"
-		listEventsProjectID    = "project-1"
+		listEventsProjectID = "project-1"
 	)
 
 	var (
@@ -727,8 +727,8 @@ var _ = Describe("stackReleaseService.MarkFailedWithValidationErrors records fai
 
 var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 	const (
-		detailStackID = "stack-1"
-		detailProjectID  = "project-1"
+		detailStackID   = "stack-1"
+		detailProjectID = "project-1"
 	)
 
 	var (
@@ -760,7 +760,7 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 	It("returns the live overlay for the converged release", func() {
 		release := &models.StackRelease{ID: "rel-1", StackID: detailStackID, State: models.ReleaseStateReleased}
 		stack := &models.Stack{
-			ID:     detailStackID,
+			ID:        detailStackID,
 			ProjectID: detailProjectID,
 			Status: &models.StackStatus{
 				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1", Revision: "rev-1"},
@@ -782,7 +782,7 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 	It("returns nil overlay for a terminal non-live release", func() {
 		release := &models.StackRelease{ID: "rel-0", StackID: detailStackID, State: models.ReleaseStateSuperseded}
 		stack := &models.Stack{
-			ID:     detailStackID,
+			ID:        detailStackID,
 			ProjectID: detailProjectID,
 			Status: &models.StackStatus{
 				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1"},
@@ -856,7 +856,7 @@ var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
 	const (
 		streamStackID   = "stack-1"
 		streamReleaseID = "rel-1"
-		streamProjectID    = "project-1"
+		streamProjectID = "project-1"
 	)
 
 	var (

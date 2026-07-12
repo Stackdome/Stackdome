@@ -34,7 +34,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 		projectID := "project-456"
 
 		stack := &models.Stack{
-			ID:     stackID,
+			ID:        stackID,
 			ProjectID: projectID,
 		}
 
@@ -103,7 +103,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 		projectID := "project-456"
 
 		stack := &models.Stack{
-			ID:     stackID,
+			ID:        stackID,
 			ProjectID: projectID,
 		}
 
@@ -142,7 +142,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 		projectID := "project-456"
 
 		stack := &models.Stack{
-			ID:     stackID,
+			ID:        stackID,
 			ProjectID: projectID,
 		}
 

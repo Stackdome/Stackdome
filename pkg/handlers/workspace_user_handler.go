@@ -15,18 +15,18 @@ import (
 func NewWorkspaceUserHandler(spec WorkspaceUserHandlerSpec) *workspaceUserHandler {
 	return &workspaceUserHandler{
 		workspaceUserService: spec.WorkspaceUserService,
-		projectService:          spec.ProjectService,
+		projectService:       spec.ProjectService,
 	}
 }
 
 type WorkspaceUserHandlerSpec struct {
 	WorkspaceUserService services.WorkspaceUserService
-	ProjectService          services.ProjectService
+	ProjectService       services.ProjectService
 }
 
 type workspaceUserHandler struct {
 	workspaceUserService services.WorkspaceUserService
-	projectService          services.ProjectService
+	projectService       services.ProjectService
 }
 
 func (a workspaceUserHandler) Get(w http.ResponseWriter, r *http.Request) {

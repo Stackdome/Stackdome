@@ -18,22 +18,22 @@ type PermissionService interface {
 }
 
 type permissionService struct {
-	policyMgr resourceaccess.ResourceAccessPolicyManager
+	policyMgr    resourceaccess.ResourceAccessPolicyManager
 	projectStore stores.ProjectStore
-	logger    logger.Logger
+	logger       logger.Logger
 }
 
 type PermissionServiceSpec struct {
 	PolicyManager resourceaccess.ResourceAccessPolicyManager
-	ProjectStore     stores.ProjectStore
+	ProjectStore  stores.ProjectStore
 	Logger        logger.Logger
 }
 
 func NewPermissionService(spec PermissionServiceSpec) PermissionService {
 	return &permissionService{
-		policyMgr: spec.PolicyManager,
+		policyMgr:    spec.PolicyManager,
 		projectStore: spec.ProjectStore,
-		logger:    spec.Logger,
+		logger:       spec.Logger,
 	}
 }
 

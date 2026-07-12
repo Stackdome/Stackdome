@@ -21,7 +21,7 @@ func TestCreateStackConnection_UsesConnectionScopedValidation(t *testing.T) {
 	stackID := "stack-123"
 	projectID := "project-456"
 	stack := &models.Stack{
-		ID:     stackID,
+		ID:        stackID,
 		ProjectID: projectID,
 		StackResources: []*models.StackResource{
 			{Name: "web"},

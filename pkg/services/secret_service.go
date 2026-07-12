@@ -46,7 +46,7 @@ type SecretServiceSpec struct {
 	EncryptionService   EncryptionService
 	ReferenceService    ReferenceService
 	ClusterClientGetter ClusterClientGetter
-	ProjectService         ProjectService
+	ProjectService      ProjectService
 	Logger              logger.Logger
 	Permissions         auth.PermissionService
 }
@@ -57,7 +57,7 @@ type secretService struct {
 	encryptionService   EncryptionService
 	validator           validator.SecretValidator
 	clusterClientGetter ClusterClientGetter
-	projectService         ProjectService
+	projectService      ProjectService
 	logger              logger.Logger
 	permissions         auth.PermissionService
 }
@@ -71,7 +71,7 @@ func NewSecretService(spec SecretServiceSpec) SecretService {
 		validator:           secret.NewSecretValidator(),
 		encryptionService:   spec.EncryptionService,
 		clusterClientGetter: spec.ClusterClientGetter,
-		projectService:         spec.ProjectService,
+		projectService:      spec.ProjectService,
 		logger:              spec.Logger,
 		permissions:         spec.Permissions,
 	}

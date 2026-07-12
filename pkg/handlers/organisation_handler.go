@@ -15,13 +15,13 @@ import (
 // OrganisationHandlerSpec is the specification for the OrganisationHandler
 type OrganisationHandlerSpec struct {
 	OrganisationService services.OrganisationService
-	ProjectService         services.ProjectService
+	ProjectService      services.ProjectService
 }
 
 // organisationHandler is the handler for organisation related operations
 type organisationHandler struct {
 	organisationService services.OrganisationService
-	projectService         services.ProjectService
+	projectService      services.ProjectService
 }
 
 // NewOrganisationHandler creates a new OrganisationHandler
@@ -29,7 +29,7 @@ type organisationHandler struct {
 func NewOrganisationHandler(spec OrganisationHandlerSpec) *organisationHandler {
 	return &organisationHandler{
 		organisationService: spec.OrganisationService,
-		projectService:         spec.ProjectService,
+		projectService:      spec.ProjectService,
 	}
 }
 

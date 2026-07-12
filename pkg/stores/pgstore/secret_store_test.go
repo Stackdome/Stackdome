@@ -19,11 +19,11 @@ var _ = Describe("SecretStore", func() {
 	)
 
 	const (
-		orgID  = "org-1"
-		orgID2 = "org-2"
-		projectA  = "project-a"
-		projectB  = "project-b"
-		userID = "user-1"
+		orgID    = "org-1"
+		orgID2   = "org-2"
+		projectA = "project-a"
+		projectB = "project-b"
+		userID   = "user-1"
 	)
 
 	BeforeEach(func() {
@@ -55,7 +55,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-1",
 				OrganisationID: orgID,
-				ProjectID:         projectA,
+				ProjectID:      projectA,
 				UserID:         userID,
 				Name:           "github-pat",
 				Type:           models.SecretTypeToken,
@@ -67,7 +67,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-2",
 				OrganisationID: orgID,
-				ProjectID:         projectA,
+				ProjectID:      projectA,
 				UserID:         userID,
 				Name:           "docker-creds",
 				Type:           models.SecretTypeDockerRegistry,
@@ -79,7 +79,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-3",
 				OrganisationID: orgID,
-				ProjectID:         projectB,
+				ProjectID:      projectB,
 				UserID:         userID,
 				Name:           "ssh-deploy-key",
 				Type:           models.SecretTypeSSHKey,
@@ -91,7 +91,7 @@ var _ = Describe("SecretStore", func() {
 			{
 				ID:             "sec-4",
 				OrganisationID: orgID2,
-				ProjectID:         projectA,
+				ProjectID:      projectA,
 				UserID:         userID,
 				Name:           "other-org-secret",
 				Type:           models.SecretTypeGeneric,

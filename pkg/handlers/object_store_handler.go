@@ -13,18 +13,18 @@ import (
 
 type ObjectStoreHandlerSpec struct {
 	ObjectStoreService services.ObjectStoreService
-	ProjectService        services.ProjectService
+	ProjectService     services.ProjectService
 }
 
 type objectStoreHandler struct {
 	objectStoreService services.ObjectStoreService
-	projectService        services.ProjectService
+	projectService     services.ProjectService
 }
 
 func NewObjectStoreHandler(spec ObjectStoreHandlerSpec) *objectStoreHandler {
 	return &objectStoreHandler{
 		objectStoreService: spec.ObjectStoreService,
-		projectService:        spec.ProjectService,
+		projectService:     spec.ProjectService,
 	}
 }
 

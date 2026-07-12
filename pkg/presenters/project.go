@@ -10,7 +10,7 @@ func PresentProject(in *models.Project) openapi.Project {
 		Id:             &in.ID,
 		Name:           in.Name,
 		OrganisationId: &in.OrganisationID,
-		DefaultProject:    &in.DefaultProject,
+		DefaultProject: &in.DefaultProject,
 		CreatedAt:      &in.CreatedAt,
 		UpdatedAt:      &in.UpdatedAt,
 	}
@@ -28,7 +28,7 @@ func PresentProjectList(in []*models.Project) []openapi.Project {
 func PresentProjectMembership(in *models.ProjectMembership) openapi.ProjectMembership {
 	m := openapi.ProjectMembership{
 		Id:        &in.ID,
-		ProjectId:    in.ProjectID,
+		ProjectId: in.ProjectID,
 		UserId:    in.UserID,
 		Role:      string(in.Role),
 		CreatedAt: &in.CreatedAt,
