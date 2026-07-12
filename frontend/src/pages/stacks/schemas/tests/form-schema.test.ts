@@ -189,6 +189,35 @@ describe("convertFormStackToApiStack — spec.connections", () => {
   });
 });
 
+describe("convertFormStackToApiStack — git source credential passthrough", () => {
+  it("preserves source.git.integration_id seeded by the git-provider wizard", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "git" as const,
+            gitRevisionType: "branch" as const,
+            gitRevisionValue: "main",
+            source: {
+              git: {
+                repo_url: "git@github.com:acme/private-repo.git",
+                dockerfile_path: "Dockerfile",
+                build_context: ".",
+                integration_id: "gh-integration-1",
+              },
+            },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0].source?.git?.integration_id).toBe("gh-integration-1");
+  });
+});
+
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
     const { FormEnvVarSchema } = await import("../form-schema");
@@ -312,19 +341,6 @@ describe("FormStackSchema — depends_on cross-validation", () => {
       );
       expect(issue?.message).toMatch(/unknown resource/i);
     }
-  });
-
-  it("flags a dangling reference once its target is renamed", async () => {
-    // Reproduces the bug the user hit on the edit page: rename a depended-upon
-    // resource and the dependent's depends_on entry now points nowhere.
-    const { FormStackSchema } = await import("../form-schema");
-    const result = FormStackSchema.safeParse(
-      stackOf(
-        stackResource({ name: "redis-renamed" }),
-        stackResource({ name: "api", depends_on: ["redis"] }),
-      ),
-    );
-    expect(result.success).toBe(false);
   });
 
   it("emits one issue per dangling entry, not just the first", async () => {

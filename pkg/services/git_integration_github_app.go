@@ -92,7 +92,10 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 			githubapp.PermContents: githubapp.PermLevelRead,
 			githubapp.PermMetadata: githubapp.PermLevelRead,
 		},
-		DefaultEvents: []string{GitHubEventPush, GitHubEventInstallation},
+		// GitHub rejects "installation" as a default_event — installation
+		// lifecycle deliveries are sent to every app automatically, so only
+		// subscribable events belong here.
+		DefaultEvents: []string{GitHubEventPush},
 	}
 	// The API contract exposes the manifest as a free-form object, so marshal
 	// the typed manifest into the generic map the model carries.

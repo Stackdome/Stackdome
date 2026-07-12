@@ -11,6 +11,43 @@
 
 export type StatusVariant = "ready" | "pending" | "error" | "info" | "neutral";
 
+/**
+ * Display word per variant — cards, filter pills, and any other status
+ * surface must speak the same language, so derive labels from here rather
+ * than hardcoding words per component.
+ */
+export const statusVariantLabel: Record<StatusVariant, string> = {
+  ready: "ready",
+  pending: "pending",
+  error: "failed",
+  info: "unknown",
+  neutral: "unknown",
+};
+
+/**
+ * Visual tone per variant for the "Status Strip" cards: `deploying` renders
+ * the animated in-flight rail; settled tones color the status word only.
+ */
+export type StatusTone = "success" | "brand" | "danger" | "deploying";
+
+export const statusVariantTone: Record<StatusVariant, StatusTone> = {
+  ready: "success",
+  pending: "deploying",
+  error: "danger",
+  info: "brand",
+  neutral: "brand",
+};
+
+/**
+ * Preview envs with no reported phase are still provisioning — treat a
+ * missing phase as pending, not neutral. All preview status surfaces (cards,
+ * filter buckets) must go through this so they agree.
+ */
+export function previewStatusVariant(phase?: string | null): StatusVariant {
+  if (!(phase ?? "").trim()) return "pending";
+  return statusVariant("preview", phase);
+}
+
 export type StatusDomain =
   | "stack"
   | "resource"
@@ -22,6 +59,7 @@ export type StatusDomain =
   | "registry"
   | "storage"
   | "build"
+  | "preview"
   | "generic";
 
 export function statusVariant(domain: StatusDomain, state?: string | null): StatusVariant {
@@ -178,6 +216,21 @@ export function statusVariant(domain: StatusDomain, state?: string | null): Stat
           return "error";
         case "cancelled":
           return "neutral";
+        default:
+          return "info";
+      }
+
+    // pkg/models/preview_stack.go — PreviewStackPhase vocabulary
+    case "preview":
+      switch (s) {
+        case "provisioning":
+        case "deploying":
+        case "deleting":
+          return "pending";
+        case "ready":
+          return "ready";
+        case "failed":
+          return "error";
         default:
           return "info";
       }

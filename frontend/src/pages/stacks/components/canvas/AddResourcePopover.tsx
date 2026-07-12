@@ -216,7 +216,9 @@ export function AddResourcePopover(props: AddResourcePopoverProps) {
           Add resource
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-[560px] p-0">
+      {/* align="end": the trigger sits at the canvas's top-right, so the wide
+          panel must open leftward to stay on screen. */}
+      <PopoverContent align="end" className="w-[560px] p-0">
         <AddResourcePanel {...props} onRequestClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>

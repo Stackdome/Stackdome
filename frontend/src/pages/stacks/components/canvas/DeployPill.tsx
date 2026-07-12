@@ -88,18 +88,20 @@ export function DeployPill({
         </span>
       )}
       {hasChanges && (
-        <Button type="button" variant="outline" size="sm" className="border-border bg-transparent hover:bg-muted" onClick={onViewChanges}>
+        <Button type="button" variant="outline" size="sm" className="rounded-md border-border bg-transparent hover:bg-muted" onClick={onViewChanges}>
           <FileDiff className="size-3.5" />
           Details
         </Button>
       )}
-      <Button type="button" variant="default" size="sm" onClick={fireDeploy} disabled={deployDisabled}>
+      <Button type="button" variant="default" size="sm" className="rounded-md" onClick={fireDeploy} disabled={deployDisabled}>
         {busy ? <Loader2 className="size-3.5 animate-spin" /> : <Rocket className="size-3.5" />}
         {busy ? "Deploying" : "Deploy"}
         {!busy && (
           <kbd
             aria-hidden
-            className="ml-1 flex items-center gap-px rounded-[4px] border border-white/30 bg-white/15 px-1 py-0.5 text-white"
+            // currentColor so the chip follows the button's foreground —
+            // white in light mode, primary-foreground (near-black) in dark.
+            className="ml-1 flex items-center gap-px rounded-[4px] border border-current/30 bg-current/10 px-1 py-0.5 text-current"
           >
             {isMac ? <Command className="size-2.5" /> : <span className="font-mono text-[9px] font-semibold leading-none">Ctrl</span>}
             <CornerDownLeft className="size-2.5" />
@@ -109,7 +111,7 @@ export function DeployPill({
       {!isDraft && canDiscardDraft && onDiscardDraft && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" aria-label="Change actions">
+            <Button type="button" variant="ghost" size="icon" className="rounded-md" aria-label="Change actions">
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
