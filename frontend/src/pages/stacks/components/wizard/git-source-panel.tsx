@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FieldShell } from "@/components/branded";
 import { WizardFooter } from "./wizard-footer";
 import { GitSourcePicker } from "@/components/git-source-picker/git-source-picker";
 import { BranchField } from "@/components/git-source-picker/branch-field";
 import type { PickedRepo } from "@/components/git-source-picker/types";
 import { buildGitSeed, defaultServiceName } from "@/pages/stacks/lib/git-source-seed";
+import { gitSourceFormSchema, type GitSourceFormValues } from "./git-source-form-schema";
 
 type Step = "pick" | "form";
 
@@ -26,6 +27,7 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
   const [buildContext, setBuildContext] = useState(".");
   const [port, setPort] = useState("");
   const [exposePublic, setExposePublic] = useState(true);
+  const [errors, setErrors] = useState<Partial<Record<keyof GitSourceFormValues, string>>>({});
 
   const toForm = () => {
     if (!repo) return;
@@ -36,14 +38,31 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
 
   const openInEditor = () => {
     if (!repo) return;
-    const portNumber = Number.parseInt(port, 10);
+    const parsed = gitSourceFormSchema.safeParse({
+      serviceName,
+      branch,
+      port,
+      dockerfilePath,
+      buildContext,
+    });
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      setErrors({
+        serviceName: flat.serviceName?.[0],
+        branch: flat.branch?.[0],
+        port: flat.port?.[0],
+      });
+      return;
+    }
+    setErrors({});
+    const portNumber = Number.parseInt(parsed.data.port, 10);
     navigate("/stacks/new", {
       state: {
         seed: buildGitSeed(repo, {
-          serviceName,
-          branch,
-          dockerfilePath,
-          buildContext,
+          serviceName: parsed.data.serviceName,
+          branch: parsed.data.branch,
+          dockerfilePath: parsed.data.dockerfilePath ?? "",
+          buildContext: parsed.data.buildContext ?? "",
           port: portNumber,
           exposePublic,
         }),
@@ -51,8 +70,6 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
     });
     onClose();
   };
-
-  const portValid = /^\d+$/.test(port) && Number(port) > 0 && Number(port) < 65536;
 
   if (step === "pick") {
     return (
@@ -88,57 +105,67 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
               The image is built from this repository&apos;s Dockerfile on every deploy.
             </p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="git-service-name">Service name</Label>
+          <FieldShell label="Service name" htmlFor="git-service-name" required error={errors.serviceName}>
             <Input
               id="git-service-name"
               value={serviceName}
-              onChange={(e) => setServiceName(e.target.value)}
+              onChange={(e) => {
+                setServiceName(e.target.value);
+                setErrors((prev) => ({ ...prev, serviceName: undefined }));
+              }}
+              aria-invalid={!!errors.serviceName}
             />
-          </div>
+          </FieldShell>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="git-branch">Branch</Label>
+            <FieldShell label="Branch" htmlFor="git-branch" required error={errors.branch}>
               <BranchField
                 id="git-branch"
                 value={branch}
-                onChange={setBranch}
+                onChange={(value) => {
+                  setBranch(value);
+                  setErrors((prev) => ({ ...prev, branch: undefined }));
+                }}
                 integrationId={repo?.integrationId ?? null}
                 repoFullName={repo?.fullName}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="git-port">Port</Label>
+            </FieldShell>
+            <FieldShell label="Port" htmlFor="git-port" required error={errors.port}>
               <Input
                 id="git-port"
                 inputMode="numeric"
                 placeholder="3000"
                 value={port}
-                onChange={(e) => setPort(e.target.value)}
+                onChange={(e) => {
+                  setPort(e.target.value);
+                  setErrors((prev) => ({ ...prev, port: undefined }));
+                }}
+                aria-invalid={!!errors.port}
               />
-            </div>
+            </FieldShell>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="git-dockerfile">Dockerfile path</Label>
+            <FieldShell
+              label="Dockerfile path"
+              htmlFor="git-dockerfile"
+              hint="Relative to the repository root."
+            >
               <Input
                 id="git-dockerfile"
                 value={dockerfilePath}
                 onChange={(e) => setDockerfilePath(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">Relative to the repository root.</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="git-context">Build context</Label>
+            </FieldShell>
+            <FieldShell
+              label="Build context"
+              htmlFor="git-context"
+              hint="Directory passed to the image build, relative to the repository root."
+            >
               <Input
                 id="git-context"
                 value={buildContext}
                 onChange={(e) => setBuildContext(e.target.value)}
               />
-              <p className="text-xs text-muted-foreground">
-                Directory passed to the image build, relative to the repository root.
-              </p>
-            </div>
+            </FieldShell>
           </div>
           <div className="flex items-center justify-between rounded-md border px-3 py-2.5">
             <div>
@@ -153,7 +180,6 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
         onBack={() => setStep("pick")}
         onContinue={openInEditor}
         continueLabel="Open in editor"
-        continueDisabled={serviceName.trim() === "" || branch.trim() === "" || !portValid}
         hint="You can add env vars and more services on the canvas"
       />
     </div>

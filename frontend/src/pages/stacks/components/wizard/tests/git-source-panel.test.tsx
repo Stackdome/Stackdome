@@ -53,14 +53,21 @@ describe("GitSourcePanel", () => {
     expect(screen.getByLabelText(/dockerfile path/i)).toHaveValue("Dockerfile");
   });
 
-  it("requires a port, then seeds /stacks/new and closes", async () => {
+  it("requires a port, showing a validation error until one is entered, then seeds /stacks/new and closes", async () => {
     const user = userEvent.setup();
     const { onClose } = renderPanel();
     await user.click(screen.getByText("stub-pick-repo"));
     await user.click(screen.getByRole("button", { name: /continue/i }));
 
     const openInEditor = screen.getByRole("button", { name: /open in editor/i });
-    expect(openInEditor).toBeDisabled();
+    expect(openInEditor).toBeEnabled();
+    await user.click(openInEditor);
+    expect(await screen.findByText(/port is required/i)).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalled();
+
+    const portLabel = screen.getByText(/^port$/i).closest("label");
+    expect(portLabel?.querySelector('[aria-hidden]')).toHaveTextContent("*");
+
     await user.type(screen.getByLabelText(/port/i), "3000");
     await user.click(openInEditor);
 
