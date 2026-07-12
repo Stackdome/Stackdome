@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { WizardFooter } from "./wizard-footer";
 import { GitSourcePicker } from "@/components/git-source-picker/git-source-picker";
+import { BranchField } from "@/components/git-source-picker/branch-field";
 import type { PickedRepo } from "@/components/git-source-picker/types";
 import { buildGitSeed, defaultServiceName } from "@/pages/stacks/lib/git-source-seed";
 
@@ -98,7 +99,13 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="git-branch">Branch</Label>
-              <Input id="git-branch" value={branch} onChange={(e) => setBranch(e.target.value)} />
+              <BranchField
+                id="git-branch"
+                value={branch}
+                onChange={setBranch}
+                integrationId={repo?.integrationId ?? null}
+                repoFullName={repo?.fullName}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="git-port">Port</Label>
@@ -119,6 +126,7 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
                 value={dockerfilePath}
                 onChange={(e) => setDockerfilePath(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">Relative to the repository root.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="git-context">Build context</Label>
@@ -127,6 +135,9 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
                 value={buildContext}
                 onChange={(e) => setBuildContext(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Directory passed to the image build, relative to the repository root.
+              </p>
             </div>
           </div>
           <div className="flex items-center justify-between rounded-md border px-3 py-2.5">

@@ -117,6 +117,10 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
             <div className="space-y-1.5">
               <Label htmlFor="cs-stackfile">Stackfile path</Label>
               <Input id="cs-stackfile" value={stackfilePath} onChange={(e) => setStackfilePath(e.target.value)} />
+              <p className="text-xs text-muted-foreground">
+                Defines the full stack — services, ports, env. Fetched from the
+                repository on every deploy.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cs-max">Max active previews</Label>

@@ -1,12 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
+import { BranchField } from "@/components/git-source-picker/branch-field";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
-import { listRepositoryBranches } from "@/api/git-integrations";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
@@ -22,26 +19,10 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
   const { defaultTeamName } = useResourceTeams();
   const [name, setName] = useState(repo.fullName.split("/").pop() ?? "");
   const [baseBranch, setBaseBranch] = useState(repo.defaultBranch);
-  const [branches, setBranches] = useState<string[]>([]);
   const [stackfilePath, setStackfilePath] = useState("stackfile.yaml");
   const [maxActive, setMaxActive] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const orgId = getCurrentOrganizationId();
-    if (!orgId || !repo.integrationId) return;
-    let cancelled = false;
-    const [owner, repoName] = repo.fullName.split("/");
-    listRepositoryBranches(orgId, repo.integrationId, owner, repoName)
-      .then((b) => {
-        if (!cancelled) setBranches(b.items ?? []);
-      })
-      .catch(() => {
-        // fall back to free-text branch input
-      });
-    return () => { cancelled = true; };
-  }, [repo]);
 
   const submit = async () => {
     const orgId = getCurrentOrganizationId();
@@ -89,25 +70,13 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
 
         <div className="space-y-1.5">
           <Label htmlFor="cfg-branch">Base branch</Label>
-          {branches.length > 0 ? (
-            <Select value={baseBranch} onValueChange={setBaseBranch}>
-              <SelectTrigger id="cfg-branch">
-                <SelectValue placeholder="Select branch" />
-              </SelectTrigger>
-              <SelectContent>
-                {branches.map((b) => (
-                  <SelectItem key={b} value={b}>{b}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <Input
-              id="cfg-branch"
-              value={baseBranch}
-              placeholder="main"
-              onChange={(e) => setBaseBranch(e.target.value)}
-            />
-          )}
+          <BranchField
+            id="cfg-branch"
+            value={baseBranch}
+            onChange={setBaseBranch}
+            integrationId={repo.integrationId}
+            repoFullName={repo.fullName}
+          />
           <p className="text-xs text-muted-foreground">The branch pull requests target.</p>
         </div>
 
@@ -119,8 +88,9 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
             onChange={(e) => setStackfilePath(e.target.value)}
           />
           <p className="text-xs text-muted-foreground">
-            Checked when the first preview deploys — a wrong path shows up as a
-            Failed environment.
+            Defines the full stack — services, ports, env. Fetched from the
+            repository on every deploy. Checked when the first preview
+            deploys — a wrong path shows up as a Failed environment.
           </p>
         </div>
 
