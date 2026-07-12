@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Globe, Lock, Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,26 +62,23 @@ export function GitSourcePicker({ value, onChange, publicUrlHint, configureUrl }
   const selected = integrations.find((i) => i.id === selectedId) ?? null;
   const hasGithubApp = integrations.some((i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP);
 
-  const loadIntegrations = useMemo(
-    () => async () => {
-      const orgId = getCurrentOrganizationId();
-      if (!orgId) return;
-      try {
-        const list = usableIntegrations((await listGitIntegrations(orgId)).items ?? []);
-        setIntegrations(list);
-        setSelectedId((current) => {
-          if (current && list.some((i) => i.id === current)) return current;
-          const app = list.find((i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP);
-          return app?.id ?? list[0]?.id ?? null;
-        });
-      } catch (e) {
-        setError(getErrorMessage(e));
-      } finally {
-        setLoaded(true);
-      }
-    },
-    [],
-  );
+  const loadIntegrations = useCallback(async () => {
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) return;
+    try {
+      const list = usableIntegrations((await listGitIntegrations(orgId)).items ?? []);
+      setIntegrations(list);
+      setSelectedId((current) => {
+        if (current && list.some((i) => i.id === current)) return current;
+        const app = list.find((i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP);
+        return app?.id ?? list[0]?.id ?? null;
+      });
+    } catch (e) {
+      setError(getErrorMessage(e));
+    } finally {
+      setLoaded(true);
+    }
+  }, []);
 
   useEffect(() => {
     void loadIntegrations();
@@ -141,17 +138,27 @@ export function GitSourcePicker({ value, onChange, publicUrlHint, configureUrl }
   const switchTab = (next: Tab) => {
     setTab(next);
     setError(null);
+    setPublicUrl("");
+    setHostUrl(selected?.type === GIT_INTEGRATION_TYPE_CREDENTIALS ? `https://${selected.host}/` : "");
     onChange(null);
   };
 
   const emitHostUrl = (url: string, integration: GitIntegration) => {
     setHostUrl(url);
-    const host = hostOf(url.trim());
-    const path = host ? new URL(url.trim()).pathname.replace(/^\/+|\/+$/g, "") : "";
+    const trimmed = url.trim();
+    let host: string | null = null;
+    let path = "";
+    try {
+      const parsed = new URL(trimmed);
+      host = parsed.host.toLowerCase();
+      path = parsed.pathname.replace(/^\/+|\/+$/g, "");
+    } catch {
+      host = null;
+    }
     if (host === (integration.host ?? "").toLowerCase() && path.includes("/")) {
       onChange({
-        fullName: repoTail(url.trim()),
-        cloneUrl: url.trim(),
+        fullName: repoTail(trimmed),
+        cloneUrl: trimmed,
         defaultBranch: "",
         integrationId: integration.id ?? null,
       });

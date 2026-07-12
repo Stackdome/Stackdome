@@ -132,6 +132,30 @@ describe("GitSourcePicker", () => {
     );
   });
 
+  it("clears the Public URL field and re-emits null when switching away and back", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    renderPicker({ onChange });
+    await user.click(await screen.findByRole("tab", { name: /public url/i }), { pointerEventsCheck: 0 });
+    const urlInput = screen.getByPlaceholderText(/https:\/\//);
+    await user.type(urlInput, "https://github.com/acme/site");
+    await waitFor(() =>
+      expect(onChange).toHaveBeenLastCalledWith({
+        fullName: "acme/site",
+        cloneUrl: "https://github.com/acme/site",
+        defaultBranch: "",
+        integrationId: null,
+      }),
+    );
+
+    await user.click(await screen.findByRole("tab", { name: /connected provider/i }), { pointerEventsCheck: 0 });
+    expect(onChange).toHaveBeenLastCalledWith(null);
+
+    await user.click(await screen.findByRole("tab", { name: /public url/i }), { pointerEventsCheck: 0 });
+    expect(screen.getByPlaceholderText(/https:\/\//)).toHaveValue("");
+    expect(onChange).toHaveBeenLastCalledWith(null);
+  });
+
   it("shows the configure escape hatch when the search returns nothing", async () => {
     renderPicker({ configureUrl: "https://github.com/apps/x/installations/new" });
     const link = await screen.findByRole("link", { name: /configure in github/i });
