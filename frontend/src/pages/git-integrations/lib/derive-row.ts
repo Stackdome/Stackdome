@@ -53,7 +53,7 @@ export interface RowViewModel {
   access: RowAccess;
 }
 
-// Invariant: status must stay derivable from the integration alone (no installations) — SummaryStrip derives rows without them.
+// Invariant: status must stay derivable from the integration alone — installations are optional row context.
 function statusFor(integration: GitIntegration): { key: RowViewModel["statusKey"]; label: string; tone: RowTone } {
   if (integration.credentials_configured === false) {
     return { key: "action_needed", label: "Needs attention", tone: "attention" };

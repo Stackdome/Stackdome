@@ -68,7 +68,7 @@ describe("GitIntegrationsPage", () => {
     expect(screen.getAllByText("GitHub App").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders the summary strip when the list is populated", async () => {
+  it("does not render summary cards above the providers panel", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({
       items: [
         { id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED, credentials_configured: true },
@@ -77,8 +77,7 @@ describe("GitIntegrationsPage", () => {
     });
     render(<GitIntegrationsPage />);
     await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
-    expect(screen.getByText(/connected & ready/i)).toBeInTheDocument();
-    expect(screen.getByText(/needs attention/i)).toBeInTheDocument();
+    expect(screen.queryByText(/connected & ready/i)).not.toBeInTheDocument();
   });
 
   it("shows the error state and retries the fetch on Retry", async () => {

@@ -14,8 +14,7 @@ import {
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { deriveRow, GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
-import { SummaryStrip } from "./components/summary-strip";
+import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
 import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
 import { IntegrationRow } from "./components/integration-row";
 import { VerifyIntegrationDialog } from "./components/verify-integration-dialog";
@@ -79,8 +78,6 @@ export default function GitIntegrationsPage() {
     </Button>
   );
 
-  const rows = integrations.map((integration) => deriveRow(integration));
-
   if (loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
@@ -112,7 +109,6 @@ export default function GitIntegrationsPage() {
       {integrations.length > 0 && (
         <>
           {error && <p className="text-sm text-destructive">Couldn&apos;t refresh integrations: {error}</p>}
-          <SummaryStrip rows={rows} />
           <Panel title="Connected providers" count={integrations.length}>
             <div className="divide-y divide-border">
               {integrations.map((integration) => (
