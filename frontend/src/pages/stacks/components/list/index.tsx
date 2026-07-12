@@ -56,7 +56,7 @@ export default function StacksPage() {
   const { canWriteAnyTeam } = useCurrentUser();
   const [searchParams] = useSearchParams();
 
-  const { envs } = usePreviewEnvs();
+  const { envs, loading: envsLoading } = usePreviewEnvs();
 
   useEffect(() => {
     const currentOrgId = getCurrentOrganizationId();
@@ -132,7 +132,9 @@ export default function StacksPage() {
     return <Navigate to="/previews" replace />;
   }
 
-  if (isLoading) {
+  // Wait for the preview-env list too: rendering before the exclusion set
+  // arrives flashes preview-created stacks in the deployed grid.
+  if (isLoading || envsLoading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
