@@ -12,7 +12,7 @@ vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 
-import { createGitHubAppManifest, getGitIntegration, listInstallations, listGitIntegrations } from "@/api/git-integrations";
+import { createGitHubAppManifest, listInstallations, listGitIntegrations } from "@/api/git-integrations";
 import { GITHUB_APP_INSTALLED_MESSAGE } from "@/hooks/use-github-setup-landing";
 import { useGithubConnect } from "../use-github-connect";
 
@@ -29,7 +29,6 @@ describe("useGithubConnect", () => {
     vi.useFakeTimers();
     openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
     (createGitHubAppManifest as ReturnType<typeof vi.fn>).mockResolvedValue(flow);
-    (getGitIntegration as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "gi1", status: "pending_install" });
     (listGitIntegrations as ReturnType<typeof vi.fn>).mockResolvedValue({
       items: [{ id: "gi1", type: "github_app", status: "pending_install" }],
       total: 1,
@@ -77,10 +76,10 @@ describe("useGithubConnect", () => {
     expect(result.current.state).toBe("connected");
   });
 
-  it("connects when polling sees the integration installed", async () => {
-    (getGitIntegration as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({ id: "gi1", status: "pending_install" })
-      .mockResolvedValueOnce({ id: "gi1", status: "installed" });
+  it("connects when polling sees an installation appear (refresh self-heals missed webhooks)", async () => {
+    (listInstallations as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ items: [], total: 0 })
+      .mockResolvedValueOnce({ items: [{ id: "in1" }], total: 1 });
     const { result } = renderHook(() => useGithubConnect());
     await act(async () => {
       await result.current.connect();
@@ -88,10 +87,38 @@ describe("useGithubConnect", () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5_000);
     });
+    expect(result.current.state).toBe("waiting");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(listInstallations).toHaveBeenCalledWith("org1", "gi1", true);
+    expect(result.current.state).toBe("connected");
+  });
+
+  it("polls to connected even when the integration record only appears after connect", async () => {
+    // connect() sees no integration yet — the record is created by GitHub's
+    // manifest callback after the user confirms in the popup.
+    (listGitIntegrations as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ items: [], total: 0 }) // during connect()
+      .mockResolvedValueOnce({ items: [], total: 0 }) // poll tick 1: still absent
+      .mockResolvedValue({
+        items: [{ id: "gi1", type: "github_app", status: "installed" }],
+        total: 1,
+      });
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+    expect(result.current.integrationId).toBeNull();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_000);
+    });
+    expect(result.current.state).toBe("waiting");
     await act(async () => {
       await vi.advanceTimersByTimeAsync(5_000);
     });
     expect(result.current.state).toBe("connected");
+    expect(result.current.integrationId).toBe("gi1");
   });
 
   it("checkAgain refreshes installations and connects when one exists", async () => {

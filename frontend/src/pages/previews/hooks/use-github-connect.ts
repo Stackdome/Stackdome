@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createGitHubAppManifest,
-  getGitIntegration,
   listGitIntegrations,
   listInstallations,
 } from "@/api/git-integrations";
@@ -47,6 +46,38 @@ export function useGithubConnect(): GithubConnect {
   const [error, setError] = useState<string | null>(null);
   const [integrationId, setIntegrationId] = useState<string | null>(null);
   const pollCount = useRef(0);
+  // Mirrors integrationId for the poll interval, whose closure would
+  // otherwise see the value captured when the interval was created.
+  const integrationIdRef = useRef<string | null>(null);
+
+  const rememberIntegrationId = useCallback((id: string | null) => {
+    integrationIdRef.current = id;
+    setIntegrationId(id);
+  }, []);
+
+  /**
+   * One connection probe, safe to run before the integration record exists:
+   * the record is only created by GitHub's manifest callback (after the user
+   * clicks "Create app" in the popup), so the id must be re-resolved lazily.
+   * Once known, installations are re-listed from GitHub (refresh=true) — the
+   * install webhook never arrives in local dev without a public URL, so a
+   * status-only check would wait forever.
+   */
+  const probeConnected = useCallback(async (): Promise<boolean> => {
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) return false;
+    let id = integrationIdRef.current;
+    if (!id) {
+      const list = await listGitIntegrations(orgId);
+      const app = (list.items ?? []).find((i) => i.type === "github_app");
+      if (!app?.id) return false;
+      id = app.id;
+      rememberIntegrationId(id);
+      if (CONNECTED_STATUSES.has(app.status ?? "")) return true;
+    }
+    const installs = await listInstallations(orgId, id, true);
+    return (installs.items ?? []).length > 0;
+  }, [rememberIntegrationId]);
 
   const connect = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
@@ -65,11 +96,13 @@ export function useGithubConnect(): GithubConnect {
     try {
       const flow = await createGitHubAppManifest(orgId);
       postManifestToPopup(flow.github_url ?? "", flow.manifest);
+      // Usually null here — the integration record appears only after the
+      // user confirms app creation in the popup; the poll re-resolves it.
       const list = await listGitIntegrations(orgId);
       const pending = (list.items ?? []).find(
         (i) => i.type === "github_app" && !CONNECTED_STATUSES.has(i.status ?? ""),
       );
-      setIntegrationId(pending?.id ?? null);
+      rememberIntegrationId(pending?.id ?? null);
       pollCount.current = 0;
       setError(null);
       setState("waiting");
@@ -78,18 +111,15 @@ export function useGithubConnect(): GithubConnect {
       setError(getErrorMessage(e));
       setState("error");
     }
-  }, []);
+  }, [rememberIntegrationId]);
 
   const checkAgain = useCallback(async () => {
-    const orgId = getCurrentOrganizationId();
-    if (!orgId || !integrationId) return;
     try {
-      const installs = await listInstallations(orgId, integrationId, true);
-      if ((installs.items ?? []).length > 0) setState("connected");
+      if (await probeConnected()) setState("connected");
     } catch (e) {
       setError(getErrorMessage(e));
     }
-  }, [integrationId]);
+  }, [probeConnected]);
 
   // The popup posts a message right before closing itself.
   useEffect(() => {
@@ -104,12 +134,12 @@ export function useGithubConnect(): GithubConnect {
     return () => window.removeEventListener("message", onMessage);
   }, [state]);
 
-  // Fallback: poll the integration status in case the message never arrives
-  // (popup closed early, blocked message, webhook race).
+  // Fallback: poll in case the message never arrives (popup closed early,
+  // blocked message, cross-origin landing, missed webhook). Deliberately not
+  // gated on integrationId — the record doesn't exist until the user confirms
+  // in the popup; probeConnected re-resolves it on every tick.
   useEffect(() => {
-    if (state !== "waiting" || !integrationId) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
+    if (state !== "waiting") return;
     const timer = setInterval(async () => {
       pollCount.current += 1;
       if (pollCount.current > MAX_POLLS) {
@@ -119,14 +149,16 @@ export function useGithubConnect(): GithubConnect {
         return;
       }
       try {
-        const integration = await getGitIntegration(orgId, integrationId);
-        if (CONNECTED_STATUSES.has(integration.status ?? "")) setState("connected");
+        if (await probeConnected()) {
+          clearInterval(timer);
+          setState("connected");
+        }
       } catch {
         // transient poll errors are ignored; checkAgain surfaces real ones
       }
     }, POLL_MS);
     return () => clearInterval(timer);
-  }, [state, integrationId]);
+  }, [state, probeConnected]);
 
   return { state, error, connect, checkAgain, integrationId };
 }
