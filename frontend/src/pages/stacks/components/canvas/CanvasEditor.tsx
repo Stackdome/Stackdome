@@ -114,11 +114,12 @@ export function CanvasEditor({
         snapToGrid
         snapGrid={SNAP_GRID}
         proOptions={{ hideAttribution: true }}
-        // Brand tokens instead of xyflow's default dark/light palette so the
-        // canvas matches the surrounding chrome in both modes.
-        style={{ backgroundColor: "var(--background)" }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+        {/* bgColor: the Background SVG paints xyflow's default (#141414 in
+            dark) over the pane — pin it to the app token so the canvas
+            matches the sidebar/chrome in both modes. Dot color stays the
+            xyflow default. */}
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} bgColor="var(--background)" />
         <CanvasControls
           showConnections={showConnections}
           onToggleConnections={onToggleConnections}
