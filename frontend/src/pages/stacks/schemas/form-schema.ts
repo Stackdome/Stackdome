@@ -398,8 +398,9 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
   if (resource.sourceType === 'git') {
     const existingGit = resource.source?.git;
     // Flatten the UI revision helpers into exactly one of branch/tag/commit.
-    // push is optional (omit => internal cluster registry); credential
-    // overrides (integration_id / registry_credentials_id) are public-only unset.
+    // push is optional (omit => internal cluster registry). integration_id
+    // carries the clone-auth credential reference (e.g. seeded by the "From
+    // git provider" wizard for private repos) and must pass through as-is.
     prepared.source = {
       git: {
         repo_url: existingGit?.repo_url ?? '',
@@ -409,6 +410,7 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
         tag: resource.gitRevisionType === 'tag' ? resource.gitRevisionValue : undefined,
         commit: resource.gitRevisionType === 'commit' ? resource.gitRevisionValue : undefined,
         push: existingGit?.push?.repository ? { repository: existingGit.push.repository } : undefined,
+        integration_id: existingGit?.integration_id,
       },
     };
   } else if (resource.sourceType === 'image') {

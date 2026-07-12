@@ -189,6 +189,35 @@ describe("convertFormStackToApiStack — spec.connections", () => {
   });
 });
 
+describe("convertFormStackToApiStack — git source credential passthrough", () => {
+  it("preserves source.git.integration_id seeded by the git-provider wizard", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "git" as const,
+            gitRevisionType: "branch" as const,
+            gitRevisionValue: "main",
+            source: {
+              git: {
+                repo_url: "git@github.com:acme/private-repo.git",
+                dockerfile_path: "Dockerfile",
+                build_context: ".",
+                integration_id: "gh-integration-1",
+              },
+            },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0].source?.git?.integration_id).toBe("gh-integration-1");
+  });
+});
+
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
     const { FormEnvVarSchema } = await import("../form-schema");
