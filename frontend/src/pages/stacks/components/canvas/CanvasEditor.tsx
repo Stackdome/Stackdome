@@ -125,7 +125,7 @@ export function CanvasEditor({
           onToggleConnections={onToggleConnections}
           onAutoLayout={onAutoLayout}
         />
-        <Panel position="top-left">
+        <Panel position="top-right">
           <AddResourcePopover
             addedIds={addedBlockIds}
             onAdd={onAddBlock}
