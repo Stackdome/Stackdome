@@ -50,6 +50,12 @@ export function WizardChooser({
 }: WizardChooserProps) {
   const alts: AltStart[] = [
     {
+      icon: GitBranch,
+      label: "From git provider",
+      desc: "Deploy straight from a repository.",
+      onClick: onPickGit,
+    },
+    {
       icon: Grid3x3,
       label: "Build from blocks",
       desc: "Assemble your stack from pre-configured building blocks of resources.",
@@ -72,12 +78,6 @@ export function WizardChooser({
       label: "Blank slate",
       desc: "Build it up yourself.",
       onClick: onPickBlank,
-    },
-    {
-      icon: GitBranch,
-      label: "From git provider",
-      desc: "Deploy straight from a repository.",
-      onClick: onPickGit,
     },
   ];
 
