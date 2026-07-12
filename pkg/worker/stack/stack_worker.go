@@ -18,7 +18,6 @@ const (
 type stackWorker struct {
 	stackService   stackService
 	clusterManager clustermanager.ClusterManager
-	env            string
 	subReconcilers []subReconciler
 	worker.BaseWorker
 }
@@ -49,6 +48,7 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 			NewNamespaceReconciler(NamespaceReconcilerSpec{
 				ClusterManager:   spec.ClusterManager,
 				NamespaceService: spec.NamespaceService,
+				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-namespace-reconciler"),
 			}),
 		},
 	}
@@ -60,34 +60,37 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.Stack")
 	}
 
+	log := w.Logger().WithField(logger.FieldStackID, stackID.ID)
+
 	stack, err := w.stackService.InternalGetStack(ctx, stackID.ID)
 	if err != nil {
 		if err.Is404() {
-			w.Logger().Infof("Stack %s not found, skipping reconciliation", stackID.ID)
+			log.Info(ctx, "stack not found, skipping reconciliation")
 			return worker.Result{}, nil
 		}
 		return worker.Result{}, err
 	}
-	w.Logger().Infof("Processing stack: %s", stack.ID)
+	log.Info(ctx, "processing stack")
 
 	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil && w.Env == config.EnvironmentTest {
-		w.Logger().Infof("Skipping cluster provisioning for stack %s due to annotation", stack.ID)
+		log.Info(ctx, "skipping cluster provisioning due to annotation")
 		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
 	}
 
 	res, err := w.reconcile(ctx, stack)
 	if err != nil {
-		w.Logger().Errorf("Failed to reconcile stack %s: %v", stack.ID, err)
+		log.Error(ctx, "failed to reconcile stack: %v", err)
 		return worker.Result{}, err
 	}
 	return res, nil
 }
 
 func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worker.Result, *errors.ServiceError) {
-	w.Logger().Infof("Reconciling stack: %s", stack.ID)
+	log := w.Logger().WithField(logger.FieldStackID, stack.ID)
+	log.Info(ctx, "reconciling stack")
 
 	for _, subReconciler := range w.subReconcilers {
-		w.Logger().Info(ctx, "reconciling with sub-reconciler: %s", subReconciler.Name())
+		log.Debug(ctx, "reconciling with sub-reconciler: %s", subReconciler.Name())
 		result, err := subReconciler.Reconcile(ctx, stack)
 		switch {
 		case err != nil:

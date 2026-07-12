@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useRef } from "react";
-import type { z } from "zod";
-import { ApiStackResourceStatusSchema } from "@/pages/stacks/schemas/api-schema";
+import type { components } from "@/api/types/openapi";
 import { statusVariant as toStatusVariant } from "@/components/branded/status-variant";
 import {
   dirtyTabsForResource,
@@ -72,8 +71,11 @@ export function useResourceTabProps(args: {
   baselineResource?: Partial<FormStackResourceData>;
   onChange: (index: number, updated: Partial<FormStackResourceData>) => void;
   context: ResourceTabContext;
+  /** Live runtime status for this resource, from the status release's
+   *  live_status.resources[resource.name]. Absent for drafts/never-deployed resources. */
+  liveStatus?: components["schemas"]["StackResourceStatus"];
 }): ResourceTabProps {
-  const { resource, index, baselineResource, onChange, context } = args;
+  const { resource, index, baselineResource, onChange, context, liveStatus } = args;
 
   const dirtyTabs = useMemo(
     () =>
@@ -114,8 +116,7 @@ export function useResourceTabProps(args: {
     });
   }, []);
 
-  const statusObj = (resource.status ?? {}) as z.infer<typeof ApiStackResourceStatusSchema>;
-  const statusVariant = toStatusVariant("resource", statusObj.state);
+  const statusVariant = toStatusVariant("resource", liveStatus?.state);
   const statusDotColor =
     statusVariant === "ready"
       ? "bg-success"
@@ -179,7 +180,7 @@ export function useResourceTabProps(args: {
     dirtyTabs,
     isDirty,
     statusDotColor,
-    statusState: statusObj.state,
+    statusState: liveStatus?.state,
     configurationProps: {
       index,
       draft: configurationDraft,

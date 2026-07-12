@@ -62,17 +62,17 @@ func (r *postgresBackupReconciler) Name() string {
 }
 
 func (r *postgresBackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Infof("reconciling backup: %s in namespace %s", req.Name, req.Namespace)
+	r.Log.Info(ctx, "reconciling backup: %s in namespace %s", req.Name, req.Namespace)
 
 	backup := &cnpgv1.Backup{}
 	if err := r.Client.Get(ctx, req.NamespacedName, backup); err != nil {
-		r.Log.Errorf("failed to get CNPG Backup: %v", err)
+		r.Log.Error(ctx, "failed to get CNPG Backup: %v", err)
 		return ctrl.Result{}, nil
 	}
 
 	addonID, err := r.resolveAddonID(ctx, backup)
 	if err != nil {
-		r.Log.Errorf("failed to resolve addon ID for backup %s: %v", backup.Name, err)
+		r.Log.Error(ctx, "failed to resolve addon ID for backup %s: %v", backup.Name, err)
 		return ctrl.Result{}, nil
 	}
 	if addonID == "" {
@@ -85,7 +85,7 @@ func (r *postgresBackupReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return r.createBackupRecord(ctx, addonID, backup)
 	}
 	if serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to lookup backup: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to lookup backup: %w", serr)
 	}
 
 	return r.updateBackupRecord(ctx, existing, backup)
@@ -130,10 +130,10 @@ func (r *postgresBackupReconciler) createBackupRecord(ctx context.Context, addon
 	}
 
 	if _, serr := r.PostgresBackupService.Create(ctx, record); serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to create backup record: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to create backup record: %w", serr)
 	}
 
-	r.Log.Infof("created backup record for %s (addon %s)", backup.Name, addonID)
+	r.Log.Info(ctx, "created backup record for %s (addon %s)", backup.Name, addonID)
 	return ctrl.Result{}, nil
 }
 
@@ -156,10 +156,10 @@ func (r *postgresBackupReconciler) updateBackupRecord(ctx context.Context, exist
 	}
 
 	if _, serr := r.PostgresBackupService.Update(ctx, existing.ID, existing); serr != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update backup record: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to update backup record: %w", serr)
 	}
 
-	r.Log.Infof("updated backup %s phase to %s", backup.Name, newPhase)
+	r.Log.Info(ctx, "updated backup %s phase to %s", backup.Name, newPhase)
 	return ctrl.Result{}, nil
 }
 

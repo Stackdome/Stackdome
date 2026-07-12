@@ -56,7 +56,7 @@ func (w *previewWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 	preview, serr := w.previewStackStore.GetByID(ctx, previewRef.ID)
 	if serr != nil {
 		if serr.Is404() {
-			w.Logger().Infof("preview %s not found, skipping", previewRef.ID)
+			w.Logger().Info(ctx, "preview %s not found, skipping", previewRef.ID)
 			return worker.Result{}, nil
 		}
 		return worker.Result{}, serr
@@ -66,11 +66,11 @@ func (w *previewWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 		return worker.Result{}, nil
 	}
 
-	w.Logger().Infof("processing preview %s (phase=%s)", preview.ID, preview.Status.Phase)
+	w.Logger().Info(ctx, "processing preview %s (phase=%s)", preview.ID, preview.Status.Phase)
 
 	res, reconcileErr := w.reconcile(ctx, preview)
 	if reconcileErr != nil {
-		w.Logger().Errorf("failed to reconcile preview %s: %v", preview.ID, reconcileErr)
+		w.Logger().Error(ctx, "failed to reconcile preview %s: %v", preview.ID, reconcileErr)
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile preview %s: %v", preview.ID, reconcileErr)
 	}
 
@@ -79,7 +79,7 @@ func (w *previewWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 
 func (w *previewWorker) reconcile(ctx context.Context, preview *models.PreviewStack) (worker.Result, error) {
 	for _, sr := range w.subReconcilers {
-		w.Logger().Infof("running sub-reconciler: %s for preview: %s", sr.Name(), preview.ID)
+		w.Logger().Info(ctx, "running sub-reconciler: %s for preview: %s", sr.Name(), preview.ID)
 		result, err := sr.Reconcile(ctx, preview)
 		switch {
 		case err != nil:

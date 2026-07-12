@@ -1,6 +1,7 @@
 package auth
 
 import (
+	stderrors "errors"
 	"fmt"
 	"net/http"
 
@@ -50,7 +51,7 @@ func (h *jwtCookieAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	// Get the JWT token from cookie
 	cookie, err := r.Cookie(h.cookieName)
 	if err != nil {
-		if err == http.ErrNoCookie {
+		if stderrors.Is(err, http.ErrNoCookie) {
 			handleError(w, errors.ErrorUnauthorized, "Authentication cookie missing")
 			return
 		}

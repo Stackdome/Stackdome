@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"strconv"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -17,6 +16,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/gorilla/mux"
 )
+
+const queryValueTrue = "true"
 
 type handlerConfig struct {
 	MarshalInto  interface{}
@@ -32,9 +33,9 @@ func handleError(ctx context.Context, w http.ResponseWriter, err *errors.Service
 	logger := logger.GetLoggerFromContext(ctx)
 	// If this is a 400 error, its the user's issue, log as info rather than error
 	if err.HttpCode >= 400 && err.HttpCode <= 499 {
-		logger.Infof(err.Error())
+		logger.Info(ctx, "%s", err.Error())
 	} else {
-		logger.Errorf(err.Error())
+		logger.Error(ctx, "%s", err.Error())
 	}
 	writeJSONResponse(w, err.HttpCode, err.AsOpenapiError())
 }
@@ -113,8 +114,8 @@ func handleGet(w http.ResponseWriter, r *http.Request, cfg *handlerConfig) {
 	}
 
 	result, serviceErr := cfg.Action()
-	switch {
-	case serviceErr == nil:
+	switch serviceErr {
+	case nil:
 		writeJSONResponse(w, http.StatusOK, result)
 	default:
 		cfg.ErrorHandler(r.Context(), w, serviceErr)
@@ -183,13 +184,16 @@ func internalStreamHandler(w http.ResponseWriter, r *http.Request, streamable in
 				return
 			}
 			if err := streamObject.Error(); err != nil {
-				fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
+				_, _ = fmt.Fprintf(w, "event: error\ndata: %s\n\n", err.Error())
 				flusher.Flush()
 				return
 			}
 			data := streamObject.Data()
 			if data != "" {
-				fmt.Fprintf(w, "data: %s\n\n", data)
+				if withID, ok := streamObject.(interfaces.StreamObjectWithID); ok {
+					_, _ = fmt.Fprintf(w, "id: %s\n", withID.ID())
+				}
+				_, _ = fmt.Fprintf(w, "data: %s\n\n", data)
 				flusher.Flush()
 			}
 		}
@@ -222,23 +226,6 @@ func writeJSONResponse(w http.ResponseWriter, code int, payload interface{}) {
 	}
 }
 
-// Prepare a 'list' of non-db-backed resources
-func determineListRange(obj interface{}, page int, size int) (list []interface{}, total int) {
-	items := reflect.ValueOf(obj)
-	total = items.Len()
-	low := (page - 1) * size
-	high := low + size
-	if low < 0 || low >= total || high >= total {
-		low = 0
-		high = total
-	}
-	for i := low; i < high; i++ {
-		list = append(list, items.Index(i).Interface())
-	}
-
-	return list, total
-}
-
 func addStreamHeaders(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
@@ -266,6 +253,16 @@ func parseListParams(r *http.Request, allowedFilters []string) stores.ListParams
 	}
 
 	return params
+}
+
+// parseOptionalIntQuery reads an integer query parameter, returning def when the
+// parameter is absent. A present-but-unparseable value is an error.
+func parseOptionalIntQuery(r *http.Request, name string, def int) (int, error) {
+	raw := r.URL.Query().Get(name)
+	if raw == "" {
+		return def, nil
+	}
+	return strconv.Atoi(raw)
 }
 
 func resolveTeamID(r *http.Request, teamService services.TeamService) (string, *errors.ServiceError) {

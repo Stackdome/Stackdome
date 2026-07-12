@@ -155,11 +155,9 @@ var _ = Describe("Stack", func() {
 
 			deleted := shared.DeleteStack(client, orgID, teamName, created.GetId())
 
-			status, ok := deleted.GetStatusOk()
+			lifecycle, ok := deleted.GetLifecycleOk()
 			Expect(ok).To(BeTrue())
-			state, stateOk := status.GetStateOk()
-			Expect(stateOk).To(BeTrue())
-			Expect(*state).To(Equal("Deleting"))
+			Expect(*lifecycle).To(Equal(openapi.STACK_LIFECYCLE_DELETING))
 		})
 	})
 
@@ -171,7 +169,7 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*resource})
 			stack := openapi.NewStack("", *spec)
 
-			shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
+			_ = shared.CreateStackExpectError(client, orgID, teamName, stack, http.StatusBadRequest)
 		})
 
 		It("should allow creating a stack with no resources", func() {
@@ -191,7 +189,7 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*resource})
 			badStack := openapi.NewStack("test-no-image", *spec)
 
-			shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
+			_ = shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate resource names", func() {
@@ -207,7 +205,7 @@ var _ = Describe("Stack", func() {
 			spec.SetStackResources([]openapi.StackResource{*resource1, *resource2})
 			badStack := openapi.NewStack("test-dup-resources", *spec)
 
-			shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
+			_ = shared.ApplyStackExpectError(client, orgID, teamName, created.GetId(), badStack, http.StatusBadRequest)
 		})
 
 		It("should reject duplicate stack names", func() {
@@ -215,7 +213,7 @@ var _ = Describe("Stack", func() {
 			shared.CreateStack(client, orgID, teamName, stack)
 
 			duplicate := shared.CreateSimpleStack("test-dup-name")
-			shared.CreateStackExpectError(client, orgID, teamName, duplicate, http.StatusConflict)
+			_ = shared.CreateStackExpectError(client, orgID, teamName, duplicate, http.StatusConflict)
 		})
 	})
 
@@ -262,7 +260,7 @@ var _ = Describe("Stack", func() {
 			})
 
 			resource := openapi.NewStackResource("bad")
-			shared.CreateStackResourceExpectError(client, orgID, teamName, stackID, resource, http.StatusBadRequest)
+			_ = shared.CreateStackResourceExpectError(client, orgID, teamName, stackID, resource, http.StatusBadRequest)
 		})
 	})
 })

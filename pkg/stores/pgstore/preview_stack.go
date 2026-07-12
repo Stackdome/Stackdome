@@ -40,7 +40,7 @@ func (s *previewStackStore) Create(ctx context.Context, preview *models.PreviewS
 func (s *previewStackStore) GetByID(ctx context.Context, id string) (*models.PreviewStack, *errors.ServiceError) {
 	var preview models.PreviewStack
 	if err := s.sessionFactory.New(ctx).First(&preview, "id = ?", id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("preview stack with id %s not found", id)
 		}
 		return nil, errors.GeneralError("failed to get preview stack: %s", err.Error())
@@ -60,7 +60,7 @@ func (s *previewStackStore) GetByConfigAndPR(ctx context.Context, configID strin
 	if err := s.sessionFactory.New(ctx).
 		Where("stack_preview_config_id = ? AND pr_number = ?", configID, prNumber).
 		First(&preview).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("preview stack for config %s and PR #%s not found", configID, prNumber)
 		}
 		return nil, errors.GeneralError("failed to get preview stack: %s", err.Error())

@@ -5,9 +5,11 @@ import (
 
 	"github.com/Stackdome/stackdome/cmd/environment"
 	"github.com/Stackdome/stackdome/cmd/server"
-	"github.com/golang/glog"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/spf13/cobra"
 )
+
+var log = logger.NewLogger()
 
 func NewServeCommand() *cobra.Command {
 	cmd := &cobra.Command{
@@ -24,7 +26,7 @@ func NewServeCommand() *cobra.Command {
 
 func runServe(env environment.EnvImpl) {
 	if err := env.Init(context.Background()); err != nil {
-		glog.Exitf("Unable to initialize environment: %s", err.Error())
+		log.Fatalf("Unable to initialize environment: %s", err.Error())
 	}
 	// Run the servers
 	go func() {

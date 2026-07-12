@@ -1,4 +1,4 @@
-import { Layers, PlusCircle, Loader2, AlertTriangle, Search, ChevronDown, ArrowDown } from "lucide-react";
+import { Layers, PlusCircle, Loader2, AlertTriangle, Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
@@ -14,9 +14,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { PageHeader, EmptyState, type StatusVariant } from "@/components/branded";
-import { statusVariant, statusVariantLabel } from "@/components/branded/status-variant";
+import { statusVariantLabel } from "@/components/branded/status-variant";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
-import { DeployStackCard } from "./stack-card";
+import type { Stack } from "@/pages/stacks/types";
+import { DeployStackCard, headerStatus } from "./stack-card";
 import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
@@ -37,11 +38,11 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name (A–Z)" },
 ];
 
-function bucketStatus(state?: string | null): StatusFilter {
-  const v = statusVariant("stack", state);
-  if (v === "ready") return "ready";
-  if (v === "pending") return "pending";
-  if (v === "error") return "error";
+function bucketStatus(stack: Stack): StatusFilter {
+  const { variant } = headerStatus(stack);
+  if (variant === "ready") return "ready";
+  if (variant === "pending") return "pending";
+  if (variant === "error") return "error";
   return "all";
 }
 
@@ -94,12 +95,11 @@ export default function StacksPage() {
     [stacks, previewStackIds],
   );
 
-  // Aggregate counts by status bucket — used for the filter pill counts
+  // Aggregate counts by status bucket — used for the subtitle and filter pill counts
   const counts = useMemo(() => {
-    const c = { all: 0, ready: 0, pending: 0, error: 0 } as Record<StatusFilter, number>;
-    c.all = deployedStacks.length;
+    const c = { all: deployedStacks.length, ready: 0, pending: 0, error: 0 } as Record<StatusFilter, number>;
     for (const s of deployedStacks) {
-      const b = bucketStatus(s.status?.state);
+      const b = bucketStatus(s);
       if (b !== "all") c[b]++;
     }
     return c;
@@ -108,7 +108,7 @@ export default function StacksPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let out = deployedStacks.filter((s) => {
-      if (statusFilter !== "all" && bucketStatus(s.status?.state) !== statusFilter) return false;
+      if (statusFilter !== "all" && bucketStatus(s) !== statusFilter) return false;
       if (q && !(s.name?.toLowerCase().includes(q))) return false;
       return true;
     });
@@ -155,7 +155,6 @@ export default function StacksPage() {
   }
 
   const sortLabel = SORT_OPTIONS.find((o) => o.key === sortKey)?.label ?? "Sort";
-  const showToolbar = deployedStacks.length > 0;
 
   return (
     <div className="flex flex-1 flex-col p-8 space-y-6 h-full">
@@ -173,11 +172,25 @@ export default function StacksPage() {
         }
       />
 
-      {/* Filter / sort toolbar */}
-      <div className="flex flex-wrap items-center gap-3">
-        {showToolbar && (
-          <>
-            <div className="relative w-[300px]">
+      {deployedStacks.length === 0 ? (
+        <EmptyState
+          icon={<Layers className="h-8 w-8" />}
+          title="No stacks deployed yet"
+          description="Deploy your first stack to get started."
+          action={
+            canWriteAnyTeam ? (
+              <Button onClick={() => setWizardOpen(true)}>
+                <PlusCircle className="h-4 w-4" />
+                  Create New Stack
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <>
+          {/* Filter / sort toolbar */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Filter stacks…"
@@ -186,8 +199,8 @@ export default function StacksPage() {
                 className="pl-9 h-9"
               />
             </div>
-            <div className="flex items-stretch overflow-hidden rounded-md border border-border">
-              {STATUS_FILTERS.map((f, i) => {
+            <div className="flex items-center gap-1.5">
+              {STATUS_FILTERS.map((f) => {
                 const active = statusFilter === f.key;
                 const count = counts[f.key];
                 return (
@@ -196,11 +209,10 @@ export default function StacksPage() {
                     type="button"
                     onClick={() => setStatusFilter(f.key)}
                     className={cn(
-                      "inline-flex items-center gap-1.5 px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
-                      i > 0 && "border-l border-border",
+                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
                       active
-                        ? "bg-brand-bg text-brand"
-                        : "text-muted-foreground hover:bg-muted/50"
+                        ? "border-brand-border bg-brand-bg text-brand"
+                        : "border-border text-muted-foreground hover:bg-muted/50"
                     )}
                   >
                     <span>{f.label}</span>
@@ -209,15 +221,13 @@ export default function StacksPage() {
                 );
               })}
             </div>
-            <div className="flex-1" />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 h-9 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground transition-colors hover:border-brand-border hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
                 >
-                  <ArrowDown className="h-3 w-3" />
-                  {sortLabel}
+                    Sort: <span className="text-foreground">{sortLabel}</span>
                   <ChevronDown className="h-3 w-3" />
                 </button>
               </DropdownMenuTrigger>
@@ -240,36 +250,22 @@ export default function StacksPage() {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-          </>
-        )}
-      </div>
+          </div>
 
-      {deployedStacks.length === 0 ? (
-        <EmptyState
-          icon={<Layers className="h-8 w-8" />}
-          title="No stacks deployed yet"
-          description="Deploy your first stack to get started."
-          action={
-            canWriteAnyTeam ? (
-              <Button onClick={() => setWizardOpen(true)}>
-                <PlusCircle className="h-4 w-4" />
-                  Create New Stack
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon={<Search className="h-8 w-8" />}
-          title="No stacks match"
-          description="Try a different search or status filter."
-        />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
-          {filtered.map((stack) => (
-            <DeployStackCard key={stack.id || stack.name} stack={stack} />
-          ))}
-        </div>
+          {filtered.length === 0 ? (
+            <EmptyState
+              icon={<Search className="h-8 w-8" />}
+              title="No stacks match"
+              description="Try a different search or status filter."
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+              {filtered.map((stack) => (
+                <DeployStackCard key={stack.id || stack.name} stack={stack} />
+              ))}
+            </div>
+          )}
+        </>
       )}
 
       <StackCreateWizard open={wizardOpen} onOpenChange={setWizardOpen} />

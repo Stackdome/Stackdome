@@ -64,10 +64,10 @@ func (r *deprovisionReconciler) deletePreviewRecord(ctx context.Context, preview
 	if key, ok := r.previewCacheKeys.LoadAndDelete(preview.ID); ok {
 		r.stackfileCache.Delete(key.(string))
 	}
-	r.logger.Infof("preview %s: cleaning up record", preview.ID)
+	r.logger.Info(ctx, "preview %s: cleaning up record", preview.ID)
 	if sErr := r.previewStackStore.Delete(ctx, preview.ID); sErr != nil {
 		return resultNil, fmt.Errorf("failed to delete preview record %s: %w", preview.ID, sErr)
 	}
-	r.logger.Infof("preview %s deprovisioned", preview.ID)
+	r.logger.Info(ctx, "preview %s deprovisioned", preview.ID)
 	return resultStop, nil
 }

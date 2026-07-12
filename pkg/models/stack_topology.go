@@ -23,6 +23,6 @@ type TopologyEdge struct {
 	Target   TopologyNodeRef        `json:"target"`
 	Mappings []ConnectionMapping    `json:"mappings,omitempty"`
 	Config   map[string]interface{} `json:"config,omitempty"`
-	// If its from user's explict connection or inferred by the system, Like consuming pull secrets, git credentials.
+	// If its from user's explicit connection or inferred by the system, Like consuming pull secrets, git credentials.
 	SourceOfTruth string `json:"source_of_truth"`
 }

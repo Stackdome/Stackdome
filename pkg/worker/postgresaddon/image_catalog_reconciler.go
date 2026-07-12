@@ -38,7 +38,7 @@ func (r *imageCatalogReconciler) Reconcile(ctx context.Context, addon *models.Po
 	key := client.ObjectKey{Name: builders.DefaultImageCatalogName, Namespace: addon.Namespace}
 	if err := clusterClient.Get(ctx, key, existing); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			r.logger.Infof("Creating ImageCatalog '%s' in namespace '%s'", builders.DefaultImageCatalogName, addon.Namespace)
+			r.logger.Info(ctx, "Creating ImageCatalog '%s' in namespace '%s'", builders.DefaultImageCatalogName, addon.Namespace)
 			catalog := &cnpgv1.ImageCatalog{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      builders.DefaultImageCatalogName,

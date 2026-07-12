@@ -1,15 +1,13 @@
 package presenters
 
 import (
-	"fmt"
-
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"k8s.io/utils/ptr"
 )
 
-func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
+func PresentStackRelease(r *models.StackRelease, live *models.ReleaseLiveStatus) openapi.StackRelease {
 	state := openapi.StackReleaseState(r.State)
 	result := openapi.StackRelease{
 		Id:               &r.ID,
@@ -25,6 +23,7 @@ func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
 		UpdatedAt:        &r.UpdatedAt,
 		RenderedAt:       r.RenderedAt,
 		CompletedAt:      r.CompletedAt,
+		LiveStatus:       presentReleaseLiveStatus(live),
 	}
 
 	causeKind := openapi.ReleaseCauseKind(r.Cause.Kind)
@@ -46,6 +45,25 @@ func PresentStackRelease(r *models.StackRelease) openapi.StackRelease {
 	}
 
 	return result
+}
+
+func presentReleaseLiveStatus(live *models.ReleaseLiveStatus) *openapi.ReleaseLiveStatus {
+	if live == nil {
+		return nil
+	}
+	resources := make(map[string]openapi.StackResourceStatus, len(live.Resources))
+	for name, status := range live.Resources {
+		if presented := presentStackResourceStatus(status); presented != nil {
+			resources[name] = *presented
+		}
+	}
+	return &openapi.ReleaseLiveStatus{
+		Health:           ptr.To(openapi.ReleaseHealth(live.Health)),
+		Resources:        &resources,
+		Conditions:       presentConditions(live.Conditions),
+		TargetRevision:   &live.TargetRevision,
+		ObservedRevision: &live.ObservedRevision,
+	}
 }
 
 func presentReleaseValidationErrors(verrs models.ReleaseValidationErrors) []openapi.ReleaseValidationError {
@@ -81,7 +99,7 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 		return nil
 	}
 	result := &openapi.ReleaseOutcome{
-		Duration: ptr.To(fmt.Sprintf("%s", o.Duration)),
+		Duration: ptr.To(o.Duration.String()),
 	}
 	if o.Resources != nil {
 		resources := make(map[string]openapi.ResourceOutcome, len(o.Resources))
@@ -98,8 +116,8 @@ func presentReleaseOutcome(o *models.ReleaseOutcome) *openapi.ReleaseOutcome {
 	return result
 }
 
-func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetail {
-	base := PresentStackRelease(r)
+func PresentStackReleaseDetail(r *models.StackRelease, live *models.ReleaseLiveStatus) openapi.StackReleaseDetail {
+	base := PresentStackRelease(r, live)
 	detail := openapi.StackReleaseDetail{
 		Id:               base.Id,
 		StackId:          base.StackId,
@@ -118,6 +136,7 @@ func PresentStackReleaseDetail(r *models.StackRelease) openapi.StackReleaseDetai
 		UpdatedAt:        base.UpdatedAt,
 		RenderedAt:       base.RenderedAt,
 		CompletedAt:      base.CompletedAt,
+		LiveStatus:       base.LiveStatus,
 		Snapshot:         presentStackReleaseSnapshot(&r.Snapshot),
 	}
 	return detail
@@ -150,10 +169,57 @@ func presentStackReleaseSnapshot(s *models.StackSnapshot) *openapi.StackReleaseS
 	return snap
 }
 
+func PresentReleaseEvent(e *models.ReleaseEvent) openapi.ReleaseEvent {
+	result := openapi.ReleaseEvent{
+		Id:           &e.ID,
+		ReleaseId:    &e.ReleaseID,
+		StackId:      &e.StackID,
+		Sequence:     ptr.To(int32(e.Sequence)),
+		OccurredAt:   &e.OccurredAt,
+		Source:       ptr.To(string(e.Source)),
+		Scope:        ptr.To(string(e.Scope)),
+		ResourceName: e.ResourceName,
+		Type:         ptr.To(string(e.Type)),
+		Level:        ptr.To(string(e.Level)),
+		Message:      &e.Message,
+	}
+
+	if len(e.Links) > 0 {
+		links := make([]openapi.ReleaseEventLink, len(e.Links))
+		for i, l := range e.Links {
+			links[i] = openapi.ReleaseEventLink{
+				Kind:   ptr.To(l.Kind),
+				Label:  ptr.To(l.Label),
+				Target: ptr.To(l.Target),
+			}
+		}
+		result.Links = links
+	}
+
+	if len(e.Metadata) > 0 {
+		result.Metadata = ptr.To(map[string]string(e.Metadata))
+	}
+
+	return result
+}
+
+// PresentReleaseEventList takes the raw page fields (not a services type) to
+// avoid a presenters -> services import cycle.
+func PresentReleaseEventList(events []*models.ReleaseEvent, nextAfterSequence int) openapi.ReleaseEventList {
+	items := make([]openapi.ReleaseEvent, len(events))
+	for i, e := range events {
+		items[i] = PresentReleaseEvent(e)
+	}
+	return openapi.ReleaseEventList{
+		Items:             items,
+		NextAfterSequence: ptr.To(int32(nextAfterSequence)),
+	}
+}
+
 func PresentStackReleaseList(result *stores.PaginatedResult[*models.StackRelease]) openapi.StackReleaseList {
 	items := make([]openapi.StackRelease, len(result.Items))
 	for i, r := range result.Items {
-		items[i] = PresentStackRelease(r)
+		items[i] = PresentStackRelease(r, nil)
 	}
 	return openapi.StackReleaseList{
 		Items:      items,

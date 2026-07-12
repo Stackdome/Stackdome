@@ -80,6 +80,7 @@ type Services struct {
 	OrgInviteService            services.OrgInviteService
 	SignupService               services.SignupService
 	StackReleaseService         services.StackReleaseService
+	ReleaseEventRecorder        services.ReleaseEventRecorder
 	ReferenceService            services.ReferenceService
 	StackPreviewConfigService   services.StackPreviewConfigService
 	PreviewStackService         services.PreviewStackService

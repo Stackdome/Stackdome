@@ -1,7 +1,10 @@
 package server
 
 import (
+	"bufio"
 	"context"
+	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -12,7 +15,7 @@ import (
 	"github.com/Stackdome/stackdome/config/openapi"
 	"github.com/Stackdome/stackdome/pkg/auth"
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
-	"github.com/golang/glog"
+	"github.com/google/uuid"
 	gorillahandlers "github.com/gorilla/handlers"
 )
 
@@ -29,6 +32,10 @@ type apiServer struct {
 }
 
 var _ Server = &apiServer{}
+
+// bootstrapLog handles server lifecycle logging before/around the request
+// logger; it reads LOG_LEVEL/LOG_FORMAT like every other logger.
+var bootstrapLog = applogger.NewLogger()
 
 func (a *apiServer) env() environment.EnvImpl {
 	return a.environment
@@ -83,13 +90,71 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	return s
 }
 
-func injectLoggerMiddleware(next http.Handler, logger applogger.Logger) http.Handler {
+const requestIDHeader = "X-Request-Id"
+
+// statusRecorder wraps ResponseWriter to capture the status code for logging.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+}
+
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *statusRecorder) Write(b []byte) (int, error) {
+	if r.status == 0 {
+		r.status = http.StatusOK
+	}
+	return r.ResponseWriter.Write(b)
+}
+
+// Flush forwards to the wrapped writer so SSE/streaming handlers keep working
+// through the logging middleware.
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// Hijack forwards to the wrapped writer for websocket/connection-takeover handlers.
+func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if h, ok := r.ResponseWriter.(http.Hijacker); ok {
+		return h.Hijack()
+	}
+	return nil, nil, fmt.Errorf("underlying ResponseWriter does not support Hijack")
+}
+
+// injectLoggerMiddleware assigns a request ID (honouring an inbound
+// X-Request-Id), binds a per-request logger carrying that ID into the context,
+// and emits a single structured completion line with status and duration.
+func injectLoggerMiddleware(next http.Handler, baseLogger applogger.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := applogger.AddLoggerToContext(r.Context(), logger)
+		requestID := r.Header.Get(requestIDHeader)
+		if requestID == "" {
+			requestID = uuid.NewString()
+		}
+		w.Header().Set(requestIDHeader, requestID)
+
+		reqLogger := baseLogger.WithField(applogger.FieldRequestID, requestID)
+		ctx := applogger.WithRequestID(r.Context(), requestID)
+		ctx = applogger.AddLoggerToContext(ctx, reqLogger)
 		r = r.WithContext(ctx)
-		logger.Infof("Received request: %s %s", r.Method, r.URL.Path)
-		next.ServeHTTP(w, r)
-		logger.Infof("Response sent for: %s %s", r.Method, r.URL.Path)
+
+		rec := &statusRecorder{ResponseWriter: w}
+		start := time.Now()
+		next.ServeHTTP(rec, r)
+		if rec.status == 0 {
+			rec.status = http.StatusOK
+		}
+
+		reqLogger.WithFields(map[string]interface{}{
+			"method":      r.Method,
+			"path":        r.URL.Path,
+			"status":      rec.status,
+			"duration_ms": time.Since(start).Milliseconds(),
+		}).Info(ctx, "request completed")
 	})
 }
 
@@ -135,12 +200,12 @@ func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.Env
 // Useful for breaking up ListenAndServer (Start) when you require the server to be listening before continuing
 func (s apiServer) Serve(listener net.Listener) {
 	var err error
-	glog.Infof("Serving without TLS at %s", s.env().Environment().Config.Server.BindAddress)
+	bootstrapLog.Infof("Serving without TLS at %s", s.env().Environment().Config.Server.BindAddress)
 	err = s.httpServer.Serve(listener)
 
 	// Web server terminated.
 	check(err, "Web server terminated with errors")
-	glog.Info("Web server terminated")
+	bootstrapLog.Infof("Web server terminated")
 }
 
 // Listen only start the listener, not the server.
@@ -153,13 +218,13 @@ func (s apiServer) Listen() (listener net.Listener, err error) {
 func (s apiServer) Start() {
 	listener, err := s.Listen()
 	if err != nil {
-		glog.Fatalf("Unable to start API server: %s", err)
+		bootstrapLog.Fatalf("Unable to start API server: %s", err)
 	}
 	s.Serve(listener)
 
 	err = s.env().Environment().DBSession.Close()
 	if err != nil {
-		glog.Errorf("Cannot close all sql connections: %v", err)
+		bootstrapLog.Errorf("Cannot close all sql connections: %v", err)
 	}
 }
 
@@ -184,8 +249,8 @@ func WithRequestTimeoutMiddleware(next http.Handler, timeoutDuration time.Durati
 }
 
 func check(err error, msg string) {
-	if err != nil && err != http.ErrServerClosed {
-		glog.Errorf("%s: %s", msg, err)
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		bootstrapLog.Errorf("%s: %s", msg, err)
 		os.Exit(1)
 	}
 }

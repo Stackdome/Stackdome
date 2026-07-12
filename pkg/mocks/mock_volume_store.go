@@ -160,6 +160,21 @@ func (mr *MockVolumeStoreMockRecorder) InternalList(ctx, ids any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalList", reflect.TypeOf((*MockVolumeStore)(nil).InternalList), ctx, ids)
 }
 
+// InternalListNotReady mocks base method.
+func (m *MockVolumeStore) InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalListNotReady", ctx)
+	ret0, _ := ret[0].([]*models.Volume)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalListNotReady indicates an expected call of InternalListNotReady.
+func (mr *MockVolumeStoreMockRecorder) InternalListNotReady(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListNotReady", reflect.TypeOf((*MockVolumeStore)(nil).InternalListNotReady), ctx)
+}
+
 // ListByTeamID mocks base method.
 func (m *MockVolumeStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Volume, *errors.ServiceError) {
 	m.ctrl.T.Helper()

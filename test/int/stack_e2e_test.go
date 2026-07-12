@@ -60,10 +60,13 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			By("Waiting for stack to become Ready via API")
 			readyStack := shared.WaitForStackReady(client, orgID, teamName, stackID, 5*time.Minute)
 
-			By("Verifying status has conditions")
-			status, ok := readyStack.GetStatusOk()
+			By("Verifying current release is healthy with conditions")
+			currentRelease, ok := readyStack.GetCurrentReleaseOk()
 			Expect(ok).To(BeTrue())
-			Expect(status.GetConditions()).NotTo(BeEmpty())
+			releaseDetail := shared.GetRelease(client, orgID, teamName, stackID, currentRelease.GetId())
+			liveStatus, ok := releaseDetail.GetLiveStatusOk()
+			Expect(ok).To(BeTrue())
+			Expect(liveStatus.GetConditions()).NotTo(BeEmpty())
 
 			By("Verifying StackResource CR is Available in the cluster")
 			shared.WaitForStackResourceCRAvailable(ctx, clusterClient, "web", namespace, 5*time.Minute)
@@ -440,7 +443,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Verifying superuser can read and write to testdb")
 			testDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "testdb", "disable")
-			defer testDB.Close()
+			defer func() { _ = testDB.Close() }()
 
 			_, err = testDB.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS e2e_su_test (id serial PRIMARY KEY, val text)")
 			Expect(err).NotTo(HaveOccurred(), "superuser should be able to create tables in testdb")
@@ -455,7 +458,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Verifying superuser can read and write to the default app database")
 			appDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "app", "disable")
-			defer appDB.Close()
+			defer func() { _ = appDB.Close() }()
 
 			_, err = appDB.ExecContext(ctx, "CREATE TABLE IF NOT EXISTS e2e_su_test (id serial PRIMARY KEY, val text)")
 			Expect(err).NotTo(HaveOccurred(), "superuser should be able to create tables in app database")
@@ -469,13 +472,13 @@ var _ = Describe("Stack E2E", Ordered, func() {
 
 			By("Verifying superuser can create a new database")
 			postgresDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "postgres", "disable")
-			defer postgresDB.Close()
+			defer func() { _ = postgresDB.Close() }()
 
 			_, err = postgresDB.ExecContext(ctx, "CREATE DATABASE e2e_superuser_created")
 			Expect(err).NotTo(HaveOccurred(), "superuser should be able to create new databases")
 
 			newDB := shared.ConnectToPostgres("127.0.0.1", localPort, creds.GetUsername(), creds.GetPassword(), "e2e_superuser_created", "disable")
-			defer newDB.Close()
+			defer func() { _ = newDB.Close() }()
 
 			var result int
 			err = newDB.QueryRowContext(ctx, "SELECT 1").Scan(&result)
@@ -716,7 +719,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			httpClient := &http.Client{Timeout: 10 * time.Second}
 			resp, err := httpClient.Get(fmt.Sprintf("http://127.0.0.1:%d/", localPort))
 			Expect(err).NotTo(HaveOccurred(), "HTTP GET to app should succeed")
-			defer resp.Body.Close()
+			defer func() { _ = resp.Body.Close() }()
 
 			body, err := io.ReadAll(resp.Body)
 			Expect(err).NotTo(HaveOccurred())

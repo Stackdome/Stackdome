@@ -8,7 +8,7 @@ import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 afterEach(cleanup);
 
 const base = {
-  statusState: null, subtitle: "0 services · 0 volumes",
+  subtitle: "0 services · 0 volumes",
   activeTab: "architecture", onTabChange: () => {},
   isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
   hasResources: true,
@@ -37,9 +37,26 @@ describe("CanvasEditorShell header", () => {
   });
 
   it("renders a single status pill and never a DRAFT pill", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" statusState="Ready" isStaged />);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" headerHealth="ok" isStaged />);
+    expect(screen.getByText("ok")).toBeInTheDocument();
     expect(screen.queryByText("DRAFT")).toBeNull();
+  });
+
+  it("shows a neutral 'Not deployed' pill when no health is derivable (never deployed)", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" />);
+    expect(screen.getByText("Not deployed")).toBeInTheDocument();
+  });
+
+  it("failed first deploy shows an error pill (health 'failed'), not an empty header", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" headerHealth="failed" />);
+    expect(screen.getByText("failed")).toBeInTheDocument();
+    expect(screen.queryByText("Not deployed")).toBeNull();
+  });
+
+  it("shows a pending 'Deleting' pill when the stack lifecycle is deleting, overriding health", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" headerHealth="ok" lifecycle="deleting" />);
+    expect(screen.getByText("Deleting")).toBeInTheDocument();
+    expect(screen.queryByText("ok")).toBeNull();
   });
 });
 
@@ -97,6 +114,23 @@ describe("CanvasEditorShell deploy pill", () => {
   it("staged-but-zero-count nets out — no pill", () => {
     render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isStaged dirtyTotal={0} />);
     expect(screen.queryByTestId("deploy-pill")).toBeNull();
+  });
+});
+
+describe("CanvasEditorShell deploy-failed chip", () => {
+  it("shows a 'Deploy failed' chip wired to onTabChange('deployments') when latestDeployFailed", () => {
+    const onTabChange = vi.fn();
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" latestDeployFailed onTabChange={onTabChange} />);
+    const chip = screen.getByRole("button", { name: "Latest deploy failed — view deployments" });
+    expect(chip).toBeInTheDocument();
+    expect(screen.getByText("Deploy failed")).toBeVisible();
+    fireEvent.click(chip);
+    expect(onTabChange).toHaveBeenCalledWith("deployments");
+  });
+
+  it("renders no chip when latestDeployFailed is unset", () => {
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" />);
+    expect(screen.queryByRole("button", { name: "Latest deploy failed — view deployments" })).toBeNull();
   });
 });
 

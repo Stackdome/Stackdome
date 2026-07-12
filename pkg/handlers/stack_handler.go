@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
@@ -8,6 +9,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/handlers/validation"
 	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/gorilla/mux"
@@ -17,6 +19,7 @@ import (
 type StackHandlerSpec struct {
 	StackService         services.StackService
 	StackResourceService services.StackResourceService
+	StackReleaseService  services.StackReleaseService
 	ImageBuildService    services.ImageBuildService
 	LoggingService       services.LoggingService
 	MetricsService       services.MetricsService
@@ -27,6 +30,7 @@ type StackHandlerSpec struct {
 type stackHandler struct {
 	stackService         services.StackService
 	stackResourceService services.StackResourceService
+	stackReleaseService  services.StackReleaseService
 	imageBuildService    services.ImageBuildService
 	loggingService       services.LoggingService
 	metricsService       services.MetricsService
@@ -38,12 +42,21 @@ func NewStackHandler(spec StackHandlerSpec) *stackHandler {
 	return &stackHandler{
 		stackResourceService: spec.StackResourceService,
 		stackService:         spec.StackService,
+		stackReleaseService:  spec.StackReleaseService,
 		imageBuildService:    spec.ImageBuildService,
 		loggingService:       spec.LoggingService,
 		metricsService:       spec.MetricsService,
 		teamService:          spec.TeamService,
 		logger:               spec.Logger,
 	}
+}
+
+func (h *stackHandler) presentWithReleases(ctx context.Context, stack *models.Stack) (openapi.Stack, *errors.ServiceError) {
+	refs, err := h.stackReleaseService.InternalGetReleaseRefs(ctx, []*models.Stack{stack})
+	if err != nil {
+		return openapi.Stack{}, err
+	}
+	return presenters.PresentStack(stack, refs[stack.ID]), nil
 }
 
 func (h *stackHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +67,7 @@ func (h *stackHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentStack(obj), nil
+			return h.presentWithReleases(r.Context(), obj)
 		},
 	}
 	handleGet(w, r, cfg)
@@ -201,7 +214,7 @@ func (h *stackHandler) GetMetrics(w http.ResponseWriter, r *http.Request) {
 				return nil, serr
 			}
 
-			stream := r.URL.Query().Get("stream") == "true"
+			stream := r.URL.Query().Get("stream") == queryValueTrue
 			if stream {
 				streamer, err := h.metricsService.StreamMetricsForStack(ctx, orgID, stackID)
 				if err != nil {
@@ -227,8 +240,12 @@ func (h *stackHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
+			refs, serr := h.stackReleaseService.InternalGetReleaseRefs(r.Context(), objs)
+			if serr != nil {
+				return nil, serr
+			}
 			return openapi.StackList{
-				Items: presenters.PresentStackList(objs),
+				Items: presenters.PresentStackList(objs, refs),
 				Total: ptr.To(int32(len(objs))),
 			}, nil
 		},
@@ -248,8 +265,12 @@ func (h *stackHandler) ListByTeamName(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
+			refs, serr := h.stackReleaseService.InternalGetReleaseRefs(ctx, objs)
+			if serr != nil {
+				return nil, serr
+			}
 			listResp := openapi.StackList{
-				Items: presenters.PresentStackList(objs),
+				Items: presenters.PresentStackList(objs, refs),
 				Total: ptr.To(int32(len(objs))),
 			}
 			return listResp, nil
@@ -287,7 +308,7 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 				h.logger.Errorf("failed to create stack: %v", serr)
 				return nil, serr
 			}
-			return presenters.PresentStack(obj), nil
+			return h.presentWithReleases(ctx, obj)
 		},
 		handleError,
 	}
@@ -325,7 +346,7 @@ func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentStack(obj), nil
+			return h.presentWithReleases(ctx, obj)
 		},
 		handleError,
 	}
@@ -361,7 +382,7 @@ func (h *stackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentStack(obj), nil
+			return h.presentWithReleases(ctx, obj)
 		},
 		handleError,
 	}
@@ -400,7 +421,7 @@ func (h *stackHandler) ApplyByName(w http.ResponseWriter, r *http.Request) {
 				return nil, serr
 			}
 			created = wasCreated
-			return presenters.PresentStack(obj), nil
+			return h.presentWithReleases(ctx, obj)
 		},
 		handleError,
 	}
@@ -420,7 +441,7 @@ func (h *stackHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			if serr != nil {
 				return nil, serr
 			}
-			return presenters.PresentStack(stack), nil
+			return h.presentWithReleases(r.Context(), stack)
 		},
 	}
 	handleDelete(w, r, cfg, http.StatusAccepted)

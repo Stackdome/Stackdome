@@ -137,7 +137,7 @@ func (h *stackResourceHandler) GetMetrics(w http.ResponseWriter, r *http.Request
 			orgID := mux.Vars(r)["org_id"]
 			resourceName := mux.Vars(r)["resource_name"]
 
-			stream := r.URL.Query().Get("stream") == "true"
+			stream := r.URL.Query().Get("stream") == queryValueTrue
 			if stream {
 				streamer, err := h.metricsService.StreamMetricsForStackResource(ctx, orgID, stackID, resourceName)
 				if err != nil {

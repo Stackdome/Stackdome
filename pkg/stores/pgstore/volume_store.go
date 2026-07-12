@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -41,10 +42,20 @@ func (v *volumeStore) InternalList(ctx context.Context, ids []string) ([]*models
 	return res, nil
 }
 
+func (v *volumeStore) InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError) {
+	var res []*models.Volume
+	if err := v.sessionFactory.New(ctx).
+		Where("status IS NULL OR status->>'phase' IS NULL OR status->>'phase' <> ?", models.VolumePhaseReady).
+		Find(&res).Error; err != nil {
+		return nil, errors.GeneralError("failed to fetch not-ready volumes: %s", err.Error())
+	}
+	return res, nil
+}
+
 func (v *volumeStore) GetByVolumeNameAndNamespace(ctx context.Context, name string, namespace string) (*models.Volume, *errors.ServiceError) {
 	var res models.Volume
 	if err := v.sessionFactory.New(ctx).Where("name = ? AND namespace = ?", name, namespace).First(&res).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("volume with name '%s' and namespace '%s' not found", name, namespace)
 		}
 		return nil, errors.GeneralError("failed to fetch volume: %s", err.Error())
@@ -66,7 +77,7 @@ func (v *volumeStore) CreateWithTx(ctx context.Context, spec *models.Volume) (*m
 func (v *volumeStore) GetByID(ctx context.Context, id string) (*models.Volume, *errors.ServiceError) {
 	var res models.Volume
 	if err := v.sessionFactory.New(ctx).Where("id = ?", id).First(&res).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("volume with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch volume: %s", err.Error())

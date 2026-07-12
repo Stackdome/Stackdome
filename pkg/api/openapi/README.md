@@ -211,7 +211,9 @@ Class | Method | HTTP request | Description
 *ReleasesApi* | [**CancelRelease**](docs/ReleasesApi.md#cancelrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel | Cancel a pending or rendering release
 *ReleasesApi* | [**CreateRelease**](docs/ReleasesApi.md#createrelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | Create a new release (deploy)
 *ReleasesApi* | [**GetRelease**](docs/ReleasesApi.md#getrelease) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id} | Get a release by ID
+*ReleasesApi* | [**ListReleaseEvents**](docs/ReleasesApi.md#listreleaseevents) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events | List release events ordered by sequence
 *ReleasesApi* | [**ListReleases**](docs/ReleasesApi.md#listreleases) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | List releases for a stack
+*ReleasesApi* | [**StreamReleaseEvents**](docs/ReleasesApi.md#streamreleaseevents) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream | Stream release events via Server-Sent Events
 
 
 ## Documentation For Models
@@ -349,8 +351,14 @@ Class | Method | HTTP request | Description
  - [RegistryCredentialVerifyRequest](docs/RegistryCredentialVerifyRequest.md)
  - [ReleaseCause](docs/ReleaseCause.md)
  - [ReleaseCauseKind](docs/ReleaseCauseKind.md)
+ - [ReleaseEvent](docs/ReleaseEvent.md)
+ - [ReleaseEventLink](docs/ReleaseEventLink.md)
+ - [ReleaseEventList](docs/ReleaseEventList.md)
+ - [ReleaseHealth](docs/ReleaseHealth.md)
+ - [ReleaseLiveStatus](docs/ReleaseLiveStatus.md)
  - [ReleaseOutcome](docs/ReleaseOutcome.md)
  - [ReleasePins](docs/ReleasePins.md)
+ - [ReleaseSummary](docs/ReleaseSummary.md)
  - [ReleaseValidationError](docs/ReleaseValidationError.md)
  - [RemoteSource](docs/RemoteSource.md)
  - [ResourceMetrics](docs/ResourceMetrics.md)
@@ -371,7 +379,7 @@ Class | Method | HTTP request | Description
  - [StackConnection](docs/StackConnection.md)
  - [StackConnectionConfig](docs/StackConnectionConfig.md)
  - [StackConnectionList](docs/StackConnectionList.md)
- - [StackConvergenceRecord](docs/StackConvergenceRecord.md)
+ - [StackLifecycle](docs/StackLifecycle.md)
  - [StackList](docs/StackList.md)
  - [StackPreviewConfig](docs/StackPreviewConfig.md)
  - [StackPreviewConfigCreate](docs/StackPreviewConfigCreate.md)
@@ -388,10 +396,8 @@ Class | Method | HTTP request | Description
  - [StackResourceFailure](docs/StackResourceFailure.md)
  - [StackResourceList](docs/StackResourceList.md)
  - [StackResourceStatus](docs/StackResourceStatus.md)
- - [StackResourceSummary](docs/StackResourceSummary.md)
  - [StackSettings](docs/StackSettings.md)
  - [StackSpec](docs/StackSpec.md)
- - [StackStatus](docs/StackStatus.md)
  - [StackTopology](docs/StackTopology.md)
  - [Team](docs/Team.md)
  - [TeamCreateRequest](docs/TeamCreateRequest.md)

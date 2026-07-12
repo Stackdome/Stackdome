@@ -1,15 +1,19 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { getErrorMessage } from "@/api/client";
+import { parseApiError, type ParsedFieldError } from "@/api/errors";
+import { mapFieldErrors } from "@/pages/stacks/lib/map-field-errors";
+import { ValidationBanner, type ValidationBannerItem } from "@/pages/stacks/components/detail/ValidationBanner";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
-import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
+import { jumpTargetIndex } from "@/pages/stacks/components/detail/deployments/release-errors";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
 import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
 import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
@@ -22,8 +26,9 @@ import { applyStackByName, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
-import { useReleaseDetail } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { ReleaseState } from "@/pages/stacks/components/detail/deployments/release-states";
+import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/detail/deployments/use-release-detail";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/detail/deployments/derive";
+import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
@@ -71,7 +76,7 @@ function mapStackResourceToFormData(resource: StackResource): FormStackResourceD
     volume_mounts: cleanedVolumeMounts
   };
 
-  return convertApiResourceToFormResource(resourceWithCleanedMounts as z.infer<typeof ApiStackResourceSchema> & { status?: unknown });
+  return convertApiResourceToFormResource(resourceWithCleanedMounts as z.infer<typeof ApiStackResourceSchema>);
 }
 
 function mapVolumeToFormData(volume: Volume): VolumeFormData {
@@ -206,16 +211,7 @@ export default function StackDetailPage() {
   );
   const effectiveStack = draftStackView ?? stackToShow;
 
-  // Publicly exposed services → best live ingress URL, for the header's
-  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
   const orgDomains = useOrgDomains(effectiveStack?.organisation_id ?? getCurrentOrganizationId() ?? undefined);
-  const publicEndpoints = useMemo(() => {
-    if (isDraft) return [];
-    return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
-      const best = pickBestIngress(r.status?.public_ingress ?? [], orgDomains);
-      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
-    });
-  }, [isDraft, effectiveStack, orgDomains]);
 
   // ── Release plumbing (needed this early: the diff baseline is pinned to the
   // latest release's snapshot, not the autosaved server state) ──
@@ -224,17 +220,62 @@ export default function StackDetailPage() {
     teamName: (stackToShow ? teamNameById(stackToShow.team_id) : "") || defaultTeamName || "",
     stackId: stackToShow?.id || "",
   }), [stackToShow, teamNameById, defaultTeamName]);
-  const releasesResult = useReleases({ ...deployIds, enabled: !!deployIds.stackId });
+  const idsReady = !!deployIds.stackId && !!deployIds.teamName;
+  const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.teamName, deployIds.stackId);
 
   // Diff anchor: the latest release (the config last shipped via Deploy), falling
-  // back to the converged release until the releases list loads.
+  // back to the live (currently converged) release until the releases list loads.
   const baselineReleaseId =
-    releasesResult.activeRelease?.id ?? stackToShow?.status?.last_converged?.release_id;
+    releasesResult.activeRelease?.id ?? stackToShow?.current_release?.id;
   useEffect(() => {
     if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
   }, [baselineReleaseId, releaseDetail]);
   const deployedSnapshot = releaseDetail.peek(baselineReleaseId).data?.snapshot;
+
+  // Live release (stack.current_release): what's actually serving traffic — source
+  // for live per-resource status (public ingress endpoints below).
+  const currentReleaseId = stackToShow?.current_release?.id;
+  useEffect(() => {
+    if (currentReleaseId) releaseDetail.ensure(currentReleaseId);
+  }, [currentReleaseId, releaseDetail]);
+  const currentReleaseDetail = releaseDetail.peek(currentReleaseId).data;
+
+  // "Status" release: the active non-terminal release when a deploy is under way
+  // (so the canvas/drawer reflect the in-flight rollout, not stale current-release
+  // data), else the live current_release. Distinct from currentReleaseId above,
+  // which stays pinned to what's actually serving traffic for the header's PUBLIC row.
+  const nonTerminalRelease = releasesResult.releases.find((r) => !isTerminal(r.state));
+  const statusReleaseId = nonTerminalRelease?.id ?? stackToShow?.current_release?.id;
+  const statusReleaseState = nonTerminalRelease?.state ?? stackToShow?.current_release?.state;
+  // Refetch on every id/state change (mount, and each transition — including the
+  // terminal one, since statusReleaseState is a dep) plus a 5s poll while non-terminal.
+  // Depend on the stable refresh callback, NOT the releaseDetail object (rebuilt every
+  // render): refresh has no cached-data short-circuit, so an object dep would loop.
+  const refreshRelease = releaseDetail.refresh;
+  useEffect(() => {
+    if (statusReleaseId) refreshRelease(statusReleaseId);
+  }, [statusReleaseId, statusReleaseState, refreshRelease]);
+  useEffect(() => {
+    if (!statusReleaseId || isTerminal(statusReleaseState)) return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== "hidden") refreshRelease(statusReleaseId);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [statusReleaseId, statusReleaseState, refreshRelease]);
+  const statusLiveStatus = releaseDetail.peek(statusReleaseId).data?.live_status;
+
+  // Publicly exposed services → best live ingress URL, for the header's
+  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
+  const publicEndpoints = useMemo(() => {
+    if (isDraft) return [];
+    const liveResources = currentReleaseDetail?.live_status?.resources ?? {};
+    return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
+      const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
+      const best = pickBestIngress(ingress, orgDomains);
+      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
+    });
+  }, [isDraft, effectiveStack, orgDomains, currentReleaseDetail]);
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.
@@ -265,16 +306,20 @@ export default function StackDetailPage() {
   // Diff baseline: the deployed snapshot when one exists, so autosaved edits stay
   // visibly dirty/revertable until deployed. Never-deployed stacks fall back to
   // the server state (everything reads as staged for the first deploy).
-  const snapshotResources = useMemo<FormStackResourceData[] | null>(
-    () =>
-      deployedSnapshot
-        ? formResourcesFromSpec(
-          deployedSnapshot.resources as StackResource[] | undefined,
-          deployedSnapshot.connections as StackConnection[] | undefined,
-        )
-        : null,
-    [deployedSnapshot],
-  );
+  // The snapshot stores the RESOLVED git revision (branch/commit written by the
+  // pin resolver at deploy time). When the saved spec doesn't pin one, those are
+  // deploy-time facts, not config drift — strip them so the baseline compares
+  // intent with intent instead of reading every unpinned git resource as dirty.
+  const snapshotResources = useMemo<FormStackResourceData[] | null>(() => {
+    if (!deployedSnapshot) return null;
+    return formResourcesFromSpec(
+      stripUnpinnedGitRevisions(
+        (deployedSnapshot.resources ?? []) as StackResource[],
+        stackToShow?.spec?.stack_resources ?? [],
+      ),
+      deployedSnapshot.connections as StackConnection[] | undefined,
+    );
+  }, [deployedSnapshot, stackToShow?.spec?.stack_resources]);
   const snapshotVolumes = useMemo<VolumeFormData[] | null>(
     () => (deployedSnapshot ? ((deployedSnapshot.volumes ?? []) as Volume[]).map(mapVolumeToFormData) : null),
     [deployedSnapshot],
@@ -394,14 +439,22 @@ export default function StackDetailPage() {
     [stackToShow?.spec?.volumes],
   );
 
-  // Backend validation errors from a failed autosave, mapped onto the offending
-  // env-var field so the row shows them inline. Keyed by resource NAME → env-var
-  // name → message (NOT by index): the resource may be reordered/removed before
-  // the user fixes it, so the current index + env index are resolved at render
-  // time when merging into the index-keyed errors prop.
+  // Backend structured field errors (from a failed autosave or draft deploy),
+  // mapped onto the editor's inner field keys so the offending inputs show them
+  // inline. Keyed by resource NAME → field key → message (NOT by index): the
+  // resource may be reordered/removed before the user fixes it, so the current
+  // index is resolved at render time when merging into the index-keyed errors prop.
   const [serverFieldErrors, setServerFieldErrors] = useState<{
-    [resourceName: string]: { [envName: string]: string };
+    [resourceName: string]: { [fieldKey: string]: string };
   }>({});
+  // Raw structured errors from the last draft-deploy attempt, used to render the
+  // summary banner. Cleared when a deploy is retried or the banner is dismissed.
+  const [deployFieldErrors, setDeployFieldErrors] = useState<ParsedFieldError[]>([]);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Bumped to ask the canvas to open a resource drawer (banner "jump to error").
+  const [openResourceSignal, setOpenResourceSignal] = useState<
+    { index: number; tab: EditSessionTab; nonce: number } | null
+  >(null);
 
   // Dedupe for autosave-failure toasts: the backoff retry loop and re-edits after
   // a terminal 400 re-run the same ops and would re-toast the same reason every
@@ -415,33 +468,33 @@ export default function StackDetailPage() {
     enabled: !isDraft && canWriteStack,
     stack: stackToShow ?? undefined,
     session,
-    ids: deployIds.stackId ? deployIds : null,
+    ids: idsReady ? deployIds : null,
     onStackRefreshed: (fresh) => {
       setFetchedStack(fresh);
       // Context write-through: stale currentStack must not win after a remote refresh.
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       setTopologyRefreshKey((k) => k + 1);
     },
-    onSyncError: ({ message, op }) => {
+    onSyncError: ({ message, op, fieldErrors }) => {
       // No op → the save actually landed and only the post-save refetch failed;
       // don't alarm the user with a "Save failed" toast or field error.
       if (!op) return;
-      // Dedupe: skip if this exact reason is already on screen (retry/re-edit).
-      if (lastSyncErrorMsgRef.current === message) return;
-      lastSyncErrorMsgRef.current = message;
-      toast({ title: "Save failed", description: message, variant: "destructive" });
-      // Only resource create/update ops carry env vars; others just toast.
+      // Dedupe the toast: skip if this exact reason is already on screen.
+      if (lastSyncErrorMsgRef.current !== message) {
+        lastSyncErrorMsgRef.current = message;
+        toast({ title: "Save failed", description: message, variant: "destructive" });
+      }
+      // Only resource create/update ops carry mappable field errors.
       if (op.kind !== "createResource" && op.kind !== "updateResource") return;
       const resourceName = op.resource.name;
-      if (!resourceName) return;
-      // The backend reason names the offending var: `env var '<NAME>'`.
-      const envName = message.match(/env var '([^']+)'/)?.[1];
-      if (!envName) return;
-      // Key by resource + env-var NAME; the current row indices are resolved at
-      // render time so a reorder/removal can't misattach the inline error.
+      if (!resourceName || fieldErrors.length === 0) return;
+      // Thin op → all errors belong to this one resource; map to editor field keys
+      // and store by resource NAME so a reorder/removal can't misattach them.
+      const fields = mapFieldErrors(fieldErrors, { dialect: "thin", resourceIndex: 0 }).resources[0];
+      if (!fields) return;
       setServerFieldErrors((prev) => ({
         ...prev,
-        [resourceName]: { ...(prev[resourceName] ?? {}), [envName]: message },
+        [resourceName]: { ...(prev[resourceName] ?? {}), ...fields },
       }));
     },
   });
@@ -473,29 +526,47 @@ export default function StackDetailPage() {
     return { resources, volumes: {} };
   }, [desiredState.resourceIssues]);
 
-  // Merge live zod validation (index-keyed) with backend field errors from a
-  // failed autosave (name-keyed). Resolve each server error's resource NAME and
-  // env-var NAME to their CURRENT indices here so the merged map stays index-keyed
-  // for consumers but survives a reorder/removal since the error was captured.
+  // Merge live zod validation (index-keyed) with backend field errors (name-keyed).
+  // Resolve each server error's resource NAME to its CURRENT index here so the
+  // merged map stays index-keyed for consumers but survives a reorder/removal
+  // since the error was captured.
   const mergedResourceErrors = useMemo(() => {
     const merged: { [index: number]: { [field: string]: string | undefined } } = {};
     for (const [k, v] of Object.entries(validationErrors.resources)) {
       merged[Number(k)] = { ...v };
     }
-    for (const [resourceName, envErrors] of Object.entries(serverFieldErrors)) {
+    for (const [resourceName, fields] of Object.entries(serverFieldErrors)) {
       const idx = session.draft.resources.findIndex((r) => r.name === resourceName);
       if (idx < 0) continue;
-      const draftEnv = (session.draft.resources[idx]?.execution_config
-        ?.environment_variables ?? []) as FormEnvVarData[];
-      for (const [envName, message] of Object.entries(envErrors)) {
-        const envIdx = draftEnv.findIndex((e) => e.name === envName);
-        if (envIdx < 0) continue;
-        const fieldKey = `execution_config.environment_variables.${envIdx}.value`;
-        merged[idx] = { ...(merged[idx] ?? {}), [fieldKey]: message };
-      }
+      merged[idx] = { ...(merged[idx] ?? {}), ...fields };
     }
     return merged;
   }, [validationErrors.resources, serverFieldErrors, session.draft.resources]);
+
+  // Summary-banner rows for the last draft-deploy failure. Fat dialect: resource
+  // errors carry a jump index; stack-level errors (name/settings/connections) do not.
+  const bannerItems = useMemo<ValidationBannerItem[]>(() => {
+    if (deployFieldErrors.length === 0) return [];
+    const mapped = mapFieldErrors(deployFieldErrors, { dialect: "fat" });
+    const items: ValidationBannerItem[] = [];
+    if (mapped.stackName) items.push({ label: "Stack name", message: mapped.stackName });
+    for (const [idxStr, fields] of Object.entries(mapped.resources)) {
+      const idx = Number(idxStr);
+      const label = session.draft.resources[idx]?.name?.trim() || `Resource ${idx + 1}`;
+      for (const [fieldKey, message] of Object.entries(fields)) {
+        // Env errors live on the Environment tab; everything else renders on
+        // Configuration. Jump opens the tab holding the offending field.
+        const tab = fieldKey.startsWith("execution_config.environment_variables")
+          ? "environment"
+          : "configuration";
+        items.push({ label, message, resourceIndex: idx, tab });
+      }
+    }
+    for (const m of mapped.settings) items.push({ label: "Stack settings", message: m });
+    for (const m of mapped.connections) items.push({ label: "Connection", message: m });
+    for (const u of mapped.unmapped) items.push({ label: u.field, message: u.message });
+    return items;
+  }, [deployFieldErrors, session.draft.resources]);
 
   const lifecycle = useDeployLifecycle({
     stack: stackToShow ?? undefined,
@@ -507,33 +578,36 @@ export default function StackDetailPage() {
     detail: releaseDetail,
   });
 
-  // When a release converges, the server moves status.last_converged but the
-  // client's stack copy still points at the previous release, so the staged
-  // panel keeps diffing against the old snapshot until a manual page refresh.
-  // Refetch the stack once per newly-released release to pick up the pointer.
-  const convergedFetchRef = useRef<string | undefined>(undefined);
-  const activeRelease = releasesResult.activeRelease;
-  useEffect(() => {
-    if (!deployIds.stackId || !activeRelease) return;
-    if (activeRelease.state !== ReleaseState.Released) return;
-    if (stackToShow?.status?.last_converged?.release_id === activeRelease.id) return;
-    if (convergedFetchRef.current === activeRelease.id) return;
-    convergedFetchRef.current = activeRelease.id;
+  // When a release settles into ANY terminal state, the stack's current_release /
+  // latest_release summaries are stale until refetched — the staged panel would
+  // keep diffing against the old snapshot otherwise. Refetch once per transition,
+  // keyed on the polled releases list (not on the stack's own pointer).
+  const refetchStack = useCallback(() => {
+    if (!deployIds.stackId) return;
     void getStackById(deployIds.orgId, deployIds.teamName, deployIds.stackId).then((fresh) => {
       setFetchedStack(fresh);
       setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
       // Server topology may have changed with the new release; re-derive edges.
       setTopologyRefreshKey((k) => k + 1);
     }).catch(() => {
-      // Poll-driven refresh; the next release poll retries naturally.
-      convergedFetchRef.current = undefined;
+      // Transient fetch failure; the next terminal transition retries.
     });
-  }, [deployIds, activeRelease, stackToShow?.status?.last_converged?.release_id, setStacks]);
+  }, [deployIds, setStacks]);
+  const activeRelease = releasesResult.activeRelease;
+  const prevActiveReleaseRef = useRef<{ id?: string; state?: string } | undefined>(
+    activeRelease && { id: activeRelease.id, state: activeRelease.state },
+  );
+  useEffect(() => {
+    const prev = prevActiveReleaseRef.current;
+    prevActiveReleaseRef.current = activeRelease && { id: activeRelease.id, state: activeRelease.state };
+    if (shouldRefetchStackSummaries(prev, activeRelease, stackToShow?.latest_release)) {
+      refetchStack();
+    }
+  }, [activeRelease, stackToShow?.latest_release, refetchStack]);
 
-  // Live snapshot: already lazily fetched by useDeployLifecycle via detail.ensure;
-  // peek here to gate canDiscardDraft and pass to the revert hook.
-  const liveReleaseId = stackToShow?.status?.last_converged?.release_id;
-  const liveSnapshot = releaseDetail.peek(liveReleaseId).data?.snapshot;
+  // Live snapshot: already lazily fetched above (currentReleaseId ensure); peek
+  // here to gate canDiscardDraft and pass to the revert hook.
+  const liveSnapshot = currentReleaseDetail?.snapshot;
 
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
   const [viewChangesOpen, setViewChangesOpen] = useState(false);
@@ -541,7 +615,7 @@ export default function StackDetailPage() {
   const [deleting, setDeleting] = useState(false);
 
   const stackRevert = useStackRevert({
-    ids: deployIds.stackId ? deployIds : null,
+    ids: idsReady ? deployIds : null,
     stack: stackToShow ?? undefined,
     liveSnapshot,
     onReverted: (fresh) => {
@@ -551,12 +625,21 @@ export default function StackDetailPage() {
       session.discard(); // auto-start effect restarts the session on the reverted baseline
       toast({ title: "Draft discarded", description: "Stack restored to the last deployment.", variant: "success" });
     },
+    onError: (message) => {
+      // Revert isn't atomic (apply + volume deletes), so warn about partial state
+      // alongside the backend reason.
+      toast({
+        title: "Discard failed",
+        description: `${message} The stack may be partially reverted; reload to see its current state.`,
+        variant: "destructive",
+      });
+    },
   });
 
   // Immediate, confirm-gated volume deletion (canvas). Only wired for saved
   // stacks — the wizard (`/stacks/new`) has nothing server-side to delete yet.
   const volumeDelete = useVolumeDelete({
-    ids: deployIds.stackId ? deployIds : null,
+    ids: idsReady ? deployIds : null,
     draftSync,
     onServerRefresh: (fresh) => {
       setFetchedStack(fresh);
@@ -569,6 +652,33 @@ export default function StackDetailPage() {
     toast,
   });
 
+  // Shared validation-failure handler for release actions (draft deploy, deploy,
+  // cancel, rollback). Rich (fieldErrors-bearing) 400s paint inline field errors
+  // and the summary banner instead of a generic toast. Returns true when the
+  // error was consumed this way, so the caller can skip its own fallback toast.
+  const applyValidationFailure = useCallback((err: unknown): boolean => {
+    const parsed = parseApiError(err);
+    if (parsed.fieldErrors.length === 0) return false;
+    const mapped = mapFieldErrors(parsed.fieldErrors, { dialect: "fat" });
+    if (mapped.stackName) setNameError(mapped.stackName);
+    setServerFieldErrors((prev) => {
+      const next = { ...prev };
+      for (const [idxStr, fields] of Object.entries(mapped.resources)) {
+        const nm = session.draft.resources[Number(idxStr)]?.name;
+        if (nm) next[nm] = { ...(next[nm] ?? {}), ...fields };
+      }
+      return next;
+    });
+    setDeployFieldErrors(parsed.fieldErrors);
+    setBannerDismissed(false);
+    toast({
+      title: "Deploy failed",
+      description: `${parsed.fieldErrors.length} validation ${parsed.fieldErrors.length === 1 ? "error" : "errors"}`,
+      variant: "destructive",
+    });
+    return true;
+  }, [session.draft.resources, toast]);
+
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
   const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
@@ -578,11 +688,13 @@ export default function StackDetailPage() {
       toast({ title: ok, variant: "success" });
       refetchReleases();
     } catch (e) {
-      toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      if (!applyValidationFailure(e)) {
+        toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      }
     } finally {
       setDeployBusy(false);
     }
-  }, [toast, refetchReleases]);
+  }, [toast, refetchReleases, applyValidationFailure]);
 
   const onDeploy = useCallback(async () => {
     if (!draftSync || !deployIds.stackId) return;
@@ -617,6 +729,9 @@ export default function StackDetailPage() {
     if (!isDraft) return;
     setDraftDeploying(true);
     setNameError(undefined);
+    // Clear stale validation state from a previous failed attempt.
+    setDeployFieldErrors([]);
+    setServerFieldErrors({});
 
     // A draft needs a name before it can be created. The stack name field is not
     // min-length-constrained in the schema (empty passes zod and only fails at
@@ -715,11 +830,13 @@ export default function StackDetailPage() {
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
-      toast({
-        title: "Failed to create stack",
-        description: getErrorMessage(err),
-        variant: "destructive"
-      });
+      if (!applyValidationFailure(err)) {
+        toast({
+          title: "Failed to create stack",
+          description: parseApiError(err).topLevel,
+          variant: "destructive",
+        });
+      }
     } finally {
       setDraftDeploying(false);
     }
@@ -795,6 +912,9 @@ export default function StackDetailPage() {
     );
   }
 
+  const headerHealth = effectiveStack ? deriveHeaderHealth(effectiveStack) : undefined;
+  const showDeployFailedHint = !!effectiveStack && latestDeployFailed(effectiveStack);
+
   const resourceCount = effectiveStack?.spec?.stack_resources?.length || 0;
   const volumeCount = effectiveStack?.spec?.volumes?.length || 0;
   const addonCount = connectionAddonIds.size;
@@ -813,6 +933,19 @@ export default function StackDetailPage() {
       stackId={effectiveStack.id}
       stack={effectiveStack}
       onOpenLogs={() => setActiveTab("logs")}
+      onJumpToResource={(resourceName, tab) => {
+        // Resolve against the list the canvas drawer actually indexes into
+        // (the live draft while a session is active), at click time — the
+        // banner's render-time list may have drifted.
+        const index = jumpTargetIndex(
+          resourceName,
+          session.isActive ? session.draft.resources : draftResources,
+        );
+        if (index === undefined) return;
+        setActiveTab("architecture");
+        setOpenResourceSignal({ index, tab, nonce: Date.now() });
+      }}
+      refetchReleases={refetchReleases}
       releases={releasesResult.releases}
       activeRelease={releasesResult.activeRelease}
       loading={releasesResult.loading}
@@ -870,7 +1003,7 @@ export default function StackDetailPage() {
     : stagedCount ?? dirtyTotal;
 
   return (
-    <>
+    <ReleaseDetailProvider value={releaseDetail}>
       <CanvasEditorShell
         stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
         stackId={effectiveStack?.id}
@@ -878,7 +1011,9 @@ export default function StackDetailPage() {
         nameEditable={isDraft}
         onNameChange={handleNameChange}
         nameError={nameError}
-        statusState={effectiveStack?.status?.state}
+        headerHealth={headerHealth}
+        latestDeployFailed={showDeployFailedHint}
+        lifecycle={effectiveStack?.lifecycle}
         subtitle={subtitleText}
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -900,25 +1035,38 @@ export default function StackDetailPage() {
         onDelete={() => setDeleteConfirmOpen(true)}
         publicEndpoints={publicEndpoints}
         architecture={
-          <StackCanvasTab
-            session={session}
-            baselineResources={baselineResources}
-            baselineVolumes={baselineVolumes}
-            draftResources={draftResources}
-            draftVolumes={draftVolumes}
-            serverOutputsByName={serverOutputsByName}
-            connectionAddonIds={connectionAddonIds}
-            addonNameById={addonNameById}
-            addonStateById={addonStateById}
-            errors={mergedResourceErrors}
-            onViewLogs={() => setActiveTab("logs")}
-            topologyIds={!isDraft && deployIds.stackId ? deployIds : null}
-            topologyRefreshKey={topologyRefreshKey}
-            onDeleteVolume={deployIds.stackId ? volumeDelete.deleteVolume : undefined}
-            deletingVolume={volumeDelete.deleting}
-            persistedVolumeNames={persistedVolumeNames}
-            releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
-          />
+          <>
+            {!bannerDismissed && bannerItems.length > 0 && (
+              <div className="px-4 pt-3">
+                <ValidationBanner
+                  items={bannerItems}
+                  onJump={(index, tab) => setOpenResourceSignal({ index, tab, nonce: Date.now() })}
+                  onDismiss={() => setBannerDismissed(true)}
+                />
+              </div>
+            )}
+            <StackCanvasTab
+              session={session}
+              openResourceSignal={openResourceSignal}
+              baselineResources={baselineResources}
+              baselineVolumes={baselineVolumes}
+              draftResources={draftResources}
+              draftVolumes={draftVolumes}
+              serverOutputsByName={serverOutputsByName}
+              connectionAddonIds={connectionAddonIds}
+              addonNameById={addonNameById}
+              addonStateById={addonStateById}
+              errors={mergedResourceErrors}
+              onViewLogs={() => setActiveTab("logs")}
+              topologyIds={!isDraft && idsReady ? deployIds : null}
+              topologyRefreshKey={topologyRefreshKey}
+              onDeleteVolume={idsReady ? volumeDelete.deleteVolume : undefined}
+              deletingVolume={volumeDelete.deleting}
+              persistedVolumeNames={persistedVolumeNames}
+              releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
+              liveStatusResources={statusLiveStatus?.resources}
+            />
+          </>
         }
         deployments={deploymentsBody}
         logs={logsBody}
@@ -967,14 +1115,8 @@ export default function StackDetailPage() {
                 void (async () => {
                   // Flush any pending autosave before reverting (don't block on failure)
                   await draftSync.flush();
-                  const ok = await stackRevert.revert();
-                  if (!ok) {
-                    toast({
-                      title: "Discard failed",
-                      description: "The stack may be partially reverted. Reload the page to see its current state.",
-                      variant: "destructive",
-                    });
-                  }
+                  // Failure surfaces via the hook's onError toast.
+                  await stackRevert.revert();
                 })();
               }}
               disabled={stackRevert.reverting}
@@ -1003,6 +1145,6 @@ export default function StackDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </ReleaseDetailProvider>
   );
 }

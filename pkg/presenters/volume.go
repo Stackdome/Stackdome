@@ -59,15 +59,6 @@ func presentAnnotations(annotations models.Annotations) []openapi.Annotation {
 	return result
 }
 
-func presentSSHConfig(config *models.SSHConfig) openapi.SSHConfig {
-	if config == nil {
-		return openapi.SSHConfig{}
-	}
-	return openapi.SSHConfig{
-		PublicKey: config.PublicKey,
-	}
-}
-
 func presentVolumes(volumes []*models.Volume, withStatus bool) []openapi.Volume {
 	if len(volumes) == 0 {
 		return nil
@@ -276,12 +267,6 @@ func convertAnnotations(annotations []openapi.Annotation) models.Annotations {
 		}
 	}
 	return result
-}
-
-func convertSSHConfig(config openapi.SSHConfig) *models.SSHConfig {
-	return &models.SSHConfig{
-		PublicKey: config.PublicKey,
-	}
 }
 
 func convertVolumes(volumes []openapi.Volume) []*models.Volume {

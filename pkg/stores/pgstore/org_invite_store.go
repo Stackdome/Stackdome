@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -39,7 +40,7 @@ func (s *orgInviteStore) GetByID(ctx context.Context, id string) (*models.OrgInv
 	session := s.sessionFactory.New(ctx)
 	var invite models.OrgInvite
 	if err := session.Preload("Organisation").Preload("Team").Preload("InvitedBy").Where("id = ?", id).First(&invite).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("invite not found")
 		}
 		return nil, errors.GeneralError("failed to get invite: %s", err.Error())
@@ -51,7 +52,7 @@ func (s *orgInviteStore) GetByTokenHash(ctx context.Context, tokenHash string) (
 	session := s.sessionFactory.New(ctx)
 	var invite models.OrgInvite
 	if err := session.Preload("Organisation").Preload("Team").Preload("InvitedBy").Where("token_hash = ?", tokenHash).First(&invite).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("invite not found")
 		}
 		return nil, errors.GeneralError("failed to get invite by token: %s", err.Error())
@@ -182,7 +183,7 @@ func (s *orgInviteStore) GetPendingByOrgAndEmail(ctx context.Context, orgID, ema
 	if err := session.Preload("Team").Preload("InvitedBy").
 		Where("organisation_id = ? AND email = ? AND status = ?", orgID, email, models.InviteStatusPending).
 		First(&invite).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, errors.GeneralError("failed to check pending invite: %s", err.Error())

@@ -97,7 +97,7 @@ func (d *developmentEnvironment) InitDatabase(ctx context.Context) error {
 func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) error {
 	d.Logger.Debugf("Initializing worker manager")
 	d.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
-		Environment: d.Env.Name,
+		Environment: d.Name,
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
@@ -106,13 +106,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		ClusterManager:   d.ClusterManager,
 		VolumeService:    d.Services.VolumeService,
 		NamespaceService: d.Services.NamespaceService,
-		Env:              d.Env.Name,
+		Env:              d.Name,
 	})
 
 	d.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       d.Services.StackReleaseService,
+		EventRecorder:        d.Services.ReleaseEventRecorder,
 		StackService:         d.Services.StackService,
 		ClusterManager:       d.ClusterManager,
 		SecretService:        d.Services.SecretService,
@@ -132,14 +133,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 			SessionFactory: d.DBSession,
 		}),
 		ReleaseWorkerEnqueuer: d.WorkerManager,
-		Env:                   d.Env.Name,
+		Env:                   d.Name,
 	})
 	d.WorkerManager.RegisterWorker(releaseWorker, &models.StackRelease{})
 
 	releaseGCWorker := releasegcworker.NewReleaseGCWorker(releasegcworker.ReleaseGCWorkerSpec{
 		ReleaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{SessionFactory: d.DBSession}),
 		StackStore:   pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: d.DBSession}),
-		Env:          d.Env.Name,
+		Env:          d.Name,
 	})
 	d.WorkerManager.RegisterWorker(releaseGCWorker, &releasegcworker.ReleaseGCRequest{})
 
@@ -151,7 +152,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 			SessionFactory: d.DBSession,
 		}),
 		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
-		Env:             d.Env.Name,
+		Env:             d.Name,
 	})
 	d.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 
@@ -163,7 +164,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		ReferenceService:     d.Services.ReferenceService,
 		ClusterManager:       d.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
-		Env:                  d.Env.Name,
+		Env:                  d.Name,
 	})
 	d.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
@@ -171,14 +172,14 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		InviteService:  d.Services.OrgInviteService,
 		EmailService:   d.EmailService,
 		LeadershipFlag: d.LeadershipFlag,
-		Env:            d.Env.Name,
+		Env:            d.Name,
 	})
 	d.WorkerManager.RegisterWorker(inviteEmailWorker, &models.OrgInvite{})
 
 	inviteCleanupWorker := inviteworker.NewInviteCleanupWorker(inviteworker.InviteCleanupWorkerSpec{
 		InviteService:  d.Services.OrgInviteService,
 		LeadershipFlag: d.LeadershipFlag,
-		Env:            d.Env.Name,
+		Env:            d.Name,
 	})
 	d.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
@@ -192,7 +193,7 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		}),
 		ReleaseService: d.Services.StackReleaseService,
 		StackService:   d.Services.StackService,
-		Env:            d.Env.Name,
+		Env:            d.Name,
 	})
 	d.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
@@ -248,64 +249,69 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 	d.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag:      leadershipFlag,
 		CredentialDecryptor: d.EncryptionService,
+		Logger:              applogger.NewLoggerWithPrefix(ctx, "cluster-manager").SetLevel(d.Logger.GetLevel()),
 		ControllersToRegister: []clustermanager.ControllerFn{
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
-					Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()),
+					Log:            applogger.NewLoggerWithPrefix(ctx, "volume-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StorageService: d.Services.StackStorageService,
 					VolumeService:  d.Services.VolumeService,
-					Env:            d.Env.Name,
+					Env:            d.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "workspace-user-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					WorkspaceUserService: d.Services.WorkspaceUserService,
 					ClusterService:       d.Services.ClusterService,
-					Env:                  d.Env.Name,
+					Env:                  d.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-					Log:            applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()),
+					Log:            applogger.NewLoggerWithPrefix(ctx, "stack-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StackService:   d.Services.StackService,
-					Env:            d.Env.Name,
+					Env:            d.Name,
 					ReleaseChecker: d.Services.StackReleaseService,
 					Enqueuer:       d.WorkerManager,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "stack-resource-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StackService:         d.Services.StackService,
 					StackResourceService: d.Services.StackResourceService,
-					Env:                  d.Env.Name,
+					Env:                  d.Name,
+					ReleaseChecker:       d.Services.StackReleaseService,
+					EventRecorder:        d.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
-					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
+					ReleaseChecker:        d.Services.StackReleaseService,
+					EventRecorder:         d.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
-					Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()),
+					Logger:                 applogger.NewLoggerWithPrefix(ctx, "cluster-image-registry-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					DBImageRegistryService: d.Services.ClusterImageRegistryService,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "postgres-addon-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresAddonService: d.Services.PostgresAddonService,
-					Env:                  d.Env.Name,
+					Env:                  d.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
-					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()),
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresBackupService: d.Services.PostgresBackupService,
 				})
 			},
@@ -631,12 +637,21 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: d.DBSession,
 	})
 
+	releaseEventStore := pgstore.NewReleaseEventStore(pgstore.ReleaseEventStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	releaseEventRecorder := services.NewReleaseEventRecorder(services.ReleaseEventRecorderSpec{
+		Store: releaseEventStore,
+	})
+
 	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
 		Store:              stackReleaseStore,
 		StackService:       stackService,
 		CredentialResolver: credentialResolver,
 		Permissions:        d.PermissionService,
 		ReferenceService:   referenceService,
+		EventStore:         releaseEventStore,
+		EventRecorder:      releaseEventRecorder,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -694,6 +709,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
+		ReleaseEventRecorder:        releaseEventRecorder,
 		ReferenceService:            referenceService,
 		StackPreviewConfigService:   stackPreviewConfigService,
 		PreviewStackService:         previewStackService,

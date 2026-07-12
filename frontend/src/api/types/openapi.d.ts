@@ -5071,6 +5071,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List release events ordered by sequence */
+        get: operations["listReleaseEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream release events via Server-Sent Events */
+        get: operations["streamReleaseEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/teams/{team_name}/secrets": {
         parameters: {
             query?: never;
@@ -7699,7 +7733,9 @@ export interface components {
             readonly revision?: string;
             spec: components["schemas"]["StackSpec"];
             settings?: components["schemas"]["StackSettings"];
-            readonly status?: components["schemas"]["StackStatus"];
+            lifecycle?: components["schemas"]["StackLifecycle"];
+            current_release?: components["schemas"]["ReleaseSummary"];
+            latest_release?: components["schemas"]["ReleaseSummary"];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
@@ -7735,15 +7771,6 @@ export interface components {
             volumes?: components["schemas"]["Volume"][];
             connections?: components["schemas"]["StackConnection"][];
         };
-        StackStatus: {
-            state?: string;
-            message?: string;
-            observed_revision?: string;
-            target_revision?: string;
-            last_converged?: components["schemas"]["StackConvergenceRecord"];
-            resources?: components["schemas"]["StackResourceSummary"][];
-            conditions?: components["schemas"]["Condition"][];
-        };
         StackResource: {
             readonly id?: string;
             readonly stack_id?: string;
@@ -7767,7 +7794,6 @@ export interface components {
             schedule?: string;
             /** Format: int32 */
             replicas?: number;
-            readonly status?: components["schemas"]["StackResourceStatus"];
         };
         StackResourceList: {
             items?: components["schemas"]["StackResource"][];
@@ -8134,6 +8160,7 @@ export interface components {
             /** Format: date-time */
             last_restart_request_processed_at?: string;
             state?: string;
+            message?: string;
             observed_revision?: string;
             conditions?: components["schemas"]["Condition"][];
             last_failure?: components["schemas"]["StackResourceFailure"];
@@ -8777,6 +8804,39 @@ export interface components {
         };
         /** @enum {string} */
         StackReleaseState: "Pending" | "InProgress" | "Released" | "Failed" | "Superseded" | "Cancelled";
+        /**
+         * @description Coarse stack entity lifecycle. Deploy/runtime status lives on releases.
+         * @enum {string}
+         */
+        StackLifecycle: "active" | "deleting";
+        /**
+         * @description Computed runtime health rollup of a live/active release.
+         * @enum {string}
+         */
+        ReleaseHealth: "ok" | "progressing" | "degraded" | "failed";
+        /** @description Lightweight release reference embedded in the stack for list views. */
+        ReleaseSummary: {
+            id?: string;
+            /** Format: int32 */
+            sequence?: number;
+            state?: components["schemas"]["StackReleaseState"];
+            health?: components["schemas"]["ReleaseHealth"];
+            message?: string;
+            /** Format: date-time */
+            created_at?: string;
+            /** Format: date-time */
+            completed_at?: string;
+        };
+        /** @description Current runtime status overlaid onto a release at read time. Present only when the release is live (currently converged) or active (Pending/InProgress). Never stored; recomputed per request. */
+        ReleaseLiveStatus: {
+            health?: components["schemas"]["ReleaseHealth"];
+            resources?: {
+                [key: string]: components["schemas"]["StackResourceStatus"];
+            };
+            conditions?: components["schemas"]["Condition"][];
+            target_revision?: string;
+            observed_revision?: string;
+        };
         /** @enum {string} */
         ReleaseCauseKind: "manual" | "rollback" | "webhook_push" | "preview_sync";
         CreateReleaseRequest: {
@@ -8805,6 +8865,7 @@ export interface components {
             /** Format: date-time */
             completed_at?: string;
             readonly validation_errors?: components["schemas"]["ReleaseValidationError"][];
+            live_status?: components["schemas"]["ReleaseLiveStatus"];
         };
         StackReleaseDetail: components["schemas"]["StackRelease"] & {
             snapshot?: components["schemas"]["StackReleaseSnapshot"];
@@ -8843,6 +8904,38 @@ export interface components {
             /** @description Total number of pages */
             total_pages?: number;
         };
+        ReleaseEventLink: {
+            kind?: string;
+            label?: string;
+            target?: {
+                [key: string]: string;
+            };
+        };
+        ReleaseEvent: {
+            id?: string;
+            release_id?: string;
+            stack_id?: string;
+            sequence?: number;
+            /** Format: date-time */
+            occurred_at?: string;
+            /** @enum {string} */
+            source?: "hub" | "cluster";
+            /** @enum {string} */
+            scope?: "release" | "resource";
+            resource_name?: string;
+            type?: string;
+            /** @enum {string} */
+            level?: "info" | "success" | "warning" | "error";
+            message?: string;
+            links?: components["schemas"]["ReleaseEventLink"][];
+            metadata?: {
+                [key: string]: string;
+            };
+        };
+        ReleaseEventList: {
+            items?: components["schemas"]["ReleaseEvent"][];
+            next_after_sequence?: number;
+        };
         ReleaseCause: {
             kind?: components["schemas"]["ReleaseCauseKind"];
             detail?: string;
@@ -8874,23 +8967,6 @@ export interface components {
             phase?: string;
             ready_replicas?: number;
             replicas?: number;
-            message?: string;
-        };
-        StackConvergenceRecord: {
-            revision?: string;
-            release_id?: string;
-            /** Format: date-time */
-            at?: string;
-        };
-        StackResourceSummary: {
-            name?: string;
-            phase?: string;
-            observed_revision?: string;
-            converged_revision?: string;
-            available_replicas?: number;
-            updated_replicas?: number;
-            replicas?: number;
-            missing?: boolean;
             message?: string;
         };
         PreviewGitRepository: {
@@ -9461,6 +9537,67 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    listReleaseEvents: {
+        parameters: {
+            query?: {
+                after_sequence?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Release events ordered by sequence */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReleaseEventList"];
+                };
+            };
+        };
+    };
+    streamReleaseEvents: {
+        parameters: {
+            query?: {
+                after_sequence?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The ID of the organization */
+                org_id: components["parameters"]["org_id"];
+                /** @description The name of the team */
+                team_name: components["parameters"]["team_name"];
+                /** @description The id of record */
+                id: components["parameters"]["id"];
+                release_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Stream of release events via Server-Sent Events (SSE). Each SSE frame's id is the event sequence; data is a ReleaseEvent JSON object. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": string;
+                };
             };
         };
     };

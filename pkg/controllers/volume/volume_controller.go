@@ -72,26 +72,26 @@ func (w *volumeReconciler) Name() string {
 }
 
 func (r *volumeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Infof("reconciling volume: %s in namespace %s", req.Name, req.Namespace)
+	r.Log.Info(ctx, "reconciling volume: %s in namespace %s", req.Name, req.Namespace)
 	clusterInstance := &storagev1alpha1.Volume{}
 	if err := r.Client.Get(ctx, req.NamespacedName, clusterInstance); err != nil {
-		r.Log.Errorf("failed to get volume from cluster: %v", err)
+		r.Log.Error(ctx, "failed to get volume from cluster: %v", err)
 		return ctrl.Result{}, nil
 	}
 
 	volumeID, ok := clusterInstance.Labels[models.VolumeIDLabel]
 	if !ok {
-		r.Log.Errorf("storage ID not found in volumeCR labels")
+		r.Log.Error(ctx, "storage ID not found in volumeCR labels")
 		return ctrl.Result{}, nil
 	}
 
 	dbInstance, serr := r.VolumeService.InternalGet(ctx, volumeID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			r.Log.Infof("volume %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
+			r.Log.Info(ctx, "volume %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get volume from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get volume from db: %w", serr)
 	}
 
 	// status changed
@@ -99,8 +99,9 @@ func (r *volumeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		dbInstance.Status = mapToVolumeStatus(clusterInstance.Status)
 		serr := r.VolumeService.UpdateStatus(ctx, dbInstance.ID, dbInstance.Status)
 		if serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update  volume status in db: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update  volume status in db: %w", serr)
 		}
+		r.Log.WithField("volume_id", dbInstance.ID).Debug(ctx, "synced volume status from cluster")
 		return ctrl.Result{}, nil
 	}
 

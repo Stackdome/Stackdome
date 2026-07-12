@@ -26,6 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const httpsScheme = "https"
+
 //go:generate mockgen -destination=../mocks/mock_cluster_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ClusterService
 
 type ClusterService interface {
@@ -79,12 +81,12 @@ func (s *clusterService) InjectClusterManager(clusterManager clustermanager.Clus
 func (s *clusterService) InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
 	clusters, err := s.clusterStore.ListAll(ctx)
 	if err != nil {
-		s.logger.Errorf("failed to list all clusters: %v", err)
+		s.logger.Error(ctx, "failed to list all clusters: %v", err)
 		return nil, err
 	}
 	for _, cluster := range clusters {
 		if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-			s.logger.Errorf("failed to decrypt cluster credentials for cluster %s: %v", cluster.ID, decErr)
+			s.logger.Error(ctx, "failed to decrypt cluster credentials for cluster %s: %v", cluster.ID, decErr)
 			return nil, decErr
 		}
 	}
@@ -98,7 +100,7 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 	// Check if the cluster already exists for the org
 	existingCluster, err := s.clusterStore.GetClusterForOrg(ctx, cluster.OrganisationID)
 	if err != nil && err.Code != errors.ErrorNotFound {
-		s.logger.Errorf("failed to get existing cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get existing cluster for org: %v", err)
 		return nil, err
 	}
 	if existingCluster != nil {
@@ -112,12 +114,12 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 	// Validate the cluster
 	err = s.validateCluster(cluster)
 	if err != nil {
-		s.logger.Errorf("failed to validate cluster: %v", err)
+		s.logger.Error(ctx, "failed to validate cluster: %v", err)
 		return nil, err
 	}
 
 	if encErr := s.encryptClusterCredentials(cluster); encErr != nil {
-		s.logger.Errorf("failed to encrypt cluster credentials: %v", encErr)
+		s.logger.Error(ctx, "failed to encrypt cluster credentials: %v", encErr)
 		return nil, encErr
 	}
 
@@ -138,7 +140,7 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 			registry.OrganisationID = createdCluster.OrganisationID
 			createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)
 			if err != nil {
-				s.logger.Errorf("failed to create image registry: %v", err)
+				s.logger.Error(ctx, "failed to create image registry: %v", err)
 				return err
 			}
 			createdCluster.ImageRegistries = []*models.ClusterImageRegistry{createdRegistry}
@@ -146,12 +148,12 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		return nil
 	})
 	if cerr != nil {
-		s.logger.Errorf("failed to create cluster: %v", cerr)
+		s.logger.Error(ctx, "failed to create cluster: %v", cerr)
 		return nil, cerr
 	}
 
 	if err := s.ensureClusterIssuer(ctx, createdCluster); err != nil {
-		s.logger.Errorf("failed to create ClusterIssuer on cluster %s: %v", createdCluster.ID, err)
+		s.logger.Error(ctx, "failed to create ClusterIssuer on cluster %s: %v", createdCluster.ID, err)
 	}
 
 	return createdCluster, nil
@@ -160,7 +162,7 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	cluster, err := s.clusterStore.Get(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster: %v", err)
+		s.logger.Error(ctx, "failed to get cluster: %v", err)
 		return err
 	}
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
@@ -177,13 +179,13 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 		for _, registry := range cluster.ImageRegistries {
 			// Delete the image registry from the cluster
 			if registry == nil {
-				s.logger.Errorf("image registry is nil")
+				s.logger.Error(ctx, "image registry is nil")
 				return errors.GeneralError("image registry is nil")
 			}
-			s.logger.Infof("Deleting image registry %s", registry.ID)
+			s.logger.Info(ctx, "Deleting image registry %s", registry.ID)
 			err := s.imageRegistryService.Delete(ctx, cluster.OrganisationID, registry.ID)
 			if err != nil {
-				s.logger.Errorf("failed to delete image registry: %v", err)
+				s.logger.Error(ctx, "failed to delete image registry: %v", err)
 				return err
 			}
 		}
@@ -192,7 +194,7 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 	// Delete the cluster from the database
 	err = s.clusterStore.Delete(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to delete cluster: %v", err)
+		s.logger.Error(ctx, "failed to delete cluster: %v", err)
 		return err
 	}
 	return nil
@@ -227,7 +229,7 @@ func (s *clusterService) validateCluster(cluster *models.Cluster) *errors.Servic
 	if err != nil {
 		return errors.BadRequest("cluster URL is not valid: %s", err.Error())
 	}
-	if url.Scheme != "https" {
+	if url.Scheme != httpsScheme {
 		return errors.BadRequest("cluster URL must use https scheme")
 	}
 
@@ -288,11 +290,11 @@ func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*m
 	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return nil, err
 	}
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-		s.logger.Errorf("failed to decrypt cluster credentials: %v", decErr)
+		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
 		return nil, decErr
 	}
 	return cluster, nil
@@ -301,11 +303,11 @@ func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*m
 func (s *clusterService) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
 	cluster, err := s.clusterStore.GetDefaultCluster(ctx)
 	if err != nil {
-		s.logger.Errorf("failed to get default cluster: %v", err)
+		s.logger.Error(ctx, "failed to get default cluster: %v", err)
 		return nil, err
 	}
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-		s.logger.Errorf("failed to decrypt cluster credentials: %v", decErr)
+		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
 		return nil, decErr
 	}
 	return cluster, nil
@@ -314,14 +316,14 @@ func (s *clusterService) GetDefaultCluster(ctx context.Context) (*models.Cluster
 func (s *clusterService) Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError) {
 	cluster, err := s.clusterStore.Get(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster: %v", err)
+		s.logger.Error(ctx, "failed to get cluster: %v", err)
 		return nil, err
 	}
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-		s.logger.Errorf("failed to decrypt cluster credentials: %v", decErr)
+		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
 		return nil, decErr
 	}
 	return cluster, nil
@@ -415,11 +417,11 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 		if cerr := k8sClient.Create(ctx, issuer); cerr != nil {
 			return fmt.Errorf("creating ClusterIssuer: %w", cerr)
 		}
-		s.logger.Infof("created ClusterIssuer %s on cluster %s", models.DefaultClusterIssuerName, cluster.ID)
+		s.logger.Info(ctx, "created ClusterIssuer %s on cluster %s", models.DefaultClusterIssuerName, cluster.ID)
 		return nil
 	}
 
-	s.logger.Infof("ClusterIssuer %s already exists on cluster %s, skipping", models.DefaultClusterIssuerName, cluster.ID)
+	s.logger.Info(ctx, "ClusterIssuer %s already exists on cluster %s, skipping", models.DefaultClusterIssuerName, cluster.ID)
 	return nil
 }
 

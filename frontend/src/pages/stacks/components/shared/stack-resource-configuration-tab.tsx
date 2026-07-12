@@ -671,7 +671,11 @@ function StackResourceConfigurationTabImpl({
                     required
                   />
                 </FieldShell>
-                <FieldShell label="Protocol" htmlFor={`port-protocol-${index}-${pidx}`}>
+                <FieldShell
+                  label="Protocol"
+                  htmlFor={`port-protocol-${index}-${pidx}`}
+                  error={getError(errors, `ports.${pidx}.protocol`)}
+                >
                   <Select
                     value={port.protocol || "tcp"}
                     onValueChange={(value) => updatePort(pidx, { protocol: value as "tcp" | "http" })}

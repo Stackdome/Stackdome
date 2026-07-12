@@ -1,4 +1,5 @@
 import api from "./client";
+import { API_BASE_URL } from "./base-url";
 import type { components } from "./types/openapi";
 
 export type StackRelease = components["schemas"]["StackRelease"];
@@ -6,6 +7,17 @@ export type StackReleaseDetail = components["schemas"]["StackReleaseDetail"];
 export type StackReleaseSnapshot = components["schemas"]["StackReleaseSnapshot"];
 export type StackReleaseList = components["schemas"]["StackReleaseList"];
 export type CreateReleaseRequest = components["schemas"]["CreateReleaseRequest"];
+export type ReleaseLiveStatus = components["schemas"]["ReleaseLiveStatus"];
+export type ReleaseEvent = components["schemas"]["ReleaseEvent"];
+export type ReleaseEventList = components["schemas"]["ReleaseEventList"];
+export type ReleaseSummary = components["schemas"]["ReleaseSummary"];
+
+/** The generated `ReleaseEvent.scope` is a types-only union; this is its runtime mirror. */
+export type ReleaseEventScopeValue = NonNullable<ReleaseEvent["scope"]>;
+export const ReleaseEventScope = {
+  Release: "release",
+  Resource: "resource",
+} as const satisfies Record<string, ReleaseEventScopeValue>;
 
 function releasesPath(orgId: string, teamName: string, stackId: string): string {
   return `/organizations/${orgId}/teams/${teamName}/stacks/${stackId}/releases`;
@@ -36,4 +48,24 @@ export async function rollbackRelease(orgId: string, teamName: string, stackId: 
 
 export async function cancelRelease(orgId: string, teamName: string, stackId: string, releaseId: string): Promise<void> {
   await api.post<void>(`${releasesPath(orgId, teamName, stackId)}/${releaseId}/cancel`);
+}
+
+export async function listReleaseEvents(
+  orgId: string, teamName: string, stackId: string, releaseId: string, afterSequence?: number,
+): Promise<ReleaseEventList> {
+  const params = afterSequence !== undefined ? { after_sequence: afterSequence } : undefined;
+  const response = await api.get<ReleaseEventList>(
+    `${releasesPath(orgId, teamName, stackId)}/${releaseId}/events`, { params },
+  );
+  return response.data;
+}
+
+// EventSource cannot set headers; base-URL handling mirrors buildStackLogStreamUrl in api/observability.ts.
+export function buildReleaseEventStreamUrl(
+  orgId: string, teamName: string, stackId: string, releaseId: string, afterSequence?: number,
+): string {
+  const baseUrl = API_BASE_URL;
+  const path = `${baseUrl}${releasesPath(orgId, teamName, stackId)}/${releaseId}/events/stream`;
+  const suffix = afterSequence !== undefined ? `?after_sequence=${afterSequence}` : "";
+  return `${path}${suffix}`;
 }

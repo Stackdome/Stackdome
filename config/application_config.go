@@ -18,6 +18,7 @@ type ApplicationConfig struct {
 	JwtSecret     string             `json:"jwt_secret"`
 	EncryptionKey string             `json:"encryption_key"`
 	LogLevel      string             `json:"log_level"`
+	LogFormat     string             `json:"log_format"`
 	GitHubOAuth   *GitHubOAuthConfig `json:"github_oauth"`
 	// ServerExternalURL is the externally reachable base URL of the hub,
 	// required for the GitHub App manifest flow (browser redirects, webhooks).
@@ -36,6 +37,10 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 
 	if val, ok := EnvLogLevel.Lookup(); ok {
 		c.LogLevel = val
+	}
+
+	if val, ok := EnvLogFormat.Lookup(); ok {
+		c.LogFormat = val
 	}
 
 	if val, ok := EnvEncryptionKey.Lookup(); ok {
@@ -206,6 +211,7 @@ func NewApplicationConfig() *ApplicationConfig {
 		Server:      NewServerConfig(),
 		Database:    NewDatabaseConfig(),
 		LogLevel:    "info",
+		LogFormat:   "json",
 		GitHubOAuth: NewGitHubOAuthConfig(),
 	}
 }

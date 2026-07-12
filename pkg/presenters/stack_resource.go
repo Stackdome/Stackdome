@@ -24,6 +24,7 @@ func presentStackResourceStatus(status *models.StackResourceStatus) *openapi.Sta
 	}
 	res := &openapi.StackResourceStatus{
 		State:                         ptr.To(string(status.State)),
+		Message:                       &status.Message,
 		ObservedRevision:              &status.ObservedCrRevision,
 		Conditions:                    presentConditions(status.Conditions),
 		PublicIngress:                 presentIngress(status.PublicIngresses),
@@ -105,6 +106,5 @@ func presentStackResource(r *models.StackResource) openapi.StackResource {
 		WorkloadType:    (*string)(&r.WorkloadType),
 		Schedule:        &r.Schedule,
 		Replicas:        r.Replicas,
-		Status:          presentStackResourceStatus(r.Status),
 	}
 }

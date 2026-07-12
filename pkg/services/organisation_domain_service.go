@@ -60,7 +60,7 @@ func (s *organisationDomainService) InternalCreateWithTx(ctx context.Context, sp
 	// Verify no duplicate domain exists
 	domains, err := s.organisationDomainStore.ListByOrganisationID(ctx, spec.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to list domains for organisation %s: %v", spec.OrganisationID, err)
+		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", spec.OrganisationID, err)
 		return nil, err
 	}
 
@@ -72,7 +72,7 @@ func (s *organisationDomainService) InternalCreateWithTx(ctx context.Context, sp
 
 	createdDomain, err := s.organisationDomainStore.CreateWithTx(ctx, spec)
 	if err != nil {
-		s.logger.Errorf("failed to create organisation domain: %v", err)
+		s.logger.Error(ctx, "failed to create organisation domain: %v", err)
 		return nil, err
 	}
 	return createdDomain, nil
@@ -106,7 +106,7 @@ func (s *organisationDomainService) Create(ctx context.Context, spec *models.Org
 
 	domains, err := s.organisationDomainStore.ListByOrganisationID(ctx, spec.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to list domains for organisation %s: %v", spec.OrganisationID, err)
+		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", spec.OrganisationID, err)
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (s *organisationDomainService) Update(ctx context.Context, id string, spec 
 	if existingDomain.Domain != spec.Domain {
 		domains, err := s.organisationDomainStore.ListByOrganisationID(ctx, existingDomain.OrganisationID)
 		if err != nil {
-			s.logger.Errorf("failed to list domains for organisation %s: %v", existingDomain.OrganisationID, err)
+			s.logger.Error(ctx, "failed to list domains for organisation %s: %v", existingDomain.OrganisationID, err)
 			return nil, err
 		}
 
@@ -189,7 +189,7 @@ func (s *organisationDomainService) GetDefaultDomainForOrganisation(ctx context.
 
 	domains, err := s.organisationDomainStore.ListByOrganisationID(ctx, organisationID)
 	if err != nil {
-		s.logger.Errorf("failed to list domains for organisation %s: %v", organisationID, err)
+		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", organisationID, err)
 		return nil, err
 	}
 

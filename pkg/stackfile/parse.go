@@ -5,6 +5,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 const MaxStackfileSize = 1 << 20 // 1MB
@@ -105,10 +107,10 @@ func Validate(sf *Stackfile) error {
 		return fmt.Errorf("stackfile defines too many volumes (%d, max 50)", len(sf.Volumes))
 	}
 	validAccessModes := map[string]bool{
-		"":              true,
-		"ReadWriteOnce": true,
-		"ReadOnlyMany":  true,
-		"ReadWriteMany": true,
+		"":                             true,
+		string(models.READ_WRITE_ONCE): true,
+		string(models.READ_ONLY_MANY):  true,
+		string(models.READ_WRITE_MANY): true,
 	}
 	for volName, vol := range sf.Volumes {
 		if !validAccessModes[vol.AccessMode] {
@@ -133,7 +135,7 @@ func validateEnvRefs(resourceName string, env map[string]string, ports []PortDef
 		hasSelf := false
 		hasResource := false
 		for _, ref := range refs {
-			if ref.Source == "self" {
+			if ref.Source == sourceSelf {
 				hasSelf = true
 			} else {
 				hasResource = true
@@ -158,7 +160,7 @@ func validateEnvRefs(resourceName string, env map[string]string, ports []PortDef
 		source := refs[0].Source
 		for _, ref := range refs[1:] {
 			if ref.Source != source {
-				return fmt.Errorf("resource '%s' env var '%s': references multiple resources ('%s' and '%s'). Each env var can only reference one source resource.", resourceName, envKey, source, ref.Source)
+				return fmt.Errorf("resource '%s' env var '%s': references multiple resources ('%s' and '%s'). Each env var can only reference one source resource", resourceName, envKey, source, ref.Source)
 			}
 		}
 
@@ -177,19 +179,19 @@ func validateEnvRefs(resourceName string, env map[string]string, ports []PortDef
 }
 
 var postgresAddonOutputs = map[string]bool{
-	"host":           true,
-	"port":           true,
-	"database":       true,
-	"username":       true,
-	"password":       true,
-	"sslmode":        true,
-	"ca_certificate": true,
-	"url":            true,
+	models.OutputNameHost:          true,
+	models.OutputNamePort:          true,
+	models.OutputNameDatabase:      true,
+	models.OutputNameUsername:      true,
+	models.OutputNamePassword:      true,
+	models.OutputNameSSLMode:       true,
+	models.OutputNameCACertificate: true,
+	models.OutputNameURL:           true,
 }
 
 func addonOutputsForType(addonType string) map[string]bool {
 	switch addonType {
-	case "postgres":
+	case PostgresAddonType:
 		return postgresAddonOutputs
 	default:
 		return nil
@@ -225,11 +227,11 @@ func validateResourceOutput(resourceName, envKey, sourceResource, output string,
 }
 
 func validateSelfOutput(resourceName, envKey, output string, ports []PortDef) error {
-	return validateOutputAgainstPorts(resourceName, envKey, "self", output, ports)
+	return validateOutputAgainstPorts(resourceName, envKey, sourceSelf, output, ports)
 }
 
 func validateOutputAgainstPorts(resourceName, envKey, source, output string, ports []PortDef) error {
-	if output == "host" {
+	if output == models.OutputNameHost {
 		return nil
 	}
 
@@ -239,15 +241,15 @@ func validateOutputAgainstPorts(resourceName, envKey, source, output string, por
 	}
 
 	parts := strings.Split(output, ".")
-	label := source
-	if source == "self" {
+	var label string
+	if source == sourceSelf {
 		label = "resource '" + resourceName + "'"
 	} else {
 		label = "resource '" + source + "'"
 	}
 
 	switch parts[0] {
-	case "port":
+	case models.OutputNamePort:
 		if len(parts) != 2 {
 			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'port.<port-name>'", resourceName, envKey, output)
 		}
@@ -255,7 +257,7 @@ func validateOutputAgainstPorts(resourceName, envKey, source, output string, por
 			return fmt.Errorf("resource '%s' env var '%s': output '%s' references port '%s' which is not defined on %s", resourceName, envKey, output, parts[1], label)
 		}
 
-	case "url":
+	case models.OutputNameURL:
 		if len(parts) != 2 {
 			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'url.<port-name>'", resourceName, envKey, output)
 		}
@@ -269,7 +271,7 @@ func validateOutputAgainstPorts(resourceName, envKey, source, output string, por
 		}
 		portName := parts[1]
 		suffix := parts[2]
-		if suffix != "host" && suffix != "url" {
+		if suffix != models.OutputNameHost && suffix != models.OutputNameURL {
 			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'public.<port-name>.host' or 'public.<port-name>.url'", resourceName, envKey, output)
 		}
 		p, ok := portNames[portName]
@@ -281,7 +283,7 @@ func validateOutputAgainstPorts(resourceName, envKey, source, output string, por
 		}
 
 	default:
-		valid := []string{"host"}
+		valid := []string{models.OutputNameHost}
 		for _, p := range ports {
 			valid = append(valid, "port."+p.Name, "url."+p.Name)
 			if p.Public {

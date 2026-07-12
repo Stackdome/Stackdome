@@ -43,7 +43,7 @@ describe("serverStateFromStack", () => {
     name: "demo",
     spec: {
       stack_resources: [
-        { id: "r-1", stack_id: "st-1", revision: 3, name: "web", source: { image: { ref: "nginx:1" } }, status: { state: "Ready" }, volume_mounts: [{ source_volume_name: "web-data", target_path: "/data", stack_resource_id: "r-1", source_volume_type: "pvc" }] },
+        { id: "r-1", stack_id: "st-1", revision: 3, name: "web", source: { image: { ref: "nginx:1" } }, volume_mounts: [{ source_volume_name: "web-data", target_path: "/data", stack_resource_id: "r-1", source_volume_type: "pvc" }] },
       ],
       volumes: [{ id: "v-1", name: "web-data", spec: { size: "1Gi", access_mode: "ReadWriteOnce" }, status: {} }],
       connections: [{ id: "c-1", kind: "env", from: { type: "secret", id: "s-1" }, to: { type: "stack_resource", name: "web" }, mappings: [{ target: { type: "env", name: "TOKEN" }, value: { output: "token" } }] }],

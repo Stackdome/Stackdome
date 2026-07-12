@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -356,6 +357,138 @@ func (a *ReleasesApiService) GetReleaseExecute(r ApiGetReleaseRequest) (*StackRe
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiListReleaseEventsRequest struct {
+	ctx           context.Context
+	ApiService    *ReleasesApiService
+	orgId         string
+	teamName      string
+	id            string
+	releaseId     string
+	afterSequence *int32
+	limit         *int32
+}
+
+func (r ApiListReleaseEventsRequest) AfterSequence(afterSequence int32) ApiListReleaseEventsRequest {
+	r.afterSequence = &afterSequence
+	return r
+}
+
+func (r ApiListReleaseEventsRequest) Limit(limit int32) ApiListReleaseEventsRequest {
+	r.limit = &limit
+	return r
+}
+
+func (r ApiListReleaseEventsRequest) Execute() (*ReleaseEventList, *http.Response, error) {
+	return r.ApiService.ListReleaseEventsExecute(r)
+}
+
+/*
+ListReleaseEvents List release events ordered by sequence
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@param releaseId
+	@return ApiListReleaseEventsRequest
+*/
+func (a *ReleasesApiService) ListReleaseEvents(ctx context.Context, orgId string, teamName string, id string, releaseId string) ApiListReleaseEventsRequest {
+	return ApiListReleaseEventsRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		teamName:   teamName,
+		id:         id,
+		releaseId:  releaseId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return ReleaseEventList
+func (a *ReleasesApiService) ListReleaseEventsExecute(r ApiListReleaseEventsRequest) (*ReleaseEventList, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue *ReleaseEventList
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ReleasesApiService.ListReleaseEvents")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"release_id"+"}", url.PathEscape(parameterToString(r.releaseId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.afterSequence != nil {
+		localVarQueryParams.Add("after_sequence", parameterToString(*r.afterSequence, ""))
+	}
+	if r.limit != nil {
+		localVarQueryParams.Add("limit", parameterToString(*r.limit, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiListReleasesRequest struct {
 	ctx        context.Context
 	ApiService *ReleasesApiService
@@ -453,6 +586,129 @@ func (a *ReleasesApiService) ListReleasesExecute(r ApiListReleasesRequest) (*Sta
 
 	// to determine the Accept header
 	localVarHTTPHeaderAccepts := []string{"application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
+type ApiStreamReleaseEventsRequest struct {
+	ctx           context.Context
+	ApiService    *ReleasesApiService
+	orgId         string
+	teamName      string
+	id            string
+	releaseId     string
+	afterSequence *int32
+}
+
+func (r ApiStreamReleaseEventsRequest) AfterSequence(afterSequence int32) ApiStreamReleaseEventsRequest {
+	r.afterSequence = &afterSequence
+	return r
+}
+
+func (r ApiStreamReleaseEventsRequest) Execute() (**os.File, *http.Response, error) {
+	return r.ApiService.StreamReleaseEventsExecute(r)
+}
+
+/*
+StreamReleaseEvents Stream release events via Server-Sent Events
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param teamName The name of the team
+	@param id The id of record
+	@param releaseId
+	@return ApiStreamReleaseEventsRequest
+*/
+func (a *ReleasesApiService) StreamReleaseEvents(ctx context.Context, orgId string, teamName string, id string, releaseId string) ApiStreamReleaseEventsRequest {
+	return ApiStreamReleaseEventsRequest{
+		ApiService: a,
+		ctx:        ctx,
+		orgId:      orgId,
+		teamName:   teamName,
+		id:         id,
+		releaseId:  releaseId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return *os.File
+func (a *ReleasesApiService) StreamReleaseEventsExecute(r ApiStreamReleaseEventsRequest) (**os.File, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue **os.File
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "ReleasesApiService.StreamReleaseEvents")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"release_id"+"}", url.PathEscape(parameterToString(r.releaseId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.afterSequence != nil {
+		localVarQueryParams.Add("after_sequence", parameterToString(*r.afterSequence, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"text/event-stream"}
 
 	// set Accept header
 	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)

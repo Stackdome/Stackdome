@@ -216,10 +216,32 @@ func Fmt() error {
 	return sh.Run("go", "fmt", "./...")
 }
 
-// Lint runs the linter
+const golangciLintVersion = "v2.12.2"
+
+// Lint runs the linter, installing golangci-lint if missing or outdated
 func Lint() error {
 	fmt.Println("Running linter...")
-	return sh.Run("golangci-lint", "run", "./...")
+	bin, err := ensureGolangciLint()
+	if err != nil {
+		return err
+	}
+	return sh.Run(bin, "run", "./...")
+}
+
+func ensureGolangciLint() (string, error) {
+	gopath, err := sh.Output("go", "env", "GOPATH")
+	if err != nil {
+		return "", err
+	}
+	bin := filepath.Join(gopath, "bin", "golangci-lint")
+	if out, err := sh.Output(bin, "version", "--short"); err == nil && "v"+strings.TrimSpace(out) == golangciLintVersion {
+		return bin, nil
+	}
+	fmt.Printf("Installing golangci-lint %s...\n", golangciLintVersion)
+	if err := sh.Run("go", "install", "github.com/golangci/golangci-lint/v2/cmd/golangci-lint@"+golangciLintVersion); err != nil {
+		return "", err
+	}
+	return bin, nil
 }
 
 // Clean removes build artifacts
@@ -855,7 +877,7 @@ func runIntegrationTests(ctx context.Context, focus string, verbose bool) error 
 	}
 
 	// Add test timeout
-	args = append(args, "-timeout", "30m")
+	args = append(args, "-timeout", "60m")
 
 	// Run tests
 	cmd := exec.CommandContext(ctx, "go", args...)

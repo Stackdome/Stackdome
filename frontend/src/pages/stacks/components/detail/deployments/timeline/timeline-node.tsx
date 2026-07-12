@@ -2,6 +2,7 @@ import { ChevronDown } from "lucide-react";
 import { StatusPill } from "@/components/branded";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
+import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { causeLabel, releaseGitSha, formatDuration, formatReleaseTime } from "../derive";
 import { ReleaseState, isDeploying } from "../release-states";
 import type { ReleaseDetail } from "../use-release-detail";
@@ -22,11 +23,14 @@ export interface TimelineNodeProps {
   onCopyId: (id: string) => void;
   /** releases[0] — render LIVE progress from the stack rather than the stored outcome. */
   isActive: boolean;
-  /** This release currently serves traffic (stack.status.last_converged). */
+  /** This release currently serves traffic (stack.current_release). */
   isLive: boolean;
   stack: Stack;
   logContext?: LogContext;
   onOpenLogs?: (name: string) => void;
+  onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
+  /** Hybrid progress driver: forwarded to the live body's release-scoped event handler. */
+  refetchReleases?: () => void;
 }
 
 /**
@@ -34,7 +38,7 @@ export interface TimelineNodeProps {
  * release; only the body differs (live progress for the latest, stored post-mortem for earlier).
  */
 export function TimelineNode(props: TimelineNodeProps) {
-  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs } = props;
+  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases } = props;
   const id = release.id ?? "";
   const state = release.state ?? "";
   const deploying = isDeploying(state);
@@ -88,9 +92,19 @@ export function TimelineNode(props: TimelineNodeProps) {
               detail={detail}
               prevReleaseId={prevReleaseId}
               prevSeq={prevSeq}
+              onJumpToResource={onJumpToResource}
+              refetchReleases={refetchReleases}
             />
           ) : (
-            <ReleasePostMortem detail={detail} release={release} stack={stack} prevReleaseId={prevReleaseId} prevSeq={prevSeq} />
+            <ReleasePostMortem
+              detail={detail}
+              release={release}
+              stack={stack}
+              prevReleaseId={prevReleaseId}
+              prevSeq={prevSeq}
+              logContext={logContext}
+              onJumpToResource={onJumpToResource}
+            />
           )}
         </div>
       )}

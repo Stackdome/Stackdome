@@ -23,6 +23,17 @@ type StackReleaseStore interface {
 	// or (nil, nil) if none exists.
 	GetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 
+	// GetLatestByStackID returns the highest-sequence release for a stack, any state,
+	// or (nil, nil) if the stack has no releases.
+	GetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+
+	// GetLatestByStackIDs returns the highest-sequence release for each of the given
+	// stack IDs, keyed by stack ID. Stacks with no releases are absent from the map.
+	GetLatestByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError)
+
+	// GetByIDs returns releases keyed by release ID.
+	GetByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError)
+
 	// CAS state transitions. The bool return indicates whether THIS caller won
 	// the compare-and-swap (i.e., the row was in the expected state).
 

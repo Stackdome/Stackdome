@@ -44,6 +44,7 @@ type serviceWorkerManager struct {
 	environment       string
 	registeredWorkers map[reflect.Type]workerlib.Worker
 	stopChan          chan struct{}
+	log               logger.Logger
 }
 
 func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
@@ -51,6 +52,7 @@ func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
 		environment:       spec.Environment,
 		registeredWorkers: make(map[reflect.Type]workerlib.Worker),
 		stopChan:          make(chan struct{}),
+		log:               logger.NewLoggerWithPrefix(context.Background(), "worker-manager"),
 	}
 	return workerMgr
 }
@@ -63,20 +65,19 @@ func (s *serviceWorkerManager) Start(ctx context.Context) error {
 		return errors.New("no workers registered under the worker manager")
 	}
 
-	workerManagerLogger := logger.NewLoggerWithPrefix(context.Background(), "worker-manager")
-
 	for _, worker := range s.registeredWorkers {
 		if worker != nil {
 			go func(w workerlib.Worker) {
 				s.startWorker(ctx, w)
 			}(worker)
-			workerManagerLogger.Infof("%s worker started", worker.Name())
+			s.log.Info(ctx, "%s worker started", worker.Name())
 		}
 	}
 	return nil
 }
 
 func (s *serviceWorkerManager) Stop(drain bool) {
+	s.log.Infof("stopping worker manager (drain=%t)", drain)
 	close(s.stopChan)
 	var wg sync.WaitGroup
 	wg.Add(len(s.registeredWorkers))
@@ -94,6 +95,7 @@ func (s *serviceWorkerManager) Stop(drain bool) {
 		}(worker)
 	}
 	wg.Wait()
+	s.log.Infof("worker manager stopped")
 }
 
 func (s *serviceWorkerManager) Enqueue(operand interface{}) error {
@@ -150,10 +152,10 @@ func (s *serviceWorkerManager) startWorker(ctx context.Context, worker workerlib
 
 func (s *serviceWorkerManager) populateWorkerQueue(ctx context.Context, worker workerlib.Worker) {
 	ctx = withSystemIdentity(ctx)
-	worker.Logger().Infof("populating queue once for worker: %s", worker.Name())
+	worker.Logger().Info(ctx, "populating queue once for worker: %s", worker.Name())
 	operandList, err := worker.GetInput(ctx)
 	if err != nil {
-		worker.Logger().Errorf("failed to populate queue for worker: %v", err)
+		worker.Logger().Error(ctx, "failed to populate queue for worker: %v", err)
 		return
 	}
 	for _, operand := range operandList {
@@ -170,8 +172,12 @@ func (s *serviceWorkerManager) processNextWorkItemForWorker(ctx context.Context,
 	defer worker.WorkQueue().Done(operand)
 	switch {
 	case err != nil:
-		worker.Logger().Errorf("reconcile error: %v", err)
-		if worker.WorkQueue().NumRequeues(operand) <= MaxOperandRequeue {
+		requeues := worker.WorkQueue().NumRequeues(operand)
+		worker.Logger().WithFields(map[string]interface{}{
+			"operand":  fmt.Sprintf("%v", operand),
+			"requeues": requeues,
+		}).Error(ctx, "reconcile error: %v", err)
+		if requeues <= MaxOperandRequeue {
 			worker.WorkQueue().AddRateLimited(operand)
 		}
 	case result.RequeueAfter > 0:
@@ -190,7 +196,7 @@ func (s *serviceWorkerManager) processNextWorkItemForWorker(ctx context.Context,
 // method.
 func (s *serviceWorkerManager) startPeriodicWorkEnqueue(ctx context.Context,
 	worker workerlib.Worker, periodicWorkerConfig workerlib.PeriodicReconcilable) {
-	worker.Logger().Infof("starting PeriodicReconciler for worker: %s", worker.Name())
+	worker.Logger().Info(ctx, "starting PeriodicReconciler for worker: %s", worker.Name())
 	ticker := time.NewTicker(periodicWorkerConfig.Interval())
 	defer ticker.Stop()
 	for {
@@ -200,7 +206,7 @@ func (s *serviceWorkerManager) startPeriodicWorkEnqueue(ctx context.Context,
 		case <-ticker.C:
 			operandList, err := s.getWorkerInput(ctx, worker)
 			if err != nil {
-				worker.Logger().Errorf("failed to perform periodic reconcile: %v", err)
+				worker.Logger().Error(ctx, "failed to perform periodic reconcile: %v", err)
 				continue
 			}
 			for _, operand := range operandList {
@@ -219,7 +225,7 @@ func (s *serviceWorkerManager) getWorkerInput(
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
 			{
-				worker.Logger().Infof("worker %s panicked: %v", worker.Name(), panicErr)
+				worker.Logger().Error(ctx, "worker %s panicked: %v", worker.Name(), panicErr)
 				err = fmt.Errorf("worker %s panicked: %v", worker.Name(), panicErr)
 			}
 		}
@@ -238,7 +244,7 @@ func (s *serviceWorkerManager) workerExecute(
 	defer func() {
 		if panicErr := recover(); panicErr != nil {
 			{
-				worker.Logger().Infof("worker %s panicked: %v", worker.Name(), panicErr)
+				worker.Logger().Error(ctx, "worker %s panicked: %v", worker.Name(), panicErr)
 				err = fmt.Errorf("worker %s panicked: %v", worker.Name(), panicErr)
 			}
 		}

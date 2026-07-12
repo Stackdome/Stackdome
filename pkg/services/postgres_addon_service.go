@@ -17,6 +17,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/validator/postgresaddon"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -253,6 +254,11 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", createdPostgresAddon.Name, err.Error())
 	}
 
+	s.logger.WithFields(map[string]interface{}{
+		"addon_id":            createdPostgresAddon.ID,
+		logger.FieldClusterID: createdPostgresAddon.ClusterID,
+		"databases":           len(createdPostgresAddon.Databases),
+	}).Info(ctx, "created postgres addon")
 	return createdPostgresAddon, nil
 }
 
@@ -333,6 +339,7 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", updatedPostgresAddon.Name, err.Error())
 	}
 
+	s.logger.WithField("addon_id", updatedPostgresAddon.ID).Info(ctx, "updated postgres addon")
 	return updatedPostgresAddon, nil
 }
 
@@ -420,6 +427,11 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 	}
 
 	// Mark for deletion
+	postgresAddon.DeletionTimestamp = ptr.To(time.Now().UTC())
+	if err := s.postgresAddonStore.UpdateDeletionTimestamp(ctx, id, postgresAddon.DeletionTimestamp); err != nil {
+		return nil, errors.GeneralError("failed to mark PostgreSQL addon for deletion: %s", err.Error())
+	}
+
 	postgresAddon.Status.State = models.PostgresAddonStateDeleting
 	postgresAddon.Status.Message = "PostgreSQL addon is being deleted"
 
@@ -434,6 +446,7 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
 	}
 
+	s.logger.WithField("addon_id", id).Info(ctx, "marked postgres addon for deletion")
 	return postgresAddon, nil
 }
 

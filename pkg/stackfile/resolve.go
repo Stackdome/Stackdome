@@ -17,7 +17,7 @@ func ResolveStack(ctx context.Context, stack *openapi.Stack, resolver Resolver) 
 		conn := &stack.Spec.Connections[i]
 
 		switch conn.From.Type {
-		case "secret":
+		case nodeTypeSecret:
 			if conn.From.Name == nil || *conn.From.Name == "" {
 				continue
 			}
@@ -28,11 +28,11 @@ func ResolveStack(ctx context.Context, stack *openapi.Stack, resolver Resolver) 
 			conn.From.Id = &id
 			conn.From.Name = nil
 
-		case "addon/postgres":
+		case nodeTypePostgresAddon:
 			if conn.From.Name == nil || *conn.From.Name == "" {
 				continue
 			}
-			id, err := resolver.ResolveAddonByName(ctx, "postgres", *conn.From.Name)
+			id, err := resolver.ResolveAddonByName(ctx, PostgresAddonType, *conn.From.Name)
 			if err != nil {
 				return fmt.Errorf("postgres addon %q not found", *conn.From.Name)
 			}

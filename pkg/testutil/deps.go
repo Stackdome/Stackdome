@@ -84,7 +84,7 @@ func installHelm(ctx context.Context, binDir string) error {
 	if output, err := dl.CombinedOutput(); err != nil {
 		return fmt.Errorf("downloading helm: %w\n%s", err, output)
 	}
-	defer os.Remove(tempFile)
+	defer func() { _ = os.Remove(tempFile) }()
 
 	extract := exec.CommandContext(ctx, "tar", "-xzf", tempFile, "-C", cache,
 		fmt.Sprintf("%s-%s/helm", runtime.GOOS, runtime.GOARCH))
@@ -97,7 +97,7 @@ func installHelm(ctx context.Context, binDir string) error {
 	if err := os.Rename(src, dst); err != nil {
 		return fmt.Errorf("moving helm to bin: %w", err)
 	}
-	os.RemoveAll(filepath.Join(cache, fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)))
+	_ = os.RemoveAll(filepath.Join(cache, fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)))
 
 	return nil
 }

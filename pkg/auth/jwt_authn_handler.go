@@ -9,11 +9,6 @@ import (
 	"github.com/golang-jwt/jwt"
 )
 
-type jwtAuthPayload struct {
-	UserID string `json:"userId"`
-	Role   string `json:"role"`
-}
-
 type jwtAuthnHandler struct {
 	next       http.Handler
 	jwtSecret  []byte

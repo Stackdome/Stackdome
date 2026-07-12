@@ -19,7 +19,7 @@ func (s apiServer) routes() *mux.Router {
 	// Health check endpoint
 	mainRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}).Methods(http.MethodGet)
 	services := s.environment.Environment().Services
 	logger := s.environment.Environment().Logger
@@ -58,6 +58,7 @@ func (s apiServer) routes() *mux.Router {
 	stackHandler := handlers.NewStackHandler(handlers.StackHandlerSpec{
 		StackService:         services.StackService,
 		StackResourceService: services.StackResourceService,
+		StackReleaseService:  services.StackReleaseService,
 		ImageBuildService:    services.ImageBuildService,
 		LoggingService:       services.LoggingService,
 		MetricsService:       services.MetricsService,
@@ -286,6 +287,8 @@ func (s apiServer) routes() *mux.Router {
 	teamResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.List).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}", stackReleaseHandler.GetByID).Methods(http.MethodGet)
 	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/cancel", stackReleaseHandler.Cancel).Methods(http.MethodPost)
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events", stackReleaseHandler.ListEvents).Methods(http.MethodGet)
+	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events/stream", stackReleaseHandler.StreamEvents).Methods(http.MethodGet)
 
 	// Secrets (team-scoped)
 	teamResourceRouter.HandleFunc("/secrets", secretHandler.Create).Methods(http.MethodPost)

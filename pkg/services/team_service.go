@@ -200,7 +200,7 @@ func (s *teamService) DeleteTeam(ctx context.Context, id string) *errors.Service
 	// Clean up Casbin policies using pre-fetched membership data
 	for _, membership := range memberships {
 		if rmErr := s.policyMgr.RemoveGroupingPolicy(membership.UserID, string(membership.Role), membership.TeamID); rmErr != nil {
-			s.logger.Errorf("failed to remove team role grouping: %s", rmErr.Error())
+			s.logger.Error(ctx, "failed to remove team role grouping: %s", rmErr.Error())
 		}
 	}
 
@@ -209,7 +209,7 @@ func (s *teamService) DeleteTeam(ctx context.Context, id string) *errors.Service
 	// If not, remove the OrgMember grouping for that user.
 	for _, membership := range memberships {
 		if err := s.cleanupOrgMemberGrouping(ctx, membership.UserID, team.OrganisationID); err != nil {
-			s.logger.Errorf("failed to cleanup org member grouping for user %s: %s", membership.UserID, err.Error())
+			s.logger.Error(ctx, "failed to cleanup org member grouping for user %s: %s", membership.UserID, err.Error())
 		}
 	}
 
@@ -306,12 +306,12 @@ func (s *teamService) InternalAddMember(ctx context.Context, teamID, userID stri
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(userID, string(role), teamID); err != nil {
-		s.logger.Errorf("failed to add team role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to add team role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to add team role grouping")
 	}
 
 	if err := s.ensureOrgMemberGrouping(ctx, userID, team.OrganisationID); err != nil {
-		s.logger.Errorf("failed to ensure org member grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to ensure org member grouping: %s", err.Error())
 		return nil, err
 	}
 
@@ -321,6 +321,9 @@ func (s *teamService) InternalAddMember(ctx context.Context, teamID, userID stri
 func (s *teamService) AddMember(ctx context.Context, teamID, userID string, role models.TeamRole) (*models.TeamMembership, *errors.ServiceError) {
 	// Check if membership already exists
 	exists, serr := s.membershipStore.GetByTeamAndUser(ctx, teamID, userID)
+	if serr != nil && serr.Code != errors.ErrorNotFound {
+		return nil, serr
+	}
 	if exists != nil {
 		return nil, errors.Conflict("user is already a member of this team")
 	}
@@ -361,12 +364,12 @@ func (s *teamService) AddMember(ctx context.Context, teamID, userID string, role
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(userID, string(role), teamID); err != nil {
-		s.logger.Errorf("failed to add team role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to add team role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to add team role grouping")
 	}
 
 	if err := s.ensureOrgMemberGrouping(ctx, userID, team.OrganisationID); err != nil {
-		s.logger.Errorf("failed to ensure org member grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to ensure org member grouping: %s", err.Error())
 		return nil, err
 	}
 
@@ -391,12 +394,12 @@ func (s *teamService) RemoveMember(ctx context.Context, membershipID string) *er
 	}
 
 	if rmErr := s.policyMgr.RemoveGroupingPolicy(membership.UserID, string(membership.Role), membership.TeamID); rmErr != nil {
-		s.logger.Errorf("failed to remove team role grouping: %s", rmErr.Error())
+		s.logger.Error(ctx, "failed to remove team role grouping: %s", rmErr.Error())
 		return errors.InternalServerError("failed to remove team role grouping: %s", rmErr.Error())
 	}
 
 	if err := s.cleanupOrgMemberGrouping(ctx, membership.UserID, team.OrganisationID); err != nil {
-		s.logger.Errorf("failed to cleanup org member grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to cleanup org member grouping: %s", err.Error())
 		return errors.InternalServerError("failed to cleanup org member grouping")
 	}
 
@@ -426,12 +429,12 @@ func (s *teamService) UpdateMemberRole(ctx context.Context, membershipID string,
 	// Remove old grouping policy and add new one
 	err := s.policyMgr.RemoveGroupingPolicy(existing.UserID, string(existing.Role), existing.TeamID)
 	if err != nil {
-		s.logger.Errorf("failed to remove team role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to remove team role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to remove team role grouping")
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(existing.UserID, string(role), existing.TeamID); err != nil {
-		s.logger.Errorf("failed to update team role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to update team role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to update team role grouping")
 	}
 	return res, nil
@@ -497,7 +500,7 @@ func validateTeamName(name string) *errors.ServiceError {
 		return errors.BadRequest("team name must be at most 63 characters")
 	}
 	if len(name) == 1 {
-		if !((name[0] >= 'a' && name[0] <= 'z') || (name[0] >= '0' && name[0] <= '9')) {
+		if (name[0] < 'a' || name[0] > 'z') && (name[0] < '0' || name[0] > '9') {
 			return errors.BadRequest("team name must contain only lowercase alphanumeric characters and hyphens, and must start and end with an alphanumeric character")
 		}
 		return nil

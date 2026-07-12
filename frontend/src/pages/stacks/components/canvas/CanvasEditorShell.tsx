@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { StatusPill } from "@/components/branded";
 import { statusVariant } from "@/components/branded/status-variant";
+import type { StackLifecycle } from "@/api/stacks";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,8 +33,14 @@ export interface CanvasEditorShellProps {
   stackName: string;
   /** Persistence key for header collapse; falls back to a shared draft key. */
   stackId?: string;
-  /** Raw stack status state (mapped to a pill variant), e.g. "Ready". */
-  statusState?: string | null;
+  /** Health off the current/latest release (ReleaseHealth: "ok" | "progressing" | "degraded" |
+   *  "failed"). Undefined → nothing ever deployed → a neutral "Not deployed" pill. */
+  headerHealth?: string;
+  /** The latest release failed while a different (healthy) release stays live — the
+   *  main pill shows that release's health, so this drives a secondary error hint. */
+  latestDeployFailed?: boolean;
+  /** Stack entity lifecycle — "deleting" overrides health with a pending "Deleting" pill. */
+  lifecycle?: StackLifecycle;
   /** Human subtitle, e.g. "3 services · 2 volumes". */
   subtitle: string;
   /** Optional contextual banner under the header (e.g. preview-environment notice). */
@@ -100,7 +107,9 @@ export interface CanvasEditorShellProps {
 export function CanvasEditorShell({
   stackName,
   stackId,
-  statusState,
+  headerHealth,
+  latestDeployFailed,
+  lifecycle,
   subtitle,
   notice,
   hasResources,
@@ -136,6 +145,12 @@ export function CanvasEditorShell({
   // so the drawer pushes content instead of covering it.
   const [drawerInset, setDrawerInset] = useState(0);
   const drawerInsetCtx = useMemo(() => ({ setInset: setDrawerInset }), []);
+
+  // Header status pill: "Deleting" overrides everything, "Not deployed" covers a
+  // stack that has never completed a release, otherwise health drives the pill.
+  const isDeleting = lifecycle === ("deleting" satisfies StackLifecycle);
+  const pillLabel = isDeleting ? "Deleting" : headerHealth ?? "Not deployed";
+  const pillVariant = isDeleting ? "pending" : headerHealth ? statusVariant("health", headerHealth) : "neutral";
 
   const collapseKey = `${COLLAPSE_KEY_PREFIX}${stackId ?? DRAFT_COLLAPSE_ID}`;
   const [collapsed, setCollapsed] = useState<boolean>(() => {
@@ -215,17 +230,26 @@ export function CanvasEditorShell({
           style={{ marginRight: drawerInset }}
         >
           <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
-          {statusState && (
+          {pillLabel && (
             <span
-              aria-label={`status ${statusState}`}
+              aria-label={`status ${pillLabel}`}
               className={cn(
                 "size-2 flex-none rounded-full",
-                statusVariant("stack", statusState) === "ready"
+                pillVariant === "ready"
                   ? "bg-success"
-                  : statusVariant("stack", statusState) === "error"
+                  : pillVariant === "error"
                     ? "bg-danger"
-                    : "bg-warn",
+                    : pillVariant === "neutral"
+                      ? "bg-fg-muted"
+                      : "bg-warn",
               )}
+            />
+          )}
+          {latestDeployFailed && (
+            <span
+              aria-label="Latest deploy failed"
+              title="Latest deploy failed"
+              className="size-2 flex-none rounded-full bg-danger"
             />
           )}
           <div className="mx-2 flex items-center gap-1">
@@ -282,10 +306,22 @@ export function CanvasEditorShell({
               ) : (
                 <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
               )}
-              {statusState && (
-                <StatusPill variant={statusVariant("stack", statusState)} className="flex-none">
-                  {statusState}
+              {pillLabel && (
+                <StatusPill variant={pillVariant} className="flex-none">
+                  {pillLabel}
                 </StatusPill>
+              )}
+              {latestDeployFailed && (
+                <button
+                  type="button"
+                  onClick={() => onTabChange("deployments")}
+                  className="flex-none"
+                  aria-label="Latest deploy failed — view deployments"
+                >
+                  <StatusPill variant="error" pulse={false} className="cursor-pointer hover:opacity-80">
+                    Deploy failed
+                  </StatusPill>
+                </button>
               )}
               <div className="flex-1" />
             </div>
@@ -293,7 +329,7 @@ export function CanvasEditorShell({
               <p className="mt-1 text-[12px] text-danger">{nameError}</p>
             )}
             <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-            <PublicEndpointRow endpoints={publicEndpoints ?? []} statusState={statusState} />
+            <PublicEndpointRow endpoints={publicEndpoints ?? []} variant={pillVariant} />
             {notice}
           </div>
 

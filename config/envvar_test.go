@@ -5,9 +5,23 @@ import (
 	"testing"
 )
 
+func setEnv(t *testing.T, key, value string) {
+	t.Helper()
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatalf("failed to set env %s: %v", key, err)
+	}
+}
+
+func unsetEnv(t *testing.T, key string) {
+	t.Helper()
+	if err := os.Unsetenv(key); err != nil {
+		t.Fatalf("failed to unset env %s: %v", key, err)
+	}
+}
+
 func TestStringVarLookup_Found(t *testing.T) {
-	os.Setenv("TEST_STR_VAR", "hello")
-	defer os.Unsetenv("TEST_STR_VAR")
+	setEnv(t, "TEST_STR_VAR", "hello")
+	defer unsetEnv(t, "TEST_STR_VAR")
 
 	v := StringVar("TEST_STR_VAR", "test", nil, true)
 	val, ok := v.Lookup()
@@ -20,7 +34,7 @@ func TestStringVarLookup_Found(t *testing.T) {
 }
 
 func TestStringVarLookup_NotFound_NoDefault(t *testing.T) {
-	os.Unsetenv("TEST_STR_MISSING")
+	unsetEnv(t, "TEST_STR_MISSING")
 
 	v := StringVar("TEST_STR_MISSING", "test", nil, true)
 	val, ok := v.Lookup()
@@ -33,7 +47,7 @@ func TestStringVarLookup_NotFound_NoDefault(t *testing.T) {
 }
 
 func TestStringVarLookup_NotFound_WithDefault(t *testing.T) {
-	os.Unsetenv("TEST_STR_DEFAULT")
+	unsetEnv(t, "TEST_STR_DEFAULT")
 
 	v := StringVar("TEST_STR_DEFAULT", "test", ptr("fallback"), false)
 	val, ok := v.Lookup()
@@ -46,8 +60,8 @@ func TestStringVarLookup_NotFound_WithDefault(t *testing.T) {
 }
 
 func TestStringVarLookup_TrimsWhitespace(t *testing.T) {
-	os.Setenv("TEST_STR_TRIM", "  spaced  ")
-	defer os.Unsetenv("TEST_STR_TRIM")
+	setEnv(t, "TEST_STR_TRIM", "  spaced  ")
+	defer unsetEnv(t, "TEST_STR_TRIM")
 
 	v := StringVar("TEST_STR_TRIM", "test", nil, false)
 	val, ok := v.Lookup()
@@ -60,8 +74,8 @@ func TestStringVarLookup_TrimsWhitespace(t *testing.T) {
 }
 
 func TestIntVarLookup_Valid(t *testing.T) {
-	os.Setenv("TEST_INT_VAR", "42")
-	defer os.Unsetenv("TEST_INT_VAR")
+	setEnv(t, "TEST_INT_VAR", "42")
+	defer unsetEnv(t, "TEST_INT_VAR")
 
 	v := IntVar("TEST_INT_VAR", "test", nil, true)
 	val, ok := v.Lookup()
@@ -74,8 +88,8 @@ func TestIntVarLookup_Valid(t *testing.T) {
 }
 
 func TestIntVarLookup_Invalid_FallsBackToDefault(t *testing.T) {
-	os.Setenv("TEST_INT_BAD", "notanumber")
-	defer os.Unsetenv("TEST_INT_BAD")
+	setEnv(t, "TEST_INT_BAD", "notanumber")
+	defer unsetEnv(t, "TEST_INT_BAD")
 
 	v := IntVar("TEST_INT_BAD", "test", ptr(99), false)
 	val, ok := v.Lookup()
@@ -88,8 +102,8 @@ func TestIntVarLookup_Invalid_FallsBackToDefault(t *testing.T) {
 }
 
 func TestIntVarLookup_Invalid_NoDefault(t *testing.T) {
-	os.Setenv("TEST_INT_BAD2", "notanumber")
-	defer os.Unsetenv("TEST_INT_BAD2")
+	setEnv(t, "TEST_INT_BAD2", "notanumber")
+	defer unsetEnv(t, "TEST_INT_BAD2")
 
 	v := IntVar("TEST_INT_BAD2", "test", nil, false)
 	val, ok := v.Lookup()
@@ -102,8 +116,8 @@ func TestIntVarLookup_Invalid_NoDefault(t *testing.T) {
 }
 
 func TestBoolVarLookup_True(t *testing.T) {
-	os.Setenv("TEST_BOOL_VAR", "true")
-	defer os.Unsetenv("TEST_BOOL_VAR")
+	setEnv(t, "TEST_BOOL_VAR", "true")
+	defer unsetEnv(t, "TEST_BOOL_VAR")
 
 	v := BoolVar("TEST_BOOL_VAR", "test", nil, false)
 	val, ok := v.Lookup()
@@ -116,8 +130,8 @@ func TestBoolVarLookup_True(t *testing.T) {
 }
 
 func TestBoolVarLookup_False(t *testing.T) {
-	os.Setenv("TEST_BOOL_VAR2", "false")
-	defer os.Unsetenv("TEST_BOOL_VAR2")
+	setEnv(t, "TEST_BOOL_VAR2", "false")
+	defer unsetEnv(t, "TEST_BOOL_VAR2")
 
 	v := BoolVar("TEST_BOOL_VAR2", "test", ptr(true), false)
 	val, ok := v.Lookup()
@@ -130,7 +144,7 @@ func TestBoolVarLookup_False(t *testing.T) {
 }
 
 func TestBoolVarLookup_NotFound_WithDefault(t *testing.T) {
-	os.Unsetenv("TEST_BOOL_MISSING")
+	unsetEnv(t, "TEST_BOOL_MISSING")
 
 	v := BoolVar("TEST_BOOL_MISSING", "test", ptr(true), false)
 	val, ok := v.Lookup()

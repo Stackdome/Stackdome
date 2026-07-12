@@ -6,6 +6,7 @@ import (
 	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/db"
 	sqlitedriver "github.com/glebarez/go-sqlite"
 	"github.com/glebarez/sqlite"
 	. "github.com/onsi/gomega"
@@ -57,7 +58,10 @@ func newSQLiteSessionFactory(ddlStatements ...string) *sqliteSessionFactory {
 
 func (f *sqliteSessionFactory) Init(*config.DatabaseConfig) {}
 func (f *sqliteSessionFactory) DirectDB() *sql.DB           { d, _ := f.db.DB(); return d }
-func (f *sqliteSessionFactory) New(context.Context) *gorm.DB {
+func (f *sqliteSessionFactory) New(ctx context.Context) *gorm.DB {
+	if tx := db.TxFromContext(ctx); tx != nil {
+		return tx
+	}
 	return f.db.Session(&gorm.Session{})
 }
 func (f *sqliteSessionFactory) CheckConnection() error { return nil }

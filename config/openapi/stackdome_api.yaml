@@ -2560,6 +2560,76 @@ paths:
         '200':
           description: Release cancelled
 
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events:
+    get:
+      summary: List release events ordered by sequence
+      operationId: listReleaseEvents
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - name: release_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: after_sequence
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 100
+            maximum: 500
+      responses:
+        '200':
+          description: Release events ordered by sequence
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReleaseEventList'
+
+  /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream:
+    get:
+      summary: Stream release events via Server-Sent Events
+      operationId: streamReleaseEvents
+      security:
+        - Bearer: []
+      tags:
+        - Releases
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/team_name'
+        - $ref: '#/components/parameters/id'
+        - name: release_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: after_sequence
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Stream of release events via Server-Sent Events (SSE). Each SSE frame's id is the event sequence; data is a ReleaseEvent JSON object.
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+
   # Team-scoped secret routes
   /api/v1/organizations/{org_id}/teams/{team_name}/secrets:
     post:
@@ -4665,9 +4735,12 @@ components:
           $ref: '#/components/schemas/StackSpec'
         settings:
           $ref: '#/components/schemas/StackSettings'
-        status:
-          $ref: '#/components/schemas/StackStatus'
-          readOnly: true
+        lifecycle:
+          $ref: '#/components/schemas/StackLifecycle'
+        current_release:
+          $ref: '#/components/schemas/ReleaseSummary'
+        latest_release:
+          $ref: '#/components/schemas/ReleaseSummary'
         created_at:
           type: string
           format: date-time
@@ -4732,28 +4805,6 @@ components:
           items:
             $ref: '#/components/schemas/StackConnection'
 
-    StackStatus:
-      type: object
-      properties:
-        state:
-          type: string
-        message:
-          type: string
-        observed_revision:
-          type: string
-        target_revision:
-          type: string
-        last_converged:
-          $ref: '#/components/schemas/StackConvergenceRecord'
-        resources:
-          type: array
-          items:
-            $ref: '#/components/schemas/StackResourceSummary'
-        conditions:
-          type: array
-          items:
-            $ref: '#/components/schemas/Condition'
-
     StackResource:
       type: object
       properties:
@@ -4816,9 +4867,6 @@ components:
           type: integer
           format: int32
           minimum: 0
-        status:
-          $ref: '#/components/schemas/StackResourceStatus'
-          readOnly: true
       required:
         - name
 
@@ -5579,6 +5627,8 @@ components:
           type: string
           format: date-time
         state:
+          type: string
+        message:
           type: string
         observed_revision:
           type: string
@@ -6881,6 +6931,65 @@ components:
         - RELEASE_STATE_SUPERSEDED
         - RELEASE_STATE_CANCELLED
 
+    StackLifecycle:
+      type: string
+      readOnly: true
+      description: Coarse stack entity lifecycle. Deploy/runtime status lives on releases.
+      enum: [active, deleting]
+      x-enum-varnames: [STACK_LIFECYCLE_ACTIVE, STACK_LIFECYCLE_DELETING]
+
+    ReleaseHealth:
+      type: string
+      description: Computed runtime health rollup of a live/active release.
+      enum: [ok, progressing, degraded, failed]
+      x-enum-varnames: [RELEASE_HEALTH_OK, RELEASE_HEALTH_PROGRESSING, RELEASE_HEALTH_DEGRADED, RELEASE_HEALTH_FAILED]
+
+    ReleaseSummary:
+      type: object
+      readOnly: true
+      description: Lightweight release reference embedded in the stack for list views.
+      properties:
+        id:
+          type: string
+        sequence:
+          type: integer
+          format: int32
+        state:
+          $ref: '#/components/schemas/StackReleaseState'
+        health:
+          $ref: '#/components/schemas/ReleaseHealth'
+        message:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        completed_at:
+          type: string
+          format: date-time
+
+    ReleaseLiveStatus:
+      type: object
+      readOnly: true
+      description: >-
+        Current runtime status overlaid onto a release at read time. Present only when
+        the release is live (currently converged) or active (Pending/InProgress).
+        Never stored; recomputed per request.
+      properties:
+        health:
+          $ref: '#/components/schemas/ReleaseHealth'
+        resources:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/StackResourceStatus'
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Condition'
+        target_revision:
+          type: string
+        observed_revision:
+          type: string
+
     ReleaseCauseKind:
       type: string
       enum: [manual, rollback, webhook_push, preview_sync]
@@ -6941,6 +7050,8 @@ components:
           readOnly: true
           items:
             $ref: '#/components/schemas/ReleaseValidationError'
+        live_status:
+          $ref: '#/components/schemas/ReleaseLiveStatus'
 
     StackReleaseDetail:
       allOf:
@@ -7015,6 +7126,64 @@ components:
         total_pages:
           type: integer
           description: Total number of pages
+
+    ReleaseEventLink:
+      type: object
+      properties:
+        kind:
+          type: string
+        label:
+          type: string
+        target:
+          type: object
+          additionalProperties:
+            type: string
+    ReleaseEvent:
+      type: object
+      properties:
+        id:
+          type: string
+        release_id:
+          type: string
+        stack_id:
+          type: string
+        sequence:
+          type: integer
+        occurred_at:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [hub, cluster]
+        scope:
+          type: string
+          enum: [release, resource]
+        resource_name:
+          type: string
+        type:
+          type: string
+        level:
+          type: string
+          enum: [info, success, warning, error]
+        message:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseEventLink'
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+    ReleaseEventList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseEvent'
+        next_after_sequence:
+          type: integer
 
     ReleaseCause:
       type: object
@@ -7129,39 +7298,6 @@ components:
           type: integer
         replicas:
           type: integer
-        message:
-          type: string
-
-    StackConvergenceRecord:
-      type: object
-      properties:
-        revision:
-          type: string
-        release_id:
-          type: string
-        at:
-          type: string
-          format: date-time
-
-    StackResourceSummary:
-      type: object
-      properties:
-        name:
-          type: string
-        phase:
-          type: string
-        observed_revision:
-          type: string
-        converged_revision:
-          type: string
-        available_replicas:
-          type: integer
-        updated_replicas:
-          type: integer
-        replicas:
-          type: integer
-        missing:
-          type: boolean
         message:
           type: string
 

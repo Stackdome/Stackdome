@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
@@ -85,6 +86,16 @@ func (a *jwtAuthenticator) AuthenticaticationHandler(w http.ResponseWriter, r *h
 		Role:       string(user.Role),
 		AuthMethod: AuthMethodJWT,
 	})
+
+	// Stamp identity onto the context and the per-request logger so every
+	// downstream log line is attributable to a user/org.
+	ctx = logger.WithUserID(ctx, user.ID)
+	ctx = logger.WithOrgID(ctx, user.OrganisationID)
+	reqLogger := logger.GetLoggerFromContext(ctx).WithFields(map[string]interface{}{
+		logger.FieldUserID: user.ID,
+		logger.FieldOrgID:  user.OrganisationID,
+	})
+	ctx = logger.AddLoggerToContext(ctx, reqLogger)
 	*r = *r.WithContext(ctx)
 
 	next.ServeHTTP(w, r)

@@ -5,7 +5,8 @@ import { X, ScrollText, Trash2 } from "lucide-react";
 import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
-import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
+import type { ReleaseLiveStatus } from "@/api/releases";
+import type { UseStackEditSession, EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 import { StackResourceConfigurationTab } from "@/pages/stacks/components/shared/stack-resource-configuration-tab";
 import { StackResourceDeploymentTab } from "@/pages/stacks/components/shared/stack-resource-deployment-tab";
@@ -16,6 +17,11 @@ import { NodeGlyph } from "./nodes/node-glyph";
 
 /** Radix tab values used by the sub-tab components (they render their own TabsContent). */
 const TAB_VALUE = { configuration: "general", deployment: "deployment", environment: "environment" } as const;
+const TAB_FROM_VALUE: Record<string, EditSessionTab> = {
+  general: "configuration",
+  deployment: "deployment",
+  environment: "environment",
+};
 
 interface ResourceDrawerProps {
   /** Index into `session.draft.resources` of the resource being configured. */
@@ -35,6 +41,9 @@ interface ResourceDrawerProps {
   onViewLogs?: () => void;
   /** Push a volume's drawer onto the floating drawer stack. */
   onOpenVolume?: (name: string) => void;
+  /** Live per-resource status, keyed by resource name — from the status
+   *  release's live_status.resources. Absent for drafts/never-deployed stacks. */
+  liveStatusResources?: ReleaseLiveStatus["resources"];
 }
 
 /**
@@ -54,9 +63,11 @@ export function ResourceDrawer({
   onRemove,
   onViewLogs,
   onOpenVolume,
+  liveStatusResources,
 }: ResourceDrawerProps) {
   const resource = session.draft.resources[resourceIndex] ?? {};
   const baselineResource = baselineResources[resourceIndex];
+  const liveStatus = resource.name ? liveStatusResources?.[resource.name] : undefined;
 
   const secrets = useSecrets();
   const { addons: allAddons } = usePostgresAddons();
@@ -102,6 +113,7 @@ export function ResourceDrawer({
       index: resourceIndex,
       baselineResource,
       onChange,
+      liveStatus,
       context: {
         errors,
         // Draft volumes, not baseline: an inline-added volume must be pickable
@@ -120,7 +132,9 @@ export function ResourceDrawer({
       },
     });
 
-  const defaultTab = session.openTab ? TAB_VALUE[session.openTab] : TAB_VALUE.configuration;
+  // Controlled tab: driven by session.openTab so a banner "jump to error" can
+  // switch to the tab holding the offending field even while the drawer is open.
+  const activeTab = session.openTab ? TAB_VALUE[session.openTab] : TAB_VALUE.configuration;
 
   // Kind glyph + summary sub-line, derived the same way the node card is.
   const pres = useMemo(
@@ -188,7 +202,11 @@ export function ResourceDrawer({
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue={defaultTab} className="flex min-h-0 flex-1 flex-col">
+      <Tabs
+        value={activeTab}
+        onValueChange={(v) => session.setOpenTab(TAB_FROM_VALUE[v] ?? "configuration")}
+        className="flex min-h-0 flex-1 flex-col"
+      >
         <TabsList className="h-auto w-full flex-none justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 px-1">
           <TabsTrigger value={TAB_VALUE.configuration} className={tabTriggerClass}>
             Configuration

@@ -12,14 +12,6 @@ import (
 	"golang.org/x/oauth2"
 )
 
-const (
-	defaultRepoOwner = "ashishmax31"
-	defaultRepoName  = "cluster-agent"
-
-	// GitHub raw content URL pattern
-	githubRawURLPattern = "https://raw.githubusercontent.com/%s/%s/%s/%s"
-)
-
 // manifestCache holds cached manifest files
 var manifestCache = make(map[string][]byte)
 
@@ -305,7 +297,7 @@ func (g *githubLoader) fetchManifest(ctx context.Context, path string) ([]byte, 
 		if g.cacheDir != "" {
 			cacheFile := filepath.Join(g.cacheDir, "manifests", g.tag, path)
 			if err := os.MkdirAll(filepath.Dir(cacheFile), 0755); err == nil {
-				os.WriteFile(cacheFile, contentBytes, 0644)
+				_ = os.WriteFile(cacheFile, contentBytes, 0644)
 			}
 		}
 
@@ -314,41 +306,4 @@ func (g *githubLoader) fetchManifest(ctx context.Context, path string) ([]byte, 
 
 	// Return original error
 	return nil, fmt.Errorf("fetching file from GitHub: %w: resp error code: %d", err, resp.StatusCode)
-}
-
-// deployManifestsFromGitHub deploys manifests fetched from GitHub
-func deployManifestsFromGitHub(ctx context.Context, cluster *dev.Cluster, files []string, version, cacheDir string) error {
-	loader := &githubLoader{
-		tag:      version,
-		cacheDir: cacheDir,
-		client:   createGitHubClient(ctx),
-	}
-
-	// Prepare temporary directory for manifest files
-	tempDir := filepath.Join(cacheDir, "temp-manifests", version)
-	if err := os.MkdirAll(tempDir, 0755); err != nil {
-		return fmt.Errorf("creating temp directory: %w", err)
-	}
-
-	// Download and write manifest files to temporary directory
-	var filePaths []string
-	for _, file := range files {
-		content, err := loader.fetchManifest(ctx, "config/deploy/"+file)
-		if err != nil {
-			return fmt.Errorf("fetching manifest %s: %w", file, err)
-		}
-
-		filePath := filepath.Join(tempDir, file)
-		if err := os.WriteFile(filePath, content, 0644); err != nil {
-			return fmt.Errorf("writing manifest file %s: %w", file, err)
-		}
-		filePaths = append(filePaths, filePath)
-	}
-
-	// Use cluster's CreateAndWaitFromFiles method
-	if err := cluster.CreateAndWaitFromFiles(ctx, filePaths); err != nil {
-		return fmt.Errorf("creating manifests from files: %w", err)
-	}
-
-	return nil
 }

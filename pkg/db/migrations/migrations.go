@@ -71,4 +71,6 @@ var MigrationList = []*gormigrate.Migration{
 	addReleaseValidationErrors(),
 	createResourceValidationRecords(),
 	addStackTeamNameUniqueIndex(),
+	createReleaseEvents(),
+	addPostgresAddonDeletionTimestamp(),
 }

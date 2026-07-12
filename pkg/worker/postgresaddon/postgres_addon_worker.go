@@ -60,17 +60,17 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 	addon, err := w.postgresAddonService.InternalGetPostgresAddon(ctx, addonRef.ID)
 	if err != nil {
 		if err.Is404() {
-			w.Logger().Infof("PostgresAddon %s not found, skipping", addonRef.ID)
+			w.Logger().Info(ctx, "PostgresAddon %s not found, skipping", addonRef.ID)
 			return worker.Result{}, nil
 		}
 		return worker.Result{}, err
 	}
 
-	w.Logger().Infof("Processing postgres addon: %s (%s)", addon.Name, addon.ID)
+	w.Logger().Info(ctx, "Processing postgres addon: %s (%s)", addon.Name, addon.ID)
 
 	res, reconcileErr := w.reconcile(ctx, addon)
 	if reconcileErr != nil {
-		w.Logger().Errorf("Failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
+		w.Logger().Error(ctx, "Failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 	}
 	return res, nil
@@ -78,7 +78,7 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 
 func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.PostgresAddon) (worker.Result, error) {
 	for _, sr := range w.subReconcilers {
-		w.Logger().Infof("Running sub-reconciler: %s for addon: %s", sr.Name(), addon.ID)
+		w.Logger().Info(ctx, "Running sub-reconciler: %s for addon: %s", sr.Name(), addon.ID)
 		result, err := sr.Reconcile(ctx, addon)
 		switch {
 		case err != nil:
@@ -96,7 +96,7 @@ func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.Postg
 
 func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	addons, err := w.postgresAddonService.InternalList(ctx,
-		"status->>'state' IN ?",
+		"status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
 		[]string{
 			string(models.PostgresAddonStatePending),
 			string(models.PostgresAddonStateError),

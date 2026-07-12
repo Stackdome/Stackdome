@@ -2,16 +2,10 @@ package services
 
 import (
 	"encoding/base64"
-	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-func TestAESEncryptionService(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "AESEncryptionService Suite")
-}
 
 var _ = Describe("AESEncryptionService", func() {
 	var (

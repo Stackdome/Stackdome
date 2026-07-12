@@ -80,7 +80,7 @@ PG_CONTAINER_NAME="psql-stackdome-dev"
 # Cleanup — only stops the API server process, leaves infra intact
 # ============================================================
 cleanup() {
-    if [[ -n "${API_SERVER_PID:-}" ]]; then
+    if [[ -n "${API_SERVER_PID:-}" ]] && ps -p "$API_SERVER_PID" -o command= 2>/dev/null | grep -q "stackdome-server"; then
         log "Stopping API server (PID: $API_SERVER_PID)"
         kill "$API_SERVER_PID" 2>/dev/null || true
         wait "$API_SERVER_PID" 2>/dev/null || true

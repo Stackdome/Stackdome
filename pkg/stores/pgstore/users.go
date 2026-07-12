@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -40,7 +41,7 @@ func (d dbUserStore) GetByID(ctx context.Context, id string) (*models.User, *err
 	err := grm.Model(&models.User{}).
 		Preload(clause.Associations).Where("id = ?", id).First(&user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("user with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch user: %s", err.Error())
@@ -54,7 +55,7 @@ func (d dbUserStore) GetByEmail(ctx context.Context, email string) (*models.User
 	err := grm.Model(&models.User{}).
 		Preload(clause.Associations).Where("email = ?", email).First(&user).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("user with email '%s' not found", email)
 		}
 		return nil, errors.GeneralError("failed to fetch user: %s", err.Error())

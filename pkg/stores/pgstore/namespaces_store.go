@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -55,7 +56,7 @@ func (d dbNamespacesStore) Get(ctx context.Context, id string) (*models.Namespac
 	var ns models.Namespace
 	err := grm.Model(&models.Namespace{}).Where("id = ?", id).First(&ns).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("namespace with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to fetch namespace: %s", err.Error())
@@ -67,7 +68,7 @@ func (d dbNamespacesStore) Delete(ctx context.Context, id string) *errors.Servic
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("id = ?", id).Delete(&models.Namespace{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("namespace with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete namespace: %s", err.Error())
@@ -82,7 +83,7 @@ func (d dbNamespacesStore) DeleteWithTx(ctx context.Context, id string) *errors.
 	}
 	err := tx.Where("id = ?", id).Delete(&models.Namespace{}).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.NotFound("namespace with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete namespace: %s", err.Error())
@@ -94,7 +95,7 @@ func (d dbNamespacesStore) Update(ctx context.Context, id string, ns *models.Nam
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Model(&models.Namespace{}).Where("id = ?", id).Updates(ns).Error
 	if err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("namespace with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to update namespace: %s", err.Error())

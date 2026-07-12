@@ -111,13 +111,13 @@ func (s *clusterMetricsService) GetMetricsForResource(ctx context.Context, orgID
 
 	clusterClient, cErr := s.clusterManager.GetClient(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster client: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster client: %v", cErr)
 		return nil, newError("failed to get cluster client", cErr)
 	}
 
 	restConfig, cErr := s.clusterManager.GetRestConfig(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster rest config: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster rest config: %v", cErr)
 		return nil, newError("failed to get cluster rest config", cErr)
 	}
 
@@ -136,7 +136,7 @@ func (s *clusterMetricsService) GetMetricsForResource(ctx context.Context, orgID
 	}
 
 	podMetricsForResource := lo.Filter(metricsObj.NamespaceMetrics, func(podMetrics v1beta1.PodMetrics, _ int) bool {
-		resourceNameInPod, ok := podMetrics.ObjectMeta.Labels["resource"]
+		resourceNameInPod, ok := podMetrics.Labels["resource"]
 		return ok && resourceNameInPod == stackResource.Name
 	})
 
@@ -163,13 +163,13 @@ func (s *clusterMetricsService) GetMetricsForStack(ctx context.Context, orgID st
 
 	clusterClient, cErr := s.clusterManager.GetClient(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster client: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster client: %v", cErr)
 		return nil, newError("failed to get cluster client", cErr)
 	}
 
 	restConfig, cErr := s.clusterManager.GetRestConfig(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster rest config: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster rest config: %v", cErr)
 		return nil, newError("failed to get cluster rest config", cErr)
 	}
 
@@ -207,13 +207,13 @@ func (s *clusterMetricsService) StreamMetricsForResource(ctx context.Context, or
 
 	clusterClient, cErr := s.clusterManager.GetClient(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster client: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster client: %v", cErr)
 		return nil, newError("failed to get cluster client", cErr)
 	}
 
 	restConfig, cErr := s.clusterManager.GetRestConfig(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster rest config: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster rest config: %v", cErr)
 		return nil, newError("failed to get cluster rest config", cErr)
 	}
 
@@ -249,13 +249,13 @@ func (s *clusterMetricsService) StreamMetricsForStack(ctx context.Context, orgID
 
 	clusterClient, cErr := s.clusterManager.GetClient(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster client: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster client: %v", cErr)
 		return nil, newError("failed to get cluster client", cErr)
 	}
 
 	restConfig, cErr := s.clusterManager.GetRestConfig(cluster.ID)
 	if cErr != nil {
-		s.logger.Errorf("failed to get cluster rest config: %v", cErr)
+		s.logger.Error(ctx, "failed to get cluster rest config: %v", cErr)
 		return nil, newError("failed to get cluster rest config", cErr)
 	}
 
@@ -320,7 +320,7 @@ func (s *clusterMetricsStreamer) streamStackResourceMetrics(ctx context.Context)
 					continue
 				}
 				filteredMetrics := lo.Filter(metricsObj.NamespaceMetrics, func(podMetrics v1beta1.PodMetrics, _ int) bool {
-					resourceNameInPod, ok := podMetrics.ObjectMeta.Labels["resource"]
+					resourceNameInPod, ok := podMetrics.Labels["resource"]
 					return ok && resourceNameInPod == s.target.stackResource.Name
 				})
 				metrics := accumulatePodMetrics(filteredMetrics)
@@ -328,7 +328,7 @@ func (s *clusterMetricsStreamer) streamStackResourceMetrics(ctx context.Context)
 				apiObj := presenters.PresentResourceMetrics(metrics)
 				data, err := json.Marshal(apiObj)
 				if err != nil {
-					s.logger.Errorf("failed to marshal metrics object: %v", err)
+					s.logger.Error(ctx, "failed to marshal metrics object: %v", err)
 					continue
 				}
 				s.safeWriteToChannel(ctx, streamerChan, &StreamedMetrics{data: data})
@@ -373,7 +373,7 @@ func (s *clusterMetricsStreamer) streamStackMetrics(ctx context.Context) (<-chan
 				apiObj := presenters.PresentResourceMetrics(metrics)
 				data, err := json.Marshal(apiObj)
 				if err != nil {
-					s.logger.Errorf("failed to marshal metrics object: %v", err)
+					s.logger.Error(ctx, "failed to marshal metrics object: %v", err)
 					continue
 				}
 				s.safeWriteToChannel(ctx, streamerChan, &StreamedMetrics{data: data})
@@ -397,10 +397,10 @@ func (s *clusterMetricsStreamer) safeWriteToChannel(ctx context.Context, ch chan
 		return
 	default:
 		// Channel full
-		s.logger.Infof("log stream channel is full, applying rate limiting..")
+		s.logger.Info(ctx, "log stream channel is full, applying rate limiting..")
 	}
 	if err := s.config.rateLimiter.Wait(ctx); err != nil {
-		s.logger.Errorf("rate limiter wait failed: %v", err)
+		s.logger.Error(ctx, "rate limiter wait failed: %v", err)
 		return
 	}
 
@@ -412,7 +412,7 @@ func (s *clusterMetricsStreamer) safeWriteToChannel(ctx context.Context, ch chan
 		return
 	default:
 		// Channel is stil full, drop the message
-		s.logger.Warnf("log stream channel is full, dropping message")
+		s.logger.Warn(ctx, "log stream channel is full, dropping message")
 	}
 }
 
@@ -425,7 +425,7 @@ func accumulatePodMetrics(podMetricsList []v1beta1.PodMetrics) *models.ResourceM
 		for _, container := range podMetrics.Containers {
 			metrics.CPUUsage.Add(container.Usage[corev1.ResourceCPU])
 			metrics.MemoryUsage.Add(container.Usage[corev1.ResourceMemory])
-			metrics.TimeStamp = podMetrics.Timestamp.Time.UTC()
+			metrics.TimeStamp = podMetrics.Timestamp.UTC()
 		}
 		assignedNode, ok := podMetrics.Annotations[models.AssignedNodeAnnotation]
 		if ok && assignedNode != "" {

@@ -1,13 +1,14 @@
-import { Box, GitBranch, GitCommitHorizontal, Layers } from "lucide-react";
+import { AlertTriangle, Box, GitBranch, GitCommitHorizontal, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { formatDistanceToNow } from "date-fns";
 import { Card } from "@/components/ui/card";
 import {
   statusVariant,
-  statusVariantLabel,
   statusVariantTone,
   type StatusTone,
+  type StatusVariant,
 } from "@/components/branded/status-variant";
+import { deriveHeaderHealth, latestDeployFailed } from "@/pages/stacks/components/detail/deployments/derive";
 import { cn } from "@/lib/utils";
 import type { Stack } from "@/pages/stacks/types";
 
@@ -29,7 +30,7 @@ export function StatusRail({ tone }: { tone: RailTone }) {
 }
 
 /** Mono status word shown at the header's right edge, colored to match the rail. */
-export function StatusWord({ tone, children }: { tone: RailTone; children: string }) {
+export function StatusWord({ tone, children }: { tone: RailTone | "neutral"; children: string }) {
   return (
     <span
       className={cn(
@@ -37,6 +38,7 @@ export function StatusWord({ tone, children }: { tone: RailTone; children: strin
         (tone === "success") && "text-success",
         (tone === "brand" || tone === "deploying") && "text-brand",
         tone === "danger" && "text-danger",
+        tone === "neutral" && "text-fg-muted",
       )}
     >
       {children}
@@ -121,26 +123,31 @@ function inferStackIcon(stack: Stack) {
   return Layers;
 }
 
-function deployTone(state?: string | null): { tone: RailTone; word: string } {
-  const v = statusVariant("stack", state);
-  return { tone: statusVariantTone[v], word: statusVariantLabel[v] };
+/** Card status: "Deleting" overrides health; no derivable health (never
+ *  deployed, or only cancelled/superseded attempts) reads "Not deployed";
+ *  otherwise the release health rollup drives it — mirrors the stack detail
+ *  page's header. */
+export function headerStatus(stack: Stack): { label: string; variant: StatusVariant } {
+  if (stack.lifecycle === "deleting") return { label: "Deleting", variant: "pending" };
+  const health = deriveHeaderHealth(stack);
+  if (!health) return { label: "Not deployed", variant: "neutral" };
+  return { label: health, variant: statusVariant("health", health) };
 }
 
 /**
- * Deployed-stack dashboard card, "Status Strip" design. Endpoint pills come
- * from each resource's public_ingress in the list payload. Not wrapped in a
- * Link because the pills are real anchors — nested <a> is invalid HTML.
+ * Deployed-stack dashboard card, "Status Strip" design. Status comes from the
+ * release-health rollup (headerStatus); live ingress URLs live on release
+ * detail, not the list payload, so cards carry no endpoint pills.
  */
 export function DeployStackCard({ stack }: { stack: Stack }) {
   const navigate = useNavigate();
   const Icon = inferStackIcon(stack);
-  const { tone, word } = deployTone(stack.status?.state);
+  const { label: word, variant } = headerStatus(stack);
+  const tone: RailTone | "neutral" = variant === "neutral" ? "neutral" : statusVariantTone[variant];
+  const deployFailed = latestDeployFailed(stack);
   const resourceCount = stack.spec?.stack_resources?.length || 0;
   const volumeCount = stack.spec?.volumes?.length || 0;
   const age = relativeAge(stack.updated_at || stack.created_at);
-  const urls: EndpointUrl[] = (stack.spec?.stack_resources ?? []).flatMap((res) =>
-    (res.status?.public_ingress ?? []).map((ingress) => ({ resource: res.name, url: ingress.url })),
-  );
   return (
     <Card
       role="link"
@@ -152,7 +159,7 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
       }}
       className="group flex h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40"
     >
-      <StatusRail tone={tone} />
+      <StatusRail tone={tone === "neutral" ? "success" : tone} />
       <div className="flex flex-1 flex-col gap-3.5 p-5">
         <div className="flex items-center gap-[11px]">
           <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
@@ -162,12 +169,18 @@ export function DeployStackCard({ stack }: { stack: Stack }) {
           >
             {stack.name}
           </span>
-          {stack.status?.state && <StatusWord tone={tone}>{word}</StatusWord>}
+          {deployFailed && (
+            <AlertTriangle
+              className="h-3 w-3 flex-none text-danger"
+              aria-label="Latest deploy failed"
+            >
+              <title>Latest deploy failed</title>
+            </AlertTriangle>
+          )}
+          <StatusWord tone={tone}>{word}</StatusWord>
         </div>
 
-        {/* Bottom-anchored group: pills sit just above the footer in every card variant. */}
         <div className="mt-auto flex flex-col gap-3.5">
-          <EndpointPills urls={urls} />
           <CardFooterMeta items={[`${resourceCount} res`, `${volumeCount} vol`]} age={age} />
         </div>
       </div>

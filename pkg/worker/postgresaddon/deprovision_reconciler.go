@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,7 +16,7 @@ import (
 type deprovisionReconciler struct {
 	postgresAddonService postgresAddonService
 	referenceService     referenceService
-	clusterManager       clustermanager.ClusterManager
+	clusterManager       clusterClientGetter
 	logger               logger.Logger
 }
 
@@ -33,9 +32,7 @@ func newDeprovisionReconciler(spec PostgresAddonWorkerSpec) *deprovisionReconcil
 func (r *deprovisionReconciler) Name() string { return "deprovision" }
 
 func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
-	// TODO: Use addon.DeletionTimestamp != nil instead of state string check
-	// (see docs/plans/postgres-addon-improvements.md #1).
-	if addon.Status.State != models.PostgresAddonStateDeleting {
+	if addon.DeletionTimestamp == nil {
 		return resultNil, nil
 	}
 
@@ -44,11 +41,11 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.Pos
 		return resultNil, fmt.Errorf("failed to check addon usage: %w", err)
 	}
 	if inUse {
-		r.logger.Infof("Postgres addon '%s' is still in use by stacks, requeueing", addon.Name)
+		r.logger.Info(ctx, "Postgres addon '%s' is still in use by stacks, requeueing", addon.Name)
 		return resultRequeueAfter(30 * time.Second), nil
 	}
 
-	r.logger.Infof("Deprovisioning postgres addon '%s' in namespace '%s'", addon.Name, addon.Namespace)
+	r.logger.Info(ctx, "Deprovisioning postgres addon '%s' in namespace '%s'", addon.Name, addon.Namespace)
 
 	clusterClient, cerr := r.clusterManager.GetClient(addon.ClusterID)
 	if cerr != nil {
@@ -71,6 +68,6 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.Pos
 		return resultNil, fmt.Errorf("failed to delete postgres addon from DB: %w", serr)
 	}
 
-	r.logger.Infof("Successfully deprovisioned postgres addon '%s'", addon.Name)
+	r.logger.Info(ctx, "Successfully deprovisioned postgres addon '%s'", addon.Name)
 	return resultStop, nil
 }

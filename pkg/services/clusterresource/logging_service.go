@@ -91,7 +91,7 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
 	})
 	if cerr != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %v", cerr)
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", cerr)
 	}
 
 	readyResources := lo.Filter(resources, func(resource *models.StackResource, _ int) bool {
@@ -106,7 +106,7 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 
 	resourcePodMap, errors := s.resolveResourcePods(ctx, k8sclient, readyResources)
 	if len(errors) > 0 {
-		s.logger.Warnf("resource pod resolution failures: %v", errors)
+		s.logger.Warn(ctx, "resource pod resolution failures: %v", errors)
 	}
 
 	if len(resourcePodMap) == 0 {
@@ -141,7 +141,7 @@ func (s *loggingService) resolveResourcePods(ctx context.Context, k8sclient clie
 				ResourceName: resource.Name,
 				Error:        err,
 			})
-			s.logger.Errorf("failed to get pod for resource %s: %v", resource.Name, err)
+			s.logger.Error(ctx, "failed to get pod for resource %s: %v", resource.Name, err)
 			continue
 		}
 		if pod != nil {
@@ -196,7 +196,7 @@ func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObjec
 		podLogChan, err := s.k8sclient.StreamPodLogs(ctxWithTimeout, pod, &s.streamConfig)
 		if err != nil {
 			cancel()
-			return nil, fmt.Errorf("failed to stream logs for resource '%s': %v", resourceName, err)
+			return nil, fmt.Errorf("failed to stream logs for resource '%s': %w", resourceName, err)
 		}
 		podResourceStreamMap[resourceName] = podLogChan
 	}
@@ -247,11 +247,11 @@ func (s *LogStreamer) safeWriteToChannel(ctx context.Context, ch chan<- interfac
 		return
 	default:
 		// Channel full
-		s.Logger.Infof("log stream channel is full, applying rate limiting..")
+		s.Logger.Info(ctx, "log stream channel is full, applying rate limiting..")
 	}
 
 	if err := s.streamConfig.rateLimiter.Wait(ctx); err != nil {
-		s.Logger.Errorf("rate limiter wait failed: %v", err)
+		s.Logger.Error(ctx, "rate limiter wait failed: %v", err)
 		return
 	}
 	// Try again after waiting for the rate limiter.
@@ -262,6 +262,6 @@ func (s *LogStreamer) safeWriteToChannel(ctx context.Context, ch chan<- interfac
 		return
 	default:
 		// Channel is stil full, drop the message
-		s.Logger.Warnf("log stream channel is full, dropping message")
+		s.Logger.Warn(ctx, "log stream channel is full, dropping message")
 	}
 }

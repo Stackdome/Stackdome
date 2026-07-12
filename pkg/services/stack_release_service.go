@@ -10,6 +10,8 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/interfaces"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stackrelease"
 	"github.com/Stackdome/stackdome/pkg/stores"
@@ -33,12 +35,16 @@ type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
 	GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+	GetReleaseDetail(ctx context.Context, releaseID string) (*models.StackRelease, *models.ReleaseLiveStatus, *errors.ServiceError)
 	ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError)
+	ListReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence, limit int) (*ReleaseEventPage, *errors.ServiceError)
+	StreamReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence int) (interfaces.ServerSideStreamable, *errors.ServiceError)
 	CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError
 
 	// Internal methods are called by workers and controllers; no permission checks.
 	InternalCreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+	InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 	MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError)
@@ -59,6 +65,8 @@ type StackReleaseServiceSpec struct {
 	CredentialResolver CredentialResolver
 	Permissions        auth.PermissionService
 	ReferenceService   ReferenceService
+	EventStore         stores.ReleaseEventStore
+	EventRecorder      ReleaseEventRecorder
 	// GitClients is optional; it defaults to real git clients.
 	GitClients sourceGitClientProvider
 }
@@ -69,7 +77,10 @@ type stackReleaseService struct {
 	credentialResolver CredentialResolver
 	permissions        auth.PermissionService
 	referenceService   ReferenceService
+	eventStore         stores.ReleaseEventStore
+	eventRecorder      ReleaseEventRecorder
 	gitClients         sourceGitClientProvider
+	logger             logger.Logger
 	BackgroundJobEnqueuerDep
 }
 
@@ -84,7 +95,10 @@ func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 		credentialResolver: spec.CredentialResolver,
 		permissions:        spec.Permissions,
 		referenceService:   spec.ReferenceService,
+		eventStore:         spec.EventStore,
+		eventRecorder:      spec.EventRecorder,
 		gitClients:         gitClients,
+		logger:             logger.NewLoggerWithPrefix(context.Background(), "stack-release-service"),
 	}
 }
 
@@ -94,7 +108,7 @@ func (s *stackReleaseService) CreateRelease(ctx context.Context, stackID string,
 		return nil, sErr
 	}
 
-	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == "true" {
+	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == models.LabelValueTrue {
 		return nil, errors.BadRequest("cannot create releases on preview-managed stacks; use the preview sync API")
 	}
 
@@ -157,7 +171,10 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 		if e != nil {
 			return e
 		}
-		return s.referenceService.ProjectRelease(txCtx, created)
+		if e := s.referenceService.ProjectRelease(txCtx, created); e != nil {
+			return e
+		}
+		return s.eventRecorder.RecordReleaseCreated(txCtx, created)
 	}); txErr != nil {
 		return nil, txErr
 	}
@@ -165,6 +182,12 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
+	s.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   stack.ID,
+		logger.FieldReleaseID: created.ID,
+		"sequence":            created.Sequence,
+		"cause":               cause.Kind,
+	}).Info(ctx, "created release")
 	return created, nil
 }
 
@@ -189,7 +212,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		return nil, sErr
 	}
 
-	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == "true" {
+	if labels := stack.Labels.ToMap(); labels[models.PreviewStackLabel] == models.LabelValueTrue {
 		return nil, errors.BadRequest("cannot roll back a stack that is managed by preview sync")
 	}
 
@@ -230,7 +253,10 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 		if e != nil {
 			return e
 		}
-		return s.referenceService.ProjectRelease(txCtx, created)
+		if e := s.referenceService.ProjectRelease(txCtx, created); e != nil {
+			return e
+		}
+		return s.eventRecorder.RecordReleaseCreated(txCtx, created)
 	}); txErr != nil {
 		return nil, txErr
 	}
@@ -238,25 +264,108 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
+	s.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   stackID,
+		logger.FieldReleaseID: created.ID,
+		"sequence":            created.Sequence,
+		"rollback_from":       src.Sequence,
+	}).Info(ctx, "created rollback release")
 	return created, nil
 }
 
-func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
+// getReleaseWithStack fetches a release and its owning stack. GetStack
+// already perm-checks (same team, same stack, auth.ActionRead), so callers
+// don't need a separate permissions.Check.
+func (s *stackReleaseService) getReleaseWithStack(ctx context.Context, releaseID string) (*models.StackRelease, *models.Stack, *errors.ServiceError) {
 	rel, sErr := s.store.GetByID(ctx, releaseID)
 	if sErr != nil {
-		return nil, sErr
+		return nil, nil, sErr
 	}
 
 	stack, sErr := s.stackQuery.GetStack(ctx, rel.StackID)
 	if sErr != nil {
+		return nil, nil, sErr
+	}
+
+	return rel, stack, nil
+}
+
+func (s *stackReleaseService) GetRelease(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
+	rel, _, sErr := s.getReleaseWithStack(ctx, releaseID)
+	if sErr != nil {
+		return nil, sErr
+	}
+	return rel, nil
+}
+
+// GetReleaseDetail returns the release plus its live-status overlay, computed
+// from the release's stack. The overlay is nil unless the release is active
+// or is the stack's currently converged (live) release.
+func (s *stackReleaseService) GetReleaseDetail(ctx context.Context, releaseID string) (*models.StackRelease, *models.ReleaseLiveStatus, *errors.ServiceError) {
+	release, stack, sErr := s.getReleaseWithStack(ctx, releaseID)
+	if sErr != nil {
+		return nil, nil, sErr
+	}
+
+	return release, models.BuildReleaseLiveStatus(release, stack), nil
+}
+
+// InternalGetReleaseRefs batch-resolves the latest and currently converged
+// release for each given stack. No permission checks: callers have already
+// authorized the stacks.
+func (s *stackReleaseService) InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError) {
+	stackIDs := make([]string, len(stacks))
+	for i, stack := range stacks {
+		stackIDs[i] = stack.ID
+	}
+
+	latestByStackID, sErr := s.store.GetLatestByStackIDs(ctx, stackIDs)
+	if sErr != nil {
 		return nil, sErr
 	}
 
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, rel.StackID, auth.ActionRead); permErr != nil {
-		return nil, permErr
+	refs := make(map[string]models.StackReleaseRefs, len(stacks))
+	var missingCurrentIDs []string
+	for _, stack := range stacks {
+		entry := models.StackReleaseRefs{Latest: latestByStackID[stack.ID]}
+		if currentID := convergedReleaseID(stack); currentID != "" {
+			if entry.Latest != nil && entry.Latest.ID == currentID {
+				entry.Current = entry.Latest
+			} else {
+				missingCurrentIDs = append(missingCurrentIDs, currentID)
+			}
+		}
+		refs[stack.ID] = entry
 	}
 
-	return rel, nil
+	if len(missingCurrentIDs) > 0 {
+		currentByID, sErr := s.store.GetByIDs(ctx, missingCurrentIDs)
+		if sErr != nil {
+			return nil, sErr
+		}
+		for _, stack := range stacks {
+			currentID := convergedReleaseID(stack)
+			if currentID == "" {
+				continue
+			}
+			entry := refs[stack.ID]
+			if entry.Current == nil {
+				entry.Current = currentByID[currentID]
+				refs[stack.ID] = entry
+			}
+		}
+	}
+
+	return refs, nil
+}
+
+// convergedReleaseID returns the release ID the stack last converged to, or
+// "" if the stack has never converged.
+func convergedReleaseID(stack *models.Stack) string {
+	if stack.Status == nil || stack.Status.LastConverged == nil {
+		return ""
+	}
+	return stack.Status.LastConverged.ReleaseID
 }
 
 func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
@@ -270,6 +379,97 @@ func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, 
 	}
 
 	return s.store.ListByStackID(ctx, stackID, params)
+}
+
+const (
+	releaseEventsDefaultLimit = 100
+	releaseEventsMaxLimit     = 500
+)
+
+// releaseCancelledMessage is the user-facing message recorded on the
+// release_cancelled terminal event.
+const releaseCancelledMessage = "Release cancelled"
+
+// releaseLiveMessage is the user-facing message recorded on the
+// release_released terminal event.
+const releaseLiveMessage = "Release is live"
+
+// ReleaseEventPage is a sequence-cursor page of release events.
+type ReleaseEventPage struct {
+	Events            []*models.ReleaseEvent
+	NextAfterSequence int
+}
+
+func (s *stackReleaseService) ListReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence, limit int) (*ReleaseEventPage, *errors.ServiceError) {
+	release, sErr := s.store.GetByID(ctx, releaseID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if release.StackID != stackID {
+		return nil, errors.NotFound("release '%s' does not belong to stack '%s'", releaseID, stackID)
+	}
+
+	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+
+	if limit <= 0 {
+		limit = releaseEventsDefaultLimit
+	}
+	if limit > releaseEventsMaxLimit {
+		limit = releaseEventsMaxLimit
+	}
+
+	events, sErr := s.eventStore.ListByReleaseID(ctx, releaseID, afterSequence, limit)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	next := afterSequence
+	if len(events) > 0 {
+		next = events[len(events)-1].Sequence
+	}
+
+	return &ReleaseEventPage{Events: events, NextAfterSequence: next}, nil
+}
+
+// StreamReleaseEvents returns a live SSE stream of release events after
+// afterSequence. It enforces the exact same ownership and read-permission
+// checks as ListReleaseEvents before handing back the streamer.
+func (s *stackReleaseService) StreamReleaseEvents(ctx context.Context, stackID, releaseID string, afterSequence int) (interfaces.ServerSideStreamable, *errors.ServiceError) {
+	release, sErr := s.store.GetByID(ctx, releaseID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if release.StackID != stackID {
+		return nil, errors.NotFound("release '%s' does not belong to stack '%s'", releaseID, stackID)
+	}
+
+	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+		return nil, permErr
+	}
+
+	return &releaseEventStreamer{
+		events:        s.eventStore,
+		releases:      s.store,
+		releaseID:     releaseID,
+		afterSeq:      afterSequence,
+		pollInterval:  releaseEventStreamPollInterval,
+		graceInterval: releaseEventStreamTerminalGraceInterval,
+		presentEvent:  defaultPresentReleaseEvent,
+	}, nil
 }
 
 func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID string) *errors.ServiceError {
@@ -301,6 +501,11 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 	if !won {
 		return errors.Conflict("release #%d is no longer pending (it may have already started processing)", rel.Sequence)
 	}
+	// The CAS win already persisted the cancellation; recording is best-effort.
+	rel.State = models.ReleaseStateCancelled
+	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, releaseCancelledMessage); recErr != nil {
+		s.logger.Error(ctx, "release %s: failed to record release_cancelled event: %v", rel.ID, recErr)
+	}
 	return nil
 }
 
@@ -327,23 +532,82 @@ func (s *stackReleaseService) SaveManifest(ctx context.Context, id string, m *mo
 }
 
 func (s *stackReleaseService) MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
-	return s.store.MarkCancelled(ctx, id, reason)
+	won, serr := s.store.MarkCancelled(ctx, id, reason)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateCancelled, releaseCancelledMessage)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkSuperseded(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
-	return s.store.MarkSuperseded(ctx, id, reason)
+	won, serr := s.store.MarkSuperseded(ctx, id, reason)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateSuperseded, reason)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkReleased(ctx context.Context, id string, outcome models.ReleaseOutcome) (bool, *errors.ServiceError) {
-	return s.store.MarkReleased(ctx, id, outcome)
+	won, serr := s.store.MarkReleased(ctx, id, outcome)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateReleased, releaseLiveMessage)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError) {
-	return s.store.MarkFailed(ctx, id, message, outcome)
+	won, serr := s.store.MarkFailed(ctx, id, message, outcome)
+	if serr != nil || !won {
+		return won, serr
+	}
+	s.recordTerminalEvent(ctx, id, models.ReleaseStateFailed, message)
+	return true, nil
 }
 
 func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError) {
-	return s.store.MarkFailedWithValidationErrors(ctx, id, message, verrs)
+	won, serr := s.store.MarkFailedWithValidationErrors(ctx, id, message, verrs)
+	if serr != nil || !won {
+		return won, serr
+	}
+	rel, getErr := s.store.GetByID(ctx, id)
+	if getErr != nil {
+		s.logger.Error(ctx, "release %s: failed to load release for failure events: %v", id, getErr)
+		return true, nil
+	}
+	for _, verr := range verrs {
+		if recErr := s.eventRecorder.RecordReleaseCheckFailed(ctx, rel, verr.ResourceName, validationCheckKey(verr), verr.Message); recErr != nil {
+			s.logger.Error(ctx, "release %s: failed to record release_check_failed event: %v", id, recErr)
+		}
+	}
+	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateFailed, message); recErr != nil {
+		s.logger.Error(ctx, "release %s: failed to record release_failed event: %v", id, recErr)
+	}
+	return true, nil
+}
+
+// recordTerminalEvent runs after a won terminal CAS: the state change is
+// already persisted, so recording is best-effort and only the winner reaches
+// here — a requeue that lost the race cannot double-emit.
+func (s *stackReleaseService) recordTerminalEvent(ctx context.Context, id string, state models.StackReleaseState, message string) {
+	rel, serr := s.store.GetByID(ctx, id)
+	if serr != nil {
+		s.logger.Error(ctx, "release %s: failed to load release for %s event: %v", id, state, serr)
+		return
+	}
+	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, state, message); recErr != nil {
+		s.logger.Error(ctx, "release %s: failed to record %s event: %v", id, state, recErr)
+	}
+}
+
+// validationCheckKey identifies a check failure for event dedupe. The error
+// Code alone can collide across the pull and push checks of one resource,
+// so Field — which encodes the check surface — is prefixed to keep the
+// dedupe key unique per (resource, check).
+func validationCheckKey(verr models.ReleaseValidationError) string {
+	return fmt.Sprintf("%s:%s", verr.Field, verr.Code)
 }
 
 func (s *stackReleaseService) AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError {

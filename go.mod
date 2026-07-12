@@ -21,7 +21,6 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/stdr v1.2.2
 	github.com/golang-jwt/jwt v3.2.2+incompatible
-	github.com/golang/glog v1.2.5
 	github.com/google/go-containerregistry v0.21.7
 	github.com/google/go-github/v88 v88.0.0
 	github.com/google/uuid v1.6.0
@@ -112,6 +111,7 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
+	github.com/golang/glog v1.2.5 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect

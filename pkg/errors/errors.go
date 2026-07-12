@@ -7,8 +7,10 @@ import (
 	"strconv"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
-	"github.com/golang/glog"
+	"github.com/Stackdome/stackdome/pkg/logger"
 )
+
+var log = logger.NewLogger()
 
 const (
 
@@ -159,7 +161,7 @@ func New(code ServiceErrorCode, reason string, values ...interface{}) *ServiceEr
 	var err *ServiceError
 	exists, err := Find(code)
 	if !exists {
-		glog.Errorf("Undefined error code used: %d", code)
+		log.Errorf("Undefined error code used: %d", code)
 		err = &ServiceError{ErrorGeneral, "Unspecified error", 500, nil}
 	}
 

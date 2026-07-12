@@ -498,12 +498,21 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory: te.DBSession,
 	})
 
+	releaseEventStore := pgstore.NewReleaseEventStore(pgstore.ReleaseEventStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	releaseEventRecorder := services.NewReleaseEventRecorder(services.ReleaseEventRecorderSpec{
+		Store: releaseEventStore,
+	})
+
 	stackReleaseService := services.NewStackReleaseService(services.StackReleaseServiceSpec{
 		Store:              stackReleaseStore,
 		StackService:       stackService,
 		CredentialResolver: credentialResolver,
 		Permissions:        te.PermissionService,
 		ReferenceService:   referenceService,
+		EventStore:         releaseEventStore,
+		EventRecorder:      releaseEventRecorder,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -561,6 +570,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,
+		ReleaseEventRecorder:        releaseEventRecorder,
 		ReferenceService:            referenceService,
 		StackPreviewConfigService:   stackPreviewConfigService,
 		PreviewStackService:         previewStackService,
@@ -586,64 +596,69 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 	te.ClusterManager = clustermanager.NewClusterManager(clustermanager.ClusterManagerConfig{
 		LeadershipFlag:      leadershipFlag,
 		CredentialDecryptor: te.EncryptionService,
+		Logger:              applogger.NewLoggerWithPrefix(ctx, "cluster-manager").SetLevel(te.Logger.GetLevel()),
 		ControllersToRegister: []clustermanager.ControllerFn{
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return volumecontroller.NewVolumeReconciler(volumecontroller.VolumeReconcilerSpec{
-					Log:            applogger.NewLoggerWithPrefix(ctx, "test-volume-controller").SetLevel(te.Logger.GetLevel()),
+					Log:            applogger.NewLoggerWithPrefix(ctx, "test-volume-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StorageService: te.Services.StackStorageService,
 					VolumeService:  te.Services.VolumeService,
-					Env:            te.Env.Name,
+					Env:            te.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-workspace-user-controller").SetLevel(te.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-workspace-user-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					WorkspaceUserService: te.Services.WorkspaceUserService,
 					ClusterService:       te.Services.ClusterService,
-					Env:                  te.Env.Name,
+					Env:                  te.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
-					Log:            applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()),
+					Log:            applogger.NewLoggerWithPrefix(ctx, "test-stack-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StackService:   te.Services.StackService,
-					Env:            te.Env.Name,
+					Env:            te.Name,
 					ReleaseChecker: te.Services.StackReleaseService,
 					Enqueuer:       te.WorkerManager,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return stackresourcecontroller.NewStackResourceReconciler(stackresourcecontroller.StackResourceReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-stack-resource-controller").SetLevel(te.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-stack-resource-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					StackService:         te.Services.StackService,
 					StackResourceService: te.Services.StackResourceService,
-					Env:                  te.Env.Name,
+					Env:                  te.Name,
+					ReleaseChecker:       te.Services.StackReleaseService,
+					EventRecorder:        te.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
-					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()),
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					DBImageBuildService:   te.Services.ImageBuildService,
 					DBResourceService:     te.Services.StackResourceService,
 					GitIntegrationService: te.Services.GitIntegrationService,
+					ReleaseChecker:        te.Services.StackReleaseService,
+					EventRecorder:         te.Services.ReleaseEventRecorder,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return clusterimageregistry.NewClusterImageRegistryReconciler(clusterimageregistry.ClusterImageRegistryReconcilerSpec{
-					Logger:                 applogger.NewLoggerWithPrefix(ctx, "test-cluster-image-registry-controller").SetLevel(te.Logger.GetLevel()),
+					Logger:                 applogger.NewLoggerWithPrefix(ctx, "test-cluster-image-registry-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					DBImageRegistryService: te.Services.ClusterImageRegistryService,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresaddoncontroller.NewPostgresAddonReconciler(postgresaddoncontroller.PostgresAddonReconcilerSpec{
-					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-postgres-addon-controller").SetLevel(te.Logger.GetLevel()),
+					Log:                  applogger.NewLoggerWithPrefix(ctx, "test-postgres-addon-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresAddonService: te.Services.PostgresAddonService,
-					Env:                  te.Env.Name,
+					Env:                  te.Name,
 				})
 			},
-			func() clustermanager.Controller {
+			func(clusterID string) clustermanager.Controller {
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
-					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()),
+					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresBackupService: te.Services.PostgresBackupService,
 				})
 			},
@@ -657,7 +672,7 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	te.Logger.Debugf("Initializing worker manager for test environment")
 	te.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
-		Environment: te.Env.Name,
+		Environment: te.Name,
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
@@ -666,13 +681,14 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		ClusterManager:   te.ClusterManager,
 		VolumeService:    te.Services.VolumeService,
 		NamespaceService: te.Services.NamespaceService,
-		Env:              te.Env.Name,
+		Env:              te.Name,
 	})
 
 	te.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       te.Services.StackReleaseService,
+		EventRecorder:        te.Services.ReleaseEventRecorder,
 		StackService:         te.Services.StackService,
 		ClusterManager:       te.ClusterManager,
 		SecretService:        te.Services.SecretService,
@@ -692,14 +708,14 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 			SessionFactory: te.DBSession,
 		}),
 		ReleaseWorkerEnqueuer: te.WorkerManager,
-		Env:                   te.Env.Name,
+		Env:                   te.Name,
 	})
 	te.WorkerManager.RegisterWorker(releaseWorker, &models.StackRelease{})
 
 	releaseGCWorker := releasegcworker.NewReleaseGCWorker(releasegcworker.ReleaseGCWorkerSpec{
 		ReleaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{SessionFactory: te.DBSession}),
 		StackStore:   pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: te.DBSession}),
-		Env:          te.Env.Name,
+		Env:          te.Name,
 	})
 	te.WorkerManager.RegisterWorker(releaseGCWorker, &releasegcworker.ReleaseGCRequest{})
 
@@ -711,7 +727,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 			SessionFactory: te.DBSession,
 		}),
 		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
-		Env:             te.Env.Name,
+		Env:             te.Name,
 	})
 	te.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
 
@@ -723,7 +739,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		ReferenceService:     te.Services.ReferenceService,
 		ClusterManager:       te.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
-		Env:                  te.Env.Name,
+		Env:                  te.Name,
 	})
 	te.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
 
@@ -731,14 +747,14 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		InviteService:  te.Services.OrgInviteService,
 		EmailService:   te.EmailService,
 		LeadershipFlag: te.LeadershipFlag,
-		Env:            te.Env.Name,
+		Env:            te.Name,
 	})
 	te.WorkerManager.RegisterWorker(inviteEmailWorker, &models.OrgInvite{})
 
 	inviteCleanupWorker := inviteworker.NewInviteCleanupWorker(inviteworker.InviteCleanupWorkerSpec{
 		InviteService:  te.Services.OrgInviteService,
 		LeadershipFlag: te.LeadershipFlag,
-		Env:            te.Env.Name,
+		Env:            te.Name,
 	})
 	te.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
@@ -752,7 +768,7 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		}),
 		ReleaseService: te.Services.StackReleaseService,
 		StackService:   te.Services.StackService,
-		Env:            te.Env.Name,
+		Env:            te.Name,
 	})
 	te.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 

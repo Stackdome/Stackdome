@@ -345,7 +345,6 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	}
 
 	resolver := &previewSecretResolver{
-		ctx:           ctx,
 		secretService: s.secretService,
 		orgID:         config.OrganisationID,
 	}
@@ -365,7 +364,7 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	model.TeamID = config.TeamID
 	model.UserID = preview.UserID
 	model.Labels = append(model.Labels,
-		models.Label{Key: models.PreviewStackLabel, Value: "true"},
+		models.Label{Key: models.PreviewStackLabel, Value: models.LabelValueTrue},
 		models.Label{Key: models.PreviewConfigIDLabel, Value: preview.StackPreviewConfigID},
 		models.Label{Key: models.PreviewPRNumberLabel, Value: preview.PRNumber},
 		models.Label{Key: models.PreviewStackIDLabel, Value: preview.ID},
@@ -484,7 +483,6 @@ func normalizeRepoURL(url string) string {
 
 // previewSecretResolver implements stackfile.Resolver for preview environments.
 type previewSecretResolver struct {
-	ctx           context.Context
 	secretService SecretService
 	orgID         string
 }
@@ -492,7 +490,7 @@ type previewSecretResolver struct {
 func (r *previewSecretResolver) ResolveSecretByName(ctx context.Context, name string) (string, error) {
 	secret, sErr := r.secretService.InternalGetByName(ctx, r.orgID, name)
 	if sErr != nil {
-		return "", fmt.Errorf("secret '%s' not found: %v", name, sErr)
+		return "", fmt.Errorf("secret '%s' not found: %w", name, sErr)
 	}
 	return secret.ID, nil
 }

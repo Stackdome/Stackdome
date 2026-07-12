@@ -148,7 +148,7 @@ func (s *apiTokenService) ValidateToken(ctx context.Context, rawToken string) (*
 	go func() {
 		bgCtx := context.Background()
 		if err := s.store.UpdateLastUsed(bgCtx, token.ID); err != nil {
-			s.logger.Errorf("failed to update token last used: %s", err.Error())
+			s.logger.Error(ctx, "failed to update token last used: %s", err.Error())
 		}
 	}()
 

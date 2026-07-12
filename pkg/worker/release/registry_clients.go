@@ -7,7 +7,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/credentials"
 )
 
-//go:generate mockgen -source=registry_clients.go -destination=registry_clients_mock_test.go -package=release
+//go:generate mockgen -source=registry_clients.go -destination=registry_clients_mock.go -package=release
 
 // registryClientProvider builds registry clients from resolved credentials so
 // release-time image/push checks can be faked in tests.

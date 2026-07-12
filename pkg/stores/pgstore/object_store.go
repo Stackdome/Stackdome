@@ -2,6 +2,7 @@ package pgstore
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -63,7 +64,7 @@ func (s *objectStoreStore) Create(ctx context.Context, objectStore *models.Objec
 func (s *objectStoreStore) GetByID(ctx context.Context, ID string) (*models.ObjectStore, *errors.ServiceError) {
 	var objectStore models.ObjectStore
 	if err := s.sessionFactory.New(ctx).Where("id = ?", ID).First(&objectStore).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("object store with id '%s' not found", ID)
 		}
 		return nil, errors.GeneralError("failed to get object store: %s", err.Error())
@@ -76,7 +77,7 @@ func (s *objectStoreStore) GetByName(ctx context.Context, organisationID, name s
 	if err := s.sessionFactory.New(ctx).
 		Where("organisation_id = ? AND name = ?", organisationID, name).
 		First(&objectStore).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("object store with name '%s' not found", name)
 		}
 		return nil, errors.GeneralError("failed to get object store by name: %s", err.Error())
@@ -95,7 +96,7 @@ func (s *objectStoreStore) Update(ctx context.Context, objectStore *models.Objec
 	var existingObjectStore models.ObjectStore
 	if err := tx.Where("id = ?", objectStore.ID).First(&existingObjectStore).Error; err != nil {
 		tx.Rollback()
-		if err == gorm.ErrRecordNotFound {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("object store with id '%s' not found", objectStore.ID)
 		}
 		return nil, errors.GeneralError("failed to find object store for update: %s", err.Error())

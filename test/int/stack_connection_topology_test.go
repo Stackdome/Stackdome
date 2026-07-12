@@ -36,7 +36,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-conn-crud", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID = created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 
 		It("should create an env connection (resource-to-resource)", func() {
@@ -80,7 +80,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-vol-conn", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			volStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, volStackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, volStackID, 1*time.Minute)
 
 			conn := shared.VolumeMountConn("data", "api", "/mnt/data", "subdir")
 			createdConn := shared.CreateStackConnection(client, orgID, teamName, volStackID, &conn)
@@ -102,15 +102,6 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn1 := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{shared.HostMapping()})
 			shared.CreateStackConnection(client, orgID, teamName, stackID, &conn1)
 
-			target := openapi.NewConnectionTarget("env")
-			target.SetName("API_URL")
-			value := openapi.NewValueRef()
-			value.SetOutput("url.http")
-			conn2 := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{
-				*openapi.NewConnectionMapping(*target, *value),
-			})
-			// conn2 has same from/to but different kind won't work, so let's create a different pairing
-			// Actually duplicate from/to/kind will 409. Let's use a secret instead.
 			secret := shared.CreateGenericSecret("test-multi-conn-secret", map[string]string{"k": "v"})
 			createdSecret := shared.CreateSecret(client, orgID, teamName, secret)
 
@@ -118,7 +109,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			secretTarget.SetName("SECRET_KEY")
 			secretValue := openapi.NewValueRef()
 			secretValue.SetOutput("k")
-			conn2 = shared.EnvConnectionWithID("secret", createdSecret.GetId(), "stack_resource", "web", []openapi.ConnectionMapping{
+			conn2 := shared.EnvConnectionWithID("secret", createdSecret.GetId(), "stack_resource", "web", []openapi.ConnectionMapping{
 				*openapi.NewConnectionMapping(*secretTarget, *secretValue),
 			})
 			shared.CreateStackConnection(client, orgID, teamName, stackID, &conn2)
@@ -150,7 +141,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-upd-cfg", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			cfgStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, cfgStackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, cfgStackID, 1*time.Minute)
 
 			conn := shared.VolumeMountConn("cfg-data", "api", "/mnt/data", "")
 			createdConn := shared.CreateStackConnection(client, orgID, teamName, cfgStackID, &conn)
@@ -228,7 +219,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-empty", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetNodes()).To(HaveLen(2))
@@ -248,7 +239,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-topo-r2r", []openapi.StackResource{api, web}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetEdges()).To(HaveLen(1))
@@ -265,7 +256,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-deps", []openapi.StackResource{db, app})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(topology.GetEdges()).To(HaveLen(1))
@@ -281,7 +272,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-topo-mixed", []openapi.StackResource{api, worker}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			Expect(len(topology.GetEdges())).To(BeNumerically(">=", 2))
@@ -306,7 +297,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-labels", []openapi.StackResource{svc, bg})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
 			labels := map[string]bool{}
@@ -323,7 +314,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-topo-mutate", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Topology should start with no edges")
 			topology := shared.GetStackTopology(client, orgID, teamName, stackID)
@@ -365,7 +356,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-multi-db-conn", []openapi.StackResource{web})
 			createdStack := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := createdStack.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Creating first connection targeting appdb")
 			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
@@ -418,7 +409,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-dup-db-conn", []openapi.StackResource{web})
 			createdStack := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := createdStack.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Creating first connection targeting appdb")
 			conn1 := shared.EnvConnectionWithID("addon/postgres", addonID, "stack_resource", "web", []openapi.ConnectionMapping{
@@ -438,7 +429,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn2.SetConfig(openapi.StackConnectionConfig{
 				PostgresEnvConfig: &openapi.PostgresEnvConfig{Database: &appdb},
 			})
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn2, http.StatusConflict)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn2, http.StatusConflict)
 		})
 	})
 
@@ -454,14 +445,14 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-conn-neg", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID = created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 
 		It("should reject duplicate connection (same kind, from, to) with 409", func() {
 			conn := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{shared.HostMapping()})
 			shared.CreateStackConnection(client, orgID, teamName, stackID, &conn)
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusConflict)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusConflict)
 		})
 
 		It("should reject connection with invalid kind", func() {
@@ -471,7 +462,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			to.SetName("web")
 			conn := openapi.NewStackConnection("invalid_kind", *from, *to)
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
 		})
 
 		It("should reject env connection with missing from.name for stack_resource", func() {
@@ -482,7 +473,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn := openapi.NewStackConnection("env", *from, *to)
 			conn.SetMappings([]openapi.ConnectionMapping{shared.HostMapping()})
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
 		})
 
 		It("should reject env connection with missing to.name for stack_resource", func() {
@@ -493,17 +484,17 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn := openapi.NewStackConnection("env", *from, *to)
 			conn.SetMappings([]openapi.ConnectionMapping{shared.HostMapping()})
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
 		})
 
 		It("should reject connection referencing non-existent from resource", func() {
 			conn := shared.EnvConnection("stack_resource", "nonexistent", "stack_resource", "web", []openapi.ConnectionMapping{shared.HostMapping()})
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
 		})
 
 		It("should reject connection referencing non-existent to resource", func() {
 			conn := shared.EnvConnection("stack_resource", "api", "stack_resource", "nonexistent", []openapi.ConnectionMapping{shared.HostMapping()})
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
 		})
 
 		It("should reject secret connection with missing from.id", func() {
@@ -513,12 +504,12 @@ var _ = Describe("Stack Connections & Topology", func() {
 			to.SetName("api")
 			conn := openapi.NewStackConnection("env", *from, *to)
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
 		})
 
 		It("should reject secret connection referencing non-existent secret", func() {
 			conn := shared.EnvConnectionWithID("secret", "00000000-0000-0000-0000-000000000000", "stack_resource", "api", nil)
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
 		})
 
 		It("should reject volume mount connection with missing from.name", func() {
@@ -531,12 +522,12 @@ var _ = Describe("Stack Connections & Topology", func() {
 				VolumeMountConfig: openapi.NewVolumeMountConfig("/mnt"),
 			})
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, conn, http.StatusBadRequest)
 		})
 
 		It("should reject volume mount referencing non-existent volume", func() {
 			conn := shared.VolumeMountConn("nonexistent-vol", "api", "/mnt", "")
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
 		})
 
 		It("should reject volume mount missing config.mount_path", func() {
@@ -546,7 +537,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-no-mountpath", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			volStackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, volStackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, volStackID, 1*time.Minute)
 
 			from := openapi.NewTopologyNodeRef("volume")
 			from.SetName("test-vol")
@@ -555,7 +546,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			conn := openapi.NewStackConnection("volume_mount", *from, *to)
 			// No config set — mount_path missing
 
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, volStackID, conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, volStackID, conn, http.StatusBadRequest)
 		})
 
 		It("should reject env mapping referencing unsupported output", func() {
@@ -566,7 +557,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			mapping := *openapi.NewConnectionMapping(*target, *value)
 
 			conn := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{mapping})
-			shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
+			_ = shared.CreateStackConnectionExpectError(client, orgID, teamName, stackID, &conn, http.StatusBadRequest)
 		})
 	})
 
@@ -582,12 +573,12 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStack("test-conn-upd-neg", []openapi.StackResource{api, web})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID = created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 		})
 
 		It("should return 404 when updating non-existent connection", func() {
 			conn := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{shared.HostMapping()})
-			shared.UpdateStackConnectionExpectError(client, orgID, teamName, stackID, "00000000-0000-0000-0000-000000000000", &conn, http.StatusNotFound)
+			_ = shared.UpdateStackConnectionExpectError(client, orgID, teamName, stackID, "00000000-0000-0000-0000-000000000000", &conn, http.StatusNotFound)
 		})
 
 		It("should return 404 when deleting non-existent connection", func() {
@@ -599,7 +590,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			created := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn)
 
 			conn.To.SetName("nonexistent")
-			shared.UpdateStackConnectionExpectError(client, orgID, teamName, stackID, created.GetId(), &conn, http.StatusBadRequest)
+			_ = shared.UpdateStackConnectionExpectError(client, orgID, teamName, stackID, created.GetId(), &conn, http.StatusBadRequest)
 		})
 
 		It("should reject update that creates duplicate connection", func() {
@@ -620,7 +611,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			created2 := shared.CreateStackConnection(client, orgID, teamName, stackID, &conn2)
 
 			conn2Update := shared.EnvConnection("stack_resource", "api", "stack_resource", "web", []openapi.ConnectionMapping{shared.HostMapping()})
-			shared.UpdateStackConnectionExpectError(client, orgID, teamName, stackID, created2.GetId(), &conn2Update, http.StatusConflict)
+			_ = shared.UpdateStackConnectionExpectError(client, orgID, teamName, stackID, created2.GetId(), &conn2Update, http.StatusConflict)
 		})
 	})
 
@@ -635,7 +626,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-conn-persist", []openapi.StackResource{api, web}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Fetching persisted connection with its server-assigned ID")
 			connections := shared.ListStackConnections(client, orgID, teamName, stackID)
@@ -667,7 +658,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithConnections("test-conn-wipe", []openapi.StackResource{api, web}, []openapi.StackConnection{conn})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			By("Verifying connection exists")
 			Expect(shared.ListStackConnections(client, orgID, teamName, stackID)).To(HaveLen(1))
@@ -687,7 +678,7 @@ var _ = Describe("Stack Connections & Topology", func() {
 			stack := shared.CreateSkipProvisioningStackWithVolumes("test-multi-kinds", []openapi.StackResource{api, web}, []openapi.Volume{*vol})
 			created := shared.CreateStack(client, orgID, teamName, stack)
 			stackID := created.GetId()
-			shared.WaitForStackReady(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.WaitForStackActive(client, orgID, teamName, stackID, 1*time.Minute)
 
 			secret := shared.CreateGenericSecret("test-multi-kind-secret", map[string]string{"token": "abc"})
 			createdSecret := shared.CreateSecret(client, orgID, teamName, secret)

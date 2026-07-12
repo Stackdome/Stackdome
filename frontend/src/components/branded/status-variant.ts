@@ -52,6 +52,7 @@ export type StatusDomain =
   | "stack"
   | "resource"
   | "release"
+  | "health"
   | "rollout"
   | "volume"
   | "addon"
@@ -110,6 +111,20 @@ export function statusVariant(domain: StatusDomain, state?: string | null): Stat
         case "superseded":
         case "cancelled":
           return "neutral";
+        default:
+          return "info";
+      }
+
+    // pkg/models/stack_release.go ReleaseHealth — components["schemas"]["ReleaseHealth"]
+    case "health":
+      switch (s) {
+        case "ok":
+          return "ready";
+        case "progressing":
+        case "degraded":
+          return "pending";
+        case "failed":
+          return "error";
         default:
           return "info";
       }

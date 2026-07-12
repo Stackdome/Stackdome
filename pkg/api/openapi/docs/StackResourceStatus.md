@@ -8,6 +8,7 @@ Name | Type | Description | Notes
 **InternalServiceName** | Pointer to **string** |  | [optional] 
 **LastRestartRequestProcessedAt** | Pointer to **time.Time** |  | [optional] 
 **State** | Pointer to **string** |  | [optional] 
+**Message** | Pointer to **string** |  | [optional] 
 **ObservedRevision** | Pointer to **string** |  | [optional] 
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
 **LastFailure** | Pointer to [**StackResourceFailure**](StackResourceFailure.md) |  | [optional] 
@@ -135,6 +136,31 @@ SetState sets State field to given value.
 `func (o *StackResourceStatus) HasState() bool`
 
 HasState returns a boolean if a field has been set.
+
+### GetMessage
+
+`func (o *StackResourceStatus) GetMessage() string`
+
+GetMessage returns the Message field if non-nil, zero value otherwise.
+
+### GetMessageOk
+
+`func (o *StackResourceStatus) GetMessageOk() (*string, bool)`
+
+GetMessageOk returns a tuple with the Message field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetMessage
+
+`func (o *StackResourceStatus) SetMessage(v string)`
+
+SetMessage sets Message field to given value.
+
+### HasMessage
+
+`func (o *StackResourceStatus) HasMessage() bool`
+
+HasMessage returns a boolean if a field has been set.
 
 ### GetObservedRevision
 

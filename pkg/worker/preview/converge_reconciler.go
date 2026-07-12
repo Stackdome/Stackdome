@@ -36,8 +36,8 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		return resultNil, fmt.Errorf("failed to get release %s: %w", *preview.ActiveReleaseID, sErr)
 	}
 
-	switch {
-	case release.State == models.ReleaseStateReleased:
+	switch release.State {
+	case models.ReleaseStateReleased:
 		if preview.Status.Phase == models.PreviewStackPhaseReady {
 			return resultNil, nil
 		}
@@ -55,15 +55,15 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		r.logger.Infof("preview %s is ready", preview.ID)
+		r.logger.Info(ctx, "preview %s is ready", preview.ID)
 		return resultStop, nil
 
-	case release.State == models.ReleaseStateSuperseded:
+	case models.ReleaseStateSuperseded:
 		// A newer sync triggered a new release that superseded this one.
 		// Requeue — the provision reconciler will update ActiveReleaseID.
 		return resultRequeueAfter(convergePollInterval), nil
 
-	case release.State == models.ReleaseStateFailed:
+	case models.ReleaseStateFailed:
 		preview.Status = models.PreviewStackStatus{
 			Phase:   models.PreviewStackPhaseFailed,
 			Reason:  "ReleaseFailed",
@@ -72,10 +72,10 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		r.logger.Infof("preview %s failed: %s", preview.ID, release.Message)
+		r.logger.Info(ctx, "preview %s failed: %s", preview.ID, release.Message)
 		return resultStop, nil
 
-	case release.State == models.ReleaseStateCancelled:
+	case models.ReleaseStateCancelled:
 		preview.Status = models.PreviewStackStatus{
 			Phase:   models.PreviewStackPhaseFailed,
 			Reason:  "ReleaseCancelled",
@@ -84,7 +84,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		r.logger.Infof("preview %s cancelled", preview.ID)
+		r.logger.Info(ctx, "preview %s cancelled", preview.ID)
 		return resultStop, nil
 
 	default:

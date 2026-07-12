@@ -71,27 +71,27 @@ func (r *postgresAddonReconciler) Name() string {
 }
 
 func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Infof("reconciling postgres addon: %s in namespace %s", req.Name, req.Namespace)
+	r.Log.Info(ctx, "reconciling postgres addon: %s in namespace %s", req.Name, req.Namespace)
 
 	clusterInstance := &addonsv1alpha1.PostgresCluster{}
 	if err := r.Client.Get(ctx, req.NamespacedName, clusterInstance); err != nil {
-		r.Log.Errorf("failed to get postgres cluster from cluster: %v", err)
+		r.Log.Error(ctx, "failed to get postgres cluster from cluster: %v", err)
 		return ctrl.Result{}, nil
 	}
 
 	postgresAddonID, ok := clusterInstance.Labels[models.PostgresAddonIDLabel]
 	if !ok {
-		r.Log.Errorf("postgres addon ID not found in PostgresCluster labels")
+		r.Log.Error(ctx, "postgres addon ID not found in PostgresCluster labels")
 		return ctrl.Result{}, nil
 	}
 
 	dbInstance, serr := r.PostgresAddonService.InternalGetPostgresAddon(ctx, postgresAddonID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			r.Log.Infof("postgres addon %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
+			r.Log.Info(ctx, "postgres addon %s in namespace %s not found in DB", clusterInstance.Name, clusterInstance.Namespace)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get postgres addon from db: %w", serr)
 	}
 
 	// TODO(cluster-agent): Remove StatusHash=="" fallback once cluster-agent computes
@@ -117,15 +117,15 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		}
 
 		if equality.Semantic.DeepEqual(dbInstance.Status, &newStatus) {
-			r.Log.Infof("postgres addon %s status is up to date, skipping DB update", postgresAddonID)
+			r.Log.Info(ctx, "postgres addon %s status is up to date, skipping DB update", postgresAddonID)
 			return ctrl.Result{}, nil
 		}
 
 		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
 		if serr != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %v", serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %w", serr)
 		}
-		r.Log.Infof("updated postgres addon %s status: phase=%s", postgresAddonID, newStatus.State)
+		r.Log.Info(ctx, "updated postgres addon %s status: phase=%s", postgresAddonID, newStatus.State)
 	}
 
 	return ctrl.Result{}, nil
@@ -152,7 +152,7 @@ func mapPhaseToState(phase string) models.PostgresAddonState {
 
 func mapToPostgresAddonStatus(clusterStatus addonsv1alpha1.PostgresClusterStatus) *models.PostgresAddonStatus {
 	status := &models.PostgresAddonStatus{
-		State:                  mapPhaseToState(string(clusterStatus.Phase)),
+		State:                  mapPhaseToState(clusterStatus.Phase),
 		Conditions:             models.ConvertConditions(clusterStatus.Conditions),
 		LastObservedStatusHash: clusterStatus.StatusHash,
 	}

@@ -21,6 +21,7 @@ type StackResourceStatus struct {
 	InternalServiceName           *string               `json:"internal_service_name,omitempty"`
 	LastRestartRequestProcessedAt *time.Time            `json:"last_restart_request_processed_at,omitempty"`
 	State                         *string               `json:"state,omitempty"`
+	Message                       *string               `json:"message,omitempty"`
 	ObservedRevision              *string               `json:"observed_revision,omitempty"`
 	Conditions                    []Condition           `json:"conditions,omitempty"`
 	LastFailure                   *StackResourceFailure `json:"last_failure,omitempty"`
@@ -174,6 +175,38 @@ func (o *StackResourceStatus) HasState() bool {
 // SetState gets a reference to the given string and assigns it to the State field.
 func (o *StackResourceStatus) SetState(v string) {
 	o.State = &v
+}
+
+// GetMessage returns the Message field value if set, zero value otherwise.
+func (o *StackResourceStatus) GetMessage() string {
+	if o == nil || o.Message == nil {
+		var ret string
+		return ret
+	}
+	return *o.Message
+}
+
+// GetMessageOk returns a tuple with the Message field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackResourceStatus) GetMessageOk() (*string, bool) {
+	if o == nil || o.Message == nil {
+		return nil, false
+	}
+	return o.Message, true
+}
+
+// HasMessage returns a boolean if a field has been set.
+func (o *StackResourceStatus) HasMessage() bool {
+	if o != nil && o.Message != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetMessage gets a reference to the given string and assigns it to the Message field.
+func (o *StackResourceStatus) SetMessage(v string) {
+	o.Message = &v
 }
 
 // GetObservedRevision returns the ObservedRevision field value if set, zero value otherwise.
@@ -445,6 +478,9 @@ func (o StackResourceStatus) MarshalJSON() ([]byte, error) {
 	}
 	if o.State != nil {
 		toSerialize["state"] = o.State
+	}
+	if o.Message != nil {
+		toSerialize["message"] = o.Message
 	}
 	if o.ObservedRevision != nil {
 		toSerialize["observed_revision"] = o.ObservedRevision

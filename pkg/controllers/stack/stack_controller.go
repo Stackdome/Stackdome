@@ -86,11 +86,11 @@ func (w *stackReconciler) Name() string {
 
 // Reconcile reconciles the workspace storage resource
 func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) (ctrl.Result, error) {
-	w.Log.Infof("Reconciling stack %v", req.NamespacedName)
+	w.Log.Info(ctx, "Reconciling stack %v", req.NamespacedName)
 	stackCr := &corev1alpha1.Stack{}
 	if err := w.Client.Get(ctx, req.NamespacedName, stackCr); err != nil {
 		if errors.IsNotFound(err) {
-			w.Log.Infof("Stack %s not found", req.NamespacedName)
+			w.Log.Info(ctx, "Stack %s not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -99,16 +99,16 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 	stackID, ok := stackCr.Labels[corev1alpha1.LabelStackID]
 	if !ok {
 		// How are we here? The predicate should have prevented this.
-		w.Log.Errorf("Stack %s does not have a workspace id label", stackCr.Name)
+		w.Log.Error(ctx, "Stack %s does not have a workspace id label", stackCr.Name)
 		return ctrl.Result{}, nil
 	}
 	dbStack, serr := w.StackService.InternalGetStack(ctx, stackID)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			w.Log.Infof("Stack %s not found in DB", stackCr.Name)
+			w.Log.Info(ctx, "Stack %s not found in DB", stackCr.Name)
 			return ctrl.Result{Requeue: true}, nil
 		}
-		return ctrl.Result{}, fmt.Errorf("failed to get stack from db: %v", serr)
+		return ctrl.Result{}, fmt.Errorf("failed to get stack from db: %w", serr)
 	}
 
 	if dbStack.Status == nil {
@@ -122,9 +122,13 @@ func (w *stackReconciler) Reconcile(ctx context.Context, req reconcile.Request) 
 		dbStack.Status.LastValidationRun = lastValidationRun
 		serr = w.StackService.UpdateStatus(ctx, stackID, dbStack.Status)
 		if serr != nil {
-			w.Log.Errorf("Failed to update stack '%s' status : %s", dbStack.ID, serr)
-			return ctrl.Result{}, fmt.Errorf("failed to update stack status: %v", serr)
+			w.Log.Error(ctx, "Failed to update stack '%s' status : %s", dbStack.ID, serr)
+			return ctrl.Result{}, fmt.Errorf("failed to update stack status: %w", serr)
 		}
+		w.Log.WithFields(map[string]interface{}{
+			logger.FieldStackID: stackID,
+			"state":             string(currentStackCrState),
+		}).Debug(ctx, "synced stack status from cluster")
 
 		// Kick the release worker so it can observe the new status quickly.
 		w.enqueueActiveRelease(ctx, stackID)
@@ -140,14 +144,14 @@ func (w *stackReconciler) enqueueActiveRelease(ctx context.Context, stackID stri
 	}
 	active, serr := w.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
 	if serr != nil {
-		w.Log.Errorf("Failed to check active release for stack '%s': %s", stackID, serr)
+		w.Log.Error(ctx, "Failed to check active release for stack '%s': %s", stackID, serr)
 		return
 	}
 	if active == nil {
 		return
 	}
 	if err := w.enqueuer.Enqueue(&models.StackRelease{ID: active.ID}); err != nil {
-		w.Log.Errorf("Failed to enqueue release '%s': %v", active.ID, err)
+		w.Log.Error(ctx, "Failed to enqueue release '%s': %v", active.ID, err)
 	}
 }
 

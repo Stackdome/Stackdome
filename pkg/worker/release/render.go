@@ -44,7 +44,7 @@ func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackR
 	if err != nil {
 		var depErr stackdeploy.DependencyNotReadyError
 		if isNotReady(err, &depErr) {
-			r.logger.Infof("release %s: dependency not ready, requeueing: %s", release.ID, depErr.Message)
+			r.logger.Info(ctx, "release %s: dependency not ready, requeueing: %s", release.ID, depErr.Message)
 			return resultRequeueAfter(convergencePollInterval), nil
 		}
 		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("render failed: %v", err))
@@ -107,12 +107,12 @@ func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackR
 		return resultNil, fmt.Errorf("failed to save manifest: %w", serr)
 	}
 	if !ok {
-		r.logger.Infof("release %s: SaveManifest CAS failed", release.ID)
+		r.logger.Info(ctx, "release %s: SaveManifest CAS failed", release.ID)
 		return resultStop, nil
 	}
 
 	if sErr := r.stackService.UpdateStackCrRevision(ctx, release.StackID, manifestRevision); sErr != nil {
-		r.logger.Errorf("failed to update stack CrRevision: %v", sErr)
+		r.logger.Error(ctx, "failed to update stack CrRevision: %v", sErr)
 	}
 
 	return resultRequeue, nil

@@ -18,6 +18,7 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+//go:generate mockgen -destination=stack_service_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services github.com/Stackdome/stackdome/pkg/services StackService
 type StackService interface {
 	CreateStack(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
@@ -196,11 +197,11 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
 
-	s.logger.Infof("running validation for stack creation: %s", spec.Name)
+	s.logger.Info(ctx, "running validation for stack creation: %s", spec.Name)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
 		return nil, err
 	}
-	s.logger.Infof("validation passed for stack creation: %s", spec.Name)
+	s.logger.Info(ctx, "validation passed for stack creation: %s", spec.Name)
 
 	spec, _ = s.defaultingService.PopulateDefaultValues(spec)
 
@@ -239,6 +240,11 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	for _, v := range createdStack.Volumes {
 		_ = s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.Volume{ID: v.ID})
 	}
+	s.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   createdStack.ID,
+		logger.FieldClusterID: createdStack.ClusterID,
+		"name":                createdStack.Name,
+	}).Info(ctx, "created stack")
 	return createdStack, nil
 }
 
@@ -342,6 +348,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		}
 	}
 
+	s.logger.WithField(logger.FieldStackID, updatedStack.ID).Info(ctx, "updated stack")
 	return updatedStack, nil
 }
 
@@ -726,7 +733,9 @@ func (s *stackService) InternalDeleteStack(ctx context.Context, stack *models.St
 	}
 	if s.releaseService != nil {
 		if active, _ := s.releaseService.InternalGetActiveByStackID(ctx, stack.ID); active != nil {
-			s.releaseService.MarkFailed(ctx, active.ID, "stack deleted", nil)
+			if _, markErr := s.releaseService.MarkFailed(ctx, active.ID, "stack deleted", nil); markErr != nil {
+				s.logger.Error(ctx, "failed to mark release '%s' failed for deleted stack '%s': %s", active.ID, stack.Name, markErr.Error())
+			}
 		}
 	}
 	stack.DeletionTimestamp = ptr.To(time.Now().UTC())
@@ -741,6 +750,7 @@ func (s *stackService) InternalDeleteStack(ctx context.Context, stack *models.St
 	}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", stack.Name, err.Error())
 	}
+	s.logger.WithField(logger.FieldStackID, stack.ID).Info(ctx, "marked stack for deletion")
 	return stackMarkedForDelete, nil
 }
 
