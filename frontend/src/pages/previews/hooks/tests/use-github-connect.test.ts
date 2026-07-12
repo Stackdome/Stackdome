@@ -13,6 +13,11 @@ vi.mock("@/helpers/common", () => ({
 
 import { createGitHubAppManifest, listInstallations, listGitIntegrations } from "@/api/git-integrations";
 import { GITHUB_APP_INSTALLED_MESSAGE } from "@/hooks/use-github-setup-landing";
+import {
+  GIT_INTEGRATION_TYPE_GITHUB_APP,
+  STATUS_INSTALLED,
+  STATUS_PENDING_INSTALL,
+} from "@/pages/git-integrations/lib/derive-row";
 import { useGithubConnect } from "../use-github-connect";
 
 const flow = {
@@ -29,7 +34,7 @@ describe("useGithubConnect", () => {
     openSpy = vi.spyOn(window, "open").mockReturnValue({} as Window);
     (createGitHubAppManifest as ReturnType<typeof vi.fn>).mockResolvedValue(flow);
     (listGitIntegrations as ReturnType<typeof vi.fn>).mockResolvedValue({
-      items: [{ id: "gi1", type: "github_app", status: "pending_install" }],
+      items: [{ id: "gi1", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_PENDING_INSTALL }],
       total: 1,
     });
   });
@@ -101,7 +106,7 @@ describe("useGithubConnect", () => {
       .mockResolvedValueOnce({ items: [], total: 0 }) // during connect()
       .mockResolvedValueOnce({ items: [], total: 0 }) // poll tick 1: still absent
       .mockResolvedValue({
-        items: [{ id: "gi1", type: "github_app", status: "installed" }],
+        items: [{ id: "gi1", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED }],
         total: 1,
       });
     const { result } = renderHook(() => useGithubConnect());
