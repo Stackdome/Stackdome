@@ -58,7 +58,7 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
                 onBack={close}
                 onContinue={() => setPhase("configure")}
                 continueDisabled={repo == null}
-                hint={repo ? repo.fullName : "Pick a repository to continue"}
+                hint={repo ? undefined : "Pick a repository to continue"}
               />
             </div>
           )}

@@ -89,7 +89,7 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
           onBack={onBack}
           onContinue={toForm}
           continueDisabled={repo == null}
-          hint={repo ? repo.fullName : "Pick a repository to continue"}
+          hint={repo ? undefined : "Pick a repository to continue"}
         />
       </div>
     );
