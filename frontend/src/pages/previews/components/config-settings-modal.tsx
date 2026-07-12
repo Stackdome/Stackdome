@@ -141,7 +141,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
               label="Stackfile path"
               htmlFor="cs-stackfile"
               required
-              hint="Defines the full stack — services, ports, env. Fetched from the repository on every deploy."
+              hint="Defines the full stack (services, ports, env). Fetched from the repository on every deploy."
               error={fieldErrors.stackfilePath}
             >
               <Input
@@ -194,8 +194,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {config.name}?</AlertDialogTitle>
             <AlertDialogDescription>
-              Existing preview environments must be deleted first; the backend
-              rejects the delete otherwise.
+              Delete this configuration&apos;s preview environments first.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

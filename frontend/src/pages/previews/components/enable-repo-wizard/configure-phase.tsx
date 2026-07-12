@@ -118,7 +118,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
         <FieldShell
           label="Stackfile path"
           htmlFor="cfg-stackfile"
-          hint="Defines the full stack — services, ports, env. Fetched from the repository on every deploy. Checked when the first preview deploys — a wrong path shows up as a Failed environment."
+          hint="Defines the full stack (services, ports, env). Fetched from the repository on every deploy. A wrong path shows up as a Failed environment."
           error={fieldErrors.stackfilePath}
         >
           <Input

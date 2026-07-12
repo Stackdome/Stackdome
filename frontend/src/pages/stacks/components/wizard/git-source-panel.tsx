@@ -79,7 +79,7 @@ export function GitSourcePanel({ onBack, onClose }: GitSourcePanelProps) {
             <div className="mb-8 text-center">
               <h3 className="mb-2 text-2xl font-medium tracking-tight">Where does your code live?</h3>
               <p className="text-sm text-muted-foreground">
-                Pick a repository — the stack builds straight from it.
+                Pick a repository. The stack builds straight from it.
               </p>
             </div>
             <GitSourcePicker value={repo} onChange={setRepo} />

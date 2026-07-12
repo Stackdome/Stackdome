@@ -291,8 +291,8 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
           {selected?.type === GIT_INTEGRATION_TYPE_CREDENTIALS && (
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">
-                Repository listing isn&apos;t available for token connections — paste the
-                repository URL on {selected.host}. Clones use the stored credentials.
+                Repository listing isn&apos;t available for token connections. Paste the
+                repository URL on {selected.host}; clones use the stored credentials.
               </p>
               <Input
                 placeholder={`https://${selected.host}/group/project`}

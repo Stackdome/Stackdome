@@ -257,8 +257,8 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   </span>
                   <span className="text-xs text-muted-foreground">
                     {hasGithubApp
-                      ? "Already connected — manage installations from the integration card."
-                      : "Fine-grained access you manage on GitHub. Webhooks keep previews in sync — no tokens to rotate."}
+                      ? "Already connected. Manage installations from the integration card."
+                      : "Fine-grained access you manage on GitHub. Webhooks keep previews in sync. No tokens to rotate."}
                   </span>
                 </button>
                 <button
@@ -296,7 +296,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
               <div className="space-y-1">
                 <h3 className="text-sm font-medium">Installing the GitHub App</h3>
                 <p className="text-xs text-muted-foreground">
-                  Finish the installation in the GitHub popup — we&apos;ll pick it up here.
+                  Finish the installation in the GitHub popup. We&apos;ll pick it up here.
                 </p>
               </div>
 

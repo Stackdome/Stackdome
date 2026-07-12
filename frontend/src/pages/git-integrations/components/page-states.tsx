@@ -9,7 +9,7 @@ export function IntegrationsErrorState({ message, onRetry }: { message: string; 
         <TriangleAlert className="h-5 w-5" />
       </span>
       <h3 className="text-sm font-semibold text-foreground">Couldn&apos;t load integrations</h3>
-      <p className="font-mono text-[11.5px] text-fg-muted">Error: {message}</p>
+      <p className="font-mono text-[11.5px] text-fg-muted">{message}</p>
       <Button variant="outline" size="sm" onClick={onRetry}>
         <RefreshCw className="h-3.5 w-3.5" />
         Retry

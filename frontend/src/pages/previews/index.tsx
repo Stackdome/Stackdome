@@ -59,7 +59,7 @@ export default function PreviewsPage() {
       <PageHeader
         eyebrow="Platform"
         title="Previews"
-        subtitle="Repositories configured for preview environments — every pull request can get its own temporary stack."
+        subtitle="Repositories configured for preview environments. Every pull request can get its own temporary stack."
         actions={
           canWriteAnyTeam && configs.length > 0 ? (
             <Button onClick={() => setWizardOpen(true)}>
@@ -85,7 +85,7 @@ export default function PreviewsPage() {
         <EmptyState
           icon={<GitPullRequest className="h-8 w-8" />}
           title="Preview every pull request"
-          description="Enable a repository — each pull request can get its own temporary environment with a shareable URL."
+          description="Enable a repository so each pull request gets its own temporary environment with a shareable URL."
           action={
             canWriteAnyTeam ? (
               <Button onClick={() => setWizardOpen(true)}>
