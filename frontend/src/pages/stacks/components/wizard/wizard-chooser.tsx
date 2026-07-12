@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Docker whale as a monochrome glyph (fill=currentColor) so it matches the
- * muted-foreground color of the lucide tiles around it.
+ * tile color of the lucide icons around it.
  */
 function DockerGlyph({ className }: { className?: string }) {
   return (
@@ -108,7 +108,7 @@ export function WizardChooser({
                   : "hover:border-primary",
               )}
             >
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded border border-brand-border bg-brand-bg text-brand">
                 {a.glyph ? (
                   <a.glyph className="h-[18px] w-[18px]" />
                 ) : (
