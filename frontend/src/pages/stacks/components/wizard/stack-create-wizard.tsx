@@ -9,9 +9,10 @@ import { WizardChooser } from "./wizard-chooser";
 import { BlockComposer } from "./block-composer";
 import { TemplatesBrowserPanel } from "./templates-browser-panel";
 import { DockerComposeImportPanel } from "./docker-compose-import-panel";
+import { GitSourcePanel } from "./git-source-panel";
 import type { Template } from "@/data/templates/types";
 
-type Phase = "chooser" | "composer" | "template" | "compose";
+type Phase = "chooser" | "composer" | "template" | "compose" | "git";
 
 interface StackCreateWizardProps {
   open: boolean;
@@ -75,6 +76,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
                   navigate("/stacks/new");
                   close();
                 }}
+                onPickGit={() => setPhase("git")}
               />
             </div>
           )}
@@ -91,6 +93,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
               onBack={backToChooser}
             />
           )}
+          {phase === "git" && <GitSourcePanel onBack={backToChooser} onClose={close} />}
         </div>
       </DialogContent>
     </Dialog>

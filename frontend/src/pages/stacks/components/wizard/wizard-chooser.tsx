@@ -27,6 +27,7 @@ interface WizardChooserProps {
   onPickTemplate: () => void;
   onPickCompose: () => void;
   onPickBlank: () => void;
+  onPickGit: () => void;
 }
 
 interface AltStart {
@@ -45,6 +46,7 @@ export function WizardChooser({
   onPickTemplate,
   onPickCompose,
   onPickBlank,
+  onPickGit,
 }: WizardChooserProps) {
   const alts: AltStart[] = [
     {
@@ -73,10 +75,9 @@ export function WizardChooser({
     },
     {
       icon: GitBranch,
-      label: "GitHub repo",
-      desc: "Auto-detect build & start.",
-      disabled: true,
-      soon: true,
+      label: "From git provider",
+      desc: "Deploy straight from a repository.",
+      onClick: onPickGit,
     },
   ];
 
