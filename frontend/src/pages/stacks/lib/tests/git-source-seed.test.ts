@@ -31,6 +31,7 @@ describe("buildGitSeed", () => {
         repo_url: "https://github.com/acme/My_Web.App.git",
         dockerfile_path: "Dockerfile",
         build_context: ".",
+        integration_id: "int-app",
       },
     });
     expect(r.ports).toEqual([
@@ -49,5 +50,18 @@ describe("buildGitSeed", () => {
       port: 8080,
       exposePublic: false,
     }).resources[0].name).toBe("my-web-app");
+  });
+
+  it("omits integration_id when the repo has no integration (public URL)", () => {
+    const publicRepo = { ...repo, integrationId: null };
+    const seed = buildGitSeed(publicRepo, {
+      serviceName: "my-web-app",
+      branch: "main",
+      dockerfilePath: "Dockerfile",
+      buildContext: ".",
+      port: 3000,
+      exposePublic: true,
+    });
+    expect(seed.resources[0].source.git.integration_id).toBeUndefined();
   });
 });

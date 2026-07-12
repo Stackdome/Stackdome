@@ -75,6 +75,9 @@ describe("GitSourcePanel", () => {
                 sourceType: "git",
                 gitRevisionValue: "develop",
                 ports: [expect.objectContaining({ number: 3000 })],
+                source: expect.objectContaining({
+                  git: expect.objectContaining({ integration_id: "int-app" }),
+                }),
               }),
             ],
           }),

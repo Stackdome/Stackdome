@@ -56,6 +56,7 @@ export function buildGitSeed(repo: PickedRepo, form: GitServiceForm) {
             repo_url: repo.cloneUrl,
             dockerfile_path: form.dockerfilePath.trim() || "Dockerfile",
             build_context: form.buildContext.trim() || ".",
+            ...(repo.integrationId ? { integration_id: repo.integrationId } : {}),
           },
         },
       },
