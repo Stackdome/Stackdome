@@ -10,7 +10,6 @@ import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session
 import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
 import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
-import { PreviewEnvBanner } from "@/pages/stacks/components/detail/preview-env-banner";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
 import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
 import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
@@ -881,11 +880,6 @@ export default function StackDetailPage() {
         nameError={nameError}
         statusState={effectiveStack?.status?.state}
         subtitle={subtitleText}
-        notice={
-          !isDraft && effectiveStack ? (
-            <PreviewEnvBanner labels={effectiveStack.labels} teamId={effectiveStack.team_id} />
-          ) : undefined
-        }
         activeTab={activeTab}
         onTabChange={setActiveTab}
         isActive={session.isActive}
