@@ -150,7 +150,13 @@ describe("ConfigSettingsModal", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /delete configuration/i }));
     expect(await screen.findByText(/delete webapp\?/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    // fireEvent (not userEvent) for this click: while the confirm AlertDialog
+    // is open, the settings Dialog's own focus trap is still mounted too.
+    // userEvent's pointer/focus simulation recurses into a stack overflow
+    // when jsdom's synchronous focus events bounce between two simultaneously
+    // -mounted Radix focus traps. fireEvent dispatches a plain click without
+    // that focus machinery, sidestepping the jsdom-only pathological path.
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => expect(deletePreviewConfig).toHaveBeenCalledWith("org1", "default", "c1"));
     expect(onDeleted).toHaveBeenCalledOnce();
@@ -169,7 +175,14 @@ describe("ConfigSettingsModal", () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /delete configuration/i }));
     expect(await screen.findByText(/delete webapp\?/i)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    // fireEvent (not userEvent) for this click: on rejection both the settings
+    // Dialog and the confirm AlertDialog stay open (by design), and userEvent's
+    // pointer/focus simulation recurses into a stack overflow when jsdom's
+    // synchronous focus events bounce between two simultaneously-open Radix
+    // focus traps. fireEvent dispatches a plain click without that focus
+    // machinery, sidestepping the jsdom-only pathological path while still
+    // exercising the real click handler and assertions below.
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 
     await waitFor(() => expect(toastMock).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Delete failed", variant: "destructive" }),
