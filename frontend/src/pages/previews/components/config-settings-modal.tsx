@@ -94,7 +94,18 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-md">
+        {/* The delete confirm portals as a sibling, so its clicks land "outside"
+            this Dialog's content — without these guards Radix dismisses the
+            settings modal underneath the confirm. */}
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => {
+            if (deleteConfirmOpen) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (deleteConfirmOpen) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle>Repository settings</DialogTitle>
           </DialogHeader>
