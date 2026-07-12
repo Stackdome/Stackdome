@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FieldShell } from "@/components/branded";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -18,6 +18,7 @@ import {
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { configSettingsSchema, type ConfigSettingsValues } from "@/pages/previews/lib/form-schemas";
 
 interface ConfigSettingsModalProps {
   open: boolean;
@@ -35,6 +36,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
   const [stackfilePath, setStackfilePath] = useState("");
   const [maxActive, setMaxActive] = useState(10);
   const [saving, setSaving] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ConfigSettingsValues, string>>>({});
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -45,9 +47,21 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
     setBaseBranch(config.git_repository?.base_branch ?? "");
     setStackfilePath(config.stackfile_path ?? "stackfile.yaml");
     setMaxActive(config.max_active_previews ?? 10);
+    setFieldErrors({});
   }, [open, config]);
 
   const save = async () => {
+    const parsed = configSettingsSchema.safeParse({ baseBranch, stackfilePath, maxActive });
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      setFieldErrors({
+        baseBranch: flat.baseBranch?.[0],
+        stackfilePath: flat.stackfilePath?.[0],
+        maxActive: flat.maxActive?.[0],
+      });
+      return;
+    }
+    setFieldErrors({});
     const orgId = getCurrentOrganizationId();
     if (!orgId || !defaultTeamName || !config.id) return;
     setSaving(true);
@@ -56,10 +70,10 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
       const updated = await updatePreviewConfig(orgId, defaultTeamName, config.id, {
         git_repository: {
           repo_url: config.git_repository?.repo_url ?? "",
-          base_branch: baseBranch,
+          base_branch: parsed.data.baseBranch,
         },
-        stackfile_path: stackfilePath,
-        max_active_previews: maxActive,
+        stackfile_path: parsed.data.stackfilePath,
+        max_active_previews: parsed.data.maxActive,
         ...(config.description != null ? { description: config.description } : {}),
         ...(config.labels != null ? { labels: config.labels } : {}),
         ...(config.annotations != null ? { annotations: config.annotations } : {}),
@@ -110,20 +124,35 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
             <DialogTitle>Repository settings</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-branch">Base branch</Label>
-              <Input id="cs-branch" value={baseBranch} onChange={(e) => setBaseBranch(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-stackfile">Stackfile path</Label>
-              <Input id="cs-stackfile" value={stackfilePath} onChange={(e) => setStackfilePath(e.target.value)} />
-              <p className="text-xs text-muted-foreground">
-                Defines the full stack — services, ports, env. Fetched from the
-                repository on every deploy.
-              </p>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-max">Max active previews</Label>
+            <FieldShell label="Base branch" htmlFor="cs-branch" required error={fieldErrors.baseBranch}>
+              <Input
+                id="cs-branch"
+                value={baseBranch}
+                onChange={(e) => {
+                  setBaseBranch(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, baseBranch: undefined }));
+                }}
+                aria-invalid={!!fieldErrors.baseBranch}
+              />
+            </FieldShell>
+            <FieldShell
+              label="Stackfile path"
+              htmlFor="cs-stackfile"
+              required
+              hint="Defines the full stack — services, ports, env. Fetched from the repository on every deploy."
+              error={fieldErrors.stackfilePath}
+            >
+              <Input
+                id="cs-stackfile"
+                value={stackfilePath}
+                onChange={(e) => {
+                  setStackfilePath(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, stackfilePath: undefined }));
+                }}
+                aria-invalid={!!fieldErrors.stackfilePath}
+              />
+            </FieldShell>
+            <FieldShell label="Max active previews" htmlFor="cs-max" required error={fieldErrors.maxActive}>
               <Input
                 id="cs-max"
                 type="number"
@@ -132,10 +161,11 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
                 onChange={(e) => {
                   const n = e.target.valueAsNumber;
                   setMaxActive(Number.isNaN(n) ? 1 : Math.max(1, Math.floor(n)));
+                  setFieldErrors((prev) => ({ ...prev, maxActive: undefined }));
                 }}
                 className="w-28"
               />
-            </div>
+            </FieldShell>
             <Button onClick={() => void save()} disabled={saving}>Save</Button>
           </div>
 

@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FieldShell } from "@/components/branded";
 import { Textarea } from "@/components/ui/textarea";
 import { createPreviewEnv } from "@/api/preview-envs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
@@ -13,6 +13,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
 import type { StackPreviewConfig } from "@/api/preview-configs";
 import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
+import { newPreviewEnvSchema, type NewPreviewEnvValues } from "@/pages/previews/lib/form-schemas";
 
 interface NewPreviewEnvModalProps {
   open: boolean;
@@ -29,6 +30,7 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
   const [stackfileContent, setStackfileContent] = useState("");
   const [overridesText, setOverridesText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof NewPreviewEnvValues, string>>>({});
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
@@ -37,6 +39,7 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
     setStackfileContent("");
     setOverridesText("");
     setError(null);
+    setFieldErrors({});
     setAdvanced(false);
   };
 
@@ -45,16 +48,28 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
   }, [open]);
 
   const submit = async () => {
+    const parsed = newPreviewEnvSchema.safeParse({ prNumber, branch, overridesText });
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      setFieldErrors({
+        prNumber: flat.prNumber?.[0],
+        branch: flat.branch?.[0],
+        overridesText: flat.overridesText?.[0],
+      });
+      if (flat.overridesText) setAdvanced(true);
+      return;
+    }
+    setFieldErrors({});
     const orgId = getCurrentOrganizationId();
     if (!orgId || !defaultTeamName || !config.id) return;
     setSaving(true);
     setError(null);
     try {
-      const overrides = parseImageOverrides(overridesText);
+      const overrides = parseImageOverrides(parsed.data.overridesText);
       await createPreviewEnv(orgId, defaultTeamName, {
         config_id: config.id,
-        pr_number: prNumber.trim(),
-        branch,
+        pr_number: parsed.data.prNumber,
+        branch: parsed.data.branch,
         ...(stackfileContent.trim() ? { stackfile_content: stackfileContent } : {}),
         ...(overrides ? { image_overrides: overrides } : {}),
       });
@@ -83,29 +98,37 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="env-pr">PR number</Label>
+          <FieldShell label="PR number" htmlFor="env-pr" required error={fieldErrors.prNumber}>
             <Input
               id="env-pr"
               type="number"
               min={1}
               value={prNumber}
-              onChange={(e) => setPrNumber(e.target.value)}
+              onChange={(e) => {
+                setPrNumber(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, prNumber: undefined }));
+              }}
+              aria-invalid={!!fieldErrors.prNumber}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="env-branch">Branch</Label>
+          </FieldShell>
+          <FieldShell
+            label="Branch"
+            htmlFor="env-branch"
+            required
+            hint="The environment deploys this branch's latest commit; use Sync to pick up new commits later."
+            error={fieldErrors.branch}
+          >
             <Input
               id="env-branch"
               placeholder="feat/my-change"
               value={branch}
-              onChange={(e) => setBranch(e.target.value)}
+              onChange={(e) => {
+                setBranch(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, branch: undefined }));
+              }}
+              aria-invalid={!!fieldErrors.branch}
             />
-            <p className="text-xs text-muted-foreground">
-              The environment deploys this branch&apos;s latest commit; use Sync
-              to pick up new commits later.
-            </p>
-          </div>
+          </FieldShell>
 
           <Button
             type="button"
@@ -120,8 +143,7 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
 
           {advanced && (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="env-stackfile">Stackfile content (optional)</Label>
+              <FieldShell label="Stackfile content (optional)" htmlFor="env-stackfile">
                 <Textarea
                   id="env-stackfile"
                   rows={6}
@@ -130,18 +152,24 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
                   onChange={(e) => setStackfileContent(e.target.value)}
                   className="font-mono text-xs"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="env-overrides">Image overrides (optional)</Label>
+              </FieldShell>
+              <FieldShell
+                label="Image overrides (optional)"
+                htmlFor="env-overrides"
+                error={fieldErrors.overridesText}
+              >
                 <Textarea
                   id="env-overrides"
                   rows={3}
                   placeholder={"resource=registry/image:tag\none per line"}
                   value={overridesText}
-                  onChange={(e) => setOverridesText(e.target.value)}
+                  onChange={(e) => {
+                    setOverridesText(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, overridesText: undefined }));
+                  }}
                   className="font-mono text-xs"
                 />
-              </div>
+              </FieldShell>
             </div>
           )}
 
@@ -152,10 +180,7 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
-          <Button
-            onClick={() => void submit()}
-            disabled={saving || prNumber.trim() === "" || branch.trim() === ""}
-          >
+          <Button onClick={() => void submit()} disabled={saving}>
             Create environment
           </Button>
         </DialogFooter>

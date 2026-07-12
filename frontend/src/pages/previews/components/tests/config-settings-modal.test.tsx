@@ -87,6 +87,34 @@ describe("ConfigSettingsModal", () => {
     expect(input).toHaveValue(1);
   });
 
+  it("requires a non-empty stackfile path and blocks the save", async () => {
+    render(
+      <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+    );
+    const input = screen.getByLabelText(/stackfile path/i);
+    await userEvent.clear(input);
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    expect(await screen.findByText(/stackfile path is required/i)).toBeInTheDocument();
+    expect(updatePreviewConfig).not.toHaveBeenCalled();
+
+    const label = screen.getByText(/^stackfile path$/i).closest("label");
+    expect(label?.querySelector('[aria-hidden]')).toHaveTextContent("*");
+  });
+
+  it("clears the stackfile path error once the field is edited", async () => {
+    render(
+      <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+    );
+    const input = screen.getByLabelText(/stackfile path/i);
+    await userEvent.clear(input);
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    expect(await screen.findByText(/stackfile path is required/i)).toBeInTheDocument();
+
+    await userEvent.type(input, "stackfile.yaml");
+    expect(screen.queryByText(/stackfile path is required/i)).not.toBeInTheDocument();
+  });
+
   it("saves with the full-replace PUT echo of repo_url/description/labels/annotations", async () => {
     const withExtras: StackPreviewConfig = {
       ...config,

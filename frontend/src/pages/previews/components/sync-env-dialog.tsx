@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FieldShell } from "@/components/branded";
 import { Textarea } from "@/components/ui/textarea";
 import { syncPreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
 import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
+import { syncEnvSchema, type SyncEnvValues } from "@/pages/previews/lib/form-schemas";
 
 interface SyncEnvDialogProps {
   env: PreviewStack | null;
@@ -28,6 +30,7 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
   const [stackfileContent, setStackfileContent] = useState("");
   const [overridesText, setOverridesText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof SyncEnvValues, string>>>({});
   const [saving, setSaving] = useState(false);
 
   const reset = () => {
@@ -37,6 +40,7 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
     setStackfileContent("");
     setOverridesText("");
     setError(null);
+    setFieldErrors({});
   };
 
   const envId = env?.id;
@@ -46,14 +50,22 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
   }, [envId]);
 
   const submit = async () => {
+    const parsed = syncEnvSchema.safeParse({ commit, overridesText });
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      setFieldErrors({ commit: flat.commit?.[0], overridesText: flat.overridesText?.[0] });
+      if (flat.overridesText) setAdvanced(true);
+      return;
+    }
+    setFieldErrors({});
     const orgId = getCurrentOrganizationId();
     if (!orgId || !defaultTeamName || !env?.id) return;
     setSaving(true);
     setError(null);
     try {
-      const overrides = parseImageOverrides(overridesText);
+      const overrides = parseImageOverrides(parsed.data.overridesText);
       await syncPreviewEnv(orgId, defaultTeamName, env.id, {
-        ...(commit.trim() ? { commit: commit.trim() } : {}),
+        ...(parsed.data.commit ? { commit: parsed.data.commit } : {}),
         ...(force ? { force_sync: true } : {}),
         ...(stackfileContent.trim() ? { stackfile_content: stackfileContent } : {}),
         ...(overrides ? { image_overrides: overrides } : {}),
@@ -79,19 +91,24 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="sync-commit">Pin to a specific commit (optional)</Label>
+          <FieldShell
+            label="Pin to a specific commit (optional)"
+            htmlFor="sync-commit"
+            hint="Leave empty to use the branch's latest commit."
+            error={fieldErrors.commit}
+          >
             <Input
               id="sync-commit"
               placeholder="full or short SHA"
               value={commit}
-              onChange={(e) => setCommit(e.target.value)}
+              onChange={(e) => {
+                setCommit(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, commit: undefined }));
+              }}
               className="font-mono text-xs"
+              aria-invalid={!!fieldErrors.commit}
             />
-            <p className="text-xs text-muted-foreground">
-              Leave empty to use the branch&apos;s latest commit.
-            </p>
-          </div>
+          </FieldShell>
           {/*
             "Force sync" uses a Switch rather than a Checkbox: @/components/ui/checkbox
             does not exist in this codebase and no @radix-ui/react-checkbox dependency is
@@ -116,8 +133,7 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
 
           {advanced && (
             <div className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="sync-stackfile">Stackfile content (optional)</Label>
+              <FieldShell label="Stackfile content (optional)" htmlFor="sync-stackfile">
                 <Textarea
                   id="sync-stackfile"
                   rows={6}
@@ -126,18 +142,24 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
                   onChange={(e) => setStackfileContent(e.target.value)}
                   className="font-mono text-xs"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="sync-overrides">Image overrides (optional)</Label>
+              </FieldShell>
+              <FieldShell
+                label="Image overrides (optional)"
+                htmlFor="sync-overrides"
+                error={fieldErrors.overridesText}
+              >
                 <Textarea
                   id="sync-overrides"
                   rows={3}
                   placeholder={"resource=registry/image:tag\none per line"}
                   value={overridesText}
-                  onChange={(e) => setOverridesText(e.target.value)}
+                  onChange={(e) => {
+                    setOverridesText(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, overridesText: undefined }));
+                  }}
                   className="font-mono text-xs"
                 />
-              </div>
+              </FieldShell>
             </div>
           )}
 

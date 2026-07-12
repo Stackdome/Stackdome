@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FieldShell } from "@/components/branded";
 import { BranchField } from "@/components/git-source-picker/branch-field";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { configurePhaseSchema, type ConfigurePhaseValues } from "@/pages/previews/lib/form-schemas";
 import type { PickedRepo } from "./enable-repo-wizard";
 
 interface ConfigurePhaseProps {
@@ -22,9 +23,22 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
   const [stackfilePath, setStackfilePath] = useState("stackfile.yaml");
   const [maxActive, setMaxActive] = useState(10);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ConfigurePhaseValues, string>>>({});
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
+    const parsed = configurePhaseSchema.safeParse({ name, baseBranch, stackfilePath, maxActive });
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      setFieldErrors({
+        name: flat.name?.[0],
+        baseBranch: flat.baseBranch?.[0],
+        stackfilePath: flat.stackfilePath?.[0],
+        maxActive: flat.maxActive?.[0],
+      });
+      return;
+    }
+    setFieldErrors({});
     const orgId = getCurrentOrganizationId();
     if (!orgId || !defaultTeamName) {
       setError("No organization or default team available.");
@@ -34,10 +48,10 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
     setError(null);
     try {
       const created = await createPreviewConfig(orgId, defaultTeamName, {
-        name,
-        git_repository: { repo_url: repo.cloneUrl, base_branch: baseBranch },
-        stackfile_path: stackfilePath,
-        max_active_previews: maxActive,
+        name: parsed.data.name,
+        git_repository: { repo_url: repo.cloneUrl, base_branch: parsed.data.baseBranch },
+        stackfile_path: parsed.data.stackfilePath ?? stackfilePath,
+        max_active_previews: parsed.data.maxActive,
       });
       onCreated(created.id ?? "");
     } catch (e) {
@@ -62,40 +76,57 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
           </p>
         </div>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cfg-name">Name</Label>
-          <Input id="cfg-name" value={name} onChange={(e) => setName(e.target.value)} />
-          <p className="text-xs text-muted-foreground">Cannot be changed later.</p>
-        </div>
+        <FieldShell
+          label="Name"
+          htmlFor="cfg-name"
+          required
+          hint="Cannot be changed later."
+          error={fieldErrors.name}
+        >
+          <Input
+            id="cfg-name"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, name: undefined }));
+            }}
+            aria-invalid={!!fieldErrors.name}
+          />
+        </FieldShell>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cfg-branch">Base branch</Label>
+        <FieldShell
+          label="Base branch"
+          htmlFor="cfg-branch"
+          required
+          hint="The branch pull requests target."
+          error={fieldErrors.baseBranch}
+        >
           <BranchField
             id="cfg-branch"
             value={baseBranch}
-            onChange={setBaseBranch}
+            onChange={(value) => {
+              setBaseBranch(value);
+              setFieldErrors((prev) => ({ ...prev, baseBranch: undefined }));
+            }}
             integrationId={repo.integrationId}
             repoFullName={repo.fullName}
           />
-          <p className="text-xs text-muted-foreground">The branch pull requests target.</p>
-        </div>
+        </FieldShell>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cfg-stackfile">Stackfile path</Label>
+        <FieldShell
+          label="Stackfile path"
+          htmlFor="cfg-stackfile"
+          hint="Defines the full stack — services, ports, env. Fetched from the repository on every deploy. Checked when the first preview deploys — a wrong path shows up as a Failed environment."
+          error={fieldErrors.stackfilePath}
+        >
           <Input
             id="cfg-stackfile"
             value={stackfilePath}
             onChange={(e) => setStackfilePath(e.target.value)}
           />
-          <p className="text-xs text-muted-foreground">
-            Defines the full stack — services, ports, env. Fetched from the
-            repository on every deploy. Checked when the first preview
-            deploys — a wrong path shows up as a Failed environment.
-          </p>
-        </div>
+        </FieldShell>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="cfg-max">Max active previews</Label>
+        <FieldShell label="Max active previews" htmlFor="cfg-max" required error={fieldErrors.maxActive}>
           <Input
             id="cfg-max"
             type="number"
@@ -104,10 +135,11 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
             onChange={(e) => {
               const n = e.target.valueAsNumber;
               setMaxActive(Number.isNaN(n) ? 1 : Math.max(1, Math.floor(n)));
+              setFieldErrors((prev) => ({ ...prev, maxActive: undefined }));
             }}
             className="w-28"
           />
-        </div>
+        </FieldShell>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
@@ -115,7 +147,6 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
         onBack={onBack}
         onContinue={() => void submit()}
         continueLabel="Enable previews"
-        continueDisabled={name.trim() === "" || baseBranch.trim() === ""}
         loading={saving}
       />
     </div>

@@ -91,6 +91,41 @@ describe("SyncEnvDialog", () => {
     });
   });
 
+  it("has no required-field asterisks — every field is optional", () => {
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+    const commitLabel = screen.getByText(/pin to a specific commit/i).closest("label");
+    expect(commitLabel?.querySelector('[aria-hidden]')).toBeNull();
+  });
+
+  it("rejects a malformed commit SHA and does not sync", async () => {
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/pin to a specific commit/i), "not-hex!");
+    await userEvent.click(screen.getByRole("button", { name: /^sync$/i }));
+
+    expect(await screen.findByText(/valid commit sha/i)).toBeInTheDocument();
+    expect(syncPreviewEnv).not.toHaveBeenCalled();
+  });
+
+  it("clears the commit error once the field is edited", async () => {
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+    await userEvent.type(screen.getByLabelText(/pin to a specific commit/i), "zzz");
+    await userEvent.click(screen.getByRole("button", { name: /^sync$/i }));
+    expect(await screen.findByText(/valid commit sha/i)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/pin to a specific commit/i), "1");
+    expect(screen.queryByText(/valid commit sha/i)).not.toBeInTheDocument();
+  });
+
+  it("rejects an invalid image override line and expands Advanced to show it", async () => {
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /advanced/i }));
+    await userEvent.type(screen.getByLabelText(/image overrides/i), "not-a-pair");
+    await userEvent.click(screen.getByRole("button", { name: /^sync$/i }));
+
+    expect(await screen.findByText(/resource=image/i)).toBeInTheDocument();
+    expect(syncPreviewEnv).not.toHaveBeenCalled();
+  });
+
   it("omits image_overrides from the payload when the field is empty", async () => {
     (syncPreviewEnv as ReturnType<typeof vi.fn>).mockResolvedValue({});
     render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);

@@ -87,6 +87,40 @@ describe("NewPreviewEnvModal", () => {
     expect(screen.getByLabelText(/branch/i)).toHaveValue("");
   });
 
+  it("marks PR number and branch as required and rejects non-digit PR numbers", async () => {
+    render(<NewPreviewEnvModal open onOpenChange={() => {}} config={config} onCreated={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /create environment/i }));
+    expect(await screen.findByText(/pr number is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/branch is required/i)).toBeInTheDocument();
+    expect(createPreviewEnv).not.toHaveBeenCalled();
+
+    const prLabel = screen.getByText(/^pr number$/i).closest("label");
+    expect(prLabel?.querySelector('[aria-hidden]')).toHaveTextContent("*");
+  });
+
+  it("clears the PR number error once the field is edited", async () => {
+    render(<NewPreviewEnvModal open onOpenChange={() => {}} config={config} onCreated={() => {}} />);
+    await userEvent.click(screen.getByRole("button", { name: /create environment/i }));
+    expect(await screen.findByText(/pr number is required/i)).toBeInTheDocument();
+
+    await userEvent.type(screen.getByLabelText(/pr number/i), "42");
+    expect(screen.queryByText(/pr number is required/i)).not.toBeInTheDocument();
+  });
+
+  it("rejects an invalid image override line and expands Advanced to show it", async () => {
+    render(<NewPreviewEnvModal open onOpenChange={() => {}} config={config} onCreated={() => {}} />);
+
+    await userEvent.type(screen.getByLabelText(/pr number/i), "42");
+    await userEvent.type(screen.getByLabelText(/branch/i), "feat/login");
+    await userEvent.click(screen.getByRole("button", { name: /advanced/i }));
+    await userEvent.type(screen.getByLabelText(/image overrides/i), "not-a-pair");
+    await userEvent.click(screen.getByRole("button", { name: /create environment/i }));
+
+    expect(await screen.findByText(/resource=image/i)).toBeInTheDocument();
+    expect(createPreviewEnv).not.toHaveBeenCalled();
+  });
+
   it("shows inline conflict message on 409", async () => {
     const err = new AxiosError("conflict");
     Object.defineProperty(err, "response", { value: { status: 409, data: { reason: "exists" } } });
