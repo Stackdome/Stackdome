@@ -103,6 +103,11 @@ func (s *secretService) Create(ctx context.Context, secret *models.Secret) (*mod
 		return nil, err
 	}
 
+	s.logger.WithFields(map[string]interface{}{
+		"secret_id":  createdSecret.ID,
+		"project_id": createdSecret.ProjectID,
+		"key_count":  len(createdSecret.Keys),
+	}).Info(ctx, "created secret")
 	return createdSecret, nil
 }
 
@@ -182,6 +187,7 @@ func (s *secretService) Update(ctx context.Context, id string, secret *models.Se
 		return nil, err
 	}
 
+	s.logger.WithField("secret_id", updatedSecret.ID).Info(ctx, "updated secret")
 	return updatedSecret, nil
 }
 
@@ -206,6 +212,7 @@ func (s *secretService) Delete(ctx context.Context, ID string) *errors.ServiceEr
 		return err
 	}
 
+	s.logger.WithField("secret_id", ID).Info(ctx, "deleted secret")
 	return nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cnpgv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
@@ -55,7 +56,7 @@ type Controller interface {
 	Name() string
 }
 
-type ControllerFn func() Controller
+type ControllerFn func(clusterID string) Controller
 
 // ClusterControl represents a control structure for a single cluster
 type ClusterControl struct {
@@ -78,6 +79,7 @@ type ClusterManagerImpl struct {
 	supervisorCancelFn    context.CancelFunc
 	supervisorErr         error
 	isRunning             bool
+	log                   logger.Logger
 }
 
 func (cc *ClusterControl) Serve(ctx context.Context) error {
@@ -137,6 +139,7 @@ type ClusterManagerConfig struct {
 	LeadershipFlag        *leadership.Flag
 	ControllersToRegister []ControllerFn
 	CredentialDecryptor   CredentialDecryptor
+	Logger                logger.Logger
 }
 
 // NewClusterManager creates a new ClusterManager instance
@@ -147,6 +150,7 @@ func NewClusterManager(config ClusterManagerConfig) ClusterManager {
 		credentialDecryptor:   config.CredentialDecryptor,
 		registeredClusters:    make(map[string]*ClusterControl),
 		supervisor:            suture.NewSimple("cluster-manager"),
+		log:                   config.Logger,
 	}
 }
 
@@ -180,7 +184,7 @@ func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
 
 	controllers := make([]Controller, len(cm.controllersToRegister))
 	for i, fn := range cm.controllersToRegister {
-		controllers[i] = fn()
+		controllers[i] = fn(cluster.ID)
 	}
 
 	clusterCtrl := &ClusterControl{
@@ -194,6 +198,11 @@ func (cm *ClusterManagerImpl) RegisterCluster(cluster *models.Cluster) error {
 	serviceID := cm.supervisor.Add(clusterCtrl)
 	clusterCtrl.serviceID = serviceID
 	cm.registeredClusters[cluster.ID] = clusterCtrl
+	cm.log.WithFields(map[string]interface{}{
+		logger.FieldClusterID: cluster.ID,
+		"cluster_name":        cluster.Name,
+		"controllers":         len(controllers),
+	}).Infof("registered cluster")
 	return nil
 }
 
@@ -264,6 +273,7 @@ func (cm *ClusterManagerImpl) UnregisterCluster(clusterID string) error {
 		return fmt.Errorf("failed to remove cluster %s from supervisor: %w", clusterID, err)
 	}
 	delete(cm.registeredClusters, clusterID)
+	cm.log.WithField(logger.FieldClusterID, clusterID).Infof("unregistered cluster")
 	return nil
 }
 
@@ -273,10 +283,12 @@ func (cm *ClusterManagerImpl) Start(ctx context.Context) {
 }
 
 func (cm *ClusterManagerImpl) run(ctx context.Context) {
+	cm.log.Info(ctx, "waiting for leadership before starting cluster supervisor")
 	if err := wait.PollUntilContextCancel(ctx, 30*time.Second, true, func(ctx context.Context) (bool, error) {
 		return cm.leadershipFlag.Raised(), nil
 	}); err != nil {
 		cm.supervisorErr = fmt.Errorf("leadership poll failed: %w", err)
+		cm.log.Error(ctx, "leadership poll failed, cluster supervisor not started: %v", err)
 		return
 	}
 
@@ -289,13 +301,16 @@ func (cm *ClusterManagerImpl) run(ctx context.Context) {
 		<-ctx.Done()
 		cancelFn()
 	}()
+	cm.log.Info(ctx, "leadership acquired, cluster supervisor serving")
 	if err := cm.supervisor.Serve(childCtx); err != nil {
 		cm.supervisorErr = err
+		cm.log.Error(ctx, "cluster supervisor terminated with error: %v", err)
 	}
 }
 
 // Stop halts the cluster manager operations
 func (cm *ClusterManagerImpl) Stop(ctx context.Context) error {
+	cm.log.Info(ctx, "stopping cluster manager")
 	if cm.supervisorCancelFn != nil {
 		cm.supervisorCancelFn()
 	}

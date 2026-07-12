@@ -55,7 +55,7 @@ func (r *objectStoreDependencyReconciler) Reconcile(ctx context.Context, addon *
 		}
 	}
 
-	r.logger.Infof("Deploying ObjectStore '%s' to namespace '%s'", objectStore.Name, addon.Namespace)
+	r.logger.Info(ctx, "Deploying ObjectStore '%s' to namespace '%s'", objectStore.Name, addon.Namespace)
 
 	if err := r.ensureCredentialSecret(ctx, clusterClient, objectStore, addon.Namespace); err != nil {
 		return resultNil, fmt.Errorf("failed to ensure credential secret: %w", err)

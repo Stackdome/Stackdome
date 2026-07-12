@@ -55,7 +55,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		r.logger.Infof("preview %s is ready", preview.ID)
+		r.logger.Info(ctx, "preview %s is ready", preview.ID)
 		return resultStop, nil
 
 	case models.ReleaseStateSuperseded:
@@ -72,7 +72,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		r.logger.Infof("preview %s failed: %s", preview.ID, release.Message)
+		r.logger.Info(ctx, "preview %s failed: %s", preview.ID, release.Message)
 		return resultStop, nil
 
 	case models.ReleaseStateCancelled:
@@ -84,7 +84,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		r.logger.Infof("preview %s cancelled", preview.ID)
+		r.logger.Info(ctx, "preview %s cancelled", preview.ID)
 		return resultStop, nil
 
 	default:

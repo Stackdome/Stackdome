@@ -48,13 +48,13 @@ func NewWorkspaceUserClusterResourceService(spec WorkspaceUserClusterResourceSer
 func (s *workspaceUserClusterResourceService) CreateWorkspaceUserInCluster(ctx context.Context, workspaceUser *models.WorkspaceUser) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, workspaceUser.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
 	user, err := s.userService.Get(ctx, workspaceUser.UserID)
 	if err != nil {
-		s.logger.Errorf("failed to get user: %v", err)
+		s.logger.Error(ctx, "failed to get user: %v", err)
 		return newError("failed to get user", err)
 	}
 
@@ -70,7 +70,7 @@ func (s *workspaceUserClusterResourceService) CreateWorkspaceUserInCluster(ctx c
 	// Create the user in the cluster
 	createErr := client.Create(ctx, desiredObject)
 	if createErr != nil {
-		s.logger.Errorf("failed to create workspaceuser in cluster: %v", err)
+		s.logger.Error(ctx, "failed to create workspaceuser in cluster: %v", err)
 		return newError("failed to create workspaceuser in cluster", createErr)
 	}
 
@@ -81,12 +81,12 @@ func (s *workspaceUserClusterResourceService) CreateWorkspaceUserInCluster(ctx c
 func (s *workspaceUserClusterResourceService) DeleteWorkspaceUserInCluster(ctx context.Context, workspaceUser *models.WorkspaceUser) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, workspaceUser.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 	user, err := s.userService.Get(ctx, workspaceUser.UserID)
 	if err != nil {
-		s.logger.Errorf("failed to get user: %v", err)
+		s.logger.Error(ctx, "failed to get user: %v", err)
 		return newError("failed to get user from db", err)
 	}
 
@@ -104,7 +104,7 @@ func (s *workspaceUserClusterResourceService) DeleteWorkspaceUserInCluster(ctx c
 	// Delete the user in the cluster
 	deleteErr := client.Delete(ctx, desiredObject)
 	if deleteErr != nil {
-		s.logger.Errorf("failed to delete workspaceuser in cluster: %v", deleteErr)
+		s.logger.Error(ctx, "failed to delete workspaceuser in cluster: %v", deleteErr)
 		return newError("failed to delete workspaceuser in cluster", deleteErr)
 	}
 
@@ -115,13 +115,13 @@ func (s *workspaceUserClusterResourceService) DeleteWorkspaceUserInCluster(ctx c
 func (s *workspaceUserClusterResourceService) UpdateWorkspaceUserInCluster(ctx context.Context, workspaceUser *models.WorkspaceUser) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, workspaceUser.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
 	user, err := s.userService.Get(ctx, workspaceUser.UserID)
 	if err != nil {
-		s.logger.Errorf("failed to get user: %v", err)
+		s.logger.Error(ctx, "failed to get user: %v", err)
 		return newError("failed to get user from db", err)
 	}
 
@@ -143,7 +143,7 @@ func (s *workspaceUserClusterResourceService) UpdateWorkspaceUserInCluster(ctx c
 	desiredObject.ResourceVersion = existingObject.ResourceVersion
 	updateErr := client.Update(ctx, desiredObject)
 	if updateErr != nil {
-		s.logger.Errorf("failed to update workspaceuser in cluster: %v", err)
+		s.logger.Error(ctx, "failed to update workspaceuser in cluster: %v", err)
 		return newError("failed to update workspaceuser in cluster", updateErr)
 	}
 

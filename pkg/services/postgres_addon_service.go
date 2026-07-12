@@ -254,6 +254,11 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", createdPostgresAddon.Name, err.Error())
 	}
 
+	s.logger.WithFields(map[string]interface{}{
+		"addon_id":            createdPostgresAddon.ID,
+		logger.FieldClusterID: createdPostgresAddon.ClusterID,
+		"databases":           len(createdPostgresAddon.Databases),
+	}).Info(ctx, "created postgres addon")
 	return createdPostgresAddon, nil
 }
 
@@ -334,6 +339,7 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", updatedPostgresAddon.Name, err.Error())
 	}
 
+	s.logger.WithField("addon_id", updatedPostgresAddon.ID).Info(ctx, "updated postgres addon")
 	return updatedPostgresAddon, nil
 }
 
@@ -440,6 +446,7 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
 	}
 
+	s.logger.WithField("addon_id", id).Info(ctx, "marked postgres addon for deletion")
 	return postgresAddon, nil
 }
 

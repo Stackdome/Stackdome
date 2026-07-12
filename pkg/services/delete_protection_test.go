@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -27,6 +28,7 @@ func TestSecretDeleteBlockedReturns409(t *testing.T) {
 		secretStore:      secretStore,
 		referenceService: refs,
 		permissions:      permissions,
+		logger:           logger.NewLogger(),
 	}
 
 	err := svc.Delete(context.Background(), "sec-1")
@@ -54,6 +56,7 @@ func TestSecretDeleteAllowedWhenNotReferenced(t *testing.T) {
 		secretStore:      secretStore,
 		referenceService: refs,
 		permissions:      permissions,
+		logger:           logger.NewLogger(),
 	}
 
 	if err := svc.Delete(context.Background(), "sec-1"); err != nil {
@@ -79,6 +82,7 @@ func TestPostgresAddonDeleteBlockedReturns409(t *testing.T) {
 		postgresAddonStore: addonStore,
 		referenceService:   refs,
 		permissions:        permissions,
+		logger:             logger.NewLogger(),
 	}
 
 	_, err := svc.DeletePostgresAddon(context.Background(), "pg-1")
@@ -105,6 +109,7 @@ func TestVolumeDeleteBlockedReturns409(t *testing.T) {
 		volumeStore:      volumeStore,
 		referenceService: refs,
 		permissions:      permissions,
+		logger:           logger.NewLogger(),
 	}
 
 	err := svc.Delete(context.Background(), "vol-1")

@@ -48,7 +48,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 				return resultNil, fmt.Errorf("failed to mark released: %w", markErr)
 			}
 			if ok {
-				r.logger.Infof("release %s converged", release.ID)
+				r.logger.Info(ctx, "release %s converged", release.ID)
 			}
 			return resultStop, nil
 		}
@@ -61,7 +61,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 		if _, markErr := r.releaseService.MarkFailed(ctx, release.ID, msg, &outcome); markErr != nil {
 			return resultNil, fmt.Errorf("failed to mark failed: %w", markErr)
 		}
-		r.logger.Errorf("release %s: %s", release.ID, msg)
+		r.logger.Error(ctx, "release %s: %s", release.ID, msg)
 		return resultStop, nil
 	}
 

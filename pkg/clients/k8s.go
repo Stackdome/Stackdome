@@ -103,7 +103,7 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 	if logOpts.Since() != "" {
 		sinceTime, err := time.ParseDuration(logOpts.Since())
 		if err != nil {
-			k.logger.Warnf("invalid since time format: %v. Ignoring set log since options", err)
+			k.logger.Warn(ctx, "invalid since time format: %v. Ignoring set log since options", err)
 		} else {
 			logOptions.SinceSeconds = ptr.To(int64(sinceTime.Seconds()))
 		}
@@ -134,15 +134,15 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 					return
 				}
 				if err == io.EOF {
-					k.logger.Debugf("log stream for pod %s/%s ended", pod.Namespace, pod.Name)
+					k.logger.Debug(ctx, "log stream for pod %s/%s ended", pod.Namespace, pod.Name)
 					return
 				}
 				if numStreamErrors >= logOpts.MaxErrors() {
-					k.logger.Warnf("maximum number of stream errors reached (%d), stopping log stream", logOpts.MaxErrors())
+					k.logger.Warn(ctx, "maximum number of stream errors reached (%d), stopping log stream", logOpts.MaxErrors())
 					safeWriteToChannel(ctx, logChannel, &LogStreamObject{Error: fmt.Errorf("maximum number of stream errors reached")})
 					return
 				}
-				k.logger.Errorf("error reading log line: %v", err)
+				k.logger.Error(ctx, "error reading log line: %v", err)
 				safeWriteToChannel(ctx, logChannel, &LogStreamObject{Error: fmt.Errorf("error reading log line: %w", err)})
 				numStreamErrors++
 				continue
@@ -211,7 +211,7 @@ func (k *kubernetesClient) StreamNamespaceMetrics(ctx context.Context, namespace
 	}
 
 	streamChannel := make(chan *MetricsStreamObject)
-	k.logger.Infof("starting metrics stream for namespace %s with poll interval %s", namespace, metricsStreamOpts.PollInterval().String())
+	k.logger.Info(ctx, "starting metrics stream for namespace %s with poll interval %s", namespace, metricsStreamOpts.PollInterval().String())
 	pollingTicker := time.NewTicker(metricsStreamOpts.PollInterval())
 
 	ticker := make(chan struct{})
@@ -244,11 +244,11 @@ func (k *kubernetesClient) StreamNamespaceMetrics(ctx context.Context, namespace
 				podMetricsList, err := metricsClient.MetricsV1beta1().PodMetricses(namespace).List(ctx, metav1.ListOptions{})
 				if err != nil {
 					if numStreamErrors >= metricsStreamOpts.MaxErrors() {
-						k.logger.Warnf("maximum number of stream errors reached (%d), stopping metrics stream", metricsStreamOpts.MaxErrors())
+						k.logger.Warn(ctx, "maximum number of stream errors reached (%d), stopping metrics stream", metricsStreamOpts.MaxErrors())
 						safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{Error: fmt.Errorf("maximum number of stream errors reached")})
 						return
 					}
-					k.logger.Errorf("error fetching pod metrics: %v", err)
+					k.logger.Error(ctx, "error fetching pod metrics: %v", err)
 					safeWriteToChannel(ctx, streamChannel, &MetricsStreamObject{Error: fmt.Errorf("error fetching pod metrics: %w", err)})
 					numStreamErrors++
 					continue

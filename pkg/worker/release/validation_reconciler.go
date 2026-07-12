@@ -62,7 +62,7 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 	// requeue that re-enters here re-calls harmlessly. Log-only on error: the
 	// validation outcome is authoritative, not the event trail.
 	if recErr := r.eventRecorder.RecordReleaseChecksStarted(ctx, release); recErr != nil {
-		r.logger.Errorf("release %s: failed to record release_checks_started event: %v", release.ID, recErr)
+		r.logger.Error(ctx, "release %s: failed to record release_checks_started event: %v", release.ID, recErr)
 	}
 
 	var verrs models.ReleaseValidationErrors
@@ -92,7 +92,7 @@ func (r *validationReconciler) Reconcile(ctx context.Context, release *models.St
 	// checks_passed until a later re-entry verifies it.
 	if !anyRateLimited {
 		if recErr := r.eventRecorder.RecordReleaseChecksPassed(ctx, release); recErr != nil {
-			r.logger.Errorf("release %s: failed to record release_checks_passed event: %v", release.ID, recErr)
+			r.logger.Error(ctx, "release %s: failed to record release_checks_passed event: %v", release.ID, recErr)
 		}
 	}
 	return resultNil, nil
@@ -159,7 +159,7 @@ func (r *validationReconciler) checkImagePull(ctx context.Context, release *mode
 		// most likely deploy fine. Warn and skip the check so the release
 		// proceeds; no success fingerprint is recorded since nothing was
 		// verified. The skip is reported so checks_passed is withheld.
-		r.logger.Warnf("release %s: resource %s: registry rate limited while checking image '%s'; skipping check", release.ID, res.Name, imageRef)
+		r.logger.Warn(ctx, "release %s: resource %s: registry rate limited while checking image '%s'; skipping check", release.ID, res.Name, imageRef)
 		return nil, true, nil
 	case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
 		// No credentials were resolved for this registry and it rejects
@@ -223,7 +223,7 @@ func (r *validationReconciler) checkPushAccess(ctx context.Context, release *mod
 		// Same rationale as checkImagePull: skip instead of requeueing so a
 		// registry rate limit cannot hang the release to deploy timeout. The
 		// skip is reported so checks_passed is withheld.
-		r.logger.Warnf("release %s: resource %s: registry rate limited while checking push access to '%s'; skipping check", release.ID, res.Name, pushRef)
+		r.logger.Warn(ctx, "release %s: resource %s: registry rate limited while checking push access to '%s'; skipping check", release.ID, res.Name, pushRef)
 		return nil, true, nil
 	case stderrors.Is(err, clients.ErrAuthFailed) && resolved.Source == credentials.SourceAnonymous:
 		// Same distinction as checkImagePull: pushing without any resolved
@@ -259,7 +259,7 @@ func (r *validationReconciler) rememberSuccess(ctx context.Context, stackID, res
 		StackID: stackID, ResourceName: resourceName, CheckKind: kind,
 		Fingerprint: fingerprint, ValidatedAt: time.Now().UTC(),
 	}); serr != nil {
-		r.logger.Warnf("failed to record validation success for %s/%s: %v", stackID, resourceName, serr)
+		r.logger.Warn(ctx, "failed to record validation success for %s/%s: %v", stackID, resourceName, serr)
 	}
 }
 

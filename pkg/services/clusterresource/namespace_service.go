@@ -57,7 +57,7 @@ func annotationsToMap(annotations models.Annotations) map[string]string {
 func (s *namespaceClusterResourceService) CreateNamespaceInCluster(ctx context.Context, ns *models.Namespace) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, ns.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
@@ -76,7 +76,7 @@ func (s *namespaceClusterResourceService) CreateNamespaceInCluster(ctx context.C
 
 	createErr := client.Create(ctx, desiredObject)
 	if createErr != nil {
-		s.logger.Errorf("failed to create namespace in cluster: %v", createErr)
+		s.logger.Error(ctx, "failed to create namespace in cluster: %v", createErr)
 		return newError("failed to create namespace in cluster", createErr)
 	}
 
@@ -87,7 +87,7 @@ func (s *namespaceClusterResourceService) CreateNamespaceInCluster(ctx context.C
 func (s *namespaceClusterResourceService) DeleteNamespaceInCluster(ctx context.Context, ns *models.Namespace) *ClusterResourceError {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, ns.OrganisationID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
@@ -104,7 +104,7 @@ func (s *namespaceClusterResourceService) DeleteNamespaceInCluster(ctx context.C
 
 	deleteErr := client.Delete(ctx, desiredObject)
 	if deleteErr != nil {
-		s.logger.Errorf("failed to delete namespace in cluster: %v", deleteErr)
+		s.logger.Error(ctx, "failed to delete namespace in cluster: %v", deleteErr)
 		return newError("failed to delete namespace in cluster", deleteErr)
 	}
 

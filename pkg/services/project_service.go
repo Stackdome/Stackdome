@@ -200,7 +200,7 @@ func (s *projectService) DeleteProject(ctx context.Context, id string) *errors.S
 	// Clean up Casbin policies using pre-fetched membership data
 	for _, membership := range memberships {
 		if rmErr := s.policyMgr.RemoveGroupingPolicy(membership.UserID, string(membership.Role), membership.ProjectID); rmErr != nil {
-			s.logger.Errorf("failed to remove project role grouping: %s", rmErr.Error())
+			s.logger.Error(ctx, "failed to remove project role grouping: %s", rmErr.Error())
 		}
 	}
 
@@ -209,7 +209,7 @@ func (s *projectService) DeleteProject(ctx context.Context, id string) *errors.S
 	// If not, remove the OrgMember grouping for that user.
 	for _, membership := range memberships {
 		if err := s.cleanupOrgMemberGrouping(ctx, membership.UserID, project.OrganisationID); err != nil {
-			s.logger.Errorf("failed to cleanup org member grouping for user %s: %s", membership.UserID, err.Error())
+			s.logger.Error(ctx, "failed to cleanup org member grouping for user %s: %s", membership.UserID, err.Error())
 		}
 	}
 
@@ -306,12 +306,12 @@ func (s *projectService) InternalAddMember(ctx context.Context, projectID, userI
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(userID, string(role), projectID); err != nil {
-		s.logger.Errorf("failed to add project role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to add project role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to add project role grouping")
 	}
 
 	if err := s.ensureOrgMemberGrouping(ctx, userID, project.OrganisationID); err != nil {
-		s.logger.Errorf("failed to ensure org member grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to ensure org member grouping: %s", err.Error())
 		return nil, err
 	}
 
@@ -364,12 +364,12 @@ func (s *projectService) AddMember(ctx context.Context, projectID, userID string
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(userID, string(role), projectID); err != nil {
-		s.logger.Errorf("failed to add project role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to add project role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to add project role grouping")
 	}
 
 	if err := s.ensureOrgMemberGrouping(ctx, userID, project.OrganisationID); err != nil {
-		s.logger.Errorf("failed to ensure org member grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to ensure org member grouping: %s", err.Error())
 		return nil, err
 	}
 
@@ -394,12 +394,12 @@ func (s *projectService) RemoveMember(ctx context.Context, membershipID string) 
 	}
 
 	if rmErr := s.policyMgr.RemoveGroupingPolicy(membership.UserID, string(membership.Role), membership.ProjectID); rmErr != nil {
-		s.logger.Errorf("failed to remove project role grouping: %s", rmErr.Error())
+		s.logger.Error(ctx, "failed to remove project role grouping: %s", rmErr.Error())
 		return errors.InternalServerError("failed to remove project role grouping: %s", rmErr.Error())
 	}
 
 	if err := s.cleanupOrgMemberGrouping(ctx, membership.UserID, project.OrganisationID); err != nil {
-		s.logger.Errorf("failed to cleanup org member grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to cleanup org member grouping: %s", err.Error())
 		return errors.InternalServerError("failed to cleanup org member grouping")
 	}
 
@@ -429,12 +429,12 @@ func (s *projectService) UpdateMemberRole(ctx context.Context, membershipID stri
 	// Remove old grouping policy and add new one
 	err := s.policyMgr.RemoveGroupingPolicy(existing.UserID, string(existing.Role), existing.ProjectID)
 	if err != nil {
-		s.logger.Errorf("failed to remove project role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to remove project role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to remove project role grouping")
 	}
 
 	if err := s.policyMgr.AddGroupingPolicy(existing.UserID, string(role), existing.ProjectID); err != nil {
-		s.logger.Errorf("failed to update project role grouping: %s", err.Error())
+		s.logger.Error(ctx, "failed to update project role grouping: %s", err.Error())
 		return nil, errors.InternalServerError("failed to update project role grouping")
 	}
 	return res, nil

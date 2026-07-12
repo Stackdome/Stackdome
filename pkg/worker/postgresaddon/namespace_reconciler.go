@@ -43,7 +43,7 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, addon *models.Postg
 	existingNamespace := &corev1.Namespace{}
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: namespace.Name}, existingNamespace); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			r.logger.Infof("Creating namespace '%s' in cluster", namespace.Name)
+			r.logger.Info(ctx, "Creating namespace '%s' in cluster", namespace.Name)
 			return resultNil, clusterClient.Create(ctx, &corev1.Namespace{
 				ObjectMeta: metav1.ObjectMeta{Name: namespace.Name},
 			})

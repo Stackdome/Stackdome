@@ -108,17 +108,17 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	imageBuild := &buildsv1alpha1.ImageBuild{}
 	if err := r.Client.Get(ctx, req.NamespacedName, imageBuild); err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Infof("imageBuild %v not found", req.NamespacedName)
+			r.Logger.Info(ctx, "imageBuild %v not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
 
-	r.Logger.Infof("reconciling image build: %v", req.NamespacedName)
+	r.Logger.Info(ctx, "reconciling image build: %v", req.NamespacedName)
 
 	stackID, ok := imageBuild.Labels[corev1alpha1.LabelStackID]
 	if !ok {
-		r.Logger.Errorf("imageBuild %v does not have stack ID label", req.NamespacedName)
+		r.Logger.Error(ctx, "imageBuild %v does not have stack ID label", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
@@ -126,7 +126,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if err != nil {
 		if err.Code == apperrors.ErrorNotFound {
 			// stack might have gotten deleted. We log and ignore this event.
-			r.Logger.Infof(
+			r.Logger.Info(ctx,
 				"stack resource with name '%s' for stack '%s' not found, it might have been deleted. Ignoring image build '%s'",
 				imageBuild.Spec.ResourceName,
 				stackID,
@@ -134,14 +134,14 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			)
 			return ctrl.Result{}, nil
 		}
-		r.Logger.Errorf("failed to get stack resource %s for build '%s'", imageBuild.Spec.ResourceName, client.ObjectKeyFromObject(imageBuild).String())
+		r.Logger.Error(ctx, "failed to get stack resource %s for build '%s'", imageBuild.Spec.ResourceName, client.ObjectKeyFromObject(imageBuild).String())
 		return ctrl.Result{}, err
 	}
 
 	dbResourceBuild, serr := r.DBImageBuildService.InternalGetByID(ctx, imageBuild.Name)
 	if serr != nil {
 		if serr.Code == apperrors.ErrorNotFound {
-			r.Logger.Infof("imageBuild %s not found in DB, creating a new build", imageBuild.Name)
+			r.Logger.Info(ctx, "imageBuild %s not found in DB, creating a new build", imageBuild.Name)
 			return ctrl.Result{Requeue: true}, r.createImageBuildInDB(ctx, imageBuild, dbStackResouce)
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to get image build from db: %w", serr)
@@ -199,7 +199,7 @@ func (r *ImageBuildReconciler) createImageBuildInDB(
 
 	_, serr := r.DBImageBuildService.InternalCreate(ctx, dbImageBuild)
 	if serr != nil {
-		r.Logger.Errorf("Failed to create image build '%s': %s", imageBuildCr.Name, serr)
+		r.Logger.Error(ctx, "Failed to create image build '%s': %s", imageBuildCr.Name, serr)
 		return serr.AsError()
 	}
 	return nil
@@ -312,11 +312,11 @@ func (r *ImageBuildReconciler) recordBuildEvent(
 
 	active, serr := r.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
 	if serr != nil {
-		r.Logger.Debugf("no active release lookup for stack %s: %v", stackID, serr)
+		r.Logger.Debug(ctx, "no active release lookup for stack %s: %v", stackID, serr)
 		return
 	}
 	if active == nil {
-		r.Logger.Debugf("no active release for stack %s; skipping build event", stackID)
+		r.Logger.Debug(ctx, "no active release for stack %s; skipping build event", stackID)
 		return
 	}
 
@@ -330,7 +330,7 @@ func (r *ImageBuildReconciler) recordBuildEvent(
 	if recErr := r.eventRecorder.RecordBuildEvent(
 		ctx, active, cr.Spec.ResourceName, eventType, build.ID, attribution, failure,
 	); recErr != nil {
-		r.Logger.Errorf("failed to record build event for build %s: %v", build.ID, recErr)
+		r.Logger.Error(ctx, "failed to record build event for build %s: %v", build.ID, recErr)
 	}
 }
 

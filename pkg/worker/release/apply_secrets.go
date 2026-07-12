@@ -335,8 +335,8 @@ func createOrUpdateSecret(ctx context.Context, clusterClient client.Client, desi
 }
 
 func failRelease(ctx context.Context, svc releaseService, log logger.Logger, release *models.StackRelease, msg string) {
-	log.Errorf("release %s failed: %s", release.ID, msg)
+	log.Error(ctx, "release %s failed: %s", release.ID, msg)
 	if _, err := svc.MarkFailed(ctx, release.ID, msg, nil); err != nil {
-		log.Errorf("failed to mark release %s as failed: %v", release.ID, err)
+		log.Error(ctx, "failed to mark release %s as failed: %v", release.ID, err)
 	}
 }

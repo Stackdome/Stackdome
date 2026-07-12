@@ -61,7 +61,7 @@ func NewSignupService(spec SignupServiceSpec) SignupService {
 }
 
 func (s *signupService) Signup(ctx context.Context, user *models.User, inviteToken string) (*openapi.UserSignupResponse, *errors.ServiceError) {
-	s.logger.Infof("Creating user with email: %s", user.Email)
+	s.logger.Info(ctx, "Creating user with email: %s", user.Email)
 	if len(user.Password) < 8 {
 		return nil, errors.BadRequest("password must be at least 8 characters")
 	}
@@ -78,7 +78,7 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		s.logger.Errorf("failed to hash password, %s", err.Error())
+		s.logger.Error(ctx, "failed to hash password, %s", err.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
 	user.Password = string(hashedPassword)
@@ -102,14 +102,14 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 	}
 	createdOrganisation, orgErr := s.organisationService.InternalCreate(ctx, user.Organisation)
 	if orgErr != nil {
-		s.logger.Errorf("failed to create organisation, %s", orgErr.Error())
+		s.logger.Error(ctx, "failed to create organisation, %s", orgErr.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
 	user.OrganisationID = createdOrganisation.ID
 	user.Role = models.OrgAdminRole
 
 	if _, projectErr := s.projectService.InternalCreateDefaultProject(ctx, createdOrganisation.ID); projectErr != nil {
-		s.logger.Errorf("failed to create default project: %s", projectErr.Error())
+		s.logger.Error(ctx, "failed to create default project: %s", projectErr.Error())
 		return nil, errors.GeneralError("failed to create default project")
 	}
 
@@ -123,7 +123,7 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 		string(models.OrgAdminRole),
 		createdUser.OrganisationID,
 	); policyAddErr != nil {
-		s.logger.Errorf("failed to add OrgAdmin policy for user: %s", policyAddErr.Error())
+		s.logger.Error(ctx, "failed to add OrgAdmin policy for user: %s", policyAddErr.Error())
 		return nil, errors.GeneralError("failed to create user")
 	}
 
@@ -132,7 +132,7 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 		string(models.OrgMemberRole),
 		createdUser.OrganisationID,
 	); policyAddErr != nil {
-		s.logger.Errorf("failed to add OrgMember policy for user: %s", policyAddErr.Error())
+		s.logger.Error(ctx, "failed to add OrgMember policy for user: %s", policyAddErr.Error())
 	}
 
 	return s.buildSignupResponse(ctx, createdUser)
@@ -148,7 +148,7 @@ func (s *signupService) buildSignupResponse(ctx context.Context, createdUser *mo
 	}
 	refreshToken, refreshErr := auth.CreateRefreshToken(ctx, s.refreshTokenStore, createdUser.ID)
 	if refreshErr != nil {
-		s.logger.Errorf("failed to create refresh token: %s", refreshErr.Error())
+		s.logger.Error(ctx, "failed to create refresh token: %s", refreshErr.Error())
 		return nil, errors.GeneralError("failed to generate refresh token")
 	}
 	return &openapi.UserSignupResponse{

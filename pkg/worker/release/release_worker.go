@@ -77,7 +77,7 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 	release, serr := w.releaseService.InternalGet(ctx, releaseRef.ID)
 	if serr != nil {
 		if serr.Is404() {
-			w.Logger().Infof("release %s not found, skipping", releaseRef.ID)
+			w.Logger().Info(ctx, "release %s not found, skipping", releaseRef.ID)
 			return worker.Result{}, nil
 		}
 		return worker.Result{}, serr
@@ -87,11 +87,11 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 		return worker.Result{}, nil
 	}
 
-	w.Logger().Infof("processing release %s (stack=%s, state=%s)", release.ID, release.StackID, release.State)
+	w.Logger().Info(ctx, "processing release %s (stack=%s, state=%s)", release.ID, release.StackID, release.State)
 
 	res, reconcileErr := w.reconcile(ctx, release)
 	if reconcileErr != nil {
-		w.Logger().Errorf("failed to reconcile release %s: %v", release.ID, reconcileErr)
+		w.Logger().Error(ctx, "failed to reconcile release %s: %v", release.ID, reconcileErr)
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile release %s: %v", release.ID, reconcileErr)
 	}
 
@@ -99,7 +99,7 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 		updated, _ := w.releaseService.InternalGet(ctx, releaseRef.ID)
 		if updated != nil && updated.State.Terminal() {
 			if err := w.releaseWorkerEnqueuer.Enqueue(&releasegc.ReleaseGCRequest{StackID: updated.StackID}); err != nil {
-				w.Logger().Errorf("failed to enqueue release GC for stack %s: %v", updated.StackID, err)
+				w.Logger().Error(ctx, "failed to enqueue release GC for stack %s: %v", updated.StackID, err)
 			}
 		}
 	}
@@ -109,7 +109,7 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 
 func (w *releaseWorker) reconcile(ctx context.Context, release *models.StackRelease) (worker.Result, error) {
 	for _, sr := range w.subReconcilers {
-		w.Logger().Infof("running sub-reconciler: %s for release: %s", sr.Name(), release.ID)
+		w.Logger().Info(ctx, "running sub-reconciler: %s for release: %s", sr.Name(), release.ID)
 		result, err := sr.Reconcile(ctx, release)
 		switch {
 		case err != nil:

@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"github.com/Stackdome/stackdome/config"
-	"github.com/golang/glog"
+	"github.com/Stackdome/stackdome/pkg/logger"
 )
+
+var log = logger.NewLogger()
 
 const (
 	DEVELOPMENT_ENV = "DEVELOPMENT"
@@ -16,7 +18,7 @@ const (
 func GetEnvironmentStrFromEnv() string {
 	val, ok := config.EnvStackdomeEnv.Lookup()
 	if !ok || val == "" {
-		glog.Infof("Environment variable %q not specified, using default %q", config.EnvStackdomeEnv.Name, DEVELOPMENT_ENV)
+		log.Infof("Environment variable %q not specified, using default %q", config.EnvStackdomeEnv.Name, DEVELOPMENT_ENV)
 		return DEVELOPMENT_ENV
 	}
 	return val

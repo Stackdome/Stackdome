@@ -229,7 +229,7 @@ func (s *objectStoreService) Delete(ctx context.Context, ID string) *errors.Serv
 func (s *objectStoreService) cleanupFromCluster(ctx context.Context, objectStore *models.ObjectStore, deployed models.DeployedClusterInfo) {
 	clusterClient, clientErr := s.clusterManager.GetClient(deployed.ClusterID)
 	if clientErr != nil {
-		s.logger.Errorf("failed to get client for cluster %s during ObjectStore cleanup: %v", deployed.ClusterID, clientErr)
+		s.logger.Error(ctx, "failed to get client for cluster %s during ObjectStore cleanup: %v", deployed.ClusterID, clientErr)
 		return
 	}
 
@@ -240,7 +240,7 @@ func (s *objectStoreService) cleanupFromCluster(ctx context.Context, objectStore
 		},
 	}
 	if deleteErr := clusterClient.Delete(ctx, osCR); deleteErr != nil && !k8sapierrors.IsNotFound(deleteErr) {
-		s.logger.Errorf("failed to delete ObjectStore CR %s from cluster %s: %v", objectStore.Name, deployed.ClusterID, deleteErr)
+		s.logger.Error(ctx, "failed to delete ObjectStore CR %s from cluster %s: %v", objectStore.Name, deployed.ClusterID, deleteErr)
 	}
 
 	credSecret := &corev1.Secret{
@@ -250,7 +250,7 @@ func (s *objectStoreService) cleanupFromCluster(ctx context.Context, objectStore
 		},
 	}
 	if deleteErr := clusterClient.Delete(ctx, credSecret, client.PropagationPolicy(metav1.DeletePropagationBackground)); deleteErr != nil && !k8sapierrors.IsNotFound(deleteErr) {
-		s.logger.Errorf("failed to delete credential secret for ObjectStore %s from cluster %s: %v", objectStore.Name, deployed.ClusterID, deleteErr)
+		s.logger.Error(ctx, "failed to delete credential secret for ObjectStore %s from cluster %s: %v", objectStore.Name, deployed.ClusterID, deleteErr)
 	}
 }
 

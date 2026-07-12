@@ -44,7 +44,7 @@ func (w *inviteWorker) Interval() time.Duration {
 
 func (w *inviteWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	if w.leadershipFlag != nil && !w.leadershipFlag.Raised() {
-		w.Logger().Infof("Not the leader, invite email worker will not send emails")
+		w.Logger().Info(ctx, "Not the leader, invite email worker will not send emails")
 		return nil, nil
 	}
 
@@ -70,7 +70,7 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	invite, serr := w.inviteService.InternalGetByID(ctx, id.ID)
 	if serr != nil {
 		if serr.Is404() {
-			w.Logger().Infof("Invite %s not found, skipping", id.ID)
+			w.Logger().Info(ctx, "Invite %s not found, skipping", id.ID)
 			return worker.Result{}, nil
 		}
 		return worker.Result{}, serr
@@ -82,9 +82,9 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 
 	rawToken, decErr := w.inviteService.InternalDecryptToken(ctx, invite.EncryptedToken)
 	if decErr != nil {
-		w.Logger().Errorf("failed to decrypt token for invite %s: %s", invite.ID, decErr.Error())
+		w.Logger().Error(ctx, "failed to decrypt token for invite %s: %s", invite.ID, decErr.Error())
 		if markErr := w.inviteService.InternalMarkEmailError(ctx, invite.ID, "failed to decrypt token"); markErr != nil {
-			w.Logger().Errorf("failed to mark email error for invite %s: %s", invite.ID, markErr.Error())
+			w.Logger().Error(ctx, "failed to mark email error for invite %s: %s", invite.ID, markErr.Error())
 		}
 		return worker.Result{}, nil
 	}
@@ -102,7 +102,7 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		inviterName = invite.InvitedBy.Name
 	}
 
-	w.Logger().Infof("Sending invite email to %s for org %s", invite.Email, orgName)
+	w.Logger().Info(ctx, "Sending invite email to %s for org %s", invite.Email, orgName)
 
 	txErr := w.inviteService.InternalWithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 		if markErr := w.inviteService.InternalMarkEmailSent(txCtx, invite.ID); markErr != nil {
@@ -121,13 +121,13 @@ func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		return nil
 	})
 	if txErr != nil {
-		w.Logger().Errorf("failed to send invite email to %s: %s", invite.Email, txErr.Error())
+		w.Logger().Error(ctx, "failed to send invite email to %s: %s", invite.Email, txErr.Error())
 		if markErr := w.inviteService.InternalMarkEmailError(ctx, invite.ID, txErr.Error()); markErr != nil {
-			w.Logger().Errorf("failed to mark email error for invite %s: %s", invite.ID, markErr.Error())
+			w.Logger().Error(ctx, "failed to mark email error for invite %s: %s", invite.ID, markErr.Error())
 		}
 		return worker.Result{RequeueAfter: 5 * time.Minute}, nil
 	}
 
-	w.Logger().Infof("Invite email sent to %s", invite.Email)
+	w.Logger().Info(ctx, "Invite email sent to %s", invite.Email)
 	return worker.Result{}, nil
 }
