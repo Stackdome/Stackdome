@@ -236,6 +236,40 @@ describe("AddIntegrationWizard", () => {
     expect(screen.getByLabelText(/token/i)).toHaveValue("");
   });
 
+  it("marks host and token as required and shows a validation error instead of blocking Connect", async () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: /GitLab/ }));
+
+    // Host is prefilled for GitLab, so only clearing it produces the "required" error.
+    fireEvent.change(screen.getByLabelText(/host/i), { target: { value: "" } });
+    const connectButton = screen.getByRole("button", { name: /^connect$/i });
+    expect(connectButton).toBeEnabled();
+    fireEvent.click(connectButton);
+
+    expect(await screen.findByText(/host is required/i)).toBeInTheDocument();
+    expect(await screen.findByText(/access token is required/i)).toBeInTheDocument();
+    expect(createGitIntegration).not.toHaveBeenCalled();
+
+    // Both required labels carry the asterisk marker; username does not.
+    const hostLabel = screen.getByText(/^host$/i).closest("label");
+    const tokenLabel = screen.getByText(/^access token$/i).closest("label");
+    const usernameLabel = screen.getByText(/^username$/i).closest("label");
+    expect(hostLabel?.querySelector('[aria-hidden]')).toHaveTextContent("*");
+    expect(tokenLabel?.querySelector('[aria-hidden]')).toHaveTextContent("*");
+    expect(usernameLabel?.querySelector('[aria-hidden]')).toBeNull();
+  });
+
+  it("clears the host/token errors as soon as the field is edited", async () => {
+    renderWizard();
+    fireEvent.click(screen.getByRole("button", { name: /GitLab/ }));
+    fireEvent.change(screen.getByLabelText(/host/i), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: /^connect$/i }));
+    expect(await screen.findByText(/host is required/i)).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText(/host/i), { target: { value: "gitlab.com" } });
+    expect(screen.queryByText(/host is required/i)).not.toBeInTheDocument();
+  });
+
   it("back from GitHub-credentials returns to method choice", () => {
     renderWizard();
     fireEvent.click(screen.getByRole("button", { name: /GitHub/ }));

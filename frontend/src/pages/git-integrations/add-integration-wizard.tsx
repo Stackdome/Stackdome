@@ -2,8 +2,8 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Circle, GitBranch, Github, KeyRound } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { FieldShell } from "@/components/branded";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createGitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
@@ -11,6 +11,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 import { cn } from "@/lib/utils";
 import { GIT_INTEGRATION_TYPE_CREDENTIALS, type ProviderId } from "./lib/derive-row";
+import { credentialsFormSchema, type CredentialsFormValues } from "./lib/form-schemas";
 import { ProviderLogo } from "./components/provider-logo";
 
 type Phase = "provider" | "github" | "credentials" | "connecting" | "done";
@@ -98,6 +99,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
   const [token, setToken] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof CredentialsFormValues, string>>>({});
 
   const reset = () => {
     setPhase("provider");
@@ -106,6 +108,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
     setToken("");
     setSubmitError(null);
     setSubmitting(false);
+    setFieldErrors({});
   };
 
   const close = () => {
@@ -119,22 +122,30 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
     setUsername("");
     setToken("");
     setSubmitError(null);
+    setFieldErrors({});
     setPhase(p.id === "github" ? "github" : "credentials");
   };
 
   const submitCredentials = async () => {
+    const parsed = credentialsFormSchema.safeParse({ host, username, token });
+    if (!parsed.success) {
+      const flat = parsed.error.flatten().fieldErrors;
+      setFieldErrors({ host: flat.host?.[0], token: flat.token?.[0] });
+      return;
+    }
+    setFieldErrors({});
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !host.trim() || !token.trim()) return;
+    if (!orgId) return;
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const trimmedUsername = username.trim();
+      const trimmedUsername = parsed.data.username?.trim();
       await createGitIntegration(orgId, {
-        host: host.trim(),
+        host: parsed.data.host,
         type: GIT_INTEGRATION_TYPE_CREDENTIALS,
         auth: trimmedUsername
-          ? { basic: { username: trimmedUsername, password: token.trim() } }
-          : { token: token.trim() },
+          ? { basic: { username: trimmedUsername, password: parsed.data.token } }
+          : { token: parsed.data.token },
       });
       onCreated();
       setPhase("done");
@@ -351,38 +362,54 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                     Stackdome stores the credentials encrypted and uses them only for clones.
                   </p>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="integration-host">Host</Label>
+                <FieldShell
+                  label="Host"
+                  htmlFor="integration-host"
+                  required
+                  error={fieldErrors.host}
+                >
                   <Input
                     id="integration-host"
                     placeholder={provider.hostPlaceholder}
                     value={host}
-                    onChange={(e) => setHost(e.target.value)}
+                    onChange={(e) => {
+                      setHost(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, host: undefined }));
+                    }}
+                    aria-invalid={!!fieldErrors.host}
                   />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="integration-username">Username</Label>
+                </FieldShell>
+                <FieldShell
+                  label="Username"
+                  htmlFor="integration-username"
+                  hint="Required for providers using basic auth (e.g. Bitbucket app passwords)."
+                >
                   <Input
                     id="integration-username"
                     autoComplete="off"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Required for providers using basic auth (e.g. Bitbucket app passwords).
-                  </p>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="integration-token">Access token</Label>
+                </FieldShell>
+                <FieldShell
+                  label="Access token"
+                  htmlFor="integration-token"
+                  required
+                  hint={provider.hint}
+                  error={fieldErrors.token}
+                >
                   <Input
                     id="integration-token"
                     type="password"
                     autoComplete="off"
                     value={token}
-                    onChange={(e) => setToken(e.target.value)}
+                    onChange={(e) => {
+                      setToken(e.target.value);
+                      setFieldErrors((prev) => ({ ...prev, token: undefined }));
+                    }}
+                    aria-invalid={!!fieldErrors.token}
                   />
-                  <p className="text-xs text-muted-foreground">{provider.hint}</p>
-                </div>
+                </FieldShell>
                 {submitError && (
                   <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 p-3">
                     <p className="text-sm font-medium text-destructive">Couldn&apos;t verify the token</p>
@@ -394,7 +421,6 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                 onBack={() => setPhase(provider.id === "github" ? "github" : "provider")}
                 onContinue={() => void submitCredentials()}
                 continueLabel="Connect"
-                continueDisabled={!host.trim() || !token.trim()}
                 loading={submitting}
               />
             </>

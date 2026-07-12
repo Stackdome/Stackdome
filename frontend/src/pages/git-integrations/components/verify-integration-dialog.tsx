@@ -4,11 +4,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { verifyGitIntegration, type GitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { verifyIntegrationFormSchema } from "@/pages/git-integrations/lib/form-schemas";
 
 interface VerifyIntegrationDialogProps {
   integration: GitIntegration | null;
@@ -19,15 +20,22 @@ export function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyInt
   const { toast } = useToast();
   const [repoUrl, setRepoUrl] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [fieldError, setFieldError] = useState<string | undefined>(undefined);
 
   const integrationId = integration?.id;
   useEffect(() => {
     if (integrationId == null) return;
     setRepoUrl("");
+    setFieldError(undefined);
   }, [integrationId]);
 
   const submit = async () => {
-    if (!repoUrl.trim()) return;
+    const parsed = verifyIntegrationFormSchema.safeParse({ repoUrl });
+    if (!parsed.success) {
+      setFieldError(parsed.error.flatten().fieldErrors.repoUrl?.[0]);
+      return;
+    }
+    setFieldError(undefined);
     const orgId = getCurrentOrganizationId();
     if (!orgId || !integration?.id) {
       toast({
@@ -39,7 +47,7 @@ export function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyInt
     }
     setVerifying(true);
     try {
-      await verifyGitIntegration(orgId, integration.id, repoUrl.trim());
+      await verifyGitIntegration(orgId, integration.id, parsed.data.repoUrl);
       toast({ title: "Repository access verified" });
       onOpenChange(false);
     } catch (e) {
@@ -59,21 +67,24 @@ export function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyInt
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="verify-repo-url">Repository URL</Label>
+          <FieldShell label="Repository URL" htmlFor="verify-repo-url" required error={fieldError}>
             <Input
               id="verify-repo-url"
               placeholder="https://github.com/acme/webapp"
               value={repoUrl}
-              onChange={(e) => setRepoUrl(e.target.value)}
+              onChange={(e) => {
+                setRepoUrl(e.target.value);
+                setFieldError(undefined);
+              }}
+              aria-invalid={!!fieldError}
             />
-          </div>
+          </FieldShell>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={verifying}>
             Cancel
           </Button>
-          <Button onClick={() => void submit()} disabled={verifying || !repoUrl.trim()}>
+          <Button onClick={() => void submit()} disabled={verifying}>
             Verify
           </Button>
         </DialogFooter>
