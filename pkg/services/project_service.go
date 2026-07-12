@@ -42,7 +42,7 @@ type ProjectServiceSpec struct {
 }
 
 type projectService struct {
-	projectStore          stores.ProjectStore
+	projectStore       stores.ProjectStore
 	membershipStore    stores.ProjectMembershipStore
 	userStore          stores.UserStore
 	stackStore         stores.StackStore
@@ -110,9 +110,9 @@ func (s *projectService) CreateProject(ctx context.Context, orgID string, projec
 
 func (s *projectService) InternalCreateDefaultProject(ctx context.Context, orgID string) (*models.Project, *errors.ServiceError) {
 	project := &models.Project{
-		Name:           "default",
+		Name:           models.DefaultProjectName,
 		OrganisationID: orgID,
-		DefaultProject:    true,
+		DefaultProject: true,
 	}
 	return s.projectStore.Create(ctx, project)
 }
@@ -297,8 +297,8 @@ func (s *projectService) InternalAddMember(ctx context.Context, projectID, userI
 
 	membership := &models.ProjectMembership{
 		ProjectID: projectID,
-		UserID: userID,
-		Role:   role,
+		UserID:    userID,
+		Role:      role,
 	}
 	created, serr := s.membershipStore.Create(ctx, membership)
 	if serr != nil {
@@ -355,8 +355,8 @@ func (s *projectService) AddMember(ctx context.Context, projectID, userID string
 
 	membership := &models.ProjectMembership{
 		ProjectID: projectID,
-		UserID: userID,
-		Role:   role,
+		UserID:    userID,
+		Role:      role,
 	}
 	created, serr := s.membershipStore.Create(ctx, membership)
 	if serr != nil {
