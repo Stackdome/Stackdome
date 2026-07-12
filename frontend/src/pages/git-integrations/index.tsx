@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/branded";
 import { AddIntegrationWizard } from "./add-integration-wizard";
@@ -81,15 +81,23 @@ export default function GitIntegrationsPage() {
 
   const rows = integrations.map((integration) => deriveRow(integration));
 
+  if (loading) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="mt-2 text-muted-foreground">Loading git integrations...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <PageHeader
+        eyebrow="Integrations"
         title="Git integrations"
         subtitle="Grant Stackdome access to your repositories for clones, builds, and preview environments."
         actions={addButton}
       />
-
-      {loading && <p className="text-sm text-muted-foreground">Loading…</p>}
 
       {/* Full-page error only when there's nothing to show; a failed re-fetch
           keeps the already-loaded list visible with an inline error line. */}
@@ -97,7 +105,7 @@ export default function GitIntegrationsPage() {
         <IntegrationsErrorState message={error} onRetry={() => void refresh()} />
       )}
 
-      {!loading && !error && integrations.length === 0 && (
+      {!error && integrations.length === 0 && (
         <IntegrationsEmptyState onAdd={() => setWizardOpen(true)} />
       )}
 
