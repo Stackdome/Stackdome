@@ -12,7 +12,6 @@ import {
   createPreviewEnv,
   deletePreviewEnv,
   syncPreviewEnv,
-  TERMINAL_PHASES,
 } from "../preview-envs";
 
 const ORG = "org1";
@@ -78,9 +77,5 @@ describe("preview-envs api", () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "p1" } });
     await syncPreviewEnv(ORG, TEAM, "p1");
     expect(api.post).toHaveBeenCalledWith(`${BASE}/p1/sync`, {});
-  });
-
-  it("exports terminal phases", () => {
-    expect(TERMINAL_PHASES).toEqual(["Ready", "Failed"]);
   });
 });

@@ -78,12 +78,13 @@ describe("VerifyIntegrationDialog", () => {
     });
   });
 
-  it("resets the field when a new integration is opened", () => {
+  it("resets the field when a new integration is opened", async () => {
+    const user = userEvent.setup();
     const { rerender } = render(
       <VerifyIntegrationDialog integration={integration} onOpenChange={vi.fn()} />,
     );
-    const input = screen.getByLabelText(/repository url/i) as HTMLInputElement;
-    input.value = "https://github.com/acme/webapp";
+    await user.type(screen.getByLabelText(/repository url/i), "https://github.com/acme/webapp");
+    expect(screen.getByLabelText(/repository url/i)).toHaveValue("https://github.com/acme/webapp");
 
     const other: GitIntegration = { id: "g2", host: "gitlab.com" };
     rerender(<VerifyIntegrationDialog integration={other} onOpenChange={vi.fn()} />);

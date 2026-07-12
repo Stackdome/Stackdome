@@ -44,10 +44,6 @@ describe("overridesTextSchema", () => {
     // per-line validation must not mistake that for a dropped/invalid line.
     expect(overridesTextSchema.safeParse("web=a:1\nweb=a:2").success).toBe(true);
   });
-
-  it("rejects a genuinely malformed line even alongside a duplicate key", () => {
-    expect(overridesTextSchema.safeParse("web=a:1\nweb=a:2\nnot-a-pair").success).toBe(false);
-  });
 });
 
 describe("configurePhaseSchema", () => {

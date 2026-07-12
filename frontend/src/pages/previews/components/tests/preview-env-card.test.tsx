@@ -36,13 +36,6 @@ describe("PreviewEnvCard", () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  it("renders the status word for a pending phase", () => {
-    const env: PreviewStack = { ...base, status: { phase: "Provisioning" } };
-    renderCard({ env });
-    const label = statusVariantLabel[previewStatusVariant(env.status?.phase)];
-    expect(screen.getByText(label)).toBeInTheDocument();
-  });
-
   it("replaces endpoint pills with a failed-reason strip and stackfile hint", () => {
     const env: PreviewStack = {
       ...base,

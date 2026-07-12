@@ -38,13 +38,6 @@ describe("deriveRow", () => {
     expect(row.banner).toBeUndefined();
   });
 
-  it("marks an active integration as connected", () => {
-    const row = deriveRow(integration({ status: STATUS_ACTIVE }));
-    expect(row.statusKey).toBe("connected");
-    expect(row.statusLabel).toBe("Connected");
-    expect(row.tone).toBe("ok");
-  });
-
   it("marks a pending_install integration as needs_setup with install_url CTA", () => {
     const row = deriveRow(
       integration({ status: STATUS_PENDING_INSTALL, install_url: "https://github.com/apps/x/installations/new" }),

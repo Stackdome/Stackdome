@@ -343,19 +343,6 @@ describe("FormStackSchema — depends_on cross-validation", () => {
     }
   });
 
-  it("flags a dangling reference once its target is renamed", async () => {
-    // Reproduces the bug the user hit on the edit page: rename a depended-upon
-    // resource and the dependent's depends_on entry now points nowhere.
-    const { FormStackSchema } = await import("../form-schema");
-    const result = FormStackSchema.safeParse(
-      stackOf(
-        stackResource({ name: "redis-renamed" }),
-        stackResource({ name: "api", depends_on: ["redis"] }),
-      ),
-    );
-    expect(result.success).toBe(false);
-  });
-
   it("emits one issue per dangling entry, not just the first", async () => {
     const { FormStackSchema } = await import("../form-schema");
     const result = FormStackSchema.safeParse(

@@ -129,17 +129,6 @@ describe("IntegrationRow", () => {
     expect(screen.queryByText(/verify repository access/i)).not.toBeInTheDocument();
   });
 
-  it("dispatches Remove integration from the kebab menu", async () => {
-    const user = userEvent.setup();
-    const onRemove = vi.fn();
-    const row = integration();
-    renderRow({ onRemove });
-    await waitFor(() => expect(listInstallations).toHaveBeenCalled());
-    await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
-    await user.click(await screen.findByText(/remove integration/i), { pointerEventsCheck: 0 });
-    await waitFor(() => expect(onRemove).toHaveBeenCalledWith(row));
-  });
-
   it("dispatching Verify or Remove defers the callback until after the menu has closed, avoiding the Radix pointer-events lock", async () => {
     // Regression test for a Radix DropdownMenu -> Dialog composition bug: if the
     // dialog-opening callback fires synchronously from onSelect, the menu's
@@ -149,13 +138,14 @@ describe("IntegrationRow", () => {
     // pointer-events) before the dialog mounts.
     const user = userEvent.setup();
     const onRemove = vi.fn();
+    const row = integration();
     renderRow({ onRemove });
     await waitFor(() => expect(listInstallations).toHaveBeenCalled());
     await user.click(screen.getByRole("button", { name: /open row menu/i }), { pointerEventsCheck: 0 });
     const removeItem = await screen.findByText(/remove integration/i);
     await user.click(removeItem, { pointerEventsCheck: 0 });
 
-    await waitFor(() => expect(onRemove).toHaveBeenCalled());
+    await waitFor(() => expect(onRemove).toHaveBeenCalledWith(row));
     // Once the deferred callback has run, the dropdown menu's own close
     // cleanup must have already reset pointer-events — it is not left
     // stuck at "none" by the callback firing before the menu unmounts.
