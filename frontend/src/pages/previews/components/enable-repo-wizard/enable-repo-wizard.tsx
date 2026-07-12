@@ -1,23 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GitPullRequest } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { listGitIntegrations } from "@/api/git-integrations";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { CONNECTED_STATUSES } from "@/pages/previews/hooks/use-github-connect";
-import { ConnectPhase } from "./connect-phase";
-import { RepoPickerPhase } from "./repo-picker-phase";
+import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
+import { GitSourcePicker } from "@/components/git-source-picker/git-source-picker";
+import type { PickedRepo } from "@/components/git-source-picker/types";
 import { ConfigurePhase } from "./configure-phase";
 
-type Phase = "connect" | "pick" | "configure";
+// Canonical home of PickedRepo moved to the shared picker; re-exported here so
+// existing importers (configure-phase, page tests) keep working.
+export type { PickedRepo } from "@/components/git-source-picker/types";
 
-export interface PickedRepo {
-  /** e.g. "acme/webapp" */
-  fullName: string;
-  cloneUrl: string;
-  defaultBranch: string;
-  /** null when the user typed a URL manually (no discovery available) */
-  integrationId: string | null;
-}
+type Phase = "pick" | "configure";
+
+const PR_AUTOMATION_HINT =
+  "PR automation requires a connected provider. Public URLs support manually created previews.";
 
 interface EnableRepoWizardProps {
   open: boolean;
@@ -27,46 +23,12 @@ interface EnableRepoWizardProps {
 }
 
 export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWizardProps) {
-  const [phase, setPhase] = useState<Phase>("connect");
-  const [integrationId, setIntegrationId] = useState<string | null>(null);
+  const [phase, setPhase] = useState<Phase>("pick");
   const [repo, setRepo] = useState<PickedRepo | null>(null);
-  const [checkedIntegrations, setCheckedIntegrations] = useState(false);
-
-  // On open: skip connect when a usable GitHub App integration already exists.
-  useEffect(() => {
-    if (!open) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
-    let cancelled = false;
-    setCheckedIntegrations(false);
-    listGitIntegrations(orgId)
-      .then((list) => {
-        if (cancelled) return;
-        const connected = (list.items ?? []).find(
-          (i) => i.type === "github_app" && CONNECTED_STATUSES.has(i.status ?? ""),
-        );
-        if (connected) {
-          setIntegrationId(connected.id ?? null);
-          setPhase("pick");
-        } else {
-          setPhase("connect");
-        }
-        setCheckedIntegrations(true);
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setPhase("connect");
-          setCheckedIntegrations(true);
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
 
   const close = () => {
     onOpenChange(false);
-    setPhase("connect");
+    setPhase("pick");
     setRepo(null);
   };
 
@@ -75,7 +37,7 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
       <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[760px]">
         <DialogTitle className="sr-only">Enable repository</DialogTitle>
         <DialogDescription className="sr-only">
-          Connect GitHub and enable preview environments on a repository
+          Pick a repository and enable preview environments on it
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
           <span className="flex h-6 w-6 items-center justify-center text-primary">
@@ -87,28 +49,18 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
         </div>
 
         <div className="h-[520px] max-h-[80vh] overflow-hidden">
-          {phase === "connect" && checkedIntegrations && (
-            <ConnectPhase
-              onConnected={(id) => {
-                setIntegrationId(id);
-                setPhase("pick");
-              }}
-              onCancel={close}
-              onSkip={() => {
-                setIntegrationId(null);
-                setPhase("pick");
-              }}
-            />
-          )}
           {phase === "pick" && (
-            <RepoPickerPhase
-              integrationId={integrationId}
-              onPicked={(r) => {
-                setRepo(r);
-                setPhase("configure");
-              }}
-              onBack={() => setPhase("connect")}
-            />
+            <div className="flex h-full flex-col">
+              <div className="flex-1 overflow-y-auto p-6">
+                <GitSourcePicker value={repo} onChange={setRepo} publicUrlHint={PR_AUTOMATION_HINT} />
+              </div>
+              <WizardFooter
+                onBack={close}
+                onContinue={() => setPhase("configure")}
+                continueDisabled={repo == null}
+                hint={repo ? repo.fullName : "Pick a repository to continue"}
+              />
+            </div>
           )}
           {phase === "configure" && repo && (
             <ConfigurePhase

@@ -156,10 +156,20 @@ describe("GitSourcePicker", () => {
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
 
-  it("shows the configure escape hatch when the search returns nothing", async () => {
-    renderPicker({ configureUrl: "https://github.com/apps/x/installations/new" });
+  it("shows the configure escape hatch from the selected integration's install URL when the search returns nothing", async () => {
+    vi.mocked(listGitIntegrations).mockResolvedValue({
+      items: [{ ...app, install_url: "https://github.com/apps/x/installations/new" }, creds],
+    });
+    renderPicker();
     const link = await screen.findByRole("link", { name: /configure in github/i });
     expect(link).toHaveAttribute("href", "https://github.com/apps/x/installations/new");
+  });
+
+  it("omits the configure escape hatch when the selected integration has no install URL", async () => {
+    renderPicker();
+    await screen.findByRole("tab", { name: /connected provider/i });
+    expect(await screen.findByText(/no repositories found/i)).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /configure in github/i })).not.toBeInTheDocument();
   });
 
   it("offers Connect provider when no integrations exist", async () => {

@@ -42,11 +42,9 @@ interface GitSourcePickerProps {
   onChange: (repo: PickedRepo | null) => void;
   /** Shown under the Public URL tab (e.g. preview wizard's PR-automation note). */
   publicUrlHint?: string;
-  /** When set, empty search results link here ("Configure in GitHub"). */
-  configureUrl?: string;
 }
 
-export function GitSourcePicker({ value, onChange, publicUrlHint, configureUrl }: GitSourcePickerProps) {
+export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePickerProps) {
   const [tab, setTab] = useState<Tab>("provider");
   const [integrations, setIntegrations] = useState<GitIntegration[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -61,6 +59,9 @@ export function GitSourcePicker({ value, onChange, publicUrlHint, configureUrl }
 
   const selected = integrations.find((i) => i.id === selectedId) ?? null;
   const hasGithubApp = integrations.some((i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP);
+  // GitHub App integrations carry an install URL once credentials exist; empty
+  // search results link there so users can grant the app more repositories.
+  const configureUrl = selected?.install_url;
 
   const loadIntegrations = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
