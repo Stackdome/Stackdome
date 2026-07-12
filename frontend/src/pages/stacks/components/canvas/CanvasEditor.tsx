@@ -118,7 +118,7 @@ export function CanvasEditor({
         // canvas matches the surrounding chrome in both modes.
         style={{ backgroundColor: "var(--background)" }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--border)" />
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
         <CanvasControls
           showConnections={showConnections}
           onToggleConnections={onToggleConnections}
