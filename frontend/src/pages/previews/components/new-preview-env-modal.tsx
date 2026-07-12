@@ -12,26 +12,13 @@ import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
 import type { StackPreviewConfig } from "@/api/preview-configs";
+import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
 
 interface NewPreviewEnvModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   config: StackPreviewConfig;
   onCreated: () => void;
-}
-
-/** "K1=v1\nK2=v2" → { K1: "v1", K2: "v2" }; blank lines ignored. */
-function parseOverrides(text: string): Record<string, string> | undefined {
-  const entries = text
-    .split("\n")
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .map((l) => {
-      const idx = l.indexOf("=");
-      return idx > 0 ? ([l.slice(0, idx).trim(), l.slice(idx + 1).trim()] as const) : null;
-    })
-    .filter((e): e is readonly [string, string] => e != null);
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }
 
 export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: NewPreviewEnvModalProps) {
@@ -63,7 +50,7 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
     setSaving(true);
     setError(null);
     try {
-      const overrides = parseOverrides(overridesText);
+      const overrides = parseImageOverrides(overridesText);
       await createPreviewEnv(orgId, defaultTeamName, {
         config_id: config.id,
         pr_number: prNumber.trim(),
@@ -115,8 +102,8 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
               onChange={(e) => setBranch(e.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              The environment pins this branch&apos;s current commit; use Sync to
-              pick up new commits later.
+              The environment deploys this branch&apos;s latest commit; use Sync
+              to pick up new commits later.
             </p>
           </div>
 

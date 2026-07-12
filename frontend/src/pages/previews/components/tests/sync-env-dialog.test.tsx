@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/api/preview-envs", async (importOriginal) => {
@@ -15,6 +15,7 @@ vi.mock("@/hooks/use-resource-teams", () => ({
   useResourceTeams: () => ({ teams: [], teamNameById: () => undefined, defaultTeamName: "default" }),
 }));
 
+import { syncPreviewEnv } from "@/api/preview-envs";
 import { SyncEnvDialog } from "../sync-env-dialog";
 import type { PreviewStack } from "@/api/preview-envs";
 
@@ -30,8 +31,8 @@ describe("SyncEnvDialog", () => {
       <SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />,
     );
 
-    await userEvent.type(screen.getByLabelText(/pin to commit/i), "deadbeef");
-    expect(screen.getByLabelText(/pin to commit/i)).toHaveValue("deadbeef");
+    await userEvent.type(screen.getByLabelText(/pin to a specific commit/i), "deadbeef");
+    expect(screen.getByLabelText(/pin to a specific commit/i)).toHaveValue("deadbeef");
 
     // Close without submitting (e.g. Cancel/Escape/outside-click).
     rerender(<SyncEnvDialog env={null} onOpenChange={() => {}} onSynced={() => {}} />);
@@ -39,6 +40,68 @@ describe("SyncEnvDialog", () => {
     // Reopen for a different env.
     rerender(<SyncEnvDialog env={envB} onOpenChange={() => {}} onSynced={() => {}} />);
 
-    expect(screen.getByLabelText(/pin to commit/i)).toHaveValue("");
+    expect(screen.getByLabelText(/pin to a specific commit/i)).toHaveValue("");
+  });
+
+  it("hides stackfile content and image overrides until Advanced is expanded", () => {
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+
+    expect(screen.queryByLabelText(/stackfile content/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/image overrides/i)).not.toBeInTheDocument();
+  });
+
+  it("reveals stackfile content and image overrides under Advanced", async () => {
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /advanced/i }));
+
+    expect(screen.getByLabelText(/stackfile content/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/image overrides/i)).toBeInTheDocument();
+  });
+
+  it("resets the Advanced collapse when reopened for a different env", async () => {
+    const { rerender } = render(
+      <SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /advanced/i }));
+    expect(screen.getByLabelText(/stackfile content/i)).toBeInTheDocument();
+
+    rerender(<SyncEnvDialog env={null} onOpenChange={() => {}} onSynced={() => {}} />);
+    rerender(<SyncEnvDialog env={envB} onOpenChange={() => {}} onSynced={() => {}} />);
+
+    expect(screen.queryByLabelText(/stackfile content/i)).not.toBeInTheDocument();
+  });
+
+  it("sends parsed image_overrides in the sync payload when provided", async () => {
+    (syncPreviewEnv as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /advanced/i }));
+    await userEvent.type(
+      screen.getByLabelText(/image overrides/i),
+      "web=registry.example.com/web:sha-1",
+    );
+    await userEvent.click(screen.getByRole("button", { name: /^sync$/i }));
+
+    await waitFor(() => {
+      expect(syncPreviewEnv).toHaveBeenCalledWith("org1", "default", "p1", {
+        image_overrides: { web: "registry.example.com/web:sha-1" },
+      });
+    });
+  });
+
+  it("omits image_overrides from the payload when the field is empty", async () => {
+    (syncPreviewEnv as ReturnType<typeof vi.fn>).mockResolvedValue({});
+    render(<SyncEnvDialog env={envA} onOpenChange={() => {}} onSynced={() => {}} />);
+
+    await userEvent.type(screen.getByLabelText(/pin to a specific commit/i), "deadbeef");
+    await userEvent.click(screen.getByRole("button", { name: /^sync$/i }));
+
+    await waitFor(() => {
+      expect(syncPreviewEnv).toHaveBeenCalledWith("org1", "default", "p1", {
+        commit: "deadbeef",
+      });
+    });
   });
 });
