@@ -152,7 +152,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
                 aria-invalid={!!fieldErrors.stackfilePath}
               />
             </FieldShell>
-            <FieldShell label="Max active previews" htmlFor="cs-max" required error={fieldErrors.maxActive}>
+            <FieldShell label="Max active previews" htmlFor="cs-max" error={fieldErrors.maxActive}>
               <Input
                 id="cs-max"
                 type="number"

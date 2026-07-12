@@ -1,19 +1,23 @@
 import { z } from "zod";
-import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
+import { isOverrideLine } from "@/pages/previews/lib/parse-image-overrides";
 
 /** Full 40-char or short (min 7) hex commit SHA, case-insensitive. */
 const COMMIT_SHA_REGEX = /^[0-9a-f]{7,40}$/i;
 
-/** True when every non-blank line parses as `resource=image` —
- *  i.e. `parseImageOverrides` didn't have to silently drop a line. */
+/** Applied when the user leaves "Stackfile path" blank. */
+export const DEFAULT_STACKFILE_PATH = "stackfile.yaml";
+
+/** True when every non-blank line matches the `resource=image` shape —
+ *  checked per line (via `isOverrideLine`, the same rule `parseImageOverrides`
+ *  uses) rather than by comparing line count to parsed-key count, since
+ *  duplicate resource keys collapse to one key and would otherwise be
+ *  wrongly rejected. */
 function isValidOverridesText(text: string): boolean {
-  const nonBlankLines = text
+  return text
     .split("\n")
     .map((l) => l.trim())
-    .filter(Boolean);
-  if (nonBlankLines.length === 0) return true;
-  const parsed = parseImageOverrides(text);
-  return Object.keys(parsed ?? {}).length === nonBlankLines.length;
+    .filter(Boolean)
+    .every(isOverrideLine);
 }
 
 /** Shared by every "Image overrides" textarea: optional, but any non-blank

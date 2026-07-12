@@ -7,7 +7,9 @@ import { createPreviewConfig } from "@/api/preview-configs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
-import { configurePhaseSchema, type ConfigurePhaseValues } from "@/pages/previews/lib/form-schemas";
+import {
+  configurePhaseSchema, DEFAULT_STACKFILE_PATH, type ConfigurePhaseValues,
+} from "@/pages/previews/lib/form-schemas";
 import type { PickedRepo } from "./enable-repo-wizard";
 
 interface ConfigurePhaseProps {
@@ -20,7 +22,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
   const { defaultTeamName } = useResourceTeams();
   const [name, setName] = useState(repo.fullName.split("/").pop() ?? "");
   const [baseBranch, setBaseBranch] = useState(repo.defaultBranch);
-  const [stackfilePath, setStackfilePath] = useState("stackfile.yaml");
+  const [stackfilePath, setStackfilePath] = useState(DEFAULT_STACKFILE_PATH);
   const [maxActive, setMaxActive] = useState(10);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ConfigurePhaseValues, string>>>({});
@@ -50,7 +52,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
       const created = await createPreviewConfig(orgId, defaultTeamName, {
         name: parsed.data.name,
         git_repository: { repo_url: repo.cloneUrl, base_branch: parsed.data.baseBranch },
-        stackfile_path: parsed.data.stackfilePath ?? stackfilePath,
+        stackfile_path: parsed.data.stackfilePath || DEFAULT_STACKFILE_PATH,
         max_active_previews: parsed.data.maxActive,
       });
       onCreated(created.id ?? "");
@@ -122,11 +124,15 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
           <Input
             id="cfg-stackfile"
             value={stackfilePath}
-            onChange={(e) => setStackfilePath(e.target.value)}
+            onChange={(e) => {
+              setStackfilePath(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, stackfilePath: undefined }));
+            }}
+            aria-invalid={!!fieldErrors.stackfilePath}
           />
         </FieldShell>
 
-        <FieldShell label="Max active previews" htmlFor="cfg-max" required error={fieldErrors.maxActive}>
+        <FieldShell label="Max active previews" htmlFor="cfg-max" error={fieldErrors.maxActive}>
           <Input
             id="cfg-max"
             type="number"

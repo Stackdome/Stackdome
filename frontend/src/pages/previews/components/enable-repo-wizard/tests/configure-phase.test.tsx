@@ -53,6 +53,22 @@ describe("ConfigurePhase", () => {
     });
   });
 
+  it("falls back to the default stackfile path when the field is cleared", async () => {
+    (createPreviewConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "c1" });
+    render(<ConfigurePhase repo={repo} onCreated={vi.fn()} onBack={() => {}} />);
+
+    await userEvent.clear(screen.getByLabelText(/stackfile path/i));
+    await userEvent.click(screen.getByRole("button", { name: /enable previews/i }));
+
+    await waitFor(() => {
+      expect(createPreviewConfig).toHaveBeenCalledWith(
+        "org1",
+        "default",
+        expect.objectContaining({ stackfile_path: "stackfile.yaml" }),
+      );
+    });
+  });
+
   it("marks name and base branch as required and blocks submit with an empty name", async () => {
     (createPreviewConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "c1" });
     render(<ConfigurePhase repo={repo} onCreated={vi.fn()} onBack={() => {}} />);
