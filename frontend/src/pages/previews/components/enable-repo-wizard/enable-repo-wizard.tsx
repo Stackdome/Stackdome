@@ -40,7 +40,7 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
           Pick a repository and enable preview environments on it
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-primary">
+          <span className="flex h-6 w-6 items-center justify-center text-brand">
             <GitPullRequest className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">

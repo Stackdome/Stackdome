@@ -11,11 +11,6 @@ export type PreviewPhase = NonNullable<NonNullable<PreviewStack["status"]>["phas
 /** Phases where the backend has finished reconciling; polling can stop. */
 export const TERMINAL_PHASES: PreviewPhase[] = ["Ready", "Failed"];
 
-// Labels the backend stamps on stacks created by preview environments
-// (pkg/models/preview_stack.go). Used to detect preview ownership in the UI.
-export const PREVIEW_STACK_LABEL = "preview.stackdome.io/preview-stack";
-export const PREVIEW_ID_LABEL = "preview.stackdome.io/preview-id";
-
 function base(orgId: string, teamName: string): string {
   return `/organizations/${orgId}/teams/${teamName}/preview-stacks`;
 }

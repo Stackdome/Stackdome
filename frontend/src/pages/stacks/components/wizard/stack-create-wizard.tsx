@@ -54,7 +54,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
             built-in close (X), which is absolutely positioned at top-right.
             Per-step navigation lives in each path's footer (WizardFooter). */}
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-primary">
+          <span className="flex h-6 w-6 items-center justify-center text-brand">
             <Layers className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">

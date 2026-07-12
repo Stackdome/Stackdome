@@ -24,11 +24,6 @@ export async function createGitIntegration(orgId: string, body: GitIntegration):
   return res.data as GitIntegration;
 }
 
-export async function getGitIntegration(orgId: string, id: string): Promise<GitIntegration> {
-  const res = await api.get(`${base(orgId)}/${id}`);
-  return res.data as GitIntegration;
-}
-
 export async function deleteGitIntegration(orgId: string, id: string): Promise<void> {
   await api.delete(`${base(orgId)}/${id}`);
 }

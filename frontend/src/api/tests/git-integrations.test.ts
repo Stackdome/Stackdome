@@ -7,7 +7,6 @@ vi.mock("@/api/client", () => ({
 import api from "@/api/client";
 import {
   listGitIntegrations,
-  getGitIntegration,
   deleteGitIntegration,
   verifyGitIntegration,
   createGitHubAppManifest,
@@ -28,13 +27,6 @@ describe("git-integrations api", () => {
     const out = await listGitIntegrations(ORG);
     expect(api.get).toHaveBeenCalledWith(BASE);
     expect(out.items?.[0].id).toBe("gi1");
-  });
-
-  it("gets one integration", async () => {
-    (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "gi1", status: "installed" } });
-    const out = await getGitIntegration(ORG, "gi1");
-    expect(api.get).toHaveBeenCalledWith(`${BASE}/gi1`);
-    expect(out.status).toBe("installed");
   });
 
   it("deletes an integration", async () => {

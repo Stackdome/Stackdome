@@ -1,4 +1,3 @@
-// frontend/src/pages/stacks/components/wizard/wizard-chooser.tsx
 import type { ComponentType } from "react";
 import {
   Grid3x3,
@@ -104,7 +103,7 @@ export function WizardChooser({
                 "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
                 a.disabled
                   ? "cursor-not-allowed opacity-50"
-                  : "hover:border-primary",
+                  : "hover:border-brand",
               )}
             >
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded border border-brand-border bg-brand-bg text-brand">

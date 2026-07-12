@@ -7,6 +7,11 @@ import {
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { GITHUB_APP_INSTALLED_MESSAGE } from "@/hooks/use-github-setup-landing";
+import {
+  GIT_INTEGRATION_TYPE_GITHUB_APP,
+  STATUS_INSTALLED,
+  STATUS_ACTIVE,
+} from "@/pages/git-integrations/lib/derive-row";
 
 export type GithubConnectState = "idle" | "waiting" | "connected" | "error";
 
@@ -15,14 +20,13 @@ const POPUP_FEATURES = "width=1020,height=800";
 const POLL_MS = 5_000;
 const MAX_POLLS = 40;
 
-export const CONNECTED_STATUSES = new Set(["installed", "active"]);
+export const CONNECTED_STATUSES = new Set<string>([STATUS_INSTALLED, STATUS_ACTIVE]);
 
 export interface GithubConnect {
   state: GithubConnectState;
   error: string | null;
   connect: () => Promise<void>;
   checkAgain: () => Promise<void>;
-  integrationId: string | null;
 }
 
 /** Form-POSTs the manifest JSON to GitHub inside the named popup window. */
@@ -44,15 +48,14 @@ function postManifestToPopup(githubUrl: string, manifest: unknown): void {
 export function useGithubConnect(): GithubConnect {
   const [state, setState] = useState<GithubConnectState>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [integrationId, setIntegrationId] = useState<string | null>(null);
   const pollCount = useRef(0);
-  // Mirrors integrationId for the poll interval, whose closure would
-  // otherwise see the value captured when the interval was created.
+  // Holds the integration id across the poll interval, whose closure would
+  // otherwise see the value captured when the interval was created. Internal
+  // only — no consumer needs the id, so it isn't exposed via GithubConnect.
   const integrationIdRef = useRef<string | null>(null);
 
   const rememberIntegrationId = useCallback((id: string | null) => {
     integrationIdRef.current = id;
-    setIntegrationId(id);
   }, []);
 
   /**
@@ -69,7 +72,7 @@ export function useGithubConnect(): GithubConnect {
     let id = integrationIdRef.current;
     if (!id) {
       const list = await listGitIntegrations(orgId);
-      const app = (list.items ?? []).find((i) => i.type === "github_app");
+      const app = (list.items ?? []).find((i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP);
       if (!app?.id) return false;
       id = app.id;
       rememberIntegrationId(id);
@@ -100,7 +103,7 @@ export function useGithubConnect(): GithubConnect {
       // user confirms app creation in the popup; the poll re-resolves it.
       const list = await listGitIntegrations(orgId);
       const pending = (list.items ?? []).find(
-        (i) => i.type === "github_app" && !CONNECTED_STATUSES.has(i.status ?? ""),
+        (i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP && !CONNECTED_STATUSES.has(i.status ?? ""),
       );
       rememberIntegrationId(pending?.id ?? null);
       pollCount.current = 0;
@@ -160,5 +163,5 @@ export function useGithubConnect(): GithubConnect {
     return () => clearInterval(timer);
   }, [state, probeConnected]);
 
-  return { state, error, connect, checkAgain, integrationId };
+  return { state, error, connect, checkAgain };
 }

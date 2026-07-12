@@ -101,12 +101,7 @@ export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnv
               className="w-[160px]"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Both items open a downstream dialog. Radix's DropdownMenu→Dialog
-                  composition races the menu's close (which resets
-                  document.body.style.pointerEvents) against the dialog's mount, and
-                  can leave pointer-events "none" on body forever if the dialog is
-                  cancelled. Deferring the callback until after the menu has fully
-                  closed avoids the race. See https://github.com/radix-ui/primitives/issues/1836 */}
+              {/* Deferred so the menu finishes closing before the dialog mounts — see radix-ui/primitives#1836 (canonical note in row-menu.tsx). */}
               <DropdownMenuItem
                 disabled={menuDisabled}
                 onSelect={() => setTimeout(() => onSync?.(env), 0)}

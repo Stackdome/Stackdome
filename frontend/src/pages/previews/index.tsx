@@ -8,16 +8,11 @@ import { providerIdForHost } from "@/pages/git-integrations/lib/derive-row";
 import { listAllPreviewConfigs, type StackPreviewConfig } from "@/api/preview-configs";
 import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
 import { EnableRepoWizard } from "@/pages/previews/components/enable-repo-wizard/enable-repo-wizard";
+import { repoTail } from "@/components/git-source-picker/git-source-picker";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
-
-/** "https://github.com/acme/webapp.git" → "acme/webapp" */
-function repoShort(url?: string): string {
-  if (!url) return "";
-  return url.replace(/\.git$/, "").replace(/\/+$/, "").split("/").slice(-2).join("/");
-}
 
 /** "https://github.com/acme/webapp.git" → "github.com" (empty on unparsable input) */
 function hostOf(url?: string): string {
@@ -120,7 +115,7 @@ export default function PreviewsPage() {
                     <div className="min-w-0">
                       <p className="truncate text-[15px] font-medium text-foreground">{c.name}</p>
                       <p className="truncate font-mono text-[11.5px] text-fg-muted">
-                        {repoShort(c.git_repository?.repo_url)}
+                        {c.git_repository?.repo_url ? repoTail(c.git_repository.repo_url) : ""}
                       </p>
                     </div>
                   </div>

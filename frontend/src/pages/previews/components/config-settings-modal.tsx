@@ -18,7 +18,9 @@ import {
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
-import { configSettingsSchema, type ConfigSettingsValues } from "@/pages/previews/lib/form-schemas";
+import {
+  configSettingsSchema, DEFAULT_STACKFILE_PATH, type ConfigSettingsValues,
+} from "@/pages/previews/lib/form-schemas";
 
 interface ConfigSettingsModalProps {
   open: boolean;
@@ -45,7 +47,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
   useEffect(() => {
     if (!open) return;
     setBaseBranch(config.git_repository?.base_branch ?? "");
-    setStackfilePath(config.stackfile_path ?? "stackfile.yaml");
+    setStackfilePath(config.stackfile_path ?? DEFAULT_STACKFILE_PATH);
     setMaxActive(config.max_active_previews ?? 10);
     setFieldErrors({});
   }, [open, config]);
