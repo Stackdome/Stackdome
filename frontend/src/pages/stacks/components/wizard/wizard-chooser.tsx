@@ -50,34 +50,34 @@ export function WizardChooser({
 }: WizardChooserProps) {
   const alts: AltStart[] = [
     {
-      icon: Grid3x3,
-      label: "Build from blocks",
-      desc: "Assemble your stack from pre-configured building blocks of resources.",
-      onClick: onPickBlocks,
-    },
-    {
       icon: LayoutTemplate,
-      label: "From template",
-      desc: "Curated self-hosted apps, ready to deploy.",
+      label: "Start from a template",
+      desc: "Curated self-hosted apps, one click from running.",
       onClick: onPickTemplate,
     },
     {
+      icon: Grid3x3,
+      label: "Compose with blocks",
+      desc: "Snap together databases, services, and volumes.",
+      onClick: onPickBlocks,
+    },
+    {
+      icon: GitBranch,
+      label: "Deploy from git",
+      desc: "Point at a repo; we build and ship it.",
+      onClick: onPickGit,
+    },
+    {
       glyph: DockerGlyph,
-      label: "Docker compose",
-      desc: "Import a compose.yml.",
+      label: "Import docker-compose",
+      desc: "Your compose.yml becomes a stack, as-is.",
       onClick: onPickCompose,
     },
     {
       icon: Code,
-      label: "Blank slate",
-      desc: "Build it up yourself.",
+      label: "Start from scratch",
+      desc: "An empty canvas and full control.",
       onClick: onPickBlank,
-    },
-    {
-      icon: GitBranch,
-      label: "From git provider",
-      desc: "Deploy straight from a repository.",
-      onClick: onPickGit,
     },
   ];
 
@@ -86,11 +86,10 @@ export function WizardChooser({
       <div className="w-full max-w-[780px]">
         <div className="mb-8 text-center">
           <h2 className="mb-2 text-3xl font-medium tracking-tight">
-            How do you want to start?
+            What are we shipping?
           </h2>
           <p className="text-sm text-muted-foreground">
-            Let&apos;s get something running. Pick a starting point. You can
-            change anything later.
+            Pick a starting point — everything&apos;s editable after.
           </p>
         </div>
 
