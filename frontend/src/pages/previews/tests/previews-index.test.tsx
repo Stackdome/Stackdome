@@ -82,6 +82,30 @@ describe("PreviewsPage", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/previews/cfg-1");
   });
 
+  it("filters config rows by name/repo/branch and shows a no-match state", async () => {
+    const other = {
+      id: "cfg-2",
+      name: "api-service",
+      git_repository: { repo_url: "https://gitlab.com/acme/api.git", base_branch: "develop" },
+      stackfile_path: "stackfile.yaml",
+      max_active_previews: 10,
+    };
+    vi.mocked(listAllPreviewConfigs).mockResolvedValue([config, other]);
+    const user = userEvent.setup();
+    renderPage();
+    expect(await screen.findByText("webapp")).toBeInTheDocument();
+    expect(screen.getByText("api-service")).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText(/filter repositories/i);
+    await user.type(input, "develop");
+    expect(screen.getByText("api-service")).toBeInTheDocument();
+    expect(screen.queryByText("webapp")).not.toBeInTheDocument();
+
+    await user.clear(input);
+    await user.type(input, "no-such-repo");
+    expect(await screen.findByText(/no repositories match/i)).toBeInTheDocument();
+  });
+
   it("shows the empty state with an Enable repository CTA when no configs exist", async () => {
     vi.mocked(listAllPreviewConfigs).mockResolvedValue([]);
     const user = userEvent.setup();
