@@ -118,7 +118,7 @@ export default function PreviewsPage() {
                       <ProviderLogo providerId={providerIdForHost(host)} className="h-5 w-5 shrink-0" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-semibold text-foreground">{c.name}</p>
+                      <p className="truncate text-[15px] font-medium text-foreground">{c.name}</p>
                       <p className="truncate font-mono text-[11.5px] text-fg-muted">
                         {repoShort(c.git_repository?.repo_url)}
                       </p>

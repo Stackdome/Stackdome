@@ -117,7 +117,7 @@ export function IntegrationRow({
             <ProviderLogo providerId={providerIdFor(integration)} className="h-5 w-5 shrink-0" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold text-foreground">
+            <p className="truncate text-[15px] font-medium text-foreground">
               {PROVIDER_DISPLAY_NAMES[providerIdFor(integration)]}
             </p>
             <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
