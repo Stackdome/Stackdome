@@ -20,6 +20,7 @@ import { getPreviewConfig, type StackPreviewConfig } from "@/api/preview-configs
 import { deletePreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useResourceTeams } from "@/hooks/use-resource-teams";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
@@ -73,6 +74,15 @@ export default function PreviewConfigDetailPage() {
   const { envs, loading: envsLoading, error: envsError, refresh } = usePreviewEnvs(configId);
   const [syncing, setSyncing] = useState<PreviewStack | null>(null);
   const [deleting, setDeleting] = useState<PreviewStack | null>(null);
+
+  // Breadcrumb shows the config's name instead of its UUID path segment.
+  const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  useEffect(() => {
+    if (!configId) return;
+    const path = `/previews/${configId}`;
+    setCustomLabel(path, config?.name ?? "Preview configuration");
+    setPathLoading(path, configLoading);
+  }, [configId, config?.name, configLoading, setCustomLabel, setPathLoading]);
 
   useEffect(() => {
     const orgId = getCurrentOrganizationId();
