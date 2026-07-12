@@ -26,11 +26,11 @@ describe("WizardChooser", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /Compose with blocks/i }));
-    await user.click(screen.getByRole("button", { name: /Start from a template/i }));
-    await user.click(screen.getByRole("button", { name: /Import docker-compose/i }));
-    await user.click(screen.getByRole("button", { name: /start from scratch/i }));
-    await user.click(screen.getByRole("button", { name: /Deploy from git/i }));
+    await user.click(screen.getByRole("button", { name: /Build from blocks/i }));
+    await user.click(screen.getByRole("button", { name: /From template/i }));
+    await user.click(screen.getByRole("button", { name: /Docker compose/i }));
+    await user.click(screen.getByRole("button", { name: /blank slate/i }));
+    await user.click(screen.getByRole("button", { name: /From git provider/i }));
 
     expect(onPickBlocks).toHaveBeenCalledOnce();
     expect(onPickTemplate).toHaveBeenCalledOnce();
