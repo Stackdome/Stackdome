@@ -84,7 +84,7 @@ func (w *releaseGCWorker) Execute(ctx context.Context, operand worker.Operand) (
 		return worker.Result{}, w.WorkerError.NewError("failed to delete releases for stack %s: %v", req.StackID, err)
 	}
 
-	w.Logger().Infof("GC completed for stack %s: deleted %d of %d terminal releases", req.StackID, len(toDelete), len(candidates))
+	w.Logger().Info(ctx, "GC completed for stack %s: deleted %d of %d terminal releases", req.StackID, len(toDelete), len(candidates))
 	return worker.Result{}, nil
 }
 

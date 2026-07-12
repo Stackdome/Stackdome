@@ -115,7 +115,7 @@ func (u usersService) GetUserFromContext(ctx context.Context) (*models.User, []*
 	}
 	memberships, membErr := u.teamService.InternalListUserTeams(ctx, user.ID, user.OrganisationID)
 	if membErr != nil {
-		u.logger.Errorf("failed to list user teams: %s", membErr.Error())
+		u.logger.Error(ctx, "failed to list user teams: %s", membErr.Error())
 	}
 	return user, memberships, nil
 }
@@ -172,7 +172,7 @@ func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, 
 		string(models.OrgAdminRole),
 		createdUser.OrganisationID,
 	); policyErr != nil {
-		u.logger.Errorf("failed to add OrgAdmin policy for oauth user: %s", policyErr.Error())
+		u.logger.Error(ctx, "failed to add OrgAdmin policy for oauth user: %s", policyErr.Error())
 		return nil, fmt.Errorf("failed to add access policy: %w", policyErr)
 	}
 
@@ -181,7 +181,7 @@ func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, 
 		string(models.OrgMemberRole),
 		createdUser.OrganisationID,
 	); policyErr != nil {
-		u.logger.Errorf("failed to add OrgMember policy for oauth user: %s", policyErr.Error())
+		u.logger.Error(ctx, "failed to add OrgMember policy for oauth user: %s", policyErr.Error())
 	}
 
 	return createdUser, nil
@@ -197,7 +197,7 @@ func (u usersService) InternalCreateInvitedUser(ctx context.Context, user *model
 	}
 
 	if _, teamErr := u.teamService.InternalAddMember(ctx, invite.TeamID, createdUser.ID, invite.TeamRole); teamErr != nil {
-		u.logger.Errorf("failed to add invited user to team: %s", teamErr.Error())
+		u.logger.Error(ctx, "failed to add invited user to team: %s", teamErr.Error())
 		return nil, errors.GeneralError("failed to add user to team")
 	}
 
@@ -220,7 +220,7 @@ func (u usersService) InternalCreateInvitedOAuthUser(ctx context.Context, email,
 	}
 
 	if _, teamErr := u.teamService.InternalAddMember(ctx, invite.TeamID, createdUser.ID, invite.TeamRole); teamErr != nil {
-		u.logger.Errorf("failed to add invited oauth user to team: %s", teamErr.Error())
+		u.logger.Error(ctx, "failed to add invited oauth user to team: %s", teamErr.Error())
 		return nil, fmt.Errorf("failed to add user to team: %w", teamErr)
 	}
 
@@ -237,7 +237,7 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 		if stderrors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return nil, errors.BadRequest("invalid email or password")
 		}
-		u.logger.Errorf("failed to login: %s", err.Error())
+		u.logger.Error(ctx, "failed to login: %s", err.Error())
 		return nil, errors.GeneralError("failed to login")
 	}
 	expirationTime := time.Now().UTC().Add(auth.JwtTokenExpiry)
@@ -250,13 +250,13 @@ func (u usersService) Login(ctx context.Context, loginRequest *openapi.LoginRequ
 
 	refreshToken, refreshErr := auth.CreateRefreshToken(ctx, u.refreshTokenStore, userInDB.ID)
 	if refreshErr != nil {
-		u.logger.Errorf("failed to create refresh token: %s", refreshErr.Error())
+		u.logger.Error(ctx, "failed to create refresh token: %s", refreshErr.Error())
 		return nil, errors.GeneralError("failed to generate refresh token")
 	}
 
 	memberships, membErr := u.teamService.InternalListUserTeams(ctx, userInDB.ID, userInDB.OrganisationID)
 	if membErr != nil {
-		u.logger.Errorf("failed to list user teams: %s", membErr.Error())
+		u.logger.Error(ctx, "failed to list user teams: %s", membErr.Error())
 		return nil, errors.GeneralError("failed to list user teams")
 	}
 

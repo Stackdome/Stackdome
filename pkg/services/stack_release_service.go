@@ -182,6 +182,12 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
+	s.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   stack.ID,
+		logger.FieldReleaseID: created.ID,
+		"sequence":            created.Sequence,
+		"cause":               cause.Kind,
+	}).Info(ctx, "created release")
 	return created, nil
 }
 
@@ -258,6 +264,12 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
+	s.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   stackID,
+		logger.FieldReleaseID: created.ID,
+		"sequence":            created.Sequence,
+		"rollback_from":       src.Sequence,
+	}).Info(ctx, "created rollback release")
 	return created, nil
 }
 
@@ -492,7 +504,7 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 	// The CAS win already persisted the cancellation; recording is best-effort.
 	rel.State = models.ReleaseStateCancelled
 	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, releaseCancelledMessage); recErr != nil {
-		s.logger.Errorf("release %s: failed to record release_cancelled event: %v", rel.ID, recErr)
+		s.logger.Error(ctx, "release %s: failed to record release_cancelled event: %v", rel.ID, recErr)
 	}
 	return nil
 }
@@ -562,16 +574,16 @@ func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context
 	}
 	rel, getErr := s.store.GetByID(ctx, id)
 	if getErr != nil {
-		s.logger.Errorf("release %s: failed to load release for failure events: %v", id, getErr)
+		s.logger.Error(ctx, "release %s: failed to load release for failure events: %v", id, getErr)
 		return true, nil
 	}
 	for _, verr := range verrs {
 		if recErr := s.eventRecorder.RecordReleaseCheckFailed(ctx, rel, verr.ResourceName, validationCheckKey(verr), verr.Message); recErr != nil {
-			s.logger.Errorf("release %s: failed to record release_check_failed event: %v", id, recErr)
+			s.logger.Error(ctx, "release %s: failed to record release_check_failed event: %v", id, recErr)
 		}
 	}
 	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateFailed, message); recErr != nil {
-		s.logger.Errorf("release %s: failed to record release_failed event: %v", id, recErr)
+		s.logger.Error(ctx, "release %s: failed to record release_failed event: %v", id, recErr)
 	}
 	return true, nil
 }
@@ -582,11 +594,11 @@ func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context
 func (s *stackReleaseService) recordTerminalEvent(ctx context.Context, id string, state models.StackReleaseState, message string) {
 	rel, serr := s.store.GetByID(ctx, id)
 	if serr != nil {
-		s.logger.Errorf("release %s: failed to load release for %s event: %v", id, state, serr)
+		s.logger.Error(ctx, "release %s: failed to load release for %s event: %v", id, state, serr)
 		return
 	}
 	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, state, message); recErr != nil {
-		s.logger.Errorf("release %s: failed to record %s event: %v", id, state, recErr)
+		s.logger.Error(ctx, "release %s: failed to record %s event: %v", id, state, recErr)
 	}
 }
 

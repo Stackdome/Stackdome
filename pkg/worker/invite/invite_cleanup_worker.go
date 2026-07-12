@@ -44,7 +44,7 @@ func (w *inviteCleanupWorker) Interval() time.Duration {
 
 func (w *inviteCleanupWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	if w.leadershipFlag != nil && !w.leadershipFlag.Raised() {
-		w.Logger().Infof("Not the leader, invite cleanup worker will not run")
+		w.Logger().Info(ctx, "Not the leader, invite cleanup worker will not run")
 		return nil, nil
 	}
 
@@ -68,13 +68,13 @@ func (w *inviteCleanupWorker) Execute(ctx context.Context, operand worker.Operan
 	}
 	invites := batch.Items
 
-	w.Logger().Infof("Cleaning up %d expired invites", len(invites))
+	w.Logger().Info(ctx, "Cleaning up %d expired invites", len(invites))
 
 	if serr := w.inviteService.InternalMarkExpiredAndDelete(ctx, invites); serr != nil {
-		w.Logger().Errorf("failed to clean up expired invites: %s", serr.Error())
+		w.Logger().Error(ctx, "failed to clean up expired invites: %s", serr.Error())
 		return worker.Result{RequeueAfter: 1 * time.Minute}, nil
 	}
 
-	w.Logger().Infof("Cleaned up %d expired invites", len(invites))
+	w.Logger().Info(ctx, "Cleaned up %d expired invites", len(invites))
 	return worker.Result{}, nil
 }

@@ -146,7 +146,7 @@ func (s *stackService) enrichExternalNodes(ctx context.Context, nodes map[string
 			addon, err := s.postgresAddonService.InternalGetPostgresAddon(ctx, node.Ref.Id)
 			if err != nil {
 				if err.Is404() {
-					s.logger.Warnf("postgres addon '%s' not found for topology, marking as missing", node.Ref.Id)
+					s.logger.Warn(ctx, "postgres addon '%s' not found for topology, marking as missing", node.Ref.Id)
 					node.State = "missing"
 					nodes[key] = node
 					continue
@@ -164,7 +164,7 @@ func (s *stackService) enrichExternalNodes(ctx context.Context, nodes map[string
 			secret, err := s.secretService.InternalGetByID(ctx, node.Ref.Id)
 			if err != nil {
 				if err.Is404() {
-					s.logger.Warnf("secret '%s' not found for topology, marking as missing", node.Ref.Id)
+					s.logger.Warn(ctx, "secret '%s' not found for topology, marking as missing", node.Ref.Id)
 					node.State = "missing"
 					nodes[key] = node
 					continue

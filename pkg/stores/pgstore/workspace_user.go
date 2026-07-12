@@ -3,7 +3,6 @@ package pgstore
 import (
 	"context"
 	stderrors "errors"
-	"fmt"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -46,8 +45,6 @@ func (w *workspaceUserStore) CreateWithTx(ctx context.Context, spec *models.Work
 	for _, wn := range spec.WorkspaceNamespaces {
 		wn.UserID = spec.UserID
 		wn.WorkspaceUserID = spec.ID
-		fmt.Printf("setting workspace user id %s\n", wn.WorkspaceUserID)
-		fmt.Printf("setting user id %s\n", wn.UserID)
 	}
 	if _, err := w.workspaceNamespaceStore.CreateBatchWithTx(ctx, spec.WorkspaceNamespaces); err != nil {
 		return nil, err
@@ -226,7 +223,6 @@ func (w *workspaceUserStore) UpdateWithTx(ctx context.Context, id string, spec *
 	for _, currentWS := range spec.WorkspaceNamespaces {
 		if _, ok := existingWorkspaceMap[currentWS.Workspace]; !ok {
 			// New workspaces.
-			fmt.Printf("creating new workspace %s\n", currentWS.Workspace)
 			currentWS.UserID = existingObj.UserID
 			currentWS.WorkspaceUserID = existingObj.ID
 			if _, err := w.workspaceNamespaceStore.Create(ctx, currentWS); err != nil {
@@ -235,7 +231,6 @@ func (w *workspaceUserStore) UpdateWithTx(ctx context.Context, id string, spec *
 		} else {
 			existingWS := existingWorkspaceMap[currentWS.Workspace]
 			// Enable workspace namespace objects in the current patch.
-			fmt.Printf("enabling workspace %s\n", currentWS.Workspace)
 			currentWS.Enabled = true
 			if _, err := w.workspaceNamespaceStore.UpdateWithTx(ctx, existingWS.Workspace, existingWS.UserID, currentWS); err != nil {
 				return nil, err
@@ -247,7 +242,6 @@ func (w *workspaceUserStore) UpdateWithTx(ctx context.Context, id string, spec *
 	for workspaceName, existingWN := range existingWorkspaceMap {
 		if _, ok := currentWorkspaceMap[workspaceName]; !ok {
 			// Disable workspace namespace objects not in the current patch.
-			fmt.Printf("disabling workspace %s\n", workspaceName)
 			existingWN.Enabled = false
 			if _, err := w.workspaceNamespaceStore.UpdateWithTx(ctx, existingWN.Workspace, existingWN.UserID, existingWN); err != nil {
 				return nil, err

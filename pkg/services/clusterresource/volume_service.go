@@ -51,30 +51,30 @@ func NewVolumeClusterResourceService(spec VolumeClusterResourceServiceSpec) Volu
 
 func (w *volumeClusterService) CreateVolumeInCluster(ctx context.Context, volume *models.Volume) *ClusterResourceError {
 	if err := w.resolveGitRevision(ctx, volume); err != nil {
-		w.logger.Errorf("failed to resolve git revision for volume '%s': %v", volume.ID, err)
+		w.logger.Error(ctx, "failed to resolve git revision for volume '%s': %v", volume.ID, err)
 		return newError("failed to resolve git revision", err)
 	}
 
 	cluster, err := w.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
 	if err != nil {
-		w.logger.Errorf("failed to get cluster for org: %v", err)
+		w.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
 	volumeCR, cerr := w.desiredObjectInCluster(volume)
 	if cerr != nil {
-		w.logger.Errorf("failed to create desired volume object in cluster: %v", cerr)
+		w.logger.Error(ctx, "failed to create desired volume object in cluster: %v", cerr)
 		return newError("failed to create desired volume object in cluster", cerr)
 	}
 
 	clusterClient, clientGetErr := w.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
-		w.logger.Errorf("failed to get cluster client: %v", clientGetErr)
+		w.logger.Error(ctx, "failed to get cluster client: %v", clientGetErr)
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
 	if err := clusterClient.Create(ctx, volumeCR); err != nil {
-		w.logger.Errorf("failed to create volume  in cluster: %v", err)
+		w.logger.Error(ctx, "failed to create volume  in cluster: %v", err)
 		return newError("failed to create volume  in cluster", err)
 	}
 
@@ -88,13 +88,13 @@ func (w *volumeClusterService) UpdateVolumeRemoteDirRevisionInCluster(ctx contex
 
 	cluster, err := w.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
 	if err != nil {
-		w.logger.Errorf("failed to get cluster for org: %v", err)
+		w.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
 	clusterClient, clientGetErr := w.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
-		w.logger.Errorf("failed to get cluster client: %v", clientGetErr)
+		w.logger.Error(ctx, "failed to get cluster client: %v", clientGetErr)
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
@@ -104,7 +104,7 @@ func (w *volumeClusterService) UpdateVolumeRemoteDirRevisionInCluster(ctx contex
 		Namespace: volume.Namespace,
 	}, existingVolumeCR); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			w.logger.Errorf("volume missing in cluster: %v", err)
+			w.logger.Error(ctx, "volume missing in cluster: %v", err)
 			return newError("volume missing in cluster", err)
 		}
 		return newError("failed to get volume from cluster", err)
@@ -112,7 +112,7 @@ func (w *volumeClusterService) UpdateVolumeRemoteDirRevisionInCluster(ctx contex
 
 	existingVolumeCR.Spec.Source.RemoteDir.CurrentDirectoryHash = volume.VolumeSource.RemoteDirSource.CurrentDirectoryHash
 	if err := clusterClient.Update(ctx, existingVolumeCR); err != nil {
-		w.logger.Errorf("failed to update volume in cluster: %v", err)
+		w.logger.Error(ctx, "failed to update volume in cluster: %v", err)
 		return newError("failed to update volume in cluster", err)
 	}
 	return nil
@@ -124,19 +124,19 @@ func (w *volumeClusterService) UpdateVolumeGitRevisionInCluster(ctx context.Cont
 	}
 
 	if err := w.resolveGitRevision(ctx, volume); err != nil {
-		w.logger.Errorf("failed to resolve git revision for volume '%s': %v", volume.ID, err)
+		w.logger.Error(ctx, "failed to resolve git revision for volume '%s': %v", volume.ID, err)
 		return newError("failed to resolve git revision", err)
 	}
 
 	cluster, err := w.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
 	if err != nil {
-		w.logger.Errorf("failed to get cluster for org: %v", err)
+		w.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
 	clusterClient, clientGetErr := w.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
-		w.logger.Errorf("failed to get cluster client: %v", clientGetErr)
+		w.logger.Error(ctx, "failed to get cluster client: %v", clientGetErr)
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
@@ -146,7 +146,7 @@ func (w *volumeClusterService) UpdateVolumeGitRevisionInCluster(ctx context.Cont
 		Namespace: volume.Namespace,
 	}, existingVolumeCR); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			w.logger.Errorf("volume missing in cluster: %v", err)
+			w.logger.Error(ctx, "volume missing in cluster: %v", err)
 			return newError("volume missing in cluster", err)
 		}
 		return newError("failed to get volume from cluster", err)
@@ -167,7 +167,7 @@ func (w *volumeClusterService) UpdateVolumeGitRevisionInCluster(ctx context.Cont
 
 	existingVolumeCR.Spec.Source.GitRepo.Revision = updatedRevision
 	if err := clusterClient.Update(ctx, existingVolumeCR); err != nil {
-		w.logger.Errorf("failed to update volume in cluster: %v", err)
+		w.logger.Error(ctx, "failed to update volume in cluster: %v", err)
 		return newError("failed to update volume in cluster", err)
 	}
 	return nil
@@ -176,13 +176,13 @@ func (w *volumeClusterService) UpdateVolumeGitRevisionInCluster(ctx context.Cont
 func (w *volumeClusterService) DeleteVolumeInCluster(ctx context.Context, volume *models.Volume) *ClusterResourceError {
 	cluster, err := w.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
 	if err != nil {
-		w.logger.Errorf("failed to get cluster for org: %v", err)
+		w.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return newError("failed to get cluster for org", err)
 	}
 
 	clusterClient, clientGetErr := w.clusterManager.GetClient(cluster.ID)
 	if clientGetErr != nil {
-		w.logger.Errorf("failed to get cluster client: %v", clientGetErr)
+		w.logger.Error(ctx, "failed to get cluster client: %v", clientGetErr)
 		return newError("failed to get cluster client", clientGetErr)
 	}
 
@@ -192,7 +192,7 @@ func (w *volumeClusterService) DeleteVolumeInCluster(ctx context.Context, volume
 		Namespace: volume.Namespace,
 	}, existingVolumeCR); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			w.logger.Errorf("volume missing in cluster: %v", err)
+			w.logger.Error(ctx, "volume missing in cluster: %v", err)
 			return newError("volume missing in cluster", err)
 		}
 		return newError("failed to get volume from cluster", err)
@@ -203,7 +203,7 @@ func (w *volumeClusterService) DeleteVolumeInCluster(ctx context.Context, volume
 			w.logger.Warn(ctx, "volume '%s' not found in cluster", volume.ID)
 			return nil
 		}
-		w.logger.Errorf("failed to delete  volume in cluster: %v", err)
+		w.logger.Error(ctx, "failed to delete  volume in cluster: %v", err)
 		return newError("failed to delete  volume in cluster", err)
 	}
 	return nil

@@ -53,14 +53,14 @@ func (r *postgresClusterReconciler) Reconcile(ctx context.Context, addon *models
 	existingCR := &addonsv1alpha1.PostgresCluster{}
 	if err := clusterClient.Get(ctx, client.ObjectKeyFromObject(desiredCR), existingCR); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			r.logger.Infof("Creating PostgresCluster CR '%s' in namespace '%s'", desiredCR.Name, desiredCR.Namespace)
+			r.logger.Info(ctx, "Creating PostgresCluster CR '%s' in namespace '%s'", desiredCR.Name, desiredCR.Namespace)
 			return resultNil, clusterClient.Create(ctx, desiredCR)
 		}
 		return resultNil, fmt.Errorf("failed to get PostgresCluster CR: %w", err)
 	}
 
 	if !equality.Semantic.DeepEqual(existingCR.Spec, desiredCR.Spec) {
-		r.logger.Infof("Updating PostgresCluster CR '%s'", desiredCR.Name)
+		r.logger.Info(ctx, "Updating PostgresCluster CR '%s'", desiredCR.Name)
 		desiredCR.ResourceVersion = existingCR.ResourceVersion
 		return resultNil, clusterClient.Update(ctx, desiredCR)
 	}

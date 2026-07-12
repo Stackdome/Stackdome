@@ -33,9 +33,9 @@ func handleError(ctx context.Context, w http.ResponseWriter, err *errors.Service
 	logger := logger.GetLoggerFromContext(ctx)
 	// If this is a 400 error, its the user's issue, log as info rather than error
 	if err.HttpCode >= 400 && err.HttpCode <= 499 {
-		logger.Infof(err.Error())
+		logger.Info(ctx, "%s", err.Error())
 	} else {
-		logger.Errorf(err.Error())
+		logger.Error(ctx, "%s", err.Error())
 	}
 	writeJSONResponse(w, err.HttpCode, err.AsOpenapiError())
 }

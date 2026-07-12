@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,21 +16,29 @@ import (
 type namespaceReconciler struct {
 	clusterManager   clustermanager.ClusterManager
 	namespaceService namespaceService
+	logger           logger.Logger
 }
 
 type NamespaceReconcilerSpec struct {
 	ClusterManager   clustermanager.ClusterManager
 	NamespaceService namespaceService
+	Logger           logger.Logger
 }
 
 func NewNamespaceReconciler(spec NamespaceReconcilerSpec) *namespaceReconciler {
 	return &namespaceReconciler{
 		clusterManager:   spec.ClusterManager,
 		namespaceService: spec.NamespaceService,
+		logger:           spec.Logger,
 	}
 }
 
 func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
+	log := r.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   stack.ID,
+		logger.FieldClusterID: stack.ClusterID,
+	})
+
 	clusterClient, cerr := r.clusterManager.GetClient(stack.ClusterID)
 	if cerr != nil {
 		return resultNil, fmt.Errorf("failed to get cluster client for cluster %s: %w", stack.ClusterID, cerr)
@@ -51,11 +60,13 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack
 	existingNamespace := &corev1.Namespace{}
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: namespace.Name}, existingNamespace); err != nil {
 		if k8sapierrors.IsNotFound(err) {
+			log.Info(ctx, "creating namespace %s in cluster", namespace.Name)
 			return resultNil, clusterClient.Create(ctx, desiredNamespace)
 		}
 		return resultNil, fmt.Errorf("failed to get namespace %s: %w", namespace.Name, err)
 	}
 
+	log.Debug(ctx, "namespace %s already exists in cluster", namespace.Name)
 	return resultNil, nil
 }
 

@@ -64,7 +64,7 @@ func (s *clusterImageRegistryService) Get(ctx context.Context, ID string) (*mode
 	}
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster image registry: %v", err)
+		s.logger.Error(ctx, "failed to get cluster image registry: %v", err)
 		return nil, err
 	}
 	return registry, nil
@@ -80,7 +80,7 @@ func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID
 	}
 	registries, err := s.clusterImageRegistryStore.ListByClusterID(ctx, clusterID)
 	if err != nil {
-		s.logger.Errorf("failed to list cluster image registries: %v", err)
+		s.logger.Error(ctx, "failed to list cluster image registries: %v", err)
 		return nil, err
 	}
 	return registries, nil
@@ -106,7 +106,7 @@ func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ct
 func (s *clusterImageRegistryService) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	registry, err := s.clusterImageRegistryStore.GetForOrg(ctx, orgID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster image registry for org: %v", err)
+		s.logger.Error(ctx, "failed to get cluster image registry for org: %v", err)
 		return nil, err
 	}
 	return registry, nil
@@ -147,14 +147,14 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 		// Create registry in database
 		createdRegistry, err = s.clusterImageRegistryStore.CreateWithTx(ctx, spec)
 		if err != nil {
-			s.logger.Errorf("failed to create cluster image registry: %v", err)
+			s.logger.Error(ctx, "failed to create cluster image registry: %v", err)
 			return err
 		}
 
 		// Create registry in cluster
 		cerr := s.clusterResourceService.CreateImageRegistryInCluster(ctx, createdRegistry)
 		if cerr != nil {
-			s.logger.Errorf("failed to create cluster image registry in cluster: %v", cerr)
+			s.logger.Error(ctx, "failed to create cluster image registry in cluster: %v", cerr)
 			return errors.GeneralError("failed to create cluster image registry in cluster: %s", cerr.Error())
 		}
 		return nil
@@ -196,14 +196,14 @@ func (s *clusterImageRegistryService) CreateWithTx(ctx context.Context, spec *mo
 	// Create registry in database
 	createdRegistry, err = s.clusterImageRegistryStore.CreateWithTx(ctx, spec)
 	if err != nil {
-		s.logger.Errorf("failed to create cluster image registry: %v", err)
+		s.logger.Error(ctx, "failed to create cluster image registry: %v", err)
 		return nil, err
 	}
 
 	// Create registry in cluster
 	cerr := s.clusterResourceService.CreateImageRegistryInCluster(ctx, createdRegistry)
 	if cerr != nil {
-		s.logger.Errorf("failed to create cluster image registry in cluster: %v", cerr)
+		s.logger.Error(ctx, "failed to create cluster image registry in cluster: %v", cerr)
 		return nil, errors.GeneralError("failed to create cluster image registry in cluster: %s", cerr.Error())
 	}
 
@@ -223,7 +223,7 @@ func (s *clusterImageRegistryService) validateBackendStorageSize(size string) *e
 func (s *clusterImageRegistryService) UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError {
 	err := s.clusterImageRegistryStore.UpdateStatus(ctx, ID, status)
 	if err != nil {
-		s.logger.Errorf("failed to update cluster image registry status: %v", err)
+		s.logger.Error(ctx, "failed to update cluster image registry status: %v", err)
 		return err
 	}
 	return nil
@@ -236,7 +236,7 @@ func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID stri
 
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
-		s.logger.Errorf("failed to get cluster image registry for deletion: %v", err)
+		s.logger.Error(ctx, "failed to get cluster image registry for deletion: %v", err)
 		return err
 	}
 
@@ -244,21 +244,21 @@ func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID stri
 		// Delete from cluster first
 		cErr := s.clusterResourceService.DeleteImageRegistryInCluster(ctx, registry)
 		if cErr != nil {
-			s.logger.Errorf("failed to delete cluster image registry in cluster: %v", cErr)
+			s.logger.Error(ctx, "failed to delete cluster image registry in cluster: %v", cErr)
 			return errors.GeneralError("failed to delete cluster image registry in cluster: %s", cErr.Error())
 		}
 
 		// Then delete from database
 		err = s.clusterImageRegistryStore.DeleteWithTx(ctx, ID)
 		if err != nil {
-			s.logger.Errorf("failed to delete cluster image registry: %v", err)
+			s.logger.Error(ctx, "failed to delete cluster image registry: %v", err)
 			return err
 		}
 		return nil
 	})
 
 	if deleteErr != nil {
-		s.logger.Errorf("failed to delete cluster image registry: %v", deleteErr)
+		s.logger.Error(ctx, "failed to delete cluster image registry: %v", deleteErr)
 		return deleteErr
 	}
 	return nil

@@ -32,7 +32,7 @@ func (r *simulatorReconciler) Reconcile(ctx context.Context, release *models.Sta
 	}
 
 	if r.env != config.EnvironmentTest {
-		r.logger.Errorf("release %s: simulation annotations are only allowed in test environments, ignoring", release.ID)
+		r.logger.Error(ctx, "release %s: simulation annotations are only allowed in test environments, ignoring", release.ID)
 		return resultNil, nil
 	}
 
@@ -58,6 +58,6 @@ func (r *simulatorReconciler) Reconcile(ctx context.Context, release *models.Sta
 		return resultNil, fmt.Errorf("unsupported simulated release state: %s", targetState)
 	}
 
-	r.logger.Infof("simulated release %s → %s (skip-cluster-provisioning)", release.ID, targetState)
+	r.logger.Info(ctx, "simulated release %s → %s (skip-cluster-provisioning)", release.ID, targetState)
 	return resultStop, nil
 }

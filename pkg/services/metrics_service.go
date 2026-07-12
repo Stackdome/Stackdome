@@ -44,7 +44,7 @@ func NewMetricsService(spec MetricsServiceSpec) MetricsService {
 func (s *metricsService) GetMetricsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string) (*models.ResourceMetrics, error) {
 	resource, err := s.stackResourceService.GetByStackIDAndResourceName(ctx, stackID, stackResourceName)
 	if err != nil {
-		s.logger.Errorf("failed to get stack resource: %v", err)
+		s.logger.Error(ctx, "failed to get stack resource: %v", err)
 		return nil, err
 	}
 	if resource.Status != nil && resource.Status.State != models.StackResourcePhaseReady {
@@ -61,7 +61,7 @@ func (s *metricsService) GetMetricsForStackResource(ctx context.Context, orgID s
 func (s *metricsService) GetMetricsForStack(ctx context.Context, orgID string, stackID string) (*models.ResourceMetrics, error) {
 	stack, err := s.stackService.GetStack(ctx, stackID)
 	if err != nil {
-		s.logger.Errorf("failed to get stack: %v", err)
+		s.logger.Error(ctx, "failed to get stack: %v", err)
 		return nil, err
 	}
 
@@ -71,7 +71,7 @@ func (s *metricsService) GetMetricsForStack(ctx context.Context, orgID string, s
 
 	res, cerr := s.ClusterMetricsService.GetMetricsForStack(ctx, orgID, stack)
 	if cerr != nil {
-		s.logger.Errorf("failed to get metrics for stack: %v", cerr)
+		s.logger.Error(ctx, "failed to get metrics for stack: %v", cerr)
 		return nil, cerr
 	}
 	return res, nil
@@ -80,7 +80,7 @@ func (s *metricsService) GetMetricsForStack(ctx context.Context, orgID string, s
 func (s *metricsService) StreamMetricsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string) (interfaces.ServerSideStreamable, error) {
 	resource, err := s.stackResourceService.GetByStackIDAndResourceName(ctx, stackID, stackResourceName)
 	if err != nil {
-		s.logger.Errorf("failed to get stack resource: %v", err)
+		s.logger.Error(ctx, "failed to get stack resource: %v", err)
 		return nil, err
 	}
 	if resource.Status != nil && resource.Status.State != models.StackResourcePhaseReady {
@@ -88,7 +88,7 @@ func (s *metricsService) StreamMetricsForStackResource(ctx context.Context, orgI
 	}
 	streamer, cerr := s.ClusterMetricsService.StreamMetricsForResource(ctx, orgID, resource)
 	if cerr != nil {
-		s.logger.Errorf("failed to stream metrics for resource: %v", cerr)
+		s.logger.Error(ctx, "failed to stream metrics for resource: %v", cerr)
 		return nil, cerr
 	}
 	return streamer, nil
@@ -96,7 +96,7 @@ func (s *metricsService) StreamMetricsForStackResource(ctx context.Context, orgI
 func (s *metricsService) StreamMetricsForStack(ctx context.Context, orgID string, stackID string) (interfaces.ServerSideStreamable, error) {
 	stack, err := s.stackService.GetStack(ctx, stackID)
 	if err != nil {
-		s.logger.Errorf("failed to get stack: %v", err)
+		s.logger.Error(ctx, "failed to get stack: %v", err)
 		return nil, err
 	}
 
@@ -105,7 +105,7 @@ func (s *metricsService) StreamMetricsForStack(ctx context.Context, orgID string
 	}
 	streamer, cerr := s.ClusterMetricsService.StreamMetricsForStack(ctx, orgID, stack)
 	if cerr != nil {
-		s.logger.Errorf("failed to stream metrics for stack: %v", cerr)
+		s.logger.Error(ctx, "failed to stream metrics for stack: %v", cerr)
 		return nil, cerr
 	}
 	return streamer, nil

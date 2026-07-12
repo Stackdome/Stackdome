@@ -71,16 +71,16 @@ func (w *WorkspaceUserReconciler) Name() string {
 }
 
 func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Log.Infof("reconciling workspace user: %s in namespace %s", req.Name, req.Namespace)
+	r.Log.Info(ctx, "reconciling workspace user: %s in namespace %s", req.Name, req.Namespace)
 	clusterInstance := &usersv1alpha1.User{}
 	if err := r.Client.Get(ctx, req.NamespacedName, clusterInstance); err != nil {
-		r.Log.Errorf("failed to get workspace user from cluster: %v", err)
+		r.Log.Error(ctx, "failed to get workspace user from cluster: %v", err)
 		return ctrl.Result{}, nil
 	}
 
 	workspaceUserID, ok := clusterInstance.Labels[models.WorkspaceUserIDLabel]
 	if !ok {
-		r.Log.Errorf("workspace user ID not found in workspaceuser labels")
+		r.Log.Error(ctx, "workspace user ID not found in workspaceuser labels")
 		return ctrl.Result{}, nil
 	}
 
@@ -105,6 +105,7 @@ func (r *WorkspaceUserReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update workspace user status in db: %w", serr)
 		}
+		r.Log.WithField("workspace_user_id", workspaceuser.ID).Debug(ctx, "synced workspace user status from cluster")
 		return ctrl.Result{}, nil
 	}
 

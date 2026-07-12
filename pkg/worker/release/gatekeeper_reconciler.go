@@ -38,7 +38,7 @@ func (r *gatekeeperReconciler) Reconcile(ctx context.Context, release *models.St
 		if _, err := r.releaseService.MarkSuperseded(ctx, release.ID, reason); err != nil {
 			return resultNil, fmt.Errorf("failed to mark release superseded: %w", err)
 		}
-		r.logger.Infof("release %s: %s", release.ID, reason)
+		r.logger.Info(ctx, "release %s: %s", release.ID, reason)
 		return resultStop, nil
 	}
 
@@ -48,12 +48,12 @@ func (r *gatekeeperReconciler) Reconcile(ctx context.Context, release *models.St
 			return resultNil, fmt.Errorf("failed to mark in progress: %w", serr)
 		}
 		if !ok {
-			r.logger.Infof("release %s: CAS Pending→InProgress failed", release.ID)
+			r.logger.Info(ctx, "release %s: CAS Pending→InProgress failed", release.ID)
 			return resultStop, nil
 		}
 		release.State = models.ReleaseStateInProgress
 		if recErr := r.eventRecorder.RecordReleaseStarted(ctx, release); recErr != nil {
-			r.logger.Errorf("release %s: failed to record release_started event: %v", release.ID, recErr)
+			r.logger.Error(ctx, "release %s: failed to record release_started event: %v", release.ID, recErr)
 		}
 	}
 

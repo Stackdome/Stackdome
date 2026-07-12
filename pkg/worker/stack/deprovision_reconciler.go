@@ -58,15 +58,20 @@ func (r *deprovisionReconciler) Reconcile(ctx context.Context, stack *models.Sta
 		return resultNil, nil
 	}
 
-	r.logger.Infof("deprovisioning stack '%s' in namespace '%s'", stack.Name, stack.Namespace)
+	log := r.logger.WithFields(map[string]interface{}{
+		logger.FieldStackID:   stack.ID,
+		logger.FieldClusterID: stack.ClusterID,
+	})
+
+	log.Info(ctx, "deprovisioning stack '%s' in namespace '%s'", stack.Name, stack.Namespace)
 	if err := r.deleteClusterResources(ctx, stack); err != nil {
 		return resultNil, fmt.Errorf("failed to delete cluster resources for stack '%s': %w", stack.Name, err)
 	}
-	r.logger.Infof("deleted cluster resources for stack '%s' in namespace '%s'", stack.Name, stack.Namespace)
+	log.Info(ctx, "deleted cluster resources for stack '%s' in namespace '%s'", stack.Name, stack.Namespace)
 	if err := r.deleteResourcesFromDB(ctx, stack); err != nil {
 		return resultNil, fmt.Errorf("failed to delete resources from db for stack '%s': %w", stack.Name, err)
 	}
-	r.logger.Infof("deleted resources from db for stack '%s' in namespace '%s'", stack.Name, stack.Namespace)
+	log.Info(ctx, "deleted resources from db for stack '%s' in namespace '%s'", stack.Name, stack.Namespace)
 	return resultStop, nil
 }
 
@@ -86,6 +91,8 @@ func (r *deprovisionReconciler) deleteResourcesFromDB(ctx context.Context, stack
 }
 
 func (r *deprovisionReconciler) deleteClusterResources(ctx context.Context, stack *models.Stack) error {
+	log := r.logger.WithField(logger.FieldStackID, stack.ID)
+
 	clusterClient, cerr := r.clusterManager.GetClient(stack.ClusterID)
 	if cerr != nil {
 		return cerr
@@ -98,6 +105,7 @@ func (r *deprovisionReconciler) deleteClusterResources(ctx context.Context, stac
 			Namespace: stack.Namespace,
 		},
 	}
+	log.Debug(ctx, "deleting stack CR '%s' in namespace '%s'", stack.Name, stack.Namespace)
 	if err := clusterClient.Delete(
 		ctx, stackCR,
 		&client.DeleteOptions{
@@ -138,7 +146,7 @@ func (r *deprovisionReconciler) deleteClusterResources(ctx context.Context, stac
 				Namespace: stack.Namespace,
 			},
 		}
-		r.logger.Infof("deleting secret '%s' in namespace '%s'", secretObj.Name, stack.Namespace)
+		log.Debug(ctx, "deleting secret '%s' in namespace '%s'", secretObj.Name, stack.Namespace)
 		if err := clusterClient.Delete(
 			ctx, secretObj,
 			&client.DeleteOptions{
@@ -154,6 +162,7 @@ func (r *deprovisionReconciler) deleteClusterResources(ctx context.Context, stac
 			Name: stack.Namespace,
 		},
 	}
+	log.Debug(ctx, "deleting namespace '%s'", stack.Namespace)
 	if err := clusterClient.Delete(
 		ctx, namespace,
 		&client.DeleteOptions{

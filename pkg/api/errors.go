@@ -6,9 +6,10 @@ import (
 	"net/http"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
-
-	"github.com/golang/glog"
+	"github.com/Stackdome/stackdome/pkg/logger"
 )
+
+var log = logger.NewLogger()
 
 // SendNotFound sends a 404 response with some details about the non existing resource.
 func SendNotFound(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +38,7 @@ func SendNotFound(w http.ResponseWriter, r *http.Request) {
 	_, err = w.Write(data)
 	if err != nil {
 		err = fmt.Errorf("can't send response body for request '%s'", r.URL.Path)
-		glog.Error(err)
+		log.Errorf("%v", err)
 		return
 	}
 }
@@ -58,7 +59,7 @@ func SendUnauthorized(w http.ResponseWriter, r *http.Request, message string) {
 	_, err = w.Write(data)
 	if err != nil {
 		err = fmt.Errorf("can't send response body for request '%s'", r.URL.Path)
-		glog.Error(err)
+		log.Errorf("%v", err)
 		return
 	}
 }
@@ -75,6 +76,6 @@ func SendPanic(w http.ResponseWriter, r *http.Request) {
 			r.URL.Path,
 			err.Error(),
 		)
-		glog.Error(err)
+		log.Errorf("%v", err)
 	}
 }

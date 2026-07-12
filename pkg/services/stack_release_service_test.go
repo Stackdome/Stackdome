@@ -60,6 +60,7 @@ var _ = Describe("stackReleaseService.resolvePins", func() {
 		gitClients = NewMocksourceGitClientProvider(ctrl)
 		gitClient = mocks.NewMockGitClient(ctrl)
 		svc = &stackReleaseService{
+			logger:             logger.NewLogger(),
 			credentialResolver: credResolver,
 			gitClients:         gitClients,
 		}
@@ -211,6 +212,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 		recorder = NewMockReleaseEventRecorder(ctrl)
 		enqueuer = mocks.NewMockBackgroundJobEnqueuer(ctrl)
 		svc = &stackReleaseService{
+			logger:           logger.NewLogger(),
 			store:            releaseStore,
 			stackQuery:       stackSvc,
 			permissions:      perms,
@@ -399,6 +401,7 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 		perms = mocks.NewMockPermissionService(ctrl)
 		eventStore = mocks.NewMockReleaseEventStore(ctrl)
 		svc = &stackReleaseService{
+			logger:      logger.NewLogger(),
 			store:       releaseStore,
 			stackQuery:  stackSvc,
 			permissions: perms,
@@ -746,6 +749,7 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 		stackSvc = NewMockStackService(ctrl)
 		perms = mocks.NewMockPermissionService(ctrl)
 		svc = &stackReleaseService{
+			logger:      logger.NewLogger(),
 			store:       releaseStore,
 			stackQuery:  stackSvc,
 			permissions: perms,
@@ -809,7 +813,8 @@ var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
 		ctrl = gomock.NewController(GinkgoT())
 		releaseStore = mocks.NewMockStackReleaseStore(ctrl)
 		svc = &stackReleaseService{
-			store: releaseStore,
+			logger: logger.NewLogger(),
+			store:  releaseStore,
 		}
 		ctx = context.Background()
 	})
@@ -876,6 +881,7 @@ var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
 		perms = mocks.NewMockPermissionService(ctrl)
 		eventStore = mocks.NewMockReleaseEventStore(ctrl)
 		svc = &stackReleaseService{
+			logger:      logger.NewLogger(),
 			store:       releaseStore,
 			stackQuery:  stackSvc,
 			permissions: perms,

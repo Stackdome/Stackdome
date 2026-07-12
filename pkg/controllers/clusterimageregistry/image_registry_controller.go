@@ -65,12 +65,12 @@ func (r *clusterImageRegistryReconciler) Name() string {
 }
 
 func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	r.Logger.Infof("reconciling cluster image registry: %v", req.NamespacedName)
+	r.Logger.Info(ctx, "reconciling cluster image registry: %v", req.NamespacedName)
 
 	registryCr := &registryv1alpha1.ClusterRegistry{}
 	if err := r.Client.Get(ctx, req.NamespacedName, registryCr); err != nil {
 		if errors.IsNotFound(err) {
-			r.Logger.Infof("cluster registry %v not found", req.NamespacedName)
+			r.Logger.Info(ctx, "cluster registry %v not found", req.NamespacedName)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
@@ -78,7 +78,7 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 
 	registryID, ok := registryCr.Labels[models.ImageRegistryIDLabel]
 	if !ok {
-		r.Logger.Errorf("clusterRegistry %v does not have cluster registry ID label", req.NamespacedName)
+		r.Logger.Error(ctx, "clusterRegistry %v does not have cluster registry ID label", req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
@@ -95,6 +95,7 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 		if serr := r.DBImageRegistryService.UpdateStatus(ctx, dbImageRegistry.ID, dbImageRegistry.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update cluster image registry status: %w", serr)
 		}
+		r.Logger.WithField("registry_id", dbImageRegistry.ID).Debug(ctx, "synced cluster image registry status from cluster")
 		return ctrl.Result{}, nil
 	}
 
