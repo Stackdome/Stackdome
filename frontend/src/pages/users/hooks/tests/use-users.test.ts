@@ -23,7 +23,7 @@ afterEach(() => cleanup());
 describe("useUsers", () => {
   it("merges pending invites above active users", async () => {
     mockedUsers.mockResolvedValue({ items: [{ id: "u1", name: "Ada", email: "ada@x.io", role: "OrgMember" }] } as never);
-    mockedInvites.mockResolvedValue({ items: [{ id: "inv1", email: "neo@x.io", status: "pending", team_name: "engineering", role: "Developer", expires_at: "2026-05-19T00:00:00Z", invited_by: "ada", email_sent: true }] } as never);
+    mockedInvites.mockResolvedValue({ items: [{ id: "inv1", email: "neo@x.io", status: "pending", project_name: "engineering", role: "Developer", expires_at: "2026-05-19T00:00:00Z", invited_by: "ada", email_sent: true }] } as never);
     const { result } = renderHook(() => useUsers());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.rows.map(r => r.kind)).toEqual(["pending", "active"]);

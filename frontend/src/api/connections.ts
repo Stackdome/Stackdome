@@ -10,20 +10,20 @@ export type ConnectionMapping = components["schemas"]["ConnectionMapping"];
 export type TopologyNodeRef = components["schemas"]["TopologyNodeRef"];
 export type StackConnectionConfig = components["schemas"]["StackConnectionConfig"];
 
-function connectionsPath(orgId: string, teamName: string, stackId: string): string {
-  return `/organizations/${orgId}/teams/${teamName}/stacks/${stackId}/connections`;
+function connectionsPath(orgId: string, projectName: string, stackId: string): string {
+  return `/organizations/${orgId}/projects/${projectName}/stacks/${stackId}/connections`;
 }
 
-export async function createStackConnection(orgId: string, teamName: string, stackId: string, body: StackConnection): Promise<StackConnection> {
-  const response = await api.post<StackConnection>(connectionsPath(orgId, teamName, stackId), body);
+export async function createStackConnection(orgId: string, projectName: string, stackId: string, body: StackConnection): Promise<StackConnection> {
+  const response = await api.post<StackConnection>(connectionsPath(orgId, projectName, stackId), body);
   return response.data;
 }
 
-export async function updateStackConnection(orgId: string, teamName: string, stackId: string, connectionId: string, body: StackConnection): Promise<StackConnection> {
-  const response = await api.put<StackConnection>(`${connectionsPath(orgId, teamName, stackId)}/${connectionId}`, body);
+export async function updateStackConnection(orgId: string, projectName: string, stackId: string, connectionId: string, body: StackConnection): Promise<StackConnection> {
+  const response = await api.put<StackConnection>(`${connectionsPath(orgId, projectName, stackId)}/${connectionId}`, body);
   return response.data;
 }
 
-export async function deleteStackConnection(orgId: string, teamName: string, stackId: string, connectionId: string): Promise<void> {
-  await api.delete(`${connectionsPath(orgId, teamName, stackId)}/${connectionId}`);
+export async function deleteStackConnection(orgId: string, projectName: string, stackId: string, connectionId: string): Promise<void> {
+  await api.delete(`${connectionsPath(orgId, projectName, stackId)}/${connectionId}`);
 }

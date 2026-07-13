@@ -63,7 +63,7 @@ func (r *imageBuildService) ListByResourceName(ctx context.Context, stackID stri
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := r.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := r.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	resource, err := r.stackResourceService.GetByStackIDAndResourceName(ctx, stackID, resourceName)
@@ -78,7 +78,7 @@ func (r *imageBuildService) ListByStackID(ctx context.Context, stackID string) (
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := r.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := r.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return r.imageBuildStore.ListByStackID(ctx, stackID)
@@ -93,7 +93,7 @@ func (r *imageBuildService) GetByID(ctx context.Context, ID string) (*models.Ima
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := r.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, build.StackID, auth.ActionRead); permErr != nil {
+	if permErr := r.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, build.StackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return build, nil

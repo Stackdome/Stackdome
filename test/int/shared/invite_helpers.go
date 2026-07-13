@@ -136,24 +136,24 @@ func SignupNewUser(name, email, password, orgName string) *openapi.UserSignupRes
 	return resp
 }
 
-func NewInviteCreateRequest(email, teamName, role string, expiresInDays int) openapi.OrgInviteCreateRequest {
-	return *openapi.NewOrgInviteCreateRequest(email, teamName, role, int32(expiresInDays))
+func NewInviteCreateRequest(email, projectName, role string, expiresInDays int) openapi.OrgInviteCreateRequest {
+	return *openapi.NewOrgInviteCreateRequest(email, projectName, role, int32(expiresInDays))
 }
 
-func CreateTeam(client *openapi.APIClient, orgID, teamName string) *openapi.Team {
+func CreateProject(client *openapi.APIClient, orgID, projectName string) *openapi.Project {
 	ctx := context.Background()
-	req := openapi.NewTeamCreateRequest(teamName)
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsPost(ctx, orgID).TeamCreateRequest(*req).Execute()
-	Expect(err).NotTo(HaveOccurred(), "failed to create team")
+	req := openapi.NewProjectCreateRequest(projectName)
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdProjectsPost(ctx, orgID).ProjectCreateRequest(*req).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to create project")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))
 	Expect(resp).NotTo(BeNil())
 	return resp
 }
 
-func ListTeamMembers(client *openapi.APIClient, orgID, teamName string) *openapi.TeamMembershipList {
+func ListProjectMembers(client *openapi.APIClient, orgID, projectName string) *openapi.ProjectMembershipList {
 	ctx := context.Background()
-	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdTeamsTeamNameMembersGet(ctx, orgID, teamName).Execute()
-	Expect(err).NotTo(HaveOccurred(), "failed to list team members")
+	resp, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameMembersGet(ctx, orgID, projectName).Execute()
+	Expect(err).NotTo(HaveOccurred(), "failed to list project members")
 	Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
 	Expect(resp).NotTo(BeNil())
 	return resp

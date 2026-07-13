@@ -50,7 +50,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 
 	It("records deletion intent in the deletion timestamp column, not only the status state", func() {
 		addonStore.EXPECT().GetByID(gomock.Any(), "pg-1").
-			Return(&models.PostgresAddon{ID: "pg-1", TeamID: "team-1", Name: "test-delete"}, nil)
+			Return(&models.PostgresAddon{ID: "pg-1", ProjectID: "project-1", Name: "test-delete"}, nil)
 		permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
 		refs.EXPECT().IsReferentInUse(gomock.Any(), models.ReferentPostgresAddon, "pg-1").
 			Return(false, nil, nil)

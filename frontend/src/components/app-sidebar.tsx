@@ -81,7 +81,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        {/* Settings group (Users + Teams) is shelved — nav hidden and routes
+        {/* Settings group (Users + Projects) is shelved — nav hidden and routes
             redirected in App.tsx. Components/pages remain in the repo. */}
       </SidebarContent>
 

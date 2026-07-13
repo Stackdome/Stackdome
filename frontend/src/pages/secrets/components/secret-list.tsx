@@ -21,7 +21,7 @@ interface SecretListProps {
   secrets: Secret[];
   onEdit: (secret: Secret) => void;
   onDelete: (secret: Secret) => void;
-  canWrite?: (teamId?: string) => boolean;
+  canWrite?: (projectId?: string) => boolean;
 }
 
 function formatSecretType(type: string): string {
@@ -71,7 +71,7 @@ export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListPr
         </TableHeader>
         <TableBody>
           {secrets.map((secret) => {
-            const rowCanWrite = canWrite ? canWrite(secret.team_id) : true;
+            const rowCanWrite = canWrite ? canWrite(secret.project_id) : true;
             return (
               <TableRow key={secret.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium py-4">

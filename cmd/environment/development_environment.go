@@ -342,7 +342,7 @@ func (d *developmentEnvironment) initializeResourceAccessPolicyManager(ctx conte
 func (d *developmentEnvironment) initializePermissionService(ctx context.Context) error {
 	d.PermissionService = auth.NewPermissionService(auth.PermissionServiceSpec{
 		PolicyManager: d.ResourceAccessPolicyManager,
-		TeamStore: pgstore.NewTeamStore(pgstore.TeamStoreSpec{
+		ProjectStore: pgstore.NewProjectStore(pgstore.ProjectStoreSpec{
 			SessionFactory: d.DBSession,
 		}),
 		Logger: d.Logger,
@@ -370,7 +370,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
-	teamService := services.NewTeamService(services.TeamServiceSpec{
+	projectService := services.NewProjectService(services.ProjectServiceSpec{
 		SessionFactory: d.DBSession,
 		PolicyManager:  d.ResourceAccessPolicyManager,
 		Permissions:    d.PermissionService,
@@ -381,7 +381,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		OrganisationDomainService: organisationDomainService,
 		StackQueryService:         d.Services.StackService,
 		SessionFactory:            d.DBSession,
-		TeamService:               teamService,
+		ProjectService:            projectService,
 		PolicyManager:             d.ResourceAccessPolicyManager,
 		Permissions:               d.PermissionService,
 		Logger:                    d.Logger,
@@ -398,7 +398,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SessionFactory:    d.DBSession,
 		Logger:            d.Logger,
 		EncryptionService: encryptionService,
-		TeamService:       teamService,
+		ProjectService:    projectService,
 		Permissions:       d.PermissionService,
 		ReferenceService:  referenceService,
 	})
@@ -454,7 +454,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		JWTClaimsBuilder:            auth.NewJWTClaimsBuilder(),
 		OrganisationService:         organisationService,
 		Permissions:                 d.PermissionService,
-		TeamService:                 teamService,
+		ProjectService:              projectService,
 		RefreshTokenStore:           d.RefreshTokenStore,
 	})
 
@@ -533,7 +533,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	objectStoreService := services.NewObjectStoreService(services.ObjectStoreServiceSpec{
 		SessionFactory: d.DBSession,
 		SecretService:  secretService,
-		TeamService:    teamService,
+		ProjectService: projectService,
 		ClusterManager: d.ClusterManager,
 		Logger:         d.Logger,
 		Permissions:    d.PermissionService,
@@ -551,7 +551,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SecretService:         secretService,
 		PostgresBackupService: postgresBackupService,
 		ObjectStoreService:    objectStoreService,
-		TeamService:           teamService,
+		ProjectService:        projectService,
 		ClusterManager:        d.ClusterManager,
 		Logger:                d.Logger,
 		Permissions:           d.PermissionService,
@@ -568,7 +568,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		NamespaceService:      namespaceService,
 		SecretService:         secretService,
 		PostgresAddonService:  postgresAddonService,
-		TeamService:           teamService,
+		ProjectService:        projectService,
 		Permissions:           d.PermissionService,
 		ReferenceService:      referenceService,
 		CredentialResolver:    credentialResolver,
@@ -610,7 +610,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 	orgInviteService := services.NewOrgInviteService(services.OrgInviteServiceSpec{
 		InviteStore:       orgInviteStore,
-		TeamService:       teamService,
+		ProjectService:    projectService,
 		UserService:       userService,
 		EncryptionService: encryptionService,
 		Permissions:       d.PermissionService,
@@ -621,7 +621,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		UserService:         userService,
 		OrgInviteService:    orgInviteService,
 		OrganisationService: organisationService,
-		TeamService:         teamService,
+		ProjectService:      projectService,
 		PolicyManager:       d.ResourceAccessPolicyManager,
 		RefreshTokenStore:   d.RefreshTokenStore,
 		JWTSecretKey:        d.Config.JwtSecret,
@@ -705,7 +705,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
 		APITokenService:             apiTokenService,
-		TeamService:                 teamService,
+		ProjectService:              projectService,
 		OrgInviteService:            orgInviteService,
 		SignupService:               signupService,
 		StackReleaseService:         stackReleaseService,

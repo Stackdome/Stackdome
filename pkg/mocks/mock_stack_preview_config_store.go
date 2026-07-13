@@ -87,34 +87,34 @@ func (mr *MockStackPreviewConfigStoreMockRecorder) GetByID(ctx, id any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).GetByID), ctx, id)
 }
 
-// GetByTeamAndName mocks base method.
-func (m *MockStackPreviewConfigStore) GetByTeamAndName(ctx context.Context, teamID, name string) (*models.StackPreviewConfig, *errors.ServiceError) {
+// GetByProjectAndName mocks base method.
+func (m *MockStackPreviewConfigStore) GetByProjectAndName(ctx context.Context, projectID, name string) (*models.StackPreviewConfig, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByTeamAndName", ctx, teamID, name)
+	ret := m.ctrl.Call(m, "GetByProjectAndName", ctx, projectID, name)
 	ret0, _ := ret[0].(*models.StackPreviewConfig)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetByTeamAndName indicates an expected call of GetByTeamAndName.
-func (mr *MockStackPreviewConfigStoreMockRecorder) GetByTeamAndName(ctx, teamID, name any) *gomock.Call {
+// GetByProjectAndName indicates an expected call of GetByProjectAndName.
+func (mr *MockStackPreviewConfigStoreMockRecorder) GetByProjectAndName(ctx, projectID, name any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByTeamAndName", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).GetByTeamAndName), ctx, teamID, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByProjectAndName", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).GetByProjectAndName), ctx, projectID, name)
 }
 
-// ListByTeamID mocks base method.
-func (m *MockStackPreviewConfigStore) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
+// ListByProjectID mocks base method.
+func (m *MockStackPreviewConfigStore) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamID", ctx, teamID, params)
+	ret := m.ctrl.Call(m, "ListByProjectID", ctx, projectID, params)
 	ret0, _ := ret[0].(*stores.PaginatedResult[*models.StackPreviewConfig])
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamID indicates an expected call of ListByTeamID.
-func (mr *MockStackPreviewConfigStoreMockRecorder) ListByTeamID(ctx, teamID, params any) *gomock.Call {
+// ListByProjectID indicates an expected call of ListByProjectID.
+func (mr *MockStackPreviewConfigStoreMockRecorder) ListByProjectID(ctx, projectID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).ListByTeamID), ctx, teamID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).ListByProjectID), ctx, projectID, params)
 }
 
 // Update mocks base method.

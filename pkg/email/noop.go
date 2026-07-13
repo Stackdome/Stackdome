@@ -19,6 +19,6 @@ func (n *noopEmailService) IsConfigured() bool {
 }
 
 func (n *noopEmailService) SendInviteEmail(ctx context.Context, params InviteEmailParams) error {
-	n.logger.Infof("email service not configured - invite for %s (org: %s, team: %s) not sent", params.ToEmail, params.OrgName, params.TeamName)
+	n.logger.Infof("email service not configured - invite for %s (org: %s, project: %s) not sent", params.ToEmail, params.OrgName, params.ProjectName)
 	return nil
 }

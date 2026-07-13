@@ -40,7 +40,7 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
   // (e.g. the deploy completing) also refreshes the releases list + this release's detail.
   const { events, status: eventsStatus } = useReleaseEvents({
     orgId: logContext?.orgId ?? "",
-    teamName: logContext?.teamName ?? "",
+    projectName: logContext?.projectName ?? "",
     stackId: logContext?.stackId ?? "",
     releaseId: release.id,
     terminal: isTerminal(release.state),

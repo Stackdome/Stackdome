@@ -24,7 +24,7 @@ const (
 
 type OrgInviteService interface {
 	BackgroundJobEnqueuerInjectable
-	Create(ctx context.Context, email, teamName string, role models.TeamRole, expiresInDays int) (*models.OrgInvite, string, *errors.ServiceError)
+	Create(ctx context.Context, email, projectName string, role models.ProjectRole, expiresInDays int) (*models.OrgInvite, string, *errors.ServiceError)
 	List(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.OrgInvite], *errors.ServiceError)
 	GetByID(ctx context.Context, orgID, id string) (*models.OrgInvite, *errors.ServiceError)
 	Revoke(ctx context.Context, orgID, id string) *errors.ServiceError
@@ -43,7 +43,7 @@ type OrgInviteService interface {
 
 type OrgInviteServiceSpec struct {
 	InviteStore       stores.OrgInviteStore
-	TeamService       TeamService
+	ProjectService    ProjectService
 	UserService       UserService
 	EncryptionService EncryptionService
 	Permissions       auth.PermissionService
@@ -52,7 +52,7 @@ type OrgInviteServiceSpec struct {
 
 type orgInviteService struct {
 	inviteStore       stores.OrgInviteStore
-	teamService       TeamService
+	projectService    ProjectService
 	userService       UserService
 	encryptionService EncryptionService
 	permissions       auth.PermissionService
@@ -63,7 +63,7 @@ type orgInviteService struct {
 func NewOrgInviteService(spec OrgInviteServiceSpec) OrgInviteService {
 	return &orgInviteService{
 		inviteStore:       spec.InviteStore,
-		teamService:       spec.TeamService,
+		projectService:    spec.ProjectService,
 		userService:       spec.UserService,
 		encryptionService: spec.EncryptionService,
 		permissions:       spec.Permissions,
@@ -71,7 +71,7 @@ func NewOrgInviteService(spec OrgInviteServiceSpec) OrgInviteService {
 	}
 }
 
-func (s *orgInviteService) Create(ctx context.Context, email, teamName string, role models.TeamRole, expiresInDays int) (*models.OrgInvite, string, *errors.ServiceError) {
+func (s *orgInviteService) Create(ctx context.Context, email, projectName string, role models.ProjectRole, expiresInDays int) (*models.OrgInvite, string, *errors.ServiceError) {
 	identity := auth.GetIdentityFromCtx(ctx)
 	if identity == nil {
 		return nil, "", errors.Unauthorized("not authenticated")
@@ -110,9 +110,9 @@ func (s *orgInviteService) Create(ctx context.Context, email, teamName string, r
 		return nil, "", errors.Conflict("pending invite already exists for this email")
 	}
 
-	team, serr := s.teamService.GetTeamByOrgAndName(ctx, identity.OrgID, teamName)
+	project, serr := s.projectService.GetProjectByOrgAndName(ctx, identity.OrgID, projectName)
 	if serr != nil {
-		return nil, "", errors.BadRequest("team '%s' not found in organization", teamName)
+		return nil, "", errors.BadRequest("project '%s' not found in organization", projectName)
 	}
 
 	rawBytes := make([]byte, inviteTokenByteLen)
@@ -134,8 +134,8 @@ func (s *orgInviteService) Create(ctx context.Context, email, teamName string, r
 	invite := &models.OrgInvite{
 		Email:          email,
 		OrganisationID: identity.OrgID,
-		TeamID:         team.ID,
-		TeamRole:       role,
+		ProjectID:      project.ID,
+		ProjectRole:    role,
 		TokenHash:      tokenHash,
 		EncryptedToken: encryptedToken,
 		Status:         models.InviteStatusPending,

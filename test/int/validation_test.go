@@ -43,7 +43,7 @@ const (
 var _ = Describe("Stack validation", func() {
 	var client *openapi.APIClient
 	var orgID string
-	teamName := models.DefaultTeamName
+	projectName := models.DefaultProjectName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -55,12 +55,12 @@ var _ = Describe("Stack validation", func() {
 	It("rejects an invalid thin resource create with aggregated field errors", func() {
 		By("Creating a valid stack first")
 		stack := shared.CreateSimpleStack("test-validation-thin-agg")
-		created := shared.CreateStack(client, orgID, teamName, stack)
+		created := shared.CreateStack(client, orgID, projectName, stack)
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
 		})
 
 		By("Adding a resource with a tcp+public port, a valueless env var, and an unknown dependency")
@@ -77,7 +77,7 @@ var _ = Describe("Stack validation", func() {
 
 		resource.SetDependsOn([]string{"nonexistent"})
 
-		apiErr := shared.CreateStackResourceExpectError(client, orgID, teamName, stackID, resource, 400)
+		apiErr := shared.CreateStackResourceExpectError(client, orgID, projectName, stackID, resource, 400)
 
 		By("Verifying the aggregated error details")
 		codes := shared.ErrorValidationCodes(apiErr)
@@ -97,14 +97,14 @@ var _ = Describe("Stack validation", func() {
 		stack := openapi.NewStack("test-validation-unpullable", *spec)
 
 		By("Creating the stack — should succeed without probing the registry")
-		created := shared.CreateStack(client, orgID, teamName, stack)
+		created := shared.CreateStack(client, orgID, projectName, stack)
 		Expect(created.GetId()).NotTo(BeEmpty())
 		Expect(created.Spec.StackResources).To(HaveLen(1))
 		Expect(created.Spec.StackResources[0].Source.Image.GetRef()).To(Equal(validationUnpullableImageRef))
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, created.GetId())
-			shared.WaitForStackDeleted(client, orgID, teamName, created.GetId(), 1*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, created.GetId())
+			shared.WaitForStackDeleted(client, orgID, projectName, created.GetId(), 1*time.Minute)
 		})
 	})
 
@@ -117,20 +117,20 @@ var _ = Describe("Stack validation", func() {
 		stack := openapi.NewStack("test-validation-missing-image", *spec)
 
 		By("Creating the stack (fat create — no probing at create time)")
-		created := shared.CreateStack(client, orgID, teamName, stack)
+		created := shared.CreateStack(client, orgID, projectName, stack)
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
 		})
 
 		By("Creating a release — should start Pending")
-		release := shared.CreateRelease(client, orgID, teamName, stackID)
+		release := shared.CreateRelease(client, orgID, projectName, stackID)
 		Expect(string(release.GetState())).To(Equal(string(models.ReleaseStatePending)))
 
 		By("Waiting for the release worker's async image probe to fail the release")
-		failed := shared.WaitForReleaseState(client, orgID, teamName, stackID, release.GetId(),
+		failed := shared.WaitForReleaseState(client, orgID, projectName, stackID, release.GetId(),
 			string(models.ReleaseStateFailed), 2*time.Minute)
 
 		Expect(failed.ValidationErrors).NotTo(BeEmpty(), "expected structured validation_errors on the failed release")
@@ -149,16 +149,16 @@ var _ = Describe("Stack validation", func() {
 		stack := openapi.NewStack("test-validation-default-branch", *spec)
 
 		By("Creating the stack (create succeeds without any git call)")
-		created := shared.CreateStack(client, orgID, teamName, stack)
+		created := shared.CreateStack(client, orgID, projectName, stack)
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
 		})
 
 		By("Creating a release — resolvePins resolves the repo's default branch synchronously")
-		release := shared.CreateRelease(client, orgID, teamName, stackID)
+		release := shared.CreateRelease(client, orgID, projectName, stackID)
 
 		Expect(release.Pins).NotTo(BeNil(), "expected release.pins to be set")
 		pins := release.Pins.GetResources()
@@ -167,7 +167,7 @@ var _ = Describe("Stack validation", func() {
 		Expect(resourcePins.GetGitSha()).NotTo(BeEmpty(), "expected a resolved git_sha")
 
 		By("Fetching the release detail and verifying the snapshot carries the resolved branch")
-		detail := shared.GetRelease(client, orgID, teamName, stackID, release.GetId())
+		detail := shared.GetRelease(client, orgID, projectName, stackID, release.GetId())
 		Expect(detail.Snapshot).NotTo(BeNil())
 
 		var snapshotResource *openapi.StackResource
@@ -194,15 +194,15 @@ var _ = Describe("Stack validation", func() {
 		spec.SetStackResources([]openapi.StackResource{*resource})
 		stack := openapi.NewStack("test-validation-bad-branch", *spec)
 
-		created := shared.CreateStack(client, orgID, teamName, stack)
+		created := shared.CreateStack(client, orgID, projectName, stack)
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
 		})
 
-		apiErr := shared.CreateReleaseExpectError(client, orgID, teamName, stackID, 400)
+		apiErr := shared.CreateReleaseExpectError(client, orgID, projectName, stackID, 400)
 
 		codes := shared.ErrorValidationCodes(apiErr)
 		Expect(codes).To(ContainElement(errors.VErrGitBranchNotFound))
@@ -213,16 +213,16 @@ var _ = Describe("Stack validation", func() {
 
 		By("Creating a stack with a real pullable public image and deploying it")
 		stack := shared.CreateSimpleStack("test-validation-skip-probe")
-		created, release1 := shared.CreateStackAndDeploy(client, orgID, teamName, stack)
+		created, release1 := shared.CreateStackAndDeploy(client, orgID, projectName, stack)
 		stackID := created.GetId()
 
 		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 1*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
 		})
 
 		By("Waiting for the first release to converge (generous timeout: anonymous pulls can be rate-limited and requeued)")
-		shared.WaitForReleaseReleased(client, orgID, teamName, stackID, release1.GetId(), 5*time.Minute)
+		shared.WaitForReleaseReleased(client, orgID, projectName, stackID, release1.GetId(), 5*time.Minute)
 
 		By("Reading the validation record written by the first release's image probe")
 		rec1, err := testEnv.Database.GetResourceValidationRecord(context.Background(), stackID,
@@ -232,8 +232,8 @@ var _ = Describe("Stack validation", func() {
 		firstValidatedAt := rec1.ValidatedAt
 
 		By("Creating a second release for the same, unchanged image")
-		release2 := shared.CreateRelease(client, orgID, teamName, stackID)
-		shared.WaitForReleaseReleased(client, orgID, teamName, stackID, release2.GetId(), 5*time.Minute)
+		release2 := shared.CreateRelease(client, orgID, projectName, stackID)
+		shared.WaitForReleaseReleased(client, orgID, projectName, stackID, release2.GetId(), 5*time.Minute)
 
 		By("Verifying the validation record's validated_at is unchanged — the probe was skipped")
 		rec2, err := testEnv.Database.GetResourceValidationRecord(context.Background(), stackID,

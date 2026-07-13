@@ -18,7 +18,7 @@ func PresentStack(s *models.Stack, refs models.StackReleaseRefs) openapi.Stack {
 	return openapi.Stack{
 		Id:             &s.ID,
 		OrganisationId: &s.OrganisationID,
-		TeamId:         &s.TeamID,
+		ProjectId:      &s.ProjectID,
 		UserId:         &s.UserID,
 		Name:           s.Name,
 		Namespace:      &s.Namespace,

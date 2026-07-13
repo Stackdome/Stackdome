@@ -13,19 +13,19 @@ import (
 )
 
 type PreviewStackHandlerSpec struct {
-	Service     services.PreviewStackService
-	TeamService services.TeamService
+	Service        services.PreviewStackService
+	ProjectService services.ProjectService
 }
 
 type previewStackHandler struct {
-	service     services.PreviewStackService
-	teamService services.TeamService
+	service        services.PreviewStackService
+	projectService services.ProjectService
 }
 
 func NewPreviewStackHandler(spec PreviewStackHandlerSpec) *previewStackHandler {
 	return &previewStackHandler{
-		service:     spec.Service,
-		teamService: spec.TeamService,
+		service:        spec.Service,
+		projectService: spec.ProjectService,
 	}
 }
 
@@ -34,14 +34,14 @@ func (h *previewStackHandler) Create(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (any, *errors.ServiceError) {
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 			identity := auth.GetIdentityFromCtx(r.Context())
 			model := presenters.ConvertPreviewStackCreate(&req)
 			model.UserID = identity.UserID
-			model.TeamID = teamID
+			model.ProjectID = projectID
 			preview, serr := h.service.Create(r.Context(), model)
 			if serr != nil {
 				return nil, serr
@@ -70,7 +70,7 @@ func (h *previewStackHandler) Get(w http.ResponseWriter, r *http.Request) {
 func (h *previewStackHandler) List(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (any, *errors.ServiceError) {
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -78,7 +78,7 @@ func (h *previewStackHandler) List(w http.ResponseWriter, r *http.Request) {
 			if configID := r.URL.Query().Get("config_id"); configID != "" {
 				params.Filters = append(params.Filters, stores.Filter{Field: "stack_preview_config_id", Value: configID})
 			}
-			result, serr := h.service.List(r.Context(), teamID, params)
+			result, serr := h.service.List(r.Context(), projectID, params)
 			if serr != nil {
 				return nil, serr
 			}

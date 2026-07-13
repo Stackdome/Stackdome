@@ -34,7 +34,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import * as addonsApi from "@/api/addons";
 import {
   PostgresAddonFormSchema,
@@ -68,8 +68,8 @@ export default function PostgresFormPage() {
   const { id: editId } = useParams<{ id: string }>();
   const isEdit = Boolean(editId);
   const { toast } = useToast();
-  const { teamNameById, defaultTeamName } = useResourceTeams();
-  const [addonTeamId, setAddonTeamId] = useState<string | undefined>(undefined);
+  const { projectNameById, defaultProjectName } = useResourceProjects();
+  const [addonProjectId, setAddonProjectId] = useState<string | undefined>(undefined);
   const { setCustomLabel, setPathLoading, registerNonClickablePath } = useBreadcrumb();
   const [values, setValues] = useState<PostgresAddonFormValues>(() =>
     defaultFormValues(""),
@@ -124,12 +124,12 @@ export default function PostgresFormPage() {
       setLoadingAddon(false);
       return;
     }
-    // Single-addon read is team-scoped; wait for the default team (effect re-runs).
-    if (!defaultTeamName) return;
+    // Single-addon read is project-scoped; wait for the default project (effect re-runs).
+    if (!defaultProjectName) return;
     let cancelled = false;
     setLoadingAddon(true);
     addonsApi
-      .getPostgresAddon(orgId, defaultTeamName, editId)
+      .getPostgresAddon(orgId, defaultProjectName, editId)
       .then((addon) => {
         if (cancelled) return;
         // Initialization is create-only and hidden on edit; the backend
@@ -142,7 +142,7 @@ export default function PostgresFormPage() {
         };
         setValues(hydrated);
         setOriginalValues(hydrated);
-        setAddonTeamId(addon.team_id);
+        setAddonProjectId(addon.project_id);
         setLoadError(null);
       })
       .catch((e) => {
@@ -156,7 +156,7 @@ export default function PostgresFormPage() {
     return () => {
       cancelled = true;
     };
-  }, [isEdit, editId, defaultTeamName]);
+  }, [isEdit, editId, defaultProjectName]);
 
   const update = <K extends keyof PostgresAddonFormValues>(
     key: K,
@@ -217,23 +217,23 @@ export default function PostgresFormPage() {
     try {
       const input = buildCreateInput(values, { isEdit });
       if (isEdit && editId) {
-        const teamName = teamNameById(addonTeamId);
-        if (!teamName) {
-          setSubmitError("Could not resolve the team for this addon.");
+        const projectName = projectNameById(addonProjectId);
+        if (!projectName) {
+          setSubmitError("Could not resolve the project for this addon.");
           return;
         }
-        await addonsApi.updatePostgresAddon(orgId, teamName, editId, input);
+        await addonsApi.updatePostgresAddon(orgId, projectName, editId, input);
         toast({
           title: "Addon updated",
           description: "Changes have been applied.",
           variant: "success",
         });
       } else {
-        if (!defaultTeamName) {
-          setSubmitError("You don't have a team to create addons in.");
+        if (!defaultProjectName) {
+          setSubmitError("You don't have a project to create addons in.");
           return;
         }
-        await addonsApi.createPostgresAddon(orgId, defaultTeamName, input);
+        await addonsApi.createPostgresAddon(orgId, defaultProjectName, input);
         toast({
           title: "Addon created",
           description: "Provisioning has started; status will update as it's ready.",

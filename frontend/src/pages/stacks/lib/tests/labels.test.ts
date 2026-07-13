@@ -6,7 +6,7 @@ describe("normalizeLabel", () => {
     expect(normalizeLabel("  Prod  ")).toBe("prod");
   });
   it("collapses whitespace runs to a single dash", () => {
-    expect(normalizeLabel("payments  team core")).toBe("payments-team-core");
+    expect(normalizeLabel("payments  project core")).toBe("payments-project-core");
   });
   it("returns empty string for whitespace-only input", () => {
     expect(normalizeLabel("   ")).toBe("");

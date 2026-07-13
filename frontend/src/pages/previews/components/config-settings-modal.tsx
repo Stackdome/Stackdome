@@ -17,7 +17,7 @@ import {
 } from "@/api/preview-configs";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   configSettingsSchema, DEFAULT_STACKFILE_PATH, type ConfigSettingsValues,
 } from "@/pages/previews/lib/form-schemas";
@@ -32,7 +32,7 @@ interface ConfigSettingsModalProps {
 
 export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDeleted }: ConfigSettingsModalProps) {
   const { toast } = useToast();
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
 
   const [baseBranch, setBaseBranch] = useState("");
   const [stackfilePath, setStackfilePath] = useState("");
@@ -65,11 +65,11 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
     }
     setFieldErrors({});
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName || !config.id) return;
+    if (!orgId || !defaultProjectName || !config.id) return;
     setSaving(true);
     try {
       // PUT is full-replace server-side; echo unchanged fields so they survive the save.
-      const updated = await updatePreviewConfig(orgId, defaultTeamName, config.id, {
+      const updated = await updatePreviewConfig(orgId, defaultProjectName, config.id, {
         git_repository: {
           repo_url: config.git_repository?.repo_url ?? "",
           base_branch: parsed.data.baseBranch,
@@ -92,10 +92,10 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
 
   const confirmDelete = async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName || !config.id) return;
+    if (!orgId || !defaultProjectName || !config.id) return;
     setDeleting(true);
     try {
-      await deletePreviewConfig(orgId, defaultTeamName, config.id);
+      await deletePreviewConfig(orgId, defaultProjectName, config.id);
       toast({ title: "Configuration deleted" });
       setDeleteConfirmOpen(false);
       onOpenChange(false);

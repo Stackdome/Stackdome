@@ -37,7 +37,7 @@ export interface UseDraftSyncArgs {
   enabled: boolean;
   stack: Stack | undefined;
   session: UseStackEditSession;
-  ids: { orgId: string; teamName: string; stackId: string } | null;
+  ids: { orgId: string; projectName: string; stackId: string } | null;
   onStackRefreshed: (stack: Stack) => void;
   /** Called when a sync op throws, before the mirror heals. */
   onSyncError?: (info: SyncErrorInfo) => void;
@@ -56,25 +56,25 @@ type Ids = NonNullable<UseDraftSyncArgs["ids"]>;
 async function executeOp(op: SyncOp, ids: Ids): Promise<void> {
   switch (op.kind) {
     case "createVolume":
-      await createStackVolume(ids.orgId, ids.teamName, ids.stackId, op.volume);
+      await createStackVolume(ids.orgId, ids.projectName, ids.stackId, op.volume);
       return;
     case "createResource":
-      await createStackResource(ids.orgId, ids.teamName, ids.stackId, op.resource);
+      await createStackResource(ids.orgId, ids.projectName, ids.stackId, op.resource);
       return;
     case "updateResource":
-      await updateStackResource(ids.orgId, ids.teamName, ids.stackId, op.name, op.resource);
+      await updateStackResource(ids.orgId, ids.projectName, ids.stackId, op.name, op.resource);
       return;
     case "deleteResource":
-      await deleteStackResource(ids.orgId, ids.teamName, ids.stackId, op.name);
+      await deleteStackResource(ids.orgId, ids.projectName, ids.stackId, op.name);
       return;
     case "createConnection":
-      await createStackConnection(ids.orgId, ids.teamName, ids.stackId, op.conn);
+      await createStackConnection(ids.orgId, ids.projectName, ids.stackId, op.conn);
       return;
     case "updateConnection":
-      await updateStackConnection(ids.orgId, ids.teamName, ids.stackId, op.id, op.conn);
+      await updateStackConnection(ids.orgId, ids.projectName, ids.stackId, op.id, op.conn);
       return;
     case "deleteConnection":
-      await deleteStackConnection(ids.orgId, ids.teamName, ids.stackId, op.id);
+      await deleteStackConnection(ids.orgId, ids.projectName, ids.stackId, op.id);
       return;
   }
 }
@@ -170,7 +170,7 @@ export function useDraftSync({
           await executeOp(op, currentIds);
         }
         opsSucceeded = true;
-        const fresh = await getStackById(currentIds.orgId, currentIds.teamName, currentIds.stackId);
+        const fresh = await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
         mirrorRef.current = serverStateFromStack(fresh);
         onRefreshedRef.current(fresh);
         // Deliberately NOT rebasing the session here: the diff baseline stays
@@ -195,7 +195,7 @@ export function useDraftSync({
         });
         // Heal the mirror from server truth; the draft stays authoritative locally.
         try {
-          const fresh = await getStackById(currentIds.orgId, currentIds.teamName, currentIds.stackId);
+          const fresh = await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
           mirrorRef.current = serverStateFromStack(fresh);
           onRefreshedRef.current(fresh);
         } catch {

@@ -4,14 +4,14 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**TeamName** | **string** | The name of the team to place the demoted user in | 
-**Role** | Pointer to [**NullableTeamRole**](TeamRole.md) | The team role to assign (defaults to Viewer) | [optional] 
+**ProjectName** | **string** | The name of the project to place the demoted user in | 
+**Role** | Pointer to [**NullableProjectRole**](ProjectRole.md) | The project role to assign (defaults to Viewer) | [optional] 
 
 ## Methods
 
 ### NewDemoteAdminRequest
 
-`func NewDemoteAdminRequest(teamName string, ) *DemoteAdminRequest`
+`func NewDemoteAdminRequest(projectName string, ) *DemoteAdminRequest`
 
 NewDemoteAdminRequest instantiates a new DemoteAdminRequest object
 This constructor will assign default values to properties that have it defined,
@@ -26,42 +26,42 @@ NewDemoteAdminRequestWithDefaults instantiates a new DemoteAdminRequest object
 This constructor will only assign default values to properties that have it defined,
 but it doesn't guarantee that properties required by API are set
 
-### GetTeamName
+### GetProjectName
 
-`func (o *DemoteAdminRequest) GetTeamName() string`
+`func (o *DemoteAdminRequest) GetProjectName() string`
 
-GetTeamName returns the TeamName field if non-nil, zero value otherwise.
+GetProjectName returns the ProjectName field if non-nil, zero value otherwise.
 
-### GetTeamNameOk
+### GetProjectNameOk
 
-`func (o *DemoteAdminRequest) GetTeamNameOk() (*string, bool)`
+`func (o *DemoteAdminRequest) GetProjectNameOk() (*string, bool)`
 
-GetTeamNameOk returns a tuple with the TeamName field if it's non-nil, zero value otherwise
+GetProjectNameOk returns a tuple with the ProjectName field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamName
+### SetProjectName
 
-`func (o *DemoteAdminRequest) SetTeamName(v string)`
+`func (o *DemoteAdminRequest) SetProjectName(v string)`
 
-SetTeamName sets TeamName field to given value.
+SetProjectName sets ProjectName field to given value.
 
 
 ### GetRole
 
-`func (o *DemoteAdminRequest) GetRole() TeamRole`
+`func (o *DemoteAdminRequest) GetRole() ProjectRole`
 
 GetRole returns the Role field if non-nil, zero value otherwise.
 
 ### GetRoleOk
 
-`func (o *DemoteAdminRequest) GetRoleOk() (*TeamRole, bool)`
+`func (o *DemoteAdminRequest) GetRoleOk() (*ProjectRole, bool)`
 
 GetRoleOk returns a tuple with the Role field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
 ### SetRole
 
-`func (o *DemoteAdminRequest) SetRole(v TeamRole)`
+`func (o *DemoteAdminRequest) SetRole(v ProjectRole)`
 
 SetRole sets Role field to given value.
 

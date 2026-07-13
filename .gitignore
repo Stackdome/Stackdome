@@ -4,6 +4,9 @@
 
 # Node compile cache (build artifact, never commit)
 node-compile-cache/
+
+# Integration test cache (clusters, kubeconfigs, CI logs — never commit)
+test/int/.cache/
 cluster_config.yaml
 database.yaml
 bin/

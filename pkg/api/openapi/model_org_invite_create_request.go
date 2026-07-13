@@ -17,7 +17,7 @@ import (
 // OrgInviteCreateRequest struct for OrgInviteCreateRequest
 type OrgInviteCreateRequest struct {
 	Email         string `json:"email"`
-	TeamName      string `json:"team_name"`
+	ProjectName   string `json:"project_name"`
 	Role          string `json:"role"`
 	ExpiresInDays int32  `json:"expires_in_days"`
 }
@@ -26,10 +26,10 @@ type OrgInviteCreateRequest struct {
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewOrgInviteCreateRequest(email string, teamName string, role string, expiresInDays int32) *OrgInviteCreateRequest {
+func NewOrgInviteCreateRequest(email string, projectName string, role string, expiresInDays int32) *OrgInviteCreateRequest {
 	this := OrgInviteCreateRequest{}
 	this.Email = email
-	this.TeamName = teamName
+	this.ProjectName = projectName
 	this.Role = role
 	this.ExpiresInDays = expiresInDays
 	return &this
@@ -67,28 +67,28 @@ func (o *OrgInviteCreateRequest) SetEmail(v string) {
 	o.Email = v
 }
 
-// GetTeamName returns the TeamName field value
-func (o *OrgInviteCreateRequest) GetTeamName() string {
+// GetProjectName returns the ProjectName field value
+func (o *OrgInviteCreateRequest) GetProjectName() string {
 	if o == nil {
 		var ret string
 		return ret
 	}
 
-	return o.TeamName
+	return o.ProjectName
 }
 
-// GetTeamNameOk returns a tuple with the TeamName field value
+// GetProjectNameOk returns a tuple with the ProjectName field value
 // and a boolean to check if the value has been set.
-func (o *OrgInviteCreateRequest) GetTeamNameOk() (*string, bool) {
+func (o *OrgInviteCreateRequest) GetProjectNameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.TeamName, true
+	return &o.ProjectName, true
 }
 
-// SetTeamName sets field value
-func (o *OrgInviteCreateRequest) SetTeamName(v string) {
-	o.TeamName = v
+// SetProjectName sets field value
+func (o *OrgInviteCreateRequest) SetProjectName(v string) {
+	o.ProjectName = v
 }
 
 // GetRole returns the Role field value
@@ -145,7 +145,7 @@ func (o OrgInviteCreateRequest) MarshalJSON() ([]byte, error) {
 		toSerialize["email"] = o.Email
 	}
 	if true {
-		toSerialize["team_name"] = o.TeamName
+		toSerialize["project_name"] = o.ProjectName
 	}
 	if true {
 		toSerialize["role"] = o.Role

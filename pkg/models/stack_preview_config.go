@@ -43,7 +43,7 @@ func (r *PreviewGitRepository) Scan(value any) error {
 type StackPreviewConfig struct {
 	ID                string `gorm:"primary_key;default:gen_random_uuid()"`
 	OrganisationID    string `gorm:"not null"`
-	TeamID            string `gorm:"not null"`
+	ProjectID         string `gorm:"not null"`
 	UserID            string `gorm:"not null"`
 	Name              string `gorm:"not null"`
 	Description       string

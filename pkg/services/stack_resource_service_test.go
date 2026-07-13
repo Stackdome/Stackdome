@@ -31,11 +31,11 @@ func TestStackResourceService_Restart(t *testing.T) {
 		ctx := context.Background()
 		stackID := "stack-123"
 		resourceName := "web-server"
-		teamID := "team-456"
+		projectID := "project-456"
 
 		stack := &models.Stack{
-			ID:     stackID,
-			TeamID: teamID,
+			ID:        stackID,
+			ProjectID: projectID,
 		}
 
 		resource := &models.StackResource{
@@ -59,7 +59,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 			Return(stack, nil)
 
 		mockPermissions.EXPECT().
-			Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).
+			Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).
 			Return(nil)
 
 		mockResourceStore.EXPECT().
@@ -100,11 +100,11 @@ func TestStackResourceService_Restart(t *testing.T) {
 		ctx := context.Background()
 		stackID := "stack-123"
 		resourceName := "web-server"
-		teamID := "team-456"
+		projectID := "project-456"
 
 		stack := &models.Stack{
-			ID:     stackID,
-			TeamID: teamID,
+			ID:        stackID,
+			ProjectID: projectID,
 		}
 
 		mockStackStore.EXPECT().
@@ -112,7 +112,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 			Return(stack, nil)
 
 		mockPermissions.EXPECT().
-			Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).
+			Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).
 			Return(errors.Forbidden("permission denied"))
 
 		result, err := svc.Restart(ctx, stackID, resourceName)
@@ -139,11 +139,11 @@ func TestStackResourceService_Restart(t *testing.T) {
 		ctx := context.Background()
 		stackID := "stack-123"
 		resourceName := "nonexistent-resource"
-		teamID := "team-456"
+		projectID := "project-456"
 
 		stack := &models.Stack{
-			ID:     stackID,
-			TeamID: teamID,
+			ID:        stackID,
+			ProjectID: projectID,
 		}
 
 		mockStackStore.EXPECT().
@@ -151,7 +151,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 			Return(stack, nil)
 
 		mockPermissions.EXPECT().
-			Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).
+			Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).
 			Return(nil)
 
 		mockResourceStore.EXPECT().

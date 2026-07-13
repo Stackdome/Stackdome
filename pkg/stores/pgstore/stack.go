@@ -159,13 +159,13 @@ func (w *stackStore) ListByOrganisationID(ctx context.Context, organisationID st
 	return stacks, nil
 }
 
-func (w *stackStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
+func (w *stackStore) ListByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError) {
 	var stacks []*models.Stack
 	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).
-		Where("team_id = ?", teamID).
+		Where("project_id = ?", projectID).
 		Order("created_at DESC").
 		Find(&stacks).Error; err != nil {
-		return nil, errors.GeneralError("failed to list stacks by team: %s", err.Error())
+		return nil, errors.GeneralError("failed to list stacks by project: %s", err.Error())
 	}
 	for _, stack := range stacks {
 		resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)
@@ -187,16 +187,16 @@ func (w *stackStore) ListByTeamID(ctx context.Context, teamID string) ([]*models
 	return stacks, nil
 }
 
-func (w *stackStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.Stack, *errors.ServiceError) {
-	if len(teamIDs) == 0 {
+func (w *stackStore) ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.Stack, *errors.ServiceError) {
+	if len(projectIDs) == 0 {
 		return []*models.Stack{}, nil
 	}
 	var stacks []*models.Stack
 	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).
-		Where("team_id IN ?", teamIDs).
+		Where("project_id IN ?", projectIDs).
 		Order("created_at DESC").
 		Find(&stacks).Error; err != nil {
-		return nil, errors.GeneralError("failed to list stacks by teams: %s", err.Error())
+		return nil, errors.GeneralError("failed to list stacks by projects: %s", err.Error())
 	}
 	for _, stack := range stacks {
 		resources, err := w.stackResourceStore.GetByStackID(ctx, stack.ID)
@@ -259,9 +259,9 @@ func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceErr
 	return nil
 }
 
-func (w *stackStore) GetByNameAndTeamID(ctx context.Context, name string, teamID string) (*models.Stack, *errors.ServiceError) {
+func (w *stackStore) GetByNameAndProjectID(ctx context.Context, name string, projectID string) (*models.Stack, *errors.ServiceError) {
 	var stack models.Stack
-	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND team_id = ?", name, teamID).Error; err != nil {
+	if err := w.sessionFactory.New(ctx).Omit(clause.Associations).First(&stack, "name = ? AND project_id = ?", name, projectID).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("stack with name %s not found", name)
 		}

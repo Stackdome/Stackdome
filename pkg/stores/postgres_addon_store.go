@@ -18,8 +18,8 @@ type PostgresAddonStore interface {
 	UpdateWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
-	ListByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError)
-	ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.PostgresAddon, *errors.ServiceError)
+	ListByProjectID(ctx context.Context, projectID string) ([]*models.PostgresAddon, *errors.ServiceError)
+	ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListByCluster(ctx context.Context, clusterID string) ([]*models.PostgresAddon, *errors.ServiceError)
 
 	// Validation

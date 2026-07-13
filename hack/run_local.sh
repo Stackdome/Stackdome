@@ -265,17 +265,17 @@ signup_and_authenticate() {
         err "Failed to get organization ID."
     fi
 
-    # Get the default team name
-    local teams
-    teams=$(curl -sf -H "Authorization: Bearer ${AUTH_TOKEN}" \
-        "${API_BASE}/api/v1/organizations/${ORG_ID}/teams")
-    TEAM_NAME=$(echo "$teams" | jq -r '.items[0].name // empty')
-    if [[ -z "$TEAM_NAME" ]]; then
-        TEAM_NAME="default"
+    # Get the default project name
+    local projects
+    projects=$(curl -sf -H "Authorization: Bearer ${AUTH_TOKEN}" \
+        "${API_BASE}/api/v1/organizations/${ORG_ID}/projects")
+    PROJECT_NAME=$(echo "$projects" | jq -r '.items[0].name // empty')
+    if [[ -z "$PROJECT_NAME" ]]; then
+        PROJECT_NAME="default"
     fi
 
     log "Organization ID: ${ORG_ID}"
-    log "Team: ${TEAM_NAME}"
+    log "Project: ${PROJECT_NAME}"
 }
 
 api() {
@@ -433,7 +433,7 @@ create_addon() {
     log "Creating Postgres addon '${addon_name}'..."
 
     local response
-    response=$(api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/addons/postgres" -d @"$ADDON_FILE")
+    response=$(api POST "/api/v1/organizations/${ORG_ID}/projects/${PROJECT_NAME}/addons/postgres" -d @"$ADDON_FILE")
     ADDON_ID=$(echo "$response" | jq -r '.id')
     if [[ -z "$ADDON_ID" || "$ADDON_ID" == "null" ]]; then
         err "Failed to create postgres addon. Response: $response"
@@ -443,7 +443,7 @@ create_addon() {
     log "Waiting for Postgres addon to become Ready..."
     for i in $(seq 1 30); do
         local state
-        state=$(api GET "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/addons/postgres/${ADDON_ID}" 2>/dev/null \
+        state=$(api GET "/api/v1/organizations/${ORG_ID}/projects/${PROJECT_NAME}/addons/postgres/${ADDON_ID}" 2>/dev/null \
             | jq -r '.status.state // empty' 2>/dev/null || echo "")
         if [[ "$state" == "Ready" ]]; then
             log "Postgres addon is Ready."
@@ -473,9 +473,9 @@ deploy_stack() {
     if [[ -n "${ADDON_ID:-}" ]]; then
         local stack_payload
         stack_payload=$(sed "s/<POSTGRES_ADDON_ID>/${ADDON_ID}/g" "$STACK_FILE")
-        response=$(echo "$stack_payload" | api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/stacks" -d @-)
+        response=$(echo "$stack_payload" | api POST "/api/v1/organizations/${ORG_ID}/projects/${PROJECT_NAME}/stacks" -d @-)
     else
-        response=$(api POST "/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}/stacks" -d @"$STACK_FILE")
+        response=$(api POST "/api/v1/organizations/${ORG_ID}/projects/${PROJECT_NAME}/stacks" -d @"$STACK_FILE")
     fi
 
     STACK_ID=$(echo "$response" | jq -r '.id')
@@ -496,23 +496,23 @@ print_info() {
     log ""
     info "API Server:   ${API_BASE}"
     info "Org ID:       ${ORG_ID}"
-    info "Team:         ${TEAM_NAME}"
+    info "Project:         ${PROJECT_NAME}"
     info "Cluster ID:   ${CLUSTER_ID}"
     info "Auth Token:   ${AUTH_TOKEN}"
     info "Org Domain:   ${ORG_DOMAIN}"
     info "Kubectl ctx:  k3d-${K3D_CLUSTER_NAME}"
 
-    local team_base="${API_BASE}/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}"
+    local project_base="${API_BASE}/api/v1/organizations/${ORG_ID}/projects/${PROJECT_NAME}"
 
     # Append API-level config to dev_env.yaml
     # Remove old API-level entries first to avoid duplicates on re-runs
     local tmp_config
-    tmp_config=$(grep -v '^api_server:\|^org_id:\|^team_name:\|^cluster_id:\|^auth_token:\|^org_domain:\|^admin_email:\|^admin_password:' "$DEV_CONFIG" 2>/dev/null || true)
+    tmp_config=$(grep -v '^api_server:\|^org_id:\|^project_name:\|^cluster_id:\|^auth_token:\|^org_domain:\|^admin_email:\|^admin_password:' "$DEV_CONFIG" 2>/dev/null || true)
     echo "$tmp_config" > "$DEV_CONFIG"
     cat >> "$DEV_CONFIG" <<EOF
 api_server: ${API_BASE}
 org_id: ${ORG_ID}
-team_name: ${TEAM_NAME}
+project_name: ${PROJECT_NAME}
 cluster_id: ${CLUSTER_ID}
 auth_token: ${AUTH_TOKEN}
 org_domain: ${ORG_DOMAIN}
@@ -527,12 +527,12 @@ EOF
     log "  # Deploy a stack"
     log "  curl -s -X POST -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
     log "    -H 'Content-Type: application/json' \\"
-    log "    ${team_base}/stacks -d @samples/tooljet.json | jq"
+    log "    ${project_base}/stacks -d @samples/tooljet.json | jq"
     log ""
     log "  # Create a postgres addon"
     log "  curl -s -X POST -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
     log "    -H 'Content-Type: application/json' \\"
-    log "    ${team_base}/addons/postgres -d @samples/postgres_addon_basic.json | jq"
+    log "    ${project_base}/addons/postgres -d @samples/postgres_addon_basic.json | jq"
     log ""
     log "  # Export kubeconfig"
     log "  k3d kubeconfig get ${K3D_CLUSTER_NAME} > /tmp/k3d-kubeconfig.yaml"
@@ -566,24 +566,24 @@ print_stack_info() {
         info "Stack ID:     ${STACK_ID}"
     fi
 
-    local team_base="${API_BASE}/api/v1/organizations/${ORG_ID}/teams/${TEAM_NAME}"
+    local project_base="${API_BASE}/api/v1/organizations/${ORG_ID}/projects/${PROJECT_NAME}"
 
     log ""
     log "Useful commands:"
     log ""
     log "  # List stacks"
     log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    ${team_base}/stacks | jq '.items[].name'"
+    log "    ${project_base}/stacks | jq '.items[].name'"
     log ""
     log "  # List postgres addons"
     log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-    log "    ${team_base}/addons/postgres | jq '.items[] | {name, id, state: .status.state}'"
+    log "    ${project_base}/addons/postgres | jq '.items[] | {name, id, state: .status.state}'"
 
     if [[ -n "${STACK_ID:-}" ]]; then
         log ""
         log "  # Check stack status"
         log "  curl -s -H 'Authorization: Bearer ${AUTH_TOKEN}' \\"
-        log "    ${team_base}/stacks/${STACK_ID} | jq '.status'"
+        log "    ${project_base}/stacks/${STACK_ID} | jq '.status'"
     fi
     log ""
 }

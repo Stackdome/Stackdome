@@ -30,8 +30,8 @@ func (h *orgInviteHandler) Create(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
-			role := models.TeamRole(req.Role)
-			invite, rawToken, serr := h.inviteService.Create(r.Context(), req.Email, req.TeamName, role, int(req.ExpiresInDays))
+			role := models.ProjectRole(req.Role)
+			invite, rawToken, serr := h.inviteService.Create(r.Context(), req.Email, req.ProjectName, role, int(req.ExpiresInDays))
 			if serr != nil {
 				return nil, serr
 			}

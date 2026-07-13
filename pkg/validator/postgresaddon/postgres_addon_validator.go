@@ -82,8 +82,8 @@ func (v *postgresAddonValidator) validateBasicFields(spec *models.PostgresAddon)
 		return errors.BadRequest("PostgreSQL addon user ID cannot be empty")
 	}
 
-	if spec.TeamID == "" {
-		return errors.BadRequest("PostgreSQL addon team ID cannot be empty")
+	if spec.ProjectID == "" {
+		return errors.BadRequest("PostgreSQL addon project ID cannot be empty")
 	}
 
 	// Validate name format (DNS-1123 subdomain)

@@ -5,8 +5,8 @@ import { renderHook, waitFor, act } from "@testing-library/react";
 vi.mock("@/api/releases", () => ({
   listReleaseEvents: vi.fn(),
   buildReleaseEventStreamUrl: vi.fn(
-    (orgId: string, teamName: string, stackId: string, releaseId: string, afterSequence?: number) =>
-      `/organizations/${orgId}/teams/${teamName}/stacks/${stackId}/releases/${releaseId}/events/stream${
+    (orgId: string, projectName: string, stackId: string, releaseId: string, afterSequence?: number) =>
+      `/organizations/${orgId}/projects/${projectName}/stacks/${stackId}/releases/${releaseId}/events/stream${
         afterSequence !== undefined ? `?after_sequence=${afterSequence}` : ""
       }`,
   ),
@@ -50,7 +50,7 @@ afterEach(() => {
 
 describe("useReleaseEvents", () => {
   it("idle when releaseId is undefined — no fetch, no stream", () => {
-    const { result } = renderHook(() => useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", terminal: false }));
+    const { result } = renderHook(() => useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", terminal: false }));
     expect(result.current.status).toBe("idle");
     expect(result.current.events).toEqual([]);
     expect(FakeEventSource.instances).toHaveLength(0);
@@ -60,7 +60,7 @@ describe("useReleaseEvents", () => {
   it("streams, dedupes, and orders events by sequence", async () => {
     const onEvent = vi.fn();
     const { result } = renderHook(() =>
-      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: false, onEvent }),
+      useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: false, onEvent }),
     );
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
     const source = FakeEventSource.instances[0];
@@ -81,7 +81,7 @@ describe("useReleaseEvents", () => {
 
   it("reconnects after an error, resuming from the last seen sequence", async () => {
     vi.useFakeTimers();
-    renderHook(() => useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: false }));
+    renderHook(() => useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: false }));
     expect(FakeEventSource.instances).toHaveLength(1);
     const first = FakeEventSource.instances[0];
     act(() => {
@@ -101,7 +101,7 @@ describe("useReleaseEvents", () => {
   it("resets the reconnect budget on a successful open — blips that recover never fall back to polling", async () => {
     vi.useFakeTimers();
     const { result } = renderHook(() =>
-      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: false }),
+      useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: false }),
     );
     // 15 > MAX_RECONNECTS: each blip reconnects and re-opens cleanly, so the counter
     // never accumulates past the cap. Without the reset this would flip to polling.
@@ -118,7 +118,7 @@ describe("useReleaseEvents", () => {
   it("terminal release: one-shot list fetch, no EventSource, ends closed", async () => {
     vi.mocked(listReleaseEvents).mockResolvedValue({ items: [ev(1), ev(2)] });
     const { result } = renderHook(() =>
-      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: true }),
+      useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: true }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("closed"));
@@ -133,7 +133,7 @@ describe("useReleaseEvents", () => {
       .mockResolvedValueOnce({ items: [ev(1), ev(2)], next_after_sequence: 2 })
       .mockResolvedValueOnce({ items: [ev(3)] });
     const { result } = renderHook(() =>
-      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: true }),
+      useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: true }),
     );
 
     await waitFor(() => expect(result.current.status).toBe("closed"));
@@ -145,7 +145,7 @@ describe("useReleaseEvents", () => {
 
   it("closes the stream on unmount", async () => {
     const { unmount } = renderHook(() =>
-      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: false }),
+      useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: false }),
     );
     expect(FakeEventSource.instances).toHaveLength(1);
     const source = FakeEventSource.instances[0];
@@ -160,7 +160,7 @@ describe("useReleaseEvents", () => {
     );
 
     const { result, rerender } = renderHook(
-      ({ terminal }) => useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal }),
+      ({ terminal }) => useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal }),
       { initialProps: { terminal: false } },
     );
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
@@ -184,7 +184,7 @@ describe("useReleaseEvents", () => {
 
   it("resets events when the releaseId itself changes", async () => {
     const { result, rerender } = renderHook(
-      ({ releaseId }) => useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId, terminal: false }),
+      ({ releaseId }) => useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId, terminal: false }),
       { initialProps: { releaseId: "r1" } },
     );
     await waitFor(() => expect(FakeEventSource.instances).toHaveLength(1));
@@ -201,7 +201,7 @@ describe("useReleaseEvents", () => {
   it("falls back to polling once MAX_RECONNECTS is exceeded", async () => {
     vi.useFakeTimers();
     const { result } = renderHook(() =>
-      useReleaseEvents({ orgId: "o", teamName: "t", stackId: "s", releaseId: "r1", terminal: false }),
+      useReleaseEvents({ orgId: "o", projectName: "t", stackId: "s", releaseId: "r1", terminal: false }),
     );
 
     for (let i = 0; i < 11; i++) {

@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** |  | [optional] [readonly] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
-**TeamId** | Pointer to **string** |  | [optional] [readonly] 
+**ProjectId** | Pointer to **string** |  | [optional] [readonly] 
 **Name** | **string** | Unique name for this object store configuration | 
 **Spec** | [**ObjectStoreSpec**](ObjectStoreSpec.md) |  | 
 **Status** | Pointer to [**ObjectStoreStatus**](ObjectStoreStatus.md) |  | [optional] 
@@ -82,30 +82,30 @@ SetOrganisationId sets OrganisationId field to given value.
 
 HasOrganisationId returns a boolean if a field has been set.
 
-### GetTeamId
+### GetProjectId
 
-`func (o *ObjectStore) GetTeamId() string`
+`func (o *ObjectStore) GetProjectId() string`
 
-GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
 
-### GetTeamIdOk
+### GetProjectIdOk
 
-`func (o *ObjectStore) GetTeamIdOk() (*string, bool)`
+`func (o *ObjectStore) GetProjectIdOk() (*string, bool)`
 
-GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamId
+### SetProjectId
 
-`func (o *ObjectStore) SetTeamId(v string)`
+`func (o *ObjectStore) SetProjectId(v string)`
 
-SetTeamId sets TeamId field to given value.
+SetProjectId sets ProjectId field to given value.
 
-### HasTeamId
+### HasProjectId
 
-`func (o *ObjectStore) HasTeamId() bool`
+`func (o *ObjectStore) HasProjectId() bool`
 
-HasTeamId returns a boolean if a field has been set.
+HasProjectId returns a boolean if a field has been set.
 
 ### GetName
 

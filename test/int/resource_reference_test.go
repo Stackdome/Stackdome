@@ -15,7 +15,7 @@ import (
 var _ = Describe("Resource Reference Delete Protection", func() {
 	var client *openapi.APIClient
 	var orgID string
-	teamName := models.DefaultTeamName
+	projectName := models.DefaultProjectName
 
 	BeforeEach(func() {
 		testEnv := GetEnvironment()
@@ -30,7 +30,7 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 			secret := shared.CreateGenericSecret("test-conn-secret", map[string]string{
 				"api_key": "test-key-value",
 			})
-			created := shared.CreateSecret(client, orgID, teamName, secret)
+			created := shared.CreateSecret(client, orgID, projectName, secret)
 			secretID := created.GetId()
 
 			By("Creating a stack with an env connection to the secret")
@@ -46,26 +46,26 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 				[]openapi.StackResource{*resource},
 				[]openapi.StackConnection{conn},
 			)
-			createdStack := shared.CreateStack(client, orgID, teamName, stack)
+			createdStack := shared.CreateStack(client, orgID, projectName, stack)
 			stackID := createdStack.GetId()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, teamName, stackID)
-				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
+				shared.DeleteStack(client, orgID, projectName, stackID)
+				shared.WaitForStackDeleted(client, orgID, projectName, stackID, 2*time.Minute)
 			})
 
 			By("Attempting to delete the secret — expecting 409")
-			httpResp, err := shared.DeleteSecretRaw(client, orgID, teamName, secretID)
+			httpResp, err := shared.DeleteSecretRaw(client, orgID, projectName, secretID)
 			Expect(err).To(HaveOccurred())
 			Expect(httpResp.StatusCode).To(Equal(http.StatusConflict))
 
 			By("Removing the connection")
-			connections := shared.ListStackConnections(client, orgID, teamName, stackID)
+			connections := shared.ListStackConnections(client, orgID, projectName, stackID)
 			Expect(connections).To(HaveLen(1))
-			shared.DeleteStackConnection(client, orgID, teamName, stackID, connections[0].GetId())
+			shared.DeleteStackConnection(client, orgID, projectName, stackID, connections[0].GetId())
 
 			By("Deleting the secret — expecting success")
-			shared.DeleteSecret(client, orgID, teamName, secretID)
+			shared.DeleteSecret(client, orgID, projectName, secretID)
 		})
 	})
 
@@ -75,7 +75,7 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 			secret := shared.CreateGenericSecret("test-release-secret", map[string]string{
 				"db_url": "postgres://localhost/test",
 			})
-			created := shared.CreateSecret(client, orgID, teamName, secret)
+			created := shared.CreateSecret(client, orgID, projectName, secret)
 			secretID := created.GetId()
 
 			By("Creating a stack with a connection to the secret (simulated Released)")
@@ -92,20 +92,20 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 				[]openapi.StackConnection{conn},
 				string(models.ReleaseStateReleased),
 			)
-			createdStack := shared.CreateStack(client, orgID, teamName, stack)
+			createdStack := shared.CreateStack(client, orgID, projectName, stack)
 			stackID := createdStack.GetId()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, teamName, stackID)
-				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
-				shared.DeleteSecret(client, orgID, teamName, secretID)
+				shared.DeleteStack(client, orgID, projectName, stackID)
+				shared.WaitForStackDeleted(client, orgID, projectName, stackID, 2*time.Minute)
+				shared.DeleteSecret(client, orgID, projectName, secretID)
 			})
 
 			By("Deploying the stack")
-			release := shared.CreateRelease(client, orgID, teamName, stackID)
+			release := shared.CreateRelease(client, orgID, projectName, stackID)
 
 			By("Waiting for the simulated release to reach Released state")
-			shared.WaitForReleaseReleased(client, orgID, teamName, stackID, release.GetId(), 1*time.Minute)
+			shared.WaitForReleaseReleased(client, orgID, projectName, stackID, release.GetId(), 1*time.Minute)
 
 			By("Updating the stack to remove the secret connection")
 			updatedResource := openapi.NewStackResource("web")
@@ -119,23 +119,23 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 				*openapi.NewAnnotation(shared.SkipProvisioningAnnotationKey, "true"),
 				*openapi.NewAnnotation(shared.SimulateReleaseStateAnnotationKey, string(models.ReleaseStateReleased)),
 			})
-			shared.UpdateStack(client, orgID, teamName, stackID, updatedStack)
+			shared.UpdateStack(client, orgID, projectName, stackID, updatedStack)
 
 			By("Verifying the spec no longer references the secret")
-			fetchedStack := shared.GetStack(client, orgID, teamName, stackID)
+			fetchedStack := shared.GetStack(client, orgID, projectName, stackID)
 			Expect(fetchedStack.Spec.GetConnections()).To(BeEmpty())
 
 			By("Attempting to delete the secret — expecting 409 (Released release still grips)")
-			httpResp, err := shared.DeleteSecretRaw(client, orgID, teamName, secretID)
+			httpResp, err := shared.DeleteSecretRaw(client, orgID, projectName, secretID)
 			Expect(err).To(HaveOccurred(), "expected delete to fail because Released release still references the secret")
 			Expect(httpResp.StatusCode).To(Equal(http.StatusConflict))
 
 			By("Deleting the stack (cascades releases + reference rows)")
-			shared.DeleteStack(client, orgID, teamName, stackID)
-			shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 2*time.Minute)
 
 			By("Deleting the secret — expecting success after stack deletion")
-			shared.DeleteSecret(client, orgID, teamName, secretID)
+			shared.DeleteSecret(client, orgID, projectName, secretID)
 		})
 
 		It("should NOT block deletion when only a Failed release references the secret", func() {
@@ -143,7 +143,7 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 			secret := shared.CreateGenericSecret("test-failed-secret", map[string]string{
 				"db_url": "postgres://localhost/test",
 			})
-			created := shared.CreateSecret(client, orgID, teamName, secret)
+			created := shared.CreateSecret(client, orgID, projectName, secret)
 			secretID := created.GetId()
 
 			By("Creating a stack with a connection to the secret (simulated Failed)")
@@ -160,19 +160,19 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 				[]openapi.StackConnection{conn},
 				string(models.ReleaseStateFailed),
 			)
-			createdStack := shared.CreateStack(client, orgID, teamName, stack)
+			createdStack := shared.CreateStack(client, orgID, projectName, stack)
 			stackID := createdStack.GetId()
 
 			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, teamName, stackID)
-				shared.WaitForStackDeleted(client, orgID, teamName, stackID, 2*time.Minute)
+				shared.DeleteStack(client, orgID, projectName, stackID)
+				shared.WaitForStackDeleted(client, orgID, projectName, stackID, 2*time.Minute)
 			})
 
 			By("Deploying the stack")
-			release := shared.CreateRelease(client, orgID, teamName, stackID)
+			release := shared.CreateRelease(client, orgID, projectName, stackID)
 
 			By("Waiting for the simulated release to reach Failed state")
-			shared.WaitForReleaseState(client, orgID, teamName, stackID, release.GetId(), string(models.ReleaseStateFailed), 1*time.Minute)
+			shared.WaitForReleaseState(client, orgID, projectName, stackID, release.GetId(), string(models.ReleaseStateFailed), 1*time.Minute)
 
 			By("Updating the stack to remove the secret connection")
 			updatedResource := openapi.NewStackResource("web")
@@ -186,10 +186,10 @@ var _ = Describe("Resource Reference Delete Protection", func() {
 				*openapi.NewAnnotation(shared.SkipProvisioningAnnotationKey, "true"),
 				*openapi.NewAnnotation(shared.SimulateReleaseStateAnnotationKey, string(models.ReleaseStateFailed)),
 			})
-			shared.UpdateStack(client, orgID, teamName, stackID, updatedStack)
+			shared.UpdateStack(client, orgID, projectName, stackID, updatedStack)
 
 			By("Deleting the secret — expecting success (Failed release does NOT grip)")
-			shared.DeleteSecret(client, orgID, teamName, secretID)
+			shared.DeleteSecret(client, orgID, projectName, secretID)
 		})
 	})
 })

@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { createPreviewEnv } from "@/api/preview-envs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import type { StackPreviewConfig } from "@/api/preview-configs";
 import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
 import { newPreviewEnvSchema, type NewPreviewEnvValues } from "@/pages/previews/lib/form-schemas";
@@ -23,7 +23,7 @@ interface NewPreviewEnvModalProps {
 }
 
 export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: NewPreviewEnvModalProps) {
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
   const [prNumber, setPrNumber] = useState("");
   const [branch, setBranch] = useState("");
   const [advanced, setAdvanced] = useState(false);
@@ -61,12 +61,12 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
     }
     setFieldErrors({});
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName || !config.id) return;
+    if (!orgId || !defaultProjectName || !config.id) return;
     setSaving(true);
     setError(null);
     try {
       const overrides = parseImageOverrides(parsed.data.overridesText);
-      await createPreviewEnv(orgId, defaultTeamName, {
+      await createPreviewEnv(orgId, defaultProjectName, {
         config_id: config.id,
         pr_number: parsed.data.prNumber,
         branch: parsed.data.branch,

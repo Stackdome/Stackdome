@@ -11,8 +11,8 @@ export type PreviewPhase = NonNullable<NonNullable<PreviewStack["status"]>["phas
 /** Phases where the backend has finished reconciling; polling can stop. */
 export const TERMINAL_PHASES: PreviewPhase[] = ["Ready", "Failed"];
 
-function base(orgId: string, teamName: string): string {
-  return `/organizations/${orgId}/teams/${teamName}/preview-stacks`;
+function base(orgId: string, projectName: string): string {
+  return `/organizations/${orgId}/projects/${projectName}/preview-stacks`;
 }
 
 export interface ListPreviewEnvOpts {
@@ -23,23 +23,23 @@ export interface ListPreviewEnvOpts {
 
 export async function listPreviewEnvs(
   orgId: string,
-  teamName: string,
+  projectName: string,
   opts: ListPreviewEnvOpts = {},
 ): Promise<PreviewStackList> {
   const params: Record<string, string | number> = {};
   if (opts.configId) params.config_id = opts.configId;
   if (opts.page) params.page = opts.page;
   if (opts.pageSize) params.page_size = opts.pageSize;
-  const res = await api.get(base(orgId, teamName), { params });
+  const res = await api.get(base(orgId, projectName), { params });
   return res.data as PreviewStackList;
 }
 
 /** Fetches every page so callers see the complete env set, not the first 20. */
-export async function listAllPreviewEnvs(orgId: string, teamName: string, configId?: string): Promise<PreviewStack[]> {
+export async function listAllPreviewEnvs(orgId: string, projectName: string, configId?: string): Promise<PreviewStack[]> {
   const pageSize = 100;
   const items: PreviewStack[] = [];
   for (let page = 1; ; page++) {
-    const res = await listPreviewEnvs(orgId, teamName, { configId, page, pageSize });
+    const res = await listPreviewEnvs(orgId, projectName, { configId, page, pageSize });
     const batch = res.items ?? [];
     items.push(...batch);
     const total = res.total ?? items.length;
@@ -50,37 +50,37 @@ export async function listAllPreviewEnvs(orgId: string, teamName: string, config
 
 export async function getPreviewEnv(
   orgId: string,
-  teamName: string,
+  projectName: string,
   id: string,
 ): Promise<PreviewStack> {
-  const res = await api.get(`${base(orgId, teamName)}/${id}`);
+  const res = await api.get(`${base(orgId, projectName)}/${id}`);
   return res.data as PreviewStack;
 }
 
 export async function createPreviewEnv(
   orgId: string,
-  teamName: string,
+  projectName: string,
   input: PreviewStackCreate,
 ): Promise<PreviewStack> {
-  const res = await api.post(base(orgId, teamName), input);
+  const res = await api.post(base(orgId, projectName), input);
   return res.data as PreviewStack;
 }
 
 export async function deletePreviewEnv(
   orgId: string,
-  teamName: string,
+  projectName: string,
   id: string,
 ): Promise<PreviewStack> {
-  const res = await api.delete(`${base(orgId, teamName)}/${id}`);
+  const res = await api.delete(`${base(orgId, projectName)}/${id}`);
   return res.data as PreviewStack;
 }
 
 export async function syncPreviewEnv(
   orgId: string,
-  teamName: string,
+  projectName: string,
   id: string,
   input: PreviewStackSync = {},
 ): Promise<PreviewStack> {
-  const res = await api.post(`${base(orgId, teamName)}/${id}/sync`, input);
+  const res = await api.post(`${base(orgId, projectName)}/${id}/sync`, input);
   return res.data as PreviewStack;
 }

@@ -20,7 +20,7 @@ type OrganisationService interface {
 	Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
 
 	PromoteToOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError
-	DemoteOrgAdmin(ctx context.Context, orgID, userID, teamID string, role models.TeamRole) *errors.ServiceError
+	DemoteOrgAdmin(ctx context.Context, orgID, userID, projectID string, role models.ProjectRole) *errors.ServiceError
 	ListOrgAdmins(ctx context.Context, orgID string) ([]*models.User, *errors.ServiceError)
 }
 
@@ -29,7 +29,7 @@ type organisationService struct {
 	organisationDomainService OrganisationDomainsService
 	stackQueryService         StackQueryService
 	userStore                 stores.UserStore
-	teamService               TeamService
+	projectService            ProjectService
 	atomicExecutor            stores.AtomicExecutor
 	policyMgr                 resourceaccess.ResourceAccessPolicyManager
 	permissions               auth.PermissionService
@@ -46,7 +46,7 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		}),
 		stackQueryService:         spec.StackQueryService,
 		organisationDomainService: spec.OrganisationDomainService,
-		teamService:               spec.TeamService,
+		projectService:            spec.ProjectService,
 		atomicExecutor:            pgstore.NewAtomicExecutor(spec.SessionFactory),
 		policyMgr:                 spec.PolicyManager,
 		permissions:               spec.Permissions,
@@ -58,7 +58,7 @@ type OrganisationServiceSpec struct {
 	SessionFactory            db.SessionFactory
 	OrganisationDomainService OrganisationDomainsService
 	StackQueryService         StackQueryService
-	TeamService               TeamService
+	ProjectService            ProjectService
 	PolicyManager             resourceaccess.ResourceAccessPolicyManager
 	Permissions               auth.PermissionService
 	Logger                    logger.Logger
@@ -211,7 +211,7 @@ func (s *organisationService) PromoteToOrgAdmin(ctx context.Context, orgID, user
 	return nil
 }
 
-func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID, teamID string, role models.TeamRole) *errors.ServiceError {
+func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID, projectID string, role models.ProjectRole) *errors.ServiceError {
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceOrgs, orgID, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
@@ -243,8 +243,8 @@ func (s *organisationService) DemoteOrgAdmin(ctx context.Context, orgID, userID,
 			return serr
 		}
 
-		if _, serr := s.teamService.InternalAddMember(txCtx, teamID, userID, role); serr != nil {
-			s.logger.Error(ctx, "failed to add demoted user to team: %s", serr.Error())
+		if _, serr := s.projectService.InternalAddMember(txCtx, projectID, userID, role); serr != nil {
+			s.logger.Error(ctx, "failed to add demoted user to project: %s", serr.Error())
 			return serr
 		}
 

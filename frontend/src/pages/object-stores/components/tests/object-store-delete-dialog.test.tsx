@@ -20,11 +20,11 @@ vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: vi.fn(() => "org-1"),
 }));
 
-vi.mock("@/hooks/use-resource-teams", () => ({
-  useResourceTeams: () => ({
-    teamNameById: (id: string | undefined) => (id === "t1" ? "alpha" : undefined),
-    defaultTeamName: "alpha",
-    teams: [],
+vi.mock("@/hooks/use-resource-projects", () => ({
+  useResourceProjects: () => ({
+    projectNameById: (id: string | undefined) => (id === "t1" ? "alpha" : undefined),
+    defaultProjectName: "alpha",
+    projects: [],
   }),
 }));
 
@@ -37,7 +37,7 @@ function mkStore(over: Partial<ObjectStore> = {}): ObjectStore {
   return {
     id: "os-1",
     name: "my-store",
-    team_id: "t1",
+    project_id: "t1",
     ...over,
   } as ObjectStore;
 }

@@ -59,7 +59,7 @@ const NO_ERRORS = {};
  *  "Remove volume" button (already wired to onRequestRemove) is reachable
  *  without simulating xyflow node interactions. */
 function Harness(props: {
-  topologyIds: { orgId: string; teamName: string; stackId: string } | null;
+  topologyIds: { orgId: string; projectName: string; stackId: string } | null;
   onDeleteVolume?: (name: string) => Promise<boolean>;
   deletingVolume?: boolean;
 }) {
@@ -94,7 +94,7 @@ async function openDeleteConfirm() {
 
 describe("StackCanvasTab volume delete", () => {
   it("saved stack: dialog carries the immediate data-loss copy", async () => {
-    render(<Harness topologyIds={{ orgId: "o", teamName: "t", stackId: "s" }} />);
+    render(<Harness topologyIds={{ orgId: "o", projectName: "t", stackId: "s" }} />);
     await openDeleteConfirm();
 
     const dialog = await screen.findByRole("alertdialog");
@@ -113,7 +113,7 @@ describe("StackCanvasTab volume delete", () => {
   });
 
   it("Action is disabled and reads 'Deleting…' while a delete is in flight", async () => {
-    render(<Harness topologyIds={{ orgId: "o", teamName: "t", stackId: "s" }} deletingVolume />);
+    render(<Harness topologyIds={{ orgId: "o", projectName: "t", stackId: "s" }} deletingVolume />);
     await openDeleteConfirm();
 
     const dialog = await screen.findByRole("alertdialog");
@@ -125,7 +125,7 @@ describe("StackCanvasTab volume delete", () => {
     let resolveDelete: (v: boolean) => void = () => {};
     const onDeleteVolume = vi.fn(() => new Promise<boolean>((resolve) => { resolveDelete = resolve; }));
 
-    render(<Harness topologyIds={{ orgId: "o", teamName: "t", stackId: "s" }} onDeleteVolume={onDeleteVolume} />);
+    render(<Harness topologyIds={{ orgId: "o", projectName: "t", stackId: "s" }} onDeleteVolume={onDeleteVolume} />);
     await openDeleteConfirm();
 
     const dialog = await screen.findByRole("alertdialog");

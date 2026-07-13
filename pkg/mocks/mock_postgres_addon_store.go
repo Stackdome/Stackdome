@@ -167,34 +167,34 @@ func (mr *MockPostgresAddonStoreMockRecorder) ListByOrganisation(ctx, organisati
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByOrganisation", reflect.TypeOf((*MockPostgresAddonStore)(nil).ListByOrganisation), ctx, organisationID)
 }
 
-// ListByTeamID mocks base method.
-func (m *MockPostgresAddonStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.PostgresAddon, *errors.ServiceError) {
+// ListByProjectID mocks base method.
+func (m *MockPostgresAddonStore) ListByProjectID(ctx context.Context, projectID string) ([]*models.PostgresAddon, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamID", ctx, teamID)
+	ret := m.ctrl.Call(m, "ListByProjectID", ctx, projectID)
 	ret0, _ := ret[0].([]*models.PostgresAddon)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamID indicates an expected call of ListByTeamID.
-func (mr *MockPostgresAddonStoreMockRecorder) ListByTeamID(ctx, teamID any) *gomock.Call {
+// ListByProjectID indicates an expected call of ListByProjectID.
+func (mr *MockPostgresAddonStoreMockRecorder) ListByProjectID(ctx, projectID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockPostgresAddonStore)(nil).ListByTeamID), ctx, teamID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockPostgresAddonStore)(nil).ListByProjectID), ctx, projectID)
 }
 
-// ListByTeamIDs mocks base method.
-func (m *MockPostgresAddonStore) ListByTeamIDs(ctx context.Context, teamIDs []string) ([]*models.PostgresAddon, *errors.ServiceError) {
+// ListByProjectIDs mocks base method.
+func (m *MockPostgresAddonStore) ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.PostgresAddon, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamIDs", ctx, teamIDs)
+	ret := m.ctrl.Call(m, "ListByProjectIDs", ctx, projectIDs)
 	ret0, _ := ret[0].([]*models.PostgresAddon)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamIDs indicates an expected call of ListByTeamIDs.
-func (mr *MockPostgresAddonStoreMockRecorder) ListByTeamIDs(ctx, teamIDs any) *gomock.Call {
+// ListByProjectIDs indicates an expected call of ListByProjectIDs.
+func (mr *MockPostgresAddonStoreMockRecorder) ListByProjectIDs(ctx, projectIDs any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamIDs", reflect.TypeOf((*MockPostgresAddonStore)(nil).ListByTeamIDs), ctx, teamIDs)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectIDs", reflect.TypeOf((*MockPostgresAddonStore)(nil).ListByProjectIDs), ctx, projectIDs)
 }
 
 // Update mocks base method.

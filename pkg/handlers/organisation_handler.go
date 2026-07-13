@@ -15,13 +15,13 @@ import (
 // OrganisationHandlerSpec is the specification for the OrganisationHandler
 type OrganisationHandlerSpec struct {
 	OrganisationService services.OrganisationService
-	TeamService         services.TeamService
+	ProjectService      services.ProjectService
 }
 
 // organisationHandler is the handler for organisation related operations
 type organisationHandler struct {
 	organisationService services.OrganisationService
-	teamService         services.TeamService
+	projectService      services.ProjectService
 }
 
 // NewOrganisationHandler creates a new OrganisationHandler
@@ -29,7 +29,7 @@ type organisationHandler struct {
 func NewOrganisationHandler(spec OrganisationHandlerSpec) *organisationHandler {
 	return &organisationHandler{
 		organisationService: spec.OrganisationService,
-		teamService:         spec.TeamService,
+		projectService:      spec.ProjectService,
 	}
 }
 
@@ -89,17 +89,17 @@ func (h *organisationHandler) DemoteAdmin(w http.ResponseWriter, r *http.Request
 			orgID := mux.Vars(r)["org_id"]
 			userID := mux.Vars(r)["user_id"]
 
-			team, serr := h.teamService.GetTeamByOrgAndName(r.Context(), orgID, req.GetTeamName())
+			project, serr := h.projectService.GetProjectByOrgAndName(r.Context(), orgID, req.GetProjectName())
 			if serr != nil {
 				return nil, serr
 			}
 
 			role := models.ViewerRole
 			if req.HasRole() {
-				role = presenters.ConvertTeamRole(req.GetRole())
+				role = presenters.ConvertProjectRole(req.GetRole())
 			}
 
-			return nil, h.organisationService.DemoteOrgAdmin(r.Context(), orgID, userID, team.ID, role)
+			return nil, h.organisationService.DemoteOrgAdmin(r.Context(), orgID, userID, project.ID, role)
 		},
 	}
 	handle(w, r, cfg, http.StatusNoContent)

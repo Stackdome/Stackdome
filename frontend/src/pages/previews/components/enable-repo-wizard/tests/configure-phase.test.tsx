@@ -13,8 +13,8 @@ vi.mock("@/api/git-integrations", () => ({
 vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
-vi.mock("@/hooks/use-resource-teams", () => ({
-  useResourceTeams: () => ({ teams: [], teamNameById: () => undefined, defaultTeamName: "default" }),
+vi.mock("@/hooks/use-resource-projects", () => ({
+  useResourceProjects: () => ({ projects: [], projectNameById: () => undefined, defaultProjectName: "default" }),
 }));
 
 import { createPreviewConfig } from "@/api/preview-configs";

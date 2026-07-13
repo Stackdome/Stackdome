@@ -19,7 +19,7 @@ func PresentVolume(v *models.Volume, withStatus bool) openapi.Volume {
 	}
 	res := openapi.Volume{
 		Id:          &v.ID,
-		TeamId:      &v.TeamID,
+		ProjectId:   &v.ProjectID,
 		Name:        v.Name,
 		Spec:        presentVolumeSpec(v),
 		Labels:      presentLabels(v.Labels),

@@ -1,27 +1,27 @@
 import type React from "react";
 import { Mail } from "lucide-react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { TeamChip } from "./team-chip";
+import { ProjectChip } from "./project-chip";
 import type { PendingRow as PendingRowModel } from "../hooks/use-users";
 import { formatRelative } from "../lib/format-relative";
 
 interface PendingRowProps {
   row: PendingRowModel;
   actions?: React.ReactNode;
-  /** Name of the default team in the org (to render star on chip) */
-  defaultTeamName?: string;
+  /** Name of the default project in the org (to render star on chip) */
+  defaultProjectName?: string;
 }
 
-export function PendingRow({ row, actions, defaultTeamName }: PendingRowProps) {
+export function PendingRow({ row, actions, defaultProjectName }: PendingRowProps) {
   // Use invite.created_at for "invited X ago" label
   const invitedAgo = formatRelative(row.invite.created_at);
 
-  // Build a synthetic TeamMembership shape for TeamChip
-  const teamMembership = row.team_name
+  // Build a synthetic ProjectMembership shape for ProjectChip
+  const projectMembership = row.project_name
     ? {
-      team_name: row.team_name,
+      project_name: row.project_name,
       role: row.role,
-      default_team: defaultTeamName ? row.team_name === defaultTeamName : false,
+      default_project: defaultProjectName ? row.project_name === defaultProjectName : false,
     }
     : null;
 
@@ -52,12 +52,12 @@ export function PendingRow({ row, actions, defaultTeamName }: PendingRowProps) {
         <span className="font-mono text-[11px] text-muted-foreground">–</span>
       </TableCell>
 
-      {/* Teams */}
+      {/* Projects */}
       <TableCell className="py-3.5">
-        {teamMembership ? (
-          <TeamChip
-            membership={teamMembership}
-            isDefault={defaultTeamName ? row.team_name === defaultTeamName : undefined}
+        {projectMembership ? (
+          <ProjectChip
+            membership={projectMembership}
+            isDefault={defaultProjectName ? row.project_name === defaultProjectName : undefined}
           />
         ) : (
           <span className="font-mono text-[11px] text-muted-foreground">–</span>

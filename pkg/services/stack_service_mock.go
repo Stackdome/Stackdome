@@ -178,19 +178,19 @@ func (mr *MockStackServiceMockRecorder) GetStacksByOrganisationID(ctx, organisat
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStacksByOrganisationID", reflect.TypeOf((*MockStackService)(nil).GetStacksByOrganisationID), ctx, organisationID)
 }
 
-// GetStacksByTeamID mocks base method.
-func (m *MockStackService) GetStacksByTeamID(ctx context.Context, teamID string) ([]*models.Stack, *errors.ServiceError) {
+// GetStacksByProjectID mocks base method.
+func (m *MockStackService) GetStacksByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStacksByTeamID", ctx, teamID)
+	ret := m.ctrl.Call(m, "GetStacksByProjectID", ctx, projectID)
 	ret0, _ := ret[0].([]*models.Stack)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetStacksByTeamID indicates an expected call of GetStacksByTeamID.
-func (mr *MockStackServiceMockRecorder) GetStacksByTeamID(ctx, teamID any) *gomock.Call {
+// GetStacksByProjectID indicates an expected call of GetStacksByProjectID.
+func (mr *MockStackServiceMockRecorder) GetStacksByProjectID(ctx, projectID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStacksByTeamID", reflect.TypeOf((*MockStackService)(nil).GetStacksByTeamID), ctx, teamID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStacksByProjectID", reflect.TypeOf((*MockStackService)(nil).GetStacksByProjectID), ctx, projectID)
 }
 
 // InjectBackgroundJobEnqueuer mocks base method.

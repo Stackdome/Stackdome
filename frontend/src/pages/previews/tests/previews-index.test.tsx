@@ -22,10 +22,10 @@ vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
 }));
 vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 vi.mock("@/hooks/use-current-user", () => ({
-  useCurrentUser: () => ({ canWriteAnyTeam: true }),
+  useCurrentUser: () => ({ canWriteAnyProject: true }),
 }));
-vi.mock("@/hooks/use-resource-teams", () => ({
-  useResourceTeams: () => ({ defaultTeamName: "default" }),
+vi.mock("@/hooks/use-resource-projects", () => ({
+  useResourceProjects: () => ({ defaultProjectName: "default" }),
 }));
 vi.mock("@/pages/previews/components/enable-repo-wizard/enable-repo-wizard", () => ({
   EnableRepoWizard: ({ open }: { open: boolean }) =>

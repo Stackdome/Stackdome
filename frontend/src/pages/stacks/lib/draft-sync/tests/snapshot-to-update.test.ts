@@ -94,7 +94,7 @@ describe("stackToUpdateRequest", () => {
           ports: [{ number: 80, exposed_to_public: true }],
         },
       ],
-      volumes: [{ id: "v1", team_id: "t1", status: { phase: "Ready" }, name: "data", spec: { size: "1Gi" } }],
+      volumes: [{ id: "v1", project_id: "t1", status: { phase: "Ready" }, name: "data", spec: { size: "1Gi" } }],
       connections: [{ id: "c1", kind: "volume_mount" }],
     },
   } as unknown as Stack;
@@ -121,11 +121,11 @@ describe("stackToUpdateRequest", () => {
     expect(r.outputs).toBeUndefined();
   });
 
-  it("strips readOnly volume fields (id/team_id/status) — schema validation rejects them", () => {
+  it("strips readOnly volume fields (id/project_id/status) — schema validation rejects them", () => {
     const req = stackToUpdateRequest(stack, []);
     const v = req.spec!.volumes![0] as Record<string, unknown>;
     expect(v.id).toBeUndefined();
-    expect(v.team_id).toBeUndefined();
+    expect(v.project_id).toBeUndefined();
     expect(v.status).toBeUndefined();
     expect(v.name).toBe("data");
   });

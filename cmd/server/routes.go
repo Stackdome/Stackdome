@@ -38,21 +38,21 @@ func (s apiServer) routes() *mux.Router {
 
 	organizationHandler := handlers.NewOrganisationHandler(handlers.OrganisationHandlerSpec{
 		OrganisationService: services.OrganisationService,
-		TeamService:         services.TeamService,
+		ProjectService:      services.ProjectService,
 	})
 
-	teamHandler := handlers.NewTeamHandler(handlers.TeamHandlerSpec{
-		TeamService: services.TeamService,
+	projectHandler := handlers.NewProjectHandler(handlers.ProjectHandlerSpec{
+		ProjectService: services.ProjectService,
 	})
 
 	workspaceUserHandler := handlers.NewWorkspaceUserHandler(handlers.WorkspaceUserHandlerSpec{
 		WorkspaceUserService: services.WorkspaceUserService,
-		TeamService:          services.TeamService,
+		ProjectService:       services.ProjectService,
 	})
 
 	volumeHandler := handlers.NewVolumeHandler(handlers.VolumeHandlerSpec{
-		VolumeService: services.VolumeService,
-		TeamService:   services.TeamService,
+		VolumeService:  services.VolumeService,
+		ProjectService: services.ProjectService,
 	})
 
 	stackHandler := handlers.NewStackHandler(handlers.StackHandlerSpec{
@@ -62,7 +62,7 @@ func (s apiServer) routes() *mux.Router {
 		ImageBuildService:    services.ImageBuildService,
 		LoggingService:       services.LoggingService,
 		MetricsService:       services.MetricsService,
-		TeamService:          services.TeamService,
+		ProjectService:       services.ProjectService,
 		Logger:               logger,
 	})
 
@@ -87,9 +87,9 @@ func (s apiServer) routes() *mux.Router {
 	})
 
 	secretHandler := handlers.NewSecretHandler(handlers.SecretHandlerSpec{
-		SecretService: services.SecretService,
-		TeamService:   services.TeamService,
-		Logger:        logger,
+		SecretService:  services.SecretService,
+		ProjectService: services.ProjectService,
+		Logger:         logger,
 	})
 
 	registryCredentialHandler := handlers.NewRegistryCredentialHandler(handlers.RegistryCredentialHandlerSpec{
@@ -104,18 +104,18 @@ func (s apiServer) routes() *mux.Router {
 
 	postgresAddonHandler := handlers.NewPostgresAddonHandler(handlers.PostgresAddonHandlerSpec{
 		PostgresAddonService: services.PostgresAddonService,
-		TeamService:          services.TeamService,
+		ProjectService:       services.ProjectService,
 		Logger:               logger,
 	})
 
 	objectStoreHandler := handlers.NewObjectStoreHandler(handlers.ObjectStoreHandlerSpec{
 		ObjectStoreService: services.ObjectStoreService,
-		TeamService:        services.TeamService,
+		ProjectService:     services.ProjectService,
 	})
 
 	apiV1Router := mainRouter.PathPrefix("/api/v1").Subrouter()
 
-	apiV1Router.HandleFunc("/team-roles", teamHandler.ListTeamRoles).Methods(http.MethodGet)
+	apiV1Router.HandleFunc("/project-roles", projectHandler.ListProjectRoles).Methods(http.MethodGet)
 
 	userSignupRouter := apiV1Router.PathPrefix("/user-signup").Subrouter()
 	userSignupRouter.HandleFunc("", userHandler.Signup).Methods(http.MethodPost)
@@ -168,7 +168,7 @@ func (s apiServer) routes() *mux.Router {
 
 	authenticatedUserRouter := userRouter.NewRoute().Subrouter()
 	authenticatedUserRouter.HandleFunc("/current", userHandler.GetCurrentUser).Methods(http.MethodGet)
-	authenticatedUserRouter.HandleFunc("/current/teams", teamHandler.ListCurrentUserTeams).Methods(http.MethodGet)
+	authenticatedUserRouter.HandleFunc("/current/projects", projectHandler.ListCurrentUserProjects).Methods(http.MethodGet)
 	authenticatedUserRouter.HandleFunc("/{id}", userHandler.Get).Methods(http.MethodGet)
 
 	// GitHub App manifest callback (browser redirect) and webhook receiver;
@@ -214,19 +214,19 @@ func (s apiServer) routes() *mux.Router {
 	apiTokenRouter.HandleFunc("/{id}", apiTokenHandler.GetByID).Methods(http.MethodGet)
 	apiTokenRouter.HandleFunc("/{id}", apiTokenHandler.Revoke).Methods(http.MethodDelete)
 
-	// Team CRUD routes
-	teamRouter := organizationsRouter.PathPrefix("/{org_id}/teams").Subrouter()
-	teamRouter.HandleFunc("", teamHandler.Create).Methods(http.MethodPost)
-	teamRouter.HandleFunc("", teamHandler.List).Methods(http.MethodGet)
-	teamRouter.HandleFunc("/{team_name}", teamHandler.GetByName).Methods(http.MethodGet)
-	teamRouter.HandleFunc("/{team_name}", teamHandler.Update).Methods(http.MethodPut)
-	teamRouter.HandleFunc("/{team_name}", teamHandler.Delete).Methods(http.MethodDelete)
+	// Project CRUD routes
+	projectRouter := organizationsRouter.PathPrefix("/{org_id}/projects").Subrouter()
+	projectRouter.HandleFunc("", projectHandler.Create).Methods(http.MethodPost)
+	projectRouter.HandleFunc("", projectHandler.List).Methods(http.MethodGet)
+	projectRouter.HandleFunc("/{project_name}", projectHandler.GetByName).Methods(http.MethodGet)
+	projectRouter.HandleFunc("/{project_name}", projectHandler.Update).Methods(http.MethodPut)
+	projectRouter.HandleFunc("/{project_name}", projectHandler.Delete).Methods(http.MethodDelete)
 
-	// Team membership routes
-	teamRouter.HandleFunc("/{team_name}/members", teamHandler.AddMember).Methods(http.MethodPost)
-	teamRouter.HandleFunc("/{team_name}/members", teamHandler.ListMembers).Methods(http.MethodGet)
-	teamRouter.HandleFunc("/{team_name}/members/{id}", teamHandler.UpdateMemberRole).Methods(http.MethodPut)
-	teamRouter.HandleFunc("/{team_name}/members/{id}", teamHandler.RemoveMember).Methods(http.MethodDelete)
+	// Project membership routes
+	projectRouter.HandleFunc("/{project_name}/members", projectHandler.AddMember).Methods(http.MethodPost)
+	projectRouter.HandleFunc("/{project_name}/members", projectHandler.ListMembers).Methods(http.MethodGet)
+	projectRouter.HandleFunc("/{project_name}/members/{id}", projectHandler.UpdateMemberRole).Methods(http.MethodPut)
+	projectRouter.HandleFunc("/{project_name}/members/{id}", projectHandler.RemoveMember).Methods(http.MethodDelete)
 
 	// OrgAdmin management routes
 	organizationsRouter.HandleFunc("/{org_id}/admins", organizationHandler.PromoteToAdmin).Methods(http.MethodPost)
@@ -246,113 +246,113 @@ func (s apiServer) routes() *mux.Router {
 
 	apiV1Router.HandleFunc("/invites/{token}/info", inviteHandler.GetInviteInfo).Methods(http.MethodGet)
 
-	// Team-scoped resource routes
-	teamResourceRouter := teamRouter.PathPrefix("/{team_name}").Subrouter()
+	// Project-scoped resource routes
+	projectResourceRouter := projectRouter.PathPrefix("/{project_name}").Subrouter()
 
-	// Stacks (team-scoped)
-	teamResourceRouter.HandleFunc("/stacks", stackHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks", stackHandler.ListByTeamName).Methods(http.MethodGet)
+	// Stacks (project-scoped)
+	projectResourceRouter.HandleFunc("/stacks", stackHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks", stackHandler.ListByProjectName).Methods(http.MethodGet)
 	// Literal /stacks/apply must be registered before any /stacks/{id} route:
 	// gorilla/mux matches in registration order, so the literal wins over the
 	// {id} pattern for PUT /stacks/apply.
-	teamResourceRouter.HandleFunc("/stacks/apply", stackHandler.ApplyByName).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.GetByID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/topology", stackHandler.GetTopology).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/connections", stackHandler.ListConnections).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/connections", stackHandler.CreateConnection).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.UpdateConnection).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.DeleteConnection).Methods(http.MethodDelete)
-	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/stacks/{id}/apply", stackHandler.Apply).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
-	teamResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Delete).Methods(http.MethodDelete)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/metrics", stackResourceHandler.GetMetrics).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/actions/restart", stackResourceHandler.Restart).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/apply", stackHandler.ApplyByName).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/stacks/{id}", stackHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/topology", stackHandler.GetTopology).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/connections", stackHandler.ListConnections).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/connections", stackHandler.CreateConnection).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.UpdateConnection).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/stacks/{id}/connections/{connection_id}", stackHandler.DeleteConnection).Methods(http.MethodDelete)
+	projectResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/stacks/{id}/apply", stackHandler.Apply).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
+	projectResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Delete).Methods(http.MethodDelete)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/metrics", stackResourceHandler.GetMetrics).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/actions/restart", stackResourceHandler.Restart).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
 
-	// Stack releases (team-scoped)
+	// Stack releases (project-scoped)
 	stackReleaseHandler := handlers.NewStackReleaseHandler(handlers.StackReleaseHandlerSpec{
 		StackReleaseService: services.StackReleaseService,
 	})
-	teamResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.List).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}", stackReleaseHandler.GetByID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/cancel", stackReleaseHandler.Cancel).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events", stackReleaseHandler.ListEvents).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events/stream", stackReleaseHandler.StreamEvents).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases", stackReleaseHandler.List).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}", stackReleaseHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/cancel", stackReleaseHandler.Cancel).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events", stackReleaseHandler.ListEvents).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events/stream", stackReleaseHandler.StreamEvents).Methods(http.MethodGet)
 
-	// Secrets (team-scoped)
-	teamResourceRouter.HandleFunc("/secrets", secretHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/secrets", secretHandler.ListByTeamID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.GetByID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Delete).Methods(http.MethodDelete)
+	// Secrets (project-scoped)
+	projectResourceRouter.HandleFunc("/secrets", secretHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/secrets", secretHandler.ListByProjectID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/secrets/{id}", secretHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/secrets/{id}", secretHandler.Delete).Methods(http.MethodDelete)
 
 	// Stack-scoped volumes
-	teamResourceRouter.HandleFunc("/stacks/{id}/volumes", stackHandler.CreateVolume).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stacks/{id}/volumes", volumeHandler.ListByStackID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/volumes", stackHandler.CreateVolume).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stacks/{id}/volumes", volumeHandler.ListByStackID).Methods(http.MethodGet)
 
-	// Volumes (team-scoped)
-	teamResourceRouter.HandleFunc("/volumes", volumeHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
+	// Volumes (project-scoped)
+	projectResourceRouter.HandleFunc("/volumes", volumeHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
 
-	// Postgres addons (team-scoped)
-	teamResourceRouter.HandleFunc("/addons/postgres", postgresAddonHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/addons/postgres", postgresAddonHandler.List).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}", postgresAddonHandler.GetByID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}", postgresAddonHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}", postgresAddonHandler.Delete).Methods(http.MethodDelete)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}/actions/backup", postgresAddonHandler.Backup).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}/actions/fence", postgresAddonHandler.Fence).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}/actions/hibernate", postgresAddonHandler.Hibernate).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}/backups", postgresAddonHandler.ListBackups).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/addons/postgres/{id}/credentials/{database}", postgresAddonHandler.GetCredentials).Methods(http.MethodGet)
+	// Postgres addons (project-scoped)
+	projectResourceRouter.HandleFunc("/addons/postgres", postgresAddonHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/addons/postgres", postgresAddonHandler.List).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}", postgresAddonHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}", postgresAddonHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}", postgresAddonHandler.Delete).Methods(http.MethodDelete)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}/actions/backup", postgresAddonHandler.Backup).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}/actions/fence", postgresAddonHandler.Fence).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}/actions/hibernate", postgresAddonHandler.Hibernate).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}/backups", postgresAddonHandler.ListBackups).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/addons/postgres/{id}/credentials/{database}", postgresAddonHandler.GetCredentials).Methods(http.MethodGet)
 
-	// Object stores (team-scoped)
-	teamResourceRouter.HandleFunc("/object-stores", objectStoreHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/object-stores", objectStoreHandler.List).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.GetByID).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.Delete).Methods(http.MethodDelete)
+	// Object stores (project-scoped)
+	projectResourceRouter.HandleFunc("/object-stores", objectStoreHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/object-stores", objectStoreHandler.List).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.Delete).Methods(http.MethodDelete)
 
-	// Workspace users (team-scoped)
-	teamResourceRouter.HandleFunc("/workspace-users", workspaceUserHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/workspace-users/current", workspaceUserHandler.Current).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Get).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
+	// Workspace users (project-scoped)
+	projectResourceRouter.HandleFunc("/workspace-users", workspaceUserHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/workspace-users/current", workspaceUserHandler.Current).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Get).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
 
-	// Preview configs (team-scoped)
+	// Preview configs (project-scoped)
 	previewConfigHandler := handlers.NewStackPreviewConfigHandler(handlers.StackPreviewConfigHandlerSpec{
-		Service:     services.StackPreviewConfigService,
-		TeamService: services.TeamService,
+		Service:        services.StackPreviewConfigService,
+		ProjectService: services.ProjectService,
 	})
-	teamResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.List).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Get).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Update).Methods(http.MethodPut)
-	teamResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Delete).Methods(http.MethodDelete)
+	projectResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/stack-preview-configs", previewConfigHandler.List).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Get).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Update).Methods(http.MethodPut)
+	projectResourceRouter.HandleFunc("/stack-preview-configs/{id}", previewConfigHandler.Delete).Methods(http.MethodDelete)
 
-	// Preview stacks (team-scoped)
+	// Preview stacks (project-scoped)
 	previewStackHandler := handlers.NewPreviewStackHandler(handlers.PreviewStackHandlerSpec{
-		Service:     services.PreviewStackService,
-		TeamService: services.TeamService,
+		Service:        services.PreviewStackService,
+		ProjectService: services.ProjectService,
 	})
-	teamResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.Create).Methods(http.MethodPost)
-	teamResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.List).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/preview-stacks/{id}", previewStackHandler.Get).Methods(http.MethodGet)
-	teamResourceRouter.HandleFunc("/preview-stacks/{id}", previewStackHandler.Delete).Methods(http.MethodDelete)
-	teamResourceRouter.HandleFunc("/preview-stacks/{id}/sync", previewStackHandler.Sync).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.Create).Methods(http.MethodPost)
+	projectResourceRouter.HandleFunc("/preview-stacks", previewStackHandler.List).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/preview-stacks/{id}", previewStackHandler.Get).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/preview-stacks/{id}", previewStackHandler.Delete).Methods(http.MethodDelete)
+	projectResourceRouter.HandleFunc("/preview-stacks/{id}/sync", previewStackHandler.Sync).Methods(http.MethodPost)
 
 	// Exclude /api/ and /health so unknown paths return JSON 404 instead of index.html.
 	mainRouter.PathPrefix("/").

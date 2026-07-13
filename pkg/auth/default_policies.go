@@ -16,14 +16,14 @@ func DefaultPolicies() [][]string {
 		{models.OrgMemberRole.String(), "*", "git-integrations", ActionList},
 		{models.OrgMemberRole.String(), "*", "git-integrations/*", ActionRead},
 		{models.OrgMemberRole.String(), "*", "orgs/*", ActionRead},
-		{models.OrgMemberRole.String(), "*", "teams", ActionList},
-		{models.OrgMemberRole.String(), "*", "teams/*", ActionRead},
+		{models.OrgMemberRole.String(), "*", "projects", ActionList},
+		{models.OrgMemberRole.String(), "*", "projects/*", ActionRead},
 		// Allow org members to list and read user resources so that they can see who else is in the org,
 		// but not allow them to manage users in any way.
 		{models.OrgMemberRole.String(), "*", "users", ActionList},
 		{models.OrgMemberRole.String(), "*", "users/*", ActionRead},
 
-		// Viewer: read-only on team resources
+		// Viewer: read-only on project resources
 		{models.ViewerRole.String(), "*", ResourceStacks, ActionList},
 		{models.ViewerRole.String(), "*", "stacks/*", ActionRead},
 		{models.ViewerRole.String(), "*", ResourceSecrets, ActionList},
@@ -36,7 +36,7 @@ func DefaultPolicies() [][]string {
 		{models.ViewerRole.String(), "*", "object-stores/*", ActionRead},
 		{models.ViewerRole.String(), "*", "workspace-users/*", ActionRead},
 
-		// Developer: CRUD on team resources
+		// Developer: CRUD on project resources
 		{models.DeveloperRole.String(), "*", ResourceStacks, ActionList},
 		{models.DeveloperRole.String(), "*", ResourceStacks, ActionCreate},
 		{models.DeveloperRole.String(), "*", "stacks/*", "*"},

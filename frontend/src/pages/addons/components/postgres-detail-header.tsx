@@ -43,7 +43,7 @@ export function PostgresDetailHeader({
   addon: PostgresAddon;
   onDelete: () => void;
   // Hide the Edit/Delete affordances for viewers without write access on the
-  // addon's team. Defaults to true so callers that don't gate keep current UX.
+  // addon's project. Defaults to true so callers that don't gate keep current UX.
   canWrite?: boolean;
 }) {
   const state = addon.status?.state;

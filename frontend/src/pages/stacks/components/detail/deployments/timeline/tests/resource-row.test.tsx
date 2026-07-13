@@ -33,7 +33,7 @@ describe("ResourceRow", () => {
     const onOpenLogs = vi.fn();
     render(<ResourceRow
       vm={{ name: "web", phase: "CrashLoopBackOff", replicas: "0/1", failure: { name: "web", type: "runtime_crash", stage: "runtime", reason: "CrashLoopBackOff", message: "exit 1", restartCount: 7 } }}
-      logContext={{ orgId: "o", teamName: "t", stackId: "s" }}
+      logContext={{ orgId: "o", projectName: "t", stackId: "s" }}
       onOpenLogs={onOpenLogs}
     />);
     await userEvent.click(screen.getByText("web"));

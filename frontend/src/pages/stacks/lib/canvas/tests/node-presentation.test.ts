@@ -66,7 +66,7 @@ describe("nodePresentation", () => {
   it("strips the registry and tag when building a Web summary base", () => {
     const p = nodePresentation({
       isAddon: false,
-      image: "registry.example.com:5000/team/frontend:v2",
+      image: "registry.example.com:5000/project/frontend:v2",
       ports: [{ number: 3000, exposedToPublic: true }],
     });
     expect(p.summary).toBe("frontend · :3000 · public");

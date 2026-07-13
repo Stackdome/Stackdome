@@ -41,7 +41,7 @@ type WorkspaceUser struct {
 	UserID              string
 	ClusterID           string
 	OrganisationID      string
-	TeamID              string                `gorm:"index" json:"team_id"`
+	ProjectID           string                `gorm:"index" json:"project_id"`
 	WorkspaceNamespaces []*WorkspaceNamespace `gorm:"foreignKey:WorkspaceUserID;references:ID"`
 	SshPublicKey        string
 	// Tracks the version of the object in the database.

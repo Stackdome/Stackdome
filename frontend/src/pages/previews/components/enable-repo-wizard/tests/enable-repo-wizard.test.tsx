@@ -15,8 +15,8 @@ vi.mock("@/api/preview-configs", () => ({
 vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
-vi.mock("@/hooks/use-resource-teams", () => ({
-  useResourceTeams: () => ({ teams: [], teamNameById: () => undefined, defaultTeamName: "default" }),
+vi.mock("@/hooks/use-resource-projects", () => ({
+  useResourceProjects: () => ({ projects: [], projectNameById: () => undefined, defaultProjectName: "default" }),
 }));
 
 // The picker's own network/connect concerns are covered by its dedicated

@@ -17,32 +17,32 @@ export async function getObjectStores(orgId: string): Promise<ObjectStoreList> {
   return res.data as ObjectStoreList;
 }
 
-// Single object-store read is team-scoped (only the org-level list is aggregated).
-export async function getObjectStore(orgId: string, teamName: string, id: string): Promise<ObjectStore> {
-  const res = await api.get(`/organizations/${orgId}/teams/${teamName}/object-stores/${id}`);
+// Single object-store read is project-scoped (only the org-level list is aggregated).
+export async function getObjectStore(orgId: string, projectName: string, id: string): Promise<ObjectStore> {
+  const res = await api.get(`/organizations/${orgId}/projects/${projectName}/object-stores/${id}`);
   return res.data as ObjectStore;
 }
 
-// Writes go through team-scoped endpoints (the org-scoped paths are GET-only).
+// Writes go through project-scoped endpoints (the org-scoped paths are GET-only).
 export async function createObjectStore(
   orgId: string,
-  teamName: string,
+  projectName: string,
   payload: ObjectStoreCreatePayload,
 ): Promise<ObjectStore> {
-  const res = await api.post(`/organizations/${orgId}/teams/${teamName}/object-stores`, payload);
+  const res = await api.post(`/organizations/${orgId}/projects/${projectName}/object-stores`, payload);
   return res.data as ObjectStore;
 }
 
 export async function updateObjectStore(
   orgId: string,
-  teamName: string,
+  projectName: string,
   id: string,
   payload: ObjectStoreCreatePayload,
 ): Promise<ObjectStore> {
-  const res = await api.put(`/organizations/${orgId}/teams/${teamName}/object-stores/${id}`, payload);
+  const res = await api.put(`/organizations/${orgId}/projects/${projectName}/object-stores/${id}`, payload);
   return res.data as ObjectStore;
 }
 
-export async function deleteObjectStore(orgId: string, teamName: string, id: string): Promise<void> {
-  await api.delete(`/organizations/${orgId}/teams/${teamName}/object-stores/${id}`);
+export async function deleteObjectStore(orgId: string, projectName: string, id: string): Promise<void> {
+  await api.delete(`/organizations/${orgId}/projects/${projectName}/object-stores/${id}`);
 }

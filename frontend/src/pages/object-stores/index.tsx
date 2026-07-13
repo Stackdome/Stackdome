@@ -14,7 +14,7 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 export default function ObjectStoresPage() {
   const { objectStores, loading, error, refetch } = useObjectStores();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
-  const { canWrite, canWriteAnyTeam } = useCurrentUser();
+  const { canWrite, canWriteAnyProject } = useCurrentUser();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingStore, setEditingStore] = useState<ObjectStore | null>(null);
   const [deletingStore, setDeletingStore] = useState<ObjectStore | null>(null);
@@ -55,7 +55,7 @@ export default function ObjectStoresPage() {
           title="Object Stores"
           subtitle="Backup destinations for Postgres add-ons. Supports AWS S3, S3-compatible (e.g. MinIO), Azure, and GCS."
           actions={
-            canWriteAnyTeam ? (
+            canWriteAnyProject ? (
               <Button
                 onClick={() => {
                   setEditingStore(null);
@@ -75,7 +75,7 @@ export default function ObjectStoresPage() {
             title="No Object Stores yet"
             description="Add an S3-compatible bucket, Azure container, or GCS bucket to use as a backup destination."
             action={
-              canWriteAnyTeam ? (
+              canWriteAnyProject ? (
                 <Button
                   onClick={() => {
                     setEditingStore(null);
@@ -97,7 +97,7 @@ export default function ObjectStoresPage() {
                 setShowAddDialog(true);
               }}
               onDelete={(store) => setDeletingStore(store)}
-              canWrite={(teamId?: string) => canWrite(teamId ?? "")}
+              canWrite={(projectId?: string) => canWrite(projectId ?? "")}
             />
           </Panel>
         )}

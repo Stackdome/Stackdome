@@ -19,7 +19,7 @@ import (
 type StackPreviewConfig struct {
 	Id                *string               `json:"id,omitempty"`
 	OrganisationId    *string               `json:"organisation_id,omitempty"`
-	TeamId            *string               `json:"team_id,omitempty"`
+	ProjectId         *string               `json:"project_id,omitempty"`
 	UserId            *string               `json:"user_id,omitempty"`
 	Name              *string               `json:"name,omitempty"`
 	Description       *string               `json:"description,omitempty"`
@@ -113,36 +113,36 @@ func (o *StackPreviewConfig) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 
-// GetTeamId returns the TeamId field value if set, zero value otherwise.
-func (o *StackPreviewConfig) GetTeamId() string {
-	if o == nil || o.TeamId == nil {
+// GetProjectId returns the ProjectId field value if set, zero value otherwise.
+func (o *StackPreviewConfig) GetProjectId() string {
+	if o == nil || o.ProjectId == nil {
 		var ret string
 		return ret
 	}
-	return *o.TeamId
+	return *o.ProjectId
 }
 
-// GetTeamIdOk returns a tuple with the TeamId field value if set, nil otherwise
+// GetProjectIdOk returns a tuple with the ProjectId field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *StackPreviewConfig) GetTeamIdOk() (*string, bool) {
-	if o == nil || o.TeamId == nil {
+func (o *StackPreviewConfig) GetProjectIdOk() (*string, bool) {
+	if o == nil || o.ProjectId == nil {
 		return nil, false
 	}
-	return o.TeamId, true
+	return o.ProjectId, true
 }
 
-// HasTeamId returns a boolean if a field has been set.
-func (o *StackPreviewConfig) HasTeamId() bool {
-	if o != nil && o.TeamId != nil {
+// HasProjectId returns a boolean if a field has been set.
+func (o *StackPreviewConfig) HasProjectId() bool {
+	if o != nil && o.ProjectId != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetTeamId gets a reference to the given string and assigns it to the TeamId field.
-func (o *StackPreviewConfig) SetTeamId(v string) {
-	o.TeamId = &v
+// SetProjectId gets a reference to the given string and assigns it to the ProjectId field.
+func (o *StackPreviewConfig) SetProjectId(v string) {
+	o.ProjectId = &v
 }
 
 // GetUserId returns the UserId field value if set, zero value otherwise.
@@ -473,8 +473,8 @@ func (o StackPreviewConfig) MarshalJSON() ([]byte, error) {
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
 	}
-	if o.TeamId != nil {
-		toSerialize["team_id"] = o.TeamId
+	if o.ProjectId != nil {
+		toSerialize["project_id"] = o.ProjectId
 	}
 	if o.UserId != nil {
 		toSerialize["user_id"] = o.UserId

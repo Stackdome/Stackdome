@@ -19,53 +19,53 @@ export const ReleaseEventScope = {
   Resource: "resource",
 } as const satisfies Record<string, ReleaseEventScopeValue>;
 
-function releasesPath(orgId: string, teamName: string, stackId: string): string {
-  return `/organizations/${orgId}/teams/${teamName}/stacks/${stackId}/releases`;
+function releasesPath(orgId: string, projectName: string, stackId: string): string {
+  return `/organizations/${orgId}/projects/${projectName}/stacks/${stackId}/releases`;
 }
 
-export async function listReleases(orgId: string, teamName: string, stackId: string): Promise<StackReleaseList> {
-  const response = await api.get<StackReleaseList>(releasesPath(orgId, teamName, stackId));
+export async function listReleases(orgId: string, projectName: string, stackId: string): Promise<StackReleaseList> {
+  const response = await api.get<StackReleaseList>(releasesPath(orgId, projectName, stackId));
   return response.data;
 }
 
-export async function getRelease(orgId: string, teamName: string, stackId: string, releaseId: string): Promise<StackReleaseDetail> {
-  const response = await api.get<StackReleaseDetail>(`${releasesPath(orgId, teamName, stackId)}/${releaseId}`);
+export async function getRelease(orgId: string, projectName: string, stackId: string, releaseId: string): Promise<StackReleaseDetail> {
+  const response = await api.get<StackReleaseDetail>(`${releasesPath(orgId, projectName, stackId)}/${releaseId}`);
   return response.data;
 }
 
 // POST with no from_release_id triggers a fresh deploy of the current saved config.
-export async function createRelease(orgId: string, teamName: string, stackId: string): Promise<StackRelease> {
-  const response = await api.post<StackRelease>(releasesPath(orgId, teamName, stackId), {});
+export async function createRelease(orgId: string, projectName: string, stackId: string): Promise<StackRelease> {
+  const response = await api.post<StackRelease>(releasesPath(orgId, projectName, stackId), {});
   return response.data;
 }
 
 // POST with from_release_id re-deploys that release's snapshot+pins (rollback).
-export async function rollbackRelease(orgId: string, teamName: string, stackId: string, fromReleaseId: string): Promise<StackRelease> {
+export async function rollbackRelease(orgId: string, projectName: string, stackId: string, fromReleaseId: string): Promise<StackRelease> {
   const body: CreateReleaseRequest = { from_release_id: fromReleaseId };
-  const response = await api.post<StackRelease>(releasesPath(orgId, teamName, stackId), body);
+  const response = await api.post<StackRelease>(releasesPath(orgId, projectName, stackId), body);
   return response.data;
 }
 
-export async function cancelRelease(orgId: string, teamName: string, stackId: string, releaseId: string): Promise<void> {
-  await api.post<void>(`${releasesPath(orgId, teamName, stackId)}/${releaseId}/cancel`);
+export async function cancelRelease(orgId: string, projectName: string, stackId: string, releaseId: string): Promise<void> {
+  await api.post<void>(`${releasesPath(orgId, projectName, stackId)}/${releaseId}/cancel`);
 }
 
 export async function listReleaseEvents(
-  orgId: string, teamName: string, stackId: string, releaseId: string, afterSequence?: number,
+  orgId: string, projectName: string, stackId: string, releaseId: string, afterSequence?: number,
 ): Promise<ReleaseEventList> {
   const params = afterSequence !== undefined ? { after_sequence: afterSequence } : undefined;
   const response = await api.get<ReleaseEventList>(
-    `${releasesPath(orgId, teamName, stackId)}/${releaseId}/events`, { params },
+    `${releasesPath(orgId, projectName, stackId)}/${releaseId}/events`, { params },
   );
   return response.data;
 }
 
 // EventSource cannot set headers; base-URL handling mirrors buildStackLogStreamUrl in api/observability.ts.
 export function buildReleaseEventStreamUrl(
-  orgId: string, teamName: string, stackId: string, releaseId: string, afterSequence?: number,
+  orgId: string, projectName: string, stackId: string, releaseId: string, afterSequence?: number,
 ): string {
   const baseUrl = API_BASE_URL;
-  const path = `${baseUrl}${releasesPath(orgId, teamName, stackId)}/${releaseId}/events/stream`;
+  const path = `${baseUrl}${releasesPath(orgId, projectName, stackId)}/${releaseId}/events/stream`;
   const suffix = afterSequence !== undefined ? `?after_sequence=${afterSequence}` : "";
   return `${path}${suffix}`;
 }

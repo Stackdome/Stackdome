@@ -16,7 +16,7 @@ import {
 import { triggerPostgresBackup } from "@/api/postgres-backups";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
 import { detectPlan } from "./lib/payload";
 import { PLAN_PRESETS } from "./lib/plan-presets";
@@ -46,7 +46,7 @@ export default function PostgresDetailPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { canWrite } = useCurrentUser();
-  const { teamNameById, defaultTeamName } = useResourceTeams();
+  const { projectNameById, defaultProjectName } = useResourceProjects();
   const [addon, setAddon] = useState<PostgresAddon | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,18 +71,18 @@ export default function PostgresDetailPage() {
 
   const refetch = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !id || !defaultTeamName) return;
+    if (!orgId || !id || !defaultProjectName) return;
     setLoading(true);
     setError(null);
     try {
-      const data = await getPostgresAddon(orgId, defaultTeamName, id);
+      const data = await getPostgresAddon(orgId, defaultProjectName, id);
       setAddon(data);
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [id, defaultTeamName]);
+  }, [id, defaultProjectName]);
 
   useEffect(() => {
     void refetch();
@@ -175,15 +175,15 @@ export default function PostgresDetailPage() {
   async function handleDelete() {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !addon?.id) return;
-    const teamName = teamNameById(addon.team_id);
-    if (!teamName) {
-      setDeleteError("Could not resolve the team for this addon.");
+    const projectName = projectNameById(addon.project_id);
+    if (!projectName) {
+      setDeleteError("Could not resolve the project for this addon.");
       return;
     }
     setDeleting(true);
     setDeleteError(null);
     try {
-      await deletePostgresAddon(orgId, teamName, addon.id);
+      await deletePostgresAddon(orgId, projectName, addon.id);
       toast({
         title: "Addon deleted",
         description: `"${addon.name}" is being torn down.`,
@@ -206,7 +206,7 @@ export default function PostgresDetailPage() {
       <div className="flex flex-col gap-6 p-6">
         <PostgresDetailHeader
           addon={addon}
-          canWrite={canWrite(addon.team_id ?? "")}
+          canWrite={canWrite(addon.project_id ?? "")}
           onDelete={() => setDeleteOpen(true)}
         />
 

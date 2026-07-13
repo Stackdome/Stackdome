@@ -21,7 +21,7 @@ import { deletePreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
 import { PreviewEnvCard } from "./components/preview-env-card";
@@ -57,8 +57,8 @@ export default function PreviewConfigDetailPage() {
   const { configId } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { defaultTeamName } = useResourceTeams();
-  const { canWriteAnyTeam } = useCurrentUser();
+  const { defaultProjectName } = useResourceProjects();
+  const { canWriteAnyProject } = useCurrentUser();
 
   const [config, setConfig] = useState<StackPreviewConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
@@ -86,11 +86,11 @@ export default function PreviewConfigDetailPage() {
 
   useEffect(() => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName || !configId) return;
+    if (!orgId || !defaultProjectName || !configId) return;
     let cancelled = false;
     setConfigLoading(true);
     setConfigError(null);
-    getPreviewConfig(orgId, defaultTeamName, configId)
+    getPreviewConfig(orgId, defaultProjectName, configId)
       .then((cfg) => {
         if (cancelled) return;
         setConfig(cfg);
@@ -104,13 +104,13 @@ export default function PreviewConfigDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [configId, defaultTeamName, fetchNonce]);
+  }, [configId, defaultProjectName, fetchNonce]);
 
   const confirmDeleteEnv = async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName || !deleting?.id) return;
+    if (!orgId || !defaultProjectName || !deleting?.id) return;
     try {
-      await deletePreviewEnv(orgId, defaultTeamName, deleting.id);
+      await deletePreviewEnv(orgId, defaultProjectName, deleting.id);
       toast({ title: `Deleting PR #${deleting.pr_number} environment` });
       await refresh();
     } catch (e) {
@@ -189,7 +189,7 @@ export default function PreviewConfigDetailPage() {
         title={config.name}
         subtitle={config.git_repository?.repo_url}
         actions={
-          canWriteAnyTeam ? (
+          canWriteAnyProject ? (
             <>
               <Button variant="outline" onClick={() => setSettingsOpen(true)}>
                 <Settings className="h-4 w-4" />
@@ -285,7 +285,7 @@ export default function PreviewConfigDetailPage() {
           title="No preview environments yet"
           description="Create a preview environment from a pull request branch."
           action={
-            canWriteAnyTeam ? (
+            canWriteAnyProject ? (
               <Button onClick={() => setCreateOpen(true)}>
                 <Plus className="h-4 w-4" />
                 New preview environment

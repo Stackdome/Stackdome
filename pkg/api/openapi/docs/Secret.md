@@ -8,7 +8,7 @@ Name | Type | Description | Notes
 **Name** | **string** |  | 
 **Description** | Pointer to **string** |  | [optional] 
 **OrganisationId** | Pointer to **string** |  | [optional] [readonly] 
-**TeamId** | Pointer to **string** |  | [optional] [readonly] 
+**ProjectId** | Pointer to **string** |  | [optional] [readonly] 
 **Type** | [**SecretType**](SecretType.md) |  | 
 **Data** | [**[]SecretData**](SecretData.md) |  | 
 **Outputs** | Pointer to [**[]OutputDescriptor**](OutputDescriptor.md) |  | [optional] [readonly] 
@@ -129,30 +129,30 @@ SetOrganisationId sets OrganisationId field to given value.
 
 HasOrganisationId returns a boolean if a field has been set.
 
-### GetTeamId
+### GetProjectId
 
-`func (o *Secret) GetTeamId() string`
+`func (o *Secret) GetProjectId() string`
 
-GetTeamId returns the TeamId field if non-nil, zero value otherwise.
+GetProjectId returns the ProjectId field if non-nil, zero value otherwise.
 
-### GetTeamIdOk
+### GetProjectIdOk
 
-`func (o *Secret) GetTeamIdOk() (*string, bool)`
+`func (o *Secret) GetProjectIdOk() (*string, bool)`
 
-GetTeamIdOk returns a tuple with the TeamId field if it's non-nil, zero value otherwise
+GetProjectIdOk returns a tuple with the ProjectId field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetTeamId
+### SetProjectId
 
-`func (o *Secret) SetTeamId(v string)`
+`func (o *Secret) SetProjectId(v string)`
 
-SetTeamId sets TeamId field to given value.
+SetProjectId sets ProjectId field to given value.
 
-### HasTeamId
+### HasProjectId
 
-`func (o *Secret) HasTeamId() bool`
+`func (o *Secret) HasProjectId() bool`
 
-HasTeamId returns a boolean if a field has been set.
+HasProjectId returns a boolean if a field has been set.
 
 ### GetType
 

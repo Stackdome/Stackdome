@@ -16,11 +16,11 @@ vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
 vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
-vi.mock("@/hooks/use-resource-teams", () => ({
-  useResourceTeams: () => ({ teams: [], teamNameById: () => undefined, defaultTeamName: "default" }),
+vi.mock("@/hooks/use-resource-projects", () => ({
+  useResourceProjects: () => ({ projects: [], projectNameById: () => undefined, defaultProjectName: "default" }),
 }));
 vi.mock("@/hooks/use-current-user", () => ({
-  useCurrentUser: () => ({ canWriteAnyTeam: true }),
+  useCurrentUser: () => ({ canWriteAnyProject: true }),
 }));
 
 import { getPreviewConfig } from "@/api/preview-configs";

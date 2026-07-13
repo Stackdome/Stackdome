@@ -13,18 +13,18 @@ import (
 
 type ObjectStoreHandlerSpec struct {
 	ObjectStoreService services.ObjectStoreService
-	TeamService        services.TeamService
+	ProjectService     services.ProjectService
 }
 
 type objectStoreHandler struct {
 	objectStoreService services.ObjectStoreService
-	teamService        services.TeamService
+	projectService     services.ProjectService
 }
 
 func NewObjectStoreHandler(spec ObjectStoreHandlerSpec) *objectStoreHandler {
 	return &objectStoreHandler{
 		objectStoreService: spec.ObjectStoreService,
-		teamService:        spec.TeamService,
+		projectService:     spec.ProjectService,
 	}
 }
 
@@ -35,14 +35,14 @@ func (h *objectStoreHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			orgID := mux.Vars(r)["org_id"]
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 
 			objectStore := presenters.ConvertObjectStore(&apiObjectStore)
 			objectStore.OrganisationID = orgID
-			objectStore.TeamID = teamID
+			objectStore.ProjectID = projectID
 
 			createdObjectStore, err := h.objectStoreService.Create(ctx, objectStore)
 			if err != nil {
@@ -76,12 +76,12 @@ func (h *objectStoreHandler) List(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 
-			objectStores, err := h.objectStoreService.ListByTeamID(ctx, teamID)
+			objectStores, err := h.objectStoreService.ListByProjectID(ctx, projectID)
 			if err != nil {
 				return nil, err
 			}

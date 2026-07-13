@@ -100,7 +100,7 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -136,7 +136,7 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 
@@ -284,7 +284,7 @@ func (s *stackResourceService) Delete(ctx context.Context, stackID, resourceName
 	if stackErr != nil {
 		return stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return permErr
 	}
 
@@ -310,7 +310,7 @@ func (s *stackResourceService) GetByStackID(ctx context.Context, stackID string)
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return s.stackResourceStore.GetByStackID(ctx, stackID)
@@ -325,7 +325,7 @@ func (s *stackResourceService) GetByID(ctx context.Context, ID string) (*models.
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, resource.StackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, resource.StackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return resource, nil
@@ -336,7 +336,7 @@ func (s *stackResourceService) GetByStackIDAndResourceName(ctx context.Context, 
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	return s.stackResourceStore.GetByStackIDAndResourceName(ctx, stackID, resourceName)
@@ -355,7 +355,7 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 	if stackErr != nil {
 		return nil, stackErr
 	}
-	if permErr := s.permissions.Check(ctx, stack.TeamID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
+	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, stackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
 

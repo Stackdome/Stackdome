@@ -15,20 +15,20 @@ import (
 
 type PostgresAddonHandlerSpec struct {
 	PostgresAddonService services.PostgresAddonService
-	TeamService          services.TeamService
+	ProjectService       services.ProjectService
 	Logger               logger.Logger
 }
 
 type postgresAddonHandler struct {
 	postgresAddonService services.PostgresAddonService
-	teamService          services.TeamService
+	projectService       services.ProjectService
 	logger               logger.Logger
 }
 
 func NewPostgresAddonHandler(spec PostgresAddonHandlerSpec) *postgresAddonHandler {
 	return &postgresAddonHandler{
 		postgresAddonService: spec.PostgresAddonService,
-		teamService:          spec.TeamService,
+		projectService:       spec.ProjectService,
 		logger:               spec.Logger,
 	}
 }
@@ -40,7 +40,7 @@ func (h *postgresAddonHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			orgID := mux.Vars(r)["org_id"]
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -52,7 +52,7 @@ func (h *postgresAddonHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 			postgresAddon := presenters.ConvertPostgresAddon(&apiPostgresAddon)
 			postgresAddon.OrganisationID = orgID
-			postgresAddon.TeamID = teamID
+			postgresAddon.ProjectID = projectID
 			postgresAddon.UserID = currentUser.ID
 
 			createdPostgresAddon, err := h.postgresAddonService.CreatePostgresAddon(ctx, postgresAddon)
@@ -86,12 +86,12 @@ func (h *postgresAddonHandler) List(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 
-			postgresAddons, err := h.postgresAddonService.ListPostgresAddonsByTeamID(ctx, teamID)
+			postgresAddons, err := h.postgresAddonService.ListPostgresAddonsByProjectID(ctx, projectID)
 			if err != nil {
 				return nil, err
 			}
@@ -133,7 +133,7 @@ func (h *postgresAddonHandler) Update(w http.ResponseWriter, r *http.Request) {
 			if identity == nil {
 				return nil, errors.Unauthorized("failed to fetch user")
 			}
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -141,7 +141,7 @@ func (h *postgresAddonHandler) Update(w http.ResponseWriter, r *http.Request) {
 			postgresAddon := presenters.ConvertPostgresAddon(&apiPostgresAddon)
 			postgresAddon.ID = id
 			postgresAddon.UserID = identity.UserID
-			postgresAddon.TeamID = teamID
+			postgresAddon.ProjectID = projectID
 
 			updatedPostgresAddon, err := h.postgresAddonService.UpdatePostgresAddon(ctx, id, postgresAddon)
 			if err != nil {
@@ -172,7 +172,7 @@ func (h *postgresAddonHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *postgresAddonHandler) Backup(w http.ResponseWriter, r *http.Request) {
-	var backupRequest openapi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPostRequest
+	var backupRequest openapi.ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsBackupPostRequest
 	cfg := &handlerConfig{
 		MarshalInto: &backupRequest,
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -184,7 +184,7 @@ func (h *postgresAddonHandler) Backup(w http.ResponseWriter, r *http.Request) {
 				return nil, err
 			}
 
-			return openapi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsBackupPost202Response{
+			return openapi.ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsBackupPost202Response{
 				Message: ptr.To("Backup initiated successfully"),
 			}, nil
 		},
@@ -193,7 +193,7 @@ func (h *postgresAddonHandler) Backup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *postgresAddonHandler) Fence(w http.ResponseWriter, r *http.Request) {
-	var fenceRequest openapi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePostRequest
+	var fenceRequest openapi.ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsFencePostRequest
 	cfg := &handlerConfig{
 		MarshalInto: &fenceRequest,
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -205,7 +205,7 @@ func (h *postgresAddonHandler) Fence(w http.ResponseWriter, r *http.Request) {
 				return nil, err
 			}
 
-			return openapi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsFencePost200Response{
+			return openapi.ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsFencePost200Response{
 				Message: ptr.To("Fence action initiated successfully"),
 			}, nil
 		},
@@ -214,7 +214,7 @@ func (h *postgresAddonHandler) Fence(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *postgresAddonHandler) Hibernate(w http.ResponseWriter, r *http.Request) {
-	var hibernateRequest openapi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePostRequest
+	var hibernateRequest openapi.ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsHibernatePostRequest
 	cfg := &handlerConfig{
 		MarshalInto: &hibernateRequest,
 		Action: func() (interface{}, *errors.ServiceError) {
@@ -226,7 +226,7 @@ func (h *postgresAddonHandler) Hibernate(w http.ResponseWriter, r *http.Request)
 				return nil, err
 			}
 
-			return openapi.ApiV1OrganizationsOrgIdTeamsTeamNameAddonsPostgresIdActionsHibernatePost200Response{
+			return openapi.ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsHibernatePost200Response{
 				Message: ptr.To("Hibernate action initiated successfully"),
 			}, nil
 		},

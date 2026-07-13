@@ -17,7 +17,7 @@ const volumesTableDDL = `
 	CREATE TABLE volumes (
 		id text PRIMARY KEY,
 		organisation_id text NOT NULL,
-		team_id text,
+		project_id text,
 		user_id text NOT NULL,
 		name text NOT NULL,
 		namespace_id text NOT NULL,
@@ -48,7 +48,7 @@ func newVolumesTestSessionFactory(t *testing.T) *testSessionFactory {
 	return &testSessionFactory{db: gdb}
 }
 
-func TestVolumeStoreListByTeamIDOrdersByCreatedAtDesc(t *testing.T) {
+func TestVolumeStoreListByProjectIDOrdersByCreatedAtDesc(t *testing.T) {
 	ctx := context.Background()
 	sf := newVolumesTestSessionFactory(t)
 	store := NewVolumeStore(VolumeStoreSpec{SessionFactory: sf})
@@ -59,7 +59,7 @@ func TestVolumeStoreListByTeamIDOrdersByCreatedAtDesc(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-old",
 		OrganisationID: "org-1",
-		TeamID:         "team-1",
+		ProjectID:      "project-1",
 		UserID:         "u-1",
 		Name:           "older",
 		NamespaceID:    "ns-1",
@@ -74,7 +74,7 @@ func TestVolumeStoreListByTeamIDOrdersByCreatedAtDesc(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-new",
 		OrganisationID: "org-1",
-		TeamID:         "team-1",
+		ProjectID:      "project-1",
 		UserID:         "u-1",
 		Name:           "newer",
 		NamespaceID:    "ns-1",
@@ -87,7 +87,7 @@ func TestVolumeStoreListByTeamIDOrdersByCreatedAtDesc(t *testing.T) {
 		t.Fatalf("seed newer: %v", err)
 	}
 
-	res, lerr := store.ListByTeamID(ctx, "team-1")
+	res, lerr := store.ListByProjectID(ctx, "project-1")
 	if lerr != nil {
 		t.Fatalf("unexpected error: %v", lerr)
 	}
@@ -102,7 +102,7 @@ func TestVolumeStoreListByTeamIDOrdersByCreatedAtDesc(t *testing.T) {
 	}
 }
 
-func TestVolumeStoreListByTeamIDFiltersByTeam(t *testing.T) {
+func TestVolumeStoreListByProjectIDFiltersByProject(t *testing.T) {
 	ctx := context.Background()
 	sf := newVolumesTestSessionFactory(t)
 	store := NewVolumeStore(VolumeStoreSpec{SessionFactory: sf})
@@ -111,7 +111,7 @@ func TestVolumeStoreListByTeamIDFiltersByTeam(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-a",
 		OrganisationID: "org-1",
-		TeamID:         "team-1",
+		ProjectID:      "project-1",
 		UserID:         "u-1",
 		Name:           "a",
 		NamespaceID:    "ns-1",
@@ -126,7 +126,7 @@ func TestVolumeStoreListByTeamIDFiltersByTeam(t *testing.T) {
 	if err := sf.db.Create(&models.Volume{
 		ID:             "vol-b",
 		OrganisationID: "org-1",
-		TeamID:         "team-2",
+		ProjectID:      "project-2",
 		UserID:         "u-1",
 		Name:           "b",
 		NamespaceID:    "ns-1",
@@ -139,7 +139,7 @@ func TestVolumeStoreListByTeamIDFiltersByTeam(t *testing.T) {
 		t.Fatalf("seed b: %v", err)
 	}
 
-	res, lerr := store.ListByTeamID(ctx, "team-1")
+	res, lerr := store.ListByProjectID(ctx, "project-1")
 	if lerr != nil {
 		t.Fatalf("unexpected error: %v", lerr)
 	}
@@ -161,7 +161,7 @@ var _ = Describe("VolumeStore InternalListNotReady", func() {
 		Expect(sf.db.Create(&models.Volume{
 			ID:             id,
 			OrganisationID: "org-1",
-			TeamID:         "team-1",
+			ProjectID:      "project-1",
 			UserID:         "u-1",
 			Name:           id,
 			NamespaceID:    "ns-1",

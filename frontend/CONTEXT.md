@@ -2,7 +2,7 @@
 
 The React SPA (`frontend/src/`) is the operator console for the backend hub. It
 reuses backend resource nouns (Stack, Cluster, Secret, ObjectStore,
-PostgresAddon, StackDomain, Team, Organisation — see `../CONTEXT.md`) and adds
+PostgresAddon, StackDomain, Project, Organisation — see `../CONTEXT.md`) and adds
 the UI-only concepts below. Prefer these canonical terms in components, hooks,
 and schemas.
 

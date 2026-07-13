@@ -16,19 +16,19 @@ import (
 
 // DemoteAdminRequest struct for DemoteAdminRequest
 type DemoteAdminRequest struct {
-	// The name of the team to place the demoted user in
-	TeamName string `json:"team_name"`
-	// The team role to assign (defaults to Viewer)
-	Role NullableTeamRole `json:"role,omitempty"`
+	// The name of the project to place the demoted user in
+	ProjectName string `json:"project_name"`
+	// The project role to assign (defaults to Viewer)
+	Role NullableProjectRole `json:"role,omitempty"`
 }
 
 // NewDemoteAdminRequest instantiates a new DemoteAdminRequest object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewDemoteAdminRequest(teamName string) *DemoteAdminRequest {
+func NewDemoteAdminRequest(projectName string) *DemoteAdminRequest {
 	this := DemoteAdminRequest{}
-	this.TeamName = teamName
+	this.ProjectName = projectName
 	return &this
 }
 
@@ -40,34 +40,34 @@ func NewDemoteAdminRequestWithDefaults() *DemoteAdminRequest {
 	return &this
 }
 
-// GetTeamName returns the TeamName field value
-func (o *DemoteAdminRequest) GetTeamName() string {
+// GetProjectName returns the ProjectName field value
+func (o *DemoteAdminRequest) GetProjectName() string {
 	if o == nil {
 		var ret string
 		return ret
 	}
 
-	return o.TeamName
+	return o.ProjectName
 }
 
-// GetTeamNameOk returns a tuple with the TeamName field value
+// GetProjectNameOk returns a tuple with the ProjectName field value
 // and a boolean to check if the value has been set.
-func (o *DemoteAdminRequest) GetTeamNameOk() (*string, bool) {
+func (o *DemoteAdminRequest) GetProjectNameOk() (*string, bool) {
 	if o == nil {
 		return nil, false
 	}
-	return &o.TeamName, true
+	return &o.ProjectName, true
 }
 
-// SetTeamName sets field value
-func (o *DemoteAdminRequest) SetTeamName(v string) {
-	o.TeamName = v
+// SetProjectName sets field value
+func (o *DemoteAdminRequest) SetProjectName(v string) {
+	o.ProjectName = v
 }
 
 // GetRole returns the Role field value if set, zero value otherwise (both if not set or set to explicit null).
-func (o *DemoteAdminRequest) GetRole() TeamRole {
+func (o *DemoteAdminRequest) GetRole() ProjectRole {
 	if o == nil || o.Role.Get() == nil {
-		var ret TeamRole
+		var ret ProjectRole
 		return ret
 	}
 	return *o.Role.Get()
@@ -76,7 +76,7 @@ func (o *DemoteAdminRequest) GetRole() TeamRole {
 // GetRoleOk returns a tuple with the Role field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 // NOTE: If the value is an explicit nil, `nil, true` will be returned
-func (o *DemoteAdminRequest) GetRoleOk() (*TeamRole, bool) {
+func (o *DemoteAdminRequest) GetRoleOk() (*ProjectRole, bool) {
 	if o == nil {
 		return nil, false
 	}
@@ -92,8 +92,8 @@ func (o *DemoteAdminRequest) HasRole() bool {
 	return false
 }
 
-// SetRole gets a reference to the given NullableTeamRole and assigns it to the Role field.
-func (o *DemoteAdminRequest) SetRole(v TeamRole) {
+// SetRole gets a reference to the given NullableProjectRole and assigns it to the Role field.
+func (o *DemoteAdminRequest) SetRole(v ProjectRole) {
 	o.Role.Set(&v)
 }
 
@@ -110,7 +110,7 @@ func (o *DemoteAdminRequest) UnsetRole() {
 func (o DemoteAdminRequest) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if true {
-		toSerialize["team_name"] = o.TeamName
+		toSerialize["project_name"] = o.ProjectName
 	}
 	if o.Role.IsSet() {
 		toSerialize["role"] = o.Role.Get()

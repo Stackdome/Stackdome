@@ -18,7 +18,7 @@ import { useVolumeDelete } from "../use-volume-delete";
 const mockedDelete = vi.mocked(deleteVolume);
 const mockedGetStack = vi.mocked(getStackById);
 
-const ids = { orgId: "org-1", teamName: "alpha", stackId: "stack-1" };
+const ids = { orgId: "org-1", projectName: "alpha", stackId: "stack-1" };
 
 function mkStack(volumes: Partial<Volume>[]): Stack {
   return {

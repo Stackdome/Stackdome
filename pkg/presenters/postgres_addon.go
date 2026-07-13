@@ -36,7 +36,7 @@ func PresentPostgresAddon(in *models.PostgresAddon) openapi.PostgresAddon {
 
 	res.SetId(in.ID)
 	res.SetOrganisationId(in.OrganisationID)
-	res.SetTeamId(in.TeamID)
+	res.SetProjectId(in.ProjectID)
 	res.SetUserId(in.UserID)
 	res.SetClusterId(in.ClusterID)
 	res.SetName(in.Name)

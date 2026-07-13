@@ -23,7 +23,7 @@ type StackHandlerSpec struct {
 	ImageBuildService    services.ImageBuildService
 	LoggingService       services.LoggingService
 	MetricsService       services.MetricsService
-	TeamService          services.TeamService
+	ProjectService       services.ProjectService
 	Logger               logger.Logger
 }
 
@@ -34,7 +34,7 @@ type stackHandler struct {
 	imageBuildService    services.ImageBuildService
 	loggingService       services.LoggingService
 	metricsService       services.MetricsService
-	teamService          services.TeamService
+	projectService       services.ProjectService
 	logger               logger.Logger
 }
 
@@ -46,7 +46,7 @@ func NewStackHandler(spec StackHandlerSpec) *stackHandler {
 		imageBuildService:    spec.ImageBuildService,
 		loggingService:       spec.LoggingService,
 		metricsService:       spec.MetricsService,
-		teamService:          spec.TeamService,
+		projectService:       spec.ProjectService,
 		logger:               spec.Logger,
 	}
 }
@@ -253,15 +253,15 @@ func (h *stackHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 	handleList(w, r, cfg)
 }
 
-func (h *stackHandler) ListByTeamName(w http.ResponseWriter, r *http.Request) {
+func (h *stackHandler) ListByProjectName(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
-			objs, serr := h.stackService.GetStacksByTeamID(ctx, teamID)
+			objs, serr := h.stackService.GetStacksByProjectID(ctx, projectID)
 			if serr != nil {
 				return nil, serr
 			}
@@ -286,7 +286,7 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 		validation.ValidateStackShell(&ws),
 		func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -297,7 +297,7 @@ func (h *stackHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = identity.UserID
 			convertedObject.StackResources = nil
 			convertedObject.Volumes = nil
@@ -328,7 +328,7 @@ func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
 				return nil, errors.Unauthorized("failed to fetch user")
 			}
 
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -336,7 +336,7 @@ func (h *stackHandler) Update(w http.ResponseWriter, r *http.Request) {
 			convertedObject := presenters.ConvertStack(&ws)
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = identity.UserID
 			convertedObject.StackResources = nil
 			convertedObject.Volumes = nil
@@ -366,7 +366,7 @@ func (h *stackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 				return nil, errors.Unauthorized("failed to fetch user")
 			}
 
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -374,7 +374,7 @@ func (h *stackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 			convertedObject := presenters.ConvertStack(&ws)
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = identity.UserID
 
 			// Full object update including children resources.
@@ -390,7 +390,7 @@ func (h *stackHandler) Apply(w http.ResponseWriter, r *http.Request) {
 }
 
 // ApplyByName is the name-addressed variant of Apply (kubectl-style upsert):
-// stack identity comes from the body's name (unique per team), not the URL.
+// stack identity comes from the body's name (unique per project), not the URL.
 // Responds 201 when the stack was created, 200 when it was updated.
 func (h *stackHandler) ApplyByName(w http.ResponseWriter, r *http.Request) {
 	var ws openapi.Stack
@@ -405,7 +405,7 @@ func (h *stackHandler) ApplyByName(w http.ResponseWriter, r *http.Request) {
 				return nil, errors.Unauthorized("failed to fetch user")
 			}
 
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -413,7 +413,7 @@ func (h *stackHandler) ApplyByName(w http.ResponseWriter, r *http.Request) {
 			convertedObject := presenters.ConvertStack(&ws)
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = identity.UserID
 
 			obj, wasCreated, serr := h.stackService.ApplyStack(ctx, convertedObject)

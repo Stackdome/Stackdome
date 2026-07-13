@@ -323,7 +323,7 @@ func TestBuildCR_OrgCredentialSecretNames(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		resolver := mocks.NewMockCredentialResolver(ctrl)
 		resolver.EXPECT().
-			RegistryCredentials(gomock.Any(), "org-1", "reg.example.com/team/app:v1", credentials.RegistryPurposePull, gomock.Any()).
+			RegistryCredentials(gomock.Any(), "org-1", "reg.example.com/project/app:v1", credentials.RegistryPurposePull, gomock.Any()).
 			Return(&credentials.ResolvedRegistryCredential{
 				Source:  credentials.SourceIntegration,
 				Host:    host,
@@ -332,7 +332,7 @@ func TestBuildCR_OrgCredentialSecretNames(t *testing.T) {
 
 		b := &clusterResourceBuilder{credentialResolver: resolver}
 		sr := &models.StackResource{
-			ImageConfig: &models.ImageConfigSpec{Image: "reg.example.com/team/app:v1"},
+			ImageConfig: &models.ImageConfigSpec{Image: "reg.example.com/project/app:v1"},
 		}
 		got, err := b.buildStackResourceImageSpec(sr, "org-1")
 		if err != nil {
@@ -351,7 +351,7 @@ func TestBuildCR_OrgCredentialSecretNames(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		resolver := mocks.NewMockCredentialResolver(ctrl)
 		resolver.EXPECT().
-			RegistryCredentials(gomock.Any(), "org-1", "reg.example.com/team/app", credentials.RegistryPurposePush, gomock.Any()).
+			RegistryCredentials(gomock.Any(), "org-1", "reg.example.com/project/app", credentials.RegistryPurposePush, gomock.Any()).
 			Return(&credentials.ResolvedRegistryCredential{
 				Source:  credentials.SourceIntegration,
 				Host:    host,
@@ -360,7 +360,7 @@ func TestBuildCR_OrgCredentialSecretNames(t *testing.T) {
 
 		b := &clusterResourceBuilder{credentialResolver: resolver}
 		cfg := &models.BuildConfigSpec{
-			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "reg.example.com/team/app"},
+			BuildImageRepository: models.BuildImageRepository{ExternalImageRef: "reg.example.com/project/app"},
 		}
 		got, err := b.buildImageRepositorySpec(cfg, "org-1", "stack", "res")
 		if err != nil {

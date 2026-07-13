@@ -4,18 +4,18 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
-[**CancelRelease**](ReleasesApi.md#CancelRelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/cancel | Cancel a pending or rendering release
-[**CreateRelease**](ReleasesApi.md#CreateRelease) | **Post** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | Create a new release (deploy)
-[**GetRelease**](ReleasesApi.md#GetRelease) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id} | Get a release by ID
-[**ListReleaseEvents**](ReleasesApi.md#ListReleaseEvents) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events | List release events ordered by sequence
-[**ListReleases**](ReleasesApi.md#ListReleases) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases | List releases for a stack
-[**StreamReleaseEvents**](ReleasesApi.md#StreamReleaseEvents) | **Get** /api/v1/organizations/{org_id}/teams/{team_name}/stacks/{id}/releases/{release_id}/events/stream | Stream release events via Server-Sent Events
+[**CancelRelease**](ReleasesApi.md#CancelRelease) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/cancel | Cancel a pending or rendering release
+[**CreateRelease**](ReleasesApi.md#CreateRelease) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases | Create a new release (deploy)
+[**GetRelease**](ReleasesApi.md#GetRelease) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id} | Get a release by ID
+[**ListReleaseEvents**](ReleasesApi.md#ListReleaseEvents) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events | List release events ordered by sequence
+[**ListReleases**](ReleasesApi.md#ListReleases) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases | List releases for a stack
+[**StreamReleaseEvents**](ReleasesApi.md#StreamReleaseEvents) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events/stream | Stream release events via Server-Sent Events
 
 
 
 ## CancelRelease
 
-> CancelRelease(ctx, orgId, teamName, id, releaseId).Execute()
+> CancelRelease(ctx, orgId, projectName, id, releaseId).Execute()
 
 Cancel a pending or rendering release
 
@@ -33,13 +33,13 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     releaseId := "releaseId_example" // string | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.CancelRelease(context.Background(), orgId, teamName, id, releaseId).Execute()
+    resp, r, err := apiClient.ReleasesApi.CancelRelease(context.Background(), orgId, projectName, id, releaseId).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.CancelRelease``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -54,7 +54,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 **releaseId** | **string** |  | 
 
@@ -90,7 +90,7 @@ Name | Type | Description  | Notes
 
 ## CreateRelease
 
-> StackRelease CreateRelease(ctx, orgId, teamName, id).CreateReleaseRequest(createReleaseRequest).Execute()
+> StackRelease CreateRelease(ctx, orgId, projectName, id).CreateReleaseRequest(createReleaseRequest).Execute()
 
 Create a new release (deploy)
 
@@ -108,13 +108,13 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     createReleaseRequest := *openapiclient.NewCreateReleaseRequest() // CreateReleaseRequest |  (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.CreateRelease(context.Background(), orgId, teamName, id).CreateReleaseRequest(createReleaseRequest).Execute()
+    resp, r, err := apiClient.ReleasesApi.CreateRelease(context.Background(), orgId, projectName, id).CreateReleaseRequest(createReleaseRequest).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.CreateRelease``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -131,7 +131,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
@@ -166,7 +166,7 @@ Name | Type | Description  | Notes
 
 ## GetRelease
 
-> StackReleaseDetail GetRelease(ctx, orgId, teamName, id, releaseId).Execute()
+> StackReleaseDetail GetRelease(ctx, orgId, projectName, id, releaseId).Execute()
 
 Get a release by ID
 
@@ -184,13 +184,13 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     releaseId := "releaseId_example" // string | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.GetRelease(context.Background(), orgId, teamName, id, releaseId).Execute()
+    resp, r, err := apiClient.ReleasesApi.GetRelease(context.Background(), orgId, projectName, id, releaseId).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.GetRelease``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -207,7 +207,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 **releaseId** | **string** |  | 
 
@@ -243,7 +243,7 @@ Name | Type | Description  | Notes
 
 ## ListReleaseEvents
 
-> ReleaseEventList ListReleaseEvents(ctx, orgId, teamName, id, releaseId).AfterSequence(afterSequence).Limit(limit).Execute()
+> ReleaseEventList ListReleaseEvents(ctx, orgId, projectName, id, releaseId).AfterSequence(afterSequence).Limit(limit).Execute()
 
 List release events ordered by sequence
 
@@ -261,7 +261,7 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     releaseId := "releaseId_example" // string | 
     afterSequence := int32(56) // int32 |  (optional) (default to 0)
@@ -269,7 +269,7 @@ func main() {
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.ListReleaseEvents(context.Background(), orgId, teamName, id, releaseId).AfterSequence(afterSequence).Limit(limit).Execute()
+    resp, r, err := apiClient.ReleasesApi.ListReleaseEvents(context.Background(), orgId, projectName, id, releaseId).AfterSequence(afterSequence).Limit(limit).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.ListReleaseEvents``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -286,7 +286,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 **releaseId** | **string** |  | 
 
@@ -324,7 +324,7 @@ Name | Type | Description  | Notes
 
 ## ListReleases
 
-> StackReleaseList ListReleases(ctx, orgId, teamName, id).State(state).Page(page).PageSize(pageSize).Execute()
+> StackReleaseList ListReleases(ctx, orgId, projectName, id).State(state).Page(page).PageSize(pageSize).Execute()
 
 List releases for a stack
 
@@ -342,7 +342,7 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     state := openapiclient.StackReleaseState("Pending") // StackReleaseState | Filter by release state (optional)
     page := int32(56) // int32 | Page number (optional) (default to 1)
@@ -350,7 +350,7 @@ func main() {
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.ListReleases(context.Background(), orgId, teamName, id).State(state).Page(page).PageSize(pageSize).Execute()
+    resp, r, err := apiClient.ReleasesApi.ListReleases(context.Background(), orgId, projectName, id).State(state).Page(page).PageSize(pageSize).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.ListReleases``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -367,7 +367,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 
 ### Other Parameters
@@ -404,7 +404,7 @@ Name | Type | Description  | Notes
 
 ## StreamReleaseEvents
 
-> *os.File StreamReleaseEvents(ctx, orgId, teamName, id, releaseId).AfterSequence(afterSequence).Execute()
+> *os.File StreamReleaseEvents(ctx, orgId, projectName, id, releaseId).AfterSequence(afterSequence).Execute()
 
 Stream release events via Server-Sent Events
 
@@ -422,14 +422,14 @@ import (
 
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
-    teamName := "teamName_example" // string | The name of the team
+    projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
     releaseId := "releaseId_example" // string | 
     afterSequence := int32(56) // int32 |  (optional) (default to 0)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.ReleasesApi.StreamReleaseEvents(context.Background(), orgId, teamName, id, releaseId).AfterSequence(afterSequence).Execute()
+    resp, r, err := apiClient.ReleasesApi.StreamReleaseEvents(context.Background(), orgId, projectName, id, releaseId).AfterSequence(afterSequence).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `ReleasesApi.StreamReleaseEvents``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -446,7 +446,7 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 **ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
 **orgId** | **string** | The ID of the organization | 
-**teamName** | **string** | The name of the team | 
+**projectName** | **string** | The name of the project | 
 **id** | **string** | The id of record | 
 **releaseId** | **string** |  | 
 

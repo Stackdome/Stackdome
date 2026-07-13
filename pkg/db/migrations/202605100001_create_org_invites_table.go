@@ -13,8 +13,8 @@ func createOrgInvitesTable() *gormigrate.Migration {
 		ID             string    `gorm:"primary_key;default:gen_random_uuid()"`
 		Email          string    `gorm:"not null;index:idx_org_invites_email"`
 		OrganisationID string    `gorm:"not null;index:idx_org_invites_org_id"`
-		TeamID         string    `gorm:"not null"`
-		TeamRole       string    `gorm:"not null"`
+		ProjectID      string    `gorm:"not null"`
+		ProjectRole    string    `gorm:"not null"`
 		TokenHash      string    `gorm:"not null;uniqueIndex:idx_org_invites_token_hash"`
 		EncryptedToken string    `gorm:"not null"`
 		Status         string    `gorm:"not null;default:pending"`
@@ -38,9 +38,9 @@ func createOrgInvitesTable() *gormigrate.Migration {
 				return fmt.Errorf("error adding org FK on org_invites: %w", err)
 			}
 			if err := tx.Exec(
-				"ALTER TABLE org_invites ADD CONSTRAINT fk_org_invites_team FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE",
+				"ALTER TABLE org_invites ADD CONSTRAINT fk_org_invites_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE",
 			).Error; err != nil {
-				return fmt.Errorf("error adding team FK on org_invites: %w", err)
+				return fmt.Errorf("error adding project FK on org_invites: %w", err)
 			}
 			if err := tx.Exec(
 				"ALTER TABLE org_invites ADD CONSTRAINT fk_org_invites_invited_by FOREIGN KEY (invited_by_id) REFERENCES users(id) ON DELETE CASCADE",

@@ -13,8 +13,8 @@ vi.mock("@/api/preview-configs", () => ({
 vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
-vi.mock("@/hooks/use-resource-teams", () => ({
-  useResourceTeams: () => ({ teams: [], teamNameById: () => undefined, defaultTeamName: "default" }),
+vi.mock("@/hooks/use-resource-projects", () => ({
+  useResourceProjects: () => ({ projects: [], projectNameById: () => undefined, defaultProjectName: "default" }),
 }));
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
@@ -119,7 +119,7 @@ describe("ConfigSettingsModal", () => {
     const withExtras: StackPreviewConfig = {
       ...config,
       description: "webapp previews",
-      labels: [{ key: "team", value: "platform" }],
+      labels: [{ key: "project", value: "platform" }],
       annotations: [{ key: "note", value: "internal" }],
     };
     vi.mocked(updatePreviewConfig).mockResolvedValue(withExtras);
@@ -141,7 +141,7 @@ describe("ConfigSettingsModal", () => {
         stackfile_path: "deploy/stackfile.yaml",
         max_active_previews: 10,
         description: "webapp previews",
-        labels: [{ key: "team", value: "platform" }],
+        labels: [{ key: "project", value: "platform" }],
         annotations: [{ key: "note", value: "internal" }],
       });
     });

@@ -12,19 +12,19 @@ import (
 )
 
 type StackPreviewConfigHandlerSpec struct {
-	Service     services.StackPreviewConfigService
-	TeamService services.TeamService
+	Service        services.StackPreviewConfigService
+	ProjectService services.ProjectService
 }
 
 type stackPreviewConfigHandler struct {
-	service     services.StackPreviewConfigService
-	teamService services.TeamService
+	service        services.StackPreviewConfigService
+	projectService services.ProjectService
 }
 
 func NewStackPreviewConfigHandler(spec StackPreviewConfigHandlerSpec) *stackPreviewConfigHandler {
 	return &stackPreviewConfigHandler{
-		service:     spec.Service,
-		teamService: spec.TeamService,
+		service:        spec.Service,
+		projectService: spec.ProjectService,
 	}
 }
 
@@ -33,14 +33,14 @@ func (h *stackPreviewConfigHandler) Create(w http.ResponseWriter, r *http.Reques
 	cfg := &handlerConfig{
 		MarshalInto: &req,
 		Action: func() (interface{}, *errors.ServiceError) {
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 			identity := auth.GetIdentityFromCtx(r.Context())
 			model := presenters.ConvertStackPreviewConfigCreate(&req)
 			model.OrganisationID = identity.OrgID
-			model.TeamID = teamID
+			model.ProjectID = projectID
 			model.UserID = identity.UserID
 			config, serr := h.service.Create(r.Context(), model)
 			if serr != nil {
@@ -70,12 +70,12 @@ func (h *stackPreviewConfigHandler) Get(w http.ResponseWriter, r *http.Request) 
 func (h *stackPreviewConfigHandler) List(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 			params := parseListParams(r, nil)
-			result, serr := h.service.List(r.Context(), teamID, params)
+			result, serr := h.service.List(r.Context(), projectID, params)
 			if serr != nil {
 				return nil, serr
 			}

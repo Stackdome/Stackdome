@@ -24,12 +24,12 @@ export function useUserActions() {
   const demote = useCallback(
     async (
       userId: string,
-      teamName: string,
+      projectName: string,
       role: "Developer" | "Viewer"
     ): Promise<ActionResult> => {
       if (!orgId) return { ok: false, error: "no organisation" };
       try {
-        await demoteAdmin(orgId, userId, { team_name: teamName, role });
+        await demoteAdmin(orgId, userId, { project_name: projectName, role });
         return { ok: true };
       } catch (e) {
         return { ok: false, error: getErrorMessage(e) };

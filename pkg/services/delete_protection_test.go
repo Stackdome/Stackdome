@@ -15,7 +15,7 @@ func TestSecretDeleteBlockedReturns409(t *testing.T) {
 
 	secretStore := mocks.NewMockSecretStore(ctrl)
 	secretStore.EXPECT().GetByID(gomock.Any(), "sec-1").
-		Return(&models.Secret{ID: "sec-1", TeamID: "team-1"}, nil)
+		Return(&models.Secret{ID: "sec-1", ProjectID: "project-1"}, nil)
 
 	permissions := mocks.NewMockPermissionService(ctrl)
 	permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -42,7 +42,7 @@ func TestSecretDeleteAllowedWhenNotReferenced(t *testing.T) {
 
 	secretStore := mocks.NewMockSecretStore(ctrl)
 	secretStore.EXPECT().GetByID(gomock.Any(), "sec-1").
-		Return(&models.Secret{ID: "sec-1", TeamID: "team-1"}, nil)
+		Return(&models.Secret{ID: "sec-1", ProjectID: "project-1"}, nil)
 	secretStore.EXPECT().Delete(gomock.Any(), "sec-1").Return(nil)
 
 	permissions := mocks.NewMockPermissionService(ctrl)
@@ -69,7 +69,7 @@ func TestPostgresAddonDeleteBlockedReturns409(t *testing.T) {
 
 	addonStore := mocks.NewMockPostgresAddonStore(ctrl)
 	addonStore.EXPECT().GetByID(gomock.Any(), "pg-1").
-		Return(&models.PostgresAddon{ID: "pg-1", TeamID: "team-1"}, nil)
+		Return(&models.PostgresAddon{ID: "pg-1", ProjectID: "project-1"}, nil)
 
 	permissions := mocks.NewMockPermissionService(ctrl)
 	permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)
@@ -96,7 +96,7 @@ func TestVolumeDeleteBlockedReturns409(t *testing.T) {
 
 	volumeStore := mocks.NewMockVolumeStore(ctrl)
 	volumeStore.EXPECT().GetByID(gomock.Any(), "vol-1").
-		Return(&models.Volume{ID: "vol-1", Name: "uploads", TeamID: "team-1"}, nil)
+		Return(&models.Volume{ID: "vol-1", Name: "uploads", ProjectID: "project-1"}, nil)
 
 	permissions := mocks.NewMockPermissionService(ctrl)
 	permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil)

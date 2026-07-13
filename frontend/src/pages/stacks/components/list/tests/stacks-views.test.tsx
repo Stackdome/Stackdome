@@ -13,7 +13,7 @@ vi.mock("@/helpers/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 vi.mock("@/hooks/use-current-user", () => ({
-  useCurrentUser: () => ({ canWriteAnyTeam: true, isOrgAdmin: true }),
+  useCurrentUser: () => ({ canWriteAnyProject: true, isOrgAdmin: true }),
 }));
 vi.mock("@/pages/stacks/components/wizard/stack-create-wizard", () => ({
   StackCreateWizard: ({ open }: { open: boolean }) => (open ? <div data-testid="stack-wizard" /> : null),

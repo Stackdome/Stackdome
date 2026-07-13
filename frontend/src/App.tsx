@@ -23,8 +23,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/contexts/theme-provider"
 import { CurrentUserProvider } from "@/contexts/current-user-context"
 import { RequireAdmin } from "@/components/require-admin"
-// Users + Teams (workspace collaboration) are shelved — pages remain in the
-// repo (src/pages/users, src/pages/teams) but are unrouted; /settings/* below
+// Users + Projects (workspace collaboration) are shelved — pages remain in the
+// repo (src/pages/users, src/pages/projects) but are unrouted; /settings/* below
 // redirects home so a typed URL doesn't 404.
 
 const Logout = () => {
@@ -65,7 +65,7 @@ const router = createBrowserRouter(
         <Route path="/previews" element={<PreviewsPage />} />
         <Route path="/previews/:configId" element={<PreviewConfigDetailPage />} />
         <Route path="/git-integrations" element={<GitIntegrationsPage />} />
-        {/* Workspace collaboration (Users + Teams) shelved — redirect home. */}
+        {/* Workspace collaboration (Users + Projects) shelved — redirect home. */}
         <Route path="/settings/*" element={<Navigate to="/" replace />} />
       </Route>
       <Route path="/sign-in" element={<Login />} />

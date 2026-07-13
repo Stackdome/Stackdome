@@ -12,7 +12,7 @@ func ValidateVolume(in *openapi.Volume) Validate {
 	// String() is "<invalid Value>", making validateEmpty fail unconditionally.
 	return ValidateAll([]Validate{
 		validateEmpty(in, "Id", "id"),
-		validateEmpty(in, "TeamId", "team_id"),
+		validateEmpty(in, "ProjectId", "project_id"),
 		validateEmpty(in, "Status", "status"),
 		validateLabels(&in.Labels),
 		validateAnnotations(&in.Annotations),

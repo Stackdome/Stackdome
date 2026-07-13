@@ -21,7 +21,7 @@ afterEach(() => cleanup());
 
 describe("useInviteInfo", () => {
   it("resolves to new-user with the info payload on success", async () => {
-    vi.mocked(getPublicInviteInfo).mockResolvedValue({ org_name: "Acme", team_name: "engineering", inviter_name: "Jane", expires_at: "2026-05-19T00:00:00Z" } as never);
+    vi.mocked(getPublicInviteInfo).mockResolvedValue({ org_name: "Acme", project_name: "engineering", inviter_name: "Jane", expires_at: "2026-05-19T00:00:00Z" } as never);
     const { result } = renderHook(() => useInviteInfo("tok"));
     await waitFor(() => expect(result.current.state).toBe("new-user"));
     expect(result.current.info?.org_name).toBe("Acme");

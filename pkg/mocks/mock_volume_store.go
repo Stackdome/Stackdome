@@ -175,19 +175,19 @@ func (mr *MockVolumeStoreMockRecorder) InternalListNotReady(ctx any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListNotReady", reflect.TypeOf((*MockVolumeStore)(nil).InternalListNotReady), ctx)
 }
 
-// ListByTeamID mocks base method.
-func (m *MockVolumeStore) ListByTeamID(ctx context.Context, teamID string) ([]*models.Volume, *errors.ServiceError) {
+// ListByProjectID mocks base method.
+func (m *MockVolumeStore) ListByProjectID(ctx context.Context, projectID string) ([]*models.Volume, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByTeamID", ctx, teamID)
+	ret := m.ctrl.Call(m, "ListByProjectID", ctx, projectID)
 	ret0, _ := ret[0].([]*models.Volume)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ListByTeamID indicates an expected call of ListByTeamID.
-func (mr *MockVolumeStoreMockRecorder) ListByTeamID(ctx, teamID any) *gomock.Call {
+// ListByProjectID indicates an expected call of ListByProjectID.
+func (mr *MockVolumeStoreMockRecorder) ListByProjectID(ctx, projectID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByTeamID", reflect.TypeOf((*MockVolumeStore)(nil).ListByTeamID), ctx, teamID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockVolumeStore)(nil).ListByProjectID), ctx, projectID)
 }
 
 // UpdateGitRepoSourceRevision mocks base method.

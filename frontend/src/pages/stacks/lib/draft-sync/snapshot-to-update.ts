@@ -3,10 +3,10 @@ import type { StackReleaseSnapshot } from "@/api/releases";
 import { cleanServerResource } from "./server-state";
 
 function cleanVolume(v: Volume) {
-  // Strip every readOnly Volume field (id, team_id, status) — the whole-stack
+  // Strip every readOnly Volume field (id, project_id, status) — the whole-stack
   // PUT is schema-validated server-side and rejects readOnly properties.
-  const { id, team_id, status, ...rest } = v as Volume & { status?: unknown; team_id?: string };
-  void id; void team_id; void status;
+  const { id, project_id, status, ...rest } = v as Volume & { status?: unknown; project_id?: string };
+  void id; void project_id; void status;
   return rest;
 }
 

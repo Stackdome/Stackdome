@@ -13,7 +13,7 @@ import { AddonTypePickerDialog, type AddonType } from "./components/addon-type-p
 export default function AddonsPage() {
   const navigate = useNavigate();
   const { addons, loading, error, refetch } = usePostgresAddons();
-  const { canWriteAnyTeam, canWrite } = useCurrentUser();
+  const { canWriteAnyProject, canWrite } = useCurrentUser();
   const [pickerOpen, setPickerOpen] = useState(false);
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
 
@@ -57,7 +57,7 @@ export default function AddonsPage() {
           title="Addons"
           subtitle="Manage hosted addon services for your stacks"
           actions={
-            canWriteAnyTeam ? (
+            canWriteAnyProject ? (
               <Button onClick={() => setPickerOpen(true)}>
                 <PlusCircle className="h-4 w-4" />
                 Add Addon
@@ -72,7 +72,7 @@ export default function AddonsPage() {
             title="No addons yet"
             description="Add an addon to provision a managed Postgres for your stacks."
             action={
-              canWriteAnyTeam ? (
+              canWriteAnyProject ? (
                 <Button onClick={() => setPickerOpen(true)}>
                   <PlusCircle className="h-4 w-4" />
                   Add Addon
@@ -83,7 +83,7 @@ export default function AddonsPage() {
         ) : (
           <AddonList
             addons={addons}
-            canWrite={(teamId?: string) => canWrite(teamId ?? "")}
+            canWrite={(projectId?: string) => canWrite(projectId ?? "")}
           />
         )}
 

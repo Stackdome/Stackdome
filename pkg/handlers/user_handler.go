@@ -54,7 +54,7 @@ func (a usersHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				return nil, err
 			}
-			return presenters.PresentUserWithTeams(user, memberships), nil
+			return presenters.PresentUserWithProjects(user, memberships), nil
 		},
 	}
 	handleGet(w, r, cfg)

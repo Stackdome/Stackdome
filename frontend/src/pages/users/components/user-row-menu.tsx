@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { useUserActions } from "../hooks/use-user-actions";
-import { useTeamOptions } from "../hooks/use-team-options";
+import { useProjectOptions } from "../hooks/use-project-options";
 import type { ActiveRow } from "../hooks/use-users";
 
 interface UserRowMenuProps {
@@ -27,11 +27,11 @@ interface UserRowMenuProps {
 
 export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
   const { promote, demote } = useUserActions();
-  const { teams } = useTeamOptions();
+  const { projects } = useProjectOptions();
   const { toast } = useToast();
   const [busy, setBusy] = useState(false);
   const [demoteOpen, setDemoteOpen] = useState(false);
-  const [demoteTeam, setDemoteTeam] = useState("");
+  const [demoteProject, setDemoteProject] = useState("");
   const [demoteRole, setDemoteRole] = useState<"Developer" | "Viewer">("Developer");
 
   const isOrgMember = row.role === "OrgMember";
@@ -54,14 +54,14 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
   }
 
   async function handleDemoteConfirm() {
-    if (busy || !demoteTeam) return;
+    if (busy || !demoteProject) return;
     setBusy(true);
     try {
-      const result = await demote(row.id, demoteTeam, demoteRole);
+      const result = await demote(row.id, demoteProject, demoteRole);
       if (result.ok) {
         toast({ title: "User demoted", description: `${row.name} has been demoted to OrgMember.`, variant: "success" });
         setDemoteOpen(false);
-        setDemoteTeam("");
+        setDemoteProject("");
         onChanged();
       } else {
         toast({ title: "Failed to demote user", description: result.error, variant: "destructive" });
@@ -104,13 +104,13 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
         )}
         {isOrgAdmin && demoteOpen && (
           <div className="px-2 py-1.5 space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">Demote to team member</p>
-            <Select value={demoteTeam} onValueChange={setDemoteTeam}>
+            <p className="text-xs text-muted-foreground font-medium">Demote to project member</p>
+            <Select value={demoteProject} onValueChange={setDemoteProject}>
               <SelectTrigger size="sm" className="w-full">
-                <SelectValue placeholder="Select team" />
+                <SelectValue placeholder="Select project" />
               </SelectTrigger>
               <SelectContent>
-                {teams.map((t) => (
+                {projects.map((t) => (
                   <SelectItem key={t.id ?? t.name} value={t.name ?? ""}>
                     {t.name}
                   </SelectItem>
@@ -131,7 +131,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
                 size="sm"
                 className="flex-1 h-7 text-xs"
                 onClick={handleDemoteConfirm}
-                disabled={!demoteTeam || busy}
+                disabled={!demoteProject || busy}
               >
                 Confirm
               </Button>

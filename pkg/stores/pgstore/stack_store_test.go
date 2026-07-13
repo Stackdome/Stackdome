@@ -20,17 +20,17 @@ var _ = Describe("StackStore", func() {
 
 	const (
 		orgID     = "org-1"
-		teamA     = "team-a"
+		projectA  = "project-a"
 		userID    = "user-1"
 		clusterID = "cluster-1"
 		stackName = "demo"
 	)
 
-	newStackSpec := func(id, name, teamID string) *models.Stack {
+	newStackSpec := func(id, name, projectID string) *models.Stack {
 		return &models.Stack{
 			ID:             id,
 			OrganisationID: orgID,
-			TeamID:         teamID,
+			ProjectID:      projectID,
 			ClusterID:      clusterID,
 			UserID:         userID,
 			Name:           name,
@@ -44,7 +44,7 @@ var _ = Describe("StackStore", func() {
 			CREATE TABLE IF NOT EXISTS stacks (
 				id TEXT PRIMARY KEY,
 				organisation_id TEXT NOT NULL,
-				team_id TEXT NOT NULL,
+				project_id TEXT NOT NULL,
 				cluster_id TEXT,
 				user_id TEXT NOT NULL,
 				name TEXT NOT NULL,
@@ -60,21 +60,21 @@ var _ = Describe("StackStore", func() {
 				deletion_timestamp DATETIME
 			)
 		`, `
-			CREATE UNIQUE INDEX IF NOT EXISTS idx_stacks_team_id_name ON stacks (team_id, name)
+			CREATE UNIQUE INDEX IF NOT EXISTS idx_stacks_project_id_name ON stacks (project_id, name)
 		`)
 		store = pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: sf})
 		ctx = context.Background()
 
 		Expect(sf.New(ctx).Exec(
-			`INSERT INTO stacks (id, organisation_id, team_id, cluster_id, user_id, name, namespace_id, namespace)
+			`INSERT INTO stacks (id, organisation_id, project_id, cluster_id, user_id, name, namespace_id, namespace)
 			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			"stack-1", orgID, teamA, clusterID, userID, stackName, "ns-id-1", "ns-1",
+			"stack-1", orgID, projectA, clusterID, userID, stackName, "ns-id-1", "ns-1",
 		).Error).NotTo(HaveOccurred())
 	})
 
 	Describe("Create", func() {
-		It("maps a (team_id, name) unique violation to Conflict", func() {
-			created, serr := store.Create(ctx, newStackSpec("stack-2", stackName, teamA))
+		It("maps a (project_id, name) unique violation to Conflict", func() {
+			created, serr := store.Create(ctx, newStackSpec("stack-2", stackName, projectA))
 			Expect(created).To(BeNil())
 			Expect(serr).NotTo(BeNil())
 			Expect(serr.IsConflict()).To(BeTrue())
@@ -82,12 +82,12 @@ var _ = Describe("StackStore", func() {
 	})
 
 	Describe("CreateWithTx", func() {
-		It("maps a (team_id, name) unique violation to Conflict", func() {
+		It("maps a (project_id, name) unique violation to Conflict", func() {
 			tx := sf.New(ctx).Begin()
 			defer tx.Rollback()
 			txCtx := db.CtxWithTransaction(ctx, tx)
 
-			created, serr := store.CreateWithTx(txCtx, newStackSpec("stack-3", stackName, teamA))
+			created, serr := store.CreateWithTx(txCtx, newStackSpec("stack-3", stackName, projectA))
 			Expect(created).To(BeNil())
 			Expect(serr).NotTo(BeNil())
 			Expect(serr.IsConflict()).To(BeTrue())

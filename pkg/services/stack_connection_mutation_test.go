@@ -19,10 +19,10 @@ import (
 func TestCreateStackConnection_UsesConnectionScopedValidation(t *testing.T) {
 	ctx := context.Background()
 	stackID := "stack-123"
-	teamID := "team-456"
+	projectID := "project-456"
 	stack := &models.Stack{
-		ID:     stackID,
-		TeamID: teamID,
+		ID:        stackID,
+		ProjectID: projectID,
 		StackResources: []*models.StackResource{
 			{Name: "web"},
 		},
@@ -50,8 +50,8 @@ func TestCreateStackConnection_UsesConnectionScopedValidation(t *testing.T) {
 	}
 
 	mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
-	mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
-	mockPermissions.EXPECT().Check(ctx, teamID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+	mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
+	mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 
 	// ValidateConnections is the narrow gate under test; ValidateForUpdate
 	// must never be called for a connection-only mutation.

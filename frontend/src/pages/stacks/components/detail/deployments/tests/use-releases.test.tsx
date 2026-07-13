@@ -6,7 +6,7 @@ vi.mock("@/api/releases", () => ({ listReleases: vi.fn() }));
 import { listReleases } from "@/api/releases";
 import { useReleases } from "../use-releases";
 
-const ARGS = { orgId: "o", teamName: "t", stackId: "s", enabled: true };
+const ARGS = { orgId: "o", projectName: "t", stackId: "s", enabled: true };
 
 beforeEach(() => vi.clearAllMocks());
 afterEach(() => { cleanup(); vi.useRealTimers(); });

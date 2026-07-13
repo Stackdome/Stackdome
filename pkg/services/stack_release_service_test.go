@@ -184,11 +184,11 @@ var _ = Describe("stackReleaseService.resolvePins", func() {
 
 var _ = Describe("stackReleaseService release creation records release_created", func() {
 	const (
-		createEventsStackID = "stack-1"
-		createEventsOrgID   = "org-1"
-		createEventsTeamID  = "team-1"
-		createEventsUserID  = "user-1"
-		rollbackFromRelID   = "rel-src"
+		createEventsStackID   = "stack-1"
+		createEventsOrgID     = "org-1"
+		createEventsProjectID = "project-1"
+		createEventsUserID    = "user-1"
+		rollbackFromRelID     = "rel-src"
 	)
 
 	var (
@@ -279,9 +279,9 @@ var _ = Describe("stackReleaseService release creation records release_created",
 				Return(&models.StackRelease{ID: rollbackFromRelID, StackID: createEventsStackID, State: models.ReleaseStateReleased, Sequence: 7}, nil)
 			stackSvc.EXPECT().
 				GetStack(ctx, createEventsStackID).
-				Return(&models.Stack{ID: createEventsStackID, TeamID: createEventsTeamID}, nil)
+				Return(&models.Stack{ID: createEventsStackID, ProjectID: createEventsProjectID}, nil)
 			perms.EXPECT().
-				Check(ctx, createEventsTeamID, auth.ResourceStacks, createEventsStackID, auth.ActionWrite).
+				Check(ctx, createEventsProjectID, auth.ResourceStacks, createEventsStackID, auth.ActionWrite).
 				Return(nil)
 		})
 
@@ -304,7 +304,7 @@ var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", 
 	const (
 		cancelStackID   = "stack-1"
 		cancelReleaseID = "rel-1"
-		cancelTeamID    = "team-1"
+		cancelProjectID = "project-1"
 	)
 
 	var (
@@ -343,8 +343,8 @@ var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", 
 	// passing write-permission check that CancelRelease performs up front.
 	expectLookupAndPermission := func() {
 		releaseStore.EXPECT().GetByID(ctx, cancelReleaseID).Return(rel, nil)
-		stackSvc.EXPECT().GetStack(ctx, cancelStackID).Return(&models.Stack{ID: cancelStackID, TeamID: cancelTeamID}, nil)
-		perms.EXPECT().Check(ctx, cancelTeamID, auth.ResourceStacks, cancelStackID, auth.ActionWrite).Return(nil)
+		stackSvc.EXPECT().GetStack(ctx, cancelStackID).Return(&models.Stack{ID: cancelStackID, ProjectID: cancelProjectID}, nil)
+		perms.EXPECT().Check(ctx, cancelProjectID, auth.ResourceStacks, cancelStackID, auth.ActionWrite).Return(nil)
 	}
 
 	It("records release_cancelled when the cancel CAS is won", func() {
@@ -381,7 +381,7 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 	const (
 		listEventsStackID   = "stack-1"
 		listEventsReleaseID = "rel-1"
-		listEventsTeamID    = "team-1"
+		listEventsProjectID = "project-1"
 	)
 
 	var (
@@ -415,16 +415,16 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 	})
 
 	// expectOwnershipAndReadPermission stubs a release owned by listEventsStackID
-	// and a passing read-permission check on that stack's team.
+	// and a passing read-permission check on that stack's project.
 	expectOwnershipAndReadPermission := func() {
 		releaseStore.EXPECT().
 			GetByID(ctx, listEventsReleaseID).
 			Return(&models.StackRelease{ID: listEventsReleaseID, StackID: listEventsStackID}, nil)
 		stackSvc.EXPECT().
 			GetStack(ctx, listEventsStackID).
-			Return(&models.Stack{ID: listEventsStackID, TeamID: listEventsTeamID}, nil)
+			Return(&models.Stack{ID: listEventsStackID, ProjectID: listEventsProjectID}, nil)
 		perms.EXPECT().
-			Check(ctx, listEventsTeamID, auth.ResourceStacks, listEventsStackID, auth.ActionRead).
+			Check(ctx, listEventsProjectID, auth.ResourceStacks, listEventsStackID, auth.ActionRead).
 			Return(nil)
 	}
 
@@ -439,15 +439,15 @@ var _ = Describe("stackReleaseService.ListReleaseEvents", func() {
 		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
 	})
 
-	It("checks read permission on the owning stack's team and stops on denial", func() {
+	It("checks read permission on the owning stack's project and stops on denial", func() {
 		releaseStore.EXPECT().
 			GetByID(ctx, listEventsReleaseID).
 			Return(&models.StackRelease{ID: listEventsReleaseID, StackID: listEventsStackID}, nil)
 		stackSvc.EXPECT().
 			GetStack(ctx, listEventsStackID).
-			Return(&models.Stack{ID: listEventsStackID, TeamID: listEventsTeamID}, nil)
+			Return(&models.Stack{ID: listEventsStackID, ProjectID: listEventsProjectID}, nil)
 		perms.EXPECT().
-			Check(ctx, listEventsTeamID, auth.ResourceStacks, listEventsStackID, auth.ActionRead).
+			Check(ctx, listEventsProjectID, auth.ResourceStacks, listEventsStackID, auth.ActionRead).
 			Return(errors.Forbidden("nope"))
 
 		page, serr := svc.ListReleaseEvents(ctx, listEventsStackID, listEventsReleaseID, 0, 0)
@@ -730,8 +730,8 @@ var _ = Describe("stackReleaseService.MarkFailedWithValidationErrors records fai
 
 var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 	const (
-		detailStackID = "stack-1"
-		detailTeamID  = "team-1"
+		detailStackID   = "stack-1"
+		detailProjectID = "project-1"
 	)
 
 	var (
@@ -764,8 +764,8 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 	It("returns the live overlay for the converged release", func() {
 		release := &models.StackRelease{ID: "rel-1", StackID: detailStackID, State: models.ReleaseStateReleased}
 		stack := &models.Stack{
-			ID:     detailStackID,
-			TeamID: detailTeamID,
+			ID:        detailStackID,
+			ProjectID: detailProjectID,
 			Status: &models.StackStatus{
 				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1", Revision: "rev-1"},
 			},
@@ -786,8 +786,8 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 	It("returns nil overlay for a terminal non-live release", func() {
 		release := &models.StackRelease{ID: "rel-0", StackID: detailStackID, State: models.ReleaseStateSuperseded}
 		stack := &models.Stack{
-			ID:     detailStackID,
-			TeamID: detailTeamID,
+			ID:        detailStackID,
+			ProjectID: detailProjectID,
 			Status: &models.StackStatus{
 				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1"},
 			},
@@ -861,7 +861,7 @@ var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
 	const (
 		streamStackID   = "stack-1"
 		streamReleaseID = "rel-1"
-		streamTeamID    = "team-1"
+		streamProjectID = "project-1"
 	)
 
 	var (
@@ -905,15 +905,15 @@ var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
 		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
 	})
 
-	It("checks read permission on the owning stack's team and stops on denial", func() {
+	It("checks read permission on the owning stack's project and stops on denial", func() {
 		releaseStore.EXPECT().
 			GetByID(ctx, streamReleaseID).
 			Return(&models.StackRelease{ID: streamReleaseID, StackID: streamStackID}, nil)
 		stackSvc.EXPECT().
 			GetStack(ctx, streamStackID).
-			Return(&models.Stack{ID: streamStackID, TeamID: streamTeamID}, nil)
+			Return(&models.Stack{ID: streamStackID, ProjectID: streamProjectID}, nil)
 		perms.EXPECT().
-			Check(ctx, streamTeamID, auth.ResourceStacks, streamStackID, auth.ActionRead).
+			Check(ctx, streamProjectID, auth.ResourceStacks, streamStackID, auth.ActionRead).
 			Return(errors.Forbidden("nope"))
 
 		streamable, serr := svc.StreamReleaseEvents(ctx, streamStackID, streamReleaseID, 0)
@@ -928,9 +928,9 @@ var _ = Describe("stackReleaseService.StreamReleaseEvents", func() {
 			Return(&models.StackRelease{ID: streamReleaseID, StackID: streamStackID}, nil)
 		stackSvc.EXPECT().
 			GetStack(ctx, streamStackID).
-			Return(&models.Stack{ID: streamStackID, TeamID: streamTeamID}, nil)
+			Return(&models.Stack{ID: streamStackID, ProjectID: streamProjectID}, nil)
 		perms.EXPECT().
-			Check(ctx, streamTeamID, auth.ResourceStacks, streamStackID, auth.ActionRead).
+			Check(ctx, streamProjectID, auth.ResourceStacks, streamStackID, auth.ActionRead).
 			Return(nil)
 
 		streamable, serr := svc.StreamReleaseEvents(ctx, streamStackID, streamReleaseID, 7)

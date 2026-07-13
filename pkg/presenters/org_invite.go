@@ -12,7 +12,7 @@ func PresentOrgInvite(invite *models.OrgInvite) openapi.OrgInvite {
 		Id:             &invite.ID,
 		Email:          &invite.Email,
 		OrganisationId: &invite.OrganisationID,
-		Role:           ptr.To(string(invite.TeamRole)),
+		Role:           ptr.To(string(invite.ProjectRole)),
 		Status:         ptr.To(openapi.InviteStatus(invite.Status)),
 		ExpiresAt:      &invite.ExpiresAt,
 		EmailSent:      &invite.EmailSent,
@@ -20,8 +20,8 @@ func PresentOrgInvite(invite *models.OrgInvite) openapi.OrgInvite {
 		CreatedAt:      &invite.CreatedAt,
 		AcceptedAt:     invite.AcceptedAt,
 	}
-	if invite.Team != nil {
-		resp.TeamName = &invite.Team.Name
+	if invite.Project != nil {
+		resp.ProjectName = &invite.Project.Name
 	}
 	if invite.InvitedBy != nil {
 		resp.InvitedBy = &invite.InvitedBy.Name
@@ -34,15 +34,15 @@ func PresentOrgInviteCreateResponse(invite *models.OrgInvite, rawToken string) o
 		Id:             &invite.ID,
 		Email:          &invite.Email,
 		OrganisationId: &invite.OrganisationID,
-		Role:           ptr.To(string(invite.TeamRole)),
+		Role:           ptr.To(string(invite.ProjectRole)),
 		Status:         ptr.To(openapi.InviteStatus(invite.Status)),
 		ExpiresAt:      &invite.ExpiresAt,
 		EmailSent:      &invite.EmailSent,
 		InviteToken:    &rawToken,
 		CreatedAt:      &invite.CreatedAt,
 	}
-	if invite.Team != nil {
-		resp.TeamName = &invite.Team.Name
+	if invite.Project != nil {
+		resp.ProjectName = &invite.Project.Name
 	}
 	if invite.InvitedBy != nil {
 		resp.InvitedBy = &invite.InvitedBy.Name
@@ -69,8 +69,8 @@ func PresentOrgInviteInfo(invite *models.OrgInvite) openapi.OrgInviteInfo {
 	if invite.Organisation != nil {
 		resp.OrgName = &invite.Organisation.Name
 	}
-	if invite.Team != nil {
-		resp.TeamName = &invite.Team.Name
+	if invite.Project != nil {
+		resp.ProjectName = &invite.Project.Name
 	}
 	if invite.InvitedBy != nil {
 		resp.InviterName = &invite.InvitedBy.Name

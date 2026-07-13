@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { syncPreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
 import { syncEnvSchema, type SyncEnvValues } from "@/pages/previews/lib/form-schemas";
 
@@ -23,7 +23,7 @@ interface SyncEnvDialogProps {
 }
 
 export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProps) {
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
   const [commit, setCommit] = useState("");
   const [force, setForce] = useState(false);
   const [advanced, setAdvanced] = useState(false);
@@ -59,12 +59,12 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
     }
     setFieldErrors({});
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName || !env?.id) return;
+    if (!orgId || !defaultProjectName || !env?.id) return;
     setSaving(true);
     setError(null);
     try {
       const overrides = parseImageOverrides(parsed.data.overridesText);
-      await syncPreviewEnv(orgId, defaultTeamName, env.id, {
+      await syncPreviewEnv(orgId, defaultProjectName, env.id, {
         ...(parsed.data.commit ? { commit: parsed.data.commit } : {}),
         ...(force ? { force_sync: true } : {}),
         ...(stackfileContent.trim() ? { stackfile_content: stackfileContent } : {}),

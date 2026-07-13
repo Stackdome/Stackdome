@@ -20,7 +20,7 @@ type OrgInviteCreateResponse struct {
 	Id             *string       `json:"id,omitempty"`
 	Email          *string       `json:"email,omitempty"`
 	OrganisationId *string       `json:"organisation_id,omitempty"`
-	TeamName       *string       `json:"team_name,omitempty"`
+	ProjectName    *string       `json:"project_name,omitempty"`
 	Role           *string       `json:"role,omitempty"`
 	Status         *InviteStatus `json:"status,omitempty"`
 	ExpiresAt      *time.Time    `json:"expires_at,omitempty"`
@@ -144,36 +144,36 @@ func (o *OrgInviteCreateResponse) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 
-// GetTeamName returns the TeamName field value if set, zero value otherwise.
-func (o *OrgInviteCreateResponse) GetTeamName() string {
-	if o == nil || o.TeamName == nil {
+// GetProjectName returns the ProjectName field value if set, zero value otherwise.
+func (o *OrgInviteCreateResponse) GetProjectName() string {
+	if o == nil || o.ProjectName == nil {
 		var ret string
 		return ret
 	}
-	return *o.TeamName
+	return *o.ProjectName
 }
 
-// GetTeamNameOk returns a tuple with the TeamName field value if set, nil otherwise
+// GetProjectNameOk returns a tuple with the ProjectName field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *OrgInviteCreateResponse) GetTeamNameOk() (*string, bool) {
-	if o == nil || o.TeamName == nil {
+func (o *OrgInviteCreateResponse) GetProjectNameOk() (*string, bool) {
+	if o == nil || o.ProjectName == nil {
 		return nil, false
 	}
-	return o.TeamName, true
+	return o.ProjectName, true
 }
 
-// HasTeamName returns a boolean if a field has been set.
-func (o *OrgInviteCreateResponse) HasTeamName() bool {
-	if o != nil && o.TeamName != nil {
+// HasProjectName returns a boolean if a field has been set.
+func (o *OrgInviteCreateResponse) HasProjectName() bool {
+	if o != nil && o.ProjectName != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetTeamName gets a reference to the given string and assigns it to the TeamName field.
-func (o *OrgInviteCreateResponse) SetTeamName(v string) {
-	o.TeamName = &v
+// SetProjectName gets a reference to the given string and assigns it to the ProjectName field.
+func (o *OrgInviteCreateResponse) SetProjectName(v string) {
+	o.ProjectName = &v
 }
 
 // GetRole returns the Role field value if set, zero value otherwise.
@@ -411,8 +411,8 @@ func (o OrgInviteCreateResponse) MarshalJSON() ([]byte, error) {
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
 	}
-	if o.TeamName != nil {
-		toSerialize["team_name"] = o.TeamName
+	if o.ProjectName != nil {
+		toSerialize["project_name"] = o.ProjectName
 	}
 	if o.Role != nil {
 		toSerialize["role"] = o.Role

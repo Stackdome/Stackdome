@@ -26,7 +26,7 @@ type ApiCreatePreviewConfigRequest struct {
 	ctx                      context.Context
 	ApiService               *PreviewConfigsApiService
 	orgId                    string
-	teamName                 string
+	projectName              string
 	stackPreviewConfigCreate *StackPreviewConfigCreate
 }
 
@@ -44,15 +44,15 @@ CreatePreviewConfig Create a new preview config
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@return ApiCreatePreviewConfigRequest
 */
-func (a *PreviewConfigsApiService) CreatePreviewConfig(ctx context.Context, orgId string, teamName string) ApiCreatePreviewConfigRequest {
+func (a *PreviewConfigsApiService) CreatePreviewConfig(ctx context.Context, orgId string, projectName string) ApiCreatePreviewConfigRequest {
 	return ApiCreatePreviewConfigRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
 	}
 }
 
@@ -72,9 +72,9 @@ func (a *PreviewConfigsApiService) CreatePreviewConfigExecute(r ApiCreatePreview
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -169,11 +169,11 @@ func (a *PreviewConfigsApiService) CreatePreviewConfigExecute(r ApiCreatePreview
 }
 
 type ApiDeletePreviewConfigRequest struct {
-	ctx        context.Context
-	ApiService *PreviewConfigsApiService
-	orgId      string
-	teamName   string
-	id         string
+	ctx         context.Context
+	ApiService  *PreviewConfigsApiService
+	orgId       string
+	projectName string
+	id          string
 }
 
 func (r ApiDeletePreviewConfigRequest) Execute() (*http.Response, error) {
@@ -185,17 +185,17 @@ DeletePreviewConfig Delete a preview config
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@return ApiDeletePreviewConfigRequest
 */
-func (a *PreviewConfigsApiService) DeletePreviewConfig(ctx context.Context, orgId string, teamName string, id string) ApiDeletePreviewConfigRequest {
+func (a *PreviewConfigsApiService) DeletePreviewConfig(ctx context.Context, orgId string, projectName string, id string) ApiDeletePreviewConfigRequest {
 	return ApiDeletePreviewConfigRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
 	}
 }
 
@@ -212,9 +212,9 @@ func (a *PreviewConfigsApiService) DeletePreviewConfigExecute(r ApiDeletePreview
 		return nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -276,11 +276,11 @@ func (a *PreviewConfigsApiService) DeletePreviewConfigExecute(r ApiDeletePreview
 }
 
 type ApiGetPreviewConfigRequest struct {
-	ctx        context.Context
-	ApiService *PreviewConfigsApiService
-	orgId      string
-	teamName   string
-	id         string
+	ctx         context.Context
+	ApiService  *PreviewConfigsApiService
+	orgId       string
+	projectName string
+	id          string
 }
 
 func (r ApiGetPreviewConfigRequest) Execute() (*StackPreviewConfig, *http.Response, error) {
@@ -292,17 +292,17 @@ GetPreviewConfig Get a specific preview config
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@return ApiGetPreviewConfigRequest
 */
-func (a *PreviewConfigsApiService) GetPreviewConfig(ctx context.Context, orgId string, teamName string, id string) ApiGetPreviewConfigRequest {
+func (a *PreviewConfigsApiService) GetPreviewConfig(ctx context.Context, orgId string, projectName string, id string) ApiGetPreviewConfigRequest {
 	return ApiGetPreviewConfigRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
 	}
 }
 
@@ -322,9 +322,9 @@ func (a *PreviewConfigsApiService) GetPreviewConfigExecute(r ApiGetPreviewConfig
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
@@ -395,12 +395,12 @@ func (a *PreviewConfigsApiService) GetPreviewConfigExecute(r ApiGetPreviewConfig
 }
 
 type ApiListPreviewConfigsRequest struct {
-	ctx        context.Context
-	ApiService *PreviewConfigsApiService
-	orgId      string
-	teamName   string
-	page       *int32
-	pageSize   *int32
+	ctx         context.Context
+	ApiService  *PreviewConfigsApiService
+	orgId       string
+	projectName string
+	page        *int32
+	pageSize    *int32
 }
 
 // Page number
@@ -420,19 +420,19 @@ func (r ApiListPreviewConfigsRequest) Execute() (*StackPreviewConfigList, *http.
 }
 
 /*
-ListPreviewConfigs List preview configs for a team
+ListPreviewConfigs List preview configs for a project
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@return ApiListPreviewConfigsRequest
 */
-func (a *PreviewConfigsApiService) ListPreviewConfigs(ctx context.Context, orgId string, teamName string) ApiListPreviewConfigsRequest {
+func (a *PreviewConfigsApiService) ListPreviewConfigs(ctx context.Context, orgId string, projectName string) ApiListPreviewConfigsRequest {
 	return ApiListPreviewConfigsRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
 	}
 }
 
@@ -452,9 +452,9 @@ func (a *PreviewConfigsApiService) ListPreviewConfigsExecute(r ApiListPreviewCon
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)
 	localVarQueryParams := url.Values{}
@@ -533,7 +533,7 @@ type ApiUpdatePreviewConfigRequest struct {
 	ctx                      context.Context
 	ApiService               *PreviewConfigsApiService
 	orgId                    string
-	teamName                 string
+	projectName              string
 	id                       string
 	stackPreviewConfigUpdate *StackPreviewConfigUpdate
 }
@@ -552,17 +552,17 @@ UpdatePreviewConfig Update a preview config
 
 	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
 	@param orgId The ID of the organization
-	@param teamName The name of the team
+	@param projectName The name of the project
 	@param id The id of record
 	@return ApiUpdatePreviewConfigRequest
 */
-func (a *PreviewConfigsApiService) UpdatePreviewConfig(ctx context.Context, orgId string, teamName string, id string) ApiUpdatePreviewConfigRequest {
+func (a *PreviewConfigsApiService) UpdatePreviewConfig(ctx context.Context, orgId string, projectName string, id string) ApiUpdatePreviewConfigRequest {
 	return ApiUpdatePreviewConfigRequest{
-		ApiService: a,
-		ctx:        ctx,
-		orgId:      orgId,
-		teamName:   teamName,
-		id:         id,
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
 	}
 }
 
@@ -582,9 +582,9 @@ func (a *PreviewConfigsApiService) UpdatePreviewConfigExecute(r ApiUpdatePreview
 		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
 	}
 
-	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/teams/{team_name}/stack-preview-configs/{id}"
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}"
 	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
-	localVarPath = strings.Replace(localVarPath, "{"+"team_name"+"}", url.PathEscape(parameterToString(r.teamName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
 	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
 
 	localVarHeaderParams := make(map[string]string)

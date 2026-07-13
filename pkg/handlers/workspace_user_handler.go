@@ -15,18 +15,18 @@ import (
 func NewWorkspaceUserHandler(spec WorkspaceUserHandlerSpec) *workspaceUserHandler {
 	return &workspaceUserHandler{
 		workspaceUserService: spec.WorkspaceUserService,
-		teamService:          spec.TeamService,
+		projectService:       spec.ProjectService,
 	}
 }
 
 type WorkspaceUserHandlerSpec struct {
 	WorkspaceUserService services.WorkspaceUserService
-	TeamService          services.TeamService
+	ProjectService       services.ProjectService
 }
 
 type workspaceUserHandler struct {
 	workspaceUserService services.WorkspaceUserService
-	teamService          services.TeamService
+	projectService       services.ProjectService
 }
 
 func (a workspaceUserHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -71,7 +71,7 @@ func (a workspaceUserHandler) Create(w http.ResponseWriter, r *http.Request) {
 		validation.ValidateWorkspaceUser(&wpr),
 		func() (_ interface{}, returnErr *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, a.teamService)
+			projectID, serr := resolveProjectID(r, a.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -82,7 +82,7 @@ func (a workspaceUserHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 
 			convertedObject.OrganisationID = currentUser.OrganisationID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = currentUser.ID
 			obj, serr := a.workspaceUserService.Create(ctx, convertedObject, currentUser)
 			if serr != nil {

@@ -15,7 +15,7 @@ const (
 	ResourceClusters            = "clusters"
 	ResourceImageRegistries     = "image-registries"
 	ResourceOrgs                = "orgs"
-	ResourceTeams               = "teams"
+	ResourceProjects            = "projects"
 	ResourceObjectStores        = "object-stores"
 	ResourceUsers               = "users"
 	ResourceWorkspaceUsers      = "workspace-users"
@@ -60,7 +60,7 @@ var ResourceTypes = []ResourceType{
 	{Name: ResourceImageBuilds, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourceAddons, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate, ActionLogs, ActionExec}},
 	{Name: ResourceDomains, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
-	{Name: ResourceTeams, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
+	{Name: ResourceProjects, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourceInvites, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourcePreviewConfigs, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},
 	{Name: ResourcePreviewStacks, Actions: []string{ActionRead, ActionWrite, ActionDelete, ActionList, ActionCreate}},

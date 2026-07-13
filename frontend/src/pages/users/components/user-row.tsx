@@ -1,14 +1,14 @@
 import type React from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { TeamChip } from "./team-chip";
+import { ProjectChip } from "./project-chip";
 import type { ActiveRow } from "../hooks/use-users";
 import { formatRelative } from "../lib/format-relative";
 
 interface UserRowProps {
   row: ActiveRow;
   actions?: React.ReactNode;
-  /** Name of the default team in the org (to render star on chip) */
-  defaultTeamName?: string;
+  /** Name of the default project in the org (to render star on chip) */
+  defaultProjectName?: string;
 }
 
 function monogram(name: string): string {
@@ -19,7 +19,7 @@ function monogram(name: string): string {
   return (name.slice(0, 2) || "?").toUpperCase();
 }
 
-export function UserRow({ row, actions, defaultTeamName }: UserRowProps) {
+export function UserRow({ row, actions, defaultProjectName }: UserRowProps) {
   const isAdmin = row.role === "OrgAdmin";
   // last_active_at is not yet on the User model — show — until it is
   const lastActive = formatRelative((row.user as Record<string, unknown>)["last_active_at"] as string | undefined);
@@ -53,15 +53,15 @@ export function UserRow({ row, actions, defaultTeamName }: UserRowProps) {
         )}
       </TableCell>
 
-      {/* Teams */}
+      {/* Projects */}
       <TableCell className="py-3.5">
         <div className="flex flex-wrap gap-1.5">
-          {row.teams.length > 0
-            ? row.teams.map((t, i) => (
-              <TeamChip
-                key={t.team_id ?? i}
+          {row.projects.length > 0
+            ? row.projects.map((t, i) => (
+              <ProjectChip
+                key={t.project_id ?? i}
                 membership={t}
-                isDefault={defaultTeamName ? t.team_name === defaultTeamName : undefined}
+                isDefault={defaultProjectName ? t.project_name === defaultProjectName : undefined}
               />
             ))
             : <span className="text-muted-foreground text-xs">—</span>

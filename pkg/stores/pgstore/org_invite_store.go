@@ -39,7 +39,7 @@ func (s *orgInviteStore) Create(ctx context.Context, invite *models.OrgInvite) (
 func (s *orgInviteStore) GetByID(ctx context.Context, id string) (*models.OrgInvite, *errors.ServiceError) {
 	session := s.sessionFactory.New(ctx)
 	var invite models.OrgInvite
-	if err := session.Preload("Organisation").Preload("Team").Preload("InvitedBy").Where("id = ?", id).First(&invite).Error; err != nil {
+	if err := session.Preload("Organisation").Preload("Project").Preload("InvitedBy").Where("id = ?", id).First(&invite).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("invite not found")
 		}
@@ -51,7 +51,7 @@ func (s *orgInviteStore) GetByID(ctx context.Context, id string) (*models.OrgInv
 func (s *orgInviteStore) GetByTokenHash(ctx context.Context, tokenHash string) (*models.OrgInvite, *errors.ServiceError) {
 	session := s.sessionFactory.New(ctx)
 	var invite models.OrgInvite
-	if err := session.Preload("Organisation").Preload("Team").Preload("InvitedBy").Where("token_hash = ?", tokenHash).First(&invite).Error; err != nil {
+	if err := session.Preload("Organisation").Preload("Project").Preload("InvitedBy").Where("token_hash = ?", tokenHash).First(&invite).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("invite not found")
 		}
@@ -71,7 +71,7 @@ func (s *orgInviteStore) ListByOrgID(ctx context.Context, orgID string, params s
 	}
 
 	var invites []*models.OrgInvite
-	query := session.Preload("Organisation").Preload("Team").Preload("InvitedBy").Where("organisation_id = ?", orgID)
+	query := session.Preload("Organisation").Preload("Project").Preload("InvitedBy").Where("organisation_id = ?", orgID)
 	if err := params.Apply(query).Find(&invites).Error; err != nil {
 		return nil, errors.GeneralError("failed to list invites: %s", err.Error())
 	}
@@ -162,7 +162,7 @@ func (s *orgInviteStore) ListPendingUnsent(ctx context.Context, params stores.Li
 	}
 
 	var invites []*models.OrgInvite
-	query := session.Preload("Organisation").Preload("Team").Preload("InvitedBy").
+	query := session.Preload("Organisation").Preload("Project").Preload("InvitedBy").
 		Where(baseCondition, models.InviteStatusPending, now)
 	if err := params.Apply(query).Find(&invites).Error; err != nil {
 		return nil, errors.GeneralError("failed to list pending unsent invites: %s", err.Error())
@@ -180,7 +180,7 @@ func (s *orgInviteStore) ListPendingUnsent(ctx context.Context, params stores.Li
 func (s *orgInviteStore) GetPendingByOrgAndEmail(ctx context.Context, orgID, email string) (*models.OrgInvite, *errors.ServiceError) {
 	session := s.sessionFactory.New(ctx)
 	var invite models.OrgInvite
-	if err := session.Preload("Team").Preload("InvitedBy").
+	if err := session.Preload("Project").Preload("InvitedBy").
 		Where("organisation_id = ? AND email = ? AND status = ?", orgID, email, models.InviteStatusPending).
 		First(&invite).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {

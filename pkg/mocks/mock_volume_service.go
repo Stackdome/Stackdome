@@ -275,18 +275,18 @@ func (mr *MockVolumeServiceMockRecorder) InternalSyncVolumesWithTx(ctx, stack, e
 }
 
 // ListByUserID mocks base method.
-func (m *MockVolumeService) ListByUserID(ctx context.Context, teamID, userID string) ([]*models.Volume, *errors.ServiceError) {
+func (m *MockVolumeService) ListByUserID(ctx context.Context, projectID, userID string) ([]*models.Volume, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByUserID", ctx, teamID, userID)
+	ret := m.ctrl.Call(m, "ListByUserID", ctx, projectID, userID)
 	ret0, _ := ret[0].([]*models.Volume)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
 // ListByUserID indicates an expected call of ListByUserID.
-func (mr *MockVolumeServiceMockRecorder) ListByUserID(ctx, teamID, userID any) *gomock.Call {
+func (mr *MockVolumeServiceMockRecorder) ListByUserID(ctx, projectID, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockVolumeService)(nil).ListByUserID), ctx, teamID, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockVolumeService)(nil).ListByUserID), ctx, projectID, userID)
 }
 
 // ListVolumesUsedByStack mocks base method.

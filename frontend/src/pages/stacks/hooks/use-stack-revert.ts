@@ -7,7 +7,7 @@ import { snapshotToUpdateRequest, volumesToDelete } from "@/pages/stacks/lib/dra
 import { parseApiError } from "@/api/errors";
 
 export interface UseStackRevertArgs {
-  ids: { orgId: string; teamName: string; stackId: string } | null;
+  ids: { orgId: string; projectName: string; stackId: string } | null;
   stack: Stack | undefined;
   liveSnapshot: StackReleaseSnapshot | undefined;
   /** session.discard — the page's session auto-start effect re-seeds from the refreshed stack. */
@@ -25,13 +25,13 @@ export function useStackRevert({ ids, stack, liveSnapshot, onReverted, onError }
     setReverting(true);
     try {
       const req = snapshotToUpdateRequest(liveSnapshot, { name: stack.name, labels: stack.labels });
-      await applyStack(ids.orgId, ids.teamName, ids.stackId, req);
+      await applyStack(ids.orgId, ids.projectName, ids.stackId, req);
       // Draft-only volumes are unmounted after the PUT; remove them (destroys
       // the cluster volume — the confirm dialog carries that warning).
       for (const v of volumesToDelete(stack, liveSnapshot)) {
-        await deleteVolume(ids.orgId, ids.teamName, v.id);
+        await deleteVolume(ids.orgId, ids.projectName, v.id);
       }
-      const fresh = await getStackById(ids.orgId, ids.teamName, ids.stackId);
+      const fresh = await getStackById(ids.orgId, ids.projectName, ids.stackId);
       onReverted(fresh);
       return true;
     } catch (err) {

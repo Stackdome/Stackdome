@@ -30,7 +30,7 @@ func NewStackPreviewConfigStore(spec StackPreviewConfigStoreSpec) stores.StackPr
 func (s *stackPreviewConfigStore) Create(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError) {
 	if err := s.sessionFactory.New(ctx).Create(config).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
-			return nil, errors.Conflict("preview config with name '%s' already exists in this team", config.Name)
+			return nil, errors.Conflict("preview config with name '%s' already exists in this project", config.Name)
 		}
 		return nil, errors.GeneralError("failed to create preview config: %s", err.Error())
 	}
@@ -48,9 +48,9 @@ func (s *stackPreviewConfigStore) GetByID(ctx context.Context, id string) (*mode
 	return &config, nil
 }
 
-func (s *stackPreviewConfigStore) GetByTeamAndName(ctx context.Context, teamID, name string) (*models.StackPreviewConfig, *errors.ServiceError) {
+func (s *stackPreviewConfigStore) GetByProjectAndName(ctx context.Context, projectID, name string) (*models.StackPreviewConfig, *errors.ServiceError) {
 	var config models.StackPreviewConfig
-	if err := s.sessionFactory.New(ctx).First(&config, "team_id = ? AND name = ?", teamID, name).Error; err != nil {
+	if err := s.sessionFactory.New(ctx).First(&config, "project_id = ? AND name = ?", projectID, name).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("preview config with name '%s' not found", name)
 		}
@@ -77,17 +77,17 @@ func (s *stackPreviewConfigStore) Delete(ctx context.Context, id string) *errors
 	return nil
 }
 
-func (s *stackPreviewConfigStore) ListByTeamID(ctx context.Context, teamID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
+func (s *stackPreviewConfigStore) ListByProjectID(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError) {
 	params = params.WithDefaultOrder("created_at DESC")
 
 	var total int64
-	countQuery := s.sessionFactory.New(ctx).Model(&models.StackPreviewConfig{}).Where("team_id = ?", teamID)
+	countQuery := s.sessionFactory.New(ctx).Model(&models.StackPreviewConfig{}).Where("project_id = ?", projectID)
 	if err := params.ApplyFiltersOnly(countQuery).Count(&total).Error; err != nil {
 		return nil, errors.GeneralError("failed to count preview configs: %s", err.Error())
 	}
 
 	var configs []*models.StackPreviewConfig
-	dataQuery := s.sessionFactory.New(ctx).Where("team_id = ?", teamID)
+	dataQuery := s.sessionFactory.New(ctx).Where("project_id = ?", projectID)
 	if err := params.Apply(dataQuery).Find(&configs).Error; err != nil {
 		return nil, errors.GeneralError("failed to list preview configs: %s", err.Error())
 	}

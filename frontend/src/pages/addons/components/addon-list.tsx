@@ -37,9 +37,9 @@ export function AddonList({
   canWrite,
 }: {
   addons: PostgresAddon[];
-  // Gate per-row mutating actions by the row's team. Show by default when
+  // Gate per-row mutating actions by the row's project. Show by default when
   // undefined (caller hasn't opted into role-based gating).
-  canWrite?: (teamId?: string) => boolean;
+  canWrite?: (projectId?: string) => boolean;
 }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<AddonStatusFilter>("all");
@@ -131,7 +131,7 @@ export function AddonList({
               // Per-row write capability; reserved for gating any per-row
               // mutating affordances. Defaults to writable when the caller
               // hasn't opted into role-based gating.
-              data-can-write={canWrite ? canWrite(a.team_id) : true}
+              data-can-write={canWrite ? canWrite(a.project_id) : true}
               className="flex items-center justify-between px-4 py-3 hover:bg-muted/40 transition-colors group"
             >
               <div className="flex items-center gap-3 min-w-0">

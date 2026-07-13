@@ -13,7 +13,7 @@ import { deleteSecret, createSecret, updateSecret } from "@/api/secrets";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function SecretsPage() {
@@ -26,8 +26,8 @@ export default function SecretsPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const { toast } = useToast();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
-  const { teamNameById, defaultTeamName } = useResourceTeams();
-  const { canWrite, canWriteAnyTeam } = useCurrentUser();
+  const { projectNameById, defaultProjectName } = useResourceProjects();
+  const { canWrite, canWriteAnyProject } = useCurrentUser();
 
   // Set breadcrumb
   useEffect(() => {
@@ -52,15 +52,15 @@ export default function SecretsPage() {
       console.error('No organization selected');
       return;
     }
-    const teamName = teamNameById(deletingSecret.team_id);
-    if (!teamName) {
-      console.error('Could not resolve the team for this secret');
-      toast({ title: "Failed to delete secret", description: "Could not resolve the team for this secret.", variant: "destructive" });
+    const projectName = projectNameById(deletingSecret.project_id);
+    if (!projectName) {
+      console.error('Could not resolve the project for this secret');
+      toast({ title: "Failed to delete secret", description: "Could not resolve the project for this secret.", variant: "destructive" });
       return;
     }
     setDeleteLoading(true);
     try {
-      await deleteSecret(orgId, teamName, deletingSecret.id);
+      await deleteSecret(orgId, projectName, deletingSecret.id);
       refetch();
       toast({
         title: "Secret deleted",
@@ -92,25 +92,25 @@ export default function SecretsPage() {
 
     try {
       if (editingSecret?.id) {
-        // Update existing secret — target the secret's own team.
-        const teamName = teamNameById(editingSecret.team_id);
-        if (!teamName) {
-          setFormError("Could not resolve the team for this secret.");
+        // Update existing secret — target the secret's own project.
+        const projectName = projectNameById(editingSecret.project_id);
+        if (!projectName) {
+          setFormError("Could not resolve the project for this secret.");
           return;
         }
-        await updateSecret(orgId, teamName, editingSecret.id, secretData);
+        await updateSecret(orgId, projectName, editingSecret.id, secretData);
         toast({
           title: "Secret updated",
           description: "The secret has been updated successfully.",
           variant: "success",
         });
       } else {
-        // Create new secret in the user's default team.
-        if (!defaultTeamName) {
-          setFormError("You don't have a team to create secrets in.");
+        // Create new secret in the user's default project.
+        if (!defaultProjectName) {
+          setFormError("You don't have a project to create secrets in.");
           return;
         }
-        await createSecret(orgId, defaultTeamName, secretData);
+        await createSecret(orgId, defaultProjectName, secretData);
         toast({
           title: "Secret created",
           description: "The secret has been created successfully.",
@@ -164,7 +164,7 @@ export default function SecretsPage() {
           title="Secrets"
           subtitle="Manage sensitive data like API keys, passwords, and certificates"
           actions={
-            canWriteAnyTeam ? (
+            canWriteAnyProject ? (
               <Button onClick={() => setShowAddDialog(true)}>
                 <PlusCircle className="h-4 w-4" />
                 Create Secret
@@ -179,7 +179,7 @@ export default function SecretsPage() {
             title="No secrets yet"
             description="Create your first secret to securely store sensitive data."
             action={
-              canWriteAnyTeam ? (
+              canWriteAnyProject ? (
                 <Button onClick={() => setShowAddDialog(true)}>
                   <PlusCircle className="h-4 w-4" />
                   Create Secret
@@ -193,7 +193,7 @@ export default function SecretsPage() {
               secrets={secrets}
               onEdit={handleEdit}
               onDelete={handleDelete}
-              canWrite={(teamId?: string) => canWrite(teamId ?? "")}
+              canWrite={(projectId?: string) => canWrite(projectId ?? "")}
             />
           </Panel>
         )}

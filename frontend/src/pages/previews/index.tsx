@@ -12,7 +12,7 @@ import { repoTail } from "@/components/git-source-picker/git-source-picker";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 
 /** "https://github.com/acme/webapp.git" → "github.com" (empty on unparsable input) */
 function hostOf(url?: string): string {
@@ -26,8 +26,8 @@ function hostOf(url?: string): string {
 
 export default function PreviewsPage() {
   const navigate = useNavigate();
-  const { canWriteAnyTeam } = useCurrentUser();
-  const { defaultTeamName } = useResourceTeams();
+  const { canWriteAnyProject } = useCurrentUser();
+  const { defaultProjectName } = useResourceProjects();
   const [configs, setConfigs] = useState<StackPreviewConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,16 +36,16 @@ export default function PreviewsPage() {
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName) return;
+    if (!orgId || !defaultProjectName) return;
     try {
-      setConfigs(await listAllPreviewConfigs(orgId, defaultTeamName));
+      setConfigs(await listAllPreviewConfigs(orgId, defaultProjectName));
       setError(null);
     } catch (e) {
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
     }
-  }, [defaultTeamName]);
+  }, [defaultProjectName]);
 
   useEffect(() => {
     void refresh();
@@ -61,7 +61,7 @@ export default function PreviewsPage() {
         title="Previews"
         subtitle="Repositories configured for preview environments. Every pull request can get its own temporary stack."
         actions={
-          canWriteAnyTeam && configs.length > 0 ? (
+          canWriteAnyProject && configs.length > 0 ? (
             <Button onClick={() => setWizardOpen(true)}>
               <PlusCircle className="h-4 w-4" />
               Enable repository
@@ -87,7 +87,7 @@ export default function PreviewsPage() {
           title="Preview every pull request"
           description="Enable a repository so each pull request gets its own temporary environment with a shareable URL."
           action={
-            canWriteAnyTeam ? (
+            canWriteAnyProject ? (
               <Button onClick={() => setWizardOpen(true)}>
                 <PlusCircle className="h-4 w-4" />
                 Enable repository

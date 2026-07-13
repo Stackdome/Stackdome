@@ -15,8 +15,8 @@ import {
 } from "../preview-envs";
 
 const ORG = "org1";
-const TEAM = "default";
-const BASE = `/organizations/${ORG}/teams/${TEAM}/preview-stacks`;
+const PROJECT = "default";
+const BASE = `/organizations/${ORG}/projects/${PROJECT}/preview-stacks`;
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -28,7 +28,7 @@ describe("preview-envs api", () => {
     (api.get as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce(pageOf(1, 100))
       .mockResolvedValueOnce(pageOf(2, 20));
-    const out = await listAllPreviewEnvs(ORG, TEAM);
+    const out = await listAllPreviewEnvs(ORG, PROJECT);
     expect(out).toHaveLength(120);
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(api.get).toHaveBeenNthCalledWith(2, BASE, { params: { page: 2, page_size: 100 } });
@@ -36,19 +36,19 @@ describe("preview-envs api", () => {
 
   it("lists envs filtered by config", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { items: [], total: 0 } });
-    await listPreviewEnvs(ORG, TEAM, { configId: "c1", page: 1, pageSize: 20 });
+    await listPreviewEnvs(ORG, PROJECT, { configId: "c1", page: 1, pageSize: 20 });
     expect(api.get).toHaveBeenCalledWith(BASE, { params: { config_id: "c1", page: 1, page_size: 20 } });
   });
 
   it("lists envs without filter", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { items: [], total: 0 } });
-    await listPreviewEnvs(ORG, TEAM);
+    await listPreviewEnvs(ORG, PROJECT);
     expect(api.get).toHaveBeenCalledWith(BASE, { params: {} });
   });
 
   it("gets one env", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "p1", status: { phase: "Ready" } } });
-    const out = await getPreviewEnv(ORG, TEAM, "p1");
+    const out = await getPreviewEnv(ORG, PROJECT, "p1");
     expect(api.get).toHaveBeenCalledWith(`${BASE}/p1`);
     expect(out.status?.phase).toBe("Ready");
   });
@@ -56,26 +56,26 @@ describe("preview-envs api", () => {
   it("creates an env", async () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "p1" } });
     const input = { config_id: "c1", pr_number: 42, branch: "feat/login" };
-    await createPreviewEnv(ORG, TEAM, input);
+    await createPreviewEnv(ORG, PROJECT, input);
     expect(api.post).toHaveBeenCalledWith(BASE, input);
   });
 
   it("deletes an env (202 returns the env)", async () => {
     (api.delete as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "p1", status: { phase: "Deleting" } } });
-    const out = await deletePreviewEnv(ORG, TEAM, "p1");
+    const out = await deletePreviewEnv(ORG, PROJECT, "p1");
     expect(api.delete).toHaveBeenCalledWith(`${BASE}/p1`);
     expect(out.status?.phase).toBe("Deleting");
   });
 
   it("syncs an env with force", async () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "p1" } });
-    await syncPreviewEnv(ORG, TEAM, "p1", { force_sync: true });
+    await syncPreviewEnv(ORG, PROJECT, "p1", { force_sync: true });
     expect(api.post).toHaveBeenCalledWith(`${BASE}/p1/sync`, { force_sync: true });
   });
 
   it("syncs with empty body by default", async () => {
     (api.post as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { id: "p1" } });
-    await syncPreviewEnv(ORG, TEAM, "p1");
+    await syncPreviewEnv(ORG, PROJECT, "p1");
     expect(api.post).toHaveBeenCalledWith(`${BASE}/p1/sync`, {});
   });
 });

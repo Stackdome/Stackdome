@@ -14,22 +14,22 @@ import (
 )
 
 type SecretHandlerSpec struct {
-	SecretService services.SecretService
-	TeamService   services.TeamService
-	Logger        logger.Logger
+	SecretService  services.SecretService
+	ProjectService services.ProjectService
+	Logger         logger.Logger
 }
 
 type secretHandler struct {
-	secretService services.SecretService
-	teamService   services.TeamService
-	logger        logger.Logger
+	secretService  services.SecretService
+	projectService services.ProjectService
+	logger         logger.Logger
 }
 
 func NewSecretHandler(spec SecretHandlerSpec) *secretHandler {
 	return &secretHandler{
-		secretService: spec.SecretService,
-		teamService:   spec.TeamService,
-		logger:        spec.Logger,
+		secretService:  spec.SecretService,
+		projectService: spec.ProjectService,
+		logger:         spec.Logger,
 	}
 }
 
@@ -66,16 +66,16 @@ func (h *secretHandler) ListByOrgID(w http.ResponseWriter, r *http.Request) {
 	handleList(w, r, cfg)
 }
 
-func (h *secretHandler) ListByTeamID(w http.ResponseWriter, r *http.Request) {
+func (h *secretHandler) ListByProjectID(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
 			params := parseListParams(r, []string{"name"})
-			objs, serr := h.secretService.ListByTeamID(ctx, teamID, params)
+			objs, serr := h.secretService.ListByProjectID(ctx, projectID, params)
 			if serr != nil {
 				return nil, serr
 			}
@@ -96,7 +96,7 @@ func (h *secretHandler) Create(w http.ResponseWriter, r *http.Request) {
 		nil,
 		func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
-			teamID, serr := resolveTeamID(r, h.teamService)
+			projectID, serr := resolveProjectID(r, h.projectService)
 			if serr != nil {
 				return nil, serr
 			}
@@ -107,7 +107,7 @@ func (h *secretHandler) Create(w http.ResponseWriter, r *http.Request) {
 			}
 			orgID := mux.Vars(r)["org_id"]
 			convertedObject.OrganisationID = orgID
-			convertedObject.TeamID = teamID
+			convertedObject.ProjectID = projectID
 			convertedObject.UserID = currentUser.ID
 
 			obj, serr := h.secretService.Create(ctx, convertedObject)

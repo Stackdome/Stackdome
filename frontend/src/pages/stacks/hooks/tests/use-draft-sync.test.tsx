@@ -51,7 +51,7 @@ function setup(stack: Stack) {
       enabled: true,
       stack,
       session,
-      ids: { orgId: "o", teamName: "t", stackId: "st-1" },
+      ids: { orgId: "o", projectName: "t", stackId: "st-1" },
       onStackRefreshed,
     });
     return { session, sync };

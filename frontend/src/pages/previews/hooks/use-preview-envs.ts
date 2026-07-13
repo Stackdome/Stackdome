@@ -6,7 +6,7 @@ import {
 } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 
 const POLL_MS = 7_000;
 
@@ -25,16 +25,16 @@ function hasNonTerminal(envs: PreviewStack[]): boolean {
 }
 
 export function usePreviewEnvs(configId?: string): UsePreviewEnvs {
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
   const [envs, setEnvs] = useState<PreviewStack[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName) return;
+    if (!orgId || !defaultProjectName) return;
     try {
-      const list = await listAllPreviewEnvs(orgId, defaultTeamName, configId);
+      const list = await listAllPreviewEnvs(orgId, defaultProjectName, configId);
       setEnvs(list);
       setError(null);
     } catch (e) {
@@ -42,7 +42,7 @@ export function usePreviewEnvs(configId?: string): UsePreviewEnvs {
     } finally {
       setLoading(false);
     }
-  }, [configId, defaultTeamName]);
+  }, [configId, defaultProjectName]);
 
   useEffect(() => {
     void refresh();

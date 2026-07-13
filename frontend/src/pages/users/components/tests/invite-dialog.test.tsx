@@ -6,8 +6,8 @@ const create = vi.fn();
 vi.mock("../../hooks/use-invites", () => ({
   useInvites: () => ({ create, resend: vi.fn(), revoke: vi.fn(), reset: vi.fn(), submitting: false, serverError: null, result: "idle" }),
 }));
-vi.mock("../../hooks/use-team-options", () => ({
-  useTeamOptions: () => ({ teams: [{ name: "engineering", default_team: true }], loading: false }),
+vi.mock("../../hooks/use-project-options", () => ({
+  useProjectOptions: () => ({ projects: [{ name: "engineering", default_project: true }], loading: false }),
 }));
 
 import { InviteDialog } from "../invite-dialog";

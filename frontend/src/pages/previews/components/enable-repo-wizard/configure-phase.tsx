@@ -6,7 +6,7 @@ import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { useResourceTeams } from "@/hooks/use-resource-teams";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   configurePhaseSchema, DEFAULT_STACKFILE_PATH, type ConfigurePhaseValues,
 } from "@/pages/previews/lib/form-schemas";
@@ -19,7 +19,7 @@ interface ConfigurePhaseProps {
 }
 
 export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps) {
-  const { defaultTeamName } = useResourceTeams();
+  const { defaultProjectName } = useResourceProjects();
   const [name, setName] = useState(repo.fullName.split("/").pop() ?? "");
   const [baseBranch, setBaseBranch] = useState(repo.defaultBranch);
   const [stackfilePath, setStackfilePath] = useState(DEFAULT_STACKFILE_PATH);
@@ -42,14 +42,14 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
     }
     setFieldErrors({});
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultTeamName) {
-      setError("No organization or default team available.");
+    if (!orgId || !defaultProjectName) {
+      setError("No organization or default project available.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const created = await createPreviewConfig(orgId, defaultTeamName, {
+      const created = await createPreviewConfig(orgId, defaultProjectName, {
         name: parsed.data.name,
         git_repository: { repo_url: repo.cloneUrl, base_branch: parsed.data.baseBranch },
         stackfile_path: parsed.data.stackfilePath || DEFAULT_STACKFILE_PATH,
