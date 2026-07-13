@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/breadcrumb";
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { useGithubSetupLanding } from "@/hooks/use-github-setup-landing";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 
@@ -26,6 +27,7 @@ function AppLayoutContent({
 }: {
   children?: React.ReactNode;
 }) {
+  useGithubSetupLanding();
   const location = useLocation();
   const { customLabels, loadingLabels, nonClickablePaths } = useBreadcrumb();
 

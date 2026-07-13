@@ -1,4 +1,3 @@
-// frontend/src/pages/stacks/components/wizard/wizard-chooser.tsx
 import type { ComponentType } from "react";
 import {
   Grid3x3,
@@ -12,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * Docker whale as a monochrome glyph (fill=currentColor) so it matches the
- * muted-foreground color of the lucide tiles around it.
+ * tile color of the lucide icons around it.
  */
 function DockerGlyph({ className }: { className?: string }) {
   return (
@@ -27,6 +26,7 @@ interface WizardChooserProps {
   onPickTemplate: () => void;
   onPickCompose: () => void;
   onPickBlank: () => void;
+  onPickGit: () => void;
 }
 
 interface AltStart {
@@ -45,8 +45,15 @@ export function WizardChooser({
   onPickTemplate,
   onPickCompose,
   onPickBlank,
+  onPickGit,
 }: WizardChooserProps) {
   const alts: AltStart[] = [
+    {
+      icon: GitBranch,
+      label: "From git provider",
+      desc: "Deploy straight from a repository.",
+      onClick: onPickGit,
+    },
     {
       icon: Grid3x3,
       label: "Build from blocks",
@@ -71,13 +78,6 @@ export function WizardChooser({
       desc: "Build it up yourself.",
       onClick: onPickBlank,
     },
-    {
-      icon: GitBranch,
-      label: "GitHub repo",
-      desc: "Auto-detect build & start.",
-      disabled: true,
-      soon: true,
-    },
   ];
 
   return (
@@ -88,8 +88,7 @@ export function WizardChooser({
             How do you want to start?
           </h2>
           <p className="text-sm text-muted-foreground">
-            Let&apos;s get something running. Pick a starting point. You can
-            change anything later.
+            Let&apos;s get something running.
           </p>
         </div>
 
@@ -104,10 +103,10 @@ export function WizardChooser({
                 "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
                 a.disabled
                   ? "cursor-not-allowed opacity-50"
-                  : "hover:border-primary",
+                  : "hover:border-brand",
               )}
             >
-              <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded border border-brand-border bg-brand-bg text-brand">
                 {a.glyph ? (
                   <a.glyph className="h-[18px] w-[18px]" />
                 ) : (

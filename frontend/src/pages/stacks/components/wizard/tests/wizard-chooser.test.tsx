@@ -14,13 +14,15 @@ describe("WizardChooser", () => {
     const onPickBlocks = vi.fn(),
       onPickTemplate = vi.fn(),
       onPickCompose = vi.fn(),
-      onPickBlank = vi.fn();
+      onPickBlank = vi.fn(),
+      onPickGit = vi.fn();
     render(
       <WizardChooser
         onPickBlocks={onPickBlocks}
         onPickTemplate={onPickTemplate}
         onPickCompose={onPickCompose}
         onPickBlank={onPickBlank}
+        onPickGit={onPickGit}
       />,
     );
 
@@ -28,24 +30,12 @@ describe("WizardChooser", () => {
     await user.click(screen.getByRole("button", { name: /From template/i }));
     await user.click(screen.getByRole("button", { name: /Docker compose/i }));
     await user.click(screen.getByRole("button", { name: /blank slate/i }));
+    await user.click(screen.getByRole("button", { name: /From git provider/i }));
 
     expect(onPickBlocks).toHaveBeenCalledOnce();
     expect(onPickTemplate).toHaveBeenCalledOnce();
     expect(onPickCompose).toHaveBeenCalledOnce();
     expect(onPickBlank).toHaveBeenCalledOnce();
-  });
-
-  it("renders the GitHub tile disabled with a 'soon' marker", () => {
-    render(
-      <WizardChooser
-        onPickBlocks={vi.fn()}
-        onPickTemplate={vi.fn()}
-        onPickCompose={vi.fn()}
-        onPickBlank={vi.fn()}
-      />,
-    );
-    const github = screen.getByRole("button", { name: /GitHub repo/i });
-    expect(github).toBeDisabled();
-    expect(screen.getByText(/soon/i)).toBeInTheDocument();
+    expect(onPickGit).toHaveBeenCalledOnce();
   });
 });

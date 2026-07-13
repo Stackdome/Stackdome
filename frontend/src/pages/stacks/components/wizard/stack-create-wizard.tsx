@@ -9,9 +9,10 @@ import { WizardChooser } from "./wizard-chooser";
 import { BlockComposer } from "./block-composer";
 import { TemplatesBrowserPanel } from "./templates-browser-panel";
 import { DockerComposeImportPanel } from "./docker-compose-import-panel";
+import { GitSourcePanel } from "./git-source-panel";
 import type { Template } from "@/data/templates/types";
 
-type Phase = "chooser" | "composer" | "template" | "compose";
+type Phase = "chooser" | "composer" | "template" | "compose" | "git";
 
 interface StackCreateWizardProps {
   open: boolean;
@@ -53,7 +54,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
             built-in close (X), which is absolutely positioned at top-right.
             Per-step navigation lives in each path's footer (WizardFooter). */}
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-primary">
+          <span className="flex h-6 w-6 items-center justify-center text-brand">
             <Layers className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
@@ -75,6 +76,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
                   navigate("/stacks/new");
                   close();
                 }}
+                onPickGit={() => setPhase("git")}
               />
             </div>
           )}
@@ -91,6 +93,7 @@ export function StackCreateWizard({ open, onOpenChange }: StackCreateWizardProps
               onBack={backToChooser}
             />
           )}
+          {phase === "git" && <GitSourcePanel onBack={backToChooser} onClose={close} />}
         </div>
       </DialogContent>
     </Dialog>
