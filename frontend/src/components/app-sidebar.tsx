@@ -3,10 +3,12 @@ import { Link } from "react-router-dom"
 import { StackdomeMark } from "@/components/branded"
 
 import { NavStacks } from "@/components/nav-stacks"
+import { NavPreviews } from "@/components/nav-previews"
 import { NavClusters } from "@/components/nav-clusters"
 import { NavSecrets } from "@/components/nav-secrets"
 import { NavObjectStores } from "@/components/nav-object-stores"
 import { NavDomains } from "@/components/nav-domains"
+import { NavGitIntegrations } from "@/components/nav-git-integrations"
 import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
@@ -61,15 +63,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Platform</SidebarGroupLabel>
           <SidebarGroupContent>
             <NavStacks />
+            <NavPreviews />
             <NavSecrets />
             <NavObjectStores />
-            <NavAddons />
             {/* Org-scoped, admin-only resources. Hidden for members so they
                 don't see (or fetch) endpoints that return 403 for them. */}
             {isOrgAdmin && <NavClusters />}
             {isOrgAdmin && <NavDomains />}
+            <NavAddons />
           </SidebarGroupContent>
         </SidebarGroup>
+        {isOrgAdmin && (
+          <SidebarGroup>
+            <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Integrations</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <NavGitIntegrations />
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         {/* Settings group (Users + Projects) is shelved — nav hidden and routes
             redirected in App.tsx. Components/pages remain in the repo. */}
       </SidebarContent>

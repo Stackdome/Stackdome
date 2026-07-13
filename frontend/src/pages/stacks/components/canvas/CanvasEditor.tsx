@@ -12,6 +12,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useCallback, useState } from "react";
 import { Move } from "lucide-react";
+import { useTheme } from "@/hooks/use-theme";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
 import { AttachmentNode, type AttachmentFlowNode } from "./nodes/AttachmentNode";
@@ -83,6 +84,7 @@ export function CanvasEditor({
   // Right-clicking empty canvas opens the same add-resource picker at the
   // cursor (anchored via an invisible fixed-position point).
   const [paneMenuAt, setPaneMenuAt] = useState<{ x: number; y: number } | null>(null);
+  const { theme } = useTheme();
   const onPaneContextMenu = useCallback((event: React.MouseEvent | MouseEvent) => {
     event.preventDefault();
     setPaneMenuAt({ x: event.clientX, y: event.clientY });
@@ -106,18 +108,24 @@ export function CanvasEditor({
         onPaneContextMenu={onPaneContextMenu}
         fitView
         fitViewOptions={FIT_OPTIONS}
-        colorMode="system"
+        // Follow the app's theme toggle, not the OS preference — "system"
+        // left the canvas dark while the rest of the UI switched to light.
+        colorMode={theme}
         snapToGrid
         snapGrid={SNAP_GRID}
         proOptions={{ hideAttribution: true }}
       >
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} />
+        {/* bgColor: the Background SVG paints xyflow's default (#141414 in
+            dark) over the pane — pin it to the app token so the canvas
+            matches the sidebar/chrome in both modes. Dot color stays the
+            xyflow default. */}
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} bgColor="var(--background)" />
         <CanvasControls
           showConnections={showConnections}
           onToggleConnections={onToggleConnections}
           onAutoLayout={onAutoLayout}
         />
-        <Panel position="top-left">
+        <Panel position="top-right">
           <AddResourcePopover
             addedIds={addedBlockIds}
             onAdd={onAddBlock}
