@@ -32,8 +32,8 @@ import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/editor/tabs/deployments/use-releases";
 import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/editor/tabs/deployments/use-release-detail";
 import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
-import { isTerminal } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/editor/tabs/deployments/use-deploy-lifecycle";
+import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-release-anchors";
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -162,46 +162,13 @@ export default function CanvasEditorPage() {
   const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.projectName, deployIds.stackId);
 
-  // Diff anchor: the latest release (the config last shipped via Deploy), falling
-  // back to the live (currently converged) release until the releases list loads.
-  const baselineReleaseId =
-    releasesResult.activeRelease?.id ?? savedStack?.current_release?.id;
-  useEffect(() => {
-    if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
-  }, [baselineReleaseId, releaseDetail]);
-  const deployedSnapshot = releaseDetail.peek(baselineReleaseId).data?.snapshot;
-
-  // Live release (stack.current_release): what's actually serving traffic — source
-  // for live per-resource status (public ingress endpoints below).
-  const currentReleaseId = savedStack?.current_release?.id;
-  useEffect(() => {
-    if (currentReleaseId) releaseDetail.ensure(currentReleaseId);
-  }, [currentReleaseId, releaseDetail]);
-  const currentReleaseDetail = releaseDetail.peek(currentReleaseId).data;
-
-  // "Status" release: the active non-terminal release when a deploy is under way
-  // (so the canvas/drawer reflect the in-flight rollout, not stale current-release
-  // data), else the live current_release. Distinct from currentReleaseId above,
-  // which stays pinned to what's actually serving traffic for the header's PUBLIC row.
-  const nonTerminalRelease = releasesResult.releases.find((r) => !isTerminal(r.state));
-  const statusReleaseId = nonTerminalRelease?.id ?? savedStack?.current_release?.id;
-  const statusReleaseState = nonTerminalRelease?.state ?? savedStack?.current_release?.state;
-  // Refetch on every id/state change (mount, and each transition — including the
-  // terminal one, since statusReleaseState is a dep) plus a 5s poll while non-terminal.
-  // Depend on the stable refresh callback, NOT the releaseDetail object (rebuilt every
-  // render): refresh has no cached-data short-circuit, so an object dep would loop.
-  const refreshRelease = releaseDetail.refresh;
-  useEffect(() => {
-    if (statusReleaseId) refreshRelease(statusReleaseId);
-  }, [statusReleaseId, statusReleaseState, refreshRelease]);
-  useEffect(() => {
-    if (!statusReleaseId || isTerminal(statusReleaseState)) return;
-    const t = setInterval(() => {
-      if (document.visibilityState !== "hidden") refreshRelease(statusReleaseId);
-    }, 5000);
-    return () => clearInterval(t);
-  }, [statusReleaseId, statusReleaseState, refreshRelease]);
-  const statusLiveStatus = releaseDetail.peek(statusReleaseId).data?.live_status;
+  const { baselineReleaseId, deployedSnapshot, currentReleaseDetail, statusLiveStatus } =
+    useReleaseAnchors({
+      stack: savedStack ?? null,
+      releases: releasesResult.releases,
+      activeRelease: releasesResult.activeRelease,
+      releaseDetail,
+    });
 
   // Publicly exposed services → best live ingress URL, for the header's
   // PUBLIC row. Drafts have no live ingress, so the row stays empty.
