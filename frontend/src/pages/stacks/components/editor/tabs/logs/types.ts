@@ -33,7 +33,7 @@ export interface LogViewerProps {
   className?: string;
 }
 
-export interface StackLogsTabProps {
+export interface LogsTabProps {
   stackId: string;
   organizationId: string;
   resources?: StackResource[];

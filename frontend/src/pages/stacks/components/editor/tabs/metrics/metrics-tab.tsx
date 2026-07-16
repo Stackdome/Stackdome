@@ -66,13 +66,13 @@ function MetricBar({ label, value, pct, fill }: { label: string; value: string; 
   );
 }
 
-interface StackMetricsTabProps {
+interface MetricsTabProps {
   stackId: string;
   organizationId: string;
   resources: StackResource[];
 }
 
-export function StackMetricsTab({ stackId, organizationId, resources }: StackMetricsTabProps) {
+export function MetricsTab({ stackId, organizationId, resources }: MetricsTabProps) {
   const { stackMetrics, resourceMetrics, connectionStatus, error, updateResources } = useMetricsStream({
     stackId,
     organizationId,

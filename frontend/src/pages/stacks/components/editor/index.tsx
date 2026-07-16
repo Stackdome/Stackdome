@@ -10,12 +10,13 @@ import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { StackLogsTab } from "@/pages/stacks/components/editor/tabs/logs/stack-logs-tab";
-import { StackMetricsTab } from "@/pages/stacks/components/editor/tabs/metrics/stack-metrics-tab";
+import { LogsTab } from "@/pages/stacks/components/editor/tabs/logs/logs-tab";
+import { MetricsTab } from "@/pages/stacks/components/editor/tabs/metrics/metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/editor/tabs/deployments/deployments-tab";
 import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deployments/release-errors";
-import { StackCanvasTab } from "@/pages/stacks/components/editor/tabs/architecture/architecture-tab";
+import { ArchitectureTab } from "@/pages/stacks/components/editor/tabs/architecture/architecture-tab";
 import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-editor-shell";
+import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
@@ -59,8 +60,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// Helper to map an API StackResource to the form schema shape
 
 function mapStackResourceToFormData(resource: StackResource): FormStackResourceData {
   // Remove read-only fields before converting to form data
@@ -116,9 +115,9 @@ function formResourcesFromSpec(
   });
 }
 
-export default function StackDetailPage() {
+export default function CanvasEditorPage() {
   const { id } = useParams();
-  const isDraft = !id;
+  const isNewStack = !id;
   const location = useLocation();
   const navigate = useNavigate();
   const seed = useMemo<DraftSeed>(
@@ -138,7 +137,7 @@ export default function StackDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const [activeTab, setActiveTab] = useState("architecture");
+  const [activeTab, setActiveTab] = useState<EditorTabId>(EDITOR_TABS.architecture);
   const [draftDeploying, setDraftDeploying] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
 
@@ -147,23 +146,19 @@ export default function StackDetailPage() {
   const { projectNameById, defaultProjectName } = useResourceProjects();
   const { canWrite } = useCurrentUser();
 
-  // Find the current stack in context
   const currentStack = stacks.find((stack) => stack.id === id);
 
   // Viewer read-only gating: only OrgAdmin / project Developer may mutate this stack.
   const stackProjectId = fetchedStack?.project_id ?? currentStack?.project_id;
   const canWriteStack = canWrite(stackProjectId ?? "");
 
-  // Update breadcrumb with stack name
   useEffect(() => {
-    if (isDraft) return;
+    if (isNewStack) return;
     const path = `/stacks/${id}`;
 
     if (currentStack) {
-      // If stack is already available in context, use its name for breadcrumb
       setCustomLabel(path, currentStack.name|| 'Stack Details');
     } else if (id) {
-      // Set loading state while fetching
       setPathLoading(path, true);
 
       const orgId = getCurrentOrganizationId();
@@ -184,7 +179,6 @@ export default function StackDetailPage() {
         .then((data) => {
           setFetchedStack(data);
           setLoading(false);
-          // Update breadcrumb with fetched stack name
           setCustomLabel(path, data.name || 'Stack Details');
           setPathLoading(path, false);
         })
@@ -194,32 +188,32 @@ export default function StackDetailPage() {
           setPathLoading(path, false);
         });
     }
-  }, [currentStack, id, defaultProjectName, setCustomLabel, setPathLoading, isDraft]);
+  }, [currentStack, id, defaultProjectName, setCustomLabel, setPathLoading, isNewStack]);
 
-  const stackToShow = currentStack || fetchedStack;
+  const savedStack = currentStack || fetchedStack;
 
   const draftStackView = useMemo(
     () =>
-      isDraft
+      isNewStack
         ? ({
           name: draftName,
           labels: draftLabels,
           spec: { stack_resources: session.draft.resources, volumes: session.draft.volumes, connections: [] },
         } as unknown as Stack)
         : null,
-    [isDraft, draftName, draftLabels, session.draft.resources, session.draft.volumes],
+    [isNewStack, draftName, draftLabels, session.draft.resources, session.draft.volumes],
   );
-  const effectiveStack = draftStackView ?? stackToShow;
+  const effectiveStack = draftStackView ?? savedStack;
 
   const orgDomains = useOrgDomains(effectiveStack?.organisation_id ?? getCurrentOrganizationId() ?? undefined);
 
   // ── Release plumbing (needed this early: the diff baseline is pinned to the
   // latest release's snapshot, not the autosaved server state) ──
   const deployIds = useMemo(() => ({
-    orgId: stackToShow?.organisation_id || getCurrentOrganizationId() || "",
-    projectName: (stackToShow ? projectNameById(stackToShow.project_id) : "") || defaultProjectName || "",
-    stackId: stackToShow?.id || "",
-  }), [stackToShow, projectNameById, defaultProjectName]);
+    orgId: savedStack?.organisation_id || getCurrentOrganizationId() || "",
+    projectName: (savedStack ? projectNameById(savedStack.project_id) : "") || defaultProjectName || "",
+    stackId: savedStack?.id || "",
+  }), [savedStack, projectNameById, defaultProjectName]);
   const idsReady = !!deployIds.stackId && !!deployIds.projectName;
   const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.projectName, deployIds.stackId);
@@ -227,7 +221,7 @@ export default function StackDetailPage() {
   // Diff anchor: the latest release (the config last shipped via Deploy), falling
   // back to the live (currently converged) release until the releases list loads.
   const baselineReleaseId =
-    releasesResult.activeRelease?.id ?? stackToShow?.current_release?.id;
+    releasesResult.activeRelease?.id ?? savedStack?.current_release?.id;
   useEffect(() => {
     if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
   }, [baselineReleaseId, releaseDetail]);
@@ -235,7 +229,7 @@ export default function StackDetailPage() {
 
   // Live release (stack.current_release): what's actually serving traffic — source
   // for live per-resource status (public ingress endpoints below).
-  const currentReleaseId = stackToShow?.current_release?.id;
+  const currentReleaseId = savedStack?.current_release?.id;
   useEffect(() => {
     if (currentReleaseId) releaseDetail.ensure(currentReleaseId);
   }, [currentReleaseId, releaseDetail]);
@@ -246,8 +240,8 @@ export default function StackDetailPage() {
   // data), else the live current_release. Distinct from currentReleaseId above,
   // which stays pinned to what's actually serving traffic for the header's PUBLIC row.
   const nonTerminalRelease = releasesResult.releases.find((r) => !isTerminal(r.state));
-  const statusReleaseId = nonTerminalRelease?.id ?? stackToShow?.current_release?.id;
-  const statusReleaseState = nonTerminalRelease?.state ?? stackToShow?.current_release?.state;
+  const statusReleaseId = nonTerminalRelease?.id ?? savedStack?.current_release?.id;
+  const statusReleaseState = nonTerminalRelease?.state ?? savedStack?.current_release?.state;
   // Refetch on every id/state change (mount, and each transition — including the
   // terminal one, since statusReleaseState is a dep) plus a 5s poll while non-terminal.
   // Depend on the stable refresh callback, NOT the releaseDetail object (rebuilt every
@@ -268,39 +262,39 @@ export default function StackDetailPage() {
   // Publicly exposed services → best live ingress URL, for the header's
   // PUBLIC row. Drafts have no live ingress, so the row stays empty.
   const publicEndpoints = useMemo(() => {
-    if (isDraft) return [];
+    if (isNewStack) return [];
     const liveResources = currentReleaseDetail?.live_status?.resources ?? {};
     return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
       const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
       const best = pickBestIngress(ingress, orgDomains);
       return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
     });
-  }, [isDraft, effectiveStack, orgDomains, currentReleaseDetail]);
+  }, [isNewStack, effectiveStack, orgDomains, currentReleaseDetail]);
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.
-  const draftResources = useMemo<FormStackResourceData[]>(
-    () => formResourcesFromSpec(stackToShow?.spec?.stack_resources, stackToShow?.spec?.connections),
-    [stackToShow],
+  const serverResources = useMemo<FormStackResourceData[]>(
+    () => formResourcesFromSpec(savedStack?.spec?.stack_resources, savedStack?.spec?.connections),
+    [savedStack],
   );
-  const draftVolumes = useMemo<VolumeFormData[]>(
-    () => (stackToShow?.spec?.volumes || []).map(mapVolumeToFormData),
-    [stackToShow],
+  const serverVolumes = useMemo<VolumeFormData[]>(
+    () => (savedStack?.spec?.volumes || []).map(mapVolumeToFormData),
+    [savedStack],
   );
 
   // Server-computed outputs (host, port.<n>, url.<n>, public.<n>.*) keyed by
   // resource name. The working draft never computes outputs, so a resource added
   // on the canvas carries none until it is saved. The env-var OUTPUT pickers read
   // from this server-truth map (matched by name) instead of the draft copy, and
-  // it refreshes with stackToShow after every autosave — no page reload needed.
+  // it refreshes with savedStack after every autosave — no page reload needed.
   const serverOutputsByName = useMemo<Map<string, string[]>>(
     () =>
       new Map(
-        (stackToShow?.spec?.stack_resources ?? [])
+        (savedStack?.spec?.stack_resources ?? [])
           .filter((r): r is StackResource & { name: string } => !!r.name)
           .map((r) => [r.name, (r.outputs ?? []).map((o) => o.name)] as [string, string[]]),
       ),
-    [stackToShow?.spec?.stack_resources],
+    [savedStack?.spec?.stack_resources],
   );
 
   // Diff baseline: the deployed snapshot when one exists, so autosaved edits stay
@@ -315,11 +309,11 @@ export default function StackDetailPage() {
     return formResourcesFromSpec(
       stripUnpinnedGitRevisions(
         (deployedSnapshot.resources ?? []) as StackResource[],
-        stackToShow?.spec?.stack_resources ?? [],
+        savedStack?.spec?.stack_resources ?? [],
       ),
       deployedSnapshot.connections as StackConnection[] | undefined,
     );
-  }, [deployedSnapshot, stackToShow?.spec?.stack_resources]);
+  }, [deployedSnapshot, savedStack?.spec?.stack_resources]);
   const snapshotVolumes = useMemo<VolumeFormData[] | null>(
     () => (deployedSnapshot ? ((deployedSnapshot.volumes ?? []) as Volume[]).map(mapVolumeToFormData) : null),
     [deployedSnapshot],
@@ -329,33 +323,33 @@ export default function StackDetailPage() {
   // unstable order and the snapshot's order need not match — re-key the baseline
   // onto the order of whatever the diffs actually run against: the live session
   // draft when one is active, the server state otherwise.
-  const alignResources = session.isActive ? session.draft.resources : draftResources;
-  const alignVolumes = session.isActive ? session.draft.volumes : draftVolumes;
+  const alignResources = session.isActive ? session.draft.resources : serverResources;
+  const alignVolumes = session.isActive ? session.draft.volumes : serverVolumes;
   const baselineResources = useMemo<FormStackResourceData[]>(
     () =>
       (snapshotResources
         ? alignBaselineToDraft(snapshotResources, alignResources, renameFingerprint)
-        : alignBaselineToDraft(draftResources, alignResources, renameFingerprint)) as FormStackResourceData[],
-    [snapshotResources, draftResources, alignResources],
+        : alignBaselineToDraft(serverResources, alignResources, renameFingerprint)) as FormStackResourceData[],
+    [snapshotResources, serverResources, alignResources],
   );
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () =>
       (snapshotVolumes
         ? alignBaselineToDraft(snapshotVolumes, alignVolumes, renameFingerprint)
-        : alignBaselineToDraft(draftVolumes, alignVolumes, renameFingerprint)) as VolumeFormData[],
-    [snapshotVolumes, draftVolumes, alignVolumes],
+        : alignBaselineToDraft(serverVolumes, alignVolumes, renameFingerprint)) as VolumeFormData[],
+    [snapshotVolumes, serverVolumes, alignVolumes],
   );
 
   const draftSeeded = useRef(false);
   useEffect(() => {
-    if (!isDraft || draftSeeded.current) return;
+    if (!isNewStack || draftSeeded.current) return;
     draftSeeded.current = true;
     // Baseline empty so seeded resources/volumes read as "added" and Save is enabled.
     session.start({ resources: [], volumes: [] }, { linkedAddonIds: new Set(seed.linkedAddonIds) });
     if (seed.resources.length) session.updateResources(() => seed.resources);
     if (seed.volumes.length) session.updateVolumes(() => seed.volumes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDraft]);
+  }, [isNewStack]);
 
   // Addons bound to the saved stack come from its connections (from.type
   // "addon/postgres"), not from the env vars — so this is the source of truth
@@ -385,11 +379,11 @@ export default function StackDetailPage() {
   const connectionAddonIds = useMemo<Set<string>>(
     () =>
       new Set(
-        (stackToShow?.spec?.connections ?? [])
+        (savedStack?.spec?.connections ?? [])
           .filter((c) => c.from?.type === "addon/postgres" && c.from?.id)
           .map((c) => c.from!.id as string),
       ),
-    [stackToShow],
+    [savedStack],
   );
 
   // Autosave model: the canvas is always editable for writers. The session
@@ -397,18 +391,18 @@ export default function StackDetailPage() {
   // Baseline = deployed snapshot (when loaded), draft = current server state:
   // they differ when the server already holds autosaved-but-undeployed edits.
   useEffect(() => {
-    if (isDraft || !stackToShow || !canWriteStack || session.isActive) return;
+    if (isNewStack || !savedStack || !canWriteStack || session.isActive) return;
     session.start(
       { resources: baselineResources, volumes: baselineVolumes },
       {
         linkedAddonIds: connectionAddonIds,
-        draft: { resources: draftResources, volumes: draftVolumes },
+        draft: { resources: serverResources, volumes: serverVolumes },
       },
     );
     // session.start is a stable useCallback; session.isActive is the only reactive
     // field we need from the session object itself.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isDraft, stackToShow, canWriteStack, session.isActive, baselineResources, baselineVolumes, draftResources, draftVolumes, connectionAddonIds]);
+  }, [isNewStack, savedStack, canWriteStack, session.isActive, baselineResources, baselineVolumes, serverResources, serverVolumes, connectionAddonIds]);
 
   // When a release snapshot for a NEW anchor arrives — the lazy fetch landing, or
   // a fresh deploy creating a new release — advance the session baseline to it so
@@ -432,11 +426,11 @@ export default function StackDetailPage() {
   const persistedVolumeNames = useMemo(
     () =>
       new Set(
-        (stackToShow?.spec?.volumes ?? [])
+        (savedStack?.spec?.volumes ?? [])
           .map((v) => v.name)
           .filter((n): n is string => !!n),
       ),
-    [stackToShow?.spec?.volumes],
+    [savedStack?.spec?.volumes],
   );
 
   // Backend structured field errors (from a failed autosave or draft deploy),
@@ -465,8 +459,8 @@ export default function StackDetailPage() {
   // Autosave engine: debounces draft changes and syncs thin per-resource ops to
   // the server. Disabled for drafts (nothing exists server-side to sync yet).
   const draftSync = useDraftSync({
-    enabled: !isDraft && canWriteStack,
-    stack: stackToShow ?? undefined,
+    enabled: !isNewStack && canWriteStack,
+    stack: savedStack ?? undefined,
     session,
     ids: idsReady ? deployIds : null,
     onStackRefreshed: (fresh) => {
@@ -569,7 +563,7 @@ export default function StackDetailPage() {
   }, [deployFieldErrors, session.draft.resources]);
 
   const lifecycle = useDeployLifecycle({
-    stack: stackToShow ?? undefined,
+    stack: savedStack ?? undefined,
     // "Editing" = autosave hasn't landed yet (in flight or retrying). Saved-but-
     // undeployed content is detected by the staged-phase content diff instead.
     unsaved: draftSync.status === SYNC_STATUS.saving || draftSync.failureCount > 0,
@@ -600,10 +594,10 @@ export default function StackDetailPage() {
   useEffect(() => {
     const prev = prevActiveReleaseRef.current;
     prevActiveReleaseRef.current = activeRelease && { id: activeRelease.id, state: activeRelease.state };
-    if (shouldRefetchStackSummaries(prev, activeRelease, stackToShow?.latest_release)) {
+    if (shouldRefetchStackSummaries(prev, activeRelease, savedStack?.latest_release)) {
       refetchStack();
     }
-  }, [activeRelease, stackToShow?.latest_release, refetchStack]);
+  }, [activeRelease, savedStack?.latest_release, refetchStack]);
 
   // Live snapshot: already lazily fetched above (currentReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
@@ -616,7 +610,7 @@ export default function StackDetailPage() {
 
   const stackRevert = useStackRevert({
     ids: idsReady ? deployIds : null,
-    stack: stackToShow ?? undefined,
+    stack: savedStack ?? undefined,
     liveSnapshot,
     onReverted: (fresh) => {
       setFetchedStack(fresh);
@@ -726,7 +720,7 @@ export default function StackDetailPage() {
   // and navigates to the new page. There is no separate "create" step — the
   // draft stays local until the user deploys.
   const performDraftDeploy = async () => {
-    if (!isDraft) return;
+    if (!isNewStack) return;
     setDraftDeploying(true);
     setNameError(undefined);
     // Clear stale validation state from a previous failed attempt.
@@ -848,7 +842,7 @@ export default function StackDetailPage() {
     try {
       await deleteStack(deployIds.orgId, deployIds.projectName, deployIds.stackId);
       setStacks((prev) => prev.filter((s) => s.id !== deployIds.stackId));
-      toast({ title: "Stack deleted", description: `"${stackToShow?.name}" was deleted.`, variant: "success" });
+      toast({ title: "Stack deleted", description: `"${savedStack?.name}" was deleted.`, variant: "success" });
       navigate("/stacks");
     } catch {
       toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });
@@ -856,7 +850,7 @@ export default function StackDetailPage() {
       setDeleting(false);
       setDeleteConfirmOpen(false);
     }
-  }, [deployIds, setStacks, stackToShow?.name, toast, navigate]);
+  }, [deployIds, setStacks, savedStack?.name, toast, navigate]);
 
   const handleNameChange = useCallback((name: string) => {
     setDraftName(name);
@@ -879,7 +873,7 @@ export default function StackDetailPage() {
     [session],
   );
 
-  if (!isDraft && loading) {
+  if (!isNewStack && loading) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -900,7 +894,7 @@ export default function StackDetailPage() {
     );
   }
 
-  if (!isDraft && !stackToShow) {
+  if (!isNewStack && !savedStack) {
     return (
       <div className="p-8 text-center">
         <h2 className="text-xl font-semibold mb-2">Stack not found</h2>
@@ -924,25 +918,25 @@ export default function StackDetailPage() {
     ...(addonCount > 0 ? [`${addonCount} ${addonCount === 1 ? "addon" : "addons"}`] : []),
   ].join(" · ");
 
-  // Ops-view bodies — rendered inside the canvas shell; gated on isDraft so
+  // Ops-view bodies — rendered inside the canvas shell; gated on isNewStack so
   // the user sees a placeholder until the stack is saved for the first time.
-  const deploymentsBody = isDraft ? <DraftTabPlaceholder label="Deployments" /> : effectiveStack?.id ? (
+  const deploymentsBody = isNewStack ? <DraftTabPlaceholder label="Deployments" /> : effectiveStack?.id ? (
     <DeploymentsTab
       orgId={deployIds.orgId}
       projectName={deployIds.projectName}
       stackId={effectiveStack.id}
       stack={effectiveStack}
-      onOpenLogs={() => setActiveTab("logs")}
+      onOpenLogs={() => setActiveTab(EDITOR_TABS.logs)}
       onJumpToResource={(resourceName, tab) => {
         // Resolve against the list the canvas drawer actually indexes into
         // (the live draft while a session is active), at click time — the
         // banner's render-time list may have drifted.
         const index = jumpTargetIndex(
           resourceName,
-          session.isActive ? session.draft.resources : draftResources,
+          session.isActive ? session.draft.resources : serverResources,
         );
         if (index === undefined) return;
-        setActiveTab("architecture");
+        setActiveTab(EDITOR_TABS.architecture);
         setOpenResourceSignal({ index, tab, nonce: Date.now() });
       }}
       refetchReleases={refetchReleases}
@@ -959,8 +953,8 @@ export default function StackDetailPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const logsBody = isDraft ? <DraftTabPlaceholder label="Logs" /> : effectiveStack?.id ? (
-    <StackLogsTab
+  const logsBody = isNewStack ? <DraftTabPlaceholder label="Logs" /> : effectiveStack?.id ? (
+    <LogsTab
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
@@ -969,8 +963,8 @@ export default function StackDetailPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const metricsBody = isDraft ? <DraftTabPlaceholder label="Metrics" /> : effectiveStack?.id ? (
-    <StackMetricsTab
+  const metricsBody = isNewStack ? <DraftTabPlaceholder label="Metrics" /> : effectiveStack?.id ? (
+    <MetricsTab
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources || []}
@@ -1005,10 +999,10 @@ export default function StackDetailPage() {
   return (
     <ReleaseDetailProvider value={releaseDetail}>
       <CanvasEditorShell
-        stackName={isDraft ? draftName : (effectiveStack?.name ?? "")}
+        stackName={isNewStack ? draftName : (effectiveStack?.name ?? "")}
         stackId={effectiveStack?.id}
-        isDraft={isDraft}
-        nameEditable={isDraft}
+        isNewStack={isNewStack}
+        nameEditable={isNewStack}
         onNameChange={handleNameChange}
         nameError={nameError}
         headerHealth={headerHealth}
@@ -1022,10 +1016,10 @@ export default function StackDetailPage() {
         dirtyTotal={changeCount}
         isStaged={lifecycle.phase === "staged"}
         onViewChanges={() => setViewChangesOpen(true)}
-        syncStatus={isDraft ? SYNC_STATUS.idle : draftSync.status}
+        syncStatus={isNewStack ? SYNC_STATUS.idle : draftSync.status}
         deployBusy={deployBusy}
         canWrite={canWriteStack}
-        hasResources={(session.isActive ? session.draft.resources : draftResources).length > 0}
+        hasResources={(session.isActive ? session.draft.resources : serverResources).length > 0}
         onDraftDeploy={() => void performDraftDeploy()}
         draftDeploying={draftDeploying}
         onDeploy={onDeploy}
@@ -1045,20 +1039,20 @@ export default function StackDetailPage() {
                 />
               </div>
             )}
-            <StackCanvasTab
+            <ArchitectureTab
               session={session}
               openResourceSignal={openResourceSignal}
               baselineResources={baselineResources}
               baselineVolumes={baselineVolumes}
-              draftResources={draftResources}
-              draftVolumes={draftVolumes}
+              draftResources={serverResources}
+              draftVolumes={serverVolumes}
               serverOutputsByName={serverOutputsByName}
               connectionAddonIds={connectionAddonIds}
               addonNameById={addonNameById}
               addonStateById={addonStateById}
               errors={mergedResourceErrors}
-              onViewLogs={() => setActiveTab("logs")}
-              topologyIds={!isDraft && idsReady ? deployIds : null}
+              onViewLogs={() => setActiveTab(EDITOR_TABS.logs)}
+              topologyIds={!isNewStack && idsReady ? deployIds : null}
               topologyRefreshKey={topologyRefreshKey}
               onDeleteVolume={idsReady ? volumeDelete.deleteVolume : undefined}
               deletingVolume={volumeDelete.deleting}
@@ -1131,7 +1125,7 @@ export default function StackDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete stack?</AlertDialogTitle>
             <AlertDialogDescription>
-            This permanently deletes "{stackToShow?.name}", its resources, volumes and deployments. This cannot be undone.
+            This permanently deletes "{savedStack?.name}", its resources, volumes and deployments. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

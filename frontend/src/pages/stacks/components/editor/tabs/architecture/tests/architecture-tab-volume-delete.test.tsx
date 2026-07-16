@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, fireEvent, within, act } from "@testing-library/react";
-import { StackCanvasTab } from "../architecture-tab";
+import { ArchitectureTab } from "../architecture-tab";
 import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 
 afterEach(cleanup);
@@ -40,7 +40,7 @@ vi.mock("@/pages/stacks/hooks/use-stack-topology", () => ({
   useStackTopology: () => NO_TOPOLOGY,
 }));
 
-// Module-scoped (referentially stable across renders) — StackCanvasTab feeds
+// Module-scoped (referentially stable across renders) — ArchitectureTab feeds
 // these into memo chains that gate render-triggering effects; fresh literals
 // on every render would recompute those memos every time and spin forever.
 // Unmounted (no volume_mounts referencing it) so it renders as its own
@@ -68,7 +68,7 @@ function Harness(props: {
     session.start({ resources: RESOURCES, volumes: VOLUMES }, { openTab: "configuration" });
   }
   return (
-    <StackCanvasTab
+    <ArchitectureTab
       session={session}
       baselineResources={RESOURCES}
       baselineVolumes={VOLUMES}
@@ -92,7 +92,7 @@ async function openDeleteConfirm() {
   fireEvent.click(await screen.findByText("Remove volume"));
 }
 
-describe("StackCanvasTab volume delete", () => {
+describe("ArchitectureTab volume delete", () => {
   it("saved stack: dialog carries the immediate data-loss copy", async () => {
     render(<Harness topologyIds={{ orgId: "o", projectName: "t", stackId: "s" }} />);
     await openDeleteConfirm();

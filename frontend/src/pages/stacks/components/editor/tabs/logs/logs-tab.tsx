@@ -1,11 +1,11 @@
 import { LogViewer } from './log-viewer';
-import type { StackLogsTabProps } from './types';
+import type { LogsTabProps } from './types';
 
-export function StackLogsTab({
+export function LogsTab({
   stackId,
   organizationId,
   resources
-}: StackLogsTabProps) {
+}: LogsTabProps) {
   return (
     <div className="space-y-4">
       <LogViewer

@@ -11,7 +11,7 @@ interface VolumeDrawerProps {
   session: UseStackEditSession;
   onClose: () => void;
   /** When provided, "Remove volume" defers to a caller-owned confirm dialog
-   *  instead of removing immediately (e.g. StackCanvasTab's shared confirm). */
+   *  instead of removing immediately (e.g. ArchitectureTab's shared confirm). */
   onRequestRemove?: (name: string) => void;
   /** True when the volume already exists server-side — its spec (size) is
    *  immutable once the PVC is provisioned. */

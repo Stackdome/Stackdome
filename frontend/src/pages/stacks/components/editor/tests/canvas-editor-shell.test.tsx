@@ -4,12 +4,13 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, within, fireEvent, cleanup } from "@testing-library/react";
 import { CanvasEditorShell } from "../canvas-editor-shell";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
+import { EDITOR_TABS } from "../editor-tabs";
 
 afterEach(cleanup);
 
 const base = {
   subtitle: "0 services · 0 volumes",
-  activeTab: "architecture", onTabChange: () => {},
+  activeTab: EDITOR_TABS.architecture, onTabChange: () => {},
   isActive: true, dirtyResourceCount: 0, dirtyTotal: 0, isStaged: false,
   hasResources: true,
   onViewChanges: () => {},
@@ -24,7 +25,7 @@ const base = {
 describe("CanvasEditorShell header", () => {
   it("renders an editable name input in draft and reports changes", () => {
     const onNameChange = vi.fn();
-    render(<CanvasEditorShell {...base} stackName="" isDraft nameEditable onNameChange={onNameChange} />);
+    render(<CanvasEditorShell {...base} stackName="" isNewStack nameEditable onNameChange={onNameChange} />);
     const input = screen.getByPlaceholderText("name-your-stack");
     fireEvent.change(input, { target: { value: "web" } });
     expect(onNameChange).toHaveBeenCalledWith("web");
@@ -64,7 +65,7 @@ describe("CanvasEditorShell deploy pill", () => {
   it("draft with resources shows the pill Deploy wired to onDraftDeploy, no Details/menu", () => {
     const onDraftDeploy = vi.fn();
     render(
-      <CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" onDraftDeploy={onDraftDeploy} />,
+      <CanvasEditorShell {...base} isNewStack nameEditable stackName="my-stack" onDraftDeploy={onDraftDeploy} />,
     );
     // Scoped to the pill: the tab rail's "Deployments" tab also matches /deploy/i.
     const pill = within(screen.getByTestId("deploy-pill"));
@@ -75,12 +76,12 @@ describe("CanvasEditorShell deploy pill", () => {
   });
 
   it("empty draft shows no pill at all", () => {
-    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" hasResources={false} />);
+    render(<CanvasEditorShell {...base} isNewStack nameEditable stackName="my-stack" hasResources={false} />);
     expect(screen.queryByTestId("deploy-pill")).toBeNull();
   });
 
   it("draft shows 'Deploying' while the draft deploy runs", () => {
-    render(<CanvasEditorShell {...base} isDraft nameEditable stackName="my-stack" draftDeploying />);
+    render(<CanvasEditorShell {...base} isNewStack nameEditable stackName="my-stack" draftDeploying />);
     expect(screen.getByRole("button", { name: /deploying/i })).toBeDisabled();
   });
 
@@ -107,7 +108,7 @@ describe("CanvasEditorShell deploy pill", () => {
   });
 
   it("pill hidden when an ops tab is active", () => {
-    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={2} activeTab="logs" />);
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={2} activeTab={EDITOR_TABS.logs} />);
     expect(screen.queryByTestId("deploy-pill")).toBeNull();
   });
 
@@ -125,7 +126,7 @@ describe("CanvasEditorShell deploy-failed chip", () => {
     expect(chip).toBeInTheDocument();
     expect(screen.getByText("Deploy failed")).toBeVisible();
     fireEvent.click(chip);
-    expect(onTabChange).toHaveBeenCalledWith("deployments");
+    expect(onTabChange).toHaveBeenCalledWith(EDITOR_TABS.deployments);
   });
 
   it("renders no chip when latestDeployFailed is unset", () => {
@@ -173,7 +174,7 @@ describe("CanvasEditorShell collapse", () => {
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" onTabChange={onTabChange} />);
     fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
     fireEvent.click(screen.getByRole("button", { name: /Logs/ }));
-    expect(onTabChange).toHaveBeenCalledWith("logs");
+    expect(onTabChange).toHaveBeenCalledWith(EDITOR_TABS.logs);
   });
 
   it("collapsed mini-row has no deploy actions, only tabs + expand chevron", () => {

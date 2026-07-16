@@ -17,16 +17,17 @@ import { DeployPill } from "./deploy-pill";
 import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 import { PublicEndpointRow, type PublicEndpoint } from "./public-endpoint-row";
+import { EDITOR_TABS, type EditorTabId } from "./editor-tabs";
 
 const COLLAPSE_KEY_PREFIX = "stackdome.editor-header-collapsed.";
 const DRAFT_COLLAPSE_ID = "draft";
 
 /** The four editor modes, in display order. Icons per the design bundle. */
-const EDITOR_TABS = [
-  { id: "architecture", label: "Architecture", Icon: LayoutGrid },
-  { id: "deployments", label: "Deployments", Icon: History },
-  { id: "logs", label: "Logs", Icon: ScrollText },
-  { id: "metrics", label: "Metrics", Icon: Activity },
+const TAB_ITEMS = [
+  { id: EDITOR_TABS.architecture, label: "Architecture", Icon: LayoutGrid },
+  { id: EDITOR_TABS.deployments, label: "Deployments", Icon: History },
+  { id: EDITOR_TABS.logs, label: "Logs", Icon: ScrollText },
+  { id: EDITOR_TABS.metrics, label: "Metrics", Icon: Activity },
 ] as const;
 
 export interface CanvasEditorShellProps {
@@ -47,15 +48,15 @@ export interface CanvasEditorShellProps {
   notice?: ReactNode;
   /** At least one resource exists on the canvas — gates the draft deploy pill. */
   hasResources: boolean;
-  /** Draft (unsaved) stack — Deploy creates the stack and starts the first release in one go. */
-  isDraft?: boolean;
+  /** New (unsaved) stack — Deploy creates the stack and starts the first release in one go. */
+  isNewStack?: boolean;
   /** Render the title as an editable input (draft only). */
   nameEditable: boolean;
   onNameChange?: (name: string) => void;
   /** Validation error message for the stack name — shown when nameEditable and set. */
   nameError?: string;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
+  activeTab: EditorTabId;
+  onTabChange: (tab: EditorTabId) => void;
 
   // ── dirty / action wiring (all from the existing session + deploy lifecycle) ──
   /** An edit session is open. */
@@ -113,7 +114,7 @@ export function CanvasEditorShell({
   subtitle,
   notice,
   hasResources,
-  isDraft,
+  isNewStack,
   nameEditable,
   onNameChange,
   nameError,
@@ -188,9 +189,15 @@ export function CanvasEditorShell({
   // selection survive tab switches; ops views render as an opaque overlay on
   // top when active.
   const opsBody =
-    activeTab === "deployments" ? deployments : activeTab === "logs" ? logs : activeTab === "metrics" ? metrics : null;
+    activeTab === EDITOR_TABS.deployments
+      ? deployments
+      : activeTab === EDITOR_TABS.logs
+        ? logs
+        : activeTab === EDITOR_TABS.metrics
+          ? metrics
+          : null;
 
-  const actionsMenu = !isDraft && (
+  const actionsMenu = !isNewStack && (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button type="button" variant="ghost" size="icon" aria-label="Stack actions">
@@ -253,7 +260,7 @@ export function CanvasEditorShell({
             />
           )}
           <div className="mx-2 flex items-center gap-1">
-            {EDITOR_TABS.map(({ id, label, Icon }) => (
+            {TAB_ITEMS.map(({ id, label, Icon }) => (
               <button
                 key={id}
                 type="button"
@@ -314,7 +321,7 @@ export function CanvasEditorShell({
               {latestDeployFailed && (
                 <button
                   type="button"
-                  onClick={() => onTabChange("deployments")}
+                  onClick={() => onTabChange(EDITOR_TABS.deployments)}
                   className="flex-none"
                   aria-label="Latest deploy failed — view deployments"
                 >
@@ -338,7 +345,7 @@ export function CanvasEditorShell({
             className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
             style={{ marginRight: drawerInset }}
           >
-            {EDITOR_TABS.map(({ id, label, Icon }) => {
+            {TAB_ITEMS.map(({ id, label, Icon }) => {
               const active = activeTab === id;
               return (
                 <button
@@ -354,7 +361,7 @@ export function CanvasEditorShell({
                 >
                   <Icon className="size-[15px]" />
                   {label}
-                  {id === "architecture" && dirtyResourceCount > 0 && (
+                  {id === EDITOR_TABS.architecture && dirtyResourceCount > 0 && (
                     <span className="ml-0.5 rounded-full bg-brand-bg px-1.5 py-px font-mono text-[9.5px] font-medium text-brand">
                       {dirtyResourceCount}
                     </span>
@@ -363,7 +370,7 @@ export function CanvasEditorShell({
               );
             })}
             <div className="flex-1" />
-            {!isDraft && <AutosaveStatus status={syncStatus} />}
+            {!isNewStack && <AutosaveStatus status={syncStatus} />}
             {actionsMenu}
             {chevron}
           </div>
@@ -375,9 +382,9 @@ export function CanvasEditorShell({
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: drawerInset }}>
           <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
-          {activeTab === "architecture" && (
+          {activeTab === EDITOR_TABS.architecture && (
             <DeployPill
-              isDraft={isDraft}
+              isDraft={isNewStack}
               hasResources={hasResources}
               dirtyTotal={dirtyTotal}
               isStaged={isStaged}

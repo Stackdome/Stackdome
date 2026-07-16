@@ -61,7 +61,7 @@ import { HardDrive } from "lucide-react";
 import { FIT_OPTIONS } from "./fit-options";
 import type { CanvasFlowNode } from "./canvas-editor";
 
-interface StackCanvasTabProps {
+interface ArchitectureTabProps {
   session: UseStackEditSession;
   /** Diff baseline (the deployed release snapshot when one exists). */
   baselineResources: Partial<FormStackResourceData>[];
@@ -123,7 +123,7 @@ function StackCanvasFlow({
   releaseInFlight,
   liveStatusResources,
   openResourceSignal,
-}: StackCanvasTabProps) {
+}: ArchitectureTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
   const resources = session.isActive ? session.draft.resources : draftResources;
   const linkedAddonIds = session.isActive ? session.linkedAddonIds : connectionAddonIds;
@@ -761,7 +761,7 @@ function StackCanvasFlow({
  * graph; clicking a service node opens the config drawer. The `relative` wrapper
  * anchors the drawer overlay.
  */
-export function StackCanvasTab(props: StackCanvasTabProps) {
+export function ArchitectureTab(props: ArchitectureTabProps) {
   return (
     // Edge-to-edge inside the full-bleed editor shell (shell owns the chrome).
     <div className="relative h-full w-full overflow-hidden">
