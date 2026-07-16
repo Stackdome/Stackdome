@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { AddResourcePopover } from "../AddResourcePopover";
+import { AddResourcePopover } from "../add-resource-popover";
 
 afterEach(cleanup);
 

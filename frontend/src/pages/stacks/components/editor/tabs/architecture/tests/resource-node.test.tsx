@@ -3,7 +3,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, cleanup } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
-import { ResourceNode } from "../nodes/ResourceNode";
+import { ResourceNode } from "../nodes/resource-node";
 import type { StatusVariant } from "@/components/branded/status-variant";
 
 afterEach(cleanup);

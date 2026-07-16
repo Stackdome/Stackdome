@@ -2,7 +2,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { fireEvent, render, screen, cleanup } from "@testing-library/react";
-import { AddVolumeDialog } from "../AddVolumeDialog";
+import { AddVolumeDialog } from "../add-volume-dialog";
 
 afterEach(cleanup);
 

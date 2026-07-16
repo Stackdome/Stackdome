@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, fireEvent, within, act } from "@testing-library/react";
-import { StackCanvasTab } from "../StackCanvasTab";
+import { StackCanvasTab } from "../architecture-tab";
 import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 
 afterEach(cleanup);
@@ -12,7 +12,7 @@ afterEach(cleanup);
 // Stub it with a plain node list — still wired to the same onNodeClick
 // handler — so clicking the volume node still opens the volume drawer (the
 // route into the delete-confirm dialog under test) without mounting xyflow.
-vi.mock("../CanvasEditor", () => ({
+vi.mock("../canvas-editor", () => ({
   CanvasEditor: (props: { nodes: { id: string; data: { name?: string } }[]; onNodeClick?: (e: unknown, n: unknown) => void }) => (
     <div>
       {props.nodes.map((n) => (

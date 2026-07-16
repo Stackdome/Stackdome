@@ -14,7 +14,7 @@ import { StackLogsTab } from "@/pages/stacks/components/editor/tabs/logs/stack-l
 import { StackMetricsTab } from "@/pages/stacks/components/editor/tabs/metrics/stack-metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/editor/tabs/deployments/deployments-tab";
 import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deployments/release-errors";
-import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
+import { StackCanvasTab } from "@/pages/stacks/components/editor/tabs/architecture/architecture-tab";
 import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-editor-shell";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";

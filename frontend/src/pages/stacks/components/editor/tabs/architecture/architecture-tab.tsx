@@ -22,12 +22,12 @@ import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
 import { layoutGraph, NEW_NODE_GAP_X, NEW_NODE_OFFSET_Y } from "@/pages/stacks/lib/canvas/layout-graph";
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
-import { CanvasEditor } from "./CanvasEditor";
-import { ResourceDrawer } from "./ResourceDrawer";
-import { VolumeDrawer } from "./VolumeDrawer";
-import { AddVolumeDialog } from "./AddVolumeDialog";
-import { CanvasContextMenu, type CanvasMenuTarget } from "./CanvasContextMenu";
-import { MountPathDialog } from "./MountPathDialog";
+import { CanvasEditor } from "./canvas-editor";
+import { ResourceDrawer } from "./resource-drawer";
+import { VolumeDrawer } from "./volume-drawer";
+import { AddVolumeDialog } from "./add-volume-dialog";
+import { CanvasContextMenu, type CanvasMenuTarget } from "./canvas-context-menu";
+import { MountPathDialog } from "./mount-path-dialog";
 import { addMount, newVolume, removeMountsOf } from "@/pages/stacks/lib/canvas/volume-ops";
 import {
   NODE_KIND,
@@ -45,7 +45,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { DrawerStack, type DrawerPanelDescriptor } from "./DrawerStack";
+import { DrawerStack, type DrawerPanelDescriptor } from "./drawer-stack";
 import {
   replaceStack,
   pushEntry,
@@ -59,7 +59,7 @@ import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./nodes/node-glyph";
 import { HardDrive } from "lucide-react";
 import { FIT_OPTIONS } from "./fit-options";
-import type { CanvasFlowNode } from "./CanvasEditor";
+import type { CanvasFlowNode } from "./canvas-editor";
 
 interface StackCanvasTabProps {
   session: UseStackEditSession;

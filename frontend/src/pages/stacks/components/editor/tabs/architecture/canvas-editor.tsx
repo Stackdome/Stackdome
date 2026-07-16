@@ -14,11 +14,11 @@ import { useCallback, useState } from "react";
 import { Move } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { ResourceNode, type ResourceFlowNode } from "./nodes/ResourceNode";
-import { AttachmentNode, type AttachmentFlowNode } from "./nodes/AttachmentNode";
-import { ConnectionEdge } from "./edges/ConnectionEdge";
-import { CanvasControls } from "./CanvasControls";
-import { AddResourcePopover, AddResourcePanel } from "./AddResourcePopover";
+import { ResourceNode, type ResourceFlowNode } from "./nodes/resource-node";
+import { AttachmentNode, type AttachmentFlowNode } from "./nodes/attachment-node";
+import { ConnectionEdge } from "./edges/connection-edge";
+import { CanvasControls } from "./canvas-controls";
+import { AddResourcePopover, AddResourcePanel } from "./add-resource-popover";
 import { FIT_OPTIONS } from "./fit-options";
 
 /** Workload nodes (service/addon) plus the compact attachment nodes (secret/volume/object store). */

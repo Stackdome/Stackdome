@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { VolumeDrawer } from "../VolumeDrawer";
+import { VolumeDrawer } from "../volume-drawer";
 import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 
 afterEach(cleanup);

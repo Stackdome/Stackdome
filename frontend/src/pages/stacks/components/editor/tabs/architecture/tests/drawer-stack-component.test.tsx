@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { DrawerStack } from "../DrawerStack";
+import { DrawerStack } from "../drawer-stack";
 import type { DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-stack";
 import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
 

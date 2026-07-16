@@ -3,7 +3,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { CanvasContextMenu, type CanvasMenuTarget } from "../CanvasContextMenu";
+import { CanvasContextMenu, type CanvasMenuTarget } from "../canvas-context-menu";
 
 afterEach(cleanup);
 
