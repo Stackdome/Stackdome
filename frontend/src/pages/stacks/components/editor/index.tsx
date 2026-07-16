@@ -2,6 +2,7 @@ import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { getErrorMessage } from "@/api/client";
 import { parseApiError, type ParsedFieldError } from "@/api/errors";
 import { mapFieldErrors } from "@/pages/stacks/lib/map-field-errors";
+import { formatDraftValidationIssues } from "@/pages/stacks/lib/format-draft-validation";
 import { buildBannerItems } from "@/pages/stacks/components/editor/lib/banner-items";
 import { ValidationBanner, type ValidationBannerItem } from "@/pages/stacks/components/editor/validation-banner";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
@@ -678,33 +679,15 @@ export default function CanvasEditorPage() {
 
       const validation = FormStackSchema.safeParse(formStackData);
       if (!validation.success) {
-        const topLevelMessages: string[] = [];
-        let newNameError: string | undefined;
-
-        for (const issue of validation.error.issues) {
-          const [scope0, scope1, idx, ...fieldPath] = issue.path;
-          const field = fieldPath.join(".");
-          if (scope0 === "name") {
-            newNameError = issue.message;
-          } else if (scope0 === "spec" && scope1 === "stack_resources" && typeof idx === "number") {
-            const label = resources[idx]?.name?.trim() || `Resource ${idx + 1}`;
-            topLevelMessages.push(field ? `${label}: ${issue.message} (${field})` : `${label}: ${issue.message}`);
-          } else if (scope0 === "spec" && scope1 === "volumes" && typeof idx === "number") {
-            const vols = formStackData.spec.volumes as { name?: string }[] | undefined;
-            const label = vols?.[idx]?.name?.trim() || `Volume ${idx + 1}`;
-            topLevelMessages.push(field ? `${label}: ${issue.message} (${field})` : `${label}: ${issue.message}`);
-          } else {
-            topLevelMessages.push(issue.path.length ? `${issue.path.join(".")}: ${issue.message}` : issue.message);
-          }
-        }
-
-        const uniqueMessages = [...new Set(topLevelMessages)];
+        const { nameError: newNameError, messages } = formatDraftValidationIssues(
+          validation.error.issues,
+          resources,
+          formStackData.spec.volumes as { name?: string }[] | undefined,
+        );
         setNameError(newNameError);
         toast({
           title: "Validation error",
-          description: uniqueMessages.length > 0
-            ? uniqueMessages.join("; ")
-            : "Please fix the highlighted errors before saving.",
+          description: messages.length > 0 ? messages.join("; ") : "Please fix the highlighted errors before saving.",
           variant: "destructive",
         });
         setDraftDeploying(false);
