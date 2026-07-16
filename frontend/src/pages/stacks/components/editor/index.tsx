@@ -19,7 +19,7 @@ import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-edito
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
-import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
@@ -31,20 +31,15 @@ import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/componen
 import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
 import { isTerminal } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
 import { useDeployLifecycle } from "@/pages/stacks/components/editor/tabs/deployments/use-deploy-lifecycle";
-import {
-  connectionsToEnvRows,
-  connectionsToMounts,
-} from "@/pages/stacks/lib/connection-mapping";
+import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useOrgDomains } from "@/hooks/use-org-domains";
 import { pickBestIngress } from "@/pages/stacks/lib/public-endpoints";
-import type { z } from "zod";
-import { convertApiResourceToFormResource, convertApiVolumeToFormVolume, convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
+import { convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
-import type { ApiStackResourceSchema, ApiVolumeSchema } from "@/pages/stacks/schemas/api-schema";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
 import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { useVolumeDelete } from "@/pages/stacks/hooks/use-volume-delete";
@@ -60,60 +55,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-function mapStackResourceToFormData(resource: StackResource): FormStackResourceData {
-  // Remove read-only fields before converting to form data
-  const { id: _id, stack_id: _stackId, revision: _revision, ...writableResource } = resource;
-
-  const cleanedVolumeMounts = writableResource.volume_mounts?.map((volumeMount) => {
-    const { stack_resource_id: _stackResourceId, source_volume_type: _sourceVolumeType, ...cleanVolumeMount } = volumeMount;
-    return cleanVolumeMount;
-  });
-
-  const resourceWithCleanedMounts = {
-    ...writableResource,
-    volume_mounts: cleanedVolumeMounts
-  };
-
-  return convertApiResourceToFormResource(resourceWithCleanedMounts as z.infer<typeof ApiStackResourceSchema>);
-}
-
-function mapVolumeToFormData(volume: Volume): VolumeFormData {
-  // Remove read-only fields before converting to form data
-  const { id: _id, ...writableVolume } = volume;
-  return convertApiVolumeToFormVolume(writableVolume as z.infer<typeof ApiVolumeSchema> & { status?: unknown });
-}
-
-/** Map a resource+connection set (live stack spec OR release snapshot — both use
- *  the same server shapes) into form data, folding connection-backed env rows
- *  and volume mounts into each resource. */
-function formResourcesFromSpec(
-  resources: StackResource[] | undefined,
-  connectionsIn: StackConnection[] | undefined,
-): FormStackResourceData[] {
-  const connections = connectionsIn ?? [];
-  return (resources || []).map((r) => {
-    const form = mapStackResourceToFormData(r);
-    const connRows = connectionsToEnvRows(form.name ?? "", connections) as FormEnvVarData[];
-    // Populate volume_mounts from volume_mount connections — the server always
-    // returns resource.volume_mounts as [] since mounts are stored in connections.
-    const mountRows = connectionsToMounts(form.name ?? "", connections);
-    // connectionsToMounts only emits rows with all required fields present (it
-    // skips malformed connections), so the cast to the strict form type is safe.
-    const withMounts: FormStackResourceData = { ...form, volume_mounts: mountRows as FormStackResourceData["volume_mounts"] };
-    if (connRows.length === 0) return withMounts;
-    return {
-      ...withMounts,
-      execution_config: {
-        ...(withMounts.execution_config ?? {}),
-        environment_variables: [
-          ...((withMounts.execution_config?.environment_variables ?? []) as FormEnvVarData[]),
-          ...connRows,
-        ],
-      },
-    };
-  });
-}
 
 export default function CanvasEditorPage() {
   const { id } = useParams();
