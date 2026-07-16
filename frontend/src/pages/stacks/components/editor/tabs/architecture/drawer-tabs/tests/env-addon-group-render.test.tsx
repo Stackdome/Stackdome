@@ -3,7 +3,7 @@ import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup, within } from "@testing-library/react";
 import { Tabs } from "@/components/ui/tabs";
-import { StackResourceEnvironmentTab } from "../stack-resource-environment-tab";
+import { StackResourceEnvironmentTab } from "../environment-tab";
 import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { PostgresAddon } from "@/api/addons";
 

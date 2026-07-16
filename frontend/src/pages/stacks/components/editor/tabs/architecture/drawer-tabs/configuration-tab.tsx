@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { PlusCircle, GitBranch, Box, Trash2, Database, X, ArrowUpRight, HardDrive } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
-import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
+import { DirtyField } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/dirty-field";
 import { FieldShell } from "@/components/branded";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";

@@ -2,7 +2,7 @@ import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { DirtyField } from "@/pages/stacks/components/shared/dirty-field";
+import { DirtyField } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/dirty-field";
 import { FieldShell } from "@/components/branded";
 
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";

@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { X, HardDrive } from "lucide-react";
 import type { UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
-import { VolumeFields } from "@/pages/stacks/components/shared/volume-fields";
+import { VolumeFields } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/volume-fields";
 import { removeMountsOf } from "@/pages/stacks/lib/canvas/volume-ops";
 
 interface VolumeDrawerProps {

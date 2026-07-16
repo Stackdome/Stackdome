@@ -11,11 +11,11 @@ import type {
   FormEnvVarData,
   FormVolumeExtendedData as VolumeFormData,
 } from "@/pages/stacks/schemas/form-schema";
-import type { UseSecretsReturn } from "../../../hooks/use-secrets";
+import type { UseSecretsReturn } from "@/pages/stacks/hooks/use-secrets";
 import type { PostgresAddon } from "@/api/addons";
-import { StackResourceConfigurationTab, pickConfigurationDraft } from "../stack-resource-configuration-tab";
-import { StackResourceDeploymentTab, pickDeploymentDraft } from "../stack-resource-deployment-tab";
-import { StackResourceEnvironmentTab } from "../stack-resource-environment-tab";
+import { StackResourceConfigurationTab, pickConfigurationDraft } from "./configuration-tab";
+import { StackResourceDeploymentTab, pickDeploymentDraft } from "./deployment-tab";
+import { StackResourceEnvironmentTab } from "./environment-tab";
 
 /**
  * Page-level context the three resource sub-tabs need but that does not vary per

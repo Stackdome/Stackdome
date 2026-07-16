@@ -47,7 +47,7 @@ import {
   buildCreateInput,
   JsonAreaParseError,
 } from "../lib/payload";
-import StickyActionBar from "@/pages/stacks/components/shared/sticky-action-bar";
+import StickyActionBar from "@/components/sticky-action-bar";
 import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
 import { usePostgresAddons } from "../hooks/use-postgres-addons";
 import { eligibleRestoreSources } from "../lib/restore-sources";

@@ -8,10 +8,10 @@ import type { PostgresAddon } from "@/api/addons";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import type { UseStackEditSession, EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
-import { StackResourceConfigurationTab } from "@/pages/stacks/components/shared/stack-resource-configuration-tab";
-import { StackResourceDeploymentTab } from "@/pages/stacks/components/shared/stack-resource-deployment-tab";
-import { StackResourceEnvironmentTab } from "@/pages/stacks/components/shared/stack-resource-environment-tab";
-import { useResourceTabProps } from "@/pages/stacks/components/shared/hooks/use-resource-tab-props";
+import { StackResourceConfigurationTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/configuration-tab";
+import { StackResourceDeploymentTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/deployment-tab";
+import { StackResourceEnvironmentTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/environment-tab";
+import { useResourceTabProps } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/use-resource-tab-props";
 import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { NodeGlyph } from "./nodes/node-glyph";
 
