@@ -332,6 +332,14 @@ export default function CanvasEditorPage() {
   // Bumped on every autosave refresh to trigger a topology refetch.
   const [topologyRefreshKey, setTopologyRefreshKey] = useState(0);
 
+  // Server topology may have changed; re-derive edges alongside the fresh stack.
+  const applyFreshStack = useCallback((fresh: Stack) => {
+    setFetchedStack(fresh);
+    // Context write-through: stale currentStack must not win after a remote refresh.
+    setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+    setTopologyRefreshKey((k) => k + 1);
+  }, [setStacks]);
+
   // Volumes that exist server-side; their spec (PVC size) is immutable, so the
   // drawer renders those fields read-only.
   const persistedVolumeNames = useMemo(
@@ -374,12 +382,7 @@ export default function CanvasEditorPage() {
     stack: savedStack ?? undefined,
     session,
     ids: idsReady ? deployIds : null,
-    onStackRefreshed: (fresh) => {
-      setFetchedStack(fresh);
-      // Context write-through: stale currentStack must not win after a remote refresh.
-      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
-      setTopologyRefreshKey((k) => k + 1);
-    },
+    onStackRefreshed: (fresh) => applyFreshStack(fresh),
     onSyncError: ({ message, op, fieldErrors }) => {
       // No op → the save actually landed and only the post-save refetch failed;
       // don't alarm the user with a "Save failed" toast or field error.
@@ -470,14 +473,11 @@ export default function CanvasEditorPage() {
   const refetchStack = useCallback(() => {
     if (!deployIds.stackId) return;
     void getStackById(deployIds.orgId, deployIds.projectName, deployIds.stackId).then((fresh) => {
-      setFetchedStack(fresh);
-      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
-      // Server topology may have changed with the new release; re-derive edges.
-      setTopologyRefreshKey((k) => k + 1);
+      applyFreshStack(fresh);
     }).catch(() => {
       // Transient fetch failure; the next terminal transition retries.
     });
-  }, [deployIds, setStacks]);
+  }, [deployIds, applyFreshStack]);
   const activeRelease = releasesResult.activeRelease;
   const prevActiveReleaseRef = useRef<{ id?: string; state?: string } | undefined>(
     activeRelease && { id: activeRelease.id, state: activeRelease.state },
@@ -526,11 +526,7 @@ export default function CanvasEditorPage() {
   const volumeDelete = useVolumeDelete({
     ids: idsReady ? deployIds : null,
     draftSync,
-    onServerRefresh: (fresh) => {
-      setFetchedStack(fresh);
-      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
-      setTopologyRefreshKey((k) => k + 1);
-    },
+    onServerRefresh: applyFreshStack,
     onRestoreVolume: (vol) => {
       session.updateVolumes((vs) => [...vs, mapVolumeToFormData(vol)]);
     },
