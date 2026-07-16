@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
-import { ViewChangesModal } from "../ViewChangesModal";
+import { ViewChangesModal } from "../view-changes-modal";
 import type { SnapshotDiff } from "@/pages/stacks/components/editor/tabs/deployments/release-snapshot-diff";
 
 afterEach(cleanup);

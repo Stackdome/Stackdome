@@ -15,9 +15,9 @@ import { StackMetricsTab } from "@/pages/stacks/components/editor/tabs/metrics/s
 import { DeploymentsTab } from "@/pages/stacks/components/editor/tabs/deployments/deployments-tab";
 import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deployments/release-errors";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
-import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
-import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
-import { DraftTabPlaceholder } from "@/pages/stacks/components/canvas/DraftTabPlaceholder";
+import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-editor-shell";
+import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
+import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, within, fireEvent, cleanup } from "@testing-library/react";
-import { CanvasEditorShell } from "../CanvasEditorShell";
+import { CanvasEditorShell } from "../canvas-editor-shell";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 
 afterEach(cleanup);

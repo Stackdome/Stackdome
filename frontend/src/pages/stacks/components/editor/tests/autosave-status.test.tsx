@@ -2,7 +2,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { AutosaveStatus } from "../AutosaveStatus";
+import { AutosaveStatus } from "../autosave-status";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 
 describe("AutosaveStatus", () => {

@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import { DeployPill } from "../DeployPill";
+import { DeployPill } from "../deploy-pill";
 
 afterEach(cleanup);
 

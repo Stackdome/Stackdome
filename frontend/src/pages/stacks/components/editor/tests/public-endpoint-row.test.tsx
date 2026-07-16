@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
-import { PublicEndpointRow } from "../PublicEndpointRow";
+import { PublicEndpointRow } from "../public-endpoint-row";
 
 afterEach(cleanup);
 

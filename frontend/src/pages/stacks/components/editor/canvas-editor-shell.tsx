@@ -12,11 +12,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { AutosaveStatus } from "./AutosaveStatus";
-import { DeployPill } from "./DeployPill";
+import { AutosaveStatus } from "./autosave-status";
+import { DeployPill } from "./deploy-pill";
 import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
-import { PublicEndpointRow, type PublicEndpoint } from "./PublicEndpointRow";
+import { PublicEndpointRow, type PublicEndpoint } from "./public-endpoint-row";
 
 const COLLAPSE_KEY_PREFIX = "stackdome.editor-header-collapsed.";
 const DRAFT_COLLAPSE_ID = "draft";
