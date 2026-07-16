@@ -13,7 +13,7 @@ import type {
   SnapshotDiff,
   ResourceDiff,
   DiffRow,
-} from "@/pages/stacks/components/detail/deployments/release-snapshot-diff";
+} from "@/pages/stacks/components/editor/tabs/deployments/release-snapshot-diff";
 
 export interface ViewChangesModalProps {
   open: boolean;

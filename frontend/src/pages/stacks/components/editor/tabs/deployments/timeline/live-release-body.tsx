@@ -3,7 +3,7 @@ import { StageTracker } from "@/components/branded";
 import { ReleaseEventScope, type StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { ValidationBanner } from "@/pages/stacks/components/detail/ValidationBanner";
+import { ValidationBanner } from "@/pages/stacks/components/editor/validation-banner";
 import { deriveStages, deriveFailingResources, deriveRecovered, resourceSource, replicaLabel } from "../derive";
 import { ReleaseState, isTerminal } from "../release-states";
 import { diffSnapshots } from "../release-snapshot-diff";

@@ -2,7 +2,7 @@ import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { getErrorMessage } from "@/api/client";
 import { parseApiError, type ParsedFieldError } from "@/api/errors";
 import { mapFieldErrors } from "@/pages/stacks/lib/map-field-errors";
-import { ValidationBanner, type ValidationBannerItem } from "@/pages/stacks/components/detail/ValidationBanner";
+import { ValidationBanner, type ValidationBannerItem } from "@/pages/stacks/components/editor/validation-banner";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
@@ -10,10 +10,10 @@ import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { StackLogsTab } from "@/pages/stacks/components/detail/logs/stack-logs-tab";
-import { StackMetricsTab } from "@/pages/stacks/components/detail/metrics/stack-metrics-tab";
-import { DeploymentsTab } from "@/pages/stacks/components/detail/deployments/deployments-tab";
-import { jumpTargetIndex } from "@/pages/stacks/components/detail/deployments/release-errors";
+import { StackLogsTab } from "@/pages/stacks/components/editor/tabs/logs/stack-logs-tab";
+import { StackMetricsTab } from "@/pages/stacks/components/editor/tabs/metrics/stack-metrics-tab";
+import { DeploymentsTab } from "@/pages/stacks/components/editor/tabs/deployments/deployments-tab";
+import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deployments/release-errors";
 import { StackCanvasTab } from "@/pages/stacks/components/canvas/StackCanvasTab";
 import { CanvasEditorShell } from "@/pages/stacks/components/canvas/CanvasEditorShell";
 import { ViewChangesModal } from "@/pages/stacks/components/canvas/ViewChangesModal";
@@ -25,11 +25,11 @@ import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stac
 import { applyStackByName, getStackById, deleteStack } from "@/api/stacks";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
-import { useReleases } from "@/pages/stacks/components/detail/deployments/use-releases";
-import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/detail/deployments/use-release-detail";
-import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/detail/deployments/derive";
-import { isTerminal } from "@/pages/stacks/components/detail/deployments/release-states";
-import { useDeployLifecycle } from "@/pages/stacks/components/detail/deployments/use-deploy-lifecycle";
+import { useReleases } from "@/pages/stacks/components/editor/tabs/deployments/use-releases";
+import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/editor/tabs/deployments/use-release-detail";
+import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
+import { isTerminal } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
+import { useDeployLifecycle } from "@/pages/stacks/components/editor/tabs/deployments/use-deploy-lifecycle";
 import {
   connectionsToEnvRows,
   connectionsToMounts,

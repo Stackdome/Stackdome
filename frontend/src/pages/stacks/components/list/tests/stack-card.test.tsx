@@ -4,7 +4,7 @@ import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import { DeployStackCard, headerStatus } from "../stack-card";
-import { ReleaseState } from "@/pages/stacks/components/detail/deployments/release-states";
+import { ReleaseState } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
 import type { Stack } from "@/pages/stacks/types";
 
 const baseStack = {

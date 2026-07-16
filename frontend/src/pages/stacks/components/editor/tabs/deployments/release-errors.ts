@@ -1,7 +1,7 @@
 import type { StackRelease } from "@/api/releases";
 import type { StackResource } from "@/api/stacks";
 import { fieldTab } from "@/pages/stacks/lib/map-field-errors";
-import type { ValidationBannerItem } from "@/pages/stacks/components/detail/ValidationBanner";
+import type { ValidationBannerItem } from "@/pages/stacks/components/editor/validation-banner";
 
 // Async release-time validation (image/git/registry checks etc, run after a
 // release is created) surfaces on the failed release node through the same
