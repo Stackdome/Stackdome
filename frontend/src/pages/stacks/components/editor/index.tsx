@@ -19,6 +19,7 @@ import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-edito
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
+import { resolveChangeCount } from "@/pages/stacks/components/editor/lib/resolve-change-count";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
@@ -917,25 +918,7 @@ export default function CanvasEditorPage() {
   const dirtyTotal =
     session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
 
-  // "View changes" badge + modal count must agree with the modal's BODY. The body
-  // renders lifecycle.stagedDiff (saved spec vs release), which only sees SAVED
-  // content. When a sync is in flight or has errored (e.g. a fresh resource whose
-  // autosave 400s), the unsaved edit is absent from the staged diff — so the diff
-  // can be empty while real session dirt exists. In that unsettled state, never let
-  // the (stale) staged count hide the dirt: take the larger of the two. Once the
-  // sync settles, the staged diff is authoritative (session dirt can overcount,
-  // e.g. a mount added then removed nets to zero staged while the session still
-  // reads dirty), so trust it and fall back to dirt only until the diff resolves.
-  const stagedCount = lifecycle.stagedDiff
-    ? lifecycle.stagedDiff.resources.length +
-      lifecycle.stagedDiff.volumes.length +
-      lifecycle.stagedDiff.connections.length
-    : null;
-  const syncUnsettled =
-    draftSync.status === SYNC_STATUS.saving || draftSync.status === SYNC_STATUS.error;
-  const changeCount = syncUnsettled
-    ? Math.max(stagedCount ?? 0, dirtyTotal)
-    : stagedCount ?? dirtyTotal;
+  const changeCount = resolveChangeCount(lifecycle.stagedDiff, dirtyTotal, isNewStack ? SYNC_STATUS.idle : draftSync.status);
 
   return (
     <ReleaseDetailProvider value={releaseDetail}>
