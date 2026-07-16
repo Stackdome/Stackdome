@@ -2,6 +2,7 @@ import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { getErrorMessage } from "@/api/client";
 import { parseApiError, type ParsedFieldError } from "@/api/errors";
 import { mapFieldErrors } from "@/pages/stacks/lib/map-field-errors";
+import { buildBannerItems } from "@/pages/stacks/components/editor/lib/banner-items";
 import { ValidationBanner, type ValidationBannerItem } from "@/pages/stacks/components/editor/validation-banner";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
@@ -479,30 +480,10 @@ export default function CanvasEditorPage() {
     return merged;
   }, [validationErrors.resources, serverFieldErrors, session.draft.resources]);
 
-  // Summary-banner rows for the last draft-deploy failure. Fat dialect: resource
-  // errors carry a jump index; stack-level errors (name/settings/connections) do not.
-  const bannerItems = useMemo<ValidationBannerItem[]>(() => {
-    if (deployFieldErrors.length === 0) return [];
-    const mapped = mapFieldErrors(deployFieldErrors, { dialect: "fat" });
-    const items: ValidationBannerItem[] = [];
-    if (mapped.stackName) items.push({ label: "Stack name", message: mapped.stackName });
-    for (const [idxStr, fields] of Object.entries(mapped.resources)) {
-      const idx = Number(idxStr);
-      const label = session.draft.resources[idx]?.name?.trim() || `Resource ${idx + 1}`;
-      for (const [fieldKey, message] of Object.entries(fields)) {
-        // Env errors live on the Environment tab; everything else renders on
-        // Configuration. Jump opens the tab holding the offending field.
-        const tab = fieldKey.startsWith("execution_config.environment_variables")
-          ? "environment"
-          : "configuration";
-        items.push({ label, message, resourceIndex: idx, tab });
-      }
-    }
-    for (const m of mapped.settings) items.push({ label: "Stack settings", message: m });
-    for (const m of mapped.connections) items.push({ label: "Connection", message: m });
-    for (const u of mapped.unmapped) items.push({ label: u.field, message: u.message });
-    return items;
-  }, [deployFieldErrors, session.draft.resources]);
+  const bannerItems = useMemo<ValidationBannerItem[]>(
+    () => buildBannerItems(deployFieldErrors, session.draft.resources as ReadonlyArray<{ name?: string }>),
+    [deployFieldErrors, session.draft.resources],
+  );
 
   const lifecycle = useDeployLifecycle({
     stack: savedStack ?? undefined,
