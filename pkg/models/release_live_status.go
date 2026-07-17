@@ -67,9 +67,11 @@ func BuildReleaseLiveStatus(release *StackRelease, stack *Stack) *ReleaseLiveSta
 
 // rollupHealth maps the stack's aggregate conditions (cluster-agent v0.6.6+) to a
 // single release health, mirroring the agent's phase priority:
-// Failed(Stalled) > Progressing > Degraded > Converged. The fall-through splits on
-// whether the release is still deploying (progressing) or a live release that fell
-// out of serving (unavailable). Converged implies Available, so ok needs no Available check.
+// Failed(Stalled) > Progressing > Degraded > Converged. Available is checked below
+// Converged to keep a serving-but-not-yet-converged stack (e.g. still on the prior
+// revision) out of the unavailable arm. The fall-through splits on whether the
+// release is still deploying (progressing) or a live release that fell out of
+// serving (unavailable).
 func rollupHealth(release *StackRelease, stack *Stack) ReleaseHealth {
 	conds := stack.Status.Conditions
 	switch {
@@ -81,6 +83,8 @@ func rollupHealth(release *StackRelease, stack *Stack) ReleaseHealth {
 		return ReleaseHealthDegraded
 	case IsConditionTrue(conds, string(StackConditionConverged)):
 		return ReleaseHealthOK
+	case IsConditionTrue(conds, string(StackConditionAvailable)):
+		return ReleaseHealthOK // serving traffic (e.g. prior revision) though not yet converged
 	case release.State.Active():
 		return ReleaseHealthProgressing // active deploy, no rollout condition yet (pods not created)
 	default:

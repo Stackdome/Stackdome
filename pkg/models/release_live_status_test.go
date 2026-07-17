@@ -73,6 +73,13 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthOK))
 	})
 
+	ginkgo.It("rolls up ok when serving (Available) but not yet converged", func() {
+		// Serving traffic on the prior revision while the newest release has not
+		// converged — Available without Converged must not read as unavailable.
+		stack.Status.Conditions = []Condition{cond(StackConditionAvailable)}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthOK))
+	})
+
 	ginkgo.It("rolls up progressing from the Progressing condition", func() {
 		stack.Status.Conditions = []Condition{cond(StackConditionProgressing)}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
