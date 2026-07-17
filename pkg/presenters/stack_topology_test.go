@@ -14,7 +14,7 @@ func TestPresentStackTopology(t *testing.T) {
 				Ref:     models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "api"},
 				Label:   "api",
 				State:   "Ready",
-				Outputs: []models.OutputDescriptor{{Name: "url.http", Type: models.OutputValueTypeString}},
+				Outputs: []models.OutputDescriptor{{Name: models.OutputNameURL, Type: models.OutputValueTypeString}},
 			},
 		},
 		Edges: []models.TopologyEdge{
@@ -27,7 +27,7 @@ func TestPresentStackTopology(t *testing.T) {
 				Mappings: []models.ConnectionMapping{
 					{
 						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_URL"},
-						Value:  models.ValueRef{Output: "url.http"},
+						Value:  models.ValueRef{Output: models.OutputNameURL},
 					},
 				},
 			},
@@ -51,7 +51,7 @@ func TestPresentStackTopology(t *testing.T) {
 	if out.Edges[0].GetSourceOfTruth() != "connection" {
 		t.Fatalf("expected connection source_of_truth, got %q", out.Edges[0].GetSourceOfTruth())
 	}
-	if out.Edges[0].Mappings[0].Value.GetOutput() != "url.http" {
-		t.Fatalf("expected mapping output url.http, got %q", out.Edges[0].Mappings[0].Value.GetOutput())
+	if out.Edges[0].Mappings[0].Value.GetOutput() != models.OutputNameURL {
+		t.Fatalf("expected mapping output %s, got %q", models.OutputNameURL, out.Edges[0].Mappings[0].Value.GetOutput())
 	}
 }
