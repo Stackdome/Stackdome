@@ -52,6 +52,13 @@ func (h *jwtAuthnHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
+		// An expired token is a distinct, recoverable case: the client can refresh
+		// it. Signal it with a reason the refresh flow recognises, and keep the
+		// generic "Invalid token" for tampering/malformed tokens (force re-login).
+		if ve, ok := err.(*jwt.ValidationError); ok && ve.Errors&jwt.ValidationErrorExpired != 0 {
+			handleError(w, errors.ErrorUnauthorized, "token expired")
+			return
+		}
 		handleError(w, errors.ErrorUnauthorized, "Invalid token")
 		return
 	}
