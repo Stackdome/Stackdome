@@ -3,9 +3,8 @@ import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/s
 import type { StackResource, Volume } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 
-// Fixture note: copy the minimal valid StackResource/StackConnection shapes from
-// frontend/src/pages/stacks/lib/tests/connection-mapping.test.ts (same server shapes).
-// Only the fields below matter to these assertions.
+// Fixtures use the same server shapes as connection-mapping.test.ts; only the
+// fields asserted below matter.
 
 describe("formResourcesFromSpec", () => {
   it("maps resources and folds connection-backed env rows into execution_config", () => {
@@ -13,7 +12,6 @@ describe("formResourcesFromSpec", () => {
       { id: "r1", stack_id: "s1", revision: 2, name: "web" },
     ] as unknown as StackResource[];
     const connections = [
-      // env connection targeting "web" — copy exact shape from connection-mapping.test.ts
       {
         id: "c1",
         kind: "env",
@@ -30,7 +28,6 @@ describe("formResourcesFromSpec", () => {
     // read-only fields must not leak into form data
     expect((out[0] as Record<string, unknown>).id).toBeUndefined();
     expect((out[0] as Record<string, unknown>).revision).toBeUndefined();
-    // with a valid env connection fixture:
     expect(out[0].execution_config?.environment_variables).toContainEqual(
       expect.objectContaining({ from: "secret", name: "LOCKBOX_MASTER_KEY", secretId: "s1", secretKey: "LOCKBOX_MASTER_KEY" }),
     );

@@ -77,7 +77,7 @@ describe("EnvRow (addon variant)", () => {
   it("renders the field picker on addon rows", () => {
     // After the inline-addon-picker refactor, only the credField picker lives
     // on each env row. Addon + database selection moved up to the addon-group
-    // header in stack-resource-environment-tab.
+    // header in environment-tab.
     render(<EnvRow row={baseAddonRow()} {...noopProps} />);
     expect(screen.getByTestId("field-picker-trigger")).toBeInTheDocument();
     expect(screen.queryByTestId("addon-picker-trigger")).not.toBeInTheDocument();
