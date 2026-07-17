@@ -169,7 +169,8 @@ export function useResourceTabProps(args: {
     [context.allResources, thisResourceName],
   );
   // Prefer the server-truth outputs for this resource's own name; fall back to
-  // the draft copy's outputs (empty for a resource added but not yet saved).
+  // outputs derived from the draft's ports (a resource added but not yet saved
+  // has no server-computed outputs).
   const selfOutputs = useMemo(
     () =>
       context.serverOutputsByName?.get(resource.name ?? "") ??
