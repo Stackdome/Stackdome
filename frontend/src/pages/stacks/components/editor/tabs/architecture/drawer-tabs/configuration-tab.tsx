@@ -499,11 +499,11 @@ function StackResourceConfigurationTabImpl({
               <div className="flex items-center gap-2.5">
                 <Input
                   id={`port-number-${index}-${pidx}`}
-                  type="number"
-                  min="1"
-                  max="65535"
+                  inputMode="numeric"
                   value={port.number?.toString() || ""}
-                  onChange={(e) => updatePort(pidx, { number: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    updatePort(pidx, { number: parseInt(e.target.value.replace(/\D/g, "")) || 0 })
+                  }
                   className={`h-9 w-[84px] shrink-0 font-mono text-[13px] ${getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}`}
                   required
                 />
