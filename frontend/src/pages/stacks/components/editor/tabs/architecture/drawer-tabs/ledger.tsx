@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import {
@@ -42,6 +42,49 @@ export function LedgerSection({
           className="size-[15px] shrink-0 text-fg-muted transition-transform group-data-[state=open]:rotate-180"
           aria-hidden
         />
+      </CollapsibleTrigger>
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
+  );
+}
+
+interface LedgerDisclosureProps {
+  /** Row-level label, e.g. "Advanced". */
+  label: ReactNode;
+  /** Mono hint shown in the control column, e.g. "push registry". */
+  meta?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+  className?: string;
+}
+
+/**
+ * Inline row-level disclosure for advanced fields: renders as a ledger row
+ * whose label carries a rotating chevron. Lighter than LedgerSection — no
+ * section marker, no hairline rule.
+ */
+export function LedgerDisclosure({
+  label,
+  meta,
+  defaultOpen = false,
+  children,
+  className,
+}: LedgerDisclosureProps) {
+  return (
+    <Collapsible defaultOpen={defaultOpen} className={className}>
+      <CollapsibleTrigger className="group w-full cursor-pointer border-b border-secondary/80 py-1 text-left">
+        <span className="flex w-full items-center gap-4 rounded-md px-1.5 py-2 transition-colors group-hover:bg-muted/20">
+          <span className="flex w-[150px] shrink-0 items-center gap-1.5 text-[13px] text-fg-muted">
+            <ChevronRight
+              className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90"
+              aria-hidden
+            />
+            {label}
+          </span>
+          {meta && (
+            <span className="font-mono text-[10.5px] text-fg-muted/70">{meta}</span>
+          )}
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent>{children}</CollapsibleContent>
     </Collapsible>

@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { MultiSelect } from "@/components/multi-select";
 import { DirtyField } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/dirty-field";
 import {
+  LedgerDisclosure,
   LedgerRow,
   LedgerSection,
   LedgerSegmented,
@@ -447,7 +448,7 @@ function StackResourceConfigurationTabImpl({
               </LedgerRow>
             )}
 
-            <LedgerSection label="Advanced" meta="push registry" defaultOpen={false}>
+            <LedgerDisclosure label="Advanced" meta="push registry">
               <LedgerRow
                 label="Push registry"
                 htmlFor={`push-repo-${index}`}
@@ -473,7 +474,7 @@ function StackResourceConfigurationTabImpl({
                   />
                 </DirtyField>
               </LedgerRow>
-            </LedgerSection>
+            </LedgerDisclosure>
           </>
         )}
       </LedgerSection>
