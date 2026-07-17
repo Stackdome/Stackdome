@@ -74,7 +74,7 @@ export function LedgerDisclosure({
     <Collapsible defaultOpen={defaultOpen} className={className}>
       <CollapsibleTrigger className="group w-full cursor-pointer border-b border-secondary/80 py-1 text-left">
         <span className="flex w-full items-center gap-4 rounded-md px-1.5 py-2 transition-colors group-hover:bg-muted/20">
-          <span className="flex w-[150px] shrink-0 items-center gap-1.5 text-[13px] text-fg-muted">
+          <span className="flex w-[150px] shrink-0 items-center gap-1.5 text-[13px] text-foreground/60 dark:text-fg-muted">
             <ChevronRight
               className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90"
               aria-hidden
@@ -133,7 +133,7 @@ export function LedgerRow({
         <Label
           htmlFor={htmlFor}
           className={cn(
-            "w-[150px] shrink-0 text-[13px] font-normal text-fg-2",
+            "w-[150px] shrink-0 text-[13px] font-normal text-foreground dark:text-fg-2",
             alignTop && "pt-2.5",
           )}
         >
