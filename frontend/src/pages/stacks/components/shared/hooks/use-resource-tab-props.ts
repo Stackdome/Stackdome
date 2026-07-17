@@ -16,6 +16,7 @@ import type { PostgresAddon } from "@/api/addons";
 import { StackResourceConfigurationTab, pickConfigurationDraft } from "../stack-resource-configuration-tab";
 import { StackResourceDeploymentTab, pickDeploymentDraft } from "../stack-resource-deployment-tab";
 import { StackResourceEnvironmentTab } from "../stack-resource-environment-tab";
+import { deriveResourceOutputNames } from "@/pages/stacks/lib/derive-resource-outputs";
 
 /**
  * Page-level context the three resource sub-tabs need but that does not vary per
@@ -172,8 +173,8 @@ export function useResourceTabProps(args: {
   const selfOutputs = useMemo(
     () =>
       context.serverOutputsByName?.get(resource.name ?? "") ??
-      (resource.outputs ?? []).map((o: { name: string }) => o.name),
-    [context.serverOutputsByName, resource.name, resource.outputs],
+      deriveResourceOutputNames(resource),
+    [context.serverOutputsByName, resource.name, resource.ports],
   );
 
   return {

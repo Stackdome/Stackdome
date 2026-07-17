@@ -13,6 +13,7 @@ import { StackResourceDeploymentTab } from "@/pages/stacks/components/shared/sta
 import { StackResourceEnvironmentTab } from "@/pages/stacks/components/shared/stack-resource-environment-tab";
 import { useResourceTabProps } from "@/pages/stacks/components/shared/hooks/use-resource-tab-props";
 import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
+import { deriveResourceOutputNames } from "@/pages/stacks/lib/derive-resource-outputs";
 import { NodeGlyph } from "./nodes/node-glyph";
 
 /** Radix tab values used by the sub-tab components (they render their own TabsContent). */
@@ -94,7 +95,7 @@ export function ResourceDrawer({
         index: i,
         outputs:
           serverOutputsByName?.get(r.name ?? "") ??
-          (r.outputs ?? []).map((o: { name: string }) => o.name),
+          deriveResourceOutputNames(r),
       })),
     [session.draft.resources, serverOutputsByName],
   );
