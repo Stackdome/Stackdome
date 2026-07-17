@@ -6,7 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Name** | **string** |  | 
 **Value** | Pointer to **string** | Literal environment variable value. | [optional] 
-**SelfOutput** | Pointer to **string** | Read this environment variable from one of the resource&#39;s own declared outputs, for example public.http.url. | [optional] 
+**SelfOutput** | Pointer to **string** | Read this environment variable from one of the resource&#39;s own declared outputs, for example public_url. | [optional] 
 
 ## Methods
 

@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Name** | **string** | Stable output accessor name, for example &#x60;host&#x60; or &#x60;public.http.url&#x60;. | 
+**Name** | **string** | Stable output accessor name, for example &#x60;host&#x60; or &#x60;public_url&#x60;. | 
 **Type** | **string** | Scalar value type exposed by this output. | 
 **Sensitive** | **bool** | True when the output value is sensitive and should never be returned in normal metadata APIs. | 
 

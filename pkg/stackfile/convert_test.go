@@ -220,7 +220,7 @@ func TestToStack_SelfOutputEnv(t *testing.T) {
 					{Name: "http", Port: 8080, Public: true, Subdomain: "app"},
 				},
 				Env: map[string]string{
-					"SITE_URL": "{{ self.public.http.url }}",
+					"SITE_URL": "{{ self.public_url }}",
 				},
 			},
 		},
@@ -234,8 +234,8 @@ func TestToStack_SelfOutputEnv(t *testing.T) {
 
 	envMap := envVarsToMap(res.ExecutionConfig.EnvironmentVariables)
 	v := envMap["SITE_URL"]
-	if v.SelfOutput == nil || *v.SelfOutput != "public.http.url" {
-		t.Errorf("expected self output 'public.http.url', got %v", v.SelfOutput)
+	if v.SelfOutput == nil || *v.SelfOutput != "public_url" {
+		t.Errorf("expected self output 'public_url', got %v", v.SelfOutput)
 	}
 	if v.Value != nil {
 		t.Error("self output should not have a literal value")
@@ -599,7 +599,7 @@ func TestToStack_FullInfisicalExample(t *testing.T) {
 					{Name: "http", Port: 8080, Protocol: "HTTP", Public: true, Subdomain: "infisical"},
 				},
 				Env: map[string]string{
-					"SITE_URL":          "{{ self.public.http.url }}",
+					"SITE_URL":          "{{ self.public_url }}",
 					"DB_CONNECTION_URI": "postgres://infisical:infisical@{{ db.host }}:5432/infisical",
 					"REDIS_URL":         "redis://{{ redis.host }}:6379",
 					"ENCRYPTION_KEY":    "6c1fe4e407b8911c104518103505b218",

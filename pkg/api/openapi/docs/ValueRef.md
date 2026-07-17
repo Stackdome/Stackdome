@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Output** | Pointer to **string** | Output accessor on the connection&#39;s &#x60;from&#x60; node, such as &#x60;url&#x60; or &#x60;public.http.url&#x60;. | [optional] 
+**Output** | Pointer to **string** | Output accessor on the connection&#39;s &#x60;from&#x60; node, such as &#x60;url&#x60; or &#x60;public_url&#x60;. | [optional] 
 **Template** | Pointer to **string** | Template used when one target value must be composed from multiple outputs. | [optional] 
 **Values** | Pointer to [**map[string]OutputValueRef**](OutputValueRef.md) | Named template inputs, each resolving one output from the connection&#39;s &#x60;from&#x60; node. | [optional] 
 

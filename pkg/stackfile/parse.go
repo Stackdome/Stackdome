@@ -149,7 +149,7 @@ func validateEnvRefs(resourceName string, env map[string]string, ports []PortDef
 		// Self refs must be exact (entire value is the ref)
 		if hasSelf {
 			if !exactRefPattern.MatchString(envVal) {
-				return fmt.Errorf("resource '%s' env var '%s': self-references must be the only content of the env var (e.g., '{{ self.port.http }}')", resourceName, envKey)
+				return fmt.Errorf("resource '%s' env var '%s': self-references must be the only content of the env var (e.g., '{{ self.port }}')", resourceName, envKey)
 			}
 			if err := validateSelfOutput(resourceName, envKey, refs[0].Output, ports); err != nil {
 				return err

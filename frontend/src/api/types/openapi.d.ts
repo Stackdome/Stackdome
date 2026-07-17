@@ -7801,7 +7801,7 @@ export interface components {
         };
         /** @description Declared output metadata for a topology node. Values are not returned here. */
         OutputDescriptor: {
-            /** @description Stable output accessor name, for example `host` or `public.http.url`. */
+            /** @description Stable output accessor name, for example `host` or `public_url`. */
             name: string;
             /**
              * @description Scalar value type exposed by this output.
@@ -7924,7 +7924,7 @@ export interface components {
         /** @description Describes how to read a value from the connection's `from` node. This is only used inside `StackConnection.mappings[]`.
          *      */
         ValueRef: {
-            /** @description Output accessor on the connection's `from` node, such as `url` or `public.http.url`. */
+            /** @description Output accessor on the connection's `from` node, such as `url` or `public_url`. */
             output?: string;
             /** @description Template used when one target value must be composed from multiple outputs. */
             template?: string;
@@ -8298,7 +8298,7 @@ export interface components {
             name: string;
             /** @description Literal environment variable value. */
             value?: string;
-            /** @description Read this environment variable from one of the resource's own declared outputs, for example public.http.url. */
+            /** @description Read this environment variable from one of the resource's own declared outputs, for example public_url. */
             self_output?: string;
         };
         Condition: {

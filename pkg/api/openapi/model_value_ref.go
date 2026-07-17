@@ -16,7 +16,7 @@ import (
 
 // ValueRef Describes how to read a value from the connection's `from` node. This is only used inside `StackConnection.mappings[]`.
 type ValueRef struct {
-	// Output accessor on the connection's `from` node, such as `url` or `public.http.url`.
+	// Output accessor on the connection's `from` node, such as `url` or `public_url`.
 	Output *string `json:"output,omitempty"`
 	// Template used when one target value must be composed from multiple outputs.
 	Template *string `json:"template,omitempty"`

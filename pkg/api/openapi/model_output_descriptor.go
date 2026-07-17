@@ -16,7 +16,7 @@ import (
 
 // OutputDescriptor Declared output metadata for a topology node. Values are not returned here.
 type OutputDescriptor struct {
-	// Stable output accessor name, for example `host` or `public.http.url`.
+	// Stable output accessor name, for example `host` or `public_url`.
 	Name string `json:"name"`
 	// Scalar value type exposed by this output.
 	Type string `json:"type"`
