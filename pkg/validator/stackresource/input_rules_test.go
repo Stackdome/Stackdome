@@ -243,11 +243,11 @@ var _ = Describe("validateInputRules", func() {
 
 	It("accepts env self_output referencing a declared output", func() {
 		r := validImageResource()
-		// "host" and "port.http"/"url.http" (from the declared http port) are
-		// this resource's declared outputs.
+		// "host" and "port"/"url" (from the resource's single declared port)
+		// are this resource's declared outputs.
 		r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{
-			{Name: "SELF_HOST", SelfOutput: "host"},
-			{Name: "SELF_URL", SelfOutput: "url.http"},
+			{Name: "SELF_HOST", SelfOutput: models.OutputNameHost},
+			{Name: "SELF_URL", SelfOutput: models.OutputNameURL},
 		}}
 		Expect(validateInputRules(r)).To(BeEmpty())
 	})
