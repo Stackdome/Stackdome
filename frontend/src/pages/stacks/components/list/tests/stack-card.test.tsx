@@ -29,7 +29,7 @@ describe("DeployStackCard", () => {
           stack={{
             ...baseStack,
             latest_release: { id: "r1", state: ReleaseState.Released },
-            current_release: { id: "r1", state: ReleaseState.Released, health: "ok" },
+            converged_release: { id: "r1", state: ReleaseState.Released, health: "ok" },
           } as Stack}
         />
       </MemoryRouter>,
@@ -75,7 +75,7 @@ describe("DeployStackCard", () => {
           stack={{
             ...baseStack,
             latest_release: { id: "r3", state: ReleaseState.Failed },
-            current_release: { id: "r1", state: ReleaseState.Released, health: "ok" },
+            converged_release: { id: "r1", state: ReleaseState.Released, health: "ok" },
           } as Stack}
         />
       </MemoryRouter>,
@@ -90,7 +90,7 @@ describe("headerStatus", () => {
     const s = {
       ...baseStack,
       lifecycle: "deleting",
-      current_release: { id: "r1", state: ReleaseState.Released, health: "ok" },
+      converged_release: { id: "r1", state: ReleaseState.Released, health: "ok" },
       latest_release: { id: "r1", state: ReleaseState.Released },
     } as Stack;
     expect(headerStatus(s)).toEqual({ label: "Deleting", variant: "pending" });

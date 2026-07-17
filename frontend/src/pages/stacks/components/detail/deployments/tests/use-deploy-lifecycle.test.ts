@@ -6,7 +6,7 @@ import type { StackRelease, StackReleaseSnapshot } from "@/api/releases";
 const mkStack = (image: string, updatedAt?: string): Stack =>
   ({
     spec: { stack_resources: [{ name: "web", source: { image: { ref: image } } }] },
-    current_release: { id: "live-1" },
+    converged_release: { id: "live-1" },
     updated_at: updatedAt,
   } as unknown as Stack);
 

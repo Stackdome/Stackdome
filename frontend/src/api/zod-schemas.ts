@@ -619,7 +619,13 @@ const StackReleaseState = z.enum([
   "Superseded",
   "Cancelled",
 ]);
-const ReleaseHealth = z.enum(["ok", "progressing", "degraded", "failed"]);
+const ReleaseHealth = z.enum([
+  "ok",
+  "progressing",
+  "degraded",
+  "unavailable",
+  "failed",
+]);
 const ReleaseSummary = z
   .object({
     id: z.string(),
@@ -646,7 +652,7 @@ const Stack = z
     spec: StackSpec,
     settings: StackSettings.optional(),
     lifecycle: StackLifecycle.optional(),
-    current_release: ReleaseSummary.optional(),
+    converged_release: ReleaseSummary.optional(),
     latest_release: ReleaseSummary.optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
     updated_at: z.string().datetime({ offset: true }).optional(),

@@ -16,7 +16,7 @@ Name | Type | Description | Notes
 **Spec** | [**StackSpec**](StackSpec.md) |  | 
 **Settings** | Pointer to [**StackSettings**](StackSettings.md) |  | [optional] 
 **Lifecycle** | Pointer to [**StackLifecycle**](StackLifecycle.md) |  | [optional] 
-**CurrentRelease** | Pointer to [**ReleaseSummary**](ReleaseSummary.md) |  | [optional] 
+**ConvergedRelease** | Pointer to [**ReleaseSummary**](ReleaseSummary.md) |  | [optional] 
 **LatestRelease** | Pointer to [**ReleaseSummary**](ReleaseSummary.md) |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
@@ -330,30 +330,30 @@ SetLifecycle sets Lifecycle field to given value.
 
 HasLifecycle returns a boolean if a field has been set.
 
-### GetCurrentRelease
+### GetConvergedRelease
 
-`func (o *Stack) GetCurrentRelease() ReleaseSummary`
+`func (o *Stack) GetConvergedRelease() ReleaseSummary`
 
-GetCurrentRelease returns the CurrentRelease field if non-nil, zero value otherwise.
+GetConvergedRelease returns the ConvergedRelease field if non-nil, zero value otherwise.
 
-### GetCurrentReleaseOk
+### GetConvergedReleaseOk
 
-`func (o *Stack) GetCurrentReleaseOk() (*ReleaseSummary, bool)`
+`func (o *Stack) GetConvergedReleaseOk() (*ReleaseSummary, bool)`
 
-GetCurrentReleaseOk returns a tuple with the CurrentRelease field if it's non-nil, zero value otherwise
+GetConvergedReleaseOk returns a tuple with the ConvergedRelease field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetCurrentRelease
+### SetConvergedRelease
 
-`func (o *Stack) SetCurrentRelease(v ReleaseSummary)`
+`func (o *Stack) SetConvergedRelease(v ReleaseSummary)`
 
-SetCurrentRelease sets CurrentRelease field to given value.
+SetConvergedRelease sets ConvergedRelease field to given value.
 
-### HasCurrentRelease
+### HasConvergedRelease
 
-`func (o *Stack) HasCurrentRelease() bool`
+`func (o *Stack) HasConvergedRelease() bool`
 
-HasCurrentRelease returns a boolean if a field has been set.
+HasConvergedRelease returns a boolean if a field has been set.
 
 ### GetLatestRelease
 

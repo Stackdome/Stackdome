@@ -14,7 +14,7 @@ function liveStatusWith(resources: Record<string, Record<string, unknown>>): Rel
 }
 
 function stackWithReleases(current?: Partial<ReleaseSummary>, latest?: Partial<ReleaseSummary>): Stack {
-  return { current_release: current, latest_release: latest } as unknown as Stack;
+  return { converged_release: current, latest_release: latest } as unknown as Stack;
 }
 
 describe("deriveFailingResources", () => {

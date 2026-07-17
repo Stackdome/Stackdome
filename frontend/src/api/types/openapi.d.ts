@@ -7734,7 +7734,7 @@ export interface components {
             spec: components["schemas"]["StackSpec"];
             settings?: components["schemas"]["StackSettings"];
             lifecycle?: components["schemas"]["StackLifecycle"];
-            current_release?: components["schemas"]["ReleaseSummary"];
+            converged_release?: components["schemas"]["ReleaseSummary"];
             latest_release?: components["schemas"]["ReleaseSummary"];
             /** Format: date-time */
             readonly created_at?: string;
@@ -8813,7 +8813,7 @@ export interface components {
          * @description Computed runtime health rollup of a live/active release.
          * @enum {string}
          */
-        ReleaseHealth: "ok" | "progressing" | "degraded" | "failed";
+        ReleaseHealth: "ok" | "progressing" | "degraded" | "unavailable" | "failed";
         /** @description Lightweight release reference embedded in the stack for list views. */
         ReleaseSummary: {
             id?: string;

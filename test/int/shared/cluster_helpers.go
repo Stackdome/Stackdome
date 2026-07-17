@@ -320,7 +320,7 @@ func WaitForStackCRExists(ctx context.Context, clusterClient client.Client, name
 // WaitForStackActive polls the stack API until it responds 200 with an
 // active lifecycle. The wait for stacks that never deploy (e.g. skip-cluster-
 // provisioning fixtures): they have no releases, so WaitForStackReady's
-// current_release gate would never pass.
+// converged_release gate would never pass.
 func WaitForStackActive(apiClient *openapi.APIClient, orgID, projectName, stackID string, timeout time.Duration) *openapi.Stack {
 	var stack *openapi.Stack
 	Eventually(func(g Gomega) {
@@ -344,18 +344,18 @@ func WaitForStackReady(apiClient *openapi.APIClient, orgID, projectName, stackID
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(httpResp.StatusCode).To(Equal(200))
 
-		current, ok := resp.GetCurrentReleaseOk()
-		g.Expect(ok).To(BeTrue(), "stack should have a current_release")
+		current, ok := resp.GetConvergedReleaseOk()
+		g.Expect(ok).To(BeTrue(), "stack should have a converged_release")
 
 		state, stateOk := current.GetStateOk()
-		g.Expect(stateOk).To(BeTrue(), "current_release should have a state")
+		g.Expect(stateOk).To(BeTrue(), "converged_release should have a state")
 		if *state == openapi.RELEASE_STATE_FAILED {
 			StopTrying(fmt.Sprintf("stack %s release %s went terminal Failed while waiting for Released", stackID, current.GetId())).Now()
 		}
 		g.Expect(*state).To(Equal(openapi.RELEASE_STATE_RELEASED), "current release should be Released, got: %s", *state)
 
 		health, healthOk := current.GetHealthOk()
-		g.Expect(healthOk).To(BeTrue(), "current_release should have health")
+		g.Expect(healthOk).To(BeTrue(), "converged_release should have health")
 		g.Expect(*health).To(Equal(openapi.RELEASE_HEALTH_OK), "current release should be healthy, got: %s", *health)
 
 		stack = resp
@@ -604,7 +604,7 @@ func getStackResourceLiveStatus(apiClient *openapi.APIClient, orgID, projectName
 	Expect(httpResp.StatusCode).To(Equal(200))
 
 	releaseID := ""
-	if current, ok := stack.GetCurrentReleaseOk(); ok {
+	if current, ok := stack.GetConvergedReleaseOk(); ok {
 		releaseID = current.GetId()
 	} else if latest, ok := stack.GetLatestReleaseOk(); ok {
 		releaseID = latest.GetId()

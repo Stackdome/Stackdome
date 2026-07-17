@@ -4737,7 +4737,7 @@ components:
           $ref: '#/components/schemas/StackSettings'
         lifecycle:
           $ref: '#/components/schemas/StackLifecycle'
-        current_release:
+        converged_release:
           $ref: '#/components/schemas/ReleaseSummary'
         latest_release:
           $ref: '#/components/schemas/ReleaseSummary'
@@ -6941,8 +6941,8 @@ components:
     ReleaseHealth:
       type: string
       description: Computed runtime health rollup of a live/active release.
-      enum: [ok, progressing, degraded, failed]
-      x-enum-varnames: [RELEASE_HEALTH_OK, RELEASE_HEALTH_PROGRESSING, RELEASE_HEALTH_DEGRADED, RELEASE_HEALTH_FAILED]
+      enum: [ok, progressing, degraded, unavailable, failed]
+      x-enum-varnames: [RELEASE_HEALTH_OK, RELEASE_HEALTH_PROGRESSING, RELEASE_HEALTH_DEGRADED, RELEASE_HEALTH_UNAVAILABLE, RELEASE_HEALTH_FAILED]
 
     ReleaseSummary:
       type: object

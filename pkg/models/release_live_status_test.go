@@ -9,6 +9,11 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 	var stack *Stack
 	var release *StackRelease
 
+	// cond builds a True stack condition of the given type.
+	cond := func(t StackConditionType) Condition {
+		return Condition{Type: string(t), Status: string(ConditionTrue)}
+	}
+
 	ginkgo.BeforeEach(func() {
 		release = &StackRelease{
 			ID:    "rel-1",
@@ -22,7 +27,8 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 				TargetRevision:     "rev-2",
 				ObservedCrRevision: "rev-2",
 				LastConverged:      &StackConvergenceRecord{ReleaseID: "rel-1", Revision: "rev-2"},
-				Conditions:         []Condition{},
+				// Healthy converged baseline: settled and serving.
+				Conditions: []Condition{cond(StackConditionConverged), cond(StackConditionAvailable)},
 			},
 			StackResources: []*StackResource{
 				{Name: "web", Status: &StackResourceStatus{State: StackResourcePhaseReady, Replicas: 2, AvailableReplicas: 2}},
@@ -42,6 +48,7 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 
 	ginkgo.It("overlays an active release even when another release is converged", func() {
 		release = &StackRelease{ID: "rel-2", State: ReleaseStateInProgress, Snapshot: release.Snapshot}
+		stack.Status.Conditions = []Condition{cond(StackConditionProgressing)}
 		ls := BuildReleaseLiveStatus(release, stack)
 		gomega.Expect(ls).NotTo(gomega.BeNil())
 		gomega.Expect(ls.Health).To(gomega.Equal(ReleaseHealthProgressing))
@@ -58,44 +65,51 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 		gomega.Expect(BuildReleaseLiveStatus(release, stack)).To(gomega.BeNil())
 	})
 
-	ginkgo.It("rolls up failed when any resource failed", func() {
-		stack.StackResources[0].Status.State = StackResourcePhaseFailed
-		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthFailed))
+	// Health is a direct rollup of the stack's aggregate conditions (cluster-agent
+	// v0.6.6+), mirroring the agent's phase priority Failed > Progressing > Degraded > Converged.
+
+	ginkgo.It("rolls up ok from the Converged condition", func() {
+		stack.Status.Conditions = []Condition{cond(StackConditionConverged), cond(StackConditionAvailable)}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthOK))
 	})
 
-	ginkgo.It("rolls up progressing when any resource is pending", func() {
-		stack.StackResources[1].Status.State = StackResourcePhasePending
+	ginkgo.It("rolls up progressing from the Progressing condition", func() {
+		stack.Status.Conditions = []Condition{cond(StackConditionProgressing)}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
 	})
 
-	ginkgo.It("rolls up progressing when a resource has no status yet", func() {
-		stack.StackResources[1].Status = nil
-		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
-	})
-
-	ginkgo.It("rolls up degraded from the stack Degraded condition when no resource failed", func() {
-		stack.Status.Conditions = []Condition{{Type: string(StackConditionDegraded), Status: string(ConditionTrue)}}
+	ginkgo.It("rolls up degraded from the Degraded condition", func() {
+		stack.Status.Conditions = []Condition{cond(StackConditionDegraded)}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthDegraded))
 	})
 
-	ginkgo.It("prefers progressing over degraded while any resource is still coming up", func() {
-		// A resource mid-rollout makes the whole release progressing; the Degraded
-		// condition is only surfaced once nothing is progressing, so the transient
-		// state wins and degraded doesn't fire early.
-		stack.StackResources[1].Status.State = StackResourcePhasePending
-		stack.Status.Conditions = []Condition{{Type: string(StackConditionDegraded), Status: string(ConditionTrue)}}
-		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
-	})
-
-	ginkgo.It("rolls up progressing when any resource is unknown", func() {
-		stack.StackResources[1].Status.State = StackResourcePhaseUnknown
-		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
-	})
-
-	ginkgo.It("rolls up failed when unknown and failed resources are both present", func() {
-		stack.StackResources[0].Status.State = StackResourcePhaseUnknown
-		stack.StackResources[1].Status.State = StackResourcePhaseFailed
+	ginkgo.It("rolls up failed from the Stalled condition", func() {
+		stack.Status.Conditions = []Condition{cond(StackConditionStalled)}
 		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthFailed))
+	})
+
+	ginkgo.It("prefers failed over progressing when both Stalled and Progressing are set", func() {
+		stack.Status.Conditions = []Condition{cond(StackConditionStalled), cond(StackConditionProgressing)}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthFailed))
+	})
+
+	ginkgo.It("prefers progressing over degraded when both are set", func() {
+		stack.Status.Conditions = []Condition{cond(StackConditionProgressing), cond(StackConditionDegraded)}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
+	})
+
+	ginkgo.It("rolls up progressing for an active release with no rollout condition yet", func() {
+		release.State = ReleaseStateInProgress
+		stack.Status.Conditions = []Condition{}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthProgressing))
+	})
+
+	ginkgo.It("rolls up unavailable for a live release that is no longer serving", func() {
+		// Live (non-active) release with no positive condition and not serving —
+		// rolled out once, now down.
+		release.State = ReleaseStateReleased
+		stack.Status.Conditions = []Condition{}
+		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthUnavailable))
 	})
 
 	ginkgo.It("scopes live_status.resources to only the release's snapshot members", func() {
@@ -109,15 +123,5 @@ var _ = ginkgo.Describe("BuildReleaseLiveStatus", func() {
 		gomega.Expect(ls.Resources).To(gomega.HaveLen(1))
 		gomega.Expect(ls.Resources).To(gomega.HaveKey("web"))
 		gomega.Expect(ls.Resources).NotTo(gomega.HaveKey("busybox"))
-	})
-
-	ginkgo.It("ignores a resource's failed status when it is absent from the release snapshot", func() {
-		release.Snapshot = StackSnapshot{Resources: []*StackResource{{Name: "web"}}}
-		stack.StackResources = append(stack.StackResources, &StackResource{
-			Name:   "busybox",
-			Status: &StackResourceStatus{State: StackResourcePhaseFailed},
-		})
-
-		gomega.Expect(BuildReleaseLiveStatus(release, stack).Health).To(gomega.Equal(ReleaseHealthOK))
 	})
 })

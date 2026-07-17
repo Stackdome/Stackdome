@@ -7,6 +7,7 @@ const (
 	ReleaseHealthOK          ReleaseHealth = "ok"
 	ReleaseHealthProgressing ReleaseHealth = "progressing"
 	ReleaseHealthDegraded    ReleaseHealth = "degraded"
+	ReleaseHealthUnavailable ReleaseHealth = "unavailable"
 	ReleaseHealthFailed      ReleaseHealth = "failed"
 )
 
@@ -23,8 +24,8 @@ type ReleaseLiveStatus struct {
 // StackReleaseRefs pairs the currently converged (live) release with the
 // highest-sequence one for stack embedding.
 type StackReleaseRefs struct {
-	Current *StackRelease
-	Latest  *StackRelease
+	Converged *StackRelease
+	Latest    *StackRelease
 }
 
 // BuildReleaseLiveStatus overlays current stack/resource status onto a release.
@@ -56,7 +57,7 @@ func BuildReleaseLiveStatus(release *StackRelease, stack *Stack) *ReleaseLiveSta
 	}
 
 	return &ReleaseLiveStatus{
-		Health:           rollupHealth(release, stack, liveResources),
+		Health:           rollupHealth(release, stack),
 		Resources:        resources,
 		Conditions:       stack.Status.Conditions,
 		TargetRevision:   stack.Status.TargetRevision,
@@ -64,25 +65,25 @@ func BuildReleaseLiveStatus(release *StackRelease, stack *Stack) *ReleaseLiveSta
 	}
 }
 
-func rollupHealth(release *StackRelease, stack *Stack, resources []*StackResource) ReleaseHealth {
-	health := ReleaseHealthOK
-	for _, r := range resources {
-		switch {
-		case r.Status == nil || r.Status.State == StackResourcePhasePending || r.Status.State == StackResourcePhaseUnknown:
-			if health == ReleaseHealthOK {
-				health = ReleaseHealthProgressing
-			}
-		case r.Status.State == StackResourcePhaseFailed:
-			return ReleaseHealthFailed
-		}
+// rollupHealth maps the stack's aggregate conditions (cluster-agent v0.6.6+) to a
+// single release health, mirroring the agent's phase priority:
+// Failed(Stalled) > Progressing > Degraded > Converged. The fall-through splits on
+// whether the release is still deploying (progressing) or a live release that fell
+// out of serving (unavailable). Converged implies Available, so ok needs no Available check.
+func rollupHealth(release *StackRelease, stack *Stack) ReleaseHealth {
+	conds := stack.Status.Conditions
+	switch {
+	case IsConditionTrue(conds, string(StackConditionStalled)):
+		return ReleaseHealthFailed
+	case IsConditionTrue(conds, string(StackConditionProgressing)):
+		return ReleaseHealthProgressing
+	case IsConditionTrue(conds, string(StackConditionDegraded)):
+		return ReleaseHealthDegraded
+	case IsConditionTrue(conds, string(StackConditionConverged)):
+		return ReleaseHealthOK
+	case release.State.Active():
+		return ReleaseHealthProgressing // active deploy, no rollout condition yet (pods not created)
+	default:
+		return ReleaseHealthUnavailable // live release, no positive condition, not serving
 	}
-	if health == ReleaseHealthOK {
-		if IsConditionTrue(stack.Status.Conditions, string(StackConditionDegraded)) {
-			return ReleaseHealthDegraded
-		}
-		if release.State.Active() {
-			return ReleaseHealthProgressing
-		}
-	}
-	return health
 }
