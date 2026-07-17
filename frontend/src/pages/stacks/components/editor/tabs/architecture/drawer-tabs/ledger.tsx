@@ -133,7 +133,7 @@ export function LedgerRow({
         <Label
           htmlFor={htmlFor}
           className={cn(
-            "w-[150px] shrink-0 text-[13px] font-normal text-foreground dark:text-fg-2",
+            "w-[150px] shrink-0 text-[13px] font-normal text-foreground/80 dark:text-fg-2",
             alignTop && "pt-2.5",
           )}
         >

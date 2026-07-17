@@ -571,7 +571,7 @@ function StackResourceConfigurationTabImpl({
             {mounts.map((vm: VolumeMount, vmIdx: number) => (
               <div key={vmIdx} className="border-b border-secondary/80 py-1">
                 <div className="flex items-center gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20">
-                  <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-foreground dark:text-fg-2">
+                  <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-foreground/80 dark:text-fg-2">
                     <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
                     <span className="truncate">{vm.source_volume_name}</span>
                   </div>
