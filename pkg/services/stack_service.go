@@ -47,7 +47,6 @@ type StackQueryService interface {
 	GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	GetStackTopology(ctx context.Context, ID string) (*models.StackTopology, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
-	// GetStacksByUserID(ctx context.Context, projectID, orgID, userID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError)
 	GetStacksByOrganisationID(ctx context.Context, organisationID string) ([]*models.Stack, *errors.ServiceError)
 	ListStacksForCurrentUser(ctx context.Context, orgID string) ([]*models.Stack, *errors.ServiceError)

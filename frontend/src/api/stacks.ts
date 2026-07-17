@@ -25,7 +25,7 @@ export type VolumeUpdateRequest = Omit<Volume,
 >;
 
 export type StackUpdateRequest = Omit<Stack,
-  'id' | 'organisation_id' | 'user_id' | 'namespace' | 'revision' | 'lifecycle' | 'current_release' | 'latest_release' | 'created_at' | 'updated_at'
+  'id' | 'organisation_id' | 'user_id' | 'namespace' | 'revision' | 'lifecycle' | 'converged_release' | 'latest_release' | 'created_at' | 'updated_at'
 > & {
   spec: {
     stack_resources: StackResourceUpdateRequest[];

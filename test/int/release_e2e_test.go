@@ -64,9 +64,9 @@ var _ = Describe("Release E2E", Ordered, func() {
 			By("Verifying the release-centric stack summary reflects convergence")
 			convergedStack := shared.GetStack(client, orgID, projectName, stackID)
 			Expect(convergedStack.GetLifecycle()).To(Equal(openapi.STACK_LIFECYCLE_ACTIVE))
-			currentRelease := convergedStack.GetCurrentRelease()
-			Expect(currentRelease.GetId()).To(Equal(released.GetId()))
-			Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
+			convergedRelease := convergedStack.GetConvergedRelease()
+			Expect(convergedRelease.GetId()).To(Equal(released.GetId()))
+			Expect(convergedRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
 			latestRelease := convergedStack.GetLatestRelease()
 			Expect(latestRelease.GetId()).To(Equal(released.GetId()))
 

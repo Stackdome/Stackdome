@@ -768,6 +768,10 @@ var _ = Describe("stackReleaseService.GetReleaseDetail", func() {
 			ProjectID: detailProjectID,
 			Status: &models.StackStatus{
 				LastConverged: &models.StackConvergenceRecord{ReleaseID: "rel-1", Revision: "rev-1"},
+				Conditions: []models.Condition{
+					{Type: string(models.StackConditionConverged), Status: string(models.ConditionTrue)},
+					{Type: string(models.StackConditionAvailable), Status: string(models.ConditionTrue)},
+				},
 			},
 			StackResources: []*models.StackResource{
 				{Name: "web", Status: &models.StackResourceStatus{State: models.StackResourcePhaseReady}},
@@ -823,7 +827,7 @@ var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
 		ctrl.Finish()
 	})
 
-	It("resolves latest and current per stack in a batch", func() {
+	It("resolves latest and converged per stack in a batch", func() {
 		stacks := []*models.Stack{
 			{ID: "s1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "r-live"}}},
 			{ID: "s2"}, // never deployed
@@ -838,22 +842,24 @@ var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
 		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
 		Expect(serr).To(BeNil())
 		Expect(refs["s1"].Latest.ID).To(Equal("r-new"))
-		Expect(refs["s1"].Current.ID).To(Equal("r-live"))
+		Expect(refs["s1"].Converged.ID).To(Equal("r-live"))
 		Expect(refs["s2"].Latest).To(BeNil())
-		Expect(refs["s2"].Current).To(BeNil())
+		Expect(refs["s2"].Converged).To(BeNil())
 	})
 
-	It("skips the by-ids query when latest already covers current", func() {
+	It("reuses latest as converged when already converged to it", func() {
 		stacks := []*models.Stack{
 			{ID: "s1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "r-new"}}},
 		}
 		latest := &models.StackRelease{ID: "r-new", StackID: "s1", Sequence: 9}
 		releaseStore.EXPECT().GetLatestByStackIDs(ctx, []string{"s1"}).
 			Return(map[string]*models.StackRelease{"s1": latest}, nil)
+		releaseStore.EXPECT().GetByIDs(ctx, []string{}).
+			Return(map[string]*models.StackRelease{}, nil)
 
 		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
 		Expect(serr).To(BeNil())
-		Expect(refs["s1"].Current).To(BeIdenticalTo(refs["s1"].Latest))
+		Expect(refs["s1"].Converged).To(BeIdenticalTo(refs["s1"].Latest))
 	})
 })
 

@@ -182,12 +182,6 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
-	s.logger.WithFields(map[string]interface{}{
-		logger.FieldStackID:   stack.ID,
-		logger.FieldReleaseID: created.ID,
-		"sequence":            created.Sequence,
-		"cause":               cause.Kind,
-	}).Info(ctx, "created release")
 	return created, nil
 }
 
@@ -264,12 +258,6 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.StackRelease{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
-	s.logger.WithFields(map[string]interface{}{
-		logger.FieldStackID:   stackID,
-		logger.FieldReleaseID: created.ID,
-		"sequence":            created.Sequence,
-		"rollback_from":       src.Sequence,
-	}).Info(ctx, "created rollback release")
 	return created, nil
 }
 
@@ -310,64 +298,6 @@ func (s *stackReleaseService) GetReleaseDetail(ctx context.Context, releaseID st
 	return release, models.BuildReleaseLiveStatus(release, stack), nil
 }
 
-// InternalGetReleaseRefs batch-resolves the latest and currently converged
-// release for each given stack. No permission checks: callers have already
-// authorized the stacks.
-func (s *stackReleaseService) InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError) {
-	stackIDs := make([]string, len(stacks))
-	for i, stack := range stacks {
-		stackIDs[i] = stack.ID
-	}
-
-	latestByStackID, sErr := s.store.GetLatestByStackIDs(ctx, stackIDs)
-	if sErr != nil {
-		return nil, sErr
-	}
-
-	refs := make(map[string]models.StackReleaseRefs, len(stacks))
-	var missingCurrentIDs []string
-	for _, stack := range stacks {
-		entry := models.StackReleaseRefs{Latest: latestByStackID[stack.ID]}
-		if currentID := convergedReleaseID(stack); currentID != "" {
-			if entry.Latest != nil && entry.Latest.ID == currentID {
-				entry.Current = entry.Latest
-			} else {
-				missingCurrentIDs = append(missingCurrentIDs, currentID)
-			}
-		}
-		refs[stack.ID] = entry
-	}
-
-	if len(missingCurrentIDs) > 0 {
-		currentByID, sErr := s.store.GetByIDs(ctx, missingCurrentIDs)
-		if sErr != nil {
-			return nil, sErr
-		}
-		for _, stack := range stacks {
-			currentID := convergedReleaseID(stack)
-			if currentID == "" {
-				continue
-			}
-			entry := refs[stack.ID]
-			if entry.Current == nil {
-				entry.Current = currentByID[currentID]
-				refs[stack.ID] = entry
-			}
-		}
-	}
-
-	return refs, nil
-}
-
-// convergedReleaseID returns the release ID the stack last converged to, or
-// "" if the stack has never converged.
-func convergedReleaseID(stack *models.Stack) string {
-	if stack.Status == nil || stack.Status.LastConverged == nil {
-		return ""
-	}
-	return stack.Status.LastConverged.ReleaseID
-}
-
 func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, params stores.ListParams) (*stores.PaginatedResult[*models.StackRelease], *errors.ServiceError) {
 	stack, sErr := s.stackQuery.GetStack(ctx, stackID)
 	if sErr != nil {
@@ -384,15 +314,14 @@ func (s *stackReleaseService) ListReleases(ctx context.Context, stackID string, 
 const (
 	releaseEventsDefaultLimit = 100
 	releaseEventsMaxLimit     = 500
+	// releaseCancelledMessage is the user-facing message recorded on the
+	// release_cancelled terminal event.
+	releaseCancelledMessage = "Release cancelled"
+
+	// releaseLiveMessage is the user-facing message recorded on the
+	// release_released terminal event.
+	releaseLiveMessage = "Release is live"
 )
-
-// releaseCancelledMessage is the user-facing message recorded on the
-// release_cancelled terminal event.
-const releaseCancelledMessage = "Release cancelled"
-
-// releaseLiveMessage is the user-facing message recorded on the
-// release_released terminal event.
-const releaseLiveMessage = "Release is live"
 
 // ReleaseEventPage is a sequence-cursor page of release events.
 type ReleaseEventPage struct {
@@ -504,12 +433,68 @@ func (s *stackReleaseService) CancelRelease(ctx context.Context, releaseID strin
 	// The CAS win already persisted the cancellation; recording is best-effort.
 	rel.State = models.ReleaseStateCancelled
 	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateCancelled, releaseCancelledMessage); recErr != nil {
-		s.logger.Error(ctx, "release %s: failed to record release_cancelled event: %v", rel.ID, recErr)
+		s.logger.Errorf("release %s: failed to record release_cancelled event: %v", rel.ID, recErr)
 	}
 	return nil
 }
 
 // --- Internal methods (no permission checks, called by workers/controllers) ---
+
+// InternalGetReleaseRefs batch-resolves the latest and currently converged
+// release for each given stack. No permission checks: callers have already
+// authorized the stacks.
+func (s *stackReleaseService) InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError) {
+	stackIDs := make([]string, len(stacks))
+	for i, stack := range stacks {
+		stackIDs[i] = stack.ID
+	}
+
+	latestReleasesByStackID, sErr := s.store.GetLatestByStackIDs(ctx, stackIDs)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	covergedReleaseIDs := make([]string, 0)
+	for _, stack := range stacks {
+		latestRelease := latestReleasesByStackID[stack.ID]
+		// We dont want to fetch the converged release if:
+		// - There is no latest release (the stack is not deployed, so no question of convergence)
+		// - The stack has no converged release (the stack is not converged)
+		// - The converged release is the same as the latest release (the stack is converged to the latest release)
+		if latestRelease == nil || !stack.HasConvergedRelease() || stack.GetConvergedReleaseID() == latestRelease.ID {
+			continue
+		}
+		covergedReleaseIDs = append(covergedReleaseIDs, stack.GetConvergedReleaseID())
+	}
+
+	convergedReleases, sErr := s.store.GetByIDs(ctx, covergedReleaseIDs)
+	if sErr != nil {
+		return nil, sErr
+	}
+
+	convergedReleasesByStackID := make(map[string]*models.StackRelease)
+	for _, release := range convergedReleases {
+		convergedReleasesByStackID[release.StackID] = release
+	}
+
+	refs := make(map[string]models.StackReleaseRefs, len(stacks))
+	for _, stack := range stacks {
+		latestRelease := latestReleasesByStackID[stack.ID]
+		entry := models.StackReleaseRefs{
+			Latest: latestRelease,
+		}
+		// If the stack has a converged release and it is the same as the latest release,
+		// set the converged release to the latest release.
+		if stack.HasConvergedRelease() && latestRelease != nil && stack.GetConvergedReleaseID() == latestRelease.ID {
+			entry.Converged = latestRelease
+		} else {
+			entry.Converged = convergedReleasesByStackID[stack.ID]
+		}
+		refs[stack.ID] = entry
+	}
+
+	return refs, nil
+}
 
 func (s *stackReleaseService) InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
 	return s.store.GetByID(ctx, releaseID)
@@ -574,16 +559,16 @@ func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context
 	}
 	rel, getErr := s.store.GetByID(ctx, id)
 	if getErr != nil {
-		s.logger.Error(ctx, "release %s: failed to load release for failure events: %v", id, getErr)
+		s.logger.Errorf("release %s: failed to load release for failure events: %v", id, getErr)
 		return true, nil
 	}
 	for _, verr := range verrs {
 		if recErr := s.eventRecorder.RecordReleaseCheckFailed(ctx, rel, verr.ResourceName, validationCheckKey(verr), verr.Message); recErr != nil {
-			s.logger.Error(ctx, "release %s: failed to record release_check_failed event: %v", id, recErr)
+			s.logger.Errorf("release %s: failed to record release_check_failed event: %v", id, recErr)
 		}
 	}
 	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, models.ReleaseStateFailed, message); recErr != nil {
-		s.logger.Error(ctx, "release %s: failed to record release_failed event: %v", id, recErr)
+		s.logger.Errorf("release %s: failed to record release_failed event: %v", id, recErr)
 	}
 	return true, nil
 }
@@ -594,11 +579,11 @@ func (s *stackReleaseService) MarkFailedWithValidationErrors(ctx context.Context
 func (s *stackReleaseService) recordTerminalEvent(ctx context.Context, id string, state models.StackReleaseState, message string) {
 	rel, serr := s.store.GetByID(ctx, id)
 	if serr != nil {
-		s.logger.Error(ctx, "release %s: failed to load release for %s event: %v", id, state, serr)
+		s.logger.Errorf("release %s: failed to load release for %s event: %v", id, state, serr)
 		return
 	}
 	if recErr := s.eventRecorder.RecordReleaseTerminal(ctx, rel, state, message); recErr != nil {
-		s.logger.Error(ctx, "release %s: failed to record %s event: %v", id, state, recErr)
+		s.logger.Errorf("release %s: failed to record %s event: %v", id, state, recErr)
 	}
 }
 

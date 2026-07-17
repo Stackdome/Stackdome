@@ -40,7 +40,7 @@ export function DeploymentsTab({ orgId, projectName, stackId, stack, onOpenLogs,
     : undefined;
 
   // Anchor the live release at the top only when it's buried (not already the newest node).
-  const liveReleaseId = stack.current_release?.id;
+  const liveReleaseId = stack.converged_release?.id;
   const liveIdx = liveReleaseId ? releases.findIndex((r) => r.id === liveReleaseId) : -1;
   const liveRelease = liveIdx >= 0 ? releases[liveIdx] : undefined;
   const liverev = liveIdx >= 0 ? releases[liveIdx + 1] : undefined;

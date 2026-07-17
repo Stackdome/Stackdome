@@ -227,27 +227,27 @@ export default function StackDetailPage() {
   // Diff anchor: the latest release (the config last shipped via Deploy), falling
   // back to the live (currently converged) release until the releases list loads.
   const baselineReleaseId =
-    releasesResult.activeRelease?.id ?? stackToShow?.current_release?.id;
+    releasesResult.activeRelease?.id ?? stackToShow?.converged_release?.id;
   useEffect(() => {
     if (baselineReleaseId) releaseDetail.ensure(baselineReleaseId);
   }, [baselineReleaseId, releaseDetail]);
   const deployedSnapshot = releaseDetail.peek(baselineReleaseId).data?.snapshot;
 
-  // Live release (stack.current_release): what's actually serving traffic — source
+  // Live release (stack.converged_release): what's actually serving traffic — source
   // for live per-resource status (public ingress endpoints below).
-  const currentReleaseId = stackToShow?.current_release?.id;
+  const convergedReleaseId = stackToShow?.converged_release?.id;
   useEffect(() => {
-    if (currentReleaseId) releaseDetail.ensure(currentReleaseId);
-  }, [currentReleaseId, releaseDetail]);
-  const currentReleaseDetail = releaseDetail.peek(currentReleaseId).data;
+    if (convergedReleaseId) releaseDetail.ensure(convergedReleaseId);
+  }, [convergedReleaseId, releaseDetail]);
+  const convergedReleaseDetail = releaseDetail.peek(convergedReleaseId).data;
 
   // "Status" release: the active non-terminal release when a deploy is under way
   // (so the canvas/drawer reflect the in-flight rollout, not stale current-release
-  // data), else the live current_release. Distinct from currentReleaseId above,
+  // data), else the live converged_release. Distinct from convergedReleaseId above,
   // which stays pinned to what's actually serving traffic for the header's PUBLIC row.
   const nonTerminalRelease = releasesResult.releases.find((r) => !isTerminal(r.state));
-  const statusReleaseId = nonTerminalRelease?.id ?? stackToShow?.current_release?.id;
-  const statusReleaseState = nonTerminalRelease?.state ?? stackToShow?.current_release?.state;
+  const statusReleaseId = nonTerminalRelease?.id ?? stackToShow?.converged_release?.id;
+  const statusReleaseState = nonTerminalRelease?.state ?? stackToShow?.converged_release?.state;
   // Refetch on every id/state change (mount, and each transition — including the
   // terminal one, since statusReleaseState is a dep) plus a 5s poll while non-terminal.
   // Depend on the stable refresh callback, NOT the releaseDetail object (rebuilt every
@@ -269,13 +269,13 @@ export default function StackDetailPage() {
   // PUBLIC row. Drafts have no live ingress, so the row stays empty.
   const publicEndpoints = useMemo(() => {
     if (isDraft) return [];
-    const liveResources = currentReleaseDetail?.live_status?.resources ?? {};
+    const liveResources = convergedReleaseDetail?.live_status?.resources ?? {};
     return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
       const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
       const best = pickBestIngress(ingress, orgDomains);
       return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
     });
-  }, [isDraft, effectiveStack, orgDomains, currentReleaseDetail]);
+  }, [isDraft, effectiveStack, orgDomains, convergedReleaseDetail]);
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.
@@ -578,7 +578,7 @@ export default function StackDetailPage() {
     detail: releaseDetail,
   });
 
-  // When a release settles into ANY terminal state, the stack's current_release /
+  // When a release settles into ANY terminal state, the stack's converged_release /
   // latest_release summaries are stale until refetched — the staged panel would
   // keep diffing against the old snapshot otherwise. Refetch once per transition,
   // keyed on the polled releases list (not on the stack's own pointer).
@@ -605,9 +605,9 @@ export default function StackDetailPage() {
     }
   }, [activeRelease, stackToShow?.latest_release, refetchStack]);
 
-  // Live snapshot: already lazily fetched above (currentReleaseId ensure); peek
+  // Live snapshot: already lazily fetched above (convergedReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
-  const liveSnapshot = currentReleaseDetail?.snapshot;
+  const liveSnapshot = convergedReleaseDetail?.snapshot;
 
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
   const [viewChangesOpen, setViewChangesOpen] = useState(false);

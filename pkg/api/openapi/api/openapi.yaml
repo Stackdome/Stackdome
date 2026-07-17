@@ -7343,12 +7343,7 @@ components:
           deploy_timeout_minutes: 2
           min_successful_releases: 5
           release_retention_limit: 5
-        annotations:
-        - value: value
-          key: key
-        - value: value
-          key: key
-        current_release:
+        converged_release:
           sequence: 7
           completed_at: 2000-01-23T04:56:07.000+00:00
           health: null
@@ -7356,6 +7351,11 @@ components:
           id: id
           state: null
           message: message
+        annotations:
+        - value: value
+          key: key
+        - value: value
+          key: key
         created_at: 2000-01-23T04:56:07.000+00:00
         spec:
           stack_resources:
@@ -7788,7 +7788,7 @@ components:
           $ref: '#/components/schemas/StackSettings'
         lifecycle:
           $ref: '#/components/schemas/StackLifecycle'
-        current_release:
+        converged_release:
           $ref: '#/components/schemas/ReleaseSummary'
         latest_release:
           $ref: '#/components/schemas/ReleaseSummary'
@@ -7832,12 +7832,7 @@ components:
             deploy_timeout_minutes: 2
             min_successful_releases: 5
             release_retention_limit: 5
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          current_release:
+          converged_release:
             sequence: 7
             completed_at: 2000-01-23T04:56:07.000+00:00
             health: null
@@ -7845,6 +7840,11 @@ components:
             id: id
             state: null
             message: message
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           spec:
             stack_resources:
@@ -8246,12 +8246,7 @@ components:
             deploy_timeout_minutes: 2
             min_successful_releases: 5
             release_retention_limit: 5
-          annotations:
-          - value: value
-            key: key
-          - value: value
-            key: key
-          current_release:
+          converged_release:
             sequence: 7
             completed_at: 2000-01-23T04:56:07.000+00:00
             health: null
@@ -8259,6 +8254,11 @@ components:
             id: id
             state: null
             message: message
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
           created_at: 2000-01-23T04:56:07.000+00:00
           spec:
             stack_resources:
@@ -13191,12 +13191,14 @@ components:
       - ok
       - progressing
       - degraded
+      - unavailable
       - failed
       type: string
       x-enum-varnames:
       - RELEASE_HEALTH_OK
       - RELEASE_HEALTH_PROGRESSING
       - RELEASE_HEALTH_DEGRADED
+      - RELEASE_HEALTH_UNAVAILABLE
       - RELEASE_HEALTH_FAILED
     ReleaseSummary:
       description: Lightweight release reference embedded in the stack for list views.

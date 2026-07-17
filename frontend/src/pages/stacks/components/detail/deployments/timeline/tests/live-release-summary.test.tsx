@@ -26,7 +26,7 @@ const release = {
   live_status: { resources: { web: { state: "Ready" } } },
 } as unknown as StackRelease;
 const stack = {
-  current_release: { id: "r18" },
+  converged_release: { id: "r18" },
   spec: { stack_resources: [{ name: "web" }] },
 } as unknown as Stack;
 const ctx = { orgId: "o", projectName: "t", stackId: "s" };

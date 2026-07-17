@@ -205,7 +205,7 @@ var _ = Describe("PresentStack release-centric fields", func() {
 		s := &models.Stack{ID: "s1", Name: "app"}
 		out := presenters.PresentStack(s, models.StackReleaseRefs{})
 		Expect(*out.Lifecycle).To(Equal(openapi.STACK_LIFECYCLE_ACTIVE))
-		Expect(out.CurrentRelease).To(BeNil())
+		Expect(out.ConvergedRelease).To(BeNil())
 		Expect(out.LatestRelease).To(BeNil())
 	})
 
@@ -220,15 +220,21 @@ var _ = Describe("PresentStack release-centric fields", func() {
 		current := &models.StackRelease{ID: "r1", Sequence: 3, State: models.ReleaseStateReleased, Message: "Release is live"}
 		latest := &models.StackRelease{ID: "r2", Sequence: 4, State: models.ReleaseStateInProgress}
 		s := &models.Stack{
-			ID:     "s1",
-			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "r1"}},
+			ID: "s1",
+			Status: &models.StackStatus{
+				LastConverged: &models.StackConvergenceRecord{ReleaseID: "r1"},
+				Conditions: []models.Condition{
+					{Type: string(models.StackConditionConverged), Status: string(models.ConditionTrue)},
+					{Type: string(models.StackConditionAvailable), Status: string(models.ConditionTrue)},
+				},
+			},
 			StackResources: []*models.StackResource{
 				{Name: "web", Status: &models.StackResourceStatus{State: models.StackResourcePhaseReady}},
 			},
 		}
-		out := presenters.PresentStack(s, models.StackReleaseRefs{Current: current, Latest: latest})
-		Expect(*out.CurrentRelease.Id).To(Equal("r1"))
-		Expect(*out.CurrentRelease.Health).To(Equal(openapi.RELEASE_HEALTH_OK))
+		out := presenters.PresentStack(s, models.StackReleaseRefs{Converged: current, Latest: latest})
+		Expect(*out.ConvergedRelease.Id).To(Equal("r1"))
+		Expect(*out.ConvergedRelease.Health).To(Equal(openapi.RELEASE_HEALTH_OK))
 		Expect(*out.LatestRelease.Id).To(Equal("r2"))
 		Expect(*out.LatestRelease.Health).To(Equal(openapi.RELEASE_HEALTH_PROGRESSING))
 	})

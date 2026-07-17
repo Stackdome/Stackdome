@@ -68,12 +68,12 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		By("Waiting for the stack to become Ready")
 		ready := shared.WaitForStackReady(client, orgID, projectName, shell.GetId(), 5*time.Minute)
 
-		currentRelease, ok := ready.GetCurrentReleaseOk()
-		Expect(ok).To(BeTrue(), "ready stack should have a current_release")
-		Expect(currentRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
-		Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
+		convergedRelease, ok := ready.GetConvergedReleaseOk()
+		Expect(ok).To(BeTrue(), "ready stack should have a converged_release")
+		Expect(convergedRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
+		Expect(convergedRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
 
-		releaseDetail := shared.GetRelease(client, orgID, projectName, shell.GetId(), currentRelease.GetId())
+		releaseDetail := shared.GetRelease(client, orgID, projectName, shell.GetId(), convergedRelease.GetId())
 		liveStatus, ok := releaseDetail.GetLiveStatusOk()
 		Expect(ok).To(BeTrue())
 		Expect(liveStatus.GetConditions()).NotTo(BeEmpty(), "ready stack should have conditions")
@@ -91,10 +91,10 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 		By("Waiting for the stack to become Ready")
 		ready := shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
 
-		currentRelease, ok := ready.GetCurrentReleaseOk()
-		Expect(ok).To(BeTrue(), "ready stack should have a current_release")
-		Expect(currentRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
-		Expect(currentRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
+		convergedRelease, ok := ready.GetConvergedReleaseOk()
+		Expect(ok).To(BeTrue(), "ready stack should have a converged_release")
+		Expect(convergedRelease.GetState()).To(Equal(openapi.RELEASE_STATE_RELEASED))
+		Expect(convergedRelease.GetHealth()).To(Equal(openapi.RELEASE_HEALTH_OK))
 	})
 
 	It("both flows produce the same topology", func() {

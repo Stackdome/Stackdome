@@ -99,6 +99,7 @@ type StackConditionType string
 
 const (
 	StackConditionAvailable      StackConditionType = "Available"
+	StackConditionConverged      StackConditionType = "Converged"
 	StackConditionResourcesReady StackConditionType = "ResourcesReady"
 	StackConditionStalled        StackConditionType = "Stalled"
 	StackConditionDegraded       StackConditionType = "Degraded"
@@ -149,6 +150,17 @@ type Stack struct {
 	CreatedAt         time.Time
 	UpdatedAt         time.Time
 	DeletionTimestamp *time.Time `gorm:"default:NULL"`
+}
+
+func (s *Stack) HasConvergedRelease() bool {
+	return s.Status != nil && s.Status.LastConverged != nil && s.Status.LastConverged.ReleaseID != ""
+}
+
+func (s *Stack) GetConvergedReleaseID() string {
+	if s.Status == nil || s.Status.LastConverged == nil {
+		return ""
+	}
+	return s.Status.LastConverged.ReleaseID
 }
 
 // hasImageBuilds
