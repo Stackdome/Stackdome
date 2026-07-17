@@ -9,12 +9,15 @@ export interface OutputSourceResource {
 }
 
 export function deriveResourceOutputNames(resource: OutputSourceResource): string[] {
+  const ports = (resource.ports ?? []).filter((p) => p.name);
+  const multiPort = ports.length > 1;
+  const key = (base: string, portName: string) => (multiPort ? `${base}.${portName}` : base);
+
   const names = ["host"];
-  for (const port of resource.ports ?? []) {
-    if (!port.name) continue;
-    names.push(`port.${port.name}`, `url.${port.name}`);
+  for (const port of ports) {
+    names.push(key("port", port.name!), key("url", port.name!));
     if (port.exposed_to_public) {
-      names.push(`public.${port.name}.host`, `public.${port.name}.url`);
+      names.push(key("public_host", port.name!), key("public_url", port.name!));
     }
   }
   return names;
