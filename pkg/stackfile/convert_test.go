@@ -3,7 +3,11 @@ package stackfile
 import (
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 func TestToStack_BasicImageResource(t *testing.T) {
@@ -963,3 +967,14 @@ func envVarsToMap(vars []openapi.EnvVar) map[string]openapi.EnvVar {
 	}
 	return m
 }
+
+var _ = Describe("outputToVarName under the new scheme", func() {
+	DescribeTable("dots become underscores; clean keys pass through",
+		func(output, want string) { Expect(outputToVarName(output)).To(Equal(want)) },
+		Entry("host", models.OutputNameHost, "host"),
+		Entry("url", models.OutputNameURL, "url"),
+		Entry("public_url", models.OutputNamePublicURL, "public_url"),
+		Entry("url.3306", "url.3306", "url_3306"),
+		Entry("public_url.web", "public_url.web", "public_url_web"),
+	)
+})

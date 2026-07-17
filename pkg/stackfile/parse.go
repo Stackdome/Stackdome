@@ -2,6 +2,7 @@ package stackfile
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -231,67 +232,36 @@ func validateSelfOutput(resourceName, envKey, output string, ports []PortDef) er
 }
 
 func validateOutputAgainstPorts(resourceName, envKey, source, output string, ports []PortDef) error {
-	if output == models.OutputNameHost {
+	valid := map[string]struct{}{models.OutputNameHost: {}}
+	multiPort := len(ports) > 1
+	key := func(base, portName string) string {
+		if !multiPort {
+			return base
+		}
+		return base + "." + portName
+	}
+	for _, p := range ports {
+		valid[key(models.OutputNamePort, p.Name)] = struct{}{}
+		valid[key(models.OutputNameURL, p.Name)] = struct{}{}
+		if p.Public {
+			valid[key(models.OutputNamePublicHost, p.Name)] = struct{}{}
+			valid[key(models.OutputNamePublicURL, p.Name)] = struct{}{}
+		}
+	}
+
+	if _, ok := valid[output]; ok {
 		return nil
 	}
 
-	portNames := make(map[string]PortDef)
-	for _, p := range ports {
-		portNames[p.Name] = p
-	}
-
-	parts := strings.Split(output, ".")
-	var label string
+	label := "resource '" + source + "'"
 	if source == sourceSelf {
 		label = "resource '" + resourceName + "'"
-	} else {
-		label = "resource '" + source + "'"
 	}
-
-	switch parts[0] {
-	case models.OutputNamePort:
-		if len(parts) != 2 {
-			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'port.<port-name>'", resourceName, envKey, output)
-		}
-		if _, ok := portNames[parts[1]]; !ok {
-			return fmt.Errorf("resource '%s' env var '%s': output '%s' references port '%s' which is not defined on %s", resourceName, envKey, output, parts[1], label)
-		}
-
-	case models.OutputNameURL:
-		if len(parts) != 2 {
-			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'url.<port-name>'", resourceName, envKey, output)
-		}
-		if _, ok := portNames[parts[1]]; !ok {
-			return fmt.Errorf("resource '%s' env var '%s': output '%s' references port '%s' which is not defined on %s", resourceName, envKey, output, parts[1], label)
-		}
-
-	case "public":
-		if len(parts) != 3 {
-			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'public.<port-name>.host' or 'public.<port-name>.url'", resourceName, envKey, output)
-		}
-		portName := parts[1]
-		suffix := parts[2]
-		if suffix != models.OutputNameHost && suffix != models.OutputNameURL {
-			return fmt.Errorf("resource '%s' env var '%s': invalid output '%s'. Expected 'public.<port-name>.host' or 'public.<port-name>.url'", resourceName, envKey, output)
-		}
-		p, ok := portNames[portName]
-		if !ok {
-			return fmt.Errorf("resource '%s' env var '%s': output '%s' references port '%s' which is not defined on %s", resourceName, envKey, output, portName, label)
-		}
-		if !p.Public {
-			return fmt.Errorf("resource '%s' env var '%s': output '%s' requires port '%s' to have 'public: true'", resourceName, envKey, output, portName)
-		}
-
-	default:
-		valid := []string{models.OutputNameHost}
-		for _, p := range ports {
-			valid = append(valid, "port."+p.Name, "url."+p.Name)
-			if p.Public {
-				valid = append(valid, "public."+p.Name+".host", "public."+p.Name+".url")
-			}
-		}
-		return fmt.Errorf("resource '%s' env var '%s': unknown output '%s' on %s. Valid outputs: %s", resourceName, envKey, output, label, strings.Join(valid, ", "))
+	names := make([]string, 0, len(valid))
+	for k := range valid {
+		names = append(names, k)
 	}
-
-	return nil
+	sort.Strings(names)
+	return fmt.Errorf("resource '%s' env var '%s': unknown output '%s' on %s. Valid outputs: %s",
+		resourceName, envKey, output, label, strings.Join(names, ", "))
 }
