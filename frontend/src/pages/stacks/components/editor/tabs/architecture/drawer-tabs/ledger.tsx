@@ -80,44 +80,45 @@ export function LedgerRow({
   className,
 }: LedgerRowProps) {
   return (
-    <div
-      className={cn(
-        "flex gap-4 border-b border-secondary/80 px-1.5 py-2.5 transition-colors hover:bg-muted/20",
-        alignTop ? "items-start" : "items-center",
-        className,
-      )}
-    >
-      <Label
-        htmlFor={htmlFor}
+    <div className={cn("border-b border-secondary/80 py-1", className)}>
+      <div
         className={cn(
-          "w-[150px] shrink-0 text-[13px] font-normal text-fg-2",
-          alignTop && "pt-2.5",
+          "flex gap-4 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20",
+          alignTop ? "items-start" : "items-center",
         )}
       >
-        <span>
-          {label}
-          {required && (
-            <span className="ml-0.5 font-semibold text-brand/80" aria-hidden>
-              *
-            </span>
-          )}
-        </span>
-      </Label>
-      <div className="min-w-0 flex-1">
-        {children}
-        {hint && <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{hint}</p>}
-        <FieldError>{error}</FieldError>
-      </div>
-      {meta && (
-        <span
+        <Label
+          htmlFor={htmlFor}
           className={cn(
-            "shrink-0 font-mono text-[10.5px] text-fg-muted/70",
-            alignTop && "pt-3",
+            "w-[150px] shrink-0 text-[13px] font-normal text-fg-2",
+            alignTop && "pt-2.5",
           )}
         >
-          {meta}
-        </span>
-      )}
+          <span>
+            {label}
+            {required && (
+              <span className="ml-0.5 font-semibold text-brand/80" aria-hidden>
+                *
+              </span>
+            )}
+          </span>
+        </Label>
+        <div className="min-w-0 flex-1">
+          {children}
+          {hint && <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{hint}</p>}
+          <FieldError>{error}</FieldError>
+        </div>
+        {meta && (
+          <span
+            className={cn(
+              "shrink-0 font-mono text-[10.5px] text-fg-muted/70",
+              alignTop && "pt-3",
+            )}
+          >
+            {meta}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

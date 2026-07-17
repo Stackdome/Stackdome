@@ -568,33 +568,32 @@ function StackResourceConfigurationTabImpl({
               </p>
             )}
             {mounts.map((vm: VolumeMount, vmIdx: number) => (
-              <div
-                key={vmIdx}
-                className="flex items-center gap-3 border-b border-secondary/80 px-1.5 py-2.5 transition-colors hover:bg-muted/20"
-              >
-                <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-fg-2">
-                  <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
-                  <span className="truncate">{vm.source_volume_name}</span>
-                </div>
-                <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
-                  {vm.target_path}
-                </code>
-                <span className="ml-auto shrink-0 font-mono text-[10.5px] text-fg-muted/70">
+              <div key={vmIdx} className="border-b border-secondary/80 py-1">
+                <div className="flex items-center gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20">
+                  <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-fg-2">
+                    <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
+                    <span className="truncate">{vm.source_volume_name}</span>
+                  </div>
+                  <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
+                    {vm.target_path}
+                  </code>
+                  <span className="ml-auto shrink-0 font-mono text-[10.5px] text-fg-muted/70">
                   drag a volume onto the node to attach
-                </span>
-                {onOpenVolume && vm.source_volume_name && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-7 shrink-0 text-fg-muted hover:text-brand"
-                    aria-label={`Open volume ${vm.source_volume_name}`}
-                    title="Open volume settings"
-                    onClick={() => onOpenVolume(vm.source_volume_name!)}
-                  >
-                    <ArrowUpRight className="size-3.5" />
-                  </Button>
-                )}
+                  </span>
+                  {onOpenVolume && vm.source_volume_name && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 shrink-0 text-fg-muted hover:text-brand"
+                      aria-label={`Open volume ${vm.source_volume_name}`}
+                      title="Open volume settings"
+                      onClick={() => onOpenVolume(vm.source_volume_name!)}
+                    >
+                      <ArrowUpRight className="size-3.5" />
+                    </Button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
