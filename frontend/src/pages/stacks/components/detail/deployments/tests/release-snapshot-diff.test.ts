@@ -100,9 +100,9 @@ describe("diffSnapshots connections", () => {
 
   it("flags a changed mapping value on an existing connection", () => {
     const prev = mk({ resources: [], connections: [conn("DATABASE_URL", "url")] });
-    const cur = mk({ resources: [], connections: [conn("DATABASE_URL", "public.url")] });
+    const cur = mk({ resources: [], connections: [conn("DATABASE_URL", "public_url")] });
     expect(diffSnapshots(prev, cur).connections).toEqual([
-      { name: "env · db → api", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public.url", kind: "changed" }] },
+      { name: "env · db → api", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public_url", kind: "changed" }] },
     ]);
   });
 
@@ -145,11 +145,11 @@ describe("diffSnapshots connections", () => {
     });
     const cur = mk({
       resources: [web({ name: "api2" })],
-      connections: [{ ...conn("DATABASE_URL", "public.url"), to: { type: "stack_resource", name: "api2" } }],
+      connections: [{ ...conn("DATABASE_URL", "public_url"), to: { type: "stack_resource", name: "api2" } }],
     });
     const out = diffSnapshots(prev, cur);
     expect(out.connections).toEqual([
-      { name: "env · db → api2", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public.url", kind: "changed" }] },
+      { name: "env · db → api2", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public_url", kind: "changed" }] },
     ]);
   });
 

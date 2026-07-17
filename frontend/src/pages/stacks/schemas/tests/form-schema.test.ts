@@ -64,16 +64,16 @@ describe("env round-trip", () => {
       sourceType: "image" as const,
       source: { image: { ref: "nginx" } },
       execution_config: {
-        environment_variables: [{ from: "self" as const, name: "URL", selfOutput: "public.http.url" }],
+        environment_variables: [{ from: "self" as const, name: "URL", selfOutput: "public_url.http" }],
       },
     };
     const api = convertFormResourceToApiResource(form as never);
     expect(api.execution_config?.environment_variables).toEqual([
-      { name: "URL", self_output: "public.http.url" },
+      { name: "URL", self_output: "public_url.http" },
     ]);
     const back = convertApiResourceToFormResource(api as never);
     expect(back.execution_config?.environment_variables).toEqual([
-      { from: "self", name: "URL", selfOutput: "public.http.url" },
+      { from: "self", name: "URL", selfOutput: "public_url.http" },
     ]);
   });
 
