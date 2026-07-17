@@ -37,8 +37,9 @@ interface ResourceDrawerProps {
   errors: { [field: string]: string | undefined };
   onClose: () => void;
   onRemove: (index: number) => void;
-  /** Open the stack's Logs view (from the footer "View logs"). */
-  onViewLogs?: () => void;
+  /** Open the stack's Logs view (from the footer "View logs"),
+   *  pre-filtered to this resource. */
+  onViewLogs?: (resourceName?: string) => void;
   /** Push a volume's drawer onto the floating drawer stack. */
   onOpenVolume?: (name: string) => void;
   /** Live per-resource status, keyed by resource name — from the status
@@ -237,7 +238,7 @@ export function ResourceDrawer({
           size="sm"
           className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-brand-bg hover:text-brand"
           disabled={!onViewLogs}
-          onClick={onViewLogs}
+          onClick={() => onViewLogs?.(resource.name)}
         >
           <ScrollText className="size-3.5" />
           View logs

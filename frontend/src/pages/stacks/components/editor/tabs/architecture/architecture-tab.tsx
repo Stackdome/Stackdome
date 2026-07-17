@@ -78,8 +78,9 @@ interface ArchitectureTabProps {
   /** addonId → live state (e.g. "Ready"), for canvas addon node dots. */
   addonStateById?: ReadonlyMap<string, string>;
   errors: { [index: number]: { [field: string]: string | undefined } };
-  /** Switch the editor to the Logs tab (from the drawer's "View logs"). */
-  onViewLogs?: () => void;
+  /** Switch the editor to the Logs tab (from the drawer's "View logs"),
+   *  pre-filtering to the named resource when given. */
+  onViewLogs?: (resourceName?: string) => void;
   /** Null for draft (unsaved) stacks — no server topology exists yet. */
   topologyIds: { orgId: string; projectName: string; stackId: string } | null;
   /** Bump to force a topology refetch (wired to autosave refreshes). */

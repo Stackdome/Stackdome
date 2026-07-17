@@ -30,6 +30,8 @@ export interface LogViewerProps {
   stackId: string;
   organizationId: string;
   resources?: StackResource[];
+  /** Resource names pre-selected in the source filter on mount (e.g. arriving via a drawer's "View logs"). */
+  initialSources?: string[];
   className?: string;
 }
 
@@ -37,4 +39,6 @@ export interface LogsTabProps {
   stackId: string;
   organizationId: string;
   resources?: StackResource[];
+  /** Resource names pre-selected in the source filter on mount. */
+  initialSources?: string[];
 }

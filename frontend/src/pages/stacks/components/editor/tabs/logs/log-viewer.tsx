@@ -37,10 +37,10 @@ function connectionStatusInfo(status: ConnectionStatus): { variant: StatusVarian
   }
 }
 
-export function LogViewer({ stackId, organizationId, resources = [], className = '' }: LogViewerProps) {
+export function LogViewer({ stackId, organizationId, resources = [], initialSources, className = '' }: LogViewerProps) {
   const [sourceSelectOpen, setSourceSelectOpen] = useState(false);
   const [filters, setFilters] = useState<LogFilters>({
-    sources: [],
+    sources: initialSources ?? [],
     timeRange: 'live-4h',
   });
 

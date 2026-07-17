@@ -82,6 +82,9 @@ export default function CanvasEditorPage() {
 
   const session = useStackEditSession();
   const [activeTab, setActiveTab] = useState<EditorTabId>(EDITOR_TABS.architecture);
+  // Resource pre-selected in the Logs tab filter when arriving via a drawer's
+  // "View logs". Cleared on direct tab navigation so the filter doesn't stick.
+  const [logsInitialSource, setLogsInitialSource] = useState<string | undefined>();
   const [draftDeploying, setDraftDeploying] = useState(false);
   const [nameError, setNameError] = useState<string | undefined>();
 
@@ -827,6 +830,7 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+      initialSources={logsInitialSource ? [logsInitialSource] : undefined}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
@@ -861,7 +865,10 @@ export default function CanvasEditorPage() {
         lifecycle={effectiveStack?.lifecycle}
         subtitle={subtitleText}
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => {
+          setLogsInitialSource(undefined);
+          setActiveTab(tab);
+        }}
         isActive={session.isActive}
         dirtyResourceCount={session.dirty.dirtyResourceIdx.size}
         dirtyTotal={changeCount}
@@ -902,7 +909,10 @@ export default function CanvasEditorPage() {
               addonNameById={addonNameById}
               addonStateById={addonStateById}
               errors={mergedResourceErrors}
-              onViewLogs={() => setActiveTab(EDITOR_TABS.logs)}
+              onViewLogs={(resourceName) => {
+                setLogsInitialSource(resourceName);
+                setActiveTab(EDITOR_TABS.logs);
+              }}
               topologyIds={!isNewStack && idsReady ? deployIds : null}
               topologyRefreshKey={topologyRefreshKey}
               onDeleteVolume={idsReady ? volumeDelete.deleteVolume : undefined}

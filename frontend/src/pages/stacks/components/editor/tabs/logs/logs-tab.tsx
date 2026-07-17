@@ -4,7 +4,8 @@ import type { LogsTabProps } from './types';
 export function LogsTab({
   stackId,
   organizationId,
-  resources
+  resources,
+  initialSources
 }: LogsTabProps) {
   return (
     <div className="space-y-4">
@@ -12,6 +13,7 @@ export function LogsTab({
         stackId={stackId}
         organizationId={organizationId}
         resources={resources}
+        initialSources={initialSources}
       />
     </div>
   );
