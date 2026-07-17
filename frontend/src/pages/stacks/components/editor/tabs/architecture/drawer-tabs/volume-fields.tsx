@@ -2,7 +2,10 @@ import type { ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { CornerDownRight, Trash2 } from "lucide-react";
-import { FieldShell } from "@/components/branded";
+import {
+  LedgerRow,
+  LedgerSection,
+} from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/ledger";
 import type { FormVolumeExtendedData as VolumeFormData, FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 /** Derive the list of resources that mount this volume. */
@@ -44,7 +47,7 @@ interface VolumeFieldsProps {
   specReadOnly?: boolean;
 }
 
-/** Shared form body for a volume: spec grid, mount details, and remove footer. */
+/** Shared form body for a volume: spec ledger, mount details, and remove footer. */
 export function VolumeFields({
   volume,
   index,
@@ -66,87 +69,79 @@ export function VolumeFields({
 
   return (
     <>
-      {/* Volume specification */}
-      <div>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Volume specification</h3>
-        <div className="grid gap-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <FieldShell
-              label="Name"
-              htmlFor={`volume-name-${index}`}
-              required
-              hint={nameReadOnly ? "Rename from the stack Volumes list." : undefined}
-              error={errors.name || (isDuplicate ? "Volume name must be unique" : undefined)}
-            >
-              <Input
-                id={`volume-name-${index}`}
-                placeholder="Volume name"
-                value={volume.name || ""}
-                onChange={(e) => update({ name: e.target.value })}
-                disabled={nameReadOnly}
-                className={`font-mono ${errors.name || isDuplicate ? "border-danger" : ""}`}
-                aria-invalid={!!errors.name || isDuplicate}
-              />
-            </FieldShell>
-            <FieldShell
-              label="Size"
-              htmlFor={`volume-size-${index}`}
-              required
-              hint={specReadOnly ? "Size is fixed once the volume is provisioned." : "e.g., 1Gi, 500Mi."}
-              error={errors["spec.size"]}
-            >
-              <Input
-                id={`volume-size-${index}`}
-                placeholder="e.g., 1Gi, 500Mi"
-                value={volume.spec?.size || ""}
-                onChange={(e) =>
-                  update({
-                    spec: {
-                      ...volume.spec,
-                      size: e.target.value,
-                      needs_sync_before_use: volume.spec?.needs_sync_before_use ?? false,
-                      access_mode: volume.spec?.access_mode ?? "ReadWriteOnce",
-                    },
-                  })
-                }
-                disabled={specReadOnly}
-                className={`font-mono ${errors["spec.size"] ? "border-danger" : ""}`}
-                aria-invalid={!!errors["spec.size"]}
-              />
-            </FieldShell>
-          </div>
-          <FieldShell
-            label="Access mode"
-            hint="Mounted by a single resource for read/write."
-          >
-            <Input value="ReadWriteOnce (RWO)" disabled className="bg-muted font-mono" />
-          </FieldShell>
-        </div>
-      </div>
+      <LedgerSection label="Specification">
+        <LedgerRow
+          label="Name"
+          htmlFor={`volume-name-${index}`}
+          required
+          meta={nameReadOnly ? "rename from volumes list" : "unique in stack"}
+          error={errors.name || (isDuplicate ? "Volume name must be unique" : undefined)}
+        >
+          <Input
+            id={`volume-name-${index}`}
+            placeholder="Volume name"
+            value={volume.name || ""}
+            onChange={(e) => update({ name: e.target.value })}
+            disabled={nameReadOnly}
+            className={`h-9 font-mono text-[12.5px] ${errors.name || isDuplicate ? "border-danger" : ""}`}
+            aria-invalid={!!errors.name || isDuplicate}
+          />
+        </LedgerRow>
+        <LedgerRow
+          label="Size"
+          htmlFor={`volume-size-${index}`}
+          required
+          meta={specReadOnly ? "fixed once provisioned" : "e.g. 1Gi, 500Mi"}
+          error={errors["spec.size"]}
+        >
+          <Input
+            id={`volume-size-${index}`}
+            placeholder="e.g., 1Gi, 500Mi"
+            value={volume.spec?.size || ""}
+            onChange={(e) =>
+              update({
+                spec: {
+                  ...volume.spec,
+                  size: e.target.value,
+                  needs_sync_before_use: volume.spec?.needs_sync_before_use ?? false,
+                  access_mode: volume.spec?.access_mode ?? "ReadWriteOnce",
+                },
+              })
+            }
+            disabled={specReadOnly}
+            className={`h-9 font-mono text-[12.5px] ${errors["spec.size"] ? "border-danger" : ""}`}
+            aria-invalid={!!errors["spec.size"]}
+          />
+        </LedgerRow>
+        <LedgerRow label="Access mode" meta="single resource · read/write">
+          <code className="inline-block rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
+            ReadWriteOnce (RWO)
+          </code>
+        </LedgerRow>
+      </LedgerSection>
 
-      {/* Mount details */}
       {mountingInfo.length > 0 && (
-        <div>
-          <h3 className="text-sm font-semibold text-foreground mb-3">Mount details</h3>
-          <div className="space-y-1.5">
-            {mountingInfo.map((mount, mountIdx) => (
-              <div key={mountIdx} className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                <CornerDownRight className="h-3.5 w-3.5 shrink-0" />
-                <span>
-                  Mounted by <span className="font-medium text-foreground">{mount.resourceName}</span>
-                  <span className="mx-1.5">at</span>
-                  <code className="font-mono text-[12px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                    {mount.targetPath}
-                  </code>
-                </span>
+        <LedgerSection
+          label="Mounts"
+          meta={`${mountingInfo.length} ${mountingInfo.length === 1 ? "resource" : "resources"}`}
+        >
+          {mountingInfo.map((mount, mountIdx) => (
+            <div key={mountIdx} className="border-b border-secondary/80 py-1">
+              <div className="flex items-center gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20">
+                <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-fg-2">
+                  <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
+                  <span className="truncate">{mount.resourceName}</span>
+                </div>
+                <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
+                  {mount.targetPath}
+                </code>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          ))}
+        </LedgerSection>
       )}
 
-      {/* Remove */}
-      <div className="pt-3 border-t border-border flex justify-end">
+      <div className="mt-5 flex justify-end border-t border-border pt-3">
         <Button
           type="button"
           variant="ghost"
