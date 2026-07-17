@@ -1,9 +1,11 @@
 import React from "react";
 import { TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
 import { DirtyField } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/dirty-field";
-import { FieldShell } from "@/components/branded";
+import {
+  LedgerRow,
+  LedgerSection,
+} from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/ledger";
 
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
@@ -53,112 +55,106 @@ function StackResourceDeploymentTabImpl({
 }: StackResourceDeploymentTabProps) {
 
   return (
-    <TabsContent value="deployment" className="pt-4 space-y-6">
-      {/* Pre-Deploy Section (Init) */}
-      <div>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Pre-Deployment step</h3>
-        <div className="grid gap-5 max-w-3xl">
-          <FieldShell
-            label="Init Command"
-            htmlFor={`init-command-${index}`}
-            hint="Runs before the main container starts. Comma-separate the executable and its segments."
+    <TabsContent value="deployment" className="pt-1">
+      <LedgerSection label="Pre-deployment step" meta="runs before the main container">
+        <LedgerRow
+          label="Init command"
+          htmlFor={`init-command-${index}`}
+          alignTop
+          hint="Comma-separate the executable and its segments."
+        >
+          <DirtyField
+            draft={draft}
+            baseline={baseline}
+            path="init_spec.command"
+            compact
+            onReset={onDiscardField ? () => onDiscardField("init_spec.command") : undefined}
           >
-            <DirtyField
-              draft={draft}
-              baseline={baseline}
-              path="init_spec.command"
-              onReset={onDiscardField ? () => onDiscardField("init_spec.command") : undefined}
-            >
-              <Input
-                id={`init-command-${index}`}
-                value={draft.init_spec?.command?.join(",") || ""}
-                onChange={(e) =>
-                  onPatchInitSpec({
-                    command: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="e.g., sh,/scripts/init.sh"
-              />
-            </DirtyField>
-          </FieldShell>
-          <FieldShell
-            label="Init Arguments"
-            htmlFor={`init-args-${index}`}
-            hint="Comma-separated arguments passed to the init command."
+            <Input
+              id={`init-command-${index}`}
+              value={draft.init_spec?.command?.join(",") || ""}
+              onChange={(e) =>
+                onPatchInitSpec({
+                  command: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                })
+              }
+              placeholder="e.g., sh,/scripts/init.sh"
+              className="h-9 font-mono text-[12.5px]"
+            />
+          </DirtyField>
+        </LedgerRow>
+        <LedgerRow label="Init arguments" htmlFor={`init-args-${index}`}>
+          <DirtyField
+            draft={draft}
+            baseline={baseline}
+            path="init_spec.args"
+            compact
+            onReset={onDiscardField ? () => onDiscardField("init_spec.args") : undefined}
           >
-            <DirtyField
-              draft={draft}
-              baseline={baseline}
-              path="init_spec.args"
-              onReset={onDiscardField ? () => onDiscardField("init_spec.args") : undefined}
-            >
-              <Input
-                id={`init-args-${index}`}
-                value={draft.init_spec?.args?.join(",") || ""}
-                onChange={(e) =>
-                  onPatchInitSpec({
-                    args: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="e.g., arg1,arg2,arg3"
-              />
-            </DirtyField>
-          </FieldShell>
-        </div>
-      </div>
-      <Separator className="my-6" />
-      {/* Post-Deploy Section (Execution) */}
-      <div>
-        <h3 className="text-sm font-semibold text-foreground mb-3">Main container step</h3>
-        <div className="grid gap-5 max-w-3xl">
-          <FieldShell
-            label="Command"
-            htmlFor={`exec-command-${index}`}
-            hint="Overrides the container's default ENTRYPOINT. Comma-separate the executable and its segments."
+            <Input
+              id={`init-args-${index}`}
+              value={draft.init_spec?.args?.join(",") || ""}
+              onChange={(e) =>
+                onPatchInitSpec({
+                  args: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                })
+              }
+              placeholder="e.g., arg1,arg2,arg3"
+              className="h-9 font-mono text-[12.5px]"
+            />
+          </DirtyField>
+        </LedgerRow>
+      </LedgerSection>
+
+      <LedgerSection label="Main container step">
+        <LedgerRow
+          label="Command"
+          htmlFor={`exec-command-${index}`}
+          alignTop
+          hint="Overrides the container's default ENTRYPOINT."
+        >
+          <DirtyField
+            draft={draft}
+            baseline={baseline}
+            path="execution_config.command"
+            compact
+            onReset={onDiscardField ? () => onDiscardField("execution_config.command") : undefined}
           >
-            <DirtyField
-              draft={draft}
-              baseline={baseline}
-              path="execution_config.command"
-              onReset={onDiscardField ? () => onDiscardField("execution_config.command") : undefined}
-            >
-              <Input
-                id={`exec-command-${index}`}
-                value={draft.execution_config?.command?.join(",") || ""}
-                onChange={(e) =>
-                  onPatchExecCommandArgs({
-                    command: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="e.g., node,server.js"
-              />
-            </DirtyField>
-          </FieldShell>
-          <FieldShell
-            label="Arguments"
-            htmlFor={`exec-args-${index}`}
-            hint="Comma-separated arguments passed to the command."
+            <Input
+              id={`exec-command-${index}`}
+              value={draft.execution_config?.command?.join(",") || ""}
+              onChange={(e) =>
+                onPatchExecCommandArgs({
+                  command: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                })
+              }
+              placeholder="e.g., node,server.js"
+              className="h-9 font-mono text-[12.5px]"
+            />
+          </DirtyField>
+        </LedgerRow>
+        <LedgerRow label="Arguments" htmlFor={`exec-args-${index}`}>
+          <DirtyField
+            draft={draft}
+            baseline={baseline}
+            path="execution_config.args"
+            compact
+            onReset={onDiscardField ? () => onDiscardField("execution_config.args") : undefined}
           >
-            <DirtyField
-              draft={draft}
-              baseline={baseline}
-              path="execution_config.args"
-              onReset={onDiscardField ? () => onDiscardField("execution_config.args") : undefined}
-            >
-              <Input
-                id={`exec-args-${index}`}
-                value={draft.execution_config?.args?.join(",") || ""}
-                onChange={(e) =>
-                  onPatchExecCommandArgs({
-                    args: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                  })
-                }
-                placeholder="e.g., --port=3000,--verbose"
-              />
-            </DirtyField>
-          </FieldShell>
-        </div>
-      </div>
+            <Input
+              id={`exec-args-${index}`}
+              value={draft.execution_config?.args?.join(",") || ""}
+              onChange={(e) =>
+                onPatchExecCommandArgs({
+                  args: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
+                })
+              }
+              placeholder="e.g., --port=3000,--verbose"
+              className="h-9 font-mono text-[12.5px]"
+            />
+          </DirtyField>
+        </LedgerRow>
+      </LedgerSection>
     </TabsContent>
   );
 }
