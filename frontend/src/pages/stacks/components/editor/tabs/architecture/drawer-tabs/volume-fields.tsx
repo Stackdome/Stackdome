@@ -146,7 +146,7 @@ export function VolumeFields({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 px-2 text-[12.5px] text-muted-foreground/70 hover:text-danger hover:bg-danger-bg"
+          className="h-7 gap-1.5 px-2 text-[12.5px] text-danger hover:bg-danger-bg hover:text-danger"
           onClick={() => onRemove(index)}
           title="Remove volume"
         >
