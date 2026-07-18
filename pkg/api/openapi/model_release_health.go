@@ -23,6 +23,7 @@ const (
 	RELEASE_HEALTH_OK          ReleaseHealth = "ok"
 	RELEASE_HEALTH_PROGRESSING ReleaseHealth = "progressing"
 	RELEASE_HEALTH_DEGRADED    ReleaseHealth = "degraded"
+	RELEASE_HEALTH_UNAVAILABLE ReleaseHealth = "unavailable"
 	RELEASE_HEALTH_FAILED      ReleaseHealth = "failed"
 )
 
@@ -31,6 +32,7 @@ var AllowedReleaseHealthEnumValues = []ReleaseHealth{
 	"ok",
 	"progressing",
 	"degraded",
+	"unavailable",
 	"failed",
 }
 

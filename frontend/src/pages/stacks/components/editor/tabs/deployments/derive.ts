@@ -22,7 +22,7 @@ export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
   const latest = stack.latest_release;
   if (!latest) return undefined;
   if (!isTerminal(latest.state)) return "progressing";
-  if (stack.current_release?.health) return stack.current_release.health;
+  if (stack.converged_release?.health) return stack.converged_release.health;
   return latest.state === ReleaseState.Failed ? "failed" : undefined;
 }
 
@@ -55,7 +55,7 @@ export function stripUnpinnedGitRevisions(
 export function latestDeployFailed(stack: Stack): boolean {
   const latest = stack.latest_release;
   if (!latest || latest.state !== ReleaseState.Failed) return false;
-  if (!stack.current_release || latest.id === stack.current_release.id) return false;
+  if (!stack.converged_release || latest.id === stack.converged_release.id) return false;
   return deriveHeaderHealth(stack) !== "failed";
 }
 

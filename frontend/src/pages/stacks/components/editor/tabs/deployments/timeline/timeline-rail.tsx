@@ -42,7 +42,7 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
 export function TimelineRail(props: TimelineRailProps) {
   const { releases, activeRelease, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetailContext();
-  const liveReleaseId = stack.current_release?.id;
+  const liveReleaseId = stack.converged_release?.id;
   const [openIds, setOpenIds] = useState<Set<string>>(
     () => new Set([activeRelease?.id, liveReleaseId].filter((x): x is string => !!x)),
   );

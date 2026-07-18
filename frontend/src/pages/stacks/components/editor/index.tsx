@@ -165,7 +165,7 @@ export default function CanvasEditorPage() {
   const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.projectName, deployIds.stackId);
 
-  const { baselineReleaseId, deployedSnapshot, currentReleaseDetail, statusLiveStatus } =
+  const { baselineReleaseId, deployedSnapshot, convergedReleaseDetail, statusLiveStatus } =
     useReleaseAnchors({
       stack: savedStack ?? null,
       releases: releasesResult.releases,
@@ -177,13 +177,13 @@ export default function CanvasEditorPage() {
   // PUBLIC row. Drafts have no live ingress, so the row stays empty.
   const publicEndpoints = useMemo(() => {
     if (isNewStack) return [];
-    const liveResources = currentReleaseDetail?.live_status?.resources ?? {};
+    const liveResources = convergedReleaseDetail?.live_status?.resources ?? {};
     return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
       const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
       const best = pickBestIngress(ingress, orgDomains);
       return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
     });
-  }, [isNewStack, effectiveStack, orgDomains, currentReleaseDetail]);
+  }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail]);
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.
@@ -196,7 +196,8 @@ export default function CanvasEditorPage() {
     [savedStack],
   );
 
-  // Server-computed outputs (host, port.<n>, url.<n>, public.<n>.*) keyed by
+  // Server-computed outputs (host, port/url or port.<name>/url.<name>,
+  // public_host/public_url or public_host.<name>/public_url.<name>) keyed by
   // resource name. The working draft never computes outputs, so a resource added
   // on the canvas carries none until it is saved. The env-var OUTPUT pickers read
   // from this server-truth map (matched by name) instead of the draft copy, and
@@ -469,7 +470,7 @@ export default function CanvasEditorPage() {
     detail: releaseDetail,
   });
 
-  // When a release settles into ANY terminal state, the stack's current_release /
+  // When a release settles into ANY terminal state, the stack's converged_release /
   // latest_release summaries are stale until refetched — the staged panel would
   // keep diffing against the old snapshot otherwise. Refetch once per transition,
   // keyed on the polled releases list (not on the stack's own pointer).
@@ -493,9 +494,9 @@ export default function CanvasEditorPage() {
     }
   }, [activeRelease, savedStack?.latest_release, refetchStack]);
 
-  // Live snapshot: already lazily fetched above (currentReleaseId ensure); peek
+  // Live snapshot: already lazily fetched above (convergedReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
-  const liveSnapshot = currentReleaseDetail?.snapshot;
+  const liveSnapshot = convergedReleaseDetail?.snapshot;
 
   const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
   const [viewChangesOpen, setViewChangesOpen] = useState(false);

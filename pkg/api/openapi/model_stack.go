@@ -17,22 +17,22 @@ import (
 
 // Stack struct for Stack
 type Stack struct {
-	Id             *string         `json:"id,omitempty"`
-	OrganisationId *string         `json:"organisation_id,omitempty"`
-	ProjectId      *string         `json:"project_id,omitempty"`
-	UserId         *string         `json:"user_id,omitempty"`
-	Name           string          `json:"name"`
-	Namespace      *string         `json:"namespace,omitempty"`
-	Labels         []Label         `json:"labels,omitempty"`
-	Annotations    []Annotation    `json:"annotations,omitempty"`
-	Revision       *string         `json:"revision,omitempty"`
-	Spec           StackSpec       `json:"spec"`
-	Settings       *StackSettings  `json:"settings,omitempty"`
-	Lifecycle      *StackLifecycle `json:"lifecycle,omitempty"`
-	CurrentRelease *ReleaseSummary `json:"current_release,omitempty"`
-	LatestRelease  *ReleaseSummary `json:"latest_release,omitempty"`
-	CreatedAt      *time.Time      `json:"created_at,omitempty"`
-	UpdatedAt      *time.Time      `json:"updated_at,omitempty"`
+	Id               *string         `json:"id,omitempty"`
+	OrganisationId   *string         `json:"organisation_id,omitempty"`
+	ProjectId        *string         `json:"project_id,omitempty"`
+	UserId           *string         `json:"user_id,omitempty"`
+	Name             string          `json:"name"`
+	Namespace        *string         `json:"namespace,omitempty"`
+	Labels           []Label         `json:"labels,omitempty"`
+	Annotations      []Annotation    `json:"annotations,omitempty"`
+	Revision         *string         `json:"revision,omitempty"`
+	Spec             StackSpec       `json:"spec"`
+	Settings         *StackSettings  `json:"settings,omitempty"`
+	Lifecycle        *StackLifecycle `json:"lifecycle,omitempty"`
+	ConvergedRelease *ReleaseSummary `json:"converged_release,omitempty"`
+	LatestRelease    *ReleaseSummary `json:"latest_release,omitempty"`
+	CreatedAt        *time.Time      `json:"created_at,omitempty"`
+	UpdatedAt        *time.Time      `json:"updated_at,omitempty"`
 }
 
 // NewStack instantiates a new Stack object
@@ -422,36 +422,36 @@ func (o *Stack) SetLifecycle(v StackLifecycle) {
 	o.Lifecycle = &v
 }
 
-// GetCurrentRelease returns the CurrentRelease field value if set, zero value otherwise.
-func (o *Stack) GetCurrentRelease() ReleaseSummary {
-	if o == nil || o.CurrentRelease == nil {
+// GetConvergedRelease returns the ConvergedRelease field value if set, zero value otherwise.
+func (o *Stack) GetConvergedRelease() ReleaseSummary {
+	if o == nil || o.ConvergedRelease == nil {
 		var ret ReleaseSummary
 		return ret
 	}
-	return *o.CurrentRelease
+	return *o.ConvergedRelease
 }
 
-// GetCurrentReleaseOk returns a tuple with the CurrentRelease field value if set, nil otherwise
+// GetConvergedReleaseOk returns a tuple with the ConvergedRelease field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Stack) GetCurrentReleaseOk() (*ReleaseSummary, bool) {
-	if o == nil || o.CurrentRelease == nil {
+func (o *Stack) GetConvergedReleaseOk() (*ReleaseSummary, bool) {
+	if o == nil || o.ConvergedRelease == nil {
 		return nil, false
 	}
-	return o.CurrentRelease, true
+	return o.ConvergedRelease, true
 }
 
-// HasCurrentRelease returns a boolean if a field has been set.
-func (o *Stack) HasCurrentRelease() bool {
-	if o != nil && o.CurrentRelease != nil {
+// HasConvergedRelease returns a boolean if a field has been set.
+func (o *Stack) HasConvergedRelease() bool {
+	if o != nil && o.ConvergedRelease != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetCurrentRelease gets a reference to the given ReleaseSummary and assigns it to the CurrentRelease field.
-func (o *Stack) SetCurrentRelease(v ReleaseSummary) {
-	o.CurrentRelease = &v
+// SetConvergedRelease gets a reference to the given ReleaseSummary and assigns it to the ConvergedRelease field.
+func (o *Stack) SetConvergedRelease(v ReleaseSummary) {
+	o.ConvergedRelease = &v
 }
 
 // GetLatestRelease returns the LatestRelease field value if set, zero value otherwise.
@@ -588,8 +588,8 @@ func (o Stack) MarshalJSON() ([]byte, error) {
 	if o.Lifecycle != nil {
 		toSerialize["lifecycle"] = o.Lifecycle
 	}
-	if o.CurrentRelease != nil {
-		toSerialize["current_release"] = o.CurrentRelease
+	if o.ConvergedRelease != nil {
+		toSerialize["converged_release"] = o.ConvergedRelease
 	}
 	if o.LatestRelease != nil {
 		toSerialize["latest_release"] = o.LatestRelease

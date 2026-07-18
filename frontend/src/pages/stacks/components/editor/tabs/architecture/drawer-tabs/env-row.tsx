@@ -4,7 +4,9 @@ import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -15,6 +17,7 @@ import {
   CLUSTER_WIDE_FIELDS,
   type AddonOutputField,
 } from "@/pages/stacks/lib/addon-presets";
+import { groupOutputs, type ParsedOutput } from "@/pages/stacks/lib/parse-output-key";
 
 export type EnvFrom = FormEnvVarData["from"];
 
@@ -317,6 +320,38 @@ function SecretValueCell({
   );
 }
 
+function OutputOptions({ outputs }: { outputs: string[] }) {
+  const { internal, public: pub } = groupOutputs(outputs);
+  const renderItem = (o: ParsedOutput) => (
+    <SelectItem key={o.key} value={o.key}>
+      <span className="flex w-full items-center justify-between gap-2">
+        <span>
+          {o.label}
+          {o.port ? <span className="text-muted-foreground"> · {o.port}</span> : null}
+        </span>
+        <span className="ml-2 flex items-center gap-2">
+          <span className="text-[10px] italic text-muted-foreground">resolved at deploy</span>
+          <span className="rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground">{o.key}</span>
+        </span>
+      </span>
+    </SelectItem>
+  );
+  return (
+    <>
+      <SelectGroup>
+        <SelectLabel>🔒 Internal</SelectLabel>
+        {internal.map(renderItem)}
+      </SelectGroup>
+      {pub.length > 0 && (
+        <SelectGroup>
+          <SelectLabel>🌐 Public</SelectLabel>
+          {pub.map(renderItem)}
+        </SelectGroup>
+      )}
+    </>
+  );
+}
+
 function ResourceOutputCell({
   resourceOptions,
   resourceName,
@@ -352,7 +387,7 @@ function ResourceOutputCell({
             <SelectValue placeholder={outputs.length === 0 ? "No outputs" : "select output..."} />
           </SelectTrigger>
           <SelectContent>
-            {outputs.map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+            <OutputOptions outputs={outputs} />
           </SelectContent>
         </Select>
       )}
@@ -375,7 +410,7 @@ function SelfOutputCell({
         <SelectValue placeholder={outputs.length === 0 ? "No outputs declared" : "select output..."} />
       </SelectTrigger>
       <SelectContent>
-        {outputs.map((o) => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+        <OutputOptions outputs={outputs} />
       </SelectContent>
     </Select>
   );

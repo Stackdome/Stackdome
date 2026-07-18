@@ -50,7 +50,7 @@ describe("TimelineRail", () => {
 
   it("opens the latest deploy by default and tags the live release", () => {
     const r = rels(3);
-    const liveStack = { current_release: { id: "r2" }, spec: { stack_resources: [] } } as unknown as Stack;
+    const liveStack = { converged_release: { id: "r2" }, spec: { stack_resources: [] } } as unknown as Stack;
     renderRail(<TimelineRail releases={r} activeRelease={r[0]} {...base} stack={liveStack} />);
     // #2 is the live release → carries the LIVE chip.
     expect(screen.getByText("Live")).toBeInTheDocument();
@@ -58,7 +58,7 @@ describe("TimelineRail", () => {
 
   it("renders only the live dot solid; every other dot is a hollow ring", () => {
     const r = rels(3);
-    const liveStack = { current_release: { id: "r2" }, spec: { stack_resources: [] } } as unknown as Stack;
+    const liveStack = { converged_release: { id: "r2" }, spec: { stack_resources: [] } } as unknown as Stack;
     renderRail(<TimelineRail releases={r} activeRelease={r[0]} {...base} stack={liveStack} />);
     const dots = screen.getAllByTestId("rail-dot");
     const solid = dots.filter((d) => !d.className.includes("border-2") && !d.className.includes("animate-spin"));

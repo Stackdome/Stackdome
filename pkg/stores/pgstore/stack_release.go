@@ -365,11 +365,9 @@ func (s *stackReleaseStore) GetLatestByStackIDs(ctx context.Context, stackIDs []
 	}
 	var releases []*models.StackRelease
 	err := s.sessionFactory.New(ctx).
-		Where("id IN (?)", s.sessionFactory.New(ctx).
-			Model(&models.StackRelease{}).
-			Select("DISTINCT ON (stack_id) id").
-			Where("stack_id IN ?", stackIDs).
-			Order("stack_id, sequence DESC")).
+		Select("DISTINCT ON (stack_id) *").
+		Where("stack_id IN ?", stackIDs).
+		Order("stack_id, sequence DESC").
 		Find(&releases).Error
 	if err != nil {
 		return nil, errors.GeneralError("failed to get latest releases: %s", err.Error())

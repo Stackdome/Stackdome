@@ -16,22 +16,22 @@ func PresentStackList(stacks []*models.Stack, refs map[string]models.StackReleas
 
 func PresentStack(s *models.Stack, refs models.StackReleaseRefs) openapi.Stack {
 	return openapi.Stack{
-		Id:             &s.ID,
-		OrganisationId: &s.OrganisationID,
-		ProjectId:      &s.ProjectID,
-		UserId:         &s.UserID,
-		Name:           s.Name,
-		Namespace:      &s.Namespace,
-		Labels:         presentLabels(s.Labels),
-		Revision:       &s.CrRevision,
-		Annotations:    presentAnnotations(s.Annotations),
-		Spec:           presentStackSpec(s),
-		Settings:       presentStackSettings(s),
-		Lifecycle:      ptr.To(presentStackLifecycle(s)),
-		CurrentRelease: presentReleaseSummary(refs.Current, s, true),
-		LatestRelease:  presentReleaseSummary(refs.Latest, s, false),
-		CreatedAt:      &s.CreatedAt,
-		UpdatedAt:      &s.UpdatedAt,
+		Id:               &s.ID,
+		OrganisationId:   &s.OrganisationID,
+		ProjectId:        &s.ProjectID,
+		UserId:           &s.UserID,
+		Name:             s.Name,
+		Namespace:        &s.Namespace,
+		Labels:           presentLabels(s.Labels),
+		Revision:         &s.CrRevision,
+		Annotations:      presentAnnotations(s.Annotations),
+		Spec:             presentStackSpec(s),
+		Settings:         presentStackSettings(s),
+		Lifecycle:        ptr.To(presentStackLifecycle(s)),
+		ConvergedRelease: presentReleaseSummary(refs.Converged, convergedReleaseHealth(refs.Converged, s)),
+		LatestRelease:    presentReleaseSummary(refs.Latest, latestReleaseHealth(refs.Latest)),
+		CreatedAt:        &s.CreatedAt,
+		UpdatedAt:        &s.UpdatedAt,
 	}
 }
 
@@ -42,28 +42,36 @@ func presentStackLifecycle(s *models.Stack) openapi.StackLifecycle {
 	return openapi.STACK_LIFECYCLE_ACTIVE
 }
 
-func presentReleaseSummary(r *models.StackRelease, s *models.Stack, isCurrent bool) *openapi.ReleaseSummary {
+func presentReleaseSummary(r *models.StackRelease, health *openapi.ReleaseHealth) *openapi.ReleaseSummary {
 	if r == nil {
 		return nil
 	}
-	summary := &openapi.ReleaseSummary{
+	return &openapi.ReleaseSummary{
 		Id:          &r.ID,
 		Sequence:    ptr.To(int32(r.Sequence)),
 		State:       ptr.To(openapi.StackReleaseState(r.State)),
 		Message:     &r.Message,
 		CreatedAt:   &r.CreatedAt,
 		CompletedAt: r.CompletedAt,
+		Health:      health,
 	}
-	summary.Health = summaryHealth(r, s, isCurrent)
-	return summary
 }
 
-func summaryHealth(r *models.StackRelease, s *models.Stack, isCurrent bool) *openapi.ReleaseHealth {
-	if isCurrent {
-		if live := models.BuildReleaseLiveStatus(r, s); live != nil {
-			return ptr.To(openapi.ReleaseHealth(live.Health))
-		}
-		return ptr.To(openapi.RELEASE_HEALTH_PROGRESSING)
+// convergedReleaseHealth is the live runtime rollup of the stack's converged
+// release — what is actually running now. refs.Converged is only ever the stack's
+// converged release, so BuildReleaseLiveStatus always returns an overlay for it.
+func convergedReleaseHealth(r *models.StackRelease, s *models.Stack) *openapi.ReleaseHealth {
+	if r == nil {
+		return nil
+	}
+	return ptr.To(openapi.ReleaseHealth(models.BuildReleaseLiveStatus(r, s).Health))
+}
+
+// latestReleaseHealth is the newest attempt's coarse lifecycle outcome. A nil
+// result means "settled — read converged_release for the running health".
+func latestReleaseHealth(r *models.StackRelease) *openapi.ReleaseHealth {
+	if r == nil {
+		return nil
 	}
 	switch r.State {
 	case models.ReleaseStateFailed:

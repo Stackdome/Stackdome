@@ -19,9 +19,9 @@ describe("splitEnvRows", () => {
   });
 
   it("emits self rows as env vars with self_output", () => {
-    const rows: FormEnvRow[] = [{ from: "self", name: "TOOLJET_HOST", selfOutput: "public.http.url" }];
+    const rows: FormEnvRow[] = [{ from: "self", name: "TOOLJET_HOST", selfOutput: "public_url.http" }];
     const { envVars, connections } = splitEnvRows("web", rows);
-    expect(envVars).toEqual([{ name: "TOOLJET_HOST", self_output: "public.http.url" }]);
+    expect(envVars).toEqual([{ name: "TOOLJET_HOST", self_output: "public_url.http" }]);
     expect(connections).toEqual([]);
   });
 

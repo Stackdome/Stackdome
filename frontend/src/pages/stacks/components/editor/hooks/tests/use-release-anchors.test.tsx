@@ -11,16 +11,16 @@ const fakeDetail = () => ({
   peek: vi.fn(() => ({ data: undefined })),
 }) as never; // structural stand-in for ReturnType<typeof useReleaseDetail>
 
-const stackWith = (currentReleaseId?: string, state: string = ReleaseState.Released) =>
-  (currentReleaseId
-    ? ({ current_release: { id: currentReleaseId, state } } as unknown as Stack)
+const stackWith = (convergedReleaseId?: string, state: string = ReleaseState.Released) =>
+  (convergedReleaseId
+    ? ({ converged_release: { id: convergedReleaseId, state } } as unknown as Stack)
     : ({} as Stack));
 
 describe("useReleaseAnchors", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
 
-  it("pins the baseline to the active release, falling back to current_release", () => {
+  it("pins the baseline to the active release, falling back to converged_release", () => {
     const detail = fakeDetail();
     const { result } = renderHook(() =>
       useReleaseAnchors({
@@ -34,7 +34,7 @@ describe("useReleaseAnchors", () => {
     expect((detail as { ensure: ReturnType<typeof vi.fn> }).ensure).toHaveBeenCalledWith("act-1");
   });
 
-  it("falls back to current_release as baseline before the releases list loads", () => {
+  it("falls back to converged_release as baseline before the releases list loads", () => {
     const { result } = renderHook(() =>
       useReleaseAnchors({ stack: stackWith("cur-1"), releases: [], activeRelease: undefined, releaseDetail: fakeDetail() }),
     );

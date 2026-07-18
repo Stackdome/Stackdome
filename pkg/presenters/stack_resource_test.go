@@ -60,8 +60,8 @@ func TestPresentStackResource_includesDerivedOutputs(t *testing.T) {
 		"host",
 		"port.http",
 		"url.http",
-		"public.http.host",
-		"public.http.url",
+		"public_host.http",
+		"public_url.http",
 		"port.metrics",
 		"url.metrics",
 	}

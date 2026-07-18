@@ -123,6 +123,7 @@ export function statusVariant(domain: StatusDomain, state?: string | null): Stat
         case "progressing":
         case "degraded":
           return "pending";
+        case "unavailable":
         case "failed":
           return "error";
         default:

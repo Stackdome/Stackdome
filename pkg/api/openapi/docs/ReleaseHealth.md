@@ -9,6 +9,8 @@
 
 * `RELEASE_HEALTH_DEGRADED` (value: `"degraded"`)
 
+* `RELEASE_HEALTH_UNAVAILABLE` (value: `"unavailable"`)
+
 * `RELEASE_HEALTH_FAILED` (value: `"failed"`)
 
 

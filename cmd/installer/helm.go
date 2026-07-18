@@ -7,7 +7,7 @@ import (
 
 const (
 	chartRepo      = "oci://quay.io/stackdome/charts/stackdome-agent"
-	chartVersion   = "0.6.5-alpha"
+	chartVersion   = "0.6.6-alpha"
 	chartRelease   = "stackdome-agent"
 	chartNamespace = "stackdome-control-plane"
 )

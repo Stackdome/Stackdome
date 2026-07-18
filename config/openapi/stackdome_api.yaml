@@ -4737,7 +4737,7 @@ components:
           $ref: '#/components/schemas/StackSettings'
         lifecycle:
           $ref: '#/components/schemas/StackLifecycle'
-        current_release:
+        converged_release:
           $ref: '#/components/schemas/ReleaseSummary'
         latest_release:
           $ref: '#/components/schemas/ReleaseSummary'
@@ -4890,7 +4890,7 @@ components:
       properties:
         name:
           type: string
-          description: Stable output accessor name, for example `host` or `public.http.url`.
+          description: Stable output accessor name, for example `host` or `public_url`.
         type:
           type: string
           description: Scalar value type exposed by this output.
@@ -5134,7 +5134,7 @@ components:
       properties:
         output:
           type: string
-          description: Output accessor on the connection's `from` node, such as `url` or `public.http.url`.
+          description: Output accessor on the connection's `from` node, such as `url` or `public_url`.
         template:
           type: string
           description: Template used when one target value must be composed from multiple outputs.
@@ -5925,7 +5925,7 @@ components:
           description: Literal environment variable value.
         self_output:
           type: string
-          description: Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
+          description: Read this environment variable from one of the resource's own declared outputs, for example public_url.
 
 
     Condition:
@@ -6941,8 +6941,8 @@ components:
     ReleaseHealth:
       type: string
       description: Computed runtime health rollup of a live/active release.
-      enum: [ok, progressing, degraded, failed]
-      x-enum-varnames: [RELEASE_HEALTH_OK, RELEASE_HEALTH_PROGRESSING, RELEASE_HEALTH_DEGRADED, RELEASE_HEALTH_FAILED]
+      enum: [ok, progressing, degraded, unavailable, failed]
+      x-enum-varnames: [RELEASE_HEALTH_OK, RELEASE_HEALTH_PROGRESSING, RELEASE_HEALTH_DEGRADED, RELEASE_HEALTH_UNAVAILABLE, RELEASE_HEALTH_FAILED]
 
     ReleaseSummary:
       type: object

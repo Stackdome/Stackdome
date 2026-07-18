@@ -50,15 +50,15 @@ func TestBuildEnvRefConnections_TemplateRef(t *testing.T) {
 
 func TestBuildEnvRefConnections_TemplateWithDottedOutput(t *testing.T) {
 	env := map[string]string{
-		"CALLBACK": "https://{{ api.public.http.url }}/callback",
+		"CALLBACK": "https://{{ api.public_url.http }}/callback",
 	}
 	conns := buildEnvRefConnections("worker", env)
 
 	m := conns[0].Mappings[0]
-	if *m.Value.Template != "https://{{ public_http_url }}/callback" {
+	if *m.Value.Template != "https://{{ public_url_http }}/callback" {
 		t.Errorf("expected dotted output converted to underscore var, got %q", *m.Value.Template)
 	}
-	assertTemplateVar(t, m, "public_http_url", "public.http.url")
+	assertTemplateVar(t, m, "public_url_http", "public_url.http")
 }
 
 func TestBuildEnvRefConnections_MultipleRefsFromSameSource(t *testing.T) {
@@ -98,7 +98,7 @@ func TestBuildEnvRefConnections_DifferentSourcesCreateSeparateConnections(t *tes
 
 func TestBuildEnvRefConnections_SkipsSelfRefs(t *testing.T) {
 	env := map[string]string{
-		"SITE_URL": "{{ self.public.http.url }}",
+		"SITE_URL": "{{ self.public_url }}",
 	}
 	conns := buildEnvRefConnections("app", env)
 
@@ -123,7 +123,7 @@ func TestBuildEnvRefConnections_MixedLiteralsAndRefs(t *testing.T) {
 	env := map[string]string{
 		"DB_HOST":   "{{ db.host }}",
 		"LOG_LEVEL": "info",
-		"SITE_URL":  "{{ self.public.http.url }}",
+		"SITE_URL":  "{{ self.public_url }}",
 	}
 	conns := buildEnvRefConnections("app", env)
 

@@ -3,7 +3,11 @@ package stackfile
 import (
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 func TestToStack_BasicImageResource(t *testing.T) {
@@ -216,7 +220,7 @@ func TestToStack_SelfOutputEnv(t *testing.T) {
 					{Name: "http", Port: 8080, Public: true, Subdomain: "app"},
 				},
 				Env: map[string]string{
-					"SITE_URL": "{{ self.public.http.url }}",
+					"SITE_URL": "{{ self.public_url }}",
 				},
 			},
 		},
@@ -230,8 +234,8 @@ func TestToStack_SelfOutputEnv(t *testing.T) {
 
 	envMap := envVarsToMap(res.ExecutionConfig.EnvironmentVariables)
 	v := envMap["SITE_URL"]
-	if v.SelfOutput == nil || *v.SelfOutput != "public.http.url" {
-		t.Errorf("expected self output 'public.http.url', got %v", v.SelfOutput)
+	if v.SelfOutput == nil || *v.SelfOutput != "public_url" {
+		t.Errorf("expected self output 'public_url', got %v", v.SelfOutput)
 	}
 	if v.Value != nil {
 		t.Error("self output should not have a literal value")
@@ -595,7 +599,7 @@ func TestToStack_FullInfisicalExample(t *testing.T) {
 					{Name: "http", Port: 8080, Protocol: "HTTP", Public: true, Subdomain: "infisical"},
 				},
 				Env: map[string]string{
-					"SITE_URL":          "{{ self.public.http.url }}",
+					"SITE_URL":          "{{ self.public_url }}",
 					"DB_CONNECTION_URI": "postgres://infisical:infisical@{{ db.host }}:5432/infisical",
 					"REDIS_URL":         "redis://{{ redis.host }}:6379",
 					"ENCRYPTION_KEY":    "6c1fe4e407b8911c104518103505b218",
@@ -963,3 +967,14 @@ func envVarsToMap(vars []openapi.EnvVar) map[string]openapi.EnvVar {
 	}
 	return m
 }
+
+var _ = Describe("outputToVarName under the new scheme", func() {
+	DescribeTable("dots become underscores; clean keys pass through",
+		func(output, want string) { Expect(outputToVarName(output)).To(Equal(want)) },
+		Entry("host", models.OutputNameHost, "host"),
+		Entry("url", models.OutputNameURL, "url"),
+		Entry("public_url", models.OutputNamePublicURL, "public_url"),
+		Entry("url.3306", "url.3306", "url_3306"),
+		Entry("public_url.web", "public_url.web", "public_url_web"),
+	)
+})

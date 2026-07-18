@@ -61,9 +61,9 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			readyStack := shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
 
 			By("Verifying current release is healthy with conditions")
-			currentRelease, ok := readyStack.GetCurrentReleaseOk()
+			convergedRelease, ok := readyStack.GetConvergedReleaseOk()
 			Expect(ok).To(BeTrue())
-			releaseDetail := shared.GetRelease(client, orgID, projectName, stackID, currentRelease.GetId())
+			releaseDetail := shared.GetRelease(client, orgID, projectName, stackID, convergedRelease.GetId())
 			liveStatus, ok := releaseDetail.GetLiveStatusOk()
 			Expect(ok).To(BeTrue())
 			Expect(liveStatus.GetConditions()).NotTo(BeEmpty())
