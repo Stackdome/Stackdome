@@ -109,6 +109,19 @@ describe("RepoCombobox", () => {
     });
   });
 
+  it("offers an ssh/scp-style URL as a repository URL", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RepoCombobox id="repo" value="" onChange={onChange} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText(/search repositories/i), "git@github.com:acme/api.git");
+    await user.click(await screen.findByText(/use "git@github\.com:acme\/api\.git"/i));
+    expect(onChange).toHaveBeenCalledWith({
+      repo_url: "git@github.com:acme/api.git",
+      integration_id: undefined,
+    });
+  });
+
   it("falls back to URL entry when integrations fail to load", async () => {
     vi.mocked(listGitIntegrations).mockRejectedValue(new Error("boom"));
     const user = userEvent.setup();

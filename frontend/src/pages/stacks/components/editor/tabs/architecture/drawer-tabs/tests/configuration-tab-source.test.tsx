@@ -298,4 +298,15 @@ describe("image source rows", () => {
       source: { image: expect.objectContaining({ ref: "ghcr.io/acme/api:2" }) },
     });
   });
+
+  it("replaces the whole ref instead of doubling the host when a full ref is pasted", () => {
+    const { onPatchResource } = renderImageTab({
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+    });
+    const input = screen.getByLabelText(/image reference/i) as HTMLInputElement;
+    fireEvent.change(input, { target: { value: "quay.io/other/app:2" } });
+    expect(onPatchResource).toHaveBeenCalledWith({
+      source: { image: expect.objectContaining({ ref: "quay.io/other/app:2" }) },
+    });
+  });
 });

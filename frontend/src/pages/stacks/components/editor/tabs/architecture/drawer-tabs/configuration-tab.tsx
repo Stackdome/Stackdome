@@ -382,7 +382,14 @@ function StackResourceConfigurationTabImpl({
                         id={`container-image-${index}`}
                         placeholder={host ? "e.g., acme/api:1.4.2" : "e.g., nginx:latest, redis:7"}
                         value={remainder}
-                        onChange={(e) => updateImageSource({ ref: joinImageRef(host, e.target.value) })}
+                        onChange={(e) => {
+                          const typed = e.target.value;
+                          // A pasted full ref (with its own host) replaces the
+                          // whole ref outright; otherwise compose against the
+                          // active chip host as before.
+                          const { host: typedHost } = splitImageRef(typed);
+                          updateImageSource({ ref: typedHost ? typed : joinImageRef(host, typed) });
+                        }}
                         className={`h-9 flex-1 font-mono text-[12.5px] ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
                         required={draft.sourceType === "image"}
                         aria-invalid={!!getError(errors, "source.image.ref")}

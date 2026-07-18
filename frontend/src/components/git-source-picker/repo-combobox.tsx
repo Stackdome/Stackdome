@@ -144,7 +144,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
   };
 
   const display = value ? (integrationId ? repoTail(value) : value) : null;
-  const looksLikeUrl = /^https?:\/\//i.test(query);
+  const looksLikeUrl = /^(https?|ssh|git):\/\//i.test(query) || /^git@/.test(query);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
