@@ -57,6 +57,10 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
   const pickProvider = (p: RegistryProvider) => {
     setProvider(p);
     setHost(p.hostPrefill);
+    // Credentials are provider-specific: a secret typed for one registry must
+    // not survive Back → different provider and get submitted elsewhere.
+    setUsername("");
+    setPassword("");
     setFieldErrors({});
   };
 

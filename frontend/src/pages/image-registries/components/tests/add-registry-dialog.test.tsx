@@ -104,4 +104,19 @@ describe("AddRegistryDialog", () => {
     expect(screen.getByText(/password is required/i)).toBeInTheDocument();
     expect(createRegistryCredential).not.toHaveBeenCalled();
   });
+
+  it("clears typed credentials when a different provider is picked", async () => {
+    const user = userEvent.setup();
+    render(<AddRegistryDialog open onOpenChange={vi.fn()} onCreated={vi.fn()} />);
+
+    await user.click(screen.getByRole("button", { name: /docker hub/i }));
+    await user.type(screen.getByLabelText(/username/i), "bob");
+    await user.type(screen.getByLabelText(/password/i), "hub-secret");
+    await user.click(screen.getByRole("button", { name: /back/i }));
+    await user.click(screen.getByRole("button", { name: /quay/i }));
+
+    expect(screen.getByLabelText(/host/i)).toHaveValue("quay.io");
+    expect(screen.getByLabelText(/username/i)).toHaveValue("");
+    expect(screen.getByLabelText(/password/i)).toHaveValue("");
+  });
 });

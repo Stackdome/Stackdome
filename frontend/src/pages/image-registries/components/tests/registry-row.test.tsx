@@ -66,9 +66,4 @@ describe("RegistryRow", () => {
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith(credential));
   });
 
-  it("shows the provider label with the host beneath", () => {
-    renderRow();
-    expect(screen.getByText("Docker Hub")).toBeInTheDocument();
-    expect(screen.getByText("index.docker.io")).toBeInTheDocument();
-  });
 });

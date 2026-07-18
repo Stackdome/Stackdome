@@ -101,6 +101,15 @@ describe("IntegrationRow", () => {
     expect(onVerify).not.toHaveBeenCalled();
   });
 
+  it("hides the action_needed banner CTA on GitHub App rows (no PUT rotation path)", () => {
+    renderRow({
+      onUpdateCredentials: vi.fn(),
+      integration: integration({ credentials_configured: false }),
+    });
+    expect(screen.getByText(/no credentials are stored/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /update credentials/i })).not.toBeInTheDocument();
+  });
+
   it("renders the access summary derived from installations", async () => {
     vi.mocked(listInstallations).mockResolvedValue({
       items: [{ id: "i1", repository_selection: REPOSITORY_SELECTION_ALL }],

@@ -54,12 +54,25 @@ function Banner({
             {banner.ctaLabel}
           </Button>
         )
+      ) : statusKey === "action_needed" ? (
+        // Credential rotation only applies to rows that get a handler
+        // (github_app rows can't be PUT-updated); no handler → message only.
+        onUpdateCredentials && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
+            onClick={onUpdateCredentials}
+          >
+            {banner.ctaLabel}
+          </Button>
+        )
       ) : (
         <Button
           variant="outline"
           size="sm"
           className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-          onClick={statusKey === "action_needed" ? onUpdateCredentials : onVerify}
+          onClick={onVerify}
         >
           {banner.ctaLabel}
         </Button>
@@ -166,7 +179,9 @@ export function IntegrationRow({
           banner={row.banner}
           statusKey={row.statusKey}
           onVerify={() => onVerify(integration)}
-          onUpdateCredentials={onUpdateCredentials && (() => onUpdateCredentials(integration))}
+          onUpdateCredentials={
+            isGithubApp || !onUpdateCredentials ? undefined : () => onUpdateCredentials(integration)
+          }
         />
       )}
     </div>
