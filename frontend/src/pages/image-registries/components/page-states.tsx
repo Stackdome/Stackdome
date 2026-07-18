@@ -1,4 +1,4 @@
-import { Container, Plus, RefreshCw, TriangleAlert } from "lucide-react";
+import { Package, Plus, RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/branded";
 
@@ -21,7 +21,7 @@ export function RegistriesErrorState({ message, onRetry }: { message: string; on
 export function RegistriesEmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <EmptyState
-      icon={<Container className="h-8 w-8" />}
+      icon={<Package className="h-8 w-8" />}
       title="No image registries yet"
       description="Add registry credentials so builds can pull private base images and push build artifacts."
       action={

@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Container } from "lucide-react"
+import { Package } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -22,7 +22,7 @@ export function NavImageRegistries() {
           isActive={isImageRegistriesActive}
         >
           <Link to="/image-registries">
-            <Container />
+            <Package />
             <span>Image Registries</span>
           </Link>
         </SidebarMenuButton>

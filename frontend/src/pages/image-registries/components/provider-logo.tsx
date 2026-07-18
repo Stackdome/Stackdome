@@ -1,4 +1,4 @@
-import { Container } from "lucide-react";
+import { Package } from "lucide-react";
 import dockerUrl from "@/assets/brand/docker.svg";
 import dockerLightUrl from "@/assets/brand/docker-light.svg";
 import githubUrl from "@/assets/brand/github.svg";
@@ -33,5 +33,5 @@ export function ProviderLogo({ providerId, className }: { providerId: RegistryPr
       </>
     );
   }
-  return <Container className={className} aria-hidden />;
+  return <Package className={className} aria-hidden />;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { isAxiosError } from "axios";
-import { Container } from "lucide-react";
+import { Package } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogTitle,
 } from "@/components/ui/dialog";
@@ -100,7 +100,7 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
           <span className="flex h-6 w-6 items-center justify-center text-brand">
-            <Container className="h-5 w-5" />
+            <Package className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
             Add image registry
