@@ -58,7 +58,6 @@ export const REGISTRY_PROVIDERS: RegistryProvider[] = [
   },
 ];
 
-/** Detects the registry provider from a hostname, for logo selection. */
 export function providerIdForHost(host?: string): RegistryProviderId {
   const h = (host ?? "").toLowerCase();
   if (h.includes("docker.io")) return "dockerhub";

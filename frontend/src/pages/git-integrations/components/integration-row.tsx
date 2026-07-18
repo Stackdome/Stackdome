@@ -55,8 +55,7 @@ function Banner({
           </Button>
         )
       ) : statusKey === "action_needed" ? (
-        // Credential rotation only applies to rows that get a handler
-        // (github_app rows can't be PUT-updated); no handler → message only.
+        // github_app rows can't be PUT-updated: message without a CTA.
         onUpdateCredentials && (
           <Button
             variant="outline"

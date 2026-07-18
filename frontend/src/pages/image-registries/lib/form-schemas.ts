@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Add-registry form: everything required on create (password is write-only). */
+/** Password is write-only in the API — required on create, never echoed back. */
 export const createRegistrySchema = z.object({
   host: z.string().trim().min(1, "Host is required."),
   username: z.string().trim().min(1, "Username is required."),

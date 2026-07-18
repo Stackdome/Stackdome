@@ -84,7 +84,7 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
       onOpenChange(false);
       onCreated();
     } catch (e) {
-      // 409 = host+purpose duplicate; anchor it to the host field instead of a toast.
+      // Backend returns 409 for a host+purpose duplicate.
       if (isAxiosError(e) && e.response?.status === 409) {
         setFieldErrors({ host: "Credentials for this registry and purpose already exist." });
       } else {

@@ -34,6 +34,7 @@ export function UpdateCredentialsDialog({ credential, onOpenChange, onUpdated }:
     setUsername(credential?.username ?? "");
     setPassword("");
     setFieldErrors({});
+    // Keyed on id, not the object: a refetched credential must not wipe in-progress edits.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [credentialId]);
 
