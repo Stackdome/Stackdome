@@ -25,6 +25,8 @@ type ResourceError struct {
 type ClusterLoggingService interface {
 	// GetLogsForResources retrieves logs for the specified resources in the cluster.
 	GetLogsForResources(ctx context.Context, orgID string, resources []*models.StackResource, options LoggingParams) (interfaces.ServerSideStreamable, error)
+	// GetLogsForBuildPod streams logs from the pod of the given build Job.
+	GetLogsForBuildPod(ctx context.Context, orgID string, namespace string, jobName string, options LoggingParams) (interfaces.ServerSideStreamable, error)
 }
 
 type LoggingParams interface {
@@ -115,6 +117,53 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 
 	return &LogStreamer{
 		resourcePodMap: resourcePodMap,
+		k8sclient:      k8sclient,
+		Logger:         s.logger,
+		streamConfig: LogStreamConfig{
+			logStreamBufferSize:   DefaultLogStreamBufferSize,
+			streamTimeoutDuration: DefaultStreamTimeoutDuration,
+			rateLimiter:           rate.NewLimiter(rate.Every(DefaultLogStreamRateLimit), DefaultLogStreamRateLimitBurst),
+			logOptions:            options,
+			maxLogStreamErrors:    MaxLogStreamErrors,
+		},
+	}, nil
+}
+
+func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, namespace string, jobName string, options LoggingParams) (interfaces.ServerSideStreamable, error) {
+	cluster, err := s.clusterService.GetClusterForOrg(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+
+	restConfig, cerr := s.clusterManager.GetRestConfig(cluster.ID)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	ctrlRuntimeclient, cerr := s.clusterManager.GetClient(cluster.ID)
+	if cerr != nil {
+		return nil, cerr
+	}
+
+	k8sclient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
+		RestConfig:              restConfig,
+		ControllerRuntimeClient: ctrlRuntimeclient,
+		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
+	})
+	if cerr != nil {
+		return nil, fmt.Errorf("failed to create Kubernetes client: %w", cerr)
+	}
+
+	pod, perr := k8sclient.BuildPodForJob(ctx, namespace, jobName)
+	if perr != nil {
+		return nil, fmt.Errorf("failed to find build pod for job %s: %w", jobName, perr)
+	}
+	if pod == nil {
+		return nil, fmt.Errorf("no build pod found for job %s: the build has not started yet or its logs have been pruned", jobName)
+	}
+
+	return &LogStreamer{
+		resourcePodMap: map[string]*corev1.Pod{jobName: pod},
 		k8sclient:      k8sclient,
 		Logger:         s.logger,
 		streamConfig: LogStreamConfig{
