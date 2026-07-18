@@ -527,6 +527,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
 		ClusterService:       clusterService,
 		StackResourceService: stackResourceService,
+		ImageBuildService:    imageBuildService,
 		Logger:               d.Logger,
 	})
 

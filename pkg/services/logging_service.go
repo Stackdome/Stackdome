@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"strconv"
 
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
+
 	"github.com/Stackdome/stackdome/pkg/interfaces"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -54,15 +56,20 @@ func NewLoggingParams(queryValues url.Values) (*LoggingParams, error) {
 	return l, nil
 }
 
+//go:generate mockgen -destination=image_build_service_mock.go -package=services github.com/Stackdome/stackdome/pkg/services ImageBuildService
+//go:generate mockgen -destination=cluster_logging_service_mock.go -package=services github.com/Stackdome/stackdome/pkg/services/clusterresource ClusterLoggingService
+
 type LoggingService interface {
 	StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
 	StreamLogsForStack(ctx context.Context, orgID string, stackID string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
+	StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
 	ClusterResourceServiceInjectable
 }
 
 type loggingService struct {
 	clusterService       ClusterService
 	stackResourceService StackResourceService
+	imageBuildService    ImageBuildService
 	logger               logger.Logger
 	ClusterResourceServiceDeps
 }
@@ -70,6 +77,7 @@ type loggingService struct {
 type LoggingServiceSpec struct {
 	ClusterService       ClusterService
 	StackResourceService StackResourceService
+	ImageBuildService    ImageBuildService
 	Logger               logger.Logger
 }
 
@@ -77,6 +85,7 @@ func NewLoggingService(spec LoggingServiceSpec) LoggingService {
 	return &loggingService{
 		clusterService:       spec.ClusterService,
 		stackResourceService: spec.StackResourceService,
+		imageBuildService:    spec.ImageBuildService,
 		logger:               spec.Logger,
 	}
 }
@@ -125,4 +134,19 @@ func (s *loggingService) StreamLogsForStack(ctx context.Context, orgID string, s
 	}
 
 	return logStreamer, nil
+}
+
+func (s *loggingService) StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, error) {
+	build, err := s.imageBuildService.GetByID(ctx, buildID)
+	if err != nil {
+		return nil, err
+	}
+
+	if build.Status == nil || build.Status.BuildSourceRevision == "" {
+		return nil, fmt.Errorf("build %s has not started yet", buildID)
+	}
+
+	jobName := buildsv1alpha1.BuildJobName(build.StackResourceName, build.Status.BuildSourceRevision)
+
+	return s.ClusterLoggingService.GetLogsForBuildPod(ctx, orgID, build.Namespace, jobName, options)
 }

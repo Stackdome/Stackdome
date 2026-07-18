@@ -404,6 +404,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
 		ClusterService:       clusterService,
 		StackResourceService: stackResourceService,
+		ImageBuildService:    imageBuildService,
 		Logger:               te.Logger,
 	})
 
