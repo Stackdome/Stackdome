@@ -12,10 +12,11 @@ import (
 )
 
 var (
-	portNamePattern     = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
-	resourceNamePattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
-	gitCommitSHAPattern = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
-	cronParser          = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
+	portNamePattern       = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+	portNameLetterPattern = regexp.MustCompile(`[a-z]`)
+	resourceNamePattern   = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]*[a-z0-9])?$`)
+	gitCommitSHAPattern   = regexp.MustCompile(`^[0-9a-f]{7,40}$`)
+	cronParser            = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor)
 )
 
 const (
@@ -25,6 +26,20 @@ const (
 
 func fieldErr(field, code, message string, args ...any) errors.FieldError {
 	return errors.FieldError{Field: field, Code: code, Message: fmt.Sprintf(message, args...)}
+}
+
+// validPortName mirrors Kubernetes' IsValidPortName. The cluster-agent uses the
+// port name as a ContainerPort.Name and as a named Service TargetPort, both of
+// which the k8s API validates: 1-15 chars, lowercase alphanumerics and hyphens,
+// at least one letter (so a bare "3306" is rejected), no leading/trailing or
+// consecutive hyphens. Enforcing it here means a bad name fails at input rather
+// than silently at deploy.
+func validPortName(nm string) bool {
+	return nm != "" &&
+		len(nm) <= maxPortNameLength &&
+		portNamePattern.MatchString(nm) &&
+		portNameLetterPattern.MatchString(nm) &&
+		!strings.Contains(nm, "--")
 }
 
 // validateInputRules checks everything derivable from the payload alone.
@@ -186,9 +201,9 @@ func validatePorts(resource *models.StackResource) []errors.FieldError {
 	for i, p := range resource.Ports {
 		f := func(sub string) string { return fmt.Sprintf("ports[%d].%s", i, sub) }
 
-		if p.Name == "" || !portNamePattern.MatchString(p.Name) || len(p.Name) > maxPortNameLength {
+		if !validPortName(p.Name) {
 			errs = append(errs, fieldErr(f("name"), errors.VErrPortNameInvalid,
-				"port name '%s' must match %s and be at most %d characters", p.Name, portNamePattern.String(), maxPortNameLength))
+				"port name '%s' must be 1-%d lowercase alphanumeric/'-' characters, contain at least one letter, and have no consecutive or leading/trailing hyphens", p.Name, maxPortNameLength))
 		}
 		if p.Number < 1 || p.Number > 65535 {
 			errs = append(errs, fieldErr(f("number"), errors.VErrPortNumberInvalid,
