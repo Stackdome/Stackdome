@@ -6,13 +6,17 @@
 #    (Grafana → Dashboards → Import; map DS_PROMETHEUS and DS_TEMPO, and accept
 #    the SLO threshold constant VAR_SLO_P95_MS when asked — default 500).
 # 4. Services may restart until postgres finishes initializing; that settles itself.
-# 5. Set TOOLJET_HOST (on both tooljet and tooljet-worker) to your deployed URL.
+# 5. ${self.<output>} / ${<service>.<output>} env values resolve at deploy time
+#    (TOOLJET_HOST picks up the public URL automatically — no manual edit needed).
 name: tooljet
 
 services:
   tooljet:
     image: tooljet/tooljet:v3.20.189-lts
-    command: npm run start:prod
+    # The entrypoint script must be invoked explicitly: it waits for postgres,
+    # creates the app + ToolJet DB databases, and runs migrations before
+    # exec-ing the server. Stack commands replace the image entrypoint.
+    command: ./server/ee-entrypoint.sh npm run start:prod
     ports:
       - "80:80"
     depends_on:
@@ -22,24 +26,24 @@ services:
     environment:
       SERVE_CLIENT: "true"
       PORT: "80"
-      TOOLJET_HOST: "http://localhost:80"
+      TOOLJET_HOST: "${self.public_url}"
       NODE_ENV: "production"
       DISABLE_TOOLJET_TELEMETRY: "true"
       LOCKBOX_MASTER_KEY: "REPLACE_LOCKBOX_MASTER_KEY_VALUE_HERE"
       SECRET_KEY_BASE: "REPLACE_SECRET_KEY_BASE_VALUE_HERE"
-      PG_HOST: "postgresql"
+      PG_HOST: "${postgresql.host}"
       PG_PORT: "5432"
       PG_DB: "tooljet_production"
       PG_USER: "postgres"
       PG_PASS: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
       ENABLE_TOOLJET_DB: "true"
       TOOLJET_DB: "tooljet_db"
-      TOOLJET_DB_HOST: "postgresql"
+      TOOLJET_DB_HOST: "${postgresql.host}"
       TOOLJET_DB_USER: "postgres"
       TOOLJET_DB_PASS: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
-      PGRST_HOST: "postgrest"
+      PGRST_HOST: "${postgrest.host}"
       PGRST_JWT_SECRET: "REPLACE_PGRST_JWT_SECRET_VALUE_HERE"
-      REDIS_HOST: "redis"
+      REDIS_HOST: "${redis.host}"
       REDIS_PORT: "6379"
       ENABLE_OTEL: "true"
       OTEL_SERVICE_NAME: "tooljet"
@@ -49,30 +53,30 @@ services:
 
   tooljet-worker:
     image: tooljet/tooljet:v3.20.189-lts
-    command: npm run start:prod
+    command: ./server/ee-entrypoint.sh npm run start:prod
     depends_on:
       - postgresql
       - redis
     environment:
       WORKER: "true"
-      TOOLJET_HOST: "http://localhost:80"
+      TOOLJET_HOST: "${tooljet.public_url}"
       NODE_ENV: "production"
       DISABLE_TOOLJET_TELEMETRY: "true"
       LOCKBOX_MASTER_KEY: "REPLACE_LOCKBOX_MASTER_KEY_VALUE_HERE"
       SECRET_KEY_BASE: "REPLACE_SECRET_KEY_BASE_VALUE_HERE"
-      PG_HOST: "postgresql"
+      PG_HOST: "${postgresql.host}"
       PG_PORT: "5432"
       PG_DB: "tooljet_production"
       PG_USER: "postgres"
       PG_PASS: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
       ENABLE_TOOLJET_DB: "true"
       TOOLJET_DB: "tooljet_db"
-      TOOLJET_DB_HOST: "postgresql"
+      TOOLJET_DB_HOST: "${postgresql.host}"
       TOOLJET_DB_USER: "postgres"
       TOOLJET_DB_PASS: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
-      PGRST_HOST: "postgrest"
+      PGRST_HOST: "${postgrest.host}"
       PGRST_JWT_SECRET: "REPLACE_PGRST_JWT_SECRET_VALUE_HERE"
-      REDIS_HOST: "redis"
+      REDIS_HOST: "${redis.host}"
       REDIS_PORT: "6379"
       ENABLE_OTEL: "true"
       OTEL_SERVICE_NAME: "tooljet-worker"
@@ -105,8 +109,12 @@ services:
 
   lgtm:
     image: grafana/otel-lgtm:0.29.1
+    # 4318 must be listed: services only route declared ports, and the app
+    # containers push OTLP metrics/traces to lgtm:4318 (internal only).
     ports:
       - "3000:3000"
+    expose:
+      - "4318"
     environment:
       PROMETHEUS_EXTRA_ARGS: "--enable-feature=otlp-deltatocumulative"
     volumes:

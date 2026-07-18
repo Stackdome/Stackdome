@@ -8,6 +8,7 @@ import type {
   DockerComposeVolume,
 } from "@/types/docker-compose";
 import type {
+  FormEnvVarData,
   FormStackData,
   FormStackResourceData,
   FormVolumeExtendedData,
@@ -78,8 +79,10 @@ export function convertDockerComposeToStackData(
     const services = compose.services || {};
     const stackResources: FormStackResourceData[] = [];
 
+    const serviceNames = Object.keys(services);
+
     for (const [serviceName, serviceConfig] of Object.entries(services)) {
-      const conversionResult = convertServiceToStackResource(serviceName, serviceConfig);
+      const conversionResult = convertServiceToStackResource(serviceName, serviceConfig, serviceNames);
 
       if (conversionResult.success && conversionResult.data) {
         stackResources.push(conversionResult.data);
@@ -175,7 +178,8 @@ export function convertDockerComposeToStackData(
  */
 export function convertServiceToStackResource(
   serviceName: string,
-  service: DockerComposeService
+  service: DockerComposeService,
+  allServiceNames: string[] = []
 ): ServiceConversionResult {
   const warnings: ConversionWarning[] = [];
   const errors: ConversionError[] = [];
@@ -190,10 +194,10 @@ export function convertServiceToStackResource(
       depends_on: Array.isArray(service.depends_on) ? service.depends_on :
         typeof service.depends_on === 'object' && service.depends_on !== null ?
           Object.keys(service.depends_on) : [],
-      ports: convertPorts(service.ports, serviceName, warnings),
+      ports: convertPorts(service.ports, serviceName, warnings, service.expose),
       volume_mounts: convertVolumeMounts(service.volumes, serviceName, warnings),
       execution_config: {
-        environment_variables: convertEnvironmentVariables(service.environment, serviceName, warnings),
+        environment_variables: convertEnvironmentVariables(service.environment, serviceName, allServiceNames, warnings),
         command: convertCommand(service.command, warnings),
       },
       // UI-specific fields
@@ -346,11 +350,33 @@ function convertLabels(
 function convertPorts(
   ports: DockerComposeService['ports'],
   serviceName: string,
-  warnings: ConversionWarning[]
+  warnings: ConversionWarning[],
+  expose?: DockerComposeService['expose']
 ): Array<{ name: string; number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> {
-  if (!ports || !Array.isArray(ports)) return [];
-
   const convertedPorts: Array<{ name: string; number: number; protocol: 'tcp' | 'http'; exposed_to_public: boolean }> = [];
+
+  // Compose `expose` lists container ports reachable by sibling services but
+  // never published on the host — map them to internal (non-public) ports.
+  (expose ?? []).forEach((entry, index) => {
+    const port = parseInt(String(entry).split('/')[0], 10);
+    if (isNaN(port)) {
+      warnings.push({
+        type: 'partial',
+        message: `Invalid expose entry at index ${index}: ${entry}`,
+        service: serviceName,
+        dockerComposeField: 'expose',
+      });
+      return;
+    }
+    convertedPorts.push({
+      name: `tcp-${port}`,
+      number: port,
+      protocol: 'tcp',
+      exposed_to_public: false,
+    });
+  });
+
+  if (!ports || !Array.isArray(ports)) return convertedPorts;
 
   ports.forEach((port, index) => {
     try {
@@ -548,16 +574,56 @@ function convertVolumeMounts(
 }
 
 /**
+ * A whole-value env reference: "${self.public_url}" or "${<service>.<output>}".
+ * Output keys follow pkg/models/output_descriptor.go (host, port, url,
+ * public_host, public_url, optionally suffixed ".<port-name>").
+ */
+const ENV_REFERENCE_PATTERN = /^\$\{([a-z0-9][a-z0-9_-]*)\.([a-z0-9][a-z0-9_.-]*)\}$/;
+
+/**
+ * Classify one env value: reference values become self/resource rows resolved
+ * at deploy; everything else stays a literal row. References to unknown
+ * services are kept literal with a warning rather than dropped.
+ */
+function toEnvRow(
+  name: string,
+  value: string,
+  serviceName: string,
+  allServiceNames: string[],
+  warnings: ConversionWarning[]
+): FormEnvVarData {
+  const match = ENV_REFERENCE_PATTERN.exec(value);
+  if (!match) return { from: "stack", name, value };
+
+  const [, target, output] = match;
+  if (target === "self" || target === serviceName) {
+    return { from: "self", name, selfOutput: output };
+  }
+  if (allServiceNames.includes(target)) {
+    return { from: "resource", name, resourceName: target, output };
+  }
+
+  warnings.push({
+    type: 'partial',
+    message: `Environment variable '${name}' references unknown service '${target}'. Kept as literal text.`,
+    service: serviceName,
+    dockerComposeField: 'environment',
+  });
+  return { from: "stack", name, value };
+}
+
+/**
  * Convert Docker Compose environment variables
  */
 function convertEnvironmentVariables(
   environment: DockerComposeService['environment'],
   serviceName: string,
+  allServiceNames: string[],
   warnings: ConversionWarning[]
-): Array<{ name: string; value: string; from: "stack" }> {
+): FormEnvVarData[] {
   if (!environment) return [];
 
-  const envVars: Array<{ name: string; value: string; from: "stack" }> = [];
+  const envVars: FormEnvVarData[] = [];
 
   try {
     if (Array.isArray(environment)) {
@@ -567,11 +633,7 @@ function convertEnvironmentVariables(
           if (typeof envVar === 'string') {
             const [name, ...valueParts] = envVar.split('=');
             if (name) {
-              envVars.push({
-                name,
-                value: valueParts.join('=') || '',
-                from: "stack",
-              });
+              envVars.push(toEnvRow(name, valueParts.join('=') || '', serviceName, allServiceNames, warnings));
             }
           }
         } catch {
@@ -587,11 +649,7 @@ function convertEnvironmentVariables(
     } else if (typeof environment === 'object' && environment !== null) {
       // Handle object format: { KEY: "value", KEY2: "value2" }
       Object.entries(environment).forEach(([name, value]) => {
-        envVars.push({
-          name,
-          value: String(value ?? ''),
-          from: "stack",
-        });
+        envVars.push(toEnvRow(name, String(value ?? ''), serviceName, allServiceNames, warnings));
       });
     }
 
