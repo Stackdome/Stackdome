@@ -25,7 +25,7 @@ describe("template conversion round-trip", () => {
 
     const app = data.spec.stack_resources.find((r) => r.name === "tooljet")!;
     const env = Object.fromEntries(
-      (app.environment_variables ?? []).map((e: { name: string; value: string }) => [e.name, e.value]),
+      (app.execution_config?.environment_variables ?? []).map((e: { name: string; value: string }) => [e.name, e.value]),
     );
     expect(env.ENABLE_OTEL).toBe("true");
     expect(env.OTEL_EXPORTER_OTLP_TRACES).toBe("http://lgtm:4318/v1/traces");
@@ -33,7 +33,7 @@ describe("template conversion round-trip", () => {
 
     const worker = data.spec.stack_resources.find((r) => r.name === "tooljet-worker")!;
     const workerEnv = Object.fromEntries(
-      (worker.environment_variables ?? []).map((e: { name: string; value: string }) => [e.name, e.value]),
+      (worker.execution_config?.environment_variables ?? []).map((e: { name: string; value: string }) => [e.name, e.value]),
     );
     expect(workerEnv.WORKER).toBe("true");
   });
