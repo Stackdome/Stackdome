@@ -502,7 +502,59 @@ function StackResourceConfigurationTabImpl({
               </LedgerRow>
             )}
 
-            <LedgerDisclosure label="Advanced" meta="push registry">
+            <LedgerDisclosure label="Advanced" meta="build & push">
+              <LedgerRow
+                label="Dockerfile path"
+                htmlFor={`dockerfile-path-${index}`}
+                hint="Relative to the build context."
+                error={getError(errors, "source.git.dockerfile_path")}
+              >
+                <DirtyField
+                  draft={draft}
+                  baseline={baseline}
+                  path="source.git.dockerfile_path"
+                  compact
+                  onReset={onDiscardField ? () => onDiscardField("source.git.dockerfile_path") : undefined}
+                >
+                  <Input
+                    id={`dockerfile-path-${index}`}
+                    value={draft.source?.git?.dockerfile_path ?? ""}
+                    onChange={(e) => updateGitSource({ dockerfile_path: e.target.value })}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) updateGitSource({ dockerfile_path: "Dockerfile" });
+                    }}
+                    placeholder="Dockerfile"
+                    className="h-9 font-mono text-[12.5px]"
+                  />
+                </DirtyField>
+              </LedgerRow>
+
+              <LedgerRow
+                label="Build context"
+                htmlFor={`build-context-${index}`}
+                hint="Directory passed to the image build."
+                error={getError(errors, "source.git.build_context")}
+              >
+                <DirtyField
+                  draft={draft}
+                  baseline={baseline}
+                  path="source.git.build_context"
+                  compact
+                  onReset={onDiscardField ? () => onDiscardField("source.git.build_context") : undefined}
+                >
+                  <Input
+                    id={`build-context-${index}`}
+                    value={draft.source?.git?.build_context ?? ""}
+                    onChange={(e) => updateGitSource({ build_context: e.target.value })}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) updateGitSource({ build_context: "." });
+                    }}
+                    placeholder="."
+                    className="h-9 font-mono text-[12.5px]"
+                  />
+                </DirtyField>
+              </LedgerRow>
+
               <LedgerRow
                 label="Push registry"
                 htmlFor={`push-repo-${index}`}

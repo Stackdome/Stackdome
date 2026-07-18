@@ -34,7 +34,7 @@ function renderGitTab(overrides: Record<string, unknown> = {}) {
     source: { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
     ...overrides,
   };
-  render(
+  const { rerender } = render(
     // StackResourceConfigurationTab renders <TabsContent value="general">,
     // which requires a Radix <Tabs> ancestor (Tabs provides the context
     // TabsContent reads); the brief's starting spec rendered it bare and
@@ -57,7 +57,32 @@ function renderGitTab(overrides: Record<string, unknown> = {}) {
       />
     </Tabs>,
   );
-  return { onPatchResource };
+  // Re-renders with a patched `git` source, simulating the parent store
+  // applying an onPatchResource call back into draft (as it does in
+  // production). Needed for onBlur-restores-default assertions: these are
+  // controlled inputs, and without a real re-render carrying the new value,
+  // React resets the DOM node's value back to the original `value` prop
+  // right after the change event, so by the time blur fires the input no
+  // longer reads as empty.
+  const rerenderWithGitSource = (git: Record<string, unknown>) => {
+    const next = {
+      ...resource,
+      source: { git: { ...(resource as { source: { git: Record<string, unknown> } }).source.git, ...git } },
+    };
+    rerender(
+      <Tabs defaultValue="general">
+        <StackResourceConfigurationTab
+          draft={pickConfigurationDraft(next)}
+          baseline={pickConfigurationDraft(resource)}
+          index={0}
+          errors={{}}
+          volumes={[]}
+          onPatchResource={onPatchResource}
+        />
+      </Tabs>,
+    );
+  };
+  return { onPatchResource, rerenderWithGitSource };
 }
 
 vi.mock("../image-registry-select", () => ({
@@ -123,6 +148,43 @@ describe("git repository row", () => {
           integration_id: "int-app",
         }),
       },
+    });
+  });
+});
+
+describe("advanced build fields", () => {
+  it("patches dockerfile_path", () => {
+    const { onPatchResource } = renderGitTab();
+    fireEvent.click(screen.getByText("Advanced"));
+    const input = screen.getByLabelText(/dockerfile path/i);
+    fireEvent.change(input, { target: { value: "docker/Dockerfile.prod" } });
+    expect(onPatchResource).toHaveBeenCalledWith({
+      source: { git: expect.objectContaining({ dockerfile_path: "docker/Dockerfile.prod" }) },
+    });
+  });
+
+  it("patches build_context", () => {
+    const { onPatchResource } = renderGitTab();
+    fireEvent.click(screen.getByText("Advanced"));
+    const input = screen.getByLabelText(/build context/i);
+    fireEvent.change(input, { target: { value: "services/api" } });
+    expect(onPatchResource).toHaveBeenCalledWith({
+      source: { git: expect.objectContaining({ build_context: "services/api" }) },
+    });
+  });
+
+  it("restores the default on blur when cleared", () => {
+    const { onPatchResource, rerenderWithGitSource } = renderGitTab();
+    fireEvent.click(screen.getByText("Advanced"));
+    const input = screen.getByLabelText(/dockerfile path/i);
+    fireEvent.change(input, { target: { value: "" } });
+    // Carry the cleared value into a re-render (see renderGitTab) so the
+    // controlled input actually reads "" when blur fires, matching how the
+    // real app re-renders with the patched draft between change and blur.
+    rerenderWithGitSource({ dockerfile_path: "" });
+    fireEvent.blur(screen.getByLabelText(/dockerfile path/i));
+    expect(onPatchResource).toHaveBeenLastCalledWith({
+      source: { git: expect.objectContaining({ dockerfile_path: "Dockerfile" }) },
     });
   });
 });
