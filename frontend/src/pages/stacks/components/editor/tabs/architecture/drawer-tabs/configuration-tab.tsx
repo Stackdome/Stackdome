@@ -22,6 +22,7 @@ import {
   LedgerSegmented,
 } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/ledger";
 import { FieldShell } from "@/components/branded";
+import { RepoCombobox } from "@/components/git-source-picker/repo-combobox";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 
@@ -367,14 +368,14 @@ function StackResourceConfigurationTabImpl({
                 compact
                 onReset={onDiscardField ? () => onDiscardField("source.git.repo_url") : undefined}
               >
-                <Input
+                <RepoCombobox
                   id={`git-repo-${index}`}
                   value={draft.source?.git?.repo_url || ""}
-                  onChange={(e) => updateGitSource({ repo_url: e.target.value })}
-                  placeholder="https://github.com/username/repository.git"
-                  className={`h-9 font-mono text-[12.5px] ${getError(errors, "source.git.repo_url") ? "border-danger" : ""}`}
-                  required={draft.sourceType === "git"}
-                  aria-invalid={!!getError(errors, "source.git.repo_url")}
+                  integrationId={draft.source?.git?.integration_id}
+                  onChange={(pick) =>
+                    updateGitSource({ repo_url: pick.repo_url, integration_id: pick.integration_id })
+                  }
+                  hasError={!!getError(errors, "source.git.repo_url")}
                 />
               </DirtyField>
             </LedgerRow>
