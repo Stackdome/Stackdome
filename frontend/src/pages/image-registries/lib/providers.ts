@@ -5,9 +5,9 @@ export const PURPOSE_PUSH: RegistryCredentialPurpose = "push";
 export const PURPOSE_BOTH: RegistryCredentialPurpose = "both";
 
 export const PURPOSE_LABELS: Record<RegistryCredentialPurpose, string> = {
-  pull: "Pull only",
-  push: "Push only",
-  both: "Pull & push",
+  [PURPOSE_PULL]: "Pull only",
+  [PURPOSE_PUSH]: "Push only",
+  [PURPOSE_BOTH]: "Pull & push",
 };
 
 export type RegistryProviderId = "dockerhub" | "ghcr" | "gitlab" | "quay" | "other";
