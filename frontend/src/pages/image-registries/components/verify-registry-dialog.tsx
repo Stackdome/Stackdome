@@ -16,6 +16,16 @@ interface VerifyRegistryDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+/** The backend parses the registry host out of the repository reference and
+ *  rejects mismatches; a path-only value ("acme/app") would parse as a Docker
+ *  Hub reference. Prefix the credential's host unless the user already typed
+ *  a fully-qualified reference (first segment containing "." or ":"). */
+export function qualifyRepository(repository: string, host: string): string {
+  const firstSegment = repository.split("/")[0];
+  const hasHost = firstSegment.includes(".") || firstSegment.includes(":") || firstSegment === "localhost";
+  return hasHost ? repository : `${host}/${repository}`;
+}
+
 export function VerifyRegistryDialog({ credential, onOpenChange }: VerifyRegistryDialogProps) {
   const { toast } = useToast();
   const [repository, setRepository] = useState("");
@@ -47,7 +57,7 @@ export function VerifyRegistryDialog({ credential, onOpenChange }: VerifyRegistr
     }
     setVerifying(true);
     try {
-      await verifyRegistryCredential(orgId, credential.id, parsed.data.repository);
+      await verifyRegistryCredential(orgId, credential.id, qualifyRepository(parsed.data.repository, credential.host));
       toast({ title: "Registry access verified" });
       onOpenChange(false);
     } catch (e) {

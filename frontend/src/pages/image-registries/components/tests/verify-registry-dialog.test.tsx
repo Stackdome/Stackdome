@@ -35,7 +35,7 @@ describe("VerifyRegistryDialog", () => {
     expect(verifyRegistryCredential).not.toHaveBeenCalled();
   });
 
-  it("verifies a repository and closes on success", async () => {
+  it("qualifies a path-only repository with the credential host and closes on success", async () => {
     vi.mocked(verifyRegistryCredential).mockResolvedValue(undefined);
     const onOpenChange = vi.fn();
     const user = userEvent.setup();
@@ -45,9 +45,23 @@ describe("VerifyRegistryDialog", () => {
     await user.click(screen.getByRole("button", { name: /^verify$/i }));
 
     await waitFor(() => {
-      expect(verifyRegistryCredential).toHaveBeenCalledWith("org-1", "r1", "acme/app");
+      // Backend requires a fully-qualified reference; the dialog prefixes the host.
+      expect(verifyRegistryCredential).toHaveBeenCalledWith("org-1", "r1", "ghcr.io/acme/app");
       expect(toastMock).toHaveBeenCalledWith(expect.objectContaining({ title: "Registry access verified" }));
       expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  it("passes an already-qualified repository through unchanged", async () => {
+    vi.mocked(verifyRegistryCredential).mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<VerifyRegistryDialog credential={credential} onOpenChange={vi.fn()} />);
+
+    await user.type(screen.getByLabelText(/repository/i), "ghcr.io/acme/app");
+    await user.click(screen.getByRole("button", { name: /^verify$/i }));
+
+    await waitFor(() => {
+      expect(verifyRegistryCredential).toHaveBeenCalledWith("org-1", "r1", "ghcr.io/acme/app");
     });
   });
 
