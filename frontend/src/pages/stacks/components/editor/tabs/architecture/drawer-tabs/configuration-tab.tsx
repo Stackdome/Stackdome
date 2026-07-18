@@ -407,7 +407,10 @@ function StackResourceConfigurationTabImpl({
                 baseline={baseline}
                 path="source.git.repo_url"
                 compact
-                onReset={onDiscardField ? () => onDiscardField("source.git.repo_url") : undefined}
+                onReset={onDiscardField ? () => {
+                  onDiscardField("source.git.repo_url");
+                  onDiscardField("source.git.integration_id");
+                } : undefined}
               >
                 <RepoCombobox
                   id={`git-repo-${index}`}

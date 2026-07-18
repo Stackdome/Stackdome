@@ -218,6 +218,69 @@ describe("convertFormStackToApiStack — git source credential passthrough", () 
   });
 });
 
+describe("convertFormStackToApiStack — image source credential passthrough", () => {
+  it("preserves source.image.registry_credentials_id through the API-prep transform", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "image" as const,
+            source: {
+              image: {
+                ref: "ghcr.io/acme/api:1",
+                registry_credentials_id: "cred-1",
+              },
+            },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0].source?.image?.registry_credentials_id).toBe("cred-1");
+  });
+});
+
+describe("FormStackResourceSchema — image ref validation", () => {
+  it("rejects a ref with a host but an empty remainder", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/" } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+
+  it("accepts a fully-qualified ref with host, repo, and tag", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a hostless ref", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "nginx:latest" } },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
     const { FormEnvVarSchema } = await import("../form-schema");

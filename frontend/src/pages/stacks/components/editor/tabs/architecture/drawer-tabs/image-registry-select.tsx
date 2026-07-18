@@ -57,7 +57,7 @@ export function ImageRegistrySelect({ id, imageRef, registryCredentialsId, onCha
 
   const matched =
     credentials.find((c) => c.id === registryCredentialsId) ??
-    (host ? credentials.find((c) => c.host && dockerHostsEqual(c.host, host)) : undefined);
+    (host ? credentials.find((c) => dockerHostsEqual(c.host, host)) : undefined);
 
   const pickCredential = (cred: RegistryCredential) => {
     onChange({ ref: joinImageRef(cred.host ?? null, remainder), registry_credentials_id: cred.id });
@@ -103,7 +103,7 @@ export function ImageRegistrySelect({ id, imageRef, registryCredentialsId, onCha
                 <span className="text-[12.5px]">{PUBLIC_LABEL}</span>
               </CommandItem>
               {credentials.map((cred) => (
-                <CommandItem key={cred.id} value={cred.host ?? cred.id!} onSelect={() => pickCredential(cred)}>
+                <CommandItem key={cred.id} value={cred.host} onSelect={() => pickCredential(cred)}>
                   <Package className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="flex-1 truncate font-mono text-[12.5px]">{cred.host}</span>
                   <span className="text-[11px] text-muted-foreground">{cred.username}</span>

@@ -15,6 +15,7 @@ import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateReques
 import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
 import { buildDesiredConnections, mountsToConnections } from "@/pages/stacks/lib/connection-mapping";
 import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-mapping";
+import { splitImageRef } from "@/pages/stacks/lib/image-ref";
 
 /**
  * Form-specific UI schema additions
@@ -114,7 +115,11 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
       });
     }
   } else if (data.source?.image) {
-    if (!data.source.image.ref) {
+    // A ref like "ghcr.io/" (host picked, no repo typed) is non-empty but has
+    // no actual image identity once the host segment is split off — reject
+    // that the same as a fully empty ref.
+    const { remainder } = splitImageRef(data.source.image.ref ?? "");
+    if (!data.source.image.ref || !remainder) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Container image reference is required",
@@ -407,7 +412,10 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
     };
   } else if (resource.sourceType === 'image') {
     prepared.source = {
-      image: { ref: resource.source?.image?.ref ?? '' },
+      image: {
+        ref: resource.source?.image?.ref ?? '',
+        registry_credentials_id: resource.source?.image?.registry_credentials_id,
+      },
     };
   }
 

@@ -26,13 +26,22 @@ vi.mock("@/components/git-source-picker/repo-combobox", () => ({
   ),
 }));
 
-function renderGitTab(overrides: Record<string, unknown> = {}) {
+function renderGitTab(
+  overrides: Record<string, unknown> = {},
+  options: { baselineOverrides?: Record<string, unknown>; onDiscardField?: (path: string) => void } = {},
+) {
   const onPatchResource = vi.fn();
   const resource = {
     name: "api",
     sourceType: "git" as const,
     source: { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
     ...overrides,
+  };
+  const baselineResource = {
+    name: "api",
+    sourceType: "git" as const,
+    source: { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
+    ...(options.baselineOverrides ?? overrides),
   };
   const { rerender } = render(
     // StackResourceConfigurationTab renders <TabsContent value="general">,
@@ -44,7 +53,7 @@ function renderGitTab(overrides: Record<string, unknown> = {}) {
     <Tabs defaultValue="general">
       <StackResourceConfigurationTab
         draft={pickConfigurationDraft(resource)}
-        baseline={pickConfigurationDraft(resource)}
+        baseline={pickConfigurationDraft(baselineResource)}
         index={0}
         // `errors` and `volumes` are required props on StackResourceConfigurationTabProps
         // (unlike allResources/onDiscardField/onCreateVolume/onOpenVolume, which are
@@ -54,6 +63,7 @@ function renderGitTab(overrides: Record<string, unknown> = {}) {
         errors={{}}
         volumes={[]}
         onPatchResource={onPatchResource}
+        onDiscardField={options.onDiscardField}
       />
     </Tabs>,
   );
@@ -73,11 +83,12 @@ function renderGitTab(overrides: Record<string, unknown> = {}) {
       <Tabs defaultValue="general">
         <StackResourceConfigurationTab
           draft={pickConfigurationDraft(next)}
-          baseline={pickConfigurationDraft(resource)}
+          baseline={pickConfigurationDraft(baselineResource)}
           index={0}
           errors={{}}
           volumes={[]}
           onPatchResource={onPatchResource}
+          onDiscardField={options.onDiscardField}
         />
       </Tabs>,
     );
@@ -149,6 +160,39 @@ describe("git repository row", () => {
         }),
       },
     });
+  });
+
+  it("discards both repo_url and integration_id when the Repository row's reset is clicked", () => {
+    const onDiscardField = vi.fn();
+    renderGitTab(
+      {
+        source: {
+          git: {
+            repo_url: "https://github.com/acme/new-repo.git",
+            dockerfile_path: "Dockerfile",
+            build_context: ".",
+            integration_id: "int-new",
+          },
+        },
+      },
+      {
+        baselineOverrides: {
+          source: {
+            git: {
+              repo_url: "https://github.com/acme/old-repo.git",
+              dockerfile_path: "Dockerfile",
+              build_context: ".",
+              integration_id: "int-old",
+            },
+          },
+        },
+        onDiscardField,
+      },
+    );
+    const resetButton = screen.getByRole("button", { name: /reset to original value/i });
+    resetButton.click();
+    expect(onDiscardField).toHaveBeenCalledWith("source.git.repo_url");
+    expect(onDiscardField).toHaveBeenCalledWith("source.git.integration_id");
   });
 });
 
