@@ -87,4 +87,28 @@ describe("ImageRegistrySelect", () => {
       registry_credentials_id: undefined,
     });
   });
+
+  it("still renders and accepts a custom host when the credential list fails to load", async () => {
+    vi.mocked(listRegistryCredentials).mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<ImageRegistrySelect id="reg" imageRef="acme/api:1" onChange={onChange} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText(/registry host/i), "registry.example.com");
+    await user.click(await screen.findByText(/use "registry\.example\.com"/i));
+    expect(onChange).toHaveBeenCalledWith({
+      ref: "registry.example.com/acme/api:1",
+      registry_credentials_id: undefined,
+    });
+  });
+
+  it("prefers the credential id match over the ref host match", async () => {
+    const credA = { id: "cred-a", host: "ghcr.io", username: "a" };
+    const credB = { id: "cred-b", host: "quay.io", username: "b" };
+    vi.mocked(listRegistryCredentials).mockResolvedValue({ items: [credA, credB] });
+    render(
+      <ImageRegistrySelect id="reg" imageRef="ghcr.io/acme/api:1" registryCredentialsId="cred-b" onChange={vi.fn()} />,
+    );
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent("quay.io"));
+  });
 });
