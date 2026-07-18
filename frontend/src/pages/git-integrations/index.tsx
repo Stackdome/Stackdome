@@ -18,6 +18,7 @@ import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
 import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
 import { IntegrationRow } from "./components/integration-row";
 import { VerifyIntegrationDialog } from "./components/verify-integration-dialog";
+import { UpdateCredentialsDialog } from "./components/update-credentials-dialog";
 
 export default function GitIntegrationsPage() {
   const { toast } = useToast();
@@ -26,6 +27,7 @@ export default function GitIntegrationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<GitIntegration | null>(null);
   const [removing, setRemoving] = useState<GitIntegration | null>(null);
+  const [editing, setEditing] = useState<GitIntegration | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -117,7 +119,7 @@ export default function GitIntegrationsPage() {
                   integration={integration}
                   onVerify={setVerifying}
                   onRemove={setRemoving}
-                  onUpdateCredentials={() => setWizardOpen(true)}
+                  onUpdateCredentials={setEditing}
                 />
               ))}
             </div>
@@ -135,6 +137,12 @@ export default function GitIntegrationsPage() {
       <VerifyIntegrationDialog
         integration={verifying}
         onOpenChange={(o) => !o && setVerifying(null)}
+      />
+
+      <UpdateCredentialsDialog
+        integration={editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        onUpdated={() => void refresh()}
       />
 
       <AlertDialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>

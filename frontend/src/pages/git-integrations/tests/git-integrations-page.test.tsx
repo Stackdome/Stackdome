@@ -21,6 +21,7 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   deleteGitIntegration: vi.fn(),
   listInstallations: vi.fn().mockResolvedValue({ items: [] }),
   verifyGitIntegration: vi.fn(),
+  updateGitIntegration: vi.fn(),
 }));
 vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 vi.mock("@/pages/previews/hooks/use-github-connect", () => ({
@@ -30,7 +31,7 @@ vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
 }));
 
-import { listGitIntegrations, deleteGitIntegration, verifyGitIntegration } from "@/api/git-integrations";
+import { listGitIntegrations, deleteGitIntegration, verifyGitIntegration, updateGitIntegration } from "@/api/git-integrations";
 
 describe("GitIntegrationsPage", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -125,5 +126,49 @@ describe("GitIntegrationsPage", () => {
 
     await waitFor(() => expect(deleteGitIntegration).toHaveBeenCalledWith("org-1", "g1"));
     expect(toastMock).toHaveBeenCalledWith({ title: "Integration removed" });
+  });
+
+  it("opens the update-credentials dialog from the row menu and PUTs on submit", async () => {
+    vi.mocked(listGitIntegrations).mockResolvedValue({
+      items: [
+        { id: "g2", host: "gitlab.com", type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, credentials_configured: true },
+      ],
+    });
+    vi.mocked(updateGitIntegration).mockResolvedValue({ id: "g2", host: "gitlab.com" });
+    const user = userEvent.setup();
+    render(<GitIntegrationsPage />);
+    await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /open row menu/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /update credentials/i }));
+
+    await user.type(await screen.findByLabelText(/access token/i), "glpat-new");
+    await user.click(screen.getByRole("button", { name: /^update credentials$/i }));
+
+    await waitFor(() => {
+      expect(updateGitIntegration).toHaveBeenCalledWith("org-1", "g2", {
+        host: "gitlab.com",
+        auth: { token: "glpat-new" },
+      });
+    });
+    // Success refreshes the list: initial load + post-update.
+    expect(listGitIntegrations).toHaveBeenCalledTimes(2);
+  });
+
+  it("routes the action_needed banner CTA to the dialog, not the add wizard", async () => {
+    vi.mocked(listGitIntegrations).mockResolvedValue({
+      items: [
+        { id: "g2", host: "gitlab.com", type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, credentials_configured: false },
+      ],
+    });
+    const user = userEvent.setup();
+    render(<GitIntegrationsPage />);
+    await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
+
+    await user.click(screen.getByRole("button", { name: /update credentials/i }));
+
+    // Dialog is open (token field visible); wizard did not open (its copy absent).
+    expect(await screen.findByLabelText(/access token/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Use an access token/i)).not.toBeInTheDocument();
   });
 });
