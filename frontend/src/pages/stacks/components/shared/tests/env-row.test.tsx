@@ -191,15 +191,31 @@ describe("EnvRow (self variant)", () => {
       <EnvRow
         row={baseSelfRow()}
         {...noopProps}
-        selfOutputs={["public.http.url", "host"]}
+        selfOutputs={["public_url.web", "host"]}
         onChangeSelf={onChangeSelf}
       />,
     );
     await user.click(screen.getByTestId("self-output-trigger"));
-    expect(
-      await screen.findByRole("option", { name: "public.http.url" }),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole("option", { name: "public.http.url" }));
-    expect(onChangeSelf).toHaveBeenCalledWith("public.http.url");
+    const option = await screen.findByRole("option", { name: /Public URL/ });
+    expect(option).toHaveTextContent("public_url.web");
+    await user.click(option);
+    expect(onChangeSelf).toHaveBeenCalledWith("public_url.web");
+  });
+
+  it("groups outputs under Internal and Public labels with a raw-key tag", async () => {
+    const user = userEvent.setup();
+    render(
+      <EnvRow
+        row={baseSelfRow()}
+        {...noopProps}
+        selfOutputs={["host", "public_url.web"]}
+        onChangeSelf={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByTestId("self-output-trigger"));
+    expect(await screen.findByText("🔒 Internal")).toBeInTheDocument();
+    expect(screen.getByText("🌐 Public")).toBeInTheDocument();
+    const hostOption = screen.getByRole("option", { name: /^Host/ });
+    expect(hostOption).toHaveTextContent("host");
   });
 });

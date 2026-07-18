@@ -9,7 +9,7 @@ resources:
         public: true
         subdomain: api
     env:
-      SITE_URL: "{{ self.public.http.url }}"
+      SITE_URL: "{{ self.public_url }}"
       CACHE_HOST: "{{ redis.host }}"
       CACHE_URL: "redis://{{ redis.host }}:6379"
       LOG_LEVEL: info

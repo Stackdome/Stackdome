@@ -180,10 +180,14 @@ function StackResourceConfigurationTabImpl({
 
   const addPort = () => {
     const existing = draft.ports || [];
+    const number = 80;
     update({
       ports: [
         ...existing,
-        { name: `port-${existing.length + 1}`, number: 80, protocol: "tcp", exposed_to_public: false },
+        // Name derived from the number (port-<number>) so outputs read e.g.
+        // url.port-8080 instead of a meaningless positional url.port-2. k8s port
+        // names must contain a letter, so a bare number can't be the name.
+        { name: `port-${number}`, number, protocol: "tcp", exposed_to_public: false },
       ],
     });
   };
@@ -193,9 +197,17 @@ function StackResourceConfigurationTabImpl({
     patch: Partial<{ number: number; protocol: "http" | "tcp"; exposed_to_public: boolean; subdomain_prefix: string }>,
   ) => {
     update({
-      ports: (draft.ports || []).map((port: Port, i: number) =>
-        i === pidx ? { ...port, ...patch } : port,
-      ),
+      ports: (draft.ports || []).map((port: Port, i: number) => {
+        if (i !== pidx) return port;
+        const next = { ...port, ...patch };
+        // Keep the auto-derived name tracking the number so the output key stays
+        // meaningful (url.port-8080). Only re-derive while the name is still the
+        // auto value; a name the user set by hand is left untouched.
+        if (patch.number !== undefined && (!port.name || port.name === `port-${port.number}`)) {
+          next.name = `port-${patch.number}`;
+        }
+        return next;
+      }),
     });
   };
 

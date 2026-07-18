@@ -4890,7 +4890,7 @@ components:
       properties:
         name:
           type: string
-          description: Stable output accessor name, for example `host` or `public.http.url`.
+          description: Stable output accessor name, for example `host` or `public_url`.
         type:
           type: string
           description: Scalar value type exposed by this output.
@@ -5134,7 +5134,7 @@ components:
       properties:
         output:
           type: string
-          description: Output accessor on the connection's `from` node, such as `url` or `public.http.url`.
+          description: Output accessor on the connection's `from` node, such as `url` or `public_url`.
         template:
           type: string
           description: Template used when one target value must be composed from multiple outputs.
@@ -5925,7 +5925,7 @@ components:
           description: Literal environment variable value.
         self_output:
           type: string
-          description: Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
+          description: Read this environment variable from one of the resource's own declared outputs, for example public_url.
 
 
     Condition:

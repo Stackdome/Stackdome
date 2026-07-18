@@ -625,7 +625,7 @@ func resourceToResourceEnvConnection(sourceResource, targetResource string) open
 			target := openapi.NewConnectionTarget("env")
 			target.SetName("API_URL")
 			value := openapi.NewValueRef()
-			value.SetOutput("url.http")
+			value.SetOutput(models.OutputNameURL)
 			return *openapi.NewConnectionMapping(*target, *value)
 		}(),
 	})

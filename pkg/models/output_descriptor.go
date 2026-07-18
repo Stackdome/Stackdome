@@ -22,6 +22,8 @@ const (
 	OutputNameSSLMode       = "sslmode"
 	OutputNameCACertificate = "ca_certificate"
 	OutputNameURL           = "url"
+	OutputNamePublicHost    = "public_host"
+	OutputNamePublicURL     = "public_url"
 )
 
 type OutputDescriptor struct {
@@ -54,29 +56,35 @@ func (p *PostgresAddon) EnsureDeclaredOutputs() []OutputDescriptor {
 	return p.Outputs
 }
 
+// stackResourceOutputKey builds a per-port output key. A single-port resource
+// drops the suffix entirely; a multi-port resource disambiguates by port name.
+func stackResourceOutputKey(base, portName string, multiPort bool) string {
+	if !multiPort {
+		return base
+	}
+	return base + "." + portName
+}
+
 func (r *StackResource) ToOutputMap() map[string]string {
 	outputs := make(map[string]string)
 
 	host := r.InternalServiceHost()
 	outputs[OutputNameHost] = host
 
+	multiPort := len(r.Ports) > 1
 	for _, port := range r.Ports {
-		outputs["port."+port.Name] = strconv.Itoa(port.Number)
+		outputs[stackResourceOutputKey(OutputNamePort, port.Name, multiPort)] = strconv.Itoa(port.Number)
 		if port.Protocol == PortProtocolHTTP {
-			outputs["url."+port.Name] = fmt.Sprintf("http://%s:%d", host, port.Number)
+			outputs[stackResourceOutputKey(OutputNameURL, port.Name, multiPort)] = fmt.Sprintf("http://%s:%d", host, port.Number)
 		} else {
-			outputs["url."+port.Name] = fmt.Sprintf("%s:%d", host, port.Number)
+			outputs[stackResourceOutputKey(OutputNameURL, port.Name, multiPort)] = fmt.Sprintf("%s:%d", host, port.Number)
 		}
 
-		if !port.ExposedToPublic {
+		if !port.ExposedToPublic || port.ExposedFqdn == "" {
 			continue
 		}
-
-		if port.ExposedFqdn == "" {
-			continue
-		}
-		outputs["public."+port.Name+".host"] = port.ExposedFqdn
-		outputs["public."+port.Name+".url"] = "http://" + port.ExposedFqdn
+		outputs[stackResourceOutputKey(OutputNamePublicHost, port.Name, multiPort)] = port.ExposedFqdn
+		outputs[stackResourceOutputKey(OutputNamePublicURL, port.Name, multiPort)] = "http://" + port.ExposedFqdn
 	}
 
 	return outputs
@@ -99,39 +107,19 @@ func (s *Secret) ToOutputMap() map[string]string {
 
 func StackResourceOutputDescriptors(resource *StackResource) []OutputDescriptor {
 	outputs := []OutputDescriptor{
-		{
-			Name:      OutputNameHost,
-			Type:      OutputValueTypeString,
-			Sensitive: false,
-		},
+		{Name: OutputNameHost, Type: OutputValueTypeString, Sensitive: false},
 	}
 
+	multiPort := len(resource.Ports) > 1
 	for _, port := range resource.Ports {
 		outputs = append(outputs,
-			OutputDescriptor{
-				Name:      "port." + port.Name,
-				Type:      OutputValueTypeInteger,
-				Sensitive: false,
-			},
-			OutputDescriptor{
-				Name:      "url." + port.Name,
-				Type:      OutputValueTypeString,
-				Sensitive: false,
-			},
+			OutputDescriptor{Name: stackResourceOutputKey(OutputNamePort, port.Name, multiPort), Type: OutputValueTypeInteger, Sensitive: false},
+			OutputDescriptor{Name: stackResourceOutputKey(OutputNameURL, port.Name, multiPort), Type: OutputValueTypeString, Sensitive: false},
 		)
-
 		if port.ExposedToPublic {
 			outputs = append(outputs,
-				OutputDescriptor{
-					Name:      "public." + port.Name + ".host",
-					Type:      OutputValueTypeString,
-					Sensitive: false,
-				},
-				OutputDescriptor{
-					Name:      "public." + port.Name + ".url",
-					Type:      OutputValueTypeString,
-					Sensitive: false,
-				},
+				OutputDescriptor{Name: stackResourceOutputKey(OutputNamePublicHost, port.Name, multiPort), Type: OutputValueTypeString, Sensitive: false},
+				OutputDescriptor{Name: stackResourceOutputKey(OutputNamePublicURL, port.Name, multiPort), Type: OutputValueTypeString, Sensitive: false},
 			)
 		}
 	}

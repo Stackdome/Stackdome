@@ -288,7 +288,8 @@ export default function StackDetailPage() {
     [stackToShow],
   );
 
-  // Server-computed outputs (host, port.<n>, url.<n>, public.<n>.*) keyed by
+  // Server-computed outputs (host, port/url or port.<name>/url.<name>,
+  // public_host/public_url or public_host.<name>/public_url.<name>) keyed by
   // resource name. The working draft never computes outputs, so a resource added
   // on the canvas carries none until it is saved. The env-var OUTPUT pickers read
   // from this server-truth map (matched by name) instead of the draft copy, and
