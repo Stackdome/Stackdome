@@ -102,9 +102,9 @@ func (h *imageBuildHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 				return nil, errors.MalformedRequest("invalid logging query params: %s", pErr.Error())
 			}
 
-			logStreamer, err := h.loggingService.StreamLogsForBuild(ctx, orgID, buildID, loggingParams)
-			if err != nil {
-				return nil, errors.GeneralError("failed to get logs for build '%s': %s", buildID, err.Error())
+			logStreamer, serr := h.loggingService.StreamLogsForBuild(ctx, orgID, buildID, loggingParams)
+			if serr != nil {
+				return nil, serr
 			}
 			return logStreamer, nil
 		},

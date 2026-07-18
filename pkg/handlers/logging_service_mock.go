@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	errors "github.com/Stackdome/stackdome/pkg/errors"
 	interfaces "github.com/Stackdome/stackdome/pkg/interfaces"
 	services "github.com/Stackdome/stackdome/pkg/services"
 	clusterresource "github.com/Stackdome/stackdome/pkg/services/clusterresource"
@@ -56,11 +57,11 @@ func (mr *MockLoggingServiceMockRecorder) InjectClusterResourceServiceDeps(deps 
 }
 
 // StreamLogsForBuild mocks base method.
-func (m *MockLoggingService) StreamLogsForBuild(ctx context.Context, orgID, buildID string, options *services.LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (m *MockLoggingService) StreamLogsForBuild(ctx context.Context, orgID, buildID string, options *services.LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StreamLogsForBuild", ctx, orgID, buildID, options)
 	ret0, _ := ret[0].(interfaces.ServerSideStreamable)
-	ret1, _ := ret[1].(error)
+	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 

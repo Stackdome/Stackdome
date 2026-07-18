@@ -2,15 +2,18 @@ package services
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"net/url"
 	"strconv"
 
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 
+	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/interfaces"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 )
 
 type LoggingParams struct {
@@ -62,7 +65,7 @@ func NewLoggingParams(queryValues url.Values) (*LoggingParams, error) {
 type LoggingService interface {
 	StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
 	StreamLogsForStack(ctx context.Context, orgID string, stackID string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
-	StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
+	StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError)
 	ClusterResourceServiceInjectable
 }
 
@@ -136,17 +139,24 @@ func (s *loggingService) StreamLogsForStack(ctx context.Context, orgID string, s
 	return logStreamer, nil
 }
 
-func (s *loggingService) StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (s *loggingService) StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
 	build, err := s.imageBuildService.GetByID(ctx, buildID)
 	if err != nil {
 		return nil, err
 	}
 
 	if build.Status == nil || build.Status.BuildSourceRevision == "" {
-		return nil, fmt.Errorf("build %s has not started yet", buildID)
+		return nil, errors.Conflict("build %s has not started yet", buildID)
 	}
 
 	jobName := buildsv1alpha1.BuildJobName(build.StackResourceName, build.Status.BuildSourceRevision)
 
-	return s.ClusterLoggingService.GetLogsForBuildPod(ctx, orgID, build.Namespace, jobName, options)
+	streamer, cerr := s.ClusterLoggingService.GetLogsForBuildPod(ctx, orgID, build.Namespace, jobName, options)
+	if cerr != nil {
+		if stderrors.Is(cerr, clusterresource.ErrBuildPodNotFound) {
+			return nil, errors.NotFound("no logs available for build %s: %s", buildID, cerr.Error())
+		}
+		return nil, errors.GeneralError("failed to get logs for build %s: %s", buildID, cerr.Error())
+	}
+	return streamer, nil
 }

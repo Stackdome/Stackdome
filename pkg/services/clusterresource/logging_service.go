@@ -2,6 +2,7 @@ package clusterresource
 
 import (
 	"context"
+	stderrors "errors"
 	"fmt"
 	"sync"
 	"time"
@@ -16,6 +17,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 )
+
+// ErrBuildPodNotFound is returned by GetLogsForBuildPod when no pod matches the
+// build Job — the build has not started yet or its pod has been pruned.
+var ErrBuildPodNotFound = stderrors.New("no build pod found")
+
+// KubernetesClientFactory constructs a Kubernetes client from a spec. Tests
+// inject a factory returning a mock; production uses clients.NewKubernetesClient.
+type KubernetesClientFactory func(clients.KubernetesClientSpec) (clients.KubernetesClient, error)
+
+//go:generate mockgen -destination=db_cluster_service_mock.go -package=clusterresource github.com/Stackdome/stackdome/pkg/services/clusterresource DBClusterService
+//go:generate mockgen -destination=kubernetes_client_mock.go -package=clusterresource github.com/Stackdome/stackdome/pkg/clients KubernetesClient
+//go:generate mockgen -destination=cluster_manager_mock.go -package=clusterresource github.com/Stackdome/stackdome/pkg/clustermanager ClusterManager
 
 type ResourceError struct {
 	ResourceName string
@@ -42,12 +55,15 @@ type loggingService struct {
 	clusterService DBClusterService
 	clusterManager clustermanager.ClusterManager
 	logger         logger.Logger
+	newK8sClient   KubernetesClientFactory
 }
 
 type LoggingServiceSpec struct {
 	ClusterService DBClusterService
 	ClusterManager clustermanager.ClusterManager
 	Logger         logger.Logger
+	// NewK8sClient overrides the Kubernetes client constructor; nil uses the real client.
+	NewK8sClient KubernetesClientFactory
 }
 
 type StreamedLog struct {
@@ -64,10 +80,15 @@ func (s *StreamedLog) Error() error {
 }
 
 func NewLoggingService(spec LoggingServiceSpec) ClusterLoggingService {
+	newK8sClient := spec.NewK8sClient
+	if newK8sClient == nil {
+		newK8sClient = clients.NewKubernetesClient
+	}
 	return &loggingService{
 		clusterService: spec.ClusterService,
 		clusterManager: spec.ClusterManager,
 		logger:         spec.Logger,
+		newK8sClient:   newK8sClient,
 	}
 }
 
@@ -87,7 +108,7 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 		return nil, cerr
 	}
 
-	k8sclient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
+	k8sclient, cerr := s.newK8sClient(clients.KubernetesClientSpec{
 		RestConfig:              restConfig,
 		ControllerRuntimeClient: ctrlRuntimeclient,
 		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
@@ -145,7 +166,7 @@ func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, n
 		return nil, cerr
 	}
 
-	k8sclient, cerr := clients.NewKubernetesClient(clients.KubernetesClientSpec{
+	k8sclient, cerr := s.newK8sClient(clients.KubernetesClientSpec{
 		RestConfig:              restConfig,
 		ControllerRuntimeClient: ctrlRuntimeclient,
 		Logger:                  logger.NewLoggerWithPrefix(ctx, "kubernetes-client"),
@@ -159,7 +180,7 @@ func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, n
 		return nil, fmt.Errorf("failed to find build pod for job %s: %w", jobName, perr)
 	}
 	if pod == nil {
-		return nil, fmt.Errorf("no build pod found for job %s: the build has not started yet or its logs have been pruned", jobName)
+		return nil, fmt.Errorf("%w for job %s: the build has not started yet or its logs have been pruned", ErrBuildPodNotFound, jobName)
 	}
 
 	return &LogStreamer{
