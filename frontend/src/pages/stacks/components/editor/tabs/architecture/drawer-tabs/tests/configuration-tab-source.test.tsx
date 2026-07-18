@@ -249,7 +249,7 @@ describe("image source rows", () => {
     });
   });
 
-  it("discards both ref and registry_credentials_id when the Registry row's reset is clicked", () => {
+  it("discards the whole image source when the Registry row's reset is clicked", () => {
     const onDiscardField = vi.fn();
     renderImageTab(
       { source: { image: { ref: "ghcr.io/acme/api:2", registry_credentials_id: "cred-new" } } },
@@ -258,19 +258,21 @@ describe("image source rows", () => {
         onDiscardField,
       },
     );
-    // Both the Registry row and the Image reference row wrap "source.image.ref"
-    // in their own <DirtyField>, so a dirty ref surfaces a reset button on each
-    // — in JSX/DOM order, index 0 is the Registry row's, index 1 the Image
-    // reference row's.
+    // Both the Registry row and the Image reference row wrap "source.image"
+    // in their own <DirtyField>, so a dirty ref or credential surfaces a
+    // reset button on each — in JSX/DOM order, index 0 is the Registry row's,
+    // index 1 the Image reference row's. Discarding the whole "source.image"
+    // subtree in one call (rather than two leaf calls) means a credential-only
+    // change is covered by the same reset, since it dirties the same path.
     const resetButtons = screen.getAllByRole("button", { name: /reset to original value/i });
     expect(resetButtons).toHaveLength(2);
 
     resetButtons[0].click();
-    expect(onDiscardField).toHaveBeenCalledWith("source.image.ref");
-    expect(onDiscardField).toHaveBeenCalledWith("source.image.registry_credentials_id");
+    expect(onDiscardField).toHaveBeenCalledWith("source.image");
+    expect(onDiscardField).toHaveBeenCalledTimes(1);
   });
 
-  it("discards both ref and registry_credentials_id when the Image reference row's reset is clicked", () => {
+  it("discards the whole image source when the Image reference row's reset is clicked", () => {
     const onDiscardField = vi.fn();
     renderImageTab(
       { source: { image: { ref: "ghcr.io/acme/api:2", registry_credentials_id: "cred-new" } } },
@@ -283,8 +285,24 @@ describe("image source rows", () => {
     expect(resetButtons).toHaveLength(2);
 
     resetButtons[1].click();
-    expect(onDiscardField).toHaveBeenCalledWith("source.image.ref");
-    expect(onDiscardField).toHaveBeenCalledWith("source.image.registry_credentials_id");
+    expect(onDiscardField).toHaveBeenCalledWith("source.image");
+    expect(onDiscardField).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows both rows as dirty when only the credential changes and the ref stays the same", () => {
+    const onDiscardField = vi.fn();
+    renderImageTab(
+      { source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-new" } } },
+      {
+        baselineOverrides: { source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-old" } } },
+        onDiscardField,
+      },
+    );
+    // Before the fix, both DirtyFields wrapped "source.image.ref" only, so a
+    // credential-only change (same ref, different registry_credentials_id)
+    // never surfaced a reset button on either row.
+    const resetButtons = screen.getAllByRole("button", { name: /reset to original value/i });
+    expect(resetButtons).toHaveLength(2);
   });
 
   it("shows only the remainder in the ref input and recomposes the host on change", () => {

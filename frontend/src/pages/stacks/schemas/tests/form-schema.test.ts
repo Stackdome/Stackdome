@@ -279,6 +279,56 @@ describe("FormStackResourceSchema — image ref validation", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("rejects a whitespace-only ref", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "  " } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+
+  it("rejects a host with a whitespace-only remainder", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/  " } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+});
+
+describe("FormStackResourceSchema — git repo_url validation", () => {
+  it("rejects a whitespace-only repo_url", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "git",
+      source: { git: { repo_url: "   ", dockerfile_path: "Dockerfile", build_context: "." } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.git.repo_url",
+      );
+      expect(issue?.message).toBe("Git repository URL is required");
+    }
+  });
 });
 
 describe("FormEnvVarSchema (addon variant) — refines", () => {

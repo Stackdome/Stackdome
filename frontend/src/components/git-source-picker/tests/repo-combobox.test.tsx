@@ -21,6 +21,18 @@ beforeAll(() => {
       unobserve() {}
       disconnect() {}
     };
+  // Radix Select uses pointer-capture APIs that jsdom doesn't implement.
+  // Stub them so userEvent.click on the Integration SelectTrigger opens it.
+  const stubs: Record<string, () => unknown> = {
+    hasPointerCapture: () => false,
+    releasePointerCapture: () => undefined,
+    setPointerCapture: () => undefined,
+    scrollIntoView: () => undefined,
+  };
+  for (const [name, impl] of Object.entries(stubs)) {
+    const proto = Element.prototype as unknown as Record<string, unknown>;
+    if (!proto[name]) proto[name] = vi.fn(impl);
+  }
 });
 
 afterEach(cleanup);
@@ -129,5 +141,47 @@ describe("RepoCombobox", () => {
     await user.click(screen.getByRole("combobox"));
     await user.type(screen.getByPlaceholderText(/search repositories/i), "https://x.io/y.git");
     expect(await screen.findByText(/use "https:\/\/x\.io\/y\.git"/i)).toBeInTheDocument();
+  });
+
+  it("trims surrounding whitespace off a pasted URL before emitting it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RepoCombobox id="repo" value="" onChange={onChange} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText(/search repositories/i), "  https://x.io/y.git  ");
+    await user.click(await screen.findByText(/use ".*https:\/\/x\.io\/y\.git.*"/i));
+    expect(onChange).toHaveBeenCalledWith({
+      repo_url: "https://x.io/y.git",
+      integration_id: undefined,
+    });
+  });
+
+  it("recognizes a non-'git' scp-style user as a URL", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RepoCombobox id="repo" value="" onChange={onChange} />);
+    await user.click(screen.getByRole("combobox"));
+    await user.type(screen.getByPlaceholderText(/search repositories/i), "deploy@git.corp.io:acme/api.git");
+    await user.click(await screen.findByText(/use "deploy@git\.corp\.io:acme\/api\.git"/i));
+    expect(onChange).toHaveBeenCalledWith({
+      repo_url: "deploy@git.corp.io:acme/api.git",
+      integration_id: undefined,
+    });
+  });
+
+  it("collapses a typed trailing .git so useOnHost never doubles it", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<RepoCombobox id="repo" value="" onChange={onChange} />);
+    await user.click(screen.getByRole("combobox"));
+    await waitFor(() => expect(listGitIntegrations).toHaveBeenCalled());
+    await user.click(await screen.findByRole("combobox", { name: "Integration" }));
+    await user.click(await screen.findByRole("option", { name: "git.internal.example.com" }));
+    await user.type(screen.getByPlaceholderText(/search repositories/i), "acme/api.git");
+    await user.click(await screen.findByText(/use git\.internal\.example\.com\/acme\/api\.git/i));
+    expect(onChange).toHaveBeenCalledWith({
+      repo_url: "https://git.internal.example.com/acme/api.git",
+      integration_id: "int-creds",
+    });
   });
 });

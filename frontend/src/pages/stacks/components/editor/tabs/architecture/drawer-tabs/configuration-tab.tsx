@@ -334,12 +334,9 @@ function StackResourceConfigurationTabImpl({
               <DirtyField
                 draft={draft}
                 baseline={baseline}
-                path="source.image.ref"
+                path="source.image"
                 compact
-                onReset={onDiscardField ? () => {
-                  onDiscardField("source.image.ref");
-                  onDiscardField("source.image.registry_credentials_id");
-                } : undefined}
+                onReset={onDiscardField ? () => onDiscardField("source.image") : undefined}
               >
                 <ImageRegistrySelect
                   id={`image-registry-${index}`}
@@ -362,12 +359,9 @@ function StackResourceConfigurationTabImpl({
               <DirtyField
                 draft={draft}
                 baseline={baseline}
-                path="source.image.ref"
+                path="source.image"
                 compact
-                onReset={onDiscardField ? () => {
-                  onDiscardField("source.image.ref");
-                  onDiscardField("source.image.registry_credentials_id");
-                } : undefined}
+                onReset={onDiscardField ? () => onDiscardField("source.image") : undefined}
               >
                 {(() => {
                   const { host, remainder } = splitImageRef(draft.source?.image?.ref || "");

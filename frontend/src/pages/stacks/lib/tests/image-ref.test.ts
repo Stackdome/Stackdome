@@ -29,6 +29,12 @@ describe("joinImageRef", () => {
   it("does not double-slash an empty remainder", () => {
     expect(joinImageRef("ghcr.io", "")).toBe("ghcr.io/");
   });
+  it("strips a trailing slash from the host before joining", () => {
+    expect(joinImageRef("ghcr.io/", "acme/api")).toBe("ghcr.io/acme/api");
+  });
+  it("strips a leading slash from the remainder before joining", () => {
+    expect(joinImageRef("ghcr.io", "/acme/api")).toBe("ghcr.io/acme/api");
+  });
 });
 
 describe("dockerHostsEqual", () => {

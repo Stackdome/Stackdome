@@ -97,7 +97,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // Drive validation off the actual `source` union (same discriminant the canvas
   // node card uses) rather than the `sourceType` UI helper, which can desync.
   if (data.source?.git) {
-    if (!data.source.git.repo_url) {
+    if (!data.source.git.repo_url?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Git repository URL is required",
@@ -117,9 +117,12 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   } else if (data.source?.image) {
     // A ref like "ghcr.io/" (host picked, no repo typed) is non-empty but has
     // no actual image identity once the host segment is split off — reject
-    // that the same as a fully empty ref.
-    const { remainder } = splitImageRef(data.source.image.ref ?? "");
-    if (!data.source.image.ref || !remainder) {
+    // that the same as a fully empty ref. Whitespace-only refs/remainders are
+    // rejected the same way (a ref of "  " round-trips through splitImageRef
+    // untouched, so it must be checked explicitly, not just falsiness).
+    const ref = data.source.image.ref ?? "";
+    const { remainder } = splitImageRef(ref);
+    if (!ref.trim() || !remainder.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Container image reference is required",

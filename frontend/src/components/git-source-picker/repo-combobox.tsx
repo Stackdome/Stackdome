@@ -128,23 +128,38 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
     }
   };
 
+  // Trimmed once and reused everywhere the query is validated or emitted —
+  // stray leading/trailing whitespace from a paste should never reach the
+  // form value.
+  const trimmedQuery = query.trim();
+
   const useAsUrl = () => {
-    onChange({ repo_url: query, integration_id: undefined });
+    onChange({ repo_url: trimmedQuery, integration_id: undefined });
     setOpen(false);
   };
 
   // Credentials hosts can't list repos; typed paths compose against the host.
+  // Strip any leading/trailing slashes and an existing trailing ".git" from
+  // the typed path first, so pasting "acme/api.git" doesn't double up into
+  // "acme/api.git.git".
   const useOnHost = () => {
     if (!selected?.host || !selected.id) return;
+    const path = trimmedQuery
+      .replace(/^\/+/, "")
+      .replace(/\/+$/, "")
+      .replace(/\.git\/?$/, "");
     onChange({
-      repo_url: `https://${selected.host}/${query.replace(/^\/+/, "")}.git`,
+      repo_url: `https://${selected.host}/${path}.git`,
       integration_id: selected.id,
     });
     setOpen(false);
   };
 
   const display = value ? (integrationId ? repoTail(value) : value) : null;
-  const looksLikeUrl = /^(https?|ssh|git):\/\//i.test(query) || /^git@/.test(query);
+  // scp-style refs (user@host:path, e.g. deploy@git.corp.io:acme/api.git)
+  // aren't limited to a "git" user, so match the general `user@host:` shape.
+  const looksLikeUrl =
+    /^(https?|ssh|git):\/\//i.test(trimmedQuery) || /^[\w.-]+@[\w.-]+:/.test(trimmedQuery);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

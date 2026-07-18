@@ -13,8 +13,12 @@ export function splitImageRef(ref: string): { host: string | null; remainder: st
   return { host: first, remainder: ref.slice(slash + 1) };
 }
 
+/** Join a host and remainder into a single ref, normalizing the seam so
+    composing from a picked host (which may carry a trailing slash) or a typed
+    remainder (which may carry a leading slash) never produces a double slash. */
 export function joinImageRef(host: string | null, remainder: string): string {
-  return host ? `${host}/${remainder}` : remainder;
+  if (!host) return remainder;
+  return `${host.replace(/\/+$/, "")}/${remainder.replace(/^\/+/, "")}`;
 }
 
 export function dockerHostsEqual(a: string, b: string): boolean {
