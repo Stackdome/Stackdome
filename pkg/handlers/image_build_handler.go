@@ -14,18 +14,21 @@ import (
 
 type ImageBuildHandlerSpec struct {
 	ImageBuildService services.ImageBuildService
+	LoggingService    services.LoggingService
 	Logger            logger.Logger
 }
 
 type imageBuildHandler struct {
 	logger            logger.Logger
 	imageBuildService services.ImageBuildService
+	loggingService    services.LoggingService
 }
 
 func NewImageBuildHandler(spec ImageBuildHandlerSpec) *imageBuildHandler {
 	return &imageBuildHandler{
 		logger:            spec.Logger,
 		imageBuildService: spec.ImageBuildService,
+		loggingService:    spec.LoggingService,
 	}
 }
 
@@ -83,4 +86,26 @@ func (h *imageBuildHandler) ListByStackID(w http.ResponseWriter, r *http.Request
 		},
 	}
 	handleList(w, r, cfg)
+}
+
+func (h *imageBuildHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			orgID := mux.Vars(r)["org_id"]
+			buildID := mux.Vars(r)["build_id"]
+
+			loggingParams, pErr := services.NewLoggingParams(r.URL.Query())
+			if pErr != nil {
+				return nil, errors.MalformedRequest("invalid logging query params: %s", pErr.Error())
+			}
+
+			logStreamer, err := h.loggingService.StreamLogsForBuild(ctx, orgID, buildID, loggingParams)
+			if err != nil {
+				return nil, errors.GeneralError("failed to get logs for build '%s': %s", buildID, err.Error())
+			}
+			return logStreamer, nil
+		},
+	}
+	handleServerSideStream(w, r, cfg)
 }

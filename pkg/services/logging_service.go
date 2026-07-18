@@ -58,6 +58,7 @@ func NewLoggingParams(queryValues url.Values) (*LoggingParams, error) {
 
 //go:generate mockgen -destination=image_build_service_mock.go -package=services github.com/Stackdome/stackdome/pkg/services ImageBuildService
 //go:generate mockgen -destination=cluster_logging_service_mock.go -package=services github.com/Stackdome/stackdome/pkg/services/clusterresource ClusterLoggingService
+//go:generate mockgen -destination=../mocks/mock_logging_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services LoggingService
 
 type LoggingService interface {
 	StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string, options *LoggingParams) (interfaces.ServerSideStreamable, error)

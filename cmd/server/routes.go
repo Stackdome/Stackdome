@@ -75,6 +75,7 @@ func (s apiServer) routes() *mux.Router {
 
 	imageBuildHandler := handlers.NewImageBuildHandler(handlers.ImageBuildHandlerSpec{
 		ImageBuildService: services.ImageBuildService,
+		LoggingService:    services.LoggingService,
 		Logger:            logger,
 	})
 
@@ -278,6 +279,7 @@ func (s apiServer) routes() *mux.Router {
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/actions/restart", stackResourceHandler.Restart).Methods(http.MethodPost)
 	projectResourceRouter.HandleFunc("/stacks/{id}/builds", imageBuildHandler.ListByStackID).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/builds/{build_id}", imageBuildHandler.GetByID).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/builds/{build_id}/logs", imageBuildHandler.StreamLogs).Methods(http.MethodGet)
 
 	// Stack releases (project-scoped)
 	stackReleaseHandler := handlers.NewStackReleaseHandler(handlers.StackReleaseHandlerSpec{
