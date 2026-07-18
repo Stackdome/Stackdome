@@ -1,5 +1,5 @@
 import type { RegistryCredential } from "@/api/registry-credentials";
-import { providerIdForHost, PURPOSE_LABELS, PURPOSE_BOTH } from "../lib/providers";
+import { providerIdForHost, PURPOSE_LABELS, PURPOSE_BOTH, REGISTRY_PROVIDERS } from "../lib/providers";
 import { ProviderLogo } from "./provider-logo";
 import { RowMenu } from "./row-menu";
 
@@ -15,6 +15,7 @@ export function RegistryRow({
   onRemove: (credential: RegistryCredential) => void;
 }) {
   const providerId = providerIdForHost(credential.host);
+  const providerLabel = REGISTRY_PROVIDERS.find((p) => p.id === providerId)?.label ?? "Registry";
 
   return (
     <div className="flex items-center gap-4 px-4 py-3 hover:bg-muted/50">
@@ -23,8 +24,8 @@ export function RegistryRow({
           <ProviderLogo providerId={providerId} className="h-6 w-6" />
         </div>
         <div className="min-w-0">
-          <p className="text-sm font-medium text-foreground">{credential.host}</p>
-          <p className="truncate text-xs text-fg-muted">{credential.username}</p>
+          <p className="truncate text-[15px] font-medium text-foreground">{providerLabel}</p>
+          <p className="truncate font-mono text-[11.5px] text-fg-muted">{credential.host}</p>
         </div>
       </div>
 

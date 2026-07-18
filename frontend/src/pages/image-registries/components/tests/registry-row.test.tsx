@@ -29,10 +29,10 @@ function renderRow(props: Partial<Parameters<typeof RegistryRow>[0]> = {}) {
 }
 
 describe("RegistryRow", () => {
-  it("displays the host and username", () => {
+  it("displays the provider label and host", () => {
     renderRow();
+    expect(screen.getByText("Docker Hub")).toBeInTheDocument();
     expect(screen.getByText("index.docker.io")).toBeInTheDocument();
-    expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
   it("labels a pull-and-push credential", () => {
@@ -63,5 +63,11 @@ describe("RegistryRow", () => {
     await user.click(screen.getByRole("button", { name: /open row menu/i }));
     await user.click(await screen.findByRole("menuitem", { name: /remove registry/i }));
     await waitFor(() => expect(onRemove).toHaveBeenCalledWith(credential));
+  });
+
+  it("shows the provider label with the host beneath", () => {
+    renderRow();
+    expect(screen.getByText("Docker Hub")).toBeInTheDocument();
+    expect(screen.getByText("index.docker.io")).toBeInTheDocument();
   });
 });
