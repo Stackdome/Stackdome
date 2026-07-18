@@ -165,7 +165,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command shouldFilter={false}>
           {integrations.length > 1 && (
             <div className="border-b p-2">

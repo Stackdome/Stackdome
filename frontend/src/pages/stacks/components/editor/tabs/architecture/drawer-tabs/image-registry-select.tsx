@@ -93,7 +93,7 @@ export function ImageRegistrySelect({ id, imageRef, registryCredentialsId, onCha
           <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput placeholder="Registry host…" value={query} onValueChange={setQuery} />
           <CommandList>
