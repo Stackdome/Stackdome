@@ -24,6 +24,11 @@ export async function createGitIntegration(orgId: string, body: GitIntegration):
   return res.data as GitIntegration;
 }
 
+export async function updateGitIntegration(orgId: string, id: string, body: GitIntegration): Promise<GitIntegration> {
+  const res = await api.put(`${base(orgId)}/${id}`, body);
+  return res.data as GitIntegration;
+}
+
 export async function deleteGitIntegration(orgId: string, id: string): Promise<void> {
   await api.delete(`${base(orgId)}/${id}`);
 }

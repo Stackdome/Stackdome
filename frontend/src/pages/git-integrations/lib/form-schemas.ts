@@ -10,6 +10,11 @@ export const credentialsFormSchema = z.object({
 });
 export type CredentialsFormValues = z.infer<typeof credentialsFormSchema>;
 
+/** Credential-rotation dialog: same auth model as the wizard's credentials
+ *  phase but without host — host is immutable on update. */
+export const updateCredentialsFormSchema = credentialsFormSchema.omit({ host: true });
+export type UpdateCredentialsFormValues = z.infer<typeof updateCredentialsFormSchema>;
+
 function isHttpUrl(value: string): boolean {
   try {
     const url = new URL(value);
