@@ -6,6 +6,7 @@
 #    (Grafana → Dashboards → Import; map DS_PROMETHEUS and DS_TEMPO, and accept
 #    the SLO threshold constant VAR_SLO_P95_MS when asked — default 500).
 # 4. Services may restart until postgres finishes initializing; that settles itself.
+# 5. Set TOOLJET_HOST (on both tooljet and tooljet-worker) to your deployed URL.
 name: tooljet
 
 services:
