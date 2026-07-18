@@ -75,23 +75,28 @@ vi.mock("../image-registry-select", () => ({
   ),
 }));
 
-function renderImageTab(overrides: Record<string, unknown> = {}) {
+function renderImageTab(
+  overrides: Record<string, unknown> = {},
+  options: { baselineOverrides?: Record<string, unknown>; onDiscardField?: (path: string) => void } = {},
+) {
   const onPatchResource = vi.fn();
-  const resource = {
+  const baseResource = {
     name: "api",
     sourceType: "image" as const,
     source: { image: { ref: "" } },
-    ...overrides,
   };
+  const draftResource = { ...baseResource, ...overrides };
+  const baselineResource = { ...baseResource, ...(options.baselineOverrides ?? overrides) };
   render(
     <Tabs defaultValue="general">
       <StackResourceConfigurationTab
-        draft={pickConfigurationDraft(resource)}
-        baseline={pickConfigurationDraft(resource)}
+        draft={pickConfigurationDraft(draftResource)}
+        baseline={pickConfigurationDraft(baselineResource)}
         index={0}
         errors={{}}
         volumes={[]}
         onPatchResource={onPatchResource}
+        onDiscardField={options.onDiscardField}
       />
     </Tabs>,
   );
@@ -136,6 +141,44 @@ describe("image source rows", () => {
         image: expect.objectContaining({ ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" }),
       },
     });
+  });
+
+  it("discards both ref and registry_credentials_id when the Registry row's reset is clicked", () => {
+    const onDiscardField = vi.fn();
+    renderImageTab(
+      { source: { image: { ref: "ghcr.io/acme/api:2", registry_credentials_id: "cred-new" } } },
+      {
+        baselineOverrides: { source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-old" } } },
+        onDiscardField,
+      },
+    );
+    // Both the Registry row and the Image reference row wrap "source.image.ref"
+    // in their own <DirtyField>, so a dirty ref surfaces a reset button on each
+    // — in JSX/DOM order, index 0 is the Registry row's, index 1 the Image
+    // reference row's.
+    const resetButtons = screen.getAllByRole("button", { name: /reset to original value/i });
+    expect(resetButtons).toHaveLength(2);
+
+    resetButtons[0].click();
+    expect(onDiscardField).toHaveBeenCalledWith("source.image.ref");
+    expect(onDiscardField).toHaveBeenCalledWith("source.image.registry_credentials_id");
+  });
+
+  it("discards both ref and registry_credentials_id when the Image reference row's reset is clicked", () => {
+    const onDiscardField = vi.fn();
+    renderImageTab(
+      { source: { image: { ref: "ghcr.io/acme/api:2", registry_credentials_id: "cred-new" } } },
+      {
+        baselineOverrides: { source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-old" } } },
+        onDiscardField,
+      },
+    );
+    const resetButtons = screen.getAllByRole("button", { name: /reset to original value/i });
+    expect(resetButtons).toHaveLength(2);
+
+    resetButtons[1].click();
+    expect(onDiscardField).toHaveBeenCalledWith("source.image.ref");
+    expect(onDiscardField).toHaveBeenCalledWith("source.image.registry_credentials_id");
   });
 
   it("shows only the remainder in the ref input and recomposes the host on change", () => {

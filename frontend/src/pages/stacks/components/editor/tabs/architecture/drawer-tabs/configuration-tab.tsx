@@ -336,7 +336,10 @@ function StackResourceConfigurationTabImpl({
                 baseline={baseline}
                 path="source.image.ref"
                 compact
-                onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
+                onReset={onDiscardField ? () => {
+                  onDiscardField("source.image.ref");
+                  onDiscardField("source.image.registry_credentials_id");
+                } : undefined}
               >
                 <ImageRegistrySelect
                   id={`image-registry-${index}`}
@@ -361,7 +364,10 @@ function StackResourceConfigurationTabImpl({
                 baseline={baseline}
                 path="source.image.ref"
                 compact
-                onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
+                onReset={onDiscardField ? () => {
+                  onDiscardField("source.image.ref");
+                  onDiscardField("source.image.registry_credentials_id");
+                } : undefined}
               >
                 {(() => {
                   const { host, remainder } = splitImageRef(draft.source?.image?.ref || "");
