@@ -243,6 +243,42 @@ describe("convertFormStackToApiStack — image source credential passthrough", (
   });
 });
 
+describe("stashed source fields — stripped before the API payload", () => {
+  it("strips stashedGitSource and stashedImageSource via convertFormResourceToApiResource", () => {
+    const form = {
+      name: "web",
+      sourceType: "image" as const,
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+      stashedGitSource: { repo_url: "https://github.com/acme/api.git", dockerfile_path: "Dockerfile", build_context: "." },
+      stashedImageSource: { ref: "old-ref" },
+    };
+    const api = convertFormResourceToApiResource(form as never);
+    expect(api).not.toHaveProperty("stashedGitSource");
+    expect(api).not.toHaveProperty("stashedImageSource");
+  });
+
+  it("strips stashedGitSource and stashedImageSource via convertFormStackToApiStack", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "git" as const,
+            source: { git: { repo_url: "https://github.com/acme/api.git", dockerfile_path: "Dockerfile", build_context: "." } },
+            stashedGitSource: { repo_url: "https://github.com/acme/old.git", dockerfile_path: "Dockerfile", build_context: "." },
+            stashedImageSource: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-1" },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0]).not.toHaveProperty("stashedGitSource");
+    expect(api.spec.stack_resources[0]).not.toHaveProperty("stashedImageSource");
+  });
+});
+
 describe("FormStackResourceSchema — image ref validation", () => {
   it("rejects a ref with a host but an empty remainder", async () => {
     const { FormStackResourceSchema } = await import("../form-schema");

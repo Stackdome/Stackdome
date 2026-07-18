@@ -93,7 +93,27 @@ function renderGitTab(
       </Tabs>,
     );
   };
-  return { onPatchResource, rerenderWithGitSource };
+  // Simulates the parent store applying an onPatchResource call back into the
+  // draft (production shallow-merges the patch onto the full resource — see
+  // onPatchResource in use-resource-tab-props.ts). Needed for round-trip
+  // assertions on the "Build from" toggle, which reads back stashed fields.
+  const rerenderWithPatch = (patch: Record<string, unknown>) => {
+    const next = { ...resource, ...patch };
+    rerender(
+      <Tabs defaultValue="general">
+        <StackResourceConfigurationTab
+          draft={pickConfigurationDraft(next)}
+          baseline={pickConfigurationDraft(baselineResource)}
+          index={0}
+          errors={{}}
+          volumes={[]}
+          onPatchResource={onPatchResource}
+          onDiscardField={options.onDiscardField}
+        />
+      </Tabs>,
+    );
+  };
+  return { onPatchResource, rerenderWithGitSource, rerenderWithPatch };
 }
 
 vi.mock("../image-registry-select", () => ({
@@ -123,7 +143,7 @@ function renderImageTab(
   };
   const draftResource = { ...baseResource, ...overrides };
   const baselineResource = { ...baseResource, ...(options.baselineOverrides ?? overrides) };
-  render(
+  const { rerender } = render(
     <Tabs defaultValue="general">
       <StackResourceConfigurationTab
         draft={pickConfigurationDraft(draftResource)}
@@ -136,7 +156,27 @@ function renderImageTab(
       />
     </Tabs>,
   );
-  return { onPatchResource };
+  // Simulates the parent store applying an onPatchResource call back into the
+  // draft (production shallow-merges the patch onto the full resource — see
+  // onPatchResource in use-resource-tab-props.ts). Needed for round-trip
+  // assertions on the "Build from" toggle, which reads back stashed fields.
+  const rerenderWithPatch = (patch: Record<string, unknown>) => {
+    const next = { ...draftResource, ...patch };
+    rerender(
+      <Tabs defaultValue="general">
+        <StackResourceConfigurationTab
+          draft={pickConfigurationDraft(next)}
+          baseline={pickConfigurationDraft(baselineResource)}
+          index={0}
+          errors={{}}
+          volumes={[]}
+          onPatchResource={onPatchResource}
+          onDiscardField={options.onDiscardField}
+        />
+      </Tabs>,
+    );
+  };
+  return { onPatchResource, rerenderWithPatch };
 }
 
 describe("git repository row", () => {
@@ -325,6 +365,81 @@ describe("image source rows", () => {
     fireEvent.change(input, { target: { value: "quay.io/other/app:2" } });
     expect(onPatchResource).toHaveBeenCalledWith({
       source: { image: expect.objectContaining({ ref: "quay.io/other/app:2" }) },
+    });
+  });
+});
+
+describe("Build from toggle — source preservation", () => {
+  it("stashes the image source when toggling to git, and restores it exactly when toggling back", () => {
+    const { onPatchResource, rerenderWithPatch } = renderImageTab({
+      source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" } },
+    });
+
+    // image -> git: the image source is stashed, git gets fresh defaults.
+    screen.getByRole("radio", { name: /git repository/i }).click();
+    expect(onPatchResource).toHaveBeenLastCalledWith({
+      sourceType: "git",
+      source: { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
+      stashedImageSource: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" },
+    });
+
+    const lastPatch = onPatchResource.mock.calls[onPatchResource.mock.calls.length - 1][0];
+    rerenderWithPatch(lastPatch);
+
+    // git -> image: the exact stashed image source is restored, and the
+    // (untouched, default) git source is stashed in turn.
+    screen.getByRole("radio", { name: /container image/i }).click();
+    expect(onPatchResource).toHaveBeenLastCalledWith({
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" } },
+      stashedGitSource: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." },
+    });
+  });
+});
+
+describe("Build from toggle — git source preservation", () => {
+  it("stashes the git source when toggling to image, and restores it exactly when toggling back", () => {
+    const { onPatchResource, rerenderWithPatch } = renderGitTab({
+      source: {
+        git: {
+          repo_url: "https://github.com/acme/api.git",
+          dockerfile_path: "Dockerfile",
+          build_context: ".",
+          integration_id: "int-app",
+        },
+      },
+    });
+
+    // git -> image: the git source is stashed, image gets fresh defaults.
+    screen.getByRole("radio", { name: /container image/i }).click();
+    expect(onPatchResource).toHaveBeenLastCalledWith({
+      sourceType: "image",
+      source: { image: { ref: "" } },
+      stashedGitSource: {
+        repo_url: "https://github.com/acme/api.git",
+        dockerfile_path: "Dockerfile",
+        build_context: ".",
+        integration_id: "int-app",
+      },
+    });
+
+    const lastPatch = onPatchResource.mock.calls[onPatchResource.mock.calls.length - 1][0];
+    rerenderWithPatch(lastPatch);
+
+    // image -> git: the exact stashed git source is restored (repo_url +
+    // integration_id survive), and the default image source is stashed.
+    screen.getByRole("radio", { name: /git repository/i }).click();
+    expect(onPatchResource).toHaveBeenLastCalledWith({
+      sourceType: "git",
+      source: {
+        git: {
+          repo_url: "https://github.com/acme/api.git",
+          dockerfile_path: "Dockerfile",
+          build_context: ".",
+          integration_id: "int-app",
+        },
+      },
+      stashedImageSource: { ref: "" },
     });
   });
 });

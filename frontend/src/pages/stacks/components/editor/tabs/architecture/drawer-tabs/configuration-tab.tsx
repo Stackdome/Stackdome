@@ -64,6 +64,9 @@ export interface ConfigurationDraft {
   source?: Resource["source"];
   gitRevisionType?: Resource["gitRevisionType"];
   gitRevisionValue?: Resource["gitRevisionValue"];
+  // Abandoned-branch stash for the "Build from" toggle — see the handler below.
+  stashedGitSource?: Resource["stashedGitSource"];
+  stashedImageSource?: Resource["stashedImageSource"];
   volume_mounts?: Resource["volume_mounts"];
   ports?: Resource["ports"];
 }
@@ -77,6 +80,8 @@ export function pickConfigurationDraft(resource: Resource): ConfigurationDraft {
     source: resource.source,
     gitRevisionType: resource.gitRevisionType,
     gitRevisionValue: resource.gitRevisionValue,
+    stashedGitSource: resource.stashedGitSource,
+    stashedImageSource: resource.stashedImageSource,
     volume_mounts: resource.volume_mounts,
     ports: resource.ports,
   };
@@ -313,12 +318,24 @@ function StackResourceConfigurationTabImpl({
               value={draft.sourceType || "image"}
               onValueChange={(val) => {
                 const sourceType = val as "image" | "git";
-                update({
-                  sourceType,
-                  source: sourceType === "git"
-                    ? { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } }
-                    : { image: { ref: "" } },
-                });
+                // The API rejects a source with both `git` and `image` set
+                // (source_conflict), so the abandoned branch can't stay live
+                // in `source`. Stash it in a form-only field instead of
+                // discarding it, and restore the other branch from its own
+                // stash (falling back to fresh defaults the first time).
+                if (sourceType === "git") {
+                  update({
+                    sourceType,
+                    source: { git: draft.stashedGitSource ?? { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
+                    stashedImageSource: draft.source?.image ?? draft.stashedImageSource,
+                  });
+                } else {
+                  update({
+                    sourceType,
+                    source: { image: draft.stashedImageSource ?? { ref: "" } },
+                    stashedGitSource: draft.source?.git ?? draft.stashedGitSource,
+                  });
+                }
               }}
               options={[
                 { value: "image", label: "Container image", icon: <Box size={15} /> },

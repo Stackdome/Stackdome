@@ -10,6 +10,8 @@ import {
   ApiVolumeSpecSchema,
   ApiVolumeSchema,
   ApiStackSchema,
+  ApiGitSourceSchema,
+  ApiImageSourceSchema,
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
 import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
@@ -82,6 +84,12 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper fields for git revision, not part of API spec StackResource
   gitRevisionType: FormGitRevisionTypeSchema.optional(),
   gitRevisionValue: z.string().optional(),
+  // UI-only stash for the "Build from" toggle: the API rejects a source with
+  // both `git` and `image` set (source_conflict), so we cannot keep both
+  // subtrees live in `source`. Toggling away from a branch stashes it here so
+  // toggling back restores it instead of resetting to blank defaults.
+  stashedGitSource: ApiGitSourceSchema.optional(),
+  stashedImageSource: ApiImageSourceSchema.optional(),
   // Port name is optional in the form — the API requires it, so we auto-derive
   // `port-<number>` on save rather than asking the user for it.
   ports: z.array(ApiPortSchema.extend({ name: z.string().optional() })).optional(),
@@ -239,6 +247,8 @@ function convertFormResourceToApiResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
+    stashedGitSource,
+    stashedImageSource,
     outputs,
     ...rest
   } = resource;
