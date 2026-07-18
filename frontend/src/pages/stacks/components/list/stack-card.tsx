@@ -8,7 +8,7 @@ import {
   type StatusTone,
   type StatusVariant,
 } from "@/components/branded/status-variant";
-import { deriveHeaderHealth, latestDeployFailed } from "@/pages/stacks/components/detail/deployments/derive";
+import { deriveHeaderHealth, latestDeployFailed } from "@/pages/stacks/components/editor/tabs/deployments/derive";
 import { cn } from "@/lib/utils";
 import type { Stack } from "@/pages/stacks/types";
 

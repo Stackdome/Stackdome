@@ -3,7 +3,7 @@ import Login from "@/pages/login"
 import Signup from "@/pages/signup"
 import GithubCallbackPage from "@/pages/auth/github-callback"
 import StacksPage from "@/pages/stacks/components/list"
-import StackDetailPage from "@/pages/stacks/components/detail"
+import CanvasEditorPage from "@/pages/stacks/components/editor"
 import ClustersPage from "@/pages/clusters"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
 import SecretsPage from "@/pages/secrets"
@@ -47,9 +47,9 @@ const router = createBrowserRouter(
         <Route path="/" element={<StacksPage />} />
         <Route path="/dashboard" element={<StacksPage />} />
         <Route path="/stacks" element={<StacksPage />} />
-        <Route path="/stacks/new" element={<StackDetailPage />} />
+        <Route path="/stacks/new" element={<CanvasEditorPage />} />
         <Route path="/stacks/create" element={<Navigate to="/stacks/new" replace />} />
-        <Route path="/stacks/:id" element={<StackDetailPage />} />
+        <Route path="/stacks/:id" element={<CanvasEditorPage />} />
         <Route path="/secrets" element={<SecretsPage />} />
         <Route path="/object-stores" element={<ObjectStoresPage />} />
         <Route path="/addons" element={<AddonsPage />} />
