@@ -106,6 +106,16 @@ var _ = Describe("validateInputRules", func() {
 				r.Ports[0].Name = "Bad_Name_Way_Too_Long"
 			},
 			errors.VErrPortNameInvalid, "ports[0].name"),
+		Entry("pure-numeric port name (k8s requires a letter)",
+			func(r *models.StackResource) {
+				r.Ports[0].Name = "3306"
+			},
+			errors.VErrPortNameInvalid, "ports[0].name"),
+		Entry("port name with consecutive hyphens",
+			func(r *models.StackResource) {
+				r.Ports[0].Name = "web--svc"
+			},
+			errors.VErrPortNameInvalid, "ports[0].name"),
 		Entry("port number out of range",
 			func(r *models.StackResource) {
 				r.Ports[0].Number = 70000
