@@ -107,7 +107,6 @@ services:
     ports:
       - "3000:3000"
     environment:
-      ENABLE_LOGS_PROMETHEUS: "true"
       PROMETHEUS_EXTRA_ARGS: "--enable-feature=otlp-deltatocumulative"
     volumes:
       - grafana-data:/data/grafana
