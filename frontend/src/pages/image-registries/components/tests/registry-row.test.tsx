@@ -33,6 +33,7 @@ describe("RegistryRow", () => {
     renderRow();
     expect(screen.getByText("Docker Hub")).toBeInTheDocument();
     expect(screen.getByText("index.docker.io")).toBeInTheDocument();
+    expect(screen.getByText("bob")).toBeInTheDocument();
   });
 
   it("labels a pull-and-push credential", () => {

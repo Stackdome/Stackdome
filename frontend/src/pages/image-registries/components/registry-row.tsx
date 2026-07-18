@@ -29,6 +29,10 @@ export function RegistryRow({
         </div>
       </div>
 
+      <div className="flex-1 min-w-0">
+        <span className="truncate text-[11.5px] text-muted-foreground">{credential.username}</span>
+      </div>
+
       <div className="flex items-center gap-2">
         <span className="inline-flex rounded-full border border-border bg-card px-2 py-1 text-xs text-fg-muted">
           {PURPOSE_LABELS[credential.purpose ?? PURPOSE_BOTH]}
