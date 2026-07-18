@@ -8618,6 +8618,156 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBu
 	return localVarReturnValue, localVarHTTPResponse, nil
 }
 
+type ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest struct {
+	ctx         context.Context
+	ApiService  *DefaultApiService
+	orgId       string
+	projectName string
+	id          string
+	buildId     string
+	follow      *bool
+	tail        *int32
+	since       *string
+}
+
+func (r ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest) Follow(follow bool) ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest {
+	r.follow = &follow
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest) Tail(tail int32) ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest {
+	r.tail = &tail
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest) Since(since string) ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest {
+	r.since = &since
+	return r
+}
+
+func (r ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest) Execute() (**os.File, *http.Response, error) {
+	return r.ApiService.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetExecute(r)
+}
+
+/*
+ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet Get logs for an image build
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@param orgId The ID of the organization
+	@param projectName The name of the project
+	@param id The id of record
+	@param buildId The ID of the build
+	@return ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest
+*/
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet(ctx context.Context, orgId string, projectName string, id string, buildId string) ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest {
+	return ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest{
+		ApiService:  a,
+		ctx:         ctx,
+		orgId:       orgId,
+		projectName: projectName,
+		id:          id,
+		buildId:     buildId,
+	}
+}
+
+// Execute executes the request
+//
+//	@return *os.File
+func (a *DefaultApiService) ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetExecute(r ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest) (**os.File, *http.Response, error) {
+	var (
+		localVarHTTPMethod  = http.MethodGet
+		localVarPostBody    interface{}
+		formFiles           []formFile
+		localVarReturnValue **os.File
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet")
+	if err != nil {
+		return localVarReturnValue, nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}/logs"
+	localVarPath = strings.Replace(localVarPath, "{"+"org_id"+"}", url.PathEscape(parameterToString(r.orgId, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"project_name"+"}", url.PathEscape(parameterToString(r.projectName, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"id"+"}", url.PathEscape(parameterToString(r.id, "")), -1)
+	localVarPath = strings.Replace(localVarPath, "{"+"build_id"+"}", url.PathEscape(parameterToString(r.buildId, "")), -1)
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+
+	if r.follow != nil {
+		localVarQueryParams.Add("follow", parameterToString(*r.follow, ""))
+	}
+	if r.tail != nil {
+		localVarQueryParams.Add("tail", parameterToString(*r.tail, ""))
+	}
+	if r.since != nil {
+		localVarQueryParams.Add("since", parameterToString(*r.since, ""))
+	}
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{"text/event-stream", "application/json"}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return localVarReturnValue, nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarReturnValue, localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		if localVarHTTPResponse.StatusCode == 500 {
+			var v Error
+			err = a.client.decode(&v, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+			if err != nil {
+				newErr.error = err.Error()
+				return localVarReturnValue, localVarHTTPResponse, newErr
+			}
+			newErr.model = v
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	err = a.client.decode(&localVarReturnValue, localVarBody, localVarHTTPResponse.Header.Get("Content-Type"))
+	if err != nil {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: err.Error(),
+		}
+		return localVarReturnValue, localVarHTTPResponse, newErr
+	}
+
+	return localVarReturnValue, localVarHTTPResponse, nil
+}
+
 type ApiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsGetRequest struct {
 	ctx         context.Context
 	ApiService  *DefaultApiService

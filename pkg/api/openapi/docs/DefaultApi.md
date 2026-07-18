@@ -77,6 +77,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdProjectsProjectNameSecretsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameSecretsPost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/secrets | Create a new secret
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks | List all stacks for a project
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id} | Get a specific build under a stack
+[**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}/logs | Get logs for an image build
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds | List all builds under a stack
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdConnectionsConnectionIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdConnectionsConnectionIdDelete) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id} | Delete stack connection
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdConnectionsConnectionIdPut**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdConnectionsConnectionIdPut) | **Put** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id} | Update stack connection
@@ -5305,6 +5306,89 @@ Name | Type | Description  | Notes
 
 - **Content-Type**: Not defined
 - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet
+
+> *os.File ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet(ctx, orgId, projectName, id, buildId).Follow(follow).Tail(tail).Since(since).Execute()
+
+Get logs for an image build
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    projectName := "projectName_example" // string | The name of the project
+    id := "id_example" // string | The id of record
+    buildId := "buildId_example" // string | The ID of the build
+    follow := true // bool |  (optional) (default to false)
+    tail := int32(56) // int32 |  (optional) (default to 100)
+    since := "since_example" // string |  (optional)
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet(context.Background(), orgId, projectName, id, buildId).Follow(follow).Tail(tail).Since(since).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet`: *os.File
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**projectName** | **string** | The name of the project | 
+**id** | **string** | The id of record | 
+**buildId** | **string** | The ID of the build | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdBuildsBuildIdLogsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+ **follow** | **bool** |  | [default to false]
+ **tail** | **int32** |  | [default to 100]
+ **since** | **string** |  | 
+
+### Return type
+
+[***os.File**](*os.File.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: text/event-stream, application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
 [[Back to Model list]](../README.md#documentation-for-models)
