@@ -11,7 +11,6 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/interfaces"
 	"github.com/Stackdome/stackdome/pkg/logger"
-	"github.com/Stackdome/stackdome/pkg/mocks"
 )
 
 var _ = Describe("imageBuildHandler.StreamLogs", func() {
@@ -19,7 +18,7 @@ var _ = Describe("imageBuildHandler.StreamLogs", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		defer ctrl.Finish()
 
-		mockLogging := mocks.NewMockLoggingService(ctrl)
+		mockLogging := NewMockLoggingService(ctrl)
 		streamable := fakeStreamable{objects: []interfaces.StreamObject{
 			plainStreamObject{data: "step 1/5 : FROM golang"},
 		}}

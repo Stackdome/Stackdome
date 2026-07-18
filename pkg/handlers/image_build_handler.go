@@ -18,6 +18,8 @@ type ImageBuildHandlerSpec struct {
 	Logger            logger.Logger
 }
 
+//go:generate mockgen -destination=logging_service_mock.go -package=handlers github.com/Stackdome/stackdome/pkg/services LoggingService
+
 type imageBuildHandler struct {
 	logger            logger.Logger
 	imageBuildService services.ImageBuildService
