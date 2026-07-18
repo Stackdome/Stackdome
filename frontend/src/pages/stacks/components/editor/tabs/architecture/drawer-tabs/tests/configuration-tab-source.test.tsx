@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { Tabs } from "@/components/ui/tabs";
 import { StackResourceConfigurationTab, pickConfigurationDraft } from "../configuration-tab";
 
@@ -60,6 +60,44 @@ function renderGitTab(overrides: Record<string, unknown> = {}) {
   return { onPatchResource };
 }
 
+vi.mock("../image-registry-select", () => ({
+  ImageRegistrySelect: ({ imageRef, onChange }: {
+    imageRef: string;
+    onChange: (p: { ref: string; registry_credentials_id: string | undefined }) => void;
+  }) => (
+    <button
+      data-testid="image-registry-select"
+      data-ref={imageRef}
+      onClick={() => onChange({ ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" })}
+    >
+      registry
+    </button>
+  ),
+}));
+
+function renderImageTab(overrides: Record<string, unknown> = {}) {
+  const onPatchResource = vi.fn();
+  const resource = {
+    name: "api",
+    sourceType: "image" as const,
+    source: { image: { ref: "" } },
+    ...overrides,
+  };
+  render(
+    <Tabs defaultValue="general">
+      <StackResourceConfigurationTab
+        draft={pickConfigurationDraft(resource)}
+        baseline={pickConfigurationDraft(resource)}
+        index={0}
+        errors={{}}
+        volumes={[]}
+        onPatchResource={onPatchResource}
+      />
+    </Tabs>,
+  );
+  return { onPatchResource };
+}
+
 describe("git repository row", () => {
   it("renders the repo combobox with the current url", () => {
     renderGitTab({
@@ -80,6 +118,35 @@ describe("git repository row", () => {
           integration_id: "int-app",
         }),
       },
+    });
+  });
+});
+
+describe("image source rows", () => {
+  it("renders the registry select with the full ref", () => {
+    renderImageTab({ source: { image: { ref: "ghcr.io/acme/api:1" } } });
+    expect(screen.getByTestId("image-registry-select")).toHaveAttribute("data-ref", "ghcr.io/acme/api:1");
+  });
+
+  it("patches ref and registry_credentials_id together from the select", () => {
+    const { onPatchResource } = renderImageTab({ source: { image: { ref: "acme/api:1" } } });
+    screen.getByTestId("image-registry-select").click();
+    expect(onPatchResource).toHaveBeenCalledWith({
+      source: {
+        image: expect.objectContaining({ ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" }),
+      },
+    });
+  });
+
+  it("shows only the remainder in the ref input and recomposes the host on change", () => {
+    const { onPatchResource } = renderImageTab({
+      source: { image: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-ghcr" } },
+    });
+    const input = screen.getByLabelText(/image reference/i) as HTMLInputElement;
+    expect(input.value).toBe("acme/api:1");
+    fireEvent.change(input, { target: { value: "acme/api:2" } });
+    expect(onPatchResource).toHaveBeenCalledWith({
+      source: { image: expect.objectContaining({ ref: "ghcr.io/acme/api:2" }) },
     });
   });
 });

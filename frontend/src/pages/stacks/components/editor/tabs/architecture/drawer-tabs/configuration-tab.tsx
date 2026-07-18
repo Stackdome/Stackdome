@@ -23,6 +23,8 @@ import {
 } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/ledger";
 import { FieldShell } from "@/components/branded";
 import { RepoCombobox } from "@/components/git-source-picker/repo-combobox";
+import { ImageRegistrySelect } from "./image-registry-select";
+import { splitImageRef, joinImageRef } from "@/pages/stacks/lib/image-ref";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 
@@ -327,31 +329,64 @@ function StackResourceConfigurationTabImpl({
         </LedgerRow>
 
         {draft.sourceType === "image" ? (
-          <LedgerRow
-            label="Image reference"
-            htmlFor={`container-image-${index}`}
-            required
-            alignTop
-            error={getError(errors, "source.image.ref")}
-          >
-            <DirtyField
-              draft={draft}
-              baseline={baseline}
-              path="source.image.ref"
-              compact
-              onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
+          <>
+            <LedgerRow label="Registry" htmlFor={`image-registry-${index}`}>
+              <DirtyField
+                draft={draft}
+                baseline={baseline}
+                path="source.image.ref"
+                compact
+                onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
+              >
+                <ImageRegistrySelect
+                  id={`image-registry-${index}`}
+                  imageRef={draft.source?.image?.ref || ""}
+                  registryCredentialsId={draft.source?.image?.registry_credentials_id}
+                  onChange={(patch) =>
+                    updateImageSource({ ref: patch.ref, registry_credentials_id: patch.registry_credentials_id })
+                  }
+                />
+              </DirtyField>
+            </LedgerRow>
+
+            <LedgerRow
+              label="Image reference"
+              htmlFor={`container-image-${index}`}
+              required
+              alignTop
+              error={getError(errors, "source.image.ref")}
             >
-              <Input
-                id={`container-image-${index}`}
-                placeholder="e.g., nginx:latest, redis:7"
-                value={draft.source?.image?.ref || ""}
-                onChange={(e) => updateImageSource({ ref: e.target.value })}
-                className={`h-9 font-mono text-[12.5px] ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
-                required={draft.sourceType === "image"}
-                aria-invalid={!!getError(errors, "source.image.ref")}
-              />
-            </DirtyField>
-          </LedgerRow>
+              <DirtyField
+                draft={draft}
+                baseline={baseline}
+                path="source.image.ref"
+                compact
+                onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
+              >
+                {(() => {
+                  const { host, remainder } = splitImageRef(draft.source?.image?.ref || "");
+                  return (
+                    <div className="flex items-center gap-1">
+                      {host && (
+                        <span className="rounded bg-muted px-1.5 py-1 font-mono text-[11px] text-muted-foreground">
+                          {host}/
+                        </span>
+                      )}
+                      <Input
+                        id={`container-image-${index}`}
+                        placeholder={host ? "e.g., acme/api:1.4.2" : "e.g., nginx:latest, redis:7"}
+                        value={remainder}
+                        onChange={(e) => updateImageSource({ ref: joinImageRef(host, e.target.value) })}
+                        className={`h-9 flex-1 font-mono text-[12.5px] ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
+                        required={draft.sourceType === "image"}
+                        aria-invalid={!!getError(errors, "source.image.ref")}
+                      />
+                    </div>
+                  );
+                })()}
+              </DirtyField>
+            </LedgerRow>
+          </>
         ) : (
           <>
             <LedgerRow
