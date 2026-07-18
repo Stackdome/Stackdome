@@ -22,41 +22,6 @@ import {
 } from "../lib/providers";
 import { ProviderLogo } from "./provider-logo";
 
-type Step = "registry" | "credentials";
-
-const STEPS: { step: Step; label: string }[] = [
-  { step: "registry", label: "Registry" },
-  { step: "credentials", label: "Credentials" },
-];
-
-function Stepper({ step }: { step: Step }) {
-  const currentIndex = STEPS.findIndex((s) => s.step === step);
-  return (
-    <div data-testid="registry-stepper" className="flex items-center gap-2 border-b px-5 py-3">
-      {STEPS.map((s, i) => {
-        const isCurrent = s.step === step;
-        const isPast = currentIndex > i;
-        return (
-          <div key={s.step} className="flex flex-1 flex-col gap-1.5">
-            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-brand" : "bg-border")} />
-            <span
-              data-current={isCurrent}
-              className={cn(
-                "font-mono text-[11px] uppercase tracking-[1.5px]",
-                isCurrent && "text-foreground",
-                !isCurrent && isPast && "text-muted-foreground",
-                !isCurrent && !isPast && "text-muted-foreground/60",
-              )}
-            >
-              {s.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 interface AddRegistryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -142,19 +107,19 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
           </span>
         </div>
 
-        <Stepper step={provider == null ? "registry" : "credentials"} />
-
-        <div className="flex h-[480px] max-h-[80vh] flex-col overflow-hidden">
+        {/* Tile step centers inside the min height; the credentials step grows
+            with its fields up to the viewport cap instead of clipping. */}
+        <div className="flex max-h-[80vh] min-h-[440px] flex-col overflow-hidden">
           {provider == null ? (
-            <div className="flex flex-1 items-center justify-center overflow-y-auto p-8">
-              <div className="w-full">
+            <div className="flex flex-1 overflow-y-auto p-8">
+              {/* my-auto centers when the content is shorter than the shell but
+                  top-aligns (instead of clipping) once it overflows. */}
+              <div className="my-auto w-full">
                 <div className="mb-7 text-center">
                   <h2 className="mb-2 text-2xl font-medium tracking-tight">
                     Where do your images live?
                   </h2>
-                  <p className="text-sm text-muted-foreground">
-                    Pick a registry. You can add more later.
-                  </p>
+                  <p className="text-sm text-muted-foreground">Pick a registry.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   {REGISTRY_PROVIDERS.map((p) => (
@@ -183,8 +148,8 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
             </div>
           ) : (
             <>
-              <div className="flex flex-1 flex-col justify-center gap-4 overflow-y-auto p-8">
-                <div className="mb-2 text-center">
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8 [&>*]:shrink-0">
+                <div className="mb-1 text-center">
                   <h2 className="mb-2 text-2xl font-medium tracking-tight">
                     Connect {provider.id === "other" ? "your registry" : provider.label}
                   </h2>
@@ -237,7 +202,7 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
                 </FieldShell>
                 <FieldShell label="Purpose" htmlFor="registry-purpose">
                   <Select value={purpose} onValueChange={(v) => setPurpose(v as RegistryCredentialPurpose)}>
-                    <SelectTrigger id="registry-purpose">
+                    <SelectTrigger id="registry-purpose" className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>

@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Github } from "lucide-react"
+import { GitBranch } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -22,7 +22,7 @@ export function NavGitIntegrations() {
           isActive={isGitIntegrationsActive}
         >
           <Link to="/git-integrations">
-            <Github />
+            <GitBranch />
             <span>Git Integrations</span>
           </Link>
         </SidebarMenuButton>
