@@ -22,6 +22,9 @@ import {
   LedgerSegmented,
 } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/ledger";
 import { FieldShell } from "@/components/branded";
+import { RepoCombobox } from "@/components/git-source-picker/repo-combobox";
+import { ImageRegistrySelect } from "./image-registry-select";
+import { splitImageRef, joinImageRef } from "@/pages/stacks/lib/image-ref";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
 
@@ -61,6 +64,9 @@ export interface ConfigurationDraft {
   source?: Resource["source"];
   gitRevisionType?: Resource["gitRevisionType"];
   gitRevisionValue?: Resource["gitRevisionValue"];
+  // Abandoned-branch stash for the "Build from" toggle — see the handler below.
+  stashedGitSource?: Resource["stashedGitSource"];
+  stashedImageSource?: Resource["stashedImageSource"];
   volume_mounts?: Resource["volume_mounts"];
   ports?: Resource["ports"];
 }
@@ -74,6 +80,8 @@ export function pickConfigurationDraft(resource: Resource): ConfigurationDraft {
     source: resource.source,
     gitRevisionType: resource.gitRevisionType,
     gitRevisionValue: resource.gitRevisionValue,
+    stashedGitSource: resource.stashedGitSource,
+    stashedImageSource: resource.stashedImageSource,
     volume_mounts: resource.volume_mounts,
     ports: resource.ports,
   };
@@ -310,12 +318,24 @@ function StackResourceConfigurationTabImpl({
               value={draft.sourceType || "image"}
               onValueChange={(val) => {
                 const sourceType = val as "image" | "git";
-                update({
-                  sourceType,
-                  source: sourceType === "git"
-                    ? { git: { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } }
-                    : { image: { ref: "" } },
-                });
+                // The API rejects a source with both `git` and `image` set
+                // (source_conflict), so the abandoned branch can't stay live
+                // in `source`. Stash it in a form-only field instead of
+                // discarding it, and restore the other branch from its own
+                // stash (falling back to fresh defaults the first time).
+                if (sourceType === "git") {
+                  update({
+                    sourceType,
+                    source: { git: draft.stashedGitSource ?? { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
+                    stashedImageSource: draft.source?.image ?? draft.stashedImageSource,
+                  });
+                } else {
+                  update({
+                    sourceType,
+                    source: { image: draft.stashedImageSource ?? { ref: "" } },
+                    stashedGitSource: draft.source?.git ?? draft.stashedGitSource,
+                  });
+                }
               }}
               options={[
                 { value: "image", label: "Container image", icon: <Box size={15} /> },
@@ -326,31 +346,71 @@ function StackResourceConfigurationTabImpl({
         </LedgerRow>
 
         {draft.sourceType === "image" ? (
-          <LedgerRow
-            label="Image reference"
-            htmlFor={`container-image-${index}`}
-            required
-            alignTop
-            error={getError(errors, "source.image.ref")}
-          >
-            <DirtyField
-              draft={draft}
-              baseline={baseline}
-              path="source.image.ref"
-              compact
-              onReset={onDiscardField ? () => onDiscardField("source.image.ref") : undefined}
+          <>
+            <LedgerRow label="Registry" htmlFor={`image-registry-${index}`}>
+              <DirtyField
+                draft={draft}
+                baseline={baseline}
+                path="source.image"
+                compact
+                onReset={onDiscardField ? () => onDiscardField("source.image") : undefined}
+              >
+                <ImageRegistrySelect
+                  id={`image-registry-${index}`}
+                  imageRef={draft.source?.image?.ref || ""}
+                  registryCredentialsId={draft.source?.image?.registry_credentials_id}
+                  onChange={(patch) =>
+                    updateImageSource({ ref: patch.ref, registry_credentials_id: patch.registry_credentials_id })
+                  }
+                />
+              </DirtyField>
+            </LedgerRow>
+
+            <LedgerRow
+              label="Image reference"
+              htmlFor={`container-image-${index}`}
+              required
+              alignTop
+              error={getError(errors, "source.image.ref")}
             >
-              <Input
-                id={`container-image-${index}`}
-                placeholder="e.g., nginx:latest, redis:7"
-                value={draft.source?.image?.ref || ""}
-                onChange={(e) => updateImageSource({ ref: e.target.value })}
-                className={`h-9 font-mono text-[12.5px] ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
-                required={draft.sourceType === "image"}
-                aria-invalid={!!getError(errors, "source.image.ref")}
-              />
-            </DirtyField>
-          </LedgerRow>
+              <DirtyField
+                draft={draft}
+                baseline={baseline}
+                path="source.image"
+                compact
+                onReset={onDiscardField ? () => onDiscardField("source.image") : undefined}
+              >
+                {(() => {
+                  const { host, remainder } = splitImageRef(draft.source?.image?.ref || "");
+                  return (
+                    <div className="flex items-center gap-1">
+                      {host && (
+                        <span className="rounded bg-muted px-1.5 py-1 font-mono text-[11px] text-muted-foreground">
+                          {host}/
+                        </span>
+                      )}
+                      <Input
+                        id={`container-image-${index}`}
+                        placeholder={host ? "e.g., acme/api:1.4.2" : "e.g., nginx:latest, redis:7"}
+                        value={remainder}
+                        onChange={(e) => {
+                          const typed = e.target.value;
+                          // A pasted full ref (with its own host) replaces the
+                          // whole ref outright; otherwise compose against the
+                          // active chip host as before.
+                          const { host: typedHost } = splitImageRef(typed);
+                          updateImageSource({ ref: typedHost ? typed : joinImageRef(host, typed) });
+                        }}
+                        className={`h-9 flex-1 font-mono text-[12.5px] ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
+                        required={draft.sourceType === "image"}
+                        aria-invalid={!!getError(errors, "source.image.ref")}
+                      />
+                    </div>
+                  );
+                })()}
+              </DirtyField>
+            </LedgerRow>
+          </>
         ) : (
           <>
             <LedgerRow
@@ -365,16 +425,19 @@ function StackResourceConfigurationTabImpl({
                 baseline={baseline}
                 path="source.git.repo_url"
                 compact
-                onReset={onDiscardField ? () => onDiscardField("source.git.repo_url") : undefined}
+                onReset={onDiscardField ? () => {
+                  onDiscardField("source.git.repo_url");
+                  onDiscardField("source.git.integration_id");
+                } : undefined}
               >
-                <Input
+                <RepoCombobox
                   id={`git-repo-${index}`}
                   value={draft.source?.git?.repo_url || ""}
-                  onChange={(e) => updateGitSource({ repo_url: e.target.value })}
-                  placeholder="https://github.com/username/repository.git"
-                  className={`h-9 font-mono text-[12.5px] ${getError(errors, "source.git.repo_url") ? "border-danger" : ""}`}
-                  required={draft.sourceType === "git"}
-                  aria-invalid={!!getError(errors, "source.git.repo_url")}
+                  integrationId={draft.source?.git?.integration_id}
+                  onChange={(pick) =>
+                    updateGitSource({ repo_url: pick.repo_url, integration_id: pick.integration_id })
+                  }
+                  hasError={!!getError(errors, "source.git.repo_url")}
                 />
               </DirtyField>
             </LedgerRow>
@@ -460,7 +523,59 @@ function StackResourceConfigurationTabImpl({
               </LedgerRow>
             )}
 
-            <LedgerDisclosure label="Advanced" meta="push registry">
+            <LedgerDisclosure label="Advanced" meta="build & push">
+              <LedgerRow
+                label="Dockerfile path"
+                htmlFor={`dockerfile-path-${index}`}
+                hint="Relative to the build context."
+                error={getError(errors, "source.git.dockerfile_path")}
+              >
+                <DirtyField
+                  draft={draft}
+                  baseline={baseline}
+                  path="source.git.dockerfile_path"
+                  compact
+                  onReset={onDiscardField ? () => onDiscardField("source.git.dockerfile_path") : undefined}
+                >
+                  <Input
+                    id={`dockerfile-path-${index}`}
+                    value={draft.source?.git?.dockerfile_path ?? ""}
+                    onChange={(e) => updateGitSource({ dockerfile_path: e.target.value })}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) updateGitSource({ dockerfile_path: "Dockerfile" });
+                    }}
+                    placeholder="Dockerfile"
+                    className="h-9 font-mono text-[12.5px]"
+                  />
+                </DirtyField>
+              </LedgerRow>
+
+              <LedgerRow
+                label="Build context"
+                htmlFor={`build-context-${index}`}
+                hint="Directory passed to the image build."
+                error={getError(errors, "source.git.build_context")}
+              >
+                <DirtyField
+                  draft={draft}
+                  baseline={baseline}
+                  path="source.git.build_context"
+                  compact
+                  onReset={onDiscardField ? () => onDiscardField("source.git.build_context") : undefined}
+                >
+                  <Input
+                    id={`build-context-${index}`}
+                    value={draft.source?.git?.build_context ?? ""}
+                    onChange={(e) => updateGitSource({ build_context: e.target.value })}
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) updateGitSource({ build_context: "." });
+                    }}
+                    placeholder="."
+                    className="h-9 font-mono text-[12.5px]"
+                  />
+                </DirtyField>
+              </LedgerRow>
+
               <LedgerRow
                 label="Push registry"
                 htmlFor={`push-repo-${index}`}

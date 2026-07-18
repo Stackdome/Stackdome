@@ -218,6 +218,155 @@ describe("convertFormStackToApiStack — git source credential passthrough", () 
   });
 });
 
+describe("convertFormStackToApiStack — image source credential passthrough", () => {
+  it("preserves source.image.registry_credentials_id through the API-prep transform", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "image" as const,
+            source: {
+              image: {
+                ref: "ghcr.io/acme/api:1",
+                registry_credentials_id: "cred-1",
+              },
+            },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0].source?.image?.registry_credentials_id).toBe("cred-1");
+  });
+});
+
+describe("stashed source fields — stripped before the API payload", () => {
+  it("strips stashedGitSource and stashedImageSource via convertFormResourceToApiResource", () => {
+    const form = {
+      name: "web",
+      sourceType: "image" as const,
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+      stashedGitSource: { repo_url: "https://github.com/acme/api.git", dockerfile_path: "Dockerfile", build_context: "." },
+      stashedImageSource: { ref: "old-ref" },
+    };
+    const api = convertFormResourceToApiResource(form as never);
+    expect(api).not.toHaveProperty("stashedGitSource");
+    expect(api).not.toHaveProperty("stashedImageSource");
+  });
+
+  it("strips stashedGitSource and stashedImageSource via convertFormStackToApiStack", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "git" as const,
+            source: { git: { repo_url: "https://github.com/acme/api.git", dockerfile_path: "Dockerfile", build_context: "." } },
+            stashedGitSource: { repo_url: "https://github.com/acme/old.git", dockerfile_path: "Dockerfile", build_context: "." },
+            stashedImageSource: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-1" },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0]).not.toHaveProperty("stashedGitSource");
+    expect(api.spec.stack_resources[0]).not.toHaveProperty("stashedImageSource");
+  });
+});
+
+describe("FormStackResourceSchema — image ref validation", () => {
+  it("rejects a ref with a host but an empty remainder", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/" } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+
+  it("accepts a fully-qualified ref with host, repo, and tag", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a hostless ref", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "nginx:latest" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a whitespace-only ref", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "  " } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+
+  it("rejects a host with a whitespace-only remainder", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/  " } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+});
+
+describe("FormStackResourceSchema — git repo_url validation", () => {
+  it("rejects a whitespace-only repo_url", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "git",
+      source: { git: { repo_url: "   ", dockerfile_path: "Dockerfile", build_context: "." } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.git.repo_url",
+      );
+      expect(issue?.message).toBe("Git repository URL is required");
+    }
+  });
+});
+
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
     const { FormEnvVarSchema } = await import("../form-schema");

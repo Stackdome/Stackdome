@@ -10,11 +10,14 @@ import {
   ApiVolumeSpecSchema,
   ApiVolumeSchema,
   ApiStackSchema,
+  ApiGitSourceSchema,
+  ApiImageSourceSchema,
 } from "./api-schema";
 import type { StackUpdateRequest, StackResourceUpdateRequest, VolumeUpdateRequest } from "@/api/stacks";
 import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
 import { buildDesiredConnections, mountsToConnections } from "@/pages/stacks/lib/connection-mapping";
 import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-mapping";
+import { splitImageRef } from "@/pages/stacks/lib/image-ref";
 
 /**
  * Form-specific UI schema additions
@@ -81,6 +84,12 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper fields for git revision, not part of API spec StackResource
   gitRevisionType: FormGitRevisionTypeSchema.optional(),
   gitRevisionValue: z.string().optional(),
+  // UI-only stash for the "Build from" toggle: the API rejects a source with
+  // both `git` and `image` set (source_conflict), so we cannot keep both
+  // subtrees live in `source`. Toggling away from a branch stashes it here so
+  // toggling back restores it instead of resetting to blank defaults.
+  stashedGitSource: ApiGitSourceSchema.optional(),
+  stashedImageSource: ApiImageSourceSchema.optional(),
   // Port name is optional in the form — the API requires it, so we auto-derive
   // `port-<number>` on save rather than asking the user for it.
   ports: z.array(ApiPortSchema.extend({ name: z.string().optional() })).optional(),
@@ -96,7 +105,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // Drive validation off the actual `source` union (same discriminant the canvas
   // node card uses) rather than the `sourceType` UI helper, which can desync.
   if (data.source?.git) {
-    if (!data.source.git.repo_url) {
+    if (!data.source.git.repo_url?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Git repository URL is required",
@@ -114,7 +123,14 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
       });
     }
   } else if (data.source?.image) {
-    if (!data.source.image.ref) {
+    // A ref like "ghcr.io/" (host picked, no repo typed) is non-empty but has
+    // no actual image identity once the host segment is split off — reject
+    // that the same as a fully empty ref. Whitespace-only refs/remainders are
+    // rejected the same way (a ref of "  " round-trips through splitImageRef
+    // untouched, so it must be checked explicitly, not just falsiness).
+    const ref = data.source.image.ref ?? "";
+    const { remainder } = splitImageRef(ref);
+    if (!ref.trim() || !remainder.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Container image reference is required",
@@ -231,6 +247,8 @@ function convertFormResourceToApiResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
+    stashedGitSource,
+    stashedImageSource,
     outputs,
     ...rest
   } = resource;
@@ -407,7 +425,10 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
     };
   } else if (resource.sourceType === 'image') {
     prepared.source = {
-      image: { ref: resource.source?.image?.ref ?? '' },
+      image: {
+        ref: resource.source?.image?.ref ?? '',
+        registry_credentials_id: resource.source?.image?.registry_credentials_id,
+      },
     };
   }
 
