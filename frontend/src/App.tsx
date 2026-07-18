@@ -15,6 +15,7 @@ import ObjectStoresPage from "@/pages/object-stores"
 import PreviewsPage from "@/pages/previews"
 import PreviewConfigDetailPage from "@/pages/previews/config-detail"
 import GitIntegrationsPage from "@/pages/git-integrations"
+import ImageRegistriesPage from "@/pages/image-registries"
 import NotFoundPage from "@/pages/not-found"
 import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common"
@@ -65,6 +66,7 @@ const router = createBrowserRouter(
         <Route path="/previews" element={<PreviewsPage />} />
         <Route path="/previews/:configId" element={<PreviewConfigDetailPage />} />
         <Route path="/git-integrations" element={<GitIntegrationsPage />} />
+        <Route path="/image-registries" element={<ImageRegistriesPage />} />
         {/* Workspace collaboration (Users + Projects) shelved — redirect home. */}
         <Route path="/settings/*" element={<Navigate to="/" replace />} />
       </Route>

@@ -9,6 +9,7 @@ import { NavSecrets } from "@/components/nav-secrets"
 import { NavObjectStores } from "@/components/nav-object-stores"
 import { NavDomains } from "@/components/nav-domains"
 import { NavGitIntegrations } from "@/components/nav-git-integrations"
+import { NavImageRegistries } from "@/components/nav-image-registries"
 import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
 import { getCurrentUser } from "@/helpers/common"
@@ -78,6 +79,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground/70">Integrations</SidebarGroupLabel>
             <SidebarGroupContent>
               <NavGitIntegrations />
+              <NavImageRegistries />
             </SidebarGroupContent>
           </SidebarGroup>
         )}

@@ -2,33 +2,32 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/branded";
-import { AddIntegrationWizard } from "./add-integration-wizard";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  listGitIntegrations, deleteGitIntegration,
-  type GitIntegration,
-} from "@/api/git-integrations";
+  listRegistryCredentials, deleteRegistryCredential,
+  type RegistryCredential,
+} from "@/api/registry-credentials";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
-import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
-import { IntegrationRow } from "./components/integration-row";
-import { VerifyIntegrationDialog } from "./components/verify-integration-dialog";
+import { RegistriesErrorState, RegistriesEmptyState } from "./components/page-states";
+import { RegistryRow } from "./components/registry-row";
+import { AddRegistryDialog } from "./components/add-registry-dialog";
 import { UpdateCredentialsDialog } from "./components/update-credentials-dialog";
+import { VerifyRegistryDialog } from "./components/verify-registry-dialog";
 
-export default function GitIntegrationsPage() {
+export default function ImageRegistriesPage() {
   const { toast } = useToast();
-  const [integrations, setIntegrations] = useState<GitIntegration[]>([]);
+  const [credentials, setCredentials] = useState<RegistryCredential[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState<GitIntegration | null>(null);
-  const [removing, setRemoving] = useState<GitIntegration | null>(null);
-  const [editing, setEditing] = useState<GitIntegration | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<RegistryCredential | null>(null);
+  const [verifying, setVerifying] = useState<RegistryCredential | null>(null);
+  const [removing, setRemoving] = useState<RegistryCredential | null>(null);
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
@@ -38,8 +37,8 @@ export default function GitIntegrationsPage() {
       return;
     }
     try {
-      const list = await listGitIntegrations(orgId);
-      setIntegrations(list.items ?? []);
+      const list = await listRegistryCredentials(orgId);
+      setCredentials(list.items ?? []);
       setError(null);
     } catch (e) {
       setError(getErrorMessage(e));
@@ -52,19 +51,27 @@ export default function GitIntegrationsPage() {
     void refresh();
   }, [refresh]);
 
-  const remove = async (integration: GitIntegration) => {
+  const remove = async (credential: RegistryCredential) => {
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !integration.id) {
+    if (!orgId || !credential.id) {
       toast({
         title: "Remove failed",
-        description: !orgId ? "No organization selected." : "Integration is no longer available.",
+        description: !orgId ? "No organization selected." : "Registry is no longer available.",
         variant: "destructive",
       });
       return;
     }
     try {
-      await deleteGitIntegration(orgId, integration.id);
-      toast({ title: "Integration removed" });
+      const res = await deleteRegistryCredential(orgId, credential.id);
+      const affected = res.affected_stacks ?? [];
+      if (affected.length > 0) {
+        toast({
+          title: "Registry removed",
+          description: `Stacks affected: ${affected.map((s) => s.name ?? s.id).join(", ")}. Their image pulls or pushes may fail until another credential covers ${credential.host}.`,
+        });
+      } else {
+        toast({ title: "Registry removed" });
+      }
       setRemoving(null);
       await refresh();
     } catch (e) {
@@ -72,11 +79,10 @@ export default function GitIntegrationsPage() {
     }
   };
 
-  const hasGithubApp = integrations.some((i) => i.type === GIT_INTEGRATION_TYPE_GITHUB_APP);
   const addButton = (
-    <Button onClick={() => setWizardOpen(true)}>
+    <Button onClick={() => setAdding(true)}>
       <Plus className="h-4 w-4" />
-      Connect provider
+      Add registry
     </Button>
   );
 
@@ -84,7 +90,7 @@ export default function GitIntegrationsPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-2 text-muted-foreground">Loading git integrations...</p>
+        <p className="mt-2 text-muted-foreground">Loading image registries...</p>
       </div>
     );
   }
@@ -93,33 +99,31 @@ export default function GitIntegrationsPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         eyebrow="Integrations"
-        title="Git integrations"
-        subtitle="Grant Stackdome access to your repositories for clones, builds, and preview environments."
+        title="Image registries"
+        subtitle="Store registry credentials so builds can pull private images and push artifacts."
         actions={addButton}
       />
 
       {/* Full-page error only when there's nothing to show; a failed re-fetch
           keeps the already-loaded list visible with an inline error line. */}
-      {error && integrations.length === 0 && (
-        <IntegrationsErrorState message={error} onRetry={() => void refresh()} />
+      {error && credentials.length === 0 && (
+        <RegistriesErrorState message={error} onRetry={() => void refresh()} />
       )}
 
-      {!error && integrations.length === 0 && (
-        <IntegrationsEmptyState onAdd={() => setWizardOpen(true)} />
-      )}
+      {!error && credentials.length === 0 && <RegistriesEmptyState onAdd={() => setAdding(true)} />}
 
-      {integrations.length > 0 && (
+      {credentials.length > 0 && (
         <>
-          {error && <p className="text-sm text-destructive">Couldn&apos;t refresh integrations: {error}</p>}
-          <Panel title="Connected providers" count={integrations.length}>
+          {error && <p className="text-sm text-destructive">Couldn&apos;t refresh registries: {error}</p>}
+          <Panel title="Connected registries" count={credentials.length}>
             <div className="divide-y divide-border">
-              {integrations.map((integration) => (
-                <IntegrationRow
-                  key={integration.id}
-                  integration={integration}
+              {credentials.map((credential) => (
+                <RegistryRow
+                  key={credential.id}
+                  credential={credential}
                   onVerify={setVerifying}
-                  onRemove={setRemoving}
                   onUpdateCredentials={setEditing}
+                  onRemove={setRemoving}
                 />
               ))}
             </div>
@@ -127,30 +131,25 @@ export default function GitIntegrationsPage() {
         </>
       )}
 
-      <AddIntegrationWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        hasGithubApp={hasGithubApp}
-        onCreated={() => void refresh()}
-      />
-
-      <VerifyIntegrationDialog
-        integration={verifying}
-        onOpenChange={(o) => !o && setVerifying(null)}
-      />
+      <AddRegistryDialog open={adding} onOpenChange={setAdding} onCreated={() => void refresh()} />
 
       <UpdateCredentialsDialog
-        integration={editing}
+        credential={editing}
         onOpenChange={(o) => !o && setEditing(null)}
         onUpdated={() => void refresh()}
+      />
+
+      <VerifyRegistryDialog
+        credential={verifying}
+        onOpenChange={(o) => !o && setVerifying(null)}
       />
 
       <AlertDialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove this integration?</AlertDialogTitle>
+            <AlertDialogTitle>Remove this registry?</AlertDialogTitle>
             <AlertDialogDescription>
-              Repositories using this integration lose access for clones.
+              Stacks referencing these credentials lose pull/push access.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

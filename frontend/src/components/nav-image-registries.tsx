@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { GitBranch } from "lucide-react"
+import { Package } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -9,21 +9,21 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-export function NavGitIntegrations() {
+export function NavImageRegistries() {
   const location = useLocation();
-  const isGitIntegrationsActive = location.pathname.startsWith('/git-integrations');
+  const isImageRegistriesActive = location.pathname.startsWith('/image-registries');
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton
-          tooltip="Git Integrations"
+          tooltip="Image Registries"
           asChild
-          isActive={isGitIntegrationsActive}
+          isActive={isImageRegistriesActive}
         >
-          <Link to="/git-integrations">
-            <GitBranch />
-            <span>Git Integrations</span>
+          <Link to="/image-registries">
+            <Package />
+            <span>Image Registries</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
