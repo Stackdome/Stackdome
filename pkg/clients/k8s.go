@@ -283,7 +283,7 @@ func mostRecentPod(pods []corev1.Pod) *corev1.Pod {
 	}
 	latest := &pods[0]
 	for i := range pods {
-		if pods[i].CreationTimestamp.Time.After(latest.CreationTimestamp.Time) {
+		if pods[i].CreationTimestamp.After(latest.CreationTimestamp.Time) {
 			latest = &pods[i]
 		}
 	}
