@@ -11,6 +11,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -44,6 +45,7 @@ type PodLogStreamOptions interface {
 type KubernetesClient interface {
 	AttachablePodFromService(ctx context.Context, svcKey types.NamespacedName) (*corev1.Pod, error)
 	StreamPodLogs(ctx context.Context, pod *corev1.Pod, logOpts PodLogStreamOptions) (<-chan *LogStreamObject, error)
+	BuildPodForJob(ctx context.Context, namespace string, jobName string) (*corev1.Pod, error)
 
 	GetNamespaceMetrics(ctx context.Context, namespace string) (*MetricsStreamObject, error)
 	StreamNamespaceMetrics(ctx context.Context, namespace string, metricsStreamOpts MetricsStreamOptions) (<-chan *MetricsStreamObject, error)
@@ -260,6 +262,32 @@ func (k *kubernetesClient) StreamNamespaceMetrics(ctx context.Context, namespace
 		}
 	}()
 	return streamChannel, nil
+}
+
+func (k *kubernetesClient) BuildPodForJob(ctx context.Context, namespace string, jobName string) (*corev1.Pod, error) {
+	podList, err := k.clientSet.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: fmt.Sprintf("%s=%s", batchv1.JobNameLabel, jobName),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return mostRecentPod(podList.Items), nil
+}
+
+// mostRecentPod returns the pod with the latest creation timestamp, or nil when
+// the slice is empty. A build Job may produce several pods across retries
+// (BackoffLimit: 3); the newest is the active/last attempt.
+func mostRecentPod(pods []corev1.Pod) *corev1.Pod {
+	if len(pods) == 0 {
+		return nil
+	}
+	latest := &pods[0]
+	for i := range pods {
+		if pods[i].CreationTimestamp.Time.After(latest.CreationTimestamp.Time) {
+			latest = &pods[i]
+		}
+	}
+	return latest
 }
 
 func (k *kubernetesClient) attachablePodForObject(object runtime.Object, timeout time.Duration) (*corev1.Pod, error) {
