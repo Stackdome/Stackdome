@@ -728,19 +728,16 @@ paths:
         - $ref: '#/components/parameters/org_id'
         - $ref: '#/components/parameters/id'
         - in: query
-          name: query
-          schema:
-            type: string
-          description: Substring filter on the repository full name
-        - in: query
           name: page
           schema:
             type: integer
         - in: query
           name: installation_id
+          description: >-
+            Our GitInstallation id (UUID). When omitted, repositories are
+            aggregated across every installation of the integration.
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Successful operation

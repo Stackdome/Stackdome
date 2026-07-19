@@ -47,7 +47,7 @@ type GitIntegrationService interface {
 	CreateGitHubAppManifest(ctx context.Context, organisationID string) (*models.GitHubAppManifestFlow, *errors.ServiceError)
 	HandleGitHubManifestCallback(ctx context.Context, code, state string) (string, *errors.ServiceError)
 	ListInstallations(ctx context.Context, integrationID string, refresh bool) ([]*models.GitInstallation, *errors.ServiceError)
-	ListRepositories(ctx context.Context, integrationID, query string, page int, installationID int64) (*githubapp.RepoPage, *errors.ServiceError)
+	ListRepositories(ctx context.Context, integrationID string, page int, installationUUID string) (*githubapp.RepoPage, *errors.ServiceError)
 	GetRepository(ctx context.Context, integrationID, owner, repo string) (*githubapp.Repo, *errors.ServiceError)
 	ListRepositoryBranches(ctx context.Context, integrationID, owner, repo string) ([]string, *errors.ServiceError)
 	ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError

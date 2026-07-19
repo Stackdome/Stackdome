@@ -40,12 +40,12 @@ afterEach(cleanup);
 vi.mock("@/api/git-integrations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   listGitIntegrations: vi.fn(),
-  searchRepositories: vi.fn(),
+  listRepositories: vi.fn(),
   getRepository: vi.fn(),
 }));
 vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
-import { listGitIntegrations, searchRepositories, getRepository } from "@/api/git-integrations";
+import { listGitIntegrations, listRepositories, getRepository } from "@/api/git-integrations";
 
 const app = {
   id: "int-app",
@@ -64,7 +64,7 @@ const creds = {
 
 beforeEach(() => {
   vi.mocked(listGitIntegrations).mockResolvedValue({ items: [app, creds] });
-  vi.mocked(searchRepositories).mockResolvedValue({
+  vi.mocked(listRepositories).mockResolvedValue({
     items: [{ full_name: "acme/api", private: true, default_branch: "main" }],
   });
   vi.mocked(getRepository).mockResolvedValue({

@@ -895,14 +895,6 @@ paths:
         schema:
           type: string
         style: simple
-      - description: Substring filter on the repository full name
-        explode: true
-        in: query
-        name: query
-        required: false
-        schema:
-          type: string
-        style: form
       - explode: true
         in: query
         name: page
@@ -910,13 +902,14 @@ paths:
         schema:
           type: integer
         style: form
-      - explode: true
+      - description: "Our GitInstallation id (UUID). When omitted, repositories are\
+          \ aggregated across every installation of the integration."
+        explode: true
         in: query
         name: installation_id
         required: false
         schema:
-          format: int64
-          type: integer
+          type: string
         style: form
       responses:
         "200":

@@ -2901,11 +2901,6 @@ const endpoints = makeApi([
         schema: z.string(),
       },
       {
-        name: "query",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
         name: "page",
         type: "Query",
         schema: z.number().int().optional(),
@@ -2913,7 +2908,7 @@ const endpoints = makeApi([
       {
         name: "installation_id",
         type: "Query",
-        schema: z.number().int().optional(),
+        schema: z.string().optional(),
       },
     ],
     response: GitRepositoryPage,

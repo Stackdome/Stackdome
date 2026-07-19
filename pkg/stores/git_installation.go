@@ -13,6 +13,7 @@ type GitInstallationStore interface {
 	// (git_integration_id, installation_id).
 	Upsert(ctx context.Context, installation *models.GitInstallation) (*models.GitInstallation, *errors.ServiceError)
 	ListByIntegrationID(ctx context.Context, integrationID string) ([]*models.GitInstallation, *errors.ServiceError)
+	GetByIntegrationAndID(ctx context.Context, integrationID, id string) (*models.GitInstallation, *errors.ServiceError)
 	GetByIntegrationAndAccount(ctx context.Context, integrationID, accountLogin string) (*models.GitInstallation, *errors.ServiceError)
 	DeleteByInstallationID(ctx context.Context, integrationID string, installationID int64) *errors.ServiceError
 }

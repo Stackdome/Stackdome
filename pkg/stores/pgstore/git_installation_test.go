@@ -66,6 +66,25 @@ var _ = Describe("GitInstallationStore", func() {
 		Expect(installation.InstallationID).To(Equal(int64(77)))
 	})
 
+	It("gets an installation by its own id, scoped to the integration", func() {
+		installations, err := store.ListByIntegrationID(ctx, "gi-1")
+		Expect(err).To(BeNil())
+		Expect(installations).To(HaveLen(1))
+		id := installations[0].ID
+
+		got, err := store.GetByIntegrationAndID(ctx, "gi-1", id)
+		Expect(err).To(BeNil())
+		Expect(got.InstallationID).To(Equal(int64(77)))
+
+		_, err = store.GetByIntegrationAndID(ctx, "gi-1", "does-not-exist")
+		Expect(err).ToNot(BeNil())
+		Expect(err.Is404()).To(BeTrue())
+
+		_, err = store.GetByIntegrationAndID(ctx, "other-integration", id)
+		Expect(err).ToNot(BeNil())
+		Expect(err.Is404()).To(BeTrue())
+	})
+
 	It("deletes by installation id", func() {
 		Expect(store.DeleteByInstallationID(ctx, "gi-1", 77)).To(BeNil())
 		installations, err := store.ListByIntegrationID(ctx, "gi-1")

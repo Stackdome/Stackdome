@@ -47,15 +47,15 @@ export async function listInstallations(orgId: string, integrationId: string, re
   return res.data as GitInstallationList;
 }
 
-export interface RepoSearchOpts {
-  query?: string;
+export interface RepoListOpts {
   page?: number;
-  installationId?: number;
+  // Our GitInstallation id (UUID). When omitted, repositories are aggregated
+  // across every installation of the integration.
+  installationId?: string;
 }
 
-export async function searchRepositories(orgId: string, integrationId: string, opts: RepoSearchOpts = {}): Promise<GitRepositoryPage> {
+export async function listRepositories(orgId: string, integrationId: string, opts: RepoListOpts = {}): Promise<GitRepositoryPage> {
   const params: Record<string, string | number> = {};
-  if (opts.query) params.query = opts.query;
   if (opts.page) params.page = opts.page;
   if (opts.installationId) params.installation_id = opts.installationId;
   const res = await api.get(`${base(orgId)}/${integrationId}/repositories`, { params });

@@ -17,7 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   listGitIntegrations,
-  searchRepositories,
+  listRepositories,
   getRepository,
   type GitIntegration,
   type GitRepository,
@@ -82,7 +82,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
       .finally(() => setLoaded(true));
   }, [open, loaded]);
 
-  // Debounced repo search — only GitHub App integrations can list repos.
+  // Repos load once per integration; the query filters them client-side.
   useEffect(() => {
     if (!open || selected?.type !== GIT_INTEGRATION_TYPE_GITHUB_APP) {
       setRepos([]);
@@ -92,25 +92,22 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
     if (!orgId || !selected.id) return;
     let cancelled = false;
     setSearching(true);
-    const t = setTimeout(() => {
-      searchRepositories(orgId, selected.id!, { query: query || undefined })
-        .then((page) => {
-          if (cancelled) return;
-          setRepos(page.items ?? []);
-          setError(null);
-        })
-        .catch((e) => {
-          if (!cancelled) setError(getErrorMessage(e));
-        })
-        .finally(() => {
-          if (!cancelled) setSearching(false);
-        });
-    }, 300);
+    listRepositories(orgId, selected.id!)
+      .then((page) => {
+        if (cancelled) return;
+        setRepos(page.items ?? []);
+        setError(null);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(getErrorMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
     return () => {
       cancelled = true;
-      clearTimeout(t);
     };
-  }, [open, selected?.id, selected?.type, query]);
+  }, [open, selected?.id, selected?.type]);
 
   const pickRepo = async (repo: GitRepository) => {
     const orgId = getCurrentOrganizationId();
@@ -160,6 +157,10 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
   // aren't limited to a "git" user, so match the general `user@host:` shape.
   const looksLikeUrl =
     /^(https?|ssh|git):\/\//i.test(trimmedQuery) || /^[\w.-]+@[\w.-]+:/.test(trimmedQuery);
+  const needle = trimmedQuery.toLowerCase();
+  const filteredRepos = needle
+    ? repos.filter((r) => r.full_name?.toLowerCase().includes(needle))
+    : repos;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -207,7 +208,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
             {error && <div className="px-3 py-2 text-xs text-danger">{error}</div>}
             {selected?.type === GIT_INTEGRATION_TYPE_GITHUB_APP && (
               <CommandGroup>
-                {repos.map((repo) => (
+                {filteredRepos.map((repo) => (
                   <CommandItem
                     key={repo.full_name}
                     value={repo.full_name!}
@@ -224,7 +225,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
                     )}
                   </CommandItem>
                 ))}
-                {!searching && repos.length === 0 && (
+                {!searching && filteredRepos.length === 0 && (
                   <CommandEmpty>No repositories found.</CommandEmpty>
                 )}
               </CommandGroup>

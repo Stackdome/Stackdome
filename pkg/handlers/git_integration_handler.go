@@ -202,11 +202,10 @@ func (h *gitIntegrationHandler) ListRepositories(w http.ResponseWriter, r *http.
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			id := mux.Vars(r)["id"]
-			query := r.URL.Query().Get("query")
 			page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-			installationID, _ := strconv.ParseInt(r.URL.Query().Get("installation_id"), 10, 64)
+			installationID := r.URL.Query().Get("installation_id")
 
-			repoPage, serr := h.gitIntegrationService.ListRepositories(r.Context(), id, query, page, installationID)
+			repoPage, serr := h.gitIntegrationService.ListRepositories(r.Context(), id, page, installationID)
 			if serr != nil {
 				return nil, serr
 			}
