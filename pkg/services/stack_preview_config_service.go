@@ -57,6 +57,14 @@ func (s *stackPreviewConfigService) Create(ctx context.Context, config *models.S
 		return nil, err
 	}
 
+	existing, sErr := s.store.GetByOrgAndRepo(ctx, config.OrganisationID, config.NormalizedRepoURL())
+	if sErr != nil && !sErr.Is404() {
+		return nil, sErr
+	}
+	if existing != nil {
+		return nil, errors.Conflict("a preview config already exists for this repository")
+	}
+
 	if err := s.validateGitRepo(ctx, config); err != nil {
 		return nil, err
 	}
@@ -98,6 +106,16 @@ func (s *stackPreviewConfigService) Update(ctx context.Context, id string, updat
 
 	if err := s.validate(ctx, updated); err != nil {
 		return nil, err
+	}
+
+	if updated.NormalizedRepoURL() != existing.NormalizedRepoURL() {
+		conflict, sErr := s.store.GetByOrgAndRepo(ctx, updated.OrganisationID, updated.NormalizedRepoURL())
+		if sErr != nil && !sErr.Is404() {
+			return nil, sErr
+		}
+		if conflict != nil && conflict.ID != existing.ID {
+			return nil, errors.Conflict("a preview config already exists for this repository")
+		}
 	}
 
 	if err := s.validateGitRepo(ctx, updated); err != nil {
