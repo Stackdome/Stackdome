@@ -200,4 +200,29 @@ describe("deriveGraph (connection projection)", () => {
     expect(dot("cache")).toBe("pending");
     expect(dot("ghost")).toBe("neutral"); // no state known
   });
+
+  it("annotates same-pair parallel edges with index/count", () => {
+    // web has an env connection FROM api AND depends_on api → two edges on one pair.
+    const g = deriveGraph({
+      ...base,
+      resources: [
+        web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }], { depends_on: ["api"] }),
+        { name: "api" } as Partial<FormStackResourceData>,
+      ],
+    });
+    const pair = g.edges.filter((e) => e.source === "resource:api" && e.target === "resource:web");
+    expect(pair).toHaveLength(2);
+    expect(pair.map((e) => e.data.parallelCount)).toEqual([2, 2]);
+    expect(pair.map((e) => e.data.parallelIndex).sort()).toEqual([0, 1]);
+  });
+
+  it("leaves singleton edges unannotated", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }]), { name: "api" } as Partial<FormStackResourceData>],
+    });
+    expect(g.edges).toHaveLength(1);
+    expect(g.edges[0].data.parallelCount).toBeUndefined();
+    expect(g.edges[0].data.parallelIndex).toBeUndefined();
+  });
 });

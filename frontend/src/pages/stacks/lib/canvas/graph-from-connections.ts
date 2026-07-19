@@ -93,6 +93,9 @@ export interface CanvasNode {
 export interface ConnectionEdgeData {
   kind: EdgeKind;
   sourceOfTruth: EdgeSourceOfTruth;
+  /** Set only when ≥2 edges share a node pair: this edge's slot and the pair's edge total. */
+  parallelIndex?: number;
+  parallelCount?: number;
   [key: string]: unknown;
 }
 
@@ -331,6 +334,23 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         NODE_ID_PREFIX.resource + (resource.name ?? ""),
       );
     }
+  }
+
+  // Annotate edges that share a node pair (either direction) so the floating
+  // edge can offset them into distinct parallel lines instead of one overlap.
+  const byPair = new Map<string, CanvasEdge[]>();
+  for (const edge of edges) {
+    const key = [edge.source, edge.target].sort().join("|");
+    const group = byPair.get(key);
+    if (group) group.push(edge);
+    else byPair.set(key, [edge]);
+  }
+  for (const group of byPair.values()) {
+    if (group.length < 2) continue;
+    group.forEach((edge, i) => {
+      edge.data.parallelIndex = i;
+      edge.data.parallelCount = group.length;
+    });
   }
 
   return { nodes, edges };
