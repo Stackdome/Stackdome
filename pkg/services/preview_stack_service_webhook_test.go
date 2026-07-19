@@ -72,6 +72,6 @@ var _ = Describe("previewStackService InternalCreateFromWebhook", func() {
 
 		_, sErr := svc.InternalCreateFromWebhook(ctx, config, "7", "feature", "abc123")
 		Expect(sErr).ToNot(BeNil())
-		Expect(sErr.Code).To(Equal(errors.ErrorBadRequest))
+		Expect(sErr.Code).To(Equal(errors.ErrorTooManyRequests))
 	})
 })

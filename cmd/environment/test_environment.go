@@ -539,12 +539,14 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:      secretService,
 		CredentialResolver: credentialResolver,
 		Permissions:        te.PermissionService,
+		Logger:             te.Logger,
 	})
 
 	services.WirePreviewWebhook(gitIntegrationService, services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
 		ConfigStore:       stackPreviewConfigStore,
 		PreviewStackStore: previewStackStore,
 		PreviewService:    previewStackService,
+		Logger:            te.Logger,
 	}))
 
 	te.Services = Services{

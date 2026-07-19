@@ -14,6 +14,7 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/stackfile"
@@ -56,6 +57,7 @@ type PreviewStackServiceSpec struct {
 	SecretService      SecretService
 	CredentialResolver CredentialResolver
 	Permissions        auth.PermissionService
+	Logger             logger.Logger
 }
 
 type previewStackService struct {
@@ -66,6 +68,7 @@ type previewStackService struct {
 	secretService      SecretService
 	credentialResolver CredentialResolver
 	permissions        auth.PermissionService
+	logger             logger.Logger
 	BackgroundJobEnqueuerDep
 }
 
@@ -85,6 +88,7 @@ func NewPreviewStackService(spec PreviewStackServiceSpec) PreviewStackService {
 		secretService:      spec.SecretService,
 		credentialResolver: spec.CredentialResolver,
 		permissions:        spec.Permissions,
+		logger:             spec.Logger,
 	}
 }
 
@@ -141,7 +145,7 @@ func (s *previewStackService) provisionPreview(ctx context.Context, config *mode
 		return nil, sErr
 	}
 	if activeCount >= int64(config.MaxActivePreviews) {
-		return nil, errors.BadRequest("maximum active preview stacks (%d) reached for this config", config.MaxActivePreviews)
+		return nil, errors.TooManyRequests("maximum active preview stacks (%d) reached for this config", config.MaxActivePreviews)
 	}
 
 	if preview.CommitSHA == "" {
@@ -446,14 +450,22 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 func (s *previewStackService) fetchPreviewEnv(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) map[string]string {
 	gitClient, gErr := s.gitClientForConfig(ctx, config)
 	if gErr != nil {
+		s.logger.Warn(ctx, "preview env: no git client for '%s': %v", config.GitRepository.RepoURL, gErr)
 		return nil
 	}
 	raw, err := gitClient.FetchFile(ctx, config.GitRepository.RepoURL, commitSHA, PreviewEnvFile)
-	if err != nil || len(raw) == 0 {
+	if err != nil {
+		if !stderrors.Is(err, gitclient.ErrNotFound) {
+			s.logger.Warn(ctx, "preview env: failed to fetch %s at %s: %v", PreviewEnvFile, commitSHA, err)
+		}
+		return nil
+	}
+	if len(raw) == 0 {
 		return nil
 	}
 	parsed, perr := godotenv.Unmarshal(string(raw))
 	if perr != nil {
+		s.logger.Warn(ctx, "preview env: ignoring unparseable %s at %s: %v", PreviewEnvFile, commitSHA, perr)
 		return nil
 	}
 	return parsed

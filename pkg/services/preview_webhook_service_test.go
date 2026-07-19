@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -33,6 +34,7 @@ var _ = Describe("PreviewWebhookService HandlePullRequest", func() {
 			ConfigStore:       configStore,
 			PreviewStackStore: previewStore,
 			PreviewService:    previewSvc,
+			Logger:            logger.NewLogger(),
 		})
 		ctx = context.Background()
 
@@ -111,6 +113,16 @@ var _ = Describe("PreviewWebhookService HandlePullRequest", func() {
 		ev.Action = PRActionOpened
 		ev.BaseBranch = "dev"
 		configStore.EXPECT().GetByOrgAndRepo(ctx, "org-1", models.NormalizeRepoURL(ev.RepoURL)).Return(config, nil)
+
+		Expect(svc.HandlePullRequest(ctx, ev)).To(BeNil())
+	})
+
+	It("drops the delivery when the active preview cap is reached", func() {
+		ev.Action = PRActionOpened
+		configStore.EXPECT().GetByOrgAndRepo(ctx, "org-1", models.NormalizeRepoURL(ev.RepoURL)).Return(config, nil)
+		previewStore.EXPECT().GetByConfigAndPR(ctx, "config-1", "7").Return(nil, errors.NotFound("not found"))
+		previewSvc.EXPECT().InternalCreateFromWebhook(ctx, config, "7", "feature", "abc").
+			Return(nil, errors.TooManyRequests("maximum active preview stacks (2) reached for this config"))
 
 		Expect(svc.HandlePullRequest(ctx, ev)).To(BeNil())
 	})

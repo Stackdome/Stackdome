@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
@@ -40,12 +41,14 @@ type previewWebhookService struct {
 	configs  stores.StackPreviewConfigStore
 	previews stores.PreviewStackStore
 	service  PreviewStackService
+	logger   logger.Logger
 }
 
 type PreviewWebhookServiceSpec struct {
 	ConfigStore       stores.StackPreviewConfigStore
 	PreviewStackStore stores.PreviewStackStore
 	PreviewService    PreviewStackService
+	Logger            logger.Logger
 }
 
 func NewPreviewWebhookService(spec PreviewWebhookServiceSpec) PreviewWebhookService {
@@ -53,6 +56,7 @@ func NewPreviewWebhookService(spec PreviewWebhookServiceSpec) PreviewWebhookServ
 		configs:  spec.ConfigStore,
 		previews: spec.PreviewStackStore,
 		service:  spec.PreviewService,
+		logger:   spec.Logger,
 	}
 }
 
@@ -89,11 +93,11 @@ func (s *previewWebhookService) HandlePullRequest(ctx context.Context, ev PullRe
 			return s.service.InternalSyncFromWebhook(ctx, existing.ID, ev.HeadSHA)
 		}
 		_, sErr := s.service.InternalCreateFromWebhook(ctx, config, ev.PRNumber, ev.Branch, ev.HeadSHA)
-		return sErr
+		return s.dropCapReached(ctx, ev, sErr)
 	case PRActionSynchronize:
 		if existing == nil {
 			_, sErr := s.service.InternalCreateFromWebhook(ctx, config, ev.PRNumber, ev.Branch, ev.HeadSHA)
-			return sErr
+			return s.dropCapReached(ctx, ev, sErr)
 		}
 		return s.service.InternalSyncFromWebhook(ctx, existing.ID, ev.HeadSHA)
 	case PRActionClosed:
@@ -104,4 +108,15 @@ func (s *previewWebhookService) HandlePullRequest(ctx context.Context, ev PullRe
 	default:
 		return nil
 	}
+}
+
+// dropCapReached converts a max-active-previews rejection into a logged skip:
+// failing the delivery would make GitHub back off (and eventually disable the
+// webhook) over expected capacity behavior.
+func (s *previewWebhookService) dropCapReached(ctx context.Context, ev PullRequestEvent, sErr *errors.ServiceError) *errors.ServiceError {
+	if sErr != nil && sErr.Code == errors.ErrorTooManyRequests {
+		s.logger.Warn(ctx, "preview webhook: skipping PR #%s on '%s': %s", ev.PRNumber, ev.RepoURL, sErr.Reason)
+		return nil
+	}
+	return sErr
 }

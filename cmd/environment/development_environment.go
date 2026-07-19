@@ -678,12 +678,14 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SecretService:      secretService,
 		CredentialResolver: credentialResolver,
 		Permissions:        d.PermissionService,
+		Logger:             d.Logger,
 	})
 
 	services.WirePreviewWebhook(gitIntegrationService, services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
 		ConfigStore:       stackPreviewConfigStore,
 		PreviewStackStore: previewStackStore,
 		PreviewService:    previewStackService,
+		Logger:            d.Logger,
 	}))
 
 	d.Services = Services{
