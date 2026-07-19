@@ -49,4 +49,22 @@ describe("PublicEndpointRow", () => {
     const { container } = render(<PublicEndpointRow endpoints={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
+
+  it("colors each dot from its own endpoint's variant, not a shared one", () => {
+    const { container } = render(
+      <PublicEndpointRow
+        endpoints={[
+          { ...endpoints[0], variant: "ready" as const },
+          { ...endpoints[1], variant: "error" as const },
+        ]}
+      />,
+    );
+    expect(container.querySelectorAll(".bg-success")).toHaveLength(1);
+    expect(container.querySelectorAll(".bg-danger")).toHaveLength(1);
+  });
+
+  it("falls back to the neutral dot when an endpoint has no variant", () => {
+    const { container } = render(<PublicEndpointRow endpoints={[endpoints[0]]} />);
+    expect(container.querySelectorAll(".bg-fg-muted")).toHaveLength(1);
+  });
 });

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
 
-/** Header status variant → endpoint dot colour (semantic tokens only). */
+/** Per-endpoint resource status variant → dot colour (semantic tokens only). */
 const DOT_CLASS: Record<StatusVariant, string> = {
   ready: "bg-success",
   pending: "bg-warn",
@@ -19,6 +19,9 @@ export interface PublicEndpoint {
   service: string;
   url: string;
   port?: number;
+  /** The owning resource's live rollout status — each chip's dot reflects its
+   *  own service, not the stack-level rollup. */
+  variant?: StatusVariant;
 }
 
 function hostOf(url: string): string {
@@ -46,14 +49,10 @@ async function copyText(text: string): Promise<void> {
 /** Header row mapping each publicly exposed service to its best live URL. */
 export function PublicEndpointRow({
   endpoints,
-  variant,
 }: {
   endpoints: PublicEndpoint[];
-  /** Resolved header status variant (mapped to the dot colour). */
-  variant?: StatusVariant;
 }) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const dotClass = DOT_CLASS[variant ?? "neutral"];
   const timer = useRef<ReturnType<typeof setTimeout>>(null);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
@@ -73,7 +72,7 @@ export function PublicEndpointRow({
         PUBLIC
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {endpoints.map(({ service, url, port }) => (
+        {endpoints.map(({ service, url, port, variant }) => (
           <span
             key={`${service}-${url}`}
             className="group inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/25 py-1 pl-2.5 pr-1.5 font-mono text-[12px] transition-colors hover:border-border hover:bg-muted/40"
@@ -81,7 +80,7 @@ export function PublicEndpointRow({
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
                 <span className="flex items-center gap-1.5 text-fg-muted">
-                  <span aria-hidden className={cn("size-[5px] rounded-full", dotClass)} />
+                  <span aria-hidden className={cn("size-[5px] rounded-full", DOT_CLASS[variant ?? "neutral"])} />
                   {service}
                 </span>
               </TooltipTrigger>
