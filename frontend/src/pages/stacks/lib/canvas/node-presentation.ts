@@ -36,7 +36,7 @@ export interface NodePresentation {
   brandSlug?: string;
   /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
-  /** Second card line when a port is declared: `:port · public|internal`. */
+  /** Second card line when a port is declared: `port N · public|internal`. */
   detail?: string;
 }
 
@@ -119,10 +119,10 @@ function buildSummary(image: string, hasBuild: boolean | undefined): string {
   return base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
 }
 
-/** Second card line, only when a port is declared: `:port · public|internal`. */
+/** Second card line, only when a port is declared: `port N · public|internal`. */
 function buildDetail(port: PresentationPort | undefined): string | undefined {
   if (port?.number == null) return undefined;
-  return `:${port.number} · ${port.exposedToPublic ? "public" : "internal"}`;
+  return `port ${port.number} · ${port.exposedToPublic ? "public" : "internal"}`;
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {

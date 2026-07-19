@@ -69,7 +69,7 @@ export interface ResourceNodeData {
   /** Live status-dot colour bucket, from the resource/addon's runtime state. */
   dotVariant: StatusVariant;
   summary: string;
-  /** Optional second card line (`:port · public|internal`). */
+  /** Optional second card line (`port N · public|internal`). */
   detail?: string;
   volumes: VolumeChip[];
   dirtyState?: DirtyState;
