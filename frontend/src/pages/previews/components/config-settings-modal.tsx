@@ -21,6 +21,7 @@ import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   configSettingsSchema, DEFAULT_STACKFILE_PATH, type ConfigSettingsValues,
 } from "@/pages/previews/lib/form-schemas";
+import { EnvVarsEditor, type EnvVarFormRow } from "@/pages/previews/components/env-vars-editor";
 
 interface ConfigSettingsModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
   const [baseBranch, setBaseBranch] = useState("");
   const [stackfilePath, setStackfilePath] = useState("");
   const [maxActive, setMaxActive] = useState(10);
+  const [env, setEnv] = useState<EnvVarFormRow[]>([]);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ConfigSettingsValues, string>>>({});
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -49,17 +51,20 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
     setBaseBranch(config.git_repository?.base_branch ?? "");
     setStackfilePath(config.stackfile_path ?? DEFAULT_STACKFILE_PATH);
     setMaxActive(config.max_active_previews ?? 10);
+    setEnv((config.env ?? []).map(({ name, value }) => ({ name, value: value ?? "" })));
     setFieldErrors({});
   }, [open, config]);
 
   const save = async () => {
-    const parsed = configSettingsSchema.safeParse({ baseBranch, stackfilePath, maxActive });
+    const envRows = env.filter((row) => row.name.trim() !== "");
+    const parsed = configSettingsSchema.safeParse({ baseBranch, stackfilePath, maxActive, env: envRows });
     if (!parsed.success) {
       const flat = parsed.error.flatten().fieldErrors;
       setFieldErrors({
         baseBranch: flat.baseBranch?.[0],
         stackfilePath: flat.stackfilePath?.[0],
         maxActive: flat.maxActive?.[0],
+        env: flat.env?.[0],
       });
       return;
     }
@@ -76,6 +81,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
         },
         stackfile_path: parsed.data.stackfilePath,
         max_active_previews: parsed.data.maxActive,
+        env: parsed.data.env,
         ...(config.description != null ? { description: config.description } : {}),
         ...(config.labels != null ? { labels: config.labels } : {}),
         ...(config.annotations != null ? { annotations: config.annotations } : {}),
@@ -166,6 +172,19 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
                   setFieldErrors((prev) => ({ ...prev, maxActive: undefined }));
                 }}
                 className="w-28"
+              />
+            </FieldShell>
+            <FieldShell
+              label="Environment variables (optional)"
+              hint="Applied to every preview. Use {{ secret.NAME }} for secrets — never paste raw secret values."
+              error={fieldErrors.env}
+            >
+              <EnvVarsEditor
+                value={env}
+                onChange={(rows) => {
+                  setEnv(rows);
+                  setFieldErrors((prev) => ({ ...prev, env: undefined }));
+                }}
               />
             </FieldShell>
             <Button onClick={() => void save()} disabled={saving}>Save</Button>
