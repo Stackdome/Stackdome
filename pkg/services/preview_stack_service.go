@@ -26,6 +26,7 @@ import (
 // stackfile env for a preview environment.
 const PreviewEnvFile = ".env.preview"
 
+//go:generate mockgen -destination=preview_stack_service_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services github.com/Stackdome/stackdome/pkg/services PreviewStackService
 type PreviewStackService interface {
 	BackgroundJobEnqueuerInjectable
 	Create(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError)
@@ -35,6 +36,16 @@ type PreviewStackService interface {
 	List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError)
 	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) (content []byte, hash string, opErr *errors.OperationError)
 	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError)
+	// InternalCreateFromWebhook provisions a preview stack from a GitHub PR
+	// webhook event. No permission check: the webhook has already been
+	// authenticated and authorized by config resolution (org+repo match).
+	InternalCreateFromWebhook(ctx context.Context, config *models.StackPreviewConfig, prNumber, branch, headSHA string) (*models.PreviewStack, *errors.ServiceError)
+	// InternalSyncFromWebhook re-syncs an existing preview stack to a new head
+	// commit from a GitHub PR webhook event. No permission check.
+	InternalSyncFromWebhook(ctx context.Context, previewStackID, headSHA string) *errors.ServiceError
+	// InternalDeleteFromWebhook tears down a preview stack from a GitHub PR
+	// webhook event (PR closed/merged). No permission check.
+	InternalDeleteFromWebhook(ctx context.Context, previewStackID string) *errors.ServiceError
 }
 
 type PreviewStackServiceSpec struct {
@@ -87,6 +98,24 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 		return nil, permErr
 	}
 
+	return s.provisionPreview(ctx, config, preview)
+}
+
+// InternalCreateFromWebhook provisions a preview stack for a GitHub PR
+// webhook event. No permission check.
+func (s *previewStackService) InternalCreateFromWebhook(ctx context.Context, config *models.StackPreviewConfig, prNumber, branch, headSHA string) (*models.PreviewStack, *errors.ServiceError) {
+	preview := &models.PreviewStack{
+		StackPreviewConfigID: config.ID,
+		PRNumber:             prNumber,
+		Branch:               branch,
+		CommitSHA:            headSHA,
+		Source:               models.PreviewStackSourceWebhook,
+		UserID:               config.UserID,
+	}
+	return s.provisionPreview(ctx, config, preview)
+}
+
+func (s *previewStackService) provisionPreview(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
 	if preview.ProjectID != "" && preview.ProjectID != config.ProjectID {
 		return nil, errors.BadRequest("preview stack project does not match config project")
 	}
@@ -157,6 +186,20 @@ func (s *previewStackService) Sync(ctx context.Context, previewStackID string, o
 		return permErr
 	}
 
+	return s.syncPreview(ctx, preview, opts)
+}
+
+// InternalSyncFromWebhook re-syncs an existing preview stack to a new head
+// commit for a GitHub PR webhook event. No permission check.
+func (s *previewStackService) InternalSyncFromWebhook(ctx context.Context, previewStackID, headSHA string) *errors.ServiceError {
+	preview, sErr := s.store.GetByID(ctx, previewStackID)
+	if sErr != nil {
+		return sErr
+	}
+	return s.syncPreview(ctx, preview, PreviewSyncOpts{Commit: headSHA})
+}
+
+func (s *previewStackService) syncPreview(ctx context.Context, preview *models.PreviewStack, opts PreviewSyncOpts) *errors.ServiceError {
 	if preview.StackID == nil {
 		return errors.BadRequest("preview stack has not been provisioned yet")
 	}
@@ -256,13 +299,27 @@ func (s *previewStackService) Delete(ctx context.Context, previewStackID string)
 		return permErr
 	}
 
+	return s.deletePreview(ctx, preview)
+}
+
+// InternalDeleteFromWebhook tears down a preview stack for a GitHub PR
+// webhook event (PR closed/merged). No permission check.
+func (s *previewStackService) InternalDeleteFromWebhook(ctx context.Context, previewStackID string) *errors.ServiceError {
+	preview, sErr := s.store.GetByID(ctx, previewStackID)
+	if sErr != nil {
+		return sErr
+	}
+	return s.deletePreview(ctx, preview)
+}
+
+func (s *previewStackService) deletePreview(ctx context.Context, preview *models.PreviewStack) *errors.ServiceError {
 	preview.Status = models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting, Reason: "DeleteRequested"}
 	preview.DeletionTimestamp = ptr.To(time.Now().UTC())
 	if _, sErr := s.store.Update(ctx, preview); sErr != nil {
 		return sErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: previewStackID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: preview.ID}); err != nil {
 		return errors.GeneralError("failed to enqueue preview stack deletion: %v", err)
 	}
 
