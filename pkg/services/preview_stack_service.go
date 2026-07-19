@@ -18,8 +18,13 @@ import (
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/stackfile"
 	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/joho/godotenv"
 	"k8s.io/utils/ptr"
 )
+
+// PreviewEnvFile is the optional repo-root dotenv file whose entries override
+// stackfile env for a preview environment.
+const PreviewEnvFile = ".env.preview"
 
 type PreviewStackService interface {
 	BackgroundJobEnqueuerInjectable
@@ -339,6 +344,11 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to parse stackfile: %v", err))
 	}
 
+	// Merge env overrides into the stackfile before ToStack so that override
+	// values using {{ secret.NAME }} become connections and resolve through the
+	// same path as native stackfile env.
+	applyEnvOverrides(sf, s.fetchPreviewEnv(ctx, config, preview.CommitSHA), config.Env)
+
 	stack, err := sf.ToStack()
 	if err != nil {
 		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to convert stackfile: %v", err))
@@ -371,6 +381,46 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	)
 
 	return model, nil
+}
+
+// fetchPreviewEnv reads the optional repo-root .env.preview at the preview
+// commit. A missing or unparseable file yields no overrides (best-effort): a
+// clone-credential failure surfaces later in the actual build.
+func (s *previewStackService) fetchPreviewEnv(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) map[string]string {
+	gitClient, gErr := s.gitClientForConfig(ctx, config)
+	if gErr != nil {
+		return nil
+	}
+	raw, err := gitClient.FetchFile(ctx, config.GitRepository.RepoURL, commitSHA, PreviewEnvFile)
+	if err != nil || len(raw) == 0 {
+		return nil
+	}
+	parsed, perr := godotenv.Unmarshal(string(raw))
+	if perr != nil {
+		return nil
+	}
+	return parsed
+}
+
+// applyEnvOverrides overlays env onto every stackfile resource with precedence
+// stackfile < .env.preview (repoEnv) < config.Env. Runs before ToStack so that
+// override values referencing {{ secret.NAME }} resolve like native env.
+func applyEnvOverrides(sf *stackfile.Stackfile, repoEnv map[string]string, configEnv models.EnvVars) {
+	if len(repoEnv) == 0 && len(configEnv) == 0 {
+		return
+	}
+	for name, res := range sf.Resources {
+		if res.Env == nil {
+			res.Env = map[string]string{}
+		}
+		for k, v := range repoEnv {
+			res.Env[k] = v
+		}
+		for _, e := range configEnv {
+			res.Env[e.Name] = e.Value
+		}
+		sf.Resources[name] = res
+	}
 }
 
 // applyBranchSwap sets the branch to the preview branch for resources whose git
