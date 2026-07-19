@@ -97,7 +97,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
             <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-fg-muted">Activity</span>
-            <span className="whitespace-nowrap font-mono text-[10.5px] text-brand">· {selectedRow ? selectedRow.name : "all resources"}</span>
+            <span className="whitespace-nowrap font-mono text-[10.5px] text-fg-2">· {selectedRow ? selectedRow.name : "all resources"}</span>
             {streaming && (
               <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-success">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> live
