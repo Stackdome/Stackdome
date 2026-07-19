@@ -64,9 +64,13 @@ export interface ResourceNodeData {
   kindLabel: string;
   /** Glyph identifier for the node icon. */
   glyph: GlyphKind;
+  /** Brand-icon slug when the image maps to known software; falls back to glyph. */
+  brandSlug?: string;
   /** Live status-dot colour bucket, from the resource/addon's runtime state. */
   dotVariant: StatusVariant;
   summary: string;
+  /** One card line per declared port (`port N · public|internal`). */
+  details?: string[];
   volumes: VolumeChip[];
   dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */
@@ -93,6 +97,9 @@ export interface CanvasNode {
 export interface ConnectionEdgeData {
   kind: EdgeKind;
   sourceOfTruth: EdgeSourceOfTruth;
+  /** Set only when ≥2 edges share a node pair: this edge's slot and the pair's edge total. */
+  parallelIndex?: number;
+  parallelCount?: number;
   [key: string]: unknown;
 }
 
@@ -237,11 +244,13 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
+        brandSlug: pres.brandSlug,
         // Form-data resources carry no status field; the graph-build dot
         // always starts neutral here — mergeTopology overlays the real
         // per-resource state from live status / topology once available.
         dotVariant: statusVariant("resource", undefined),
         summary: pres.summary,
+        details: pres.details,
         volumes: volumeChips(resource, knownVolumes),
         dirtyState: serviceDirtyState(idx, input.dirty),
         resourceIdx: idx,
@@ -260,6 +269,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name: input.addonNameById.get(addonId) ?? addonId,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
+        brandSlug: pres.brandSlug,
         dotVariant: statusVariant("addon", input.addonStateById?.get(addonId)),
         summary: pres.summary,
         volumes: [],
@@ -333,5 +343,35 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
     }
   }
 
-  return { nodes, edges };
+  // One relationship = one line: a derived depends_on edge duplicating an
+  // authored connection in the SAME direction is redundant — drop it. An
+  // opposite-direction edge is a different relationship and stays. Whatever
+  // remains sharing a node pair (either direction) is annotated so the
+  // floating edge offsets the lines instead of overlapping them.
+  const authoredDirections = new Set(
+    edges
+      .filter((e) => e.data.sourceOfTruth === EDGE_SOURCE_OF_TRUTH.connection)
+      .map((e) => `${e.source}|${e.target}`),
+  );
+  const kept = edges.filter(
+    (e) =>
+      e.data.sourceOfTruth !== EDGE_SOURCE_OF_TRUTH.derived ||
+      !authoredDirections.has(`${e.source}|${e.target}`),
+  );
+  const byPair = new Map<string, CanvasEdge[]>();
+  for (const edge of kept) {
+    const key = [edge.source, edge.target].sort().join("|");
+    const group = byPair.get(key);
+    if (group) group.push(edge);
+    else byPair.set(key, [edge]);
+  }
+  for (const group of byPair.values()) {
+    if (group.length < 2) continue;
+    group.forEach((edge, i) => {
+      edge.data.parallelIndex = i;
+      edge.data.parallelCount = group.length;
+    });
+  }
+
+  return { nodes, edges: kept };
 }

@@ -6,15 +6,39 @@ describe("nodePresentation", () => {
     expect(nodePresentation({ isAddon: true })).toEqual({
       kindLabel: "Postgres",
       glyph: "postgres",
+      brandSlug: "postgres",
       summary: "managed postgres",
+      details: [],
     });
   });
 
-  it("detects redis and marks it in-memory", () => {
+  it("resolves a brand slug from the image for known software", () => {
+    const slug = (image: string) => nodePresentation({ isAddon: false, image }).brandSlug;
+    expect(slug("redis:6.2")).toBe("redis");
+    expect(slug("postgres:16")).toBe("postgres");
+    expect(slug("tooljet/tooljet:v3.20.18")).toBe("tooljet");
+    expect(slug("grafana/otel-lgtm:0.9")).toBe("opentelemetry"); // otel wins over grafana
+    expect(slug("grafana/grafana:11")).toBe("grafana");
+    expect(slug("minio/minio:latest")).toBe("minio");
+    expect(slug("acme/web-api:1")).toBeUndefined();
+  });
+
+  it("does not mistake postgrest for postgres", () => {
+    const p = nodePresentation({
+      isAddon: false,
+      image: "postgrest/postgrest:v12.2.12",
+      ports: [{ number: 3000, exposedToPublic: false }],
+    });
+    expect(p.kindLabel).toBe("Service");
+    expect(p.brandSlug).toBe("postgrest");
+  });
+
+  it("detects redis and shows the uniform image · port · access line", () => {
     const p = nodePresentation({ isAddon: false, image: "redis:6.2", ports: [{ number: 6379 }] });
     expect(p.kindLabel).toBe("Redis");
     expect(p.glyph).toBe("redis");
-    expect(p.summary).toBe("redis:6.2 · in-memory");
+    expect(p.summary).toBe("redis:6.2");
+    expect(p.details).toEqual(["port 6379 · internal"]);
   });
 
   it("detects postgres from a service image", () => {
@@ -29,10 +53,10 @@ describe("nodePresentation", () => {
     expect(nodePresentation({ isAddon: false, image: "mysql:8" }).glyph).toBe("database");
   });
 
-  it("detects minio as an Object store, S3-compatible", () => {
+  it("detects minio as an Object store", () => {
     const p = nodePresentation({ isAddon: false, image: "minio/minio:latest" });
     expect(p).toMatchObject({ kindLabel: "Object", glyph: "object" });
-    expect(p.summary).toBe("minio/minio:latest · S3-compatible");
+    expect(p.summary).toBe("minio:latest");
   });
 
   it("treats a generic image with a public port as Web and shows :port · public", () => {
@@ -43,7 +67,8 @@ describe("nodePresentation", () => {
     });
     expect(p.kindLabel).toBe("Web");
     expect(p.glyph).toBe("web");
-    expect(p.summary).toBe("web-api · :8080 · public");
+    expect(p.summary).toBe("web-api:1.2.3");
+    expect(p.details).toEqual(["port 8080 · public"]);
   });
 
   it("treats a generic image with only an internal port as a Service", () => {
@@ -54,7 +79,8 @@ describe("nodePresentation", () => {
     });
     expect(p.kindLabel).toBe("Service");
     expect(p.glyph).toBe("service");
-    expect(p.summary).toBe("acme/mailhog");
+    expect(p.summary).toBe("mailhog");
+    expect(p.details).toEqual(["port 1025 · internal"]);
   });
 
   it("falls back to git build when there is no image", () => {
@@ -63,12 +89,44 @@ describe("nodePresentation", () => {
     expect(p.summary).toBe("git build");
   });
 
-  it("strips the registry and tag when building a Web summary base", () => {
+  it("lists every declared port, one line each, in declared order", () => {
+    const p = nodePresentation({
+      isAddon: false,
+      image: "grafana/otel-lgtm:0.29.1",
+      ports: [
+        { number: 4318, exposedToPublic: false },
+        { number: 3000, exposedToPublic: true },
+      ],
+    });
+    expect(p.details).toEqual(["port 4318 · internal", "port 3000 · public"]);
+  });
+
+  it("caps port lines at three, folding overflow into '+N more ports'", () => {
+    const p = nodePresentation({
+      isAddon: false,
+      image: "acme/kitchen-sink",
+      ports: [
+        { number: 80, exposedToPublic: true },
+        { number: 443, exposedToPublic: true },
+        { number: 9090, exposedToPublic: false },
+        { number: 9091, exposedToPublic: false },
+        { number: 9092, exposedToPublic: false },
+      ],
+    });
+    expect(p.details).toEqual([
+      "port 80 · public",
+      "port 443 · public",
+      "+3 more ports",
+    ]);
+  });
+
+  it("strips the registry but keeps the tag in the summary", () => {
     const p = nodePresentation({
       isAddon: false,
       image: "registry.example.com:5000/project/frontend:v2",
       ports: [{ number: 3000, exposedToPublic: true }],
     });
-    expect(p.summary).toBe("frontend · :3000 · public");
+    expect(p.summary).toBe("frontend:v2");
+    expect(p.details).toEqual(["port 3000 · public"]);
   });
 });

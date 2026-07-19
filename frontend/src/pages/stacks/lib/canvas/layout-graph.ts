@@ -1,9 +1,10 @@
 import dagre from "dagre";
 import type { CanvasGraph } from "./graph-from-connections";
 
-/** Card dimensions dagre reserves per node (matches ResourceNode's box). */
+/** Card dimensions dagre reserves per node (matches ResourceNode's box —
+ *  header + summary + optional port detail line). */
 export const NODE_WIDTH = 216;
-export const NODE_HEIGHT = 88;
+export const NODE_HEIGHT = 104;
 
 /** Horizontal pitch between consecutive freshly-added nodes so they don't stack. */
 export const NEW_NODE_GAP_X = NODE_WIDTH + NODE_HEIGHT;
@@ -11,8 +12,13 @@ export const NEW_NODE_GAP_X = NODE_WIDTH + NODE_HEIGHT;
 export const NEW_NODE_OFFSET_Y = NODE_HEIGHT * 2;
 
 export interface LayoutOptions {
-  direction?: "LR" | "TB";
+  direction?: "LR" | "TB" | "BT";
 }
+
+/** Vertical gap between ranks (tiers) — room for bezier fans to separate. */
+export const RANK_SEP = 140;
+/** Horizontal gap between siblings within a rank. */
+export const NODE_SEP = 64;
 
 /**
  * Pure auto-layout. Runs dagre over the graph and returns a NEW graph with
@@ -26,7 +32,7 @@ export function layoutGraph(graph: CanvasGraph, options: LayoutOptions = {}): Ca
   if (graph.nodes.length === 0) return { nodes: [], edges: graph.edges };
 
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: options.direction ?? "LR", nodesep: 48, ranksep: 96, marginx: 24, marginy: 24 });
+  g.setGraph({ rankdir: options.direction ?? "BT", nodesep: NODE_SEP, ranksep: RANK_SEP, marginx: 24, marginy: 24 });
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const node of graph.nodes) {

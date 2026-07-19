@@ -19,6 +19,17 @@ export const ReleaseEventScope = {
   Resource: "resource",
 } as const satisfies Record<string, ReleaseEventScopeValue>;
 
+/**
+ * The spec types `ReleaseEvent.type` as a plain string; these values mirror the
+ * backend enum in pkg/models/release_event.go.
+ */
+export const ReleaseEventType = {
+  ResourceWaiting: "resource_waiting",
+  ResourceDeploying: "resource_deploying",
+  ResourceReady: "resource_ready",
+  ResourceFailed: "resource_failed",
+} as const;
+
 function releasesPath(orgId: string, projectName: string, stackId: string): string {
   return `/organizations/${orgId}/projects/${projectName}/stacks/${stackId}/releases`;
 }

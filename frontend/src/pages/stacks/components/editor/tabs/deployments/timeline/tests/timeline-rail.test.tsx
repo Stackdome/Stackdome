@@ -9,6 +9,7 @@ vi.mock("@/api/releases", () => ({
   listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
   buildReleaseEventStreamUrl: vi.fn(() => ""),
   ReleaseEventScope: { Release: "release", Resource: "resource" },
+  ReleaseEventType: { ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
 }));
 import { TimelineRail } from "../timeline-rail";
 import { ReleaseDetailProvider } from "../../use-release-detail";
@@ -97,8 +98,8 @@ describe("TimelineRail", () => {
     renderRail(<TimelineRail releases={r} activeRelease={r[0]} {...base} />);
     await userEvent.click(screen.getByText("#3"));
     await userEvent.click(screen.getByText("#2"));
-    // Both post-mortems stay mounted — an accordion would have closed #3 on opening #2.
-    expect(await screen.findByText(/vs #2/i)).toBeInTheDocument();
-    expect(await screen.findByText(/vs #1/i)).toBeInTheDocument();
+    // Both post-mortems stay mounted (plus the auto-expanded active node's live body) —
+    // an accordion would have closed #3 on opening #2.
+    expect(await screen.findAllByRole("button", { name: "Outcomes" })).toHaveLength(3);
   });
 });

@@ -12,6 +12,7 @@ import { useMemo, useState, useEffect, useCallback, useRef } from "react";
 import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
+import { statusVariant } from "@/components/branded/status-variant";
 import { LogsTab } from "@/pages/stacks/components/editor/tabs/logs/logs-tab";
 import { MetricsTab } from "@/pages/stacks/components/editor/tabs/metrics/metrics-tab";
 import { DeploymentsTab } from "@/pages/stacks/components/editor/tabs/deployments/deployments-tab";
@@ -174,16 +175,22 @@ export default function CanvasEditorPage() {
     });
 
   // Publicly exposed services → best live ingress URL, for the header's
-  // PUBLIC row. Drafts have no live ingress, so the row stays empty.
+  // PUBLIC row. Drafts have no live ingress, so the row stays empty. Each chip's
+  // dot carries its OWN resource's rollout state (same status release as the
+  // canvas node dots), not the stack-level rollup — one crashed service must not
+  // paint every endpoint red.
   const publicEndpoints = useMemo(() => {
     if (isNewStack) return [];
     const liveResources = convergedReleaseDetail?.live_status?.resources ?? {};
+    const statusResources = statusLiveStatus?.resources ?? {};
     return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
       const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
       const best = pickBestIngress(ingress, orgDomains);
-      return best && r.name ? [{ service: r.name, url: best.url, port: best.target_port }] : [];
+      if (!best || !r.name) return [];
+      const variant = statusVariant("rollout", statusResources[r.name]?.state);
+      return [{ service: r.name, url: best.url, port: best.target_port, variant }];
     });
-  }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail]);
+  }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail, statusLiveStatus]);
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.
@@ -799,7 +806,6 @@ export default function CanvasEditorPage() {
       projectName={deployIds.projectName}
       stackId={effectiveStack.id}
       stack={effectiveStack}
-      onOpenLogs={() => setActiveTab(EDITOR_TABS.logs)}
       onJumpToResource={(resourceName, tab) => {
         // Resolve against the list the canvas drawer actually indexes into
         // (the live draft while a session is active), at click time — the

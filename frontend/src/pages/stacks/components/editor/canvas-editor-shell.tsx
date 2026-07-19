@@ -336,7 +336,7 @@ export function CanvasEditorShell({
               <p className="mt-1 text-[12px] text-danger">{nameError}</p>
             )}
             <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-            <PublicEndpointRow endpoints={publicEndpoints ?? []} variant={pillVariant} />
+            <PublicEndpointRow endpoints={publicEndpoints ?? []} />
             {notice}
           </div>
 

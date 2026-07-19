@@ -6,7 +6,7 @@ import type { Stack } from "@/api/stacks";
 import { causeLabel, formatReleaseTime } from "../derive";
 import { useReleaseDetailContext } from "../use-release-detail";
 import { LiveReleaseBody } from "./live-release-body";
-import type { LogContext } from "./resource-row";
+import type { LogContext } from "./split-console";
 
 export interface LiveReleaseSummaryProps {
   /** The release currently serving traffic (stack.converged_release). */
@@ -16,7 +16,6 @@ export interface LiveReleaseSummaryProps {
   prevReleaseId?: string;
   prevSeq?: number;
   logContext?: LogContext;
-  onOpenLogs?: (name: string) => void;
 }
 
 /**
@@ -24,7 +23,7 @@ export interface LiveReleaseSummaryProps {
  * visible without scrolling (it sinks below newer deploys in the newest-first timeline).
  * Expands in place into the live body.
  */
-export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, logContext, onOpenLogs }: LiveReleaseSummaryProps) {
+export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, logContext }: LiveReleaseSummaryProps) {
   const [open, setOpen] = useState(false);
   const detail = useReleaseDetailContext();
   const ts = formatReleaseTime(release.completed_at ?? release.created_at);
@@ -54,7 +53,6 @@ export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, log
             prevReleaseId={prevReleaseId}
             prevSeq={prevSeq}
             logContext={logContext}
-            onOpenLogs={onOpenLogs}
           />
         </div>
       )}

@@ -10,11 +10,9 @@ import { resourceSource, replicaLabel, deriveStages } from "../derive";
 import { ReleaseState } from "../release-states";
 import { releaseValidationBannerItems } from "../release-errors";
 import { useReleaseEvents } from "../use-release-events";
-import { ResourceOutcomeList } from "./resource-outcome-list";
-import { ConfigChangesToggle } from "./config-changes-toggle";
+import { SplitConsole, type ResourceRowVM, type LogContext } from "./split-console";
+import { ReleaseBodyTabs } from "./release-body-tabs";
 import { DeployFailedBanner } from "./deploy-failed-banner";
-import { ReleaseActivityFeed } from "./release-activity-feed";
-import type { ResourceRowVM, LogContext } from "./resource-row";
 
 export interface ReleasePostMortemProps {
   detail: ReleaseDetail;
@@ -88,11 +86,9 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
           onDismiss={() => setValidationDismissed(true)}
         />
       )}
-      <ResourceOutcomeList rows={rows} />
-      <div className="mt-4">
-        <ReleaseActivityFeed events={events} streaming={false} />
-      </div>
-      {prevReleaseId && <ConfigChangesToggle diff={diffs} prevSeq={prevSeq} loading={!prev.data} />}
+      <ReleaseBodyTabs diff={diffs} hasPrev={!!prevReleaseId} prevSeq={prevSeq} loading={!!prevReleaseId && !prev.data}>
+        <SplitConsole rows={rows} events={events} streaming={false} />
+      </ReleaseBodyTabs>
     </div>
   );
 }
