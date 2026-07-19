@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 )
 
@@ -50,6 +51,8 @@ type StackPreviewConfig struct {
 	GitRepository     PreviewGitRepository `gorm:"type:jsonb;not null"`
 	StackfilePath     string               `gorm:"not null;default:'stackfile.yaml'"`
 	MaxActivePreviews int                  `gorm:"not null;default:10"`
+	Env               EnvVars              `gorm:"type:jsonb" json:"env"`
+	RepoURLNormalized string               `gorm:"column:repo_url_normalized" json:"-"`
 	Labels            Labels               `gorm:"type:jsonb"`
 	Annotations       Annotations          `gorm:"type:jsonb"`
 	CreatedAt         time.Time
@@ -64,6 +67,20 @@ func (s *StackPreviewConfig) GitBaseBranch() string {
 	return s.GitRepository.BaseBranch
 }
 
+// NormalizedRepoURL returns the config's repo URL in normalized form, for
+// comparison and for persisting into RepoURLNormalized.
+func (s *StackPreviewConfig) NormalizedRepoURL() string {
+	return NormalizeRepoURL(s.GitRepository.RepoURL)
+}
+
 func (StackPreviewConfig) TableName() string {
 	return "stack_preview_configs"
+}
+
+// NormalizeRepoURL strips a trailing ".git" suffix and trailing slash, and
+// lowercases the result, so that equivalent repo URLs compare equal.
+func NormalizeRepoURL(url string) string {
+	url = strings.TrimSuffix(url, ".git")
+	url = strings.TrimSuffix(url, "/")
+	return strings.ToLower(url)
 }

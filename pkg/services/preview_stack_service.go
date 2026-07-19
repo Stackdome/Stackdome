@@ -381,7 +381,7 @@ func (s *previewStackService) applyBranchSwap(stack *openapi.Stack, repoURL, bra
 		if res.Source == nil || res.Source.Git == nil {
 			continue
 		}
-		if normalizeRepoURL(res.Source.Git.RepoUrl) != normalizeRepoURL(repoURL) {
+		if models.NormalizeRepoURL(res.Source.Git.RepoUrl) != models.NormalizeRepoURL(repoURL) {
 			continue
 		}
 		res.Source.Git.SetBranch(branch)
@@ -438,7 +438,7 @@ func (s *previewStackService) applyIntegrationFromConfig(stack *models.Stack, co
 		if git.IntegrationID != "" {
 			continue
 		}
-		if normalizeRepoURL(git.RepoURL) != normalizeRepoURL(config.GitRepository.RepoURL) {
+		if models.NormalizeRepoURL(git.RepoURL) != models.NormalizeRepoURL(config.GitRepository.RepoURL) {
 			continue
 		}
 		git.IntegrationID = config.GitRepository.IntegrationID
@@ -472,13 +472,6 @@ func sanitizePreviewName(name string) string {
 		result = result[:63]
 	}
 	return result
-}
-
-// normalizeRepoURL strips trailing .git and slashes for comparison.
-func normalizeRepoURL(url string) string {
-	url = strings.TrimSuffix(url, ".git")
-	url = strings.TrimSuffix(url, "/")
-	return strings.ToLower(url)
 }
 
 // previewSecretResolver implements stackfile.Resolver for preview environments.
