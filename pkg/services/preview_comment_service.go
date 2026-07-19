@@ -53,6 +53,10 @@ func NewPreviewCommentService(spec PreviewCommentServiceSpec) PreviewCommentServ
 }
 
 func (s *previewCommentService) InternalUpsertComment(ctx context.Context, preview *models.PreviewStack) error {
+	if preview.DeletionTimestamp != nil && preview.GitHubCommentID == 0 {
+		return nil // never announced; nothing to tear down
+	}
+
 	config, sErr := s.configs.GetByID(ctx, preview.StackPreviewConfigID)
 	if sErr != nil {
 		return fmt.Errorf("failed to load preview config: %w", sErr)

@@ -191,6 +191,34 @@ var _ = Describe("ConvergeReconciler", func() {
 			Expect(result).To(Equal(resultStop))
 		})
 
+		It("preserves last-known outputs when release is Failed", func() {
+			preview.Status.Outputs = &models.PreviewStackOutputs{
+				CommitSHA: "abc1234",
+				URLs:      []models.PreviewURL{{Resource: "web", URL: "https://pr-1-web.example.com"}},
+			}
+			release := &models.StackRelease{
+				ID:      releaseID,
+				State:   models.ReleaseStateFailed,
+				Message: "image pull backoff",
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseFailed))
+					Expect(p.Status.Outputs).ToNot(BeNil())
+					Expect(p.Status.Outputs.CommitSHA).To(Equal("abc1234"))
+					Expect(p.Status.Outputs.URLs).To(HaveLen(1))
+					Expect(p.Status.Outputs.URLs[0].URL).To(Equal("https://pr-1-web.example.com"))
+					return p, nil
+				})
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+		})
+
 		It("sets Failed phase with ReleaseCancelled reason when release is Cancelled", func() {
 			release := &models.StackRelease{
 				ID:    releaseID,

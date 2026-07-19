@@ -123,6 +123,14 @@ var _ = Describe("PreviewCommentService", func() {
 		Expect(svc.InternalUpsertComment(ctx, preview)).To(Succeed())
 	})
 
+	It("skips torn-down previews that were never announced", func() {
+		now := time.Now()
+		preview.DeletionTimestamp = &now
+		preview.GitHubCommentID = 0
+
+		Expect(svc.InternalUpsertComment(ctx, preview)).To(Succeed())
+	})
+
 	Describe("renderPreviewComment", func() {
 		It("renders the deleted state without a URL table", func() {
 			now := time.Now()

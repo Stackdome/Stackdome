@@ -73,6 +73,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 			Phase:   models.PreviewStackPhaseFailed,
 			Reason:  "ReleaseFailed",
 			Message: release.Message,
+			Outputs: preview.Status.Outputs, // keep last-known URLs for the failed comment
 		}
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
