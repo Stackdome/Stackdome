@@ -87,6 +87,21 @@ func (mr *MockStackPreviewConfigStoreMockRecorder) GetByID(ctx, id any) *gomock.
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).GetByID), ctx, id)
 }
 
+// GetByOrgAndRepo mocks base method.
+func (m *MockStackPreviewConfigStore) GetByOrgAndRepo(ctx context.Context, organisationID, normalizedRepoURL string) (*models.StackPreviewConfig, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByOrgAndRepo", ctx, organisationID, normalizedRepoURL)
+	ret0, _ := ret[0].(*models.StackPreviewConfig)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetByOrgAndRepo indicates an expected call of GetByOrgAndRepo.
+func (mr *MockStackPreviewConfigStoreMockRecorder) GetByOrgAndRepo(ctx, organisationID, normalizedRepoURL any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByOrgAndRepo", reflect.TypeOf((*MockStackPreviewConfigStore)(nil).GetByOrgAndRepo), ctx, organisationID, normalizedRepoURL)
+}
+
 // GetByProjectAndName mocks base method.
 func (m *MockStackPreviewConfigStore) GetByProjectAndName(ctx context.Context, projectID, name string) (*models.StackPreviewConfig, *errors.ServiceError) {
 	m.ctrl.T.Helper()
