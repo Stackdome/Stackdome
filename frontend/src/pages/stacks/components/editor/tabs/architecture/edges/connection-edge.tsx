@@ -37,7 +37,7 @@ export function ConnectionEdge({ id, source, target, data }: EdgeProps) {
 
   return (
     <>
-      <BaseEdge id={id} path={path} style={{ stroke: "var(--brand)", strokeWidth: 1.4, strokeOpacity: 0.7 }} />
+      <BaseEdge id={id} path={path} style={{ stroke: "var(--brand)", strokeWidth: 1.4, strokeOpacity: 0.7, strokeDasharray: "6 5" }} />
       <circle cx={geo.targetX} cy={geo.targetY} r={3} fill="var(--brand)" />
     </>
   );
