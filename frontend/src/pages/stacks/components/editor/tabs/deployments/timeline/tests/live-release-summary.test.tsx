@@ -8,6 +8,7 @@ vi.mock("@/api/releases", () => ({
   listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
   buildReleaseEventStreamUrl: vi.fn(() => ""),
   ReleaseEventScope: { Release: "release", Resource: "resource" },
+  ReleaseEventType: { ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
 }));
 import { LiveReleaseSummary } from "../live-release-summary";
 import { ReleaseDetailProvider } from "../../use-release-detail";
@@ -42,14 +43,14 @@ describe("LiveReleaseSummary", () => {
     expect(screen.getByRole("button", { name: /Live release #18/ })).toBeInTheDocument();
     expect(screen.getByText("Live")).toBeInTheDocument();
     expect(screen.getByText("#18")).toBeInTheDocument();
-    // collapsed — the body (tracker / resource outcome) is not mounted yet
-    expect(screen.queryByText("Resource outcome")).not.toBeInTheDocument();
+    // collapsed — the body (tracker / split console) is not mounted yet
+    expect(screen.queryByText("Resources")).not.toBeInTheDocument();
   });
 
-  it("expands in place into the live body (tracker + resource outcome)", async () => {
+  it("expands in place into the live body (tracker + split console)", async () => {
     renderSummary(<LiveReleaseSummary release={release} stack={stack} logContext={ctx} />);
     fireEvent.click(screen.getByRole("button", { name: /Live release #18/ }));
-    expect(await screen.findByText("Resource outcome")).toBeInTheDocument();
+    expect(await screen.findByText("Resources")).toBeInTheDocument();
     expect(screen.getByText("Build")).toBeInTheDocument();
     expect(screen.getAllByText("web").length).toBeGreaterThan(0);
   });

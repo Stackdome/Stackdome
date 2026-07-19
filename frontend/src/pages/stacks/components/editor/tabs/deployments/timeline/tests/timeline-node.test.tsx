@@ -9,6 +9,7 @@ vi.mock("@/api/releases", () => ({
   listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
   buildReleaseEventStreamUrl: vi.fn(() => ""),
   ReleaseEventScope: { Release: "release", Resource: "resource" },
+  ReleaseEventType: { ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
 }));
 import { useReleaseDetail } from "../../use-release-detail";
 import { TimelineNode } from "../timeline-node";
@@ -86,7 +87,8 @@ describe("TimelineNode", () => {
 
   it("renders the historical post-mortem for a non-active node when open", async () => {
     render(<Wrap release={{ id: "r1", sequence: 13, state: "Released" } as StackRelease} isOpen prevReleaseId="r0" prevSeq={12} />);
-    expect(await screen.findByText(/vs #12/i)).toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: /Changes/ }));
+    expect(screen.getByText(/vs #12/i)).toBeInTheDocument();
   });
 
   it("renders async validation errors on the live body and jumps to the offending resource", async () => {

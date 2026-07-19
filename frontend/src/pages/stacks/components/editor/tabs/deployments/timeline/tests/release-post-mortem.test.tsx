@@ -8,6 +8,7 @@ vi.mock("@/api/releases", () => ({
   listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
   buildReleaseEventStreamUrl: vi.fn(() => ""),
   ReleaseEventScope: { Release: "release", Resource: "resource" },
+  ReleaseEventType: { ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
 }));
 import { getRelease, listReleaseEvents } from "@/api/releases";
 import { useReleaseDetail } from "../../use-release-detail";
@@ -43,14 +44,17 @@ describe("ReleasePostMortem", () => {
         : { id, sequence: 12, snapshot: { resources: [{ name: "web", source: { image: { ref: "web:1" } } }] } }));
     render(<Wrap release={{ id: "r-cur", sequence: 13, state: "Released" } as StackRelease} prevId="r-prev" />);
     await waitFor(() => expect(screen.getAllByText("web").length).toBeGreaterThan(0));
-    expect(screen.getByText("Resource outcome")).toBeInTheDocument();
+    expect(screen.getByText("Resources")).toBeInTheDocument();
     // Build→Deploy→Ready tracker leads the card (uniform with the live body).
     expect(screen.getByText("Build")).toBeInTheDocument();
-    // The image/repo source is sourced from the release snapshot (uniform with the live body).
-    expect(screen.getByText("web:2")).toBeInTheDocument();
-    // Config changes is a brand-colored collapsed toggle, not an always-open block.
-    const toggle = screen.getByText(/Config changes · vs #12/);
-    expect(toggle).toHaveClass("text-brand");
+    // The image/repo source is sourced from the release snapshot; it pins into the
+    // console detail once the resource is selected (uniform with the live body).
+    await userEvent.click(screen.getByRole("button", { name: /web/ }));
+    expect(screen.getByText("▢ web:2")).toBeInTheDocument();
+    // Config changes live behind the Changes tab, not an always-open block.
+    await userEvent.click(screen.getByRole("button", { name: /Changes/ }));
+    expect(screen.getByText("vs #12")).toBeInTheDocument();
+    expect(screen.getByText("Modified")).toBeInTheDocument();
   });
 
   it("shows the red Deploy-failed banner for a failed release (uniform with the live body)", async () => {

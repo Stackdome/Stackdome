@@ -8,14 +8,13 @@ import { isDeploying } from "../release-states";
 import { useReleaseDetailContext } from "../use-release-detail";
 import { RailNode, type RailDotShape } from "./rail-node";
 import { TimelineNode } from "./timeline-node";
-import type { LogContext } from "./resource-row";
+import type { LogContext } from "./split-console";
 
 export interface TimelineRailProps {
   releases: StackRelease[];
   activeRelease?: StackRelease;
   stack: Stack;
   logContext?: LogContext;
-  onOpenLogs?: (name: string) => void;
   onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
   refetchReleases?: () => void;
   banner?: React.ReactNode;
@@ -40,7 +39,7 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
  * opens by default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onOpenLogs, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
+  const { releases, activeRelease, stack, logContext, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
   const detail = useReleaseDetailContext();
   const liveReleaseId = stack.converged_release?.id;
   const [openIds, setOpenIds] = useState<Set<string>>(
@@ -102,7 +101,6 @@ export function TimelineRail(props: TimelineRailProps) {
                 isLive={!!liveReleaseId && r.id === liveReleaseId}
                 stack={stack}
                 logContext={logContext}
-                onOpenLogs={onOpenLogs}
                 onJumpToResource={onJumpToResource}
                 refetchReleases={refetchReleases}
               />

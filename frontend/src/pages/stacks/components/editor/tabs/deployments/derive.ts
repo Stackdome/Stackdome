@@ -1,6 +1,6 @@
 import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
-import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
+import { ReleaseEventType, type ReleaseEvent, type StackRelease, type ReleaseLiveStatus, type ReleaseSummary } from "@/api/releases";
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState, isTerminal } from "./release-states";
@@ -332,4 +332,33 @@ export function toneTextClass(t: Tone): string {
 
 export function toneDotClass(t: Tone): string {
   return { ok: "bg-success", amber: "bg-warn", err: "bg-danger", muted: "bg-fg-muted" }[t];
+}
+
+/**
+ * Console messages drop the resource name (it sits in its own column) and lead with
+ * the verb; the detail after the first ": " is kept. Unknown types pass through.
+ */
+export function compactEventMessage(e: ReleaseEvent): string {
+  const msg = e.message ?? "";
+  const detail = (prefix: string) => {
+    const i = msg.indexOf(": ");
+    return i >= 0 ? `${prefix} — ${msg.slice(i + 2)}` : prefix;
+  };
+  switch (e.type) {
+    case ReleaseEventType.ResourceDeploying: return detail("Deploying");
+    case ReleaseEventType.ResourceWaiting: return detail("Waiting");
+    case ReleaseEventType.ResourceReady: return "Ready";
+    case ReleaseEventType.ResourceFailed: return detail("Failed to start");
+    default: return msg;
+  }
+}
+
+/** Outlined status-pill treatment (split console rail). */
+export function tonePillClass(t: Tone): string {
+  return {
+    ok: "border-success text-success",
+    amber: "border-warn text-warn",
+    err: "border-danger text-danger",
+    muted: "border-fg-muted text-fg-muted",
+  }[t];
 }

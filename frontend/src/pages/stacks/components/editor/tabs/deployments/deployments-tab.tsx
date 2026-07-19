@@ -12,7 +12,6 @@ export interface DeploymentsTabProps {
   projectName: string;
   stackId: string;
   stack: Stack;
-  onOpenLogs?: (resourceName?: string) => void;
   /** Opens the canvas resource drawer (release-error banner "jump to error"). */
   onJumpToResource?: (resourceName: string, tab: EditSessionTab) => void;
   /** Hybrid progress driver: bound to the page's releases-list refetch. */
@@ -29,11 +28,10 @@ export interface DeploymentsTabProps {
   onCopyId: (id: string) => void;
 }
 
-export function DeploymentsTab({ orgId, projectName, stackId, stack, onOpenLogs, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, projectName, stackId, stack, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const logContext = { orgId, projectName, stackId };
-  const openLogs = onOpenLogs ? (name: string) => onOpenLogs(name) : undefined;
 
   const draftNode = lifecycle.phase === "editing" || lifecycle.phase === "staged"
     ? <DraftNode phase={lifecycle.phase} diff={lifecycle.stagedDiff} vsSeq={lifecycle.vsSeq} isLast={releases.length === 0} />
@@ -47,7 +45,7 @@ export function DeploymentsTab({ orgId, projectName, stackId, stack, onOpenLogs,
   const showLiveAnchor = liveRelease && releases[0]?.id !== liveRelease.id;
 
   return (
-    <div className="mx-auto max-w-[920px] px-[30px] py-[26px]">
+    <div className="mx-auto max-w-[1280px] px-[30px] py-[26px]">
       <div className="space-y-4">
         {showLiveAnchor && liveRelease && (
           <LiveReleaseSummary
@@ -56,7 +54,6 @@ export function DeploymentsTab({ orgId, projectName, stackId, stack, onOpenLogs,
             prevReleaseId={liverev?.id}
             prevSeq={liverev?.sequence}
             logContext={logContext}
-            onOpenLogs={openLogs}
           />
         )}
 
@@ -70,7 +67,6 @@ export function DeploymentsTab({ orgId, projectName, stackId, stack, onOpenLogs,
             activeRelease={activeRelease}
             stack={stack}
             logContext={logContext}
-            onOpenLogs={openLogs}
             onJumpToResource={onJumpToResource}
             refetchReleases={refetchReleases}
             draftNode={draftNode}

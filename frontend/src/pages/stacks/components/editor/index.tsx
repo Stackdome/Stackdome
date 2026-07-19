@@ -799,7 +799,6 @@ export default function CanvasEditorPage() {
       projectName={deployIds.projectName}
       stackId={effectiveStack.id}
       stack={effectiveStack}
-      onOpenLogs={() => setActiveTab(EDITOR_TABS.logs)}
       onJumpToResource={(resourceName, tab) => {
         // Resolve against the list the canvas drawer actually indexes into
         // (the live draft while a session is active), at click time — the

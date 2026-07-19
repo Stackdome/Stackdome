@@ -10,17 +10,14 @@ import { diffSnapshots } from "../release-snapshot-diff";
 import type { ReleaseDetail } from "../use-release-detail";
 import { releaseValidationBannerItems } from "../release-errors";
 import { useReleaseEvents } from "../use-release-events";
-import { type ResourceRowVM, type LogContext } from "./resource-row";
-import { ResourceOutcomeList } from "./resource-outcome-list";
-import { ConfigChangesToggle } from "./config-changes-toggle";
+import { SplitConsole, type ResourceRowVM, type LogContext } from "./split-console";
+import { ReleaseBodyTabs } from "./release-body-tabs";
 import { DeployFailedBanner } from "./deploy-failed-banner";
-import { ReleaseActivityFeed } from "./release-activity-feed";
 
 export interface LiveReleaseBodyProps {
   release: StackRelease;
   stack: Stack;
   logContext?: LogContext;
-  onOpenLogs?: (name: string) => void;
   detail?: ReleaseDetail;
   prevReleaseId?: string;
   prevSeq?: number;
@@ -33,7 +30,7 @@ export interface LiveReleaseBodyProps {
  * Detail-card body for the latest deploy (releases[0]). Renders LIVE progress from
  * release.live_status.resources + the derived tracker (vs a historical node's stored outcome).
  */
-export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail, prevReleaseId, prevSeq, onJumpToResource, refetchReleases }: LiveReleaseBodyProps) {
+export function LiveReleaseBody({ release, stack, logContext, detail, prevReleaseId, prevSeq, onJumpToResource, refetchReleases }: LiveReleaseBodyProps) {
   const [validationDismissed, setValidationDismissed] = useState(false);
   // Hybrid progress driver: the event stream pushes release-scoped state changes instead
   // of a fast poll — a resource-scoped event only updates the feed, a release-scoped one
@@ -109,13 +106,9 @@ export function LiveReleaseBody({ release, stack, logContext, onOpenLogs, detail
         />
       )}
 
-      <ResourceOutcomeList rows={rows} logContext={logContext} onOpenLogs={onOpenLogs} />
-
-      <div className="mt-4">
-        <ReleaseActivityFeed events={events} streaming={eventsStatus === "streaming"} />
-      </div>
-
-      {canDiff && <ConfigChangesToggle diff={diff} prevSeq={prevSeq} loading={!prevLoaded} />}
+      <ReleaseBodyTabs diff={diff} hasPrev={canDiff} prevSeq={prevSeq} loading={canDiff && !prevLoaded}>
+        <SplitConsole rows={rows} events={events} streaming={eventsStatus === "streaming"} logContext={logContext} />
+      </ReleaseBodyTabs>
 
       {recovered.length > 0 && (
         <div className="mt-4 rounded-md border border-warn-border bg-warn-bg px-3.5 py-2.5 text-[12.5px] text-fg-muted">
