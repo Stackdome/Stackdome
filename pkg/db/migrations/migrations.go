@@ -74,4 +74,5 @@ var MigrationList = []*gormigrate.Migration{
 	createReleaseEvents(),
 	addPostgresAddonDeletionTimestamp(),
 	addPreviewConfigEnvAndRepoNorm(),
+	addPreviewStackCommentID(),
 }
