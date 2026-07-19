@@ -2236,7 +2236,7 @@ Name | Type | Description  | Notes
 
 ## ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet
 
-> GitRepositoryPage ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(ctx, orgId, id).Query(query).Page(page).InstallationId(installationId).Execute()
+> GitRepositoryPage ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(ctx, orgId, id).Page(page).InstallationId(installationId).Execute()
 
 List repositories visible to the GitHub App installation
 
@@ -2255,13 +2255,12 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     id := "id_example" // string | The id of record
-    query := "query_example" // string | Substring filter on the repository full name (optional)
     page := int32(56) // int32 |  (optional)
-    installationId := int64(789) // int64 |  (optional)
+    installationId := "installationId_example" // string | Our GitInstallation id (UUID). When omitted, repositories are aggregated across every installation of the integration. (optional)
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(context.Background(), orgId, id).Query(query).Page(page).InstallationId(installationId).Execute()
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet(context.Background(), orgId, id).Page(page).InstallationId(installationId).Execute()
     if err != nil {
         fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGet``: %v\n", err)
         fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
@@ -2289,9 +2288,8 @@ Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
 
 
- **query** | **string** | Substring filter on the repository full name | 
  **page** | **int32** |  | 
- **installationId** | **int64** |  | 
+ **installationId** | **string** | Our GitInstallation id (UUID). When omitted, repositories are aggregated across every installation of the integration. | 
 
 ### Return type
 

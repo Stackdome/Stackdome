@@ -87,18 +87,18 @@ func (mr *MockGitHubAppClientMockRecorder) ListBranches(ctx, creds, installation
 }
 
 // ListInstallationRepos mocks base method.
-func (m *MockGitHubAppClient) ListInstallationRepos(ctx context.Context, creds *githubapp.AppCredentials, installationID int64, query string, page int) (*githubapp.RepoPage, error) {
+func (m *MockGitHubAppClient) ListInstallationRepos(ctx context.Context, creds *githubapp.AppCredentials, installationID int64, page int) (*githubapp.RepoPage, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListInstallationRepos", ctx, creds, installationID, query, page)
+	ret := m.ctrl.Call(m, "ListInstallationRepos", ctx, creds, installationID, page)
 	ret0, _ := ret[0].(*githubapp.RepoPage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // ListInstallationRepos indicates an expected call of ListInstallationRepos.
-func (mr *MockGitHubAppClientMockRecorder) ListInstallationRepos(ctx, creds, installationID, query, page any) *gomock.Call {
+func (mr *MockGitHubAppClientMockRecorder) ListInstallationRepos(ctx, creds, installationID, page any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstallationRepos", reflect.TypeOf((*MockGitHubAppClient)(nil).ListInstallationRepos), ctx, creds, installationID, query, page)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListInstallationRepos", reflect.TypeOf((*MockGitHubAppClient)(nil).ListInstallationRepos), ctx, creds, installationID, page)
 }
 
 // ListInstallations mocks base method.

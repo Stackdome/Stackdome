@@ -16,7 +16,7 @@ afterEach(cleanup);
 vi.mock("@/api/git-integrations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   listGitIntegrations: vi.fn(),
-  searchRepositories: vi.fn(),
+  listRepositories: vi.fn(),
   getRepository: vi.fn(),
 }));
 vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
@@ -27,7 +27,7 @@ vi.mock("@/pages/git-integrations/add-integration-wizard", () => ({
     open ? <div data-testid="add-integration-wizard" /> : null,
 }));
 
-import { listGitIntegrations, searchRepositories, getRepository } from "@/api/git-integrations";
+import { listGitIntegrations, listRepositories, getRepository } from "@/api/git-integrations";
 
 const app = {
   id: "int-app",
@@ -51,7 +51,7 @@ function renderPicker(props: Partial<Parameters<typeof GitSourcePicker>[0]> = {}
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(listGitIntegrations).mockResolvedValue({ items: [app, creds] });
-  vi.mocked(searchRepositories).mockResolvedValue({ items: [] });
+  vi.mocked(listRepositories).mockResolvedValue({ items: [] });
 });
 
 describe("repoTail", () => {
@@ -65,7 +65,7 @@ describe("GitSourcePicker", () => {
   it("searches repos for the auto-selected GitHub App and emits the picked repo with fetched detail", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    vi.mocked(searchRepositories).mockResolvedValue({
+    vi.mocked(listRepositories).mockResolvedValue({
       items: [{ full_name: "acme/webapp", clone_url: "https://github.com/acme/webapp.git", private: false }],
     });
     vi.mocked(getRepository).mockResolvedValue({

@@ -23,6 +23,9 @@ const DefaultAPIBaseURL = "https://api.github.com"
 // token for git-over-HTTPS operations.
 const CloneUsername = "x-access-token"
 
+// reposPerPage bounds how many repositories are fetched per installation page.
+const reposPerPage = 100
+
 // AppCredentials are the app-level credentials produced by the manifest flow.
 // Every field is a secret; the PEM in particular is the app's RSA private key
 // used to sign app JWTs.
@@ -82,8 +85,8 @@ type Client interface {
 	// MintInstallationToken creates a short-lived installation access token.
 	MintInstallationToken(ctx context.Context, creds *AppCredentials, installationID int64) (*Token, error)
 	// ListInstallationRepos lists one page of repositories the installation
-	// can access, optionally filtered by a substring query.
-	ListInstallationRepos(ctx context.Context, creds *AppCredentials, installationID int64, query string, page int) (*RepoPage, error)
+	// can access.
+	ListInstallationRepos(ctx context.Context, creds *AppCredentials, installationID int64, page int) (*RepoPage, error)
 	// GetRepo fetches repository details through the installation.
 	GetRepo(ctx context.Context, creds *AppCredentials, installationID int64, owner, repo string) (*Repo, error)
 	// ListBranches lists branch names through the installation.
@@ -231,7 +234,7 @@ func (c *client) MintInstallationToken(ctx context.Context, creds *AppCredential
 	return &Token{Value: tok.GetToken(), ExpiresAt: tok.GetExpiresAt().Time}, nil
 }
 
-func (c *client) ListInstallationRepos(ctx context.Context, creds *AppCredentials, installationID int64, query string, page int) (*RepoPage, error) {
+func (c *client) ListInstallationRepos(ctx context.Context, creds *AppCredentials, installationID int64, page int) (*RepoPage, error) {
 	gh, err := c.installationClient(creds, installationID)
 	if err != nil {
 		return nil, err
@@ -239,7 +242,7 @@ func (c *client) ListInstallationRepos(ctx context.Context, creds *AppCredential
 	if page <= 0 {
 		page = 1
 	}
-	list, resp, err := gh.Apps.ListRepos(ctx, &github.ListOptions{Page: page, PerPage: 100})
+	list, resp, err := gh.Apps.ListRepos(ctx, &github.ListOptions{Page: page, PerPage: reposPerPage})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list installation repositories: %w", err)
 	}
@@ -248,14 +251,7 @@ func (c *client) ListInstallationRepos(ctx context.Context, creds *AppCredential
 		TotalCount: list.GetTotalCount(),
 		HasNext:    resp.NextPage != 0,
 	}
-	// The installation-repositories endpoint has no server-side search, so the
-	// query is applied client-side over the fetched page; TotalCount and HasNext
-	// still reflect the unfiltered listing.
-	query = strings.ToLower(strings.TrimSpace(query))
 	for _, r := range list.Repositories {
-		if query != "" && !strings.Contains(strings.ToLower(r.GetFullName()), query) {
-			continue
-		}
 		result.Repos = append(result.Repos, repoFrom(r))
 	}
 	return result, nil

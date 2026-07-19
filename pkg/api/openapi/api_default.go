@@ -3461,15 +3461,8 @@ type ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest struct {
 	ApiService     *DefaultApiService
 	orgId          string
 	id             string
-	query          *string
 	page           *int32
-	installationId *int64
-}
-
-// Substring filter on the repository full name
-func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) Query(query string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
-	r.query = &query
-	return r
+	installationId *string
 }
 
 func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) Page(page int32) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
@@ -3477,7 +3470,8 @@ func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) Page(
 	return r
 }
 
-func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) InstallationId(installationId int64) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
+// Our GitInstallation id (UUID). When omitted, repositories are aggregated across every installation of the integration.
+func (r ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest) InstallationId(installationId string) ApiApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesGetRequest {
 	r.installationId = &installationId
 	return r
 }
@@ -3527,9 +3521,6 @@ func (a *DefaultApiService) ApiV1OrganizationsOrgIdGitIntegrationsIdRepositories
 	localVarQueryParams := url.Values{}
 	localVarFormParams := url.Values{}
 
-	if r.query != nil {
-		localVarQueryParams.Add("query", parameterToString(*r.query, ""))
-	}
 	if r.page != nil {
 		localVarQueryParams.Add("page", parameterToString(*r.page, ""))
 	}

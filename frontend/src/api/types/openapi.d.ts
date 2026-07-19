@@ -1628,10 +1628,9 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description Substring filter on the repository full name */
-                    query?: string;
                     page?: number;
-                    installation_id?: number;
+                    /** @description Our GitInstallation id (UUID). When omitted, repositories are aggregated across every installation of the integration. */
+                    installation_id?: string;
                 };
                 header?: never;
                 path: {

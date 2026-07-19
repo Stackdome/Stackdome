@@ -71,6 +71,21 @@ func (mr *MockGitInstallationStoreMockRecorder) GetByIntegrationAndAccount(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIntegrationAndAccount", reflect.TypeOf((*MockGitInstallationStore)(nil).GetByIntegrationAndAccount), ctx, integrationID, accountLogin)
 }
 
+// GetByIntegrationAndID mocks base method.
+func (m *MockGitInstallationStore) GetByIntegrationAndID(ctx context.Context, integrationID, id string) (*models.GitInstallation, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIntegrationAndID", ctx, integrationID, id)
+	ret0, _ := ret[0].(*models.GitInstallation)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetByIntegrationAndID indicates an expected call of GetByIntegrationAndID.
+func (mr *MockGitInstallationStoreMockRecorder) GetByIntegrationAndID(ctx, integrationID, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIntegrationAndID", reflect.TypeOf((*MockGitInstallationStore)(nil).GetByIntegrationAndID), ctx, integrationID, id)
+}
+
 // ListByIntegrationID mocks base method.
 func (m *MockGitInstallationStore) ListByIntegrationID(ctx context.Context, integrationID string) ([]*models.GitInstallation, *errors.ServiceError) {
 	m.ctrl.T.Helper()
