@@ -47,8 +47,8 @@ services:
       REDIS_PORT: "6379"
       ENABLE_OTEL: "true"
       OTEL_SERVICE_NAME: "tooljet"
-      OTEL_EXPORTER_OTLP_TRACES: "http://lgtm:4318/v1/traces"
-      OTEL_EXPORTER_OTLP_METRICS: "http://lgtm:4318/v1/metrics"
+      OTEL_EXPORTER_OTLP_TRACES: "http://otel-stack:4318/v1/traces"
+      OTEL_EXPORTER_OTLP_METRICS: "http://otel-stack:4318/v1/metrics"
       OTEL_METRICS_TEMPORALITY: "cumulative"
 
   tooljet-worker:
@@ -80,8 +80,8 @@ services:
       REDIS_PORT: "6379"
       ENABLE_OTEL: "true"
       OTEL_SERVICE_NAME: "tooljet-worker"
-      OTEL_EXPORTER_OTLP_TRACES: "http://lgtm:4318/v1/traces"
-      OTEL_EXPORTER_OTLP_METRICS: "http://lgtm:4318/v1/metrics"
+      OTEL_EXPORTER_OTLP_TRACES: "http://otel-stack:4318/v1/traces"
+      OTEL_EXPORTER_OTLP_METRICS: "http://otel-stack:4318/v1/metrics"
       OTEL_METRICS_TEMPORALITY: "cumulative"
 
   redis:
@@ -107,10 +107,10 @@ services:
       PGRST_JWT_SECRET: "REPLACE_PGRST_JWT_SECRET_VALUE_HERE"
       PGRST_DB_PRE_CONFIG: "postgrest.pre_config"
 
-  lgtm:
+  otel-stack:
     image: grafana/otel-lgtm:0.29.1
     # 4318 must be listed: services only route declared ports, and the app
-    # containers push OTLP metrics/traces to lgtm:4318 (internal only).
+    # containers push OTLP metrics/traces to otel-stack:4318 (internal only).
     ports:
       - "3000:3000"
     expose:
@@ -118,8 +118,10 @@ services:
     environment:
       PROMETHEUS_EXTRA_ARGS: "--enable-feature=otlp-deltatocumulative"
     volumes:
-      - grafana-data:/data/grafana
+      # /data holds every backend's state (grafana, prometheus, tempo, loki),
+      # so dashboards AND telemetry history survive restarts.
+      - otel-stack-data:/data
 
 volumes:
   postgres-data:
-  grafana-data:
+  otel-stack-data:

@@ -17,11 +17,11 @@ describe("template conversion round-trip", () => {
 
     const names = data.spec.stack_resources.map((r) => r.name).sort();
     expect(names).toEqual(
-      ["lgtm", "postgresql", "postgrest", "redis", "tooljet", "tooljet-worker"].sort(),
+      ["otel-stack", "postgresql", "postgrest", "redis", "tooljet", "tooljet-worker"].sort(),
     );
 
     const volumeNames = (data.spec.volumes ?? []).map((v) => v.name).sort();
-    expect(volumeNames).toEqual(["grafana-data", "postgres-data"].sort());
+    expect(volumeNames).toEqual(["otel-stack-data", "postgres-data"].sort());
 
     const app = data.spec.stack_resources.find((r) => r.name === "tooljet")!;
     const env = envByName(app);
@@ -29,7 +29,7 @@ describe("template conversion round-trip", () => {
     expect(env.OTEL_EXPORTER_OTLP_TRACES).toEqual({
       from: "stack",
       name: "OTEL_EXPORTER_OTLP_TRACES",
-      value: "http://lgtm:4318/v1/traces",
+      value: "http://otel-stack:4318/v1/traces",
     });
     expect(env.WORKER).toBeUndefined();
 
@@ -67,8 +67,8 @@ describe("template conversion round-trip", () => {
       ]);
     }
 
-    const lgtm = data.spec.stack_resources.find((r) => r.name === "lgtm")!;
-    const ports = (lgtm.ports ?? [])
+    const otelStack = data.spec.stack_resources.find((r) => r.name === "otel-stack")!;
+    const ports = (otelStack.ports ?? [])
       .map((p) => ({ number: p.number, public: p.exposed_to_public }))
       .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
     expect(ports).toEqual([
