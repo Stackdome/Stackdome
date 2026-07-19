@@ -29,7 +29,7 @@ export function NodeGlyph({
   className?: string;
   size?: number;
 }) {
-  if (hasBrandIcon(brandSlug)) return <BrandIcon slug={brandSlug} size={size} />;
+  if (hasBrandIcon(brandSlug)) return <BrandIcon slug={brandSlug} size={size} className={className} />;
   const Icon = GLYPH_BY_KIND[glyph] ?? Box;
   return <Icon className={className} aria-hidden />;
 }

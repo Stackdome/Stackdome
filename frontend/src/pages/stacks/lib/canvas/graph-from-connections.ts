@@ -343,30 +343,35 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
     }
   }
 
-  // One relationship = one line: within a node pair (either direction), a
-  // derived depends_on edge is redundant next to an authored connection —
-  // drop it. Whatever genuinely remains in parallel (e.g. mutual authored
-  // connections) is annotated so the floating edge can offset the lines
-  // instead of overlapping them.
+  // One relationship = one line: a derived depends_on edge duplicating an
+  // authored connection in the SAME direction is redundant — drop it. An
+  // opposite-direction edge is a different relationship and stays. Whatever
+  // remains sharing a node pair (either direction) is annotated so the
+  // floating edge offsets the lines instead of overlapping them.
+  const authoredDirections = new Set(
+    edges
+      .filter((e) => e.data.sourceOfTruth === EDGE_SOURCE_OF_TRUTH.connection)
+      .map((e) => `${e.source}|${e.target}`),
+  );
+  const kept = edges.filter(
+    (e) =>
+      e.data.sourceOfTruth !== EDGE_SOURCE_OF_TRUTH.derived ||
+      !authoredDirections.has(`${e.source}|${e.target}`),
+  );
   const byPair = new Map<string, CanvasEdge[]>();
-  for (const edge of edges) {
+  for (const edge of kept) {
     const key = [edge.source, edge.target].sort().join("|");
     const group = byPair.get(key);
     if (group) group.push(edge);
     else byPair.set(key, [edge]);
   }
-  const dropped = new Set<CanvasEdge>();
   for (const group of byPair.values()) {
     if (group.length < 2) continue;
-    const authored = group.filter((e) => e.data.sourceOfTruth === EDGE_SOURCE_OF_TRUTH.connection);
-    const kept = authored.length > 0 ? authored : group;
-    for (const edge of group) if (!kept.includes(edge)) dropped.add(edge);
-    if (kept.length < 2) continue;
-    kept.forEach((edge, i) => {
+    group.forEach((edge, i) => {
       edge.data.parallelIndex = i;
-      edge.data.parallelCount = kept.length;
+      edge.data.parallelCount = group.length;
     });
   }
 
-  return { nodes, edges: edges.filter((e) => !dropped.has(e)) };
+  return { nodes, edges: kept };
 }

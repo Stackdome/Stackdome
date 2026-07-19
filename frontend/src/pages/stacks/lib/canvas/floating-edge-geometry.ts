@@ -87,6 +87,9 @@ export function floatingEdgeGeometry(
   }
 
   if (parallelCount > 1) {
+    // The WHOLE centre line shifts before intersecting, so offset attachment
+    // points sit slightly off the exact perimeter (~half the pitch at most).
+    // Deliberate: it keeps parallel curves parallel along their full length.
     const offset = (parallelIndex - (parallelCount - 1) / 2) * PARALLEL_EDGE_PITCH;
     const px = (-dy / len) * offset;
     const py = (dx / len) * offset;

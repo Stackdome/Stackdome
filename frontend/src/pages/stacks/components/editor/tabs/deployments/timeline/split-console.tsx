@@ -63,10 +63,13 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
             <span className="ml-auto font-mono text-[10px] text-fg-muted">{readyCount}/{rows.length} ready</span>
           </div>
           <button
+            type="button"
             onClick={() => setSelected(null)}
             className={cn(
               "flex w-full items-center gap-2 rounded border px-2.5 py-[7px] text-left hover:bg-muted",
-              selected === null ? "border-border bg-muted" : "border-transparent",
+              // Keyed off the RESOLVED row, not raw state: a selection whose row
+              // vanished (e.g. topology refresh) falls back to "all resources".
+              selectedRow == null ? "border-border bg-muted" : "border-transparent",
             )}
           >
             <span className="h-[7px] w-[7px] flex-none rounded-full border-[1.5px] border-fg-muted" />
@@ -78,6 +81,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
             return (
               <button
                 key={vm.name}
+                type="button"
                 onClick={() => setSelected(vm.name)}
                 className={cn(
                   "mt-0.5 flex w-full items-center gap-2 rounded border px-2.5 py-[7px] text-left hover:bg-muted",

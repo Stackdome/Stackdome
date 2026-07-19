@@ -238,6 +238,21 @@ describe("deriveGraph (connection projection)", () => {
     expect(pair.map((e) => e.data.parallelIndex).sort()).toEqual([0, 1]);
   });
 
+  it("keeps an opposite-direction derived edge alongside an authored one", () => {
+    // Authored env edge api→web, derived depends_on web→api (opposite way).
+    // Different relationships — both survive and get parallel offsets.
+    const g = deriveGraph({
+      ...base,
+      resources: [
+        web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }]),
+        { name: "api", depends_on: ["web"] } as Partial<FormStackResourceData>,
+      ],
+    });
+    const pair = g.edges.filter((e) => [e.source, e.target].sort().join() === "resource:api,resource:web");
+    expect(pair).toHaveLength(2);
+    expect(pair.map((e) => e.data.parallelCount)).toEqual([2, 2]);
+  });
+
   it("leaves singleton edges unannotated", () => {
     const g = deriveGraph({
       ...base,

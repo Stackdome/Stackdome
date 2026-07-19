@@ -44,6 +44,20 @@ describe("floatingEdgeGeometry", () => {
     expect(onBoundary(target, geo.targetX, geo.targetY)).toBe(true);
   });
 
+  it("keeps attachment on the boundary when one rect fully contains the other", () => {
+    const outer = rect(0, 0, 1000, 1000);
+    const inner = rect(400, 450, 100, 40); // inner centre inside outer
+    const geo = floatingEdgeGeometry(outer, inner);
+    // Ray-based intersection: both points finite and on their own rect edges.
+    expect(Number.isFinite(geo.sourceX)).toBe(true);
+    expect(Number.isFinite(geo.targetX)).toBe(true);
+    const onEdge = (r: NodeRect, x: number, y: number) =>
+      Math.abs(x - r.x) < 1e-6 || Math.abs(x - (r.x + r.width)) < 1e-6 ||
+      Math.abs(y - r.y) < 1e-6 || Math.abs(y - (r.y + r.height)) < 1e-6;
+    expect(onEdge(outer, geo.sourceX, geo.sourceY)).toBe(true);
+    expect(onEdge(inner, geo.targetX, geo.targetY)).toBe(true);
+  });
+
   it("coincident centres fall back to source-bottom/target-top without NaN", () => {
     const geo = floatingEdgeGeometry(rect(0, 0), rect(0, 0));
     expect(Number.isFinite(geo.sourceX)).toBe(true);

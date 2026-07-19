@@ -113,11 +113,19 @@ function buildSummary(image: string, hasBuild: boolean | undefined): string {
   return base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
 }
 
-/** One line per declared port, in declared order: `port N · public|internal`. */
+/** Card lines the fixed node box can hold beyond the summary (see NODE_HEIGHT). */
+const MAX_PORT_LINES = 3;
+
+/** One line per declared port, in declared order: `port N · public|internal`.
+ *  Capped so the card never outgrows the box dagre reserves — overflow
+ *  collapses into a `+N more ports` line. */
 function buildPortLines(ports: PresentationPort[] | undefined): string[] {
-  return (ports ?? [])
+  const lines = (ports ?? [])
     .filter((p) => p.number != null)
     .map((p) => `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`);
+  if (lines.length <= MAX_PORT_LINES) return lines;
+  const shown = lines.slice(0, MAX_PORT_LINES - 1);
+  return [...shown, `+${lines.length - shown.length} more ports`];
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {
