@@ -336,8 +336,11 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
     }
   }
 
-  // Annotate edges that share a node pair (either direction) so the floating
-  // edge can offset them into distinct parallel lines instead of one overlap.
+  // One relationship = one line: within a node pair (either direction), a
+  // derived depends_on edge is redundant next to an authored connection —
+  // drop it. Whatever genuinely remains in parallel (e.g. mutual authored
+  // connections) is annotated so the floating edge can offset the lines
+  // instead of overlapping them.
   const byPair = new Map<string, CanvasEdge[]>();
   for (const edge of edges) {
     const key = [edge.source, edge.target].sort().join("|");
@@ -345,13 +348,18 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
     if (group) group.push(edge);
     else byPair.set(key, [edge]);
   }
+  const dropped = new Set<CanvasEdge>();
   for (const group of byPair.values()) {
     if (group.length < 2) continue;
-    group.forEach((edge, i) => {
+    const authored = group.filter((e) => e.data.sourceOfTruth === EDGE_SOURCE_OF_TRUTH.connection);
+    const kept = authored.length > 0 ? authored : group;
+    for (const edge of group) if (!kept.includes(edge)) dropped.add(edge);
+    if (kept.length < 2) continue;
+    kept.forEach((edge, i) => {
       edge.data.parallelIndex = i;
-      edge.data.parallelCount = group.length;
+      edge.data.parallelCount = kept.length;
     });
   }
 
-  return { nodes, edges };
+  return { nodes, edges: edges.filter((e) => !dropped.has(e)) };
 }
