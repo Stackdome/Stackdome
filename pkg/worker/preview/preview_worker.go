@@ -21,6 +21,7 @@ type PreviewWorkerSpec struct {
 	ConfigStore         configStore
 	ReleaseService      releaseService
 	StackService        stackService
+	CommentService      previewCommentService
 	Env                 string
 }
 

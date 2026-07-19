@@ -13,6 +13,7 @@ import (
 type deprovisionReconciler struct {
 	previewStackStore previewStackStore
 	stackService      stackService
+	commentService    previewCommentService
 	stackfileCache    *sync.Map
 	previewCacheKeys  *sync.Map
 	logger            logger.Logger
@@ -22,6 +23,7 @@ func newDeprovisionReconciler(spec PreviewWorkerSpec, stackfileCache, previewCac
 	return &deprovisionReconciler{
 		previewStackStore: spec.PreviewStackStore,
 		stackService:      spec.StackService,
+		commentService:    spec.CommentService,
 		stackfileCache:    stackfileCache,
 		previewCacheKeys:  previewCacheKeys,
 		logger:            logger.NewLoggerWithPrefix(context.Background(), "preview-deprovision"),
@@ -65,6 +67,9 @@ func (r *deprovisionReconciler) deletePreviewRecord(ctx context.Context, preview
 		r.stackfileCache.Delete(key.(string))
 	}
 	r.logger.Info(ctx, "preview %s: cleaning up record", preview.ID)
+	if err := r.commentService.InternalUpsertComment(ctx, preview); err != nil {
+		r.logger.Warn(ctx, "preview %s: failed to mark PR comment deleted: %v", preview.ID, err)
+	}
 	if sErr := r.previewStackStore.Delete(ctx, preview.ID); sErr != nil {
 		return resultNil, fmt.Errorf("failed to delete preview record %s: %w", preview.ID, sErr)
 	}

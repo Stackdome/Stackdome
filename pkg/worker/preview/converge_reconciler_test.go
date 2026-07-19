@@ -2,6 +2,7 @@ package preview
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -15,11 +16,12 @@ import (
 var _ = Describe("ConvergeReconciler", func() {
 	var (
 		ctrl         *gomock.Controller
-		previewStore *MockpreviewStackStore
-		stackSvc     *MockstackService
-		releaseSvc   *MockreleaseService
-		reconciler   *convergeReconciler
-		ctx          context.Context
+		previewStore   *MockpreviewStackStore
+		stackSvc       *MockstackService
+		releaseSvc     *MockreleaseService
+		commentService *MockpreviewCommentService
+		reconciler     *convergeReconciler
+		ctx            context.Context
 	)
 
 	BeforeEach(func() {
@@ -27,12 +29,14 @@ var _ = Describe("ConvergeReconciler", func() {
 		previewStore = NewMockpreviewStackStore(ctrl)
 		stackSvc = NewMockstackService(ctrl)
 		releaseSvc = NewMockreleaseService(ctrl)
+		commentService = NewMockpreviewCommentService(ctrl)
 		ctx = context.Background()
 
 		reconciler = &convergeReconciler{
 			releaseService:    releaseSvc,
 			stackService:      stackSvc,
 			previewStackStore: previewStore,
+			commentService:    commentService,
 			logger:            logger.NewLoggerWithPrefix(ctx, "test"),
 		}
 	})
@@ -137,6 +141,28 @@ var _ = Describe("ConvergeReconciler", func() {
 					Expect(p.Status.Outputs.URLs[1].URL).To(Equal("https://pr-1-api.example.com"))
 					return p, nil
 				})
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+		})
+
+		It("still stops when the PR comment upsert fails", func() {
+			release := &models.StackRelease{
+				ID:    releaseID,
+				State: models.ReleaseStateReleased,
+			}
+			stack := &models.Stack{ID: stackID}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					return p, nil
+				})
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).
+				Return(stderrors.New("github down"))
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
@@ -158,6 +184,7 @@ var _ = Describe("ConvergeReconciler", func() {
 					Expect(p.Status.Message).To(Equal("image pull backoff"))
 					return p, nil
 				})
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())

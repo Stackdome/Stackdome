@@ -12,6 +12,7 @@ type convergeReconciler struct {
 	releaseService    releaseService
 	stackService      stackService
 	previewStackStore previewStackStore
+	commentService    previewCommentService
 	logger            logger.Logger
 }
 
@@ -20,6 +21,7 @@ func newConvergeReconciler(spec PreviewWorkerSpec) *convergeReconciler {
 		releaseService:    spec.ReleaseService,
 		stackService:      spec.StackService,
 		previewStackStore: spec.PreviewStackStore,
+		commentService:    spec.CommentService,
 		logger:            logger.NewLoggerWithPrefix(context.Background(), "preview-converge"),
 	}
 }
@@ -55,6 +57,9 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
+		if err := r.commentService.InternalUpsertComment(ctx, preview); err != nil {
+			r.logger.Warn(ctx, "preview %s: failed to upsert PR comment: %v", preview.ID, err)
+		}
 		r.logger.Info(ctx, "preview %s is ready", preview.ID)
 		return resultStop, nil
 
@@ -71,6 +76,9 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 		}
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
+		}
+		if err := r.commentService.InternalUpsertComment(ctx, preview); err != nil {
+			r.logger.Warn(ctx, "preview %s: failed to upsert PR comment: %v", preview.ID, err)
 		}
 		r.logger.Info(ctx, "preview %s failed: %s", preview.ID, release.Message)
 		return resultStop, nil

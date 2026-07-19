@@ -399,3 +399,41 @@ func (mr *MockstackServiceMockRecorder) InternalUpdateStack(ctx, ID, spec any) *
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateStack", reflect.TypeOf((*MockstackService)(nil).InternalUpdateStack), ctx, ID, spec)
 }
+
+// MockpreviewCommentService is a mock of previewCommentService interface.
+type MockpreviewCommentService struct {
+	ctrl     *gomock.Controller
+	recorder *MockpreviewCommentServiceMockRecorder
+	isgomock struct{}
+}
+
+// MockpreviewCommentServiceMockRecorder is the mock recorder for MockpreviewCommentService.
+type MockpreviewCommentServiceMockRecorder struct {
+	mock *MockpreviewCommentService
+}
+
+// NewMockpreviewCommentService creates a new mock instance.
+func NewMockpreviewCommentService(ctrl *gomock.Controller) *MockpreviewCommentService {
+	mock := &MockpreviewCommentService{ctrl: ctrl}
+	mock.recorder = &MockpreviewCommentServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockpreviewCommentService) EXPECT() *MockpreviewCommentServiceMockRecorder {
+	return m.recorder
+}
+
+// InternalUpsertComment mocks base method.
+func (m *MockpreviewCommentService) InternalUpsertComment(ctx context.Context, preview *models.PreviewStack) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalUpsertComment", ctx, preview)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// InternalUpsertComment indicates an expected call of InternalUpsertComment.
+func (mr *MockpreviewCommentServiceMockRecorder) InternalUpsertComment(ctx, preview any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertComment", reflect.TypeOf((*MockpreviewCommentService)(nil).InternalUpsertComment), ctx, preview)
+}

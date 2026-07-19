@@ -57,3 +57,7 @@ type stackService interface {
 	InternalUpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	InternalDeleteStack(ctx context.Context, stack *models.Stack) (*models.Stack, *errors.ServiceError)
 }
+
+type previewCommentService interface {
+	InternalUpsertComment(ctx context.Context, preview *models.PreviewStack) error
+}
