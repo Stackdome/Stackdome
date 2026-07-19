@@ -541,9 +541,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Permissions:        te.PermissionService,
 	})
 
-	gitIntegrationService.(interface {
-		SetPreviewWebhook(services.PreviewWebhookService)
-	}).SetPreviewWebhook(services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
+	services.WirePreviewWebhook(gitIntegrationService, services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
 		ConfigStore:       stackPreviewConfigStore,
 		PreviewStackStore: previewStackStore,
 		PreviewService:    previewStackService,

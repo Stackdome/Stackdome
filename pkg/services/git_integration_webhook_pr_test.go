@@ -76,9 +76,7 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 			Permissions:       mocks.NewMockPermissionService(ctrl),
 			ExternalURL:       "https://hub.example.com",
 		})
-		svc.(interface {
-			SetPreviewWebhook(PreviewWebhookService)
-		}).SetPreviewWebhook(previewWebhook)
+		WirePreviewWebhook(svc, previewWebhook)
 	})
 
 	DescribeTable("routes the PR action with a populated event",

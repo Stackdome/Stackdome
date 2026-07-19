@@ -114,8 +114,13 @@ func NewGitIntegrationService(spec GitIntegrationServiceSpec) GitIntegrationServ
 	}
 }
 
-func (s *gitIntegrationService) SetPreviewWebhook(pw PreviewWebhookService) {
-	s.previewWebhook = pw
+// WirePreviewWebhook late-binds the preview webhook router onto the git
+// integration service, breaking the construction cycle
+// git-integration → credential-resolver → preview → webhook. Kept off the
+// interface so the generated GitIntegrationService mock need not import this
+// package.
+func WirePreviewWebhook(gi GitIntegrationService, pw PreviewWebhookService) {
+	gi.(*gitIntegrationService).previewWebhook = pw
 }
 
 func (s *gitIntegrationService) Create(ctx context.Context, integration *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError) {
