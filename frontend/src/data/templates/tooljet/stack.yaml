@@ -88,11 +88,15 @@ services:
   redis:
     image: redis:7
     command: redis-server --maxmemory-policy noeviction
+    expose:
+      - "6379"
 
   postgresql:
     # Pinned to match upstream ToolJet's own compose; newer majors are untested
     # against this ToolJet release.
     image: postgres:13
+    expose:
+      - "5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
@@ -102,6 +106,8 @@ services:
 
   postgrest:
     image: postgrest/postgrest:v12.2.0
+    expose:
+      - "80"
     depends_on:
       - postgresql
     environment:
