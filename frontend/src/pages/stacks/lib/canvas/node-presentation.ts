@@ -110,24 +110,16 @@ function detectKind(image: string, isPublic: boolean): KindKey {
   return isPublic ? "web" : "service";
 }
 
-function buildSummary(
-  kind: KindKey,
-  image: string,
-  hasBuild: boolean | undefined,
-  port: PresentationPort | undefined,
-): string {
-  if (kind === "redis") return `${image || "redis"} · in-memory`;
-  if (kind === "object") return `${image || "minio"} · S3-compatible`;
-  if (kind === "web") {
-    const base = imageParts(image).base || (hasBuild ? "git build" : "service");
-    const num = port?.number;
-    const access = port?.exposedToPublic ? "public" : "internal";
-    return num ? `${base} · :${num} · ${access}` : base;
-  }
-  // postgres / mysql / mongo / generic service
-  if (image) return image;
-  if (hasBuild) return "git build";
-  return "service";
+/**
+ * Uniform summary line for every kind: `image[:tag] · :port · public|internal`.
+ * Image is base name + tag (registry/org stripped); the port segment appears
+ * only when a port is declared. No image → "git build" / "service".
+ */
+function buildSummary(image: string, hasBuild: boolean | undefined, port: PresentationPort | undefined): string {
+  const { base, tag } = imageParts(image);
+  const name = base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
+  if (port?.number == null) return name;
+  return `${name} · :${port.number} · ${port.exposedToPublic ? "public" : "internal"}`;
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {
@@ -143,6 +135,6 @@ export function nodePresentation(input: PresentationInput): NodePresentation {
     kindLabel: meta.label,
     glyph: meta.glyph,
     brandSlug: detectBrandSlug(image),
-    summary: buildSummary(kind, image, input.hasBuild, port),
+    summary: buildSummary(image, input.hasBuild, port),
   };
 }
