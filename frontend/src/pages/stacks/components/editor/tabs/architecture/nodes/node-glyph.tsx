@@ -1,6 +1,7 @@
 import { Box, Cloud, Cpu, Database, Globe, Zap, type LucideIcon } from "lucide-react";
 import type { GlyphKind } from "@/pages/stacks/lib/canvas/node-presentation";
-import { BrandIcon, hasBrandIcon } from "@/components/branded/brand-icons";
+import { BrandIcon } from "@/components/branded/brand-icons";
+import { hasBrandIcon } from "@/components/branded/brand-icon-registry";
 
 const GLYPH_BY_KIND: Record<GlyphKind, LucideIcon> = {
   web: Globe,

@@ -1,5 +1,6 @@
 import { Globe, Database, Zap, Box, type LucideIcon } from "lucide-react";
-import { BrandIcon, hasBrandIcon } from "@/components/branded/brand-icons";
+import { BrandIcon } from "@/components/branded/brand-icons";
+import { hasBrandIcon } from "@/components/branded/brand-icon-registry";
 
 const LUCIDE: Record<string, LucideIcon> = { globe: Globe, database: Database, zap: Zap, box: Box };
 
