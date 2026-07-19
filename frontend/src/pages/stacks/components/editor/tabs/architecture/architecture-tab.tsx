@@ -279,12 +279,12 @@ function StackCanvasFlow({
       const posById = new Map(prev.map((n) => [n.id, n.position]));
       // Empty canvas (no preserved nodes): use the fresh dagre layout as-is.
       if (posById.size === 0) return laid.nodes as CanvasFlowNode[];
-      // Bounding box of the PRESERVED nodes — new nodes land below-left of it so
+      // Bounding box of the PRESERVED nodes — new nodes land above-left of it so
       // they never overlap the frozen layout (their fresh dagre coords belong to a
-      // different frame and would collide).
+      // different frame and would collide). Above = consumer side under BT ranks.
       const preserved = [...posById.values()];
       const minX = Math.min(...preserved.map((p) => p.x));
-      const maxY = Math.max(...preserved.map((p) => p.y));
+      const minY = Math.min(...preserved.map((p) => p.y));
       let newCount = 0;
       const next = laid.nodes.map((n) => {
         const kept = posById.get(n.id);
@@ -292,12 +292,12 @@ function StackCanvasFlow({
         // Stagger multiple new nodes in one pass so they don't stack on each other.
         const position = {
           x: minX + newCount * NEW_NODE_GAP_X,
-          y: maxY + NEW_NODE_OFFSET_Y,
+          y: minY - NEW_NODE_OFFSET_Y,
         };
         newCount += 1;
         return { ...n, position } as CanvasFlowNode;
       });
-      // TODO: a genuinely-new node parks below-left of the frozen layout and can
+      // TODO: a genuinely-new node parks above-left of the frozen layout and can
       // land outside the current viewport (the user never sees it appear). A blind
       // fitView here would work but is unsafe: this effect also re-runs on server
       // topology refreshes (autosave), so it would reset the user's pan/zoom
