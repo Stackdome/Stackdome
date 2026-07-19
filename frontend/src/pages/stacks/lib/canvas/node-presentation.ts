@@ -34,7 +34,10 @@ export interface NodePresentation {
   /** Brand-icon registry key when the image maps to known software (see
    *  `components/branded/brand-icons`); absent → generic Lucide glyph. */
   brandSlug?: string;
+  /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
+  /** Second card line when a port is declared: `:port · public|internal`. */
+  detail?: string;
 }
 
 /** Internal kind keys → their display metadata. */
@@ -110,16 +113,16 @@ function detectKind(image: string, isPublic: boolean): KindKey {
   return isPublic ? "web" : "service";
 }
 
-/**
- * Uniform summary line for every kind: `image[:tag] · :port · public|internal`.
- * Image is base name + tag (registry/org stripped); the port segment appears
- * only when a port is declared. No image → "git build" / "service".
- */
-function buildSummary(image: string, hasBuild: boolean | undefined, port: PresentationPort | undefined): string {
+/** First card line: `image[:tag]` (registry/org stripped); no image → "git build"/"service". */
+function buildSummary(image: string, hasBuild: boolean | undefined): string {
   const { base, tag } = imageParts(image);
-  const name = base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
-  if (port?.number == null) return name;
-  return `${name} · :${port.number} · ${port.exposedToPublic ? "public" : "internal"}`;
+  return base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
+}
+
+/** Second card line, only when a port is declared: `:port · public|internal`. */
+function buildDetail(port: PresentationPort | undefined): string | undefined {
+  if (port?.number == null) return undefined;
+  return `:${port.number} · ${port.exposedToPublic ? "public" : "internal"}`;
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {
@@ -135,6 +138,7 @@ export function nodePresentation(input: PresentationInput): NodePresentation {
     kindLabel: meta.label,
     glyph: meta.glyph,
     brandSlug: detectBrandSlug(image),
-    summary: buildSummary(image, input.hasBuild, port),
+    summary: buildSummary(image, input.hasBuild),
+    detail: buildDetail(port),
   };
 }

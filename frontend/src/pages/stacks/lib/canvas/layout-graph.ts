@@ -1,9 +1,10 @@
 import dagre from "dagre";
 import type { CanvasGraph } from "./graph-from-connections";
 
-/** Card dimensions dagre reserves per node (matches ResourceNode's box). */
+/** Card dimensions dagre reserves per node (matches ResourceNode's box —
+ *  header + summary + optional port detail line). */
 export const NODE_WIDTH = 216;
-export const NODE_HEIGHT = 88;
+export const NODE_HEIGHT = 104;
 
 /** Horizontal pitch between consecutive freshly-added nodes so they don't stack. */
 export const NEW_NODE_GAP_X = NODE_WIDTH + NODE_HEIGHT;

@@ -69,6 +69,8 @@ export interface ResourceNodeData {
   /** Live status-dot colour bucket, from the resource/addon's runtime state. */
   dotVariant: StatusVariant;
   summary: string;
+  /** Optional second card line (`:port · public|internal`). */
+  detail?: string;
   volumes: VolumeChip[];
   dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */
@@ -248,6 +250,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         // per-resource state from live status / topology once available.
         dotVariant: statusVariant("resource", undefined),
         summary: pres.summary,
+        detail: pres.detail,
         volumes: volumeChips(resource, knownVolumes),
         dirtyState: serviceDirtyState(idx, input.dirty),
         resourceIdx: idx,

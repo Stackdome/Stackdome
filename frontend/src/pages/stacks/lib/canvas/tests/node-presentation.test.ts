@@ -36,7 +36,8 @@ describe("nodePresentation", () => {
     const p = nodePresentation({ isAddon: false, image: "redis:6.2", ports: [{ number: 6379 }] });
     expect(p.kindLabel).toBe("Redis");
     expect(p.glyph).toBe("redis");
-    expect(p.summary).toBe("redis:6.2 · :6379 · internal");
+    expect(p.summary).toBe("redis:6.2");
+    expect(p.detail).toBe(":6379 · internal");
   });
 
   it("detects postgres from a service image", () => {
@@ -65,7 +66,8 @@ describe("nodePresentation", () => {
     });
     expect(p.kindLabel).toBe("Web");
     expect(p.glyph).toBe("web");
-    expect(p.summary).toBe("web-api:1.2.3 · :8080 · public");
+    expect(p.summary).toBe("web-api:1.2.3");
+    expect(p.detail).toBe(":8080 · public");
   });
 
   it("treats a generic image with only an internal port as a Service", () => {
@@ -76,7 +78,8 @@ describe("nodePresentation", () => {
     });
     expect(p.kindLabel).toBe("Service");
     expect(p.glyph).toBe("service");
-    expect(p.summary).toBe("mailhog · :1025 · internal");
+    expect(p.summary).toBe("mailhog");
+    expect(p.detail).toBe(":1025 · internal");
   });
 
   it("falls back to git build when there is no image", () => {
@@ -91,6 +94,7 @@ describe("nodePresentation", () => {
       image: "registry.example.com:5000/project/frontend:v2",
       ports: [{ number: 3000, exposedToPublic: true }],
     });
-    expect(p.summary).toBe("frontend:v2 · :3000 · public");
+    expect(p.summary).toBe("frontend:v2");
+    expect(p.detail).toBe(":3000 · public");
   });
 });

@@ -57,7 +57,10 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
             {data.kindLabel}
           </span>
         </div>
-        <div className="mt-1.5 truncate pl-[18px] font-mono text-[11px] text-muted-foreground">{data.summary}</div>
+        <div className="mt-1.5 pl-[18px] font-mono text-[11px] text-muted-foreground">
+          <div className="truncate">{data.summary}</div>
+          {data.detail && <div className="mt-0.5 truncate">{data.detail}</div>}
+        </div>
       </div>
 
       {data.volumes.map((v) => (
