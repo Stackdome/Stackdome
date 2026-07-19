@@ -574,16 +574,28 @@ function convertVolumeMounts(
 }
 
 /**
- * A whole-value env reference: "${self.public_url}" or "${<service>.<output>}".
+ * An env reference: "${self.public_url}" or "${<service>.<output>}".
  * Output keys follow pkg/models/output_descriptor.go (host, port, url,
  * public_host, public_url, optionally suffixed ".<port-name>").
  */
 const ENV_REFERENCE_PATTERN = /^\$\{([a-z0-9][a-z0-9_-]*)\.([a-z0-9][a-z0-9_.-]*)\}$/;
+const ENV_REFERENCE_GLOBAL = /\$\{([a-z0-9][a-z0-9_-]*)\.([a-z0-9][a-z0-9_.-]*)\}/g;
+
+/** Template keys must be valid Go identifiers (see stackdeploy.ValidateTemplateKeys). */
+function templateKeyForOutput(output: string, taken: Record<string, string>): string {
+  let key = output.replace(/[^a-zA-Z0-9_]/g, "_");
+  if (/^[0-9]/.test(key)) key = `_${key}`;
+  while (key in taken && taken[key] !== output) key = `${key}_`;
+  return key;
+}
 
 /**
- * Classify one env value: reference values become self/resource rows resolved
- * at deploy; everything else stays a literal row. References to unknown
- * services are kept literal with a warning rather than dropped.
+ * Classify one env value: reference values become rows resolved at deploy —
+ * a whole-value reference becomes a self/resource row, and a value embedding
+ * references to a single sibling service becomes a template row (Go template
+ * mapping on the env connection). Everything else stays a literal row.
+ * Unsupported references (unknown service, mixed services, embedded self)
+ * are kept literal with a warning rather than dropped.
  */
 function toEnvRow(
   name: string,
@@ -592,24 +604,50 @@ function toEnvRow(
   allServiceNames: string[],
   warnings: ConversionWarning[]
 ): FormEnvVarData {
-  const match = ENV_REFERENCE_PATTERN.exec(value);
-  if (!match) return { from: "stack", name, value };
+  const keepLiteral = (reason: string): FormEnvVarData => {
+    warnings.push({
+      type: 'partial',
+      message: `Environment variable '${name}' ${reason}. Kept as literal text.`,
+      service: serviceName,
+      dockerComposeField: 'environment',
+    });
+    return { from: "stack", name, value };
+  };
 
-  const [, target, output] = match;
+  const whole = ENV_REFERENCE_PATTERN.exec(value);
+  if (whole) {
+    const [, target, output] = whole;
+    if (target === "self" || target === serviceName) {
+      return { from: "self", name, selfOutput: output };
+    }
+    if (allServiceNames.includes(target)) {
+      return { from: "resource", name, resourceName: target, output };
+    }
+    return keepLiteral(`references unknown service '${target}'`);
+  }
+
+  const refs = [...value.matchAll(ENV_REFERENCE_GLOBAL)];
+  if (refs.length === 0) return { from: "stack", name, value };
+
+  const targets = [...new Set(refs.map((m) => m[1]))];
+  if (targets.length > 1) {
+    return keepLiteral(`embeds references to multiple services (${targets.join(", ")})`);
+  }
+  const target = targets[0];
   if (target === "self" || target === serviceName) {
-    return { from: "self", name, selfOutput: output };
+    return keepLiteral(`embeds a self reference, which is only supported as the whole value`);
   }
-  if (allServiceNames.includes(target)) {
-    return { from: "resource", name, resourceName: target, output };
+  if (!allServiceNames.includes(target)) {
+    return keepLiteral(`references unknown service '${target}'`);
   }
 
-  warnings.push({
-    type: 'partial',
-    message: `Environment variable '${name}' references unknown service '${target}'. Kept as literal text.`,
-    service: serviceName,
-    dockerComposeField: 'environment',
+  const values: Record<string, string> = {};
+  const template = value.replace(ENV_REFERENCE_GLOBAL, (_ref, _target, output: string) => {
+    const key = templateKeyForOutput(output, values);
+    values[key] = output;
+    return `{{${key}}}`;
   });
-  return { from: "stack", name, value };
+  return { from: "resourceTemplate", name, resourceName: target, template, values };
 }
 
 /**

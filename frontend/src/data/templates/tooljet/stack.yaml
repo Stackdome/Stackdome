@@ -47,8 +47,8 @@ services:
       REDIS_PORT: "6379"
       ENABLE_OTEL: "true"
       OTEL_SERVICE_NAME: "tooljet"
-      OTEL_EXPORTER_OTLP_TRACES: "http://otel-stack:4318/v1/traces"
-      OTEL_EXPORTER_OTLP_METRICS: "http://otel-stack:4318/v1/metrics"
+      OTEL_EXPORTER_OTLP_TRACES: "http://${otel-stack.host}:4318/v1/traces"
+      OTEL_EXPORTER_OTLP_METRICS: "http://${otel-stack.host}:4318/v1/metrics"
       OTEL_METRICS_TEMPORALITY: "cumulative"
 
   tooljet-worker:
@@ -80,8 +80,8 @@ services:
       REDIS_PORT: "6379"
       ENABLE_OTEL: "true"
       OTEL_SERVICE_NAME: "tooljet-worker"
-      OTEL_EXPORTER_OTLP_TRACES: "http://otel-stack:4318/v1/traces"
-      OTEL_EXPORTER_OTLP_METRICS: "http://otel-stack:4318/v1/metrics"
+      OTEL_EXPORTER_OTLP_TRACES: "http://${otel-stack.host}:4318/v1/traces"
+      OTEL_EXPORTER_OTLP_METRICS: "http://${otel-stack.host}:4318/v1/metrics"
       OTEL_METRICS_TEMPORALITY: "cumulative"
 
   redis:

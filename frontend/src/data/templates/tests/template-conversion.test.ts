@@ -27,9 +27,11 @@ describe("template conversion round-trip", () => {
     const env = envByName(app);
     expect(env.ENABLE_OTEL).toEqual({ from: "stack", name: "ENABLE_OTEL", value: "true" });
     expect(env.OTEL_EXPORTER_OTLP_TRACES).toEqual({
-      from: "stack",
+      from: "resourceTemplate",
       name: "OTEL_EXPORTER_OTLP_TRACES",
-      value: "http://otel-stack:4318/v1/traces",
+      resourceName: "otel-stack",
+      template: "http://{{host}}:4318/v1/traces",
+      values: { host: "host" },
     });
     expect(env.WORKER).toBeUndefined();
 

@@ -180,6 +180,14 @@ export function EnvRow({
               onChange={(rn, out) => onChangeResource?.(rn, out)}
             />
           )}
+          {row.from === "resourceTemplate" && (
+            <div className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5">
+              <code className="truncate font-mono text-xs">{row.template}</code>
+              <span className="ml-auto flex-none text-[10px] italic text-muted-foreground">
+                {row.resourceName} · resolved at deploy
+              </span>
+            </div>
+          )}
           {row.from === "self" && (
             <SelfOutputCell
               outputs={selfOutputs ?? []}
@@ -206,6 +214,12 @@ export function EnvRow({
               <SelectItem value="secret">Secret</SelectItem>
               <SelectItem value="addon">Addon</SelectItem>
               <SelectItem value="resource">Resource</SelectItem>
+              {/* Template rows come from imports (composite values); not hand-authorable yet. */}
+              {row.from === "resourceTemplate" && (
+                <SelectItem value="resourceTemplate" disabled>
+                  Template
+                </SelectItem>
+              )}
               <SelectItem value="self">Self</SelectItem>
             </SelectContent>
           </Select>

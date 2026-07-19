@@ -1018,14 +1018,20 @@ describe('referential environment variables', () => {
     expect(env.DB_HOST).toEqual({ from: 'resource', name: 'DB_HOST', resourceName: 'db', output: 'host' });
   });
 
-  it('keeps unknown-service references and partial interpolations literal', () => {
+  it('keeps unknown-service references literal and upgrades partial interpolations to templates', () => {
     const result = convertDockerComposeToStackData(composeWithRefs());
     const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
     const env = Object.fromEntries(
       (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
     );
     expect(env.UNKNOWN_REF).toEqual({ from: 'stack', name: 'UNKNOWN_REF', value: '${ghost.host}' });
-    expect(env.PARTIAL).toEqual({ from: 'stack', name: 'PARTIAL', value: 'prefix-${db.host}' });
+    expect(env.PARTIAL).toEqual({
+      from: 'resourceTemplate',
+      name: 'PARTIAL',
+      resourceName: 'db',
+      template: 'prefix-{{host}}',
+      values: { host: 'host' },
+    });
     expect(env.LITERAL).toEqual({ from: 'stack', name: 'LITERAL', value: 'plain-value' });
 
     expect(result.warnings).toEqual(
@@ -1092,6 +1098,61 @@ describe('expose (internal-only ports)', () => {
     expect(result.warnings).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ dockerComposeField: 'expose' }),
+      ]),
+    );
+  });
+});
+
+describe('composite env values with embedded references', () => {
+  const convert = (environment: Record<string, string>) => {
+    const compose = {
+      services: {
+        app: { image: 'app:1', environment },
+        db: { image: 'postgres:16' },
+        otel: { image: 'otel:1', ports: ['3000:3000'], expose: ['4318'] },
+      },
+    } as unknown as DockerComposeFile;
+    const result = convertDockerComposeToStackData(compose);
+    const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
+    const env = Object.fromEntries(
+      (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
+    );
+    return { env, warnings: result.warnings ?? [] };
+  };
+
+  it('converts a single-service composite into a template row', () => {
+    const { env } = convert({ OTLP: 'http://${otel.host}:4318/v1/traces' });
+    expect(env.OTLP).toEqual({
+      from: 'resourceTemplate',
+      name: 'OTLP',
+      resourceName: 'otel',
+      template: 'http://{{host}}:4318/v1/traces',
+      values: { host: 'host' },
+    });
+  });
+
+  it('supports multiple references to the same service and sanitizes dotted keys', () => {
+    const { env } = convert({ URI: '${db.host}:${db.port.tcp-5432}/app' });
+    expect(env.URI).toEqual({
+      from: 'resourceTemplate',
+      name: 'URI',
+      resourceName: 'db',
+      template: '{{host}}:{{port_tcp_5432}}/app',
+      values: { host: 'host', port_tcp_5432: 'port.tcp-5432' },
+    });
+  });
+
+  it('keeps mixed-service and embedded-self composites literal with a warning', () => {
+    const { env, warnings } = convert({
+      MIXED: '${db.host}-${otel.host}',
+      SELFISH: 'prefix-${app.public_url}',
+    });
+    expect(env.MIXED).toEqual({ from: 'stack', name: 'MIXED', value: '${db.host}-${otel.host}' });
+    expect(env.SELFISH).toEqual({ from: 'stack', name: 'SELFISH', value: 'prefix-${app.public_url}' });
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining('multiple services') }),
+        expect.objectContaining({ message: expect.stringContaining('self reference') }),
       ]),
     );
   });
