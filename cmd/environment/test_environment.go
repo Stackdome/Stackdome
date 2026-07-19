@@ -541,6 +541,14 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Permissions:        te.PermissionService,
 	})
 
+	gitIntegrationService.(interface {
+		SetPreviewWebhook(services.PreviewWebhookService)
+	}).SetPreviewWebhook(services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
+		ConfigStore:       stackPreviewConfigStore,
+		PreviewStackStore: previewStackStore,
+		PreviewService:    previewStackService,
+	}))
+
 	te.Services = Services{
 		UserService:                 userService,
 		WorkspaceUserService:        workspaceUserService,

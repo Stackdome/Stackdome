@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +31,7 @@ const (
 
 	// GitHub webhook event and action names.
 	GitHubEventInstallation        = "installation"
+	GitHubEventPullRequest         = "pull_request"
 	GitHubEventPush                = "push"
 	githubInstallationActCreated   = "created"
 	githubInstallationActDeleted   = "deleted"
@@ -334,7 +336,7 @@ func (s *gitIntegrationService) ListRepositoryBranches(ctx context.Context, inte
 // dropped. suspend/unsuspend are treated as uninstall/reinstall so a suspended
 // installation is never used to mint tokens.
 func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError {
-	if event != GitHubEventInstallation {
+	if event != GitHubEventInstallation && event != GitHubEventPullRequest {
 		// push (and everything else) is accepted and dropped for now.
 		return nil
 	}
@@ -343,16 +345,12 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 	if err != nil {
 		return errors.BadRequest("malformed webhook payload: %s", err.Error())
 	}
-	installEvent, ok := parsed.(*github.InstallationEvent)
-	if !ok {
-		return nil
-	}
-	install := installEvent.GetInstallation()
-	if install.GetAppID() == 0 {
+
+	appID := webhookAppID(parsed)
+	if appID == 0 {
 		return errors.BadRequest("webhook payload has no installation app id")
 	}
-
-	integration, creds, serr := s.findAppByID(ctx, install.GetAppID())
+	integration, creds, serr := s.findAppByID(ctx, appID)
 	if serr != nil {
 		return serr
 	}
@@ -360,6 +358,30 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 		return errors.Forbidden("webhook signature verification failed")
 	}
 
+	switch e := parsed.(type) {
+	case *github.InstallationEvent:
+		return s.handleInstallationEvent(ctx, integration, e)
+	case *github.PullRequestEvent:
+		return s.handlePullRequestEvent(ctx, integration, e)
+	default:
+		return nil
+	}
+}
+
+// webhookAppID extracts the GitHub App id from the events we act on; both
+// installation and pull_request deliveries carry an installation with the id.
+func webhookAppID(parsed any) int64 {
+	switch e := parsed.(type) {
+	case *github.InstallationEvent:
+		return e.GetInstallation().GetAppID()
+	case *github.PullRequestEvent:
+		return e.GetInstallation().GetAppID()
+	}
+	return 0
+}
+
+func (s *gitIntegrationService) handleInstallationEvent(ctx context.Context, integration *models.GitIntegration, installEvent *github.InstallationEvent) *errors.ServiceError {
+	install := installEvent.GetInstallation()
 	switch installEvent.GetAction() {
 	case githubInstallationActCreated, githubInstallationActUnsuspend:
 		if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
@@ -380,6 +402,20 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 	}
 
 	return s.syncInstallationStatus(ctx, integration)
+}
+
+func (s *gitIntegrationService) handlePullRequestEvent(ctx context.Context, integration *models.GitIntegration, prEvent *github.PullRequestEvent) *errors.ServiceError {
+	pr := prEvent.GetPullRequest()
+	ev := PullRequestEvent{
+		OrganisationID: integration.OrganisationID,
+		RepoURL:        prEvent.GetRepo().GetCloneURL(),
+		Branch:         pr.GetHead().GetRef(),
+		BaseBranch:     pr.GetBase().GetRef(),
+		HeadSHA:        pr.GetHead().GetSHA(),
+		PRNumber:       strconv.Itoa(prEvent.GetNumber()),
+		Action:         PullRequestAction(prEvent.GetAction()),
+	}
+	return s.previewWebhook.HandlePullRequest(ctx, ev)
 }
 
 // InternalMintForRepo mints an installation token for the org's installed

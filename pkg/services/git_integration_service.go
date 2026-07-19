@@ -69,6 +69,7 @@ type GitIntegrationServiceSpec struct {
 	GitHubAppClient   githubapp.Client
 	EncryptionService EncryptionService
 	Permissions       auth.PermissionService
+	PreviewWebhook    PreviewWebhookService
 	Logger            logger.Logger
 	// ExternalURL is the hub's externally reachable base URL, required for
 	// the GitHub App manifest flow.
@@ -86,6 +87,7 @@ type gitIntegrationService struct {
 	githubApp         githubapp.Client
 	encryptionService EncryptionService
 	permissions       auth.PermissionService
+	previewWebhook    PreviewWebhookService
 	logger            logger.Logger
 	externalURL       string
 	gitClients        verifyGitClientProvider
@@ -105,10 +107,15 @@ func NewGitIntegrationService(spec GitIntegrationServiceSpec) GitIntegrationServ
 		githubApp:         spec.GitHubAppClient,
 		encryptionService: spec.EncryptionService,
 		permissions:       spec.Permissions,
+		previewWebhook:    spec.PreviewWebhook,
 		logger:            spec.Logger,
 		externalURL:       strings.TrimSuffix(spec.ExternalURL, "/"),
 		gitClients:        gitClients,
 	}
+}
+
+func (s *gitIntegrationService) SetPreviewWebhook(pw PreviewWebhookService) {
+	s.previewWebhook = pw
 }
 
 func (s *gitIntegrationService) Create(ctx context.Context, integration *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError) {
