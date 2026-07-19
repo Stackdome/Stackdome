@@ -766,17 +766,27 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 	te.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
+	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewConfigStore := pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewCommentService := services.NewPreviewCommentService(services.PreviewCommentServiceSpec{
+		PreviewStackStore: previewStackStore,
+		ConfigStore:       previewConfigStore,
+		GitIntegrations:   te.Services.GitIntegrationService,
+		Commenter:         githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
+		Logger:            te.Logger,
+	})
 	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
 		PreviewStackService: te.Services.PreviewStackService,
-		PreviewStackStore: pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		ConfigStore: pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		ReleaseService: te.Services.StackReleaseService,
-		StackService:   te.Services.StackService,
-		Env:            te.Name,
+		PreviewStackStore:   previewStackStore,
+		ConfigStore:         previewConfigStore,
+		ReleaseService:      te.Services.StackReleaseService,
+		StackService:        te.Services.StackService,
+		CommentService:      previewCommentService,
+		Env:                 te.Name,
 	})
 	te.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
