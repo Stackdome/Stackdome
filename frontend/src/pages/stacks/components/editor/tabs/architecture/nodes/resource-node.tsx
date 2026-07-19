@@ -59,7 +59,9 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
         </div>
         <div className="mt-1.5 pl-[18px] font-mono text-[11px] text-muted-foreground">
           <div className="truncate">{data.summary}</div>
-          {data.detail && <div className="mt-0.5 truncate">{data.detail}</div>}
+          {(data.details ?? []).map((line) => (
+            <div key={line} className="mt-0.5 truncate">{line}</div>
+          ))}
         </div>
       </div>
 

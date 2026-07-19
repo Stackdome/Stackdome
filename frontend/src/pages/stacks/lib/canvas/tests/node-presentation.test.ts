@@ -8,6 +8,7 @@ describe("nodePresentation", () => {
       glyph: "postgres",
       brandSlug: "postgres",
       summary: "managed postgres",
+      details: [],
     });
   });
 
@@ -37,7 +38,7 @@ describe("nodePresentation", () => {
     expect(p.kindLabel).toBe("Redis");
     expect(p.glyph).toBe("redis");
     expect(p.summary).toBe("redis:6.2");
-    expect(p.detail).toBe("port 6379 · internal");
+    expect(p.details).toEqual(["port 6379 · internal"]);
   });
 
   it("detects postgres from a service image", () => {
@@ -67,7 +68,7 @@ describe("nodePresentation", () => {
     expect(p.kindLabel).toBe("Web");
     expect(p.glyph).toBe("web");
     expect(p.summary).toBe("web-api:1.2.3");
-    expect(p.detail).toBe("port 8080 · public");
+    expect(p.details).toEqual(["port 8080 · public"]);
   });
 
   it("treats a generic image with only an internal port as a Service", () => {
@@ -79,13 +80,25 @@ describe("nodePresentation", () => {
     expect(p.kindLabel).toBe("Service");
     expect(p.glyph).toBe("service");
     expect(p.summary).toBe("mailhog");
-    expect(p.detail).toBe("port 1025 · internal");
+    expect(p.details).toEqual(["port 1025 · internal"]);
   });
 
   it("falls back to git build when there is no image", () => {
     const p = nodePresentation({ isAddon: false, hasBuild: true });
     expect(p.kindLabel).toBe("Service");
     expect(p.summary).toBe("git build");
+  });
+
+  it("lists every declared port, one line each, in declared order", () => {
+    const p = nodePresentation({
+      isAddon: false,
+      image: "grafana/otel-lgtm:0.29.1",
+      ports: [
+        { number: 4318, exposedToPublic: false },
+        { number: 3000, exposedToPublic: true },
+      ],
+    });
+    expect(p.details).toEqual(["port 4318 · internal", "port 3000 · public"]);
   });
 
   it("strips the registry but keeps the tag in the summary", () => {
@@ -95,6 +108,6 @@ describe("nodePresentation", () => {
       ports: [{ number: 3000, exposedToPublic: true }],
     });
     expect(p.summary).toBe("frontend:v2");
-    expect(p.detail).toBe("port 3000 · public");
+    expect(p.details).toEqual(["port 3000 · public"]);
   });
 });

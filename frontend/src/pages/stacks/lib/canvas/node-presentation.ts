@@ -36,8 +36,8 @@ export interface NodePresentation {
   brandSlug?: string;
   /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
-  /** Second card line when a port is declared: `port N · public|internal`. */
-  detail?: string;
+  /** One card line per declared port: `port N · public|internal`. */
+  details: string[];
 }
 
 /** Internal kind keys → their display metadata. */
@@ -99,12 +99,6 @@ function imageParts(image: string): { base: string; tag?: string } {
   return { base: afterSlash };
 }
 
-/** The port to surface: a public one wins, else the first declared. */
-function primaryPort(ports?: PresentationPort[]): PresentationPort | undefined {
-  if (!ports?.length) return undefined;
-  return ports.find((p) => p.exposedToPublic) ?? ports[0];
-}
-
 function detectKind(image: string, isPublic: boolean): KindKey {
   const s = image.toLowerCase();
   for (const { match, kind } of IMAGE_KINDS) if (match.test(s)) return kind;
@@ -119,18 +113,18 @@ function buildSummary(image: string, hasBuild: boolean | undefined): string {
   return base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
 }
 
-/** Second card line, only when a port is declared: `port N · public|internal`. */
-function buildDetail(port: PresentationPort | undefined): string | undefined {
-  if (port?.number == null) return undefined;
-  return `port ${port.number} · ${port.exposedToPublic ? "public" : "internal"}`;
+/** One line per declared port, in declared order: `port N · public|internal`. */
+function buildPortLines(ports: PresentationPort[] | undefined): string[] {
+  return (ports ?? [])
+    .filter((p) => p.number != null)
+    .map((p) => `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`);
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {
   if (input.isAddon) {
-    return { kindLabel: "Postgres", glyph: "postgres", brandSlug: "postgres", summary: "managed postgres" };
+    return { kindLabel: "Postgres", glyph: "postgres", brandSlug: "postgres", summary: "managed postgres", details: [] };
   }
   const image = (input.image ?? "").trim();
-  const port = primaryPort(input.ports);
   const isPublic = !!input.ports?.some((p) => p.exposedToPublic);
   const kind = detectKind(image, isPublic);
   const meta = KIND_META[kind];
@@ -139,6 +133,6 @@ export function nodePresentation(input: PresentationInput): NodePresentation {
     glyph: meta.glyph,
     brandSlug: detectBrandSlug(image),
     summary: buildSummary(image, input.hasBuild),
-    detail: buildDetail(port),
+    details: buildPortLines(input.ports),
   };
 }
