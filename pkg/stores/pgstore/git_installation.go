@@ -77,6 +77,19 @@ func (s *gitInstallationStore) GetByIntegrationAndAccount(ctx context.Context, i
 	return &installation, nil
 }
 
+func (s *gitInstallationStore) GetByInstallationID(ctx context.Context, installationID int64) (*models.GitInstallation, *errors.ServiceError) {
+	var installation models.GitInstallation
+	if err := s.sessionFactory.New(ctx).
+		Where("installation_id = ?", installationID).
+		First(&installation).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("no installation with id %d", installationID)
+		}
+		return nil, errors.GeneralError("failed to get git installation: %s", err.Error())
+	}
+	return &installation, nil
+}
+
 func (s *gitInstallationStore) DeleteByInstallationID(ctx context.Context, integrationID string, installationID int64) *errors.ServiceError {
 	if err := s.sessionFactory.New(ctx).
 		Where("git_integration_id = ? AND installation_id = ?", integrationID, installationID).

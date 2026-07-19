@@ -21,18 +21,21 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 		hookSecret = "hook-secret"
 	)
 	var (
-		ctrl           *gomock.Controller
-		svc            GitIntegrationService
-		previewWebhook *MockPreviewWebhookService
+		ctrl               *gomock.Controller
+		svc                GitIntegrationService
+		previewWebhook     *MockPreviewWebhookService
+		installationsStore *mocks.MockGitInstallationStore
 	)
 
 	const baseRepoID = 1010
 
+	// Real repository-event payloads carry only the slim installation
+	// reference {id, node_id} — never app_id.
 	prPayloadFromRepo := func(action string, headRepoID int) []byte {
 		payload, err := json.Marshal(map[string]any{
 			"action":       action,
 			"number":       7,
-			"installation": map[string]any{"id": 77, "app_id": appID},
+			"installation": map[string]any{"id": 77},
 			"repository":   map[string]any{"id": baseRepoID, "clone_url": "https://github.com/acme/app.git"},
 			"pull_request": map[string]any{
 				"head": map[string]any{"ref": "feature", "sha": "abc123", "repo": map[string]any{"id": headRepoID}},
@@ -69,12 +72,15 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 		}
 
 		store := mocks.NewMockGitIntegrationStore(ctrl)
-		store.EXPECT().ListGitHubApps(gomock.Any()).Return([]*models.GitIntegration{integration}, nil).AnyTimes()
+		store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil).AnyTimes()
+		installationsStore = mocks.NewMockGitInstallationStore(ctrl)
+		installationsStore.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).
+			Return(&models.GitInstallation{GitIntegrationID: "gi-app", InstallationID: 77}, nil).AnyTimes()
 		previewWebhook = NewMockPreviewWebhookService(ctrl)
 
 		svc = NewGitIntegrationService(GitIntegrationServiceSpec{
 			Store:             store,
-			InstallationStore: mocks.NewMockGitInstallationStore(ctrl),
+			InstallationStore: installationsStore,
 			OAuthStateStore:   mocks.NewMockOAuthStateStore(ctrl),
 			OrganisationStore: mocks.NewMockOrganisationStore(ctrl),
 			AtomicExecutor:    mocks.NewMockAtomicExecutor(ctrl),
@@ -117,6 +123,27 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 		payload := prPayloadFromRepo("opened", baseRepoID+1)
 		serr := svc.ProcessGitHubWebhook(context.Background(), GitHubEventPullRequest, payload, signWebhook(payload, hookSecret))
 		Expect(serr).To(BeNil())
+	})
+
+	It("rejects deliveries for an unknown installation id", func() {
+		// No HandlePullRequest expectation — must not be called.
+		payload, err := json.Marshal(map[string]any{
+			"action":       "opened",
+			"number":       7,
+			"installation": map[string]any{"id": 999},
+			"repository":   map[string]any{"id": baseRepoID, "clone_url": "https://github.com/acme/app.git"},
+			"pull_request": map[string]any{
+				"head": map[string]any{"ref": "feature", "sha": "abc123", "repo": map[string]any{"id": baseRepoID}},
+				"base": map[string]any{"ref": "main"},
+			},
+		})
+		Expect(err).ToNot(HaveOccurred())
+		installationsStore.EXPECT().GetByInstallationID(gomock.Any(), int64(999)).
+			Return(nil, errors.NotFound("no installation with id %d", 999))
+
+		serr := svc.ProcessGitHubWebhook(context.Background(), GitHubEventPullRequest, payload, signWebhook(payload, hookSecret))
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Is404()).To(BeTrue())
 	})
 
 	It("rejects a bad signature without dispatching", func() {

@@ -349,21 +349,16 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 		return errors.BadRequest("malformed webhook payload: %s", err.Error())
 	}
 
-	appID := webhookAppID(parsed)
-	if appID == 0 {
-		s.logger.Warn(ctx, "github webhook: '%s' payload has no installation app id", event)
-		return errors.BadRequest("webhook payload has no installation app id")
-	}
-	integration, creds, serr := s.findAppByID(ctx, appID)
+	integration, creds, serr := s.webhookIntegration(ctx, parsed)
 	if serr != nil {
-		s.logger.Warn(ctx, "github webhook: no integration matches app id %d for '%s' event", appID, event)
+		s.logger.Warn(ctx, "github webhook: cannot resolve integration for '%s' event: %s", event, serr.Reason)
 		return serr
 	}
 	if err := github.ValidateSignature(signature, payload, []byte(creds.WebhookSecret)); err != nil {
-		s.logger.Warn(ctx, "github webhook: signature verification failed for app id %d ('%s' event)", appID, event)
+		s.logger.Warn(ctx, "github webhook: signature verification failed for org %s ('%s' event)", integration.OrganisationID, event)
 		return errors.Forbidden("webhook signature verification failed")
 	}
-	s.logger.Info(ctx, "github webhook: verified '%s' delivery for org %s (app id %d)", event, integration.OrganisationID, appID)
+	s.logger.Info(ctx, "github webhook: verified '%s' delivery for org %s", event, integration.OrganisationID)
 
 	switch e := parsed.(type) {
 	case *github.InstallationEvent:
@@ -375,16 +370,45 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 	}
 }
 
-// webhookAppID extracts the GitHub App id from the events we act on; both
-// installation and pull_request deliveries carry an installation with the id.
-func webhookAppID(parsed any) int64 {
+// webhookIntegration resolves the integration a delivery belongs to. Only
+// installation events carry the full installation object with app_id;
+// repository events (pull_request) carry the slim {id, node_id} reference, so
+// they resolve through the stored installation row instead.
+func (s *gitIntegrationService) webhookIntegration(ctx context.Context, parsed any) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
 	switch e := parsed.(type) {
 	case *github.InstallationEvent:
-		return e.GetInstallation().GetAppID()
+		appID := e.GetInstallation().GetAppID()
+		if appID == 0 {
+			return nil, nil, errors.BadRequest("installation payload has no app id")
+		}
+		return s.findAppByID(ctx, appID)
 	case *github.PullRequestEvent:
-		return e.GetInstallation().GetAppID()
+		installationID := e.GetInstallation().GetID()
+		if installationID == 0 {
+			return nil, nil, errors.BadRequest("webhook payload has no installation id")
+		}
+		return s.findAppByInstallation(ctx, installationID)
+	default:
+		return nil, nil, errors.BadRequest("unsupported webhook event")
 	}
-	return 0
+}
+
+// findAppByInstallation resolves an integration from a GitHub-global
+// installation id via the stored installation row.
+func (s *gitIntegrationService) findAppByInstallation(ctx context.Context, installationID int64) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
+	install, serr := s.installations.GetByInstallationID(ctx, installationID)
+	if serr != nil {
+		return nil, nil, serr
+	}
+	integration, serr := s.store.GetByID(ctx, install.GitIntegrationID)
+	if serr != nil {
+		return nil, nil, serr
+	}
+	creds, serr := s.appCredentials(integration)
+	if serr != nil {
+		return nil, nil, serr
+	}
+	return integration, creds, nil
 }
 
 func (s *gitIntegrationService) handleInstallationEvent(ctx context.Context, integration *models.GitIntegration, installEvent *github.InstallationEvent) *errors.ServiceError {
