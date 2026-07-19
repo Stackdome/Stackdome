@@ -14,5 +14,14 @@ var _ = ginkgo.Describe("StackPreviewConfig.NormalizedRepoURL", func() {
 		},
 		ginkgo.Entry(".git suffix", "https://github.com/acme/app.git", "https://github.com/acme/app"),
 		ginkgo.Entry("trailing slash", "https://github.com/acme/app/", "https://github.com/acme/app"),
+		ginkgo.Entry(".git plus trailing slash", "https://github.com/acme/app.git/", "https://github.com/acme/app"),
+		ginkgo.Entry("http scheme", "http://github.com/acme/app", "https://github.com/acme/app"),
+		ginkgo.Entry("scp form", "git@github.com:acme/app.git", "https://github.com/acme/app"),
+		ginkgo.Entry("ssh scheme with userinfo", "ssh://git@github.com/acme/app", "https://github.com/acme/app"),
+		ginkgo.Entry("case", "https://github.com/Acme/App", "https://github.com/acme/app"),
 	)
+
+	ginkgo.It("normalizes to host/owner/repo", func() {
+		gomega.Expect(NormalizeRepoURL("https://github.com/Acme/App.git")).To(gomega.Equal("github.com/acme/app"))
+	})
 })

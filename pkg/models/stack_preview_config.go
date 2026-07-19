@@ -77,10 +77,20 @@ func (StackPreviewConfig) TableName() string {
 	return "stack_preview_configs"
 }
 
-// NormalizeRepoURL strips a trailing ".git" suffix and trailing slash, and
-// lowercases the result, so that equivalent repo URLs compare equal.
+// NormalizeRepoURL collapses scheme, userinfo, ".git" and trailing-slash
+// variants to "host/owner/repo" so equivalent repo URLs compare equal.
 func NormalizeRepoURL(url string) string {
-	url = strings.TrimSuffix(url, ".git")
+	url = strings.TrimSpace(url)
 	url = strings.TrimSuffix(url, "/")
+	url = strings.TrimSuffix(url, ".git")
+	if i := strings.Index(url, "://"); i != -1 {
+		url = url[i+3:]
+	} else if at := strings.Index(url, "@"); at != -1 {
+		// scp form: git@host:owner/repo
+		url = strings.Replace(url[at+1:], ":", "/", 1)
+	}
+	if at := strings.Index(url, "@"); at != -1 && at < strings.Index(url, "/") {
+		url = url[at+1:]
+	}
 	return strings.ToLower(url)
 }
