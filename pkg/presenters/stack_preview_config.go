@@ -17,6 +17,7 @@ func PresentStackPreviewConfig(c *models.StackPreviewConfig) openapi.StackPrevie
 		Description:       &c.Description,
 		StackfilePath:     &c.StackfilePath,
 		MaxActivePreviews: ptr.To(int32(c.MaxActivePreviews)),
+		Env:               presentEnvVars(c.Env),
 		Labels:            presentLabels(c.Labels),
 		Annotations:       presentAnnotations(c.Annotations),
 		CreatedAt:         &c.CreatedAt,
@@ -56,6 +57,7 @@ func ConvertStackPreviewConfigCreate(req *openapi.StackPreviewConfigCreate) *mod
 		StackfilePath:     req.GetStackfilePath(),
 		MaxActivePreviews: int(req.GetMaxActivePreviews()),
 		GitRepository:     convertPreviewGitRepository(&req.GitRepository),
+		Env:               convertEnvVars(req.Env),
 		Labels:            convertLabels(req.Labels),
 		Annotations:       convertAnnotations(req.Annotations),
 	}
@@ -70,6 +72,9 @@ func ConvertStackPreviewConfigUpdate(req *openapi.StackPreviewConfigUpdate) *mod
 	}
 	if req.GitRepository != nil {
 		config.GitRepository = convertPreviewGitRepository(req.GitRepository)
+	}
+	if req.Env != nil {
+		config.Env = convertEnvVars(req.Env)
 	}
 	if req.Labels != nil {
 		config.Labels = convertLabels(req.Labels)

@@ -7337,6 +7337,11 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          type: array
+          description: Env var overrides applied to every preview environment; may use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
         labels:
           type: array
           items:
@@ -7370,6 +7375,11 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          type: array
+          description: Env var overrides applied to every preview environment; may use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
         labels:
           type: array
           items:
@@ -7390,6 +7400,11 @@ components:
           type: integer
         git_repository:
           $ref: '#/components/schemas/PreviewGitRepository'
+        env:
+          type: array
+          description: Env var overrides applied to every preview environment; may use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
         labels:
           type: array
           items:

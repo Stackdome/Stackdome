@@ -26,10 +26,12 @@ type StackPreviewConfig struct {
 	GitRepository     *PreviewGitRepository `json:"git_repository,omitempty"`
 	StackfilePath     *string               `json:"stackfile_path,omitempty"`
 	MaxActivePreviews *int32                `json:"max_active_previews,omitempty"`
-	Labels            []Label               `json:"labels,omitempty"`
-	Annotations       []Annotation          `json:"annotations,omitempty"`
-	CreatedAt         *time.Time            `json:"created_at,omitempty"`
-	UpdatedAt         *time.Time            `json:"updated_at,omitempty"`
+	// Env var overrides applied to every preview environment; may use secret references.
+	Env         []EnvVar     `json:"env,omitempty"`
+	Labels      []Label      `json:"labels,omitempty"`
+	Annotations []Annotation `json:"annotations,omitempty"`
+	CreatedAt   *time.Time   `json:"created_at,omitempty"`
+	UpdatedAt   *time.Time   `json:"updated_at,omitempty"`
 }
 
 // NewStackPreviewConfig instantiates a new StackPreviewConfig object
@@ -337,6 +339,38 @@ func (o *StackPreviewConfig) SetMaxActivePreviews(v int32) {
 	o.MaxActivePreviews = &v
 }
 
+// GetEnv returns the Env field value if set, zero value otherwise.
+func (o *StackPreviewConfig) GetEnv() []EnvVar {
+	if o == nil || o.Env == nil {
+		var ret []EnvVar
+		return ret
+	}
+	return o.Env
+}
+
+// GetEnvOk returns a tuple with the Env field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackPreviewConfig) GetEnvOk() ([]EnvVar, bool) {
+	if o == nil || o.Env == nil {
+		return nil, false
+	}
+	return o.Env, true
+}
+
+// HasEnv returns a boolean if a field has been set.
+func (o *StackPreviewConfig) HasEnv() bool {
+	if o != nil && o.Env != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetEnv gets a reference to the given []EnvVar and assigns it to the Env field.
+func (o *StackPreviewConfig) SetEnv(v []EnvVar) {
+	o.Env = v
+}
+
 // GetLabels returns the Labels field value if set, zero value otherwise.
 func (o *StackPreviewConfig) GetLabels() []Label {
 	if o == nil || o.Labels == nil {
@@ -493,6 +527,9 @@ func (o StackPreviewConfig) MarshalJSON() ([]byte, error) {
 	}
 	if o.MaxActivePreviews != nil {
 		toSerialize["max_active_previews"] = o.MaxActivePreviews
+	}
+	if o.Env != nil {
+		toSerialize["env"] = o.Env
 	}
 	if o.Labels != nil {
 		toSerialize["labels"] = o.Labels
