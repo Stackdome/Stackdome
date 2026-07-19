@@ -94,7 +94,7 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		DefaultPermissions: map[string]string{
 			githubapp.PermContents:     githubapp.PermLevelRead,
 			githubapp.PermMetadata:     githubapp.PermLevelRead,
-			githubapp.PermPullRequests: githubapp.PermLevelRead,
+			githubapp.PermPullRequests: githubapp.PermLevelWrite,
 		},
 		// GitHub rejects "installation" as a default_event — installation
 		// lifecycle deliveries are sent to every app automatically, so only

@@ -6,6 +6,7 @@ const (
 	PermMetadata     = "metadata"
 	PermPullRequests = "pull_requests"
 	PermLevelRead    = "read"
+	PermLevelWrite   = "write"
 )
 
 // AppManifest is the GitHub App creation manifest the browser POSTs to
