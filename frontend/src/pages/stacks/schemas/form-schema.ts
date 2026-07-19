@@ -60,6 +60,13 @@ const FormEnvVarSchema = z.union([
     output: z.string().min(1, "Pick an output"),
   }),
   z.object({
+    from: z.literal("resourceTemplate"),
+    name: z.string().min(1, "Required"),
+    resourceName: z.string().min(1, "Pick a resource"),
+    template: z.string().min(1, "Required"),
+    values: z.record(z.string()),
+  }),
+  z.object({
     from: z.literal("self"),
     name: z.string().min(1, "Required"),
     selfOutput: z.string().min(1, "Pick an output"),
