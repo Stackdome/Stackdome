@@ -4118,7 +4118,7 @@
     "to": "now"
   },
   "timepicker": {},
-  "timezone": "Asia/Calcutta",
+  "timezone": "browser",
   "title": "Tooljet Monitoring",
   "uid": "tooljet-monitoring",
   "version": 46,
