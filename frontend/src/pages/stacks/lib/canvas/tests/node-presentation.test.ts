@@ -6,8 +6,30 @@ describe("nodePresentation", () => {
     expect(nodePresentation({ isAddon: true })).toEqual({
       kindLabel: "Postgres",
       glyph: "postgres",
+      brandSlug: "postgres",
       summary: "managed postgres",
     });
+  });
+
+  it("resolves a brand slug from the image for known software", () => {
+    const slug = (image: string) => nodePresentation({ isAddon: false, image }).brandSlug;
+    expect(slug("redis:6.2")).toBe("redis");
+    expect(slug("postgres:16")).toBe("postgres");
+    expect(slug("tooljet/tooljet:v3.20.18")).toBe("tooljet");
+    expect(slug("grafana/otel-lgtm:0.9")).toBe("opentelemetry"); // otel wins over grafana
+    expect(slug("grafana/grafana:11")).toBe("grafana");
+    expect(slug("minio/minio:latest")).toBe("minio");
+    expect(slug("acme/web-api:1")).toBeUndefined();
+  });
+
+  it("does not mistake postgrest for postgres", () => {
+    const p = nodePresentation({
+      isAddon: false,
+      image: "postgrest/postgrest:v12.2.12",
+      ports: [{ number: 3000, exposedToPublic: false }],
+    });
+    expect(p.kindLabel).toBe("Service");
+    expect(p.brandSlug).toBe("postgrest");
   });
 
   it("detects redis and marks it in-memory", () => {

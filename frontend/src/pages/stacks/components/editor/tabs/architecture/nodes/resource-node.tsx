@@ -51,7 +51,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
       <div className="px-[13px] py-3">
         <div className="flex items-center gap-2.5">
           <span className={cn("size-2 shrink-0 rounded-full", DOT_CLASS[data.dotVariant])} aria-hidden />
-          <NodeGlyph glyph={data.glyph} className="size-[17px] shrink-0 text-fg-2" />
+          <NodeGlyph glyph={data.glyph} brandSlug={data.brandSlug} size={17} className="size-[17px] shrink-0 text-fg-2" />
           <span className="flex-1 truncate text-sm font-medium text-foreground">{data.name}</span>
           <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-muted">
             {data.kindLabel}

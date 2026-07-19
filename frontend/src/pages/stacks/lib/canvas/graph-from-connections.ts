@@ -64,6 +64,8 @@ export interface ResourceNodeData {
   kindLabel: string;
   /** Glyph identifier for the node icon. */
   glyph: GlyphKind;
+  /** Brand-icon slug when the image maps to known software; falls back to glyph. */
+  brandSlug?: string;
   /** Live status-dot colour bucket, from the resource/addon's runtime state. */
   dotVariant: StatusVariant;
   summary: string;
@@ -240,6 +242,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
+        brandSlug: pres.brandSlug,
         // Form-data resources carry no status field; the graph-build dot
         // always starts neutral here — mergeTopology overlays the real
         // per-resource state from live status / topology once available.
@@ -263,6 +266,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name: input.addonNameById.get(addonId) ?? addonId,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
+        brandSlug: pres.brandSlug,
         dotVariant: statusVariant("addon", input.addonStateById?.get(addonId)),
         summary: pres.summary,
         volumes: [],
