@@ -41,6 +41,7 @@ var _ = Describe("PreviewStackStore", func() {
 				pr_number TEXT NOT NULL,
 				branch TEXT NOT NULL,
 				commit_sha TEXT NOT NULL,
+				github_comment_id INTEGER NOT NULL DEFAULT 0,
 				source TEXT NOT NULL,
 				image_overrides TEXT,
 				labels TEXT,
