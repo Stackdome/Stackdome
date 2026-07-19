@@ -12,6 +12,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -60,6 +61,7 @@ func newGitHubAppServiceForTest(t *testing.T) (GitIntegrationService, *githubApp
 		GitHubAppClient:   deps.appClient,
 		EncryptionService: deps.encryption,
 		Permissions:       permissions,
+		Logger:            logger.NewLogger(),
 		ExternalURL:       "https://hub.example.com",
 	})
 	return svc, deps

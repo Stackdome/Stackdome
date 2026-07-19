@@ -339,25 +339,31 @@ func (s *gitIntegrationService) ListRepositoryBranches(ctx context.Context, inte
 func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError {
 	if event != GitHubEventInstallation && event != GitHubEventPullRequest {
 		// push (and everything else) is accepted and dropped for now.
+		s.logger.Info(ctx, "github webhook: ignoring '%s' event", event)
 		return nil
 	}
 
 	parsed, err := github.ParseWebHook(event, payload)
 	if err != nil {
+		s.logger.Warn(ctx, "github webhook: malformed '%s' payload: %v", event, err)
 		return errors.BadRequest("malformed webhook payload: %s", err.Error())
 	}
 
 	appID := webhookAppID(parsed)
 	if appID == 0 {
+		s.logger.Warn(ctx, "github webhook: '%s' payload has no installation app id", event)
 		return errors.BadRequest("webhook payload has no installation app id")
 	}
 	integration, creds, serr := s.findAppByID(ctx, appID)
 	if serr != nil {
+		s.logger.Warn(ctx, "github webhook: no integration matches app id %d for '%s' event", appID, event)
 		return serr
 	}
 	if err := github.ValidateSignature(signature, payload, []byte(creds.WebhookSecret)); err != nil {
+		s.logger.Warn(ctx, "github webhook: signature verification failed for app id %d ('%s' event)", appID, event)
 		return errors.Forbidden("webhook signature verification failed")
 	}
+	s.logger.Info(ctx, "github webhook: verified '%s' delivery for org %s (app id %d)", event, integration.OrganisationID, appID)
 
 	switch e := parsed.(type) {
 	case *github.InstallationEvent:
@@ -383,6 +389,7 @@ func webhookAppID(parsed any) int64 {
 
 func (s *gitIntegrationService) handleInstallationEvent(ctx context.Context, integration *models.GitIntegration, installEvent *github.InstallationEvent) *errors.ServiceError {
 	install := installEvent.GetInstallation()
+	s.logger.Info(ctx, "github webhook: installation '%s' by '%s' for org %s", installEvent.GetAction(), install.GetAccount().GetLogin(), integration.OrganisationID)
 	switch installEvent.GetAction() {
 	case githubInstallationActCreated, githubInstallationActUnsuspend:
 		if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
@@ -409,6 +416,7 @@ func (s *gitIntegrationService) handlePullRequestEvent(ctx context.Context, inte
 	pr := prEvent.GetPullRequest()
 	// fork PRs carry untrusted code; never build them
 	if pr.GetHead().GetRepo().GetID() != prEvent.GetRepo().GetID() {
+		s.logger.Info(ctx, "github webhook: dropping fork PR #%d on '%s'", prEvent.GetNumber(), prEvent.GetRepo().GetCloneURL())
 		return nil
 	}
 	ev := PullRequestEvent{

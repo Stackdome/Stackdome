@@ -10,6 +10,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	svcerrors "github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -72,6 +73,7 @@ var _ = Describe("GitIntegrationService.ListRepositories", func() {
 			GitHubAppClient:   appClient,
 			EncryptionService: encryption,
 			Permissions:       permissions,
+			Logger:            logger.NewLogger(),
 			ExternalURL:       "https://hub.example.com",
 		})
 	})

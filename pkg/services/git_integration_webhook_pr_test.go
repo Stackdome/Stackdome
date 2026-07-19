@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -16,7 +17,7 @@ import (
 
 var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 	const (
-		appID     = 4242
+		appID      = 4242
 		hookSecret = "hook-secret"
 	)
 	var (
@@ -80,6 +81,7 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 			GitHubAppClient:   mocks.NewMockGitHubAppClient(ctrl),
 			EncryptionService: encryption,
 			Permissions:       mocks.NewMockPermissionService(ctrl),
+			Logger:            logger.NewLogger(),
 			ExternalURL:       "https://hub.example.com",
 		})
 		WirePreviewWebhook(svc, previewWebhook)
