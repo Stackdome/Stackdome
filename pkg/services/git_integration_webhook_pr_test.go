@@ -25,19 +25,25 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 		previewWebhook *MockPreviewWebhookService
 	)
 
-	prPayload := func(action string) []byte {
+	const baseRepoID = 1010
+
+	prPayloadFromRepo := func(action string, headRepoID int) []byte {
 		payload, err := json.Marshal(map[string]any{
 			"action":       action,
 			"number":       7,
 			"installation": map[string]any{"id": 77, "app_id": appID},
-			"repository":   map[string]any{"clone_url": "https://github.com/acme/app.git"},
+			"repository":   map[string]any{"id": baseRepoID, "clone_url": "https://github.com/acme/app.git"},
 			"pull_request": map[string]any{
-				"head": map[string]any{"ref": "feature", "sha": "abc123"},
+				"head": map[string]any{"ref": "feature", "sha": "abc123", "repo": map[string]any{"id": headRepoID}},
 				"base": map[string]any{"ref": "main"},
 			},
 		})
 		Expect(err).ToNot(HaveOccurred())
 		return payload
+	}
+
+	prPayload := func(action string) []byte {
+		return prPayloadFromRepo(action, baseRepoID)
 	}
 
 	BeforeEach(func() {
@@ -103,6 +109,13 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 		Entry("synchronize", "synchronize", PRActionSynchronize),
 		Entry("closed", "closed", PRActionClosed),
 	)
+
+	It("drops fork PRs without dispatching", func() {
+		// No HandlePullRequest expectation — must not be called.
+		payload := prPayloadFromRepo("opened", baseRepoID+1)
+		serr := svc.ProcessGitHubWebhook(context.Background(), GitHubEventPullRequest, payload, signWebhook(payload, hookSecret))
+		Expect(serr).To(BeNil())
+	})
 
 	It("rejects a bad signature without dispatching", func() {
 		// No HandlePullRequest expectation — must not be called.

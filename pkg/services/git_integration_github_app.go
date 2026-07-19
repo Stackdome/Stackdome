@@ -92,13 +92,14 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		Public:         true,
 		HookAttributes: githubapp.AppHookAttributes{URL: hub + githubWebhookPath},
 		DefaultPermissions: map[string]string{
-			githubapp.PermContents: githubapp.PermLevelRead,
-			githubapp.PermMetadata: githubapp.PermLevelRead,
+			githubapp.PermContents:     githubapp.PermLevelRead,
+			githubapp.PermMetadata:     githubapp.PermLevelRead,
+			githubapp.PermPullRequests: githubapp.PermLevelRead,
 		},
 		// GitHub rejects "installation" as a default_event — installation
 		// lifecycle deliveries are sent to every app automatically, so only
 		// subscribable events belong here.
-		DefaultEvents: []string{GitHubEventPush},
+		DefaultEvents: []string{GitHubEventPush, GitHubEventPullRequest},
 	}
 	// The API contract exposes the manifest as a free-form object, so marshal
 	// the typed manifest into the generic map the model carries.
@@ -406,6 +407,10 @@ func (s *gitIntegrationService) handleInstallationEvent(ctx context.Context, int
 
 func (s *gitIntegrationService) handlePullRequestEvent(ctx context.Context, integration *models.GitIntegration, prEvent *github.PullRequestEvent) *errors.ServiceError {
 	pr := prEvent.GetPullRequest()
+	// fork PRs carry untrusted code; never build them
+	if pr.GetHead().GetRepo().GetID() != prEvent.GetRepo().GetID() {
+		return nil
+	}
 	ev := PullRequestEvent{
 		OrganisationID: integration.OrganisationID,
 		RepoURL:        prEvent.GetRepo().GetCloneURL(),

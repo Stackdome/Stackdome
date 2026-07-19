@@ -2,9 +2,10 @@ package githubapp
 
 // GitHub App permission scopes and access levels requested by the manifest.
 const (
-	PermContents  = "contents"
-	PermMetadata  = "metadata"
-	PermLevelRead = "read"
+	PermContents     = "contents"
+	PermMetadata     = "metadata"
+	PermPullRequests = "pull_requests"
+	PermLevelRead    = "read"
 )
 
 // AppManifest is the GitHub App creation manifest the browser POSTs to
