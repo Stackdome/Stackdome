@@ -27,7 +27,8 @@ var _ = Describe("GitInstallationStore", func() {
 				repository_selection TEXT,
 				created_at DATETIME,
 				updated_at DATETIME,
-				UNIQUE (git_integration_id, installation_id)
+				UNIQUE (git_integration_id, installation_id),
+				UNIQUE (installation_id)
 			)
 		`)
 		store = pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{SessionFactory: sf})
