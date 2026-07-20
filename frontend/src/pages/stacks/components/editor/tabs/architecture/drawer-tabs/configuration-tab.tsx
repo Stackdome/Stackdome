@@ -627,10 +627,11 @@ function StackResourceConfigurationTabImpl({
                 <Input
                   id={`port-number-${index}-${pidx}`}
                   inputMode="numeric"
-                  value={port.number?.toString() || ""}
-                  onChange={(e) =>
-                    updatePort(pidx, { number: parseInt(e.target.value.replace(/\D/g, "")) || 0 })
-                  }
+                  value={port.number?.toString() ?? ""}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    updatePort(pidx, { number: digits === "" ? undefined : parseInt(digits, 10) });
+                  }}
                   className={`h-9 w-[84px] shrink-0 font-mono text-[13px] ${getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}`}
                   required
                 />

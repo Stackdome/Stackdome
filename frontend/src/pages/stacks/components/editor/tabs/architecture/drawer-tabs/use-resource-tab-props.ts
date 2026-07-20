@@ -104,7 +104,7 @@ export function useResourceTabProps(args: {
     onChangeRef.current(indexRef.current, { ...r, init_spec: { ...r.init_spec, ...patch } });
   }, []);
 
-  const onPatchExecCommandArgs = useCallback((patch: { command?: string[]; args?: string[] }) => {
+  const onPatchExecCommandArgs = useCallback((patch: { command?: string; args?: string }) => {
     const r = resourceRef.current;
     onChangeRef.current(indexRef.current, { ...r, execution_config: { ...r.execution_config, ...patch } });
   }, []);

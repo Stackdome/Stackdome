@@ -7,11 +7,12 @@ import type {
   DockerComposeService,
   DockerComposeVolume,
 } from "@/types/docker-compose";
-import type {
-  FormEnvVarData,
-  FormStackData,
-  FormStackResourceData,
-  FormVolumeExtendedData,
+import {
+  argvToText,
+  type FormEnvVarData,
+  type FormStackData,
+  type FormStackResourceData,
+  type FormVolumeExtendedData,
 } from "@/pages/stacks/schemas/form-schema";
 
 export interface ConversionResult {
@@ -719,21 +720,22 @@ function convertEnvironmentVariables(
 function convertCommand(
   command: DockerComposeService['command'],
   warnings: ConversionWarning[]
-): string[] {
-  if (!command) return [];
+): string | undefined {
+  if (!command) return undefined;
 
   if (typeof command === 'string') {
-    // Split string command into array
-    return command.split(' ').filter(part => part.length > 0);
+    // Compose shell-form string is already the form's terminal-style text.
+    return command.trim() || undefined;
   } else if (Array.isArray(command)) {
-    return command;
+    // Compose exec-form array → quote-aware text (form field format).
+    return argvToText(command);
   } else {
     warnings.push({
       type: 'partial',
       message: 'Invalid command format. Please review and set manually.',
       dockerComposeField: 'command',
     });
-    return [];
+    return undefined;
   }
 }
 
