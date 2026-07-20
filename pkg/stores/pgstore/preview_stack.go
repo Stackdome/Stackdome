@@ -139,7 +139,7 @@ func (s *previewStackStore) ListNeedingReconciliation(ctx context.Context, page,
 	}
 	var previews []*models.PreviewStack
 	if err := s.sessionFactory.New(ctx).
-		Where("status->>'phase' NOT IN (?, ?)", models.PreviewStackPhaseReady, models.PreviewStackPhaseFailed).
+		Where("status->>'phase' NOT IN (?, ?) OR github_comment_pending", models.PreviewStackPhaseReady, models.PreviewStackPhaseFailed).
 		Order("created_at ASC").
 		Limit(pageSize).
 		Offset(offset).

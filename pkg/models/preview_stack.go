@@ -135,6 +135,7 @@ type PreviewStack struct {
 	CommitSHA            string                  `gorm:"not null"`
 	Source               PreviewStackSource      `gorm:"not null"`
 	GitHubCommentID      int64                   `gorm:"column:github_comment_id;not null;default:0"`
+	GitHubCommentPending bool                    `gorm:"column:github_comment_pending;not null;default:false"`
 	ImageOverrides       ImageOverrides          `gorm:"type:jsonb"`
 	Labels               Labels                  `gorm:"type:jsonb"`
 	Annotations          Annotations             `gorm:"type:jsonb"`

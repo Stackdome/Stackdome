@@ -21,21 +21,19 @@ const previewCommentMarker = "<!-- stackdome-preview -->"
 // Perm-less: reached only from the preview worker, never from user requests.
 type PreviewCommentService interface {
 	// InternalUpsertComment renders the comment for the preview's current
-	// state and creates or edits the sticky PR comment. Best-effort: callers
-	// log the returned error and never fail reconciliation on it.
+	// state and creates or edits the sticky PR comment. On create it sets
+	// preview.GitHubCommentID in place; the caller owns persisting it.
 	InternalUpsertComment(ctx context.Context, preview *models.PreviewStack) error
 }
 
 type PreviewCommentServiceSpec struct {
-	PreviewStackStore stores.PreviewStackStore
-	ConfigStore       stores.StackPreviewConfigStore
-	GitIntegrations   GitIntegrationService
-	Commenter         githubapp.PullRequestCommenter
-	Logger            logger.Logger
+	ConfigStore     stores.StackPreviewConfigStore
+	GitIntegrations GitIntegrationService
+	Commenter       githubapp.PullRequestCommenter
+	Logger          logger.Logger
 }
 
 type previewCommentService struct {
-	previews        stores.PreviewStackStore
 	configs         stores.StackPreviewConfigStore
 	gitIntegrations GitIntegrationService
 	commenter       githubapp.PullRequestCommenter
@@ -44,7 +42,6 @@ type previewCommentService struct {
 
 func NewPreviewCommentService(spec PreviewCommentServiceSpec) PreviewCommentService {
 	return &previewCommentService{
-		previews:        spec.PreviewStackStore,
 		configs:         spec.ConfigStore,
 		gitIntegrations: spec.GitIntegrations,
 		commenter:       spec.Commenter,
@@ -99,9 +96,6 @@ func (s *previewCommentService) InternalUpsertComment(ctx context.Context, previ
 		return err
 	}
 	preview.GitHubCommentID = id
-	if _, sErr := s.previews.Update(ctx, preview); sErr != nil {
-		return fmt.Errorf("failed to persist comment id: %w", sErr)
-	}
 	return nil
 }
 

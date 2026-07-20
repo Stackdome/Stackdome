@@ -18,7 +18,6 @@ import (
 var _ = Describe("PreviewCommentService", func() {
 	var (
 		ctrl            *gomock.Controller
-		previews        *mocks.MockPreviewStackStore
 		configs         *mocks.MockStackPreviewConfigStore
 		gitIntegrations *mocks.MockGitIntegrationService
 		commenter       *githubapp.MockPullRequestCommenter
@@ -31,16 +30,14 @@ var _ = Describe("PreviewCommentService", func() {
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
-		previews = mocks.NewMockPreviewStackStore(ctrl)
 		configs = mocks.NewMockStackPreviewConfigStore(ctrl)
 		gitIntegrations = mocks.NewMockGitIntegrationService(ctrl)
 		commenter = githubapp.NewMockPullRequestCommenter(ctrl)
 		svc = NewPreviewCommentService(PreviewCommentServiceSpec{
-			PreviewStackStore: previews,
-			ConfigStore:       configs,
-			GitIntegrations:   gitIntegrations,
-			Commenter:         commenter,
-			Logger:            logger.NewLogger(),
+			ConfigStore:     configs,
+			GitIntegrations: gitIntegrations,
+			Commenter:       commenter,
+			Logger:          logger.NewLogger(),
 		})
 		ctx = context.Background()
 
@@ -64,7 +61,7 @@ var _ = Describe("PreviewCommentService", func() {
 		mint = &models.GitHubAppMintResult{Token: "tok"}
 	})
 
-	It("creates the comment and persists its id when none exists", func() {
+	It("creates the comment and sets its id when none exists", func() {
 		configs.EXPECT().GetByID(ctx, "config-1").Return(config, nil)
 		gitIntegrations.EXPECT().InternalMintForRepo(ctx, "org-1", config.GitRepository.RepoURL).Return(mint, nil)
 		commenter.EXPECT().CreateComment(ctx, "tok", "acme", "app", 7, gomock.Any()).
@@ -74,7 +71,6 @@ var _ = Describe("PreviewCommentService", func() {
 				Expect(body).To(ContainSubstring("https://pr-7-web.example.dev"))
 				return 4242, nil
 			})
-		previews.EXPECT().Update(ctx, preview).Return(preview, nil)
 
 		Expect(svc.InternalUpsertComment(ctx, preview)).To(Succeed())
 		Expect(preview.GitHubCommentID).To(Equal(int64(4242)))
@@ -89,13 +85,12 @@ var _ = Describe("PreviewCommentService", func() {
 		Expect(svc.InternalUpsertComment(ctx, preview)).To(Succeed())
 	})
 
-	It("re-creates and stores a new id when the edit target is gone", func() {
+	It("re-creates and sets a new id when the edit target is gone", func() {
 		preview.GitHubCommentID = 4242
 		configs.EXPECT().GetByID(ctx, "config-1").Return(config, nil)
 		gitIntegrations.EXPECT().InternalMintForRepo(ctx, "org-1", config.GitRepository.RepoURL).Return(mint, nil)
 		commenter.EXPECT().EditComment(ctx, "tok", "acme", "app", int64(4242), gomock.Any()).Return(githubapp.ErrCommentNotFound)
 		commenter.EXPECT().CreateComment(ctx, "tok", "acme", "app", 7, gomock.Any()).Return(int64(5000), nil)
-		previews.EXPECT().Update(ctx, preview).Return(preview, nil)
 
 		Expect(svc.InternalUpsertComment(ctx, preview)).To(Succeed())
 		Expect(preview.GitHubCommentID).To(Equal(int64(5000)))

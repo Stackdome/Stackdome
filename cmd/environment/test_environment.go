@@ -773,11 +773,10 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 		SessionFactory: te.DBSession,
 	})
 	previewCommentService := services.NewPreviewCommentService(services.PreviewCommentServiceSpec{
-		PreviewStackStore: previewStackStore,
-		ConfigStore:       previewConfigStore,
-		GitIntegrations:   te.Services.GitIntegrationService,
-		Commenter:         githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
-		Logger:            te.Logger,
+		ConfigStore:     previewConfigStore,
+		GitIntegrations: te.Services.GitIntegrationService,
+		Commenter:       githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
+		Logger:          te.Logger,
 	})
 	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
 		PreviewStackService: te.Services.PreviewStackService,

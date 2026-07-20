@@ -76,4 +76,5 @@ var MigrationList = []*gormigrate.Migration{
 	addPreviewConfigEnvAndRepoNorm(),
 	addPreviewStackCommentID(),
 	addGitInstallationIDUniqueIndex(),
+	addPreviewCommentPending(),
 }

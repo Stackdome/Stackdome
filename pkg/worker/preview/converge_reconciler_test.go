@@ -74,6 +74,51 @@ var _ = Describe("ConvergeReconciler", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultNil))
 		})
+
+		It("retries a pending comment on a Ready preview and clears the flag on success", func() {
+			releaseID := "rel-ready"
+			preview := &models.PreviewStack{
+				ID:                   "p-ready",
+				StackID:              ptr.To("stack-1"),
+				ActiveReleaseID:      &releaseID,
+				GitHubCommentPending: true,
+				Status:               models.PreviewStackStatus{Phase: models.PreviewStackPhaseReady},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).
+				Return(&models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).Return(nil)
+			previewStore.EXPECT().Update(gomock.Any(), preview).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.GitHubCommentPending).To(BeFalse())
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+		})
+
+		It("keeps the pending flag without a DB update when the comment retry fails again", func() {
+			releaseID := "rel-ready"
+			preview := &models.PreviewStack{
+				ID:                   "p-ready",
+				StackID:              ptr.To("stack-1"),
+				ActiveReleaseID:      &releaseID,
+				GitHubCommentPending: true,
+				Status:               models.PreviewStackStatus{Phase: models.PreviewStackPhaseReady},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).
+				Return(&models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).
+				Return(stderrors.New("github down"))
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+			Expect(preview.GitHubCommentPending).To(BeTrue())
+		})
 	})
 
 	Context("terminal cases", func() {
@@ -128,8 +173,15 @@ var _ = Describe("ConvergeReconciler", func() {
 
 			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
 			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) error {
+					p.GitHubCommentID = 4242
+					return nil
+				})
 			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.GitHubCommentID).To(Equal(int64(4242)))
+					Expect(p.GitHubCommentPending).To(BeFalse())
 					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseReady))
 					Expect(p.Status.Reason).To(Equal("ReleaseConverged"))
 					Expect(p.Status.Outputs).ToNot(BeNil())
@@ -141,14 +193,13 @@ var _ = Describe("ConvergeReconciler", func() {
 					Expect(p.Status.Outputs.URLs[1].URL).To(Equal("https://pr-1-api.example.com"))
 					return p, nil
 				})
-			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultStop))
 		})
 
-		It("still stops when the PR comment upsert fails", func() {
+		It("persists Ready with the comment marked pending when the upsert fails", func() {
 			release := &models.StackRelease{
 				ID:    releaseID,
 				State: models.ReleaseStateReleased,
@@ -157,12 +208,14 @@ var _ = Describe("ConvergeReconciler", func() {
 
 			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
 			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
-			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
-					return p, nil
-				})
 			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).
 				Return(stderrors.New("github down"))
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseReady))
+					Expect(p.GitHubCommentPending).To(BeTrue())
+					return p, nil
+				})
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())

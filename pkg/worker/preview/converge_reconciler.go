@@ -41,7 +41,7 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 	switch release.State {
 	case models.ReleaseStateReleased:
 		if preview.Status.Phase == models.PreviewStackPhaseReady {
-			return resultNil, nil
+			return r.retryPendingComment(ctx, preview)
 		}
 		stack, sErr := r.stackService.InternalGetStack(ctx, *preview.StackID)
 		if sErr != nil {
@@ -54,12 +54,11 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 			Reason:  "ReleaseConverged",
 			Outputs: &outputs,
 		}
+		preview.GitHubCommentPending = !r.upsertComment(ctx, preview)
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
 		}
-		if err := r.commentService.InternalUpsertComment(ctx, preview); err != nil {
-			r.logger.Warn(ctx, "preview %s: failed to upsert PR comment: %v", preview.ID, err)
-		}
+
 		r.logger.Info(ctx, "preview %s is ready", preview.ID)
 		return resultStop, nil
 
@@ -75,11 +74,9 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 			Message: release.Message,
 			Outputs: preview.Status.Outputs, // keep last-known URLs for the failed comment
 		}
+		preview.GitHubCommentPending = !r.upsertComment(ctx, preview)
 		if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
 			return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
-		}
-		if err := r.commentService.InternalUpsertComment(ctx, preview); err != nil {
-			r.logger.Warn(ctx, "preview %s: failed to upsert PR comment: %v", preview.ID, err)
 		}
 		r.logger.Info(ctx, "preview %s failed: %s", preview.ID, release.Message)
 		return resultStop, nil
@@ -99,6 +96,32 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, preview *models.Prev
 	default:
 		return resultRequeueAfter(convergePollInterval), nil
 	}
+}
+
+// upsertComment posts the terminal-state comment; a failure is logged and
+// retried on a later pass via GitHubCommentPending.
+func (r *convergeReconciler) upsertComment(ctx context.Context, preview *models.PreviewStack) (posted bool) {
+	if err := r.commentService.InternalUpsertComment(ctx, preview); err != nil {
+		r.logger.Warn(ctx, "preview %s: failed to upsert PR comment, will retry: %v", preview.ID, err)
+		return false
+	}
+	return true
+}
+
+// retryPendingComment re-attempts a PR comment that failed after the preview
+// already went Ready. Status is already persisted; only the flag changes.
+func (r *convergeReconciler) retryPendingComment(ctx context.Context, preview *models.PreviewStack) (subReconcilerResult, error) {
+	if !preview.GitHubCommentPending {
+		return resultNil, nil
+	}
+	if !r.upsertComment(ctx, preview) {
+		return resultStop, nil // still failing; the periodic scan retries
+	}
+	preview.GitHubCommentPending = false
+	if _, sErr := r.previewStackStore.Update(ctx, preview); sErr != nil {
+		return resultNil, fmt.Errorf("failed to update preview status: %w", sErr)
+	}
+	return resultStop, nil
 }
 
 func buildOutputs(stack *models.Stack, commitSHA string) models.PreviewStackOutputs {

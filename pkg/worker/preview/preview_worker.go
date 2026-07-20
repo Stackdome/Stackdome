@@ -63,7 +63,7 @@ func (w *previewWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 		return worker.Result{}, serr
 	}
 
-	if isInTerminalState(preview.Status.Phase) {
+	if isInTerminalState(preview.Status.Phase) && !preview.GitHubCommentPending {
 		return worker.Result{}, nil
 	}
 

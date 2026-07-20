@@ -190,11 +190,10 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 		SessionFactory: d.DBSession,
 	})
 	previewCommentService := services.NewPreviewCommentService(services.PreviewCommentServiceSpec{
-		PreviewStackStore: previewStackStore,
-		ConfigStore:       previewConfigStore,
-		GitIntegrations:   d.Services.GitIntegrationService,
-		Commenter:         githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
-		Logger:            d.Logger,
+		ConfigStore:     previewConfigStore,
+		GitIntegrations: d.Services.GitIntegrationService,
+		Commenter:       githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
+		Logger:          d.Logger,
 	})
 	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
 		PreviewStackService: d.Services.PreviewStackService,
