@@ -22,7 +22,7 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 	)
 	var (
 		ctrl               *gomock.Controller
-		svc                GitIntegrationService
+		svc                GitHubWebhookService
 		previewWebhook     *MockPreviewWebhookService
 		installationsStore *mocks.MockGitInstallationStore
 	)
@@ -78,19 +78,13 @@ var _ = Describe("ProcessGitHubWebhook pull_request dispatch", func() {
 			Return(&models.GitInstallation{GitIntegrationID: "gi-app", InstallationID: 77}, nil).AnyTimes()
 		previewWebhook = NewMockPreviewWebhookService(ctrl)
 
-		svc = NewGitIntegrationService(GitIntegrationServiceSpec{
+		svc = NewGitHubWebhookService(GitHubWebhookServiceSpec{
 			Store:             store,
 			InstallationStore: installationsStore,
-			OAuthStateStore:   mocks.NewMockOAuthStateStore(ctrl),
-			OrganisationStore: mocks.NewMockOrganisationStore(ctrl),
-			AtomicExecutor:    mocks.NewMockAtomicExecutor(ctrl),
-			GitHubAppClient:   mocks.NewMockGitHubAppClient(ctrl),
 			EncryptionService: encryption,
-			Permissions:       mocks.NewMockPermissionService(ctrl),
+			PreviewWebhook:    previewWebhook,
 			Logger:            logger.NewLogger(),
-			ExternalURL:       "https://hub.example.com",
 		})
-		WirePreviewWebhook(svc, previewWebhook)
 	})
 
 	DescribeTable("routes the PR action with a populated event",

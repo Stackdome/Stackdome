@@ -67,6 +67,26 @@ func newGitHubAppServiceForTest(t *testing.T) (GitIntegrationService, *githubApp
 	return svc, deps
 }
 
+func newGitHubWebhookServiceForTest(t *testing.T) (GitHubWebhookService, *githubAppServiceMocks) {
+	t.Helper()
+	ctrl := gomock.NewController(t)
+	t.Cleanup(ctrl.Finish)
+
+	deps := &githubAppServiceMocks{
+		store:         mocks.NewMockGitIntegrationStore(ctrl),
+		installations: mocks.NewMockGitInstallationStore(ctrl),
+		encryption:    newTestEncryptionService(t),
+	}
+	svc := NewGitHubWebhookService(GitHubWebhookServiceSpec{
+		Store:             deps.store,
+		InstallationStore: deps.installations,
+		EncryptionService: deps.encryption,
+		PreviewWebhook:    NewMockPreviewWebhookService(ctrl),
+		Logger:            logger.NewLogger(),
+	})
+	return svc, deps
+}
+
 func sealedGitHubApp(t *testing.T, encryption EncryptionService, app models.GitHubAppCredentials) *models.GitIntegration {
 	t.Helper()
 	auth := models.GitIntegrationAuth{GitHubApp: &app}
@@ -250,7 +270,7 @@ func installationWebhookPayload(t *testing.T, action string) []byte {
 }
 
 func TestProcessGitHubWebhookInstallationCreated(t *testing.T) {
-	svc, deps := newGitHubAppServiceForTest(t)
+	svc, deps := newGitHubWebhookServiceForTest(t)
 	integration := sealedGitHubApp(t, deps.encryption, models.GitHubAppCredentials{AppID: 4242, Slug: "stackdome-test", WebhookSecret: "hook-secret"})
 	integration.Status = models.GitIntegrationStatusPendingInstall
 	payload := installationWebhookPayload(t, "created")
@@ -279,7 +299,7 @@ func TestProcessGitHubWebhookInstallationCreated(t *testing.T) {
 }
 
 func TestProcessGitHubWebhookRejectsBadSignature(t *testing.T) {
-	svc, deps := newGitHubAppServiceForTest(t)
+	svc, deps := newGitHubWebhookServiceForTest(t)
 	integration := sealedGitHubApp(t, deps.encryption, models.GitHubAppCredentials{AppID: 4242, WebhookSecret: "hook-secret"})
 	payload := installationWebhookPayload(t, "created")
 
@@ -292,7 +312,7 @@ func TestProcessGitHubWebhookRejectsBadSignature(t *testing.T) {
 }
 
 func TestProcessGitHubWebhookInstallationDeleted(t *testing.T) {
-	svc, deps := newGitHubAppServiceForTest(t)
+	svc, deps := newGitHubWebhookServiceForTest(t)
 	integration := sealedGitHubApp(t, deps.encryption, models.GitHubAppCredentials{AppID: 4242, WebhookSecret: "hook-secret"})
 	payload := installationWebhookPayload(t, "deleted")
 
@@ -313,7 +333,7 @@ func TestProcessGitHubWebhookInstallationDeleted(t *testing.T) {
 }
 
 func TestProcessGitHubWebhookDropsPushEvents(t *testing.T) {
-	svc, _ := newGitHubAppServiceForTest(t)
+	svc, _ := newGitHubWebhookServiceForTest(t)
 	if serr := svc.ProcessGitHubWebhook(context.Background(), GitHubEventPush, []byte(`{}`), ""); serr != nil {
 		t.Fatalf("expected push events to be dropped, got %v", serr)
 	}

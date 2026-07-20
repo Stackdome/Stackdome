@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -12,9 +11,8 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/errors"
-	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/google/go-github/v88/github"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/google/uuid"
 	"github.com/gosimple/slug"
 	"golang.org/x/sync/errgroup"
@@ -30,27 +28,11 @@ const (
 	manifestCallbackPath = "/api/v1/git-integrations/github/manifest/callback"
 	githubWebhookPath    = "/api/v1/webhooks/github"
 
-	// GitHub webhook event and action names.
-	GitHubEventInstallation        = "installation"
-	GitHubEventPullRequest         = "pull_request"
-	GitHubEventPush                = "push"
-	githubInstallationActCreated   = "created"
-	githubInstallationActDeleted   = "deleted"
-	githubInstallationActSuspend   = "suspend"
-	githubInstallationActUnsuspend = "unsuspend"
-
-	// maxWebhookLogValueLen bounds unverified webhook values in log lines.
-	maxWebhookLogValueLen = 64
+	// GitHub webhook event names.
+	GitHubEventInstallation = "installation"
+	GitHubEventPullRequest  = "pull_request"
+	GitHubEventPush         = "push"
 )
-
-// truncateForLog bounds a webhook-supplied value before it reaches a log line
-// emitted ahead of signature verification.
-func truncateForLog(s string) string {
-	if len(s) > maxWebhookLogValueLen {
-		return s[:maxWebhookLogValueLen] + "..."
-	}
-	return s
-}
 
 // CreateGitHubAppManifest starts the manifest flow: it creates (or reuses) the
 // org's pending github_app integration row and returns the manifest payload
@@ -343,131 +325,6 @@ func (s *gitIntegrationService) ListRepositoryBranches(ctx context.Context, inte
 	return branches, nil
 }
 
-// ProcessGitHubWebhook handles installation lifecycle deliveries. The event is
-// parsed with go-github, the integration is located by the app ID in the
-// payload, and the delivery is HMAC-verified against that integration's webhook
-// secret before any state changes. Unmatched or uninteresting events are
-// dropped. suspend/unsuspend are treated as uninstall/reinstall so a suspended
-// installation is never used to mint tokens.
-func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError {
-	if event != GitHubEventInstallation && event != GitHubEventPullRequest {
-		// push (and everything else) is accepted and dropped for now.
-		s.logger.Info(ctx, "github webhook: ignoring '%s' event", truncateForLog(event))
-		return nil
-	}
-
-	parsed, err := github.ParseWebHook(event, payload)
-	if err != nil {
-		s.logger.Warn(ctx, "github webhook: malformed '%s' payload: %s", event, truncateForLog(err.Error()))
-		return errors.BadRequest("malformed webhook payload: %s", err.Error())
-	}
-
-	integration, creds, serr := s.webhookIntegration(ctx, parsed)
-	if serr != nil {
-		s.logger.Warn(ctx, "github webhook: cannot resolve integration for '%s' event: %s", event, serr.Reason)
-		return serr
-	}
-	if err := github.ValidateSignature(signature, payload, []byte(creds.WebhookSecret)); err != nil {
-		s.logger.WithField(logger.FieldOrgID, integration.OrganisationID).Warn(ctx, "github webhook: signature verification failed ('%s' event)", event)
-		return errors.Forbidden("webhook signature verification failed")
-	}
-	s.logger.WithField(logger.FieldOrgID, integration.OrganisationID).Info(ctx, "github webhook: verified '%s' delivery", event)
-
-	switch e := parsed.(type) {
-	case *github.InstallationEvent:
-		return s.handleInstallationEvent(ctx, integration, e)
-	case *github.PullRequestEvent:
-		return s.handlePullRequestEvent(ctx, integration, e)
-	default:
-		return nil
-	}
-}
-
-// webhookIntegration resolves the integration a delivery belongs to. Only
-// installation events carry the full installation object with app_id;
-// repository events (pull_request) carry the slim {id, node_id} reference, so
-// they resolve through the stored installation row instead.
-func (s *gitIntegrationService) webhookIntegration(ctx context.Context, parsed any) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
-	switch e := parsed.(type) {
-	case *github.InstallationEvent:
-		appID := e.GetInstallation().GetAppID()
-		if appID == 0 {
-			return nil, nil, errors.BadRequest("installation payload has no app id")
-		}
-		return s.findAppByID(ctx, appID)
-	case *github.PullRequestEvent:
-		installationID := e.GetInstallation().GetID()
-		if installationID == 0 {
-			return nil, nil, errors.BadRequest("webhook payload has no installation id")
-		}
-		return s.findAppByInstallation(ctx, installationID)
-	default:
-		return nil, nil, errors.BadRequest("unsupported webhook event")
-	}
-}
-
-// findAppByInstallation resolves an integration from a GitHub-global
-// installation id via the stored installation row.
-func (s *gitIntegrationService) findAppByInstallation(ctx context.Context, installationID int64) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
-	install, serr := s.installations.GetByInstallationID(ctx, installationID)
-	if serr != nil {
-		return nil, nil, serr
-	}
-	integration, serr := s.store.GetByID(ctx, install.GitIntegrationID)
-	if serr != nil {
-		return nil, nil, serr
-	}
-	creds, serr := s.appCredentials(integration)
-	if serr != nil {
-		return nil, nil, serr
-	}
-	return integration, creds, nil
-}
-
-func (s *gitIntegrationService) handleInstallationEvent(ctx context.Context, integration *models.GitIntegration, installEvent *github.InstallationEvent) *errors.ServiceError {
-	install := installEvent.GetInstallation()
-	s.logger.WithField(logger.FieldOrgID, integration.OrganisationID).Info(ctx, "github webhook: installation '%s' by '%s'", installEvent.GetAction(), install.GetAccount().GetLogin())
-	switch installEvent.GetAction() {
-	case githubInstallationActCreated, githubInstallationActUnsuspend:
-		if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
-			GitIntegrationID:    integration.ID,
-			InstallationID:      install.GetID(),
-			AccountLogin:        install.GetAccount().GetLogin(),
-			AccountType:         models.GitAccountType(install.GetAccount().GetType()),
-			RepositorySelection: install.GetRepositorySelection(),
-		}); serr != nil {
-			return serr
-		}
-	case githubInstallationActDeleted, githubInstallationActSuspend:
-		if serr := s.installations.DeleteByInstallationID(ctx, integration.ID, install.GetID()); serr != nil {
-			return serr
-		}
-	default:
-		return nil
-	}
-
-	return s.syncInstallationStatus(ctx, integration)
-}
-
-func (s *gitIntegrationService) handlePullRequestEvent(ctx context.Context, integration *models.GitIntegration, prEvent *github.PullRequestEvent) *errors.ServiceError {
-	pr := prEvent.GetPullRequest()
-	// fork PRs carry untrusted code; never build them
-	if pr.GetHead().GetRepo().GetID() != prEvent.GetRepo().GetID() {
-		s.logger.Info(ctx, "github webhook: dropping fork PR #%d on '%s'", prEvent.GetNumber(), prEvent.GetRepo().GetCloneURL())
-		return nil
-	}
-	ev := PullRequestEvent{
-		OrganisationID: integration.OrganisationID,
-		RepoURL:        prEvent.GetRepo().GetCloneURL(),
-		Branch:         pr.GetHead().GetRef(),
-		BaseBranch:     pr.GetBase().GetRef(),
-		HeadSHA:        pr.GetHead().GetSHA(),
-		PRNumber:       strconv.Itoa(prEvent.GetNumber()),
-		Action:         PullRequestAction(prEvent.GetAction()),
-	}
-	return s.previewWebhook.HandlePullRequest(ctx, ev)
-}
-
 // InternalMintForRepo mints an installation token for the org's installed
 // GitHub App when an installation covers the repository owner. Returns 404
 // when no app/installation applies so resolution can fall through.
@@ -552,11 +409,18 @@ func (s *gitIntegrationService) installedApp(ctx context.Context, integrationID,
 
 // appCredentials unseals the integration and extracts the app credentials.
 func (s *gitIntegrationService) appCredentials(integration *models.GitIntegration) (*githubapp.AppCredentials, *errors.ServiceError) {
+	return unsealAppCredentials(s.encryptionService, integration)
+}
+
+// unsealAppCredentials decrypts the integration's auth blob (when not already
+// unsealed) and returns the GitHub App credentials. Shared by the integration
+// service and the webhook ingress service.
+func unsealAppCredentials(enc EncryptionService, integration *models.GitIntegration) (*githubapp.AppCredentials, *errors.ServiceError) {
 	if integration.EncryptedAuth == "" {
 		return nil, errors.BadRequest("the GitHub App setup has not been completed yet")
 	}
 	if integration.Auth == nil {
-		if serr := s.unsealIntegration(integration); serr != nil {
+		if serr := unsealGitIntegration(enc, integration); serr != nil {
 			return nil, serr
 		}
 	}
@@ -572,27 +436,6 @@ func (s *gitIntegrationService) appCredentials(integration *models.GitIntegratio
 		ClientID:      app.ClientID,
 		ClientSecret:  app.ClientSecret,
 	}, nil
-}
-
-// findAppByID locates a github_app integration by GitHub app ID.
-func (s *gitIntegrationService) findAppByID(ctx context.Context, appID int64) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
-	integrations, serr := s.store.ListGitHubApps(ctx)
-	if serr != nil {
-		return nil, nil, serr
-	}
-	for _, integration := range integrations {
-		if integration.EncryptedAuth == "" {
-			continue
-		}
-		creds, serr := s.appCredentials(integration)
-		if serr != nil {
-			continue
-		}
-		if creds.AppID == appID {
-			return integration, creds, nil
-		}
-	}
-	return nil, nil, errors.NotFound("no GitHub App integration matches app id %d", appID)
 }
 
 // reconcileInstallations re-lists installations from GitHub (the webhook-miss
@@ -642,14 +485,15 @@ func (s *gitIntegrationService) reconcileInstallations(ctx context.Context, inte
 			}
 		}
 
-		return s.syncInstallationStatus(ctx, integration)
+		return syncInstallationStatus(ctx, s.store, s.installations, integration)
 	})
 }
 
 // syncInstallationStatus flips the integration between installed and
-// pending_install based on whether any installations exist.
-func (s *gitIntegrationService) syncInstallationStatus(ctx context.Context, integration *models.GitIntegration) *errors.ServiceError {
-	installations, serr := s.installations.ListByIntegrationID(ctx, integration.ID)
+// pending_install based on whether any installations exist. Shared by the
+// integration service and the webhook ingress service.
+func syncInstallationStatus(ctx context.Context, store stores.GitIntegrationStore, installationStore stores.GitInstallationStore, integration *models.GitIntegration) *errors.ServiceError {
+	installations, serr := installationStore.ListByIntegrationID(ctx, integration.ID)
 	if serr != nil {
 		return serr
 	}
@@ -662,7 +506,7 @@ func (s *gitIntegrationService) syncInstallationStatus(ctx context.Context, inte
 	}
 	integration.Status = status
 	integration.Auth = nil
-	_, serr = s.store.Update(ctx, integration)
+	_, serr = store.Update(ctx, integration)
 	return serr
 }
 

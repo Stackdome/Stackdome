@@ -50,7 +50,6 @@ type GitIntegrationService interface {
 	ListRepositories(ctx context.Context, integrationID string, page int, installationUUID string) (*githubapp.RepoPage, *errors.ServiceError)
 	GetRepository(ctx context.Context, integrationID, owner, repo string) (*githubapp.Repo, *errors.ServiceError)
 	ListRepositoryBranches(ctx context.Context, integrationID, owner, repo string) ([]string, *errors.ServiceError)
-	ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError
 
 	// InternalMintForRepo mints an installation token for the org's installed
 	// GitHub App when it covers the repository owner (404 to fall through).
@@ -69,7 +68,6 @@ type GitIntegrationServiceSpec struct {
 	GitHubAppClient   githubapp.Client
 	EncryptionService EncryptionService
 	Permissions       auth.PermissionService
-	PreviewWebhook    PreviewWebhookService
 	Logger            logger.Logger
 	// ExternalURL is the hub's externally reachable base URL, required for
 	// the GitHub App manifest flow.
@@ -87,7 +85,6 @@ type gitIntegrationService struct {
 	githubApp         githubapp.Client
 	encryptionService EncryptionService
 	permissions       auth.PermissionService
-	previewWebhook    PreviewWebhookService
 	logger            logger.Logger
 	externalURL       string
 	gitClients        verifyGitClientProvider
@@ -107,20 +104,10 @@ func NewGitIntegrationService(spec GitIntegrationServiceSpec) GitIntegrationServ
 		githubApp:         spec.GitHubAppClient,
 		encryptionService: spec.EncryptionService,
 		permissions:       spec.Permissions,
-		previewWebhook:    spec.PreviewWebhook,
 		logger:            spec.Logger,
 		externalURL:       strings.TrimSuffix(spec.ExternalURL, "/"),
 		gitClients:        gitClients,
 	}
-}
-
-// WirePreviewWebhook late-binds the preview webhook router onto the git
-// integration service, breaking the construction cycle
-// git-integration → credential-resolver → preview → webhook. Kept off the
-// interface so the generated GitIntegrationService mock need not import this
-// package.
-func WirePreviewWebhook(gi GitIntegrationService, pw PreviewWebhookService) {
-	gi.(*gitIntegrationService).previewWebhook = pw
 }
 
 func (s *gitIntegrationService) Create(ctx context.Context, integration *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError) {
@@ -313,7 +300,11 @@ func (s *gitIntegrationService) sealIntegration(integration *models.GitIntegrati
 // unsealIntegration decrypts the stored auth blob onto the transient Auth
 // field, verifying integrity against the data hash.
 func (s *gitIntegrationService) unsealIntegration(integration *models.GitIntegration) *errors.ServiceError {
-	decrypted, err := s.encryptionService.DecryptData(integration.EncryptedAuth)
+	return unsealGitIntegration(s.encryptionService, integration)
+}
+
+func unsealGitIntegration(enc EncryptionService, integration *models.GitIntegration) *errors.ServiceError {
+	decrypted, err := enc.DecryptData(integration.EncryptedAuth)
 	if err != nil {
 		return errors.GeneralError("failed to decrypt git integration auth: %s", err.Error())
 	}

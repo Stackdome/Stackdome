@@ -290,13 +290,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:            te.Logger,
 	})
 
+	gitIntegrationStore := pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	gitInstallationStore := pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
+		SessionFactory: te.DBSession,
+	})
 	gitIntegrationService := services.NewGitIntegrationService(services.GitIntegrationServiceSpec{
-		Store: pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		InstallationStore: pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
 		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 			SessionFactory: te.DBSession,
 		}),
@@ -542,12 +544,20 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:             te.Logger,
 	})
 
-	services.WirePreviewWebhook(gitIntegrationService, services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
+	previewWebhookService := services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
 		ConfigStore:       stackPreviewConfigStore,
 		PreviewStackStore: previewStackStore,
 		PreviewService:    previewStackService,
 		Logger:            te.Logger,
-	}))
+	})
+
+	githubWebhookService := services.NewGitHubWebhookService(services.GitHubWebhookServiceSpec{
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
+		EncryptionService: encryptionService,
+		PreviewWebhook:    previewWebhookService,
+		Logger:            te.Logger,
+	})
 
 	te.Services = Services{
 		UserService:                 userService,
@@ -570,6 +580,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		CredentialResolver:          credentialResolver,
 		RegistryCredentialService:   registryCredentialService,
 		GitIntegrationService:       gitIntegrationService,
+		GitHubWebhookService:        githubWebhookService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
