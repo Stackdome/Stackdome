@@ -39,7 +39,7 @@ type previewStackStore interface {
 
 type previewStackService interface {
 	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) ([]byte, string, *errors.OperationError)
-	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError)
+	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, stackFileBytes []byte) (*models.Stack, *errors.OperationError)
 }
 
 type configStore interface {

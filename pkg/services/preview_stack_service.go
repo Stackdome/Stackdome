@@ -36,7 +36,7 @@ type PreviewStackService interface {
 	Get(ctx context.Context, previewStackID string) (*models.PreviewStack, *errors.ServiceError)
 	List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError)
 	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) (content []byte, hash string, opErr *errors.OperationError)
-	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError)
+	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, stackFileBytes []byte) (*models.Stack, *errors.OperationError)
 	// InternalCreateFromWebhook provisions a preview stack from a GitHub PR
 	// webhook event. No permission check: the webhook has already been
 	// authenticated and authorized by config resolution (org+repo match).
@@ -399,8 +399,13 @@ func ContentHash(data []byte) string {
 
 // InternalBuildStackFromContent parses stackfile content, resolves references, applies
 // preview transforms, and returns the resulting stack model.
-func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError) {
-	sf, err := stackfile.Load(content)
+func (s *previewStackService) InternalBuildStackFromContent(
+	ctx context.Context,
+	config *models.StackPreviewConfig,
+	preview *models.PreviewStack,
+	stackFileBytes []byte,
+) (*models.Stack, *errors.OperationError) {
+	sf, err := stackfile.Load(stackFileBytes)
 	if err != nil {
 		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to parse stackfile: %v", err))
 	}
@@ -429,7 +434,7 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	s.applyDomainPrefix(&stack, preview.PRNumber)
 
 	model := presenters.ConvertStack(&stack)
-	s.applyIntegrationFromConfig(model, config)
+	s.applyGitIntegrationFromConfig(model, config)
 	model.Name = preview.Name
 	model.OrganisationID = config.OrganisationID
 	model.ProjectID = config.ProjectID
@@ -540,12 +545,12 @@ func (s *previewStackService) applyDomainPrefix(stack *openapi.Stack, prNumber s
 	}
 }
 
-// applyIntegrationFromConfig pins the preview config's git integration onto
+// applyGitIntegrationFromConfig pins the preview config's git integration onto
 // build configs that match the config's repo URL and don't already have clone
 // auth. This runs on the converted model so preview builds follow the same
 // credential ladder as the config: integration id, then host auto-match, then
 // anonymous.
-func (s *previewStackService) applyIntegrationFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
+func (s *previewStackService) applyGitIntegrationFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
 	if config.GitRepository.IntegrationID == "" {
 		return
 	}
