@@ -54,10 +54,18 @@ services:
 
   tooljet-worker:
     image: tooljet/tooljet:v3.20.189-lts
-    command: ./server/ee-entrypoint.sh npm run start:prod
+    # Unlike the server, the worker must NOT run ee-entrypoint.sh: the
+    # entrypoint runs db:setup:prod, and two containers migrating the same
+    # database concurrently deadlock each other until statement_timeout kills
+    # one of them (pg error 57014, "canceling statement due to statement
+    # timeout"). Upstream runs workers with worker:prod, which just starts the
+    # process. Depending on tooljet guarantees the schema is fully migrated
+    # before the worker boots.
+    command: npm --prefix server run worker:prod
     depends_on:
       - postgresql
       - redis
+      - tooljet
     environment:
       WORKER: "true"
       TOOLJET_HOST: "${tooljet.public_url}"
@@ -92,9 +100,7 @@ services:
       - "6379"
 
   postgresql:
-    # Pinned to match upstream ToolJet's own compose; newer majors are untested
-    # against this ToolJet release.
-    image: postgres:13
+    image: postgres:16
     expose:
       - "5432"
     volumes:

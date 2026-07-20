@@ -116,7 +116,10 @@ export function DeployPill({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-[200px]">
-            <DropdownMenuItem onClick={onDiscardDraft}>
+            {/* Deferred so the confirm dialog mounts only after the menu has
+                closed and released its body pointer-events lock.
+                See https://github.com/radix-ui/primitives/issues/1836 */}
+            <DropdownMenuItem onSelect={() => setTimeout(() => onDiscardDraft(), 0)}>
               <Undo2 className="size-4" />
               Discard draft changes
             </DropdownMenuItem>
