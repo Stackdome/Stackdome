@@ -1,0 +1,43 @@
+name: stackdome
+
+resources:
+  api-server:
+    build:
+      repo: https://github.com/Stackdome/stackdome
+      branch: main
+      dockerfile: Dockerfile.preview
+      context: .
+    command: ["sh", "-c"]
+    args: ["./stackdome-server migrate && ./stackdome-server serve"]
+    ports:
+      - name: http
+        port: 8000
+        public: true
+        subdomain: stackdome
+    env:
+      DB_HOST: "{{ db.host }}"
+      DB_PORT: "5432"
+      DB_NAME: stackdome
+      DB_USERNAME: stackdome
+      DB_PASSWORD: stackdome-preview
+      JWT_SECRET: preview-jwt-secret-not-for-production
+      ENCRYPTION_KEY: preview-encryption-key-not-for-prod
+      LOG_LEVEL: info
+    depends_on: [db]
+
+  db:
+    image: postgres:16-alpine
+    ports:
+      - name: postgres
+        port: 5432
+    env:
+      POSTGRES_DB: stackdome
+      POSTGRES_USER: stackdome
+      POSTGRES_PASSWORD: stackdome-preview
+    volumes:
+      - name: db-data
+        path: /var/lib/postgresql/data
+
+volumes:
+  db-data:
+    size: 5Gi

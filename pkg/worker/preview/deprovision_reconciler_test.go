@@ -16,17 +16,19 @@ import (
 
 var _ = Describe("DeprovisionReconciler", func() {
 	var (
-		ctrl         *gomock.Controller
-		previewStore *MockpreviewStackStore
-		stackSvc     *MockstackService
-		reconciler   *deprovisionReconciler
-		ctx          context.Context
+		ctrl           *gomock.Controller
+		previewStore   *MockpreviewStackStore
+		stackSvc       *MockstackService
+		commentService *MockpreviewCommentService
+		reconciler     *deprovisionReconciler
+		ctx            context.Context
 	)
 
 	BeforeEach(func() {
 		ctrl = gomock.NewController(GinkgoT())
 		previewStore = NewMockpreviewStackStore(ctrl)
 		stackSvc = NewMockstackService(ctrl)
+		commentService = NewMockpreviewCommentService(ctrl)
 		ctx = context.Background()
 
 		cache := &sync.Map{}
@@ -34,6 +36,7 @@ var _ = Describe("DeprovisionReconciler", func() {
 		reconciler = &deprovisionReconciler{
 			previewStackStore: previewStore,
 			stackService:      stackSvc,
+			commentService:    commentService,
 			stackfileCache:    cache,
 			previewCacheKeys:  cacheKeys,
 			logger:            logger.NewLoggerWithPrefix(ctx, "test"),
@@ -63,7 +66,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 				DeletionTimestamp: ptr.To(time.Now()),
 				Status:            models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting},
 			}
-			previewStore.EXPECT().Delete(gomock.Any(), "p-2").Return(nil)
+			gomock.InOrder(
+				commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).Return(nil),
+				previewStore.EXPECT().Delete(gomock.Any(), "p-2").Return(nil),
+			)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
@@ -82,7 +88,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 			reconciler.stackfileCache.Store(cacheKey, "cached-content")
 			reconciler.previewCacheKeys.Store("p-cache", cacheKey)
 
-			previewStore.EXPECT().Delete(gomock.Any(), "p-cache").Return(nil)
+			gomock.InOrder(
+				commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).Return(nil),
+				previewStore.EXPECT().Delete(gomock.Any(), "p-cache").Return(nil),
+			)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
@@ -118,7 +127,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
 			stackSvc.EXPECT().InternalDeleteStack(gomock.Any(), stack).
 				Return(nil, errors.NotFound("stack already deleted"))
-			previewStore.EXPECT().Delete(gomock.Any(), "p-3").Return(nil)
+			gomock.InOrder(
+				commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).Return(nil),
+				previewStore.EXPECT().Delete(gomock.Any(), "p-3").Return(nil),
+			)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
@@ -138,7 +150,10 @@ var _ = Describe("DeprovisionReconciler", func() {
 
 			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).
 				Return(nil, errors.NotFound("stack not found"))
-			previewStore.EXPECT().Delete(gomock.Any(), "p-4").Return(nil)
+			gomock.InOrder(
+				commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).Return(nil),
+				previewStore.EXPECT().Delete(gomock.Any(), "p-4").Return(nil),
+			)
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())

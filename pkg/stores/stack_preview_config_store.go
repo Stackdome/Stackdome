@@ -13,6 +13,7 @@ type StackPreviewConfigStore interface {
 	Create(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.StackPreviewConfig, *errors.ServiceError)
 	GetByProjectAndName(ctx context.Context, projectID, name string) (*models.StackPreviewConfig, *errors.ServiceError)
+	GetByOrgAndRepo(ctx context.Context, organisationID, normalizedRepoURL string) (*models.StackPreviewConfig, *errors.ServiceError)
 	Update(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError)
 	Delete(ctx context.Context, id string) *errors.ServiceError
 	ListByProjectID(ctx context.Context, projectID string, params ListParams) (*PaginatedResult[*models.StackPreviewConfig], *errors.ServiceError)

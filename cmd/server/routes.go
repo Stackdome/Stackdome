@@ -99,6 +99,7 @@ func (s apiServer) routes() *mux.Router {
 
 	gitIntegrationHandler := handlers.NewGitIntegrationHandler(handlers.GitIntegrationHandlerSpec{
 		GitIntegrationService: services.GitIntegrationService,
+		GitHubWebhookService:  services.GitHubWebhookService,
 		Logger:                logger,
 	})
 

@@ -8,6 +8,7 @@ import (
 
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -38,6 +39,7 @@ func newGitIntegrationServiceForTest(t *testing.T) (GitIntegrationService, *gitI
 		Store:             deps.store,
 		EncryptionService: deps.encryption,
 		Permissions:       permissions,
+		Logger:            logger.NewLogger(),
 		GitClients:        deps.gitClients,
 	})
 	return svc, deps

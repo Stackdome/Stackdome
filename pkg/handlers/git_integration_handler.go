@@ -22,17 +22,20 @@ const (
 
 type GitIntegrationHandlerSpec struct {
 	GitIntegrationService services.GitIntegrationService
+	GitHubWebhookService  services.GitHubWebhookService
 	Logger                logger.Logger
 }
 
 type gitIntegrationHandler struct {
 	gitIntegrationService services.GitIntegrationService
+	githubWebhookService  services.GitHubWebhookService
 	logger                logger.Logger
 }
 
 func NewGitIntegrationHandler(spec GitIntegrationHandlerSpec) *gitIntegrationHandler {
 	return &gitIntegrationHandler{
 		gitIntegrationService: spec.GitIntegrationService,
+		githubWebhookService:  spec.GitHubWebhookService,
 		logger:                spec.Logger,
 	}
 }
@@ -173,7 +176,7 @@ func (h *gitIntegrationHandler) GitHubWebhook(w http.ResponseWriter, r *http.Req
 	event := r.Header.Get(githubEventHeader)
 	signature := r.Header.Get(githubSignatureHeader)
 
-	if serr := h.gitIntegrationService.ProcessGitHubWebhook(r.Context(), event, payload, signature); serr != nil {
+	if serr := h.githubWebhookService.ProcessGitHubWebhook(r.Context(), event, payload, signature); serr != nil {
 		handleError(r.Context(), w, serr)
 		return
 	}

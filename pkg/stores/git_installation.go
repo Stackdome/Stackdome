@@ -15,5 +15,8 @@ type GitInstallationStore interface {
 	ListByIntegrationID(ctx context.Context, integrationID string) ([]*models.GitInstallation, *errors.ServiceError)
 	GetByIntegrationAndID(ctx context.Context, integrationID, id string) (*models.GitInstallation, *errors.ServiceError)
 	GetByIntegrationAndAccount(ctx context.Context, integrationID, accountLogin string) (*models.GitInstallation, *errors.ServiceError)
+	// GetByInstallationID looks up an installation by its GitHub-global
+	// installation id (repository webhooks carry only this reference).
+	GetByInstallationID(ctx context.Context, installationID int64) (*models.GitInstallation, *errors.ServiceError)
 	DeleteByInstallationID(ctx context.Context, integrationID string, installationID int64) *errors.ServiceError
 }

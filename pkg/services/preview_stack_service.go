@@ -14,13 +14,20 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/stackfile"
 	"github.com/Stackdome/stackdome/pkg/stores"
+	"github.com/joho/godotenv"
 	"k8s.io/utils/ptr"
 )
 
+// PreviewEnvFile is the optional repo-root dotenv file whose entries override
+// stackfile env for a preview environment.
+const PreviewEnvFile = ".env.preview"
+
+//go:generate mockgen -destination=preview_stack_service_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services github.com/Stackdome/stackdome/pkg/services PreviewStackService
 type PreviewStackService interface {
 	BackgroundJobEnqueuerInjectable
 	Create(ctx context.Context, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError)
@@ -29,7 +36,17 @@ type PreviewStackService interface {
 	Get(ctx context.Context, previewStackID string) (*models.PreviewStack, *errors.ServiceError)
 	List(ctx context.Context, projectID string, params stores.ListParams) (*stores.PaginatedResult[*models.PreviewStack], *errors.ServiceError)
 	InternalFetchStackfile(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) (content []byte, hash string, opErr *errors.OperationError)
-	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError)
+	InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, stackFileBytes []byte) (*models.Stack, *errors.OperationError)
+	// InternalCreateFromWebhook provisions a preview stack from a GitHub PR
+	// webhook event. No permission check: the webhook has already been
+	// authenticated and authorized by config resolution (org+repo match).
+	InternalCreateFromWebhook(ctx context.Context, config *models.StackPreviewConfig, prNumber, branch, headSHA string) (*models.PreviewStack, *errors.ServiceError)
+	// InternalSyncFromWebhook re-syncs an existing preview stack to a new head
+	// commit from a GitHub PR webhook event. No permission check.
+	InternalSyncFromWebhook(ctx context.Context, previewStackID, headSHA string) *errors.ServiceError
+	// InternalDeleteFromWebhook tears down a preview stack from a GitHub PR
+	// webhook event (PR closed/merged). No permission check.
+	InternalDeleteFromWebhook(ctx context.Context, previewStackID string) *errors.ServiceError
 }
 
 type PreviewStackServiceSpec struct {
@@ -40,6 +57,7 @@ type PreviewStackServiceSpec struct {
 	SecretService      SecretService
 	CredentialResolver CredentialResolver
 	Permissions        auth.PermissionService
+	Logger             logger.Logger
 }
 
 type previewStackService struct {
@@ -50,6 +68,7 @@ type previewStackService struct {
 	secretService      SecretService
 	credentialResolver CredentialResolver
 	permissions        auth.PermissionService
+	logger             logger.Logger
 	BackgroundJobEnqueuerDep
 }
 
@@ -69,6 +88,7 @@ func NewPreviewStackService(spec PreviewStackServiceSpec) PreviewStackService {
 		secretService:      spec.SecretService,
 		credentialResolver: spec.CredentialResolver,
 		permissions:        spec.Permissions,
+		logger:             spec.Logger,
 	}
 }
 
@@ -82,6 +102,24 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 		return nil, permErr
 	}
 
+	return s.provisionPreview(ctx, config, preview)
+}
+
+// InternalCreateFromWebhook provisions a preview stack for a GitHub PR
+// webhook event. No permission check.
+func (s *previewStackService) InternalCreateFromWebhook(ctx context.Context, config *models.StackPreviewConfig, prNumber, branch, headSHA string) (*models.PreviewStack, *errors.ServiceError) {
+	preview := &models.PreviewStack{
+		StackPreviewConfigID: config.ID,
+		PRNumber:             prNumber,
+		Branch:               branch,
+		CommitSHA:            headSHA,
+		Source:               models.PreviewStackSourceWebhook,
+		UserID:               config.UserID,
+	}
+	return s.provisionPreview(ctx, config, preview)
+}
+
+func (s *previewStackService) provisionPreview(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
 	if preview.ProjectID != "" && preview.ProjectID != config.ProjectID {
 		return nil, errors.BadRequest("preview stack project does not match config project")
 	}
@@ -107,7 +145,7 @@ func (s *previewStackService) Create(ctx context.Context, preview *models.Previe
 		return nil, sErr
 	}
 	if activeCount >= int64(config.MaxActivePreviews) {
-		return nil, errors.BadRequest("maximum active preview stacks (%d) reached for this config", config.MaxActivePreviews)
+		return nil, errors.TooManyRequests("maximum active preview stacks (%d) reached for this config", config.MaxActivePreviews)
 	}
 
 	if preview.CommitSHA == "" {
@@ -152,6 +190,20 @@ func (s *previewStackService) Sync(ctx context.Context, previewStackID string, o
 		return permErr
 	}
 
+	return s.syncPreview(ctx, preview, opts)
+}
+
+// InternalSyncFromWebhook re-syncs an existing preview stack to a new head
+// commit for a GitHub PR webhook event. No permission check.
+func (s *previewStackService) InternalSyncFromWebhook(ctx context.Context, previewStackID, headSHA string) *errors.ServiceError {
+	preview, sErr := s.store.GetByID(ctx, previewStackID)
+	if sErr != nil {
+		return sErr
+	}
+	return s.syncPreview(ctx, preview, PreviewSyncOpts{Commit: headSHA})
+}
+
+func (s *previewStackService) syncPreview(ctx context.Context, preview *models.PreviewStack, opts PreviewSyncOpts) *errors.ServiceError {
 	if preview.StackID == nil {
 		return errors.BadRequest("preview stack has not been provisioned yet")
 	}
@@ -251,13 +303,27 @@ func (s *previewStackService) Delete(ctx context.Context, previewStackID string)
 		return permErr
 	}
 
+	return s.deletePreview(ctx, preview)
+}
+
+// InternalDeleteFromWebhook tears down a preview stack for a GitHub PR
+// webhook event (PR closed/merged). No permission check.
+func (s *previewStackService) InternalDeleteFromWebhook(ctx context.Context, previewStackID string) *errors.ServiceError {
+	preview, sErr := s.store.GetByID(ctx, previewStackID)
+	if sErr != nil {
+		return sErr
+	}
+	return s.deletePreview(ctx, preview)
+}
+
+func (s *previewStackService) deletePreview(ctx context.Context, preview *models.PreviewStack) *errors.ServiceError {
 	preview.Status = models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeleting, Reason: "DeleteRequested"}
 	preview.DeletionTimestamp = ptr.To(time.Now().UTC())
 	if _, sErr := s.store.Update(ctx, preview); sErr != nil {
 		return sErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: previewStackID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: preview.ID}); err != nil {
 		return errors.GeneralError("failed to enqueue preview stack deletion: %v", err)
 	}
 
@@ -333,11 +399,21 @@ func ContentHash(data []byte) string {
 
 // InternalBuildStackFromContent parses stackfile content, resolves references, applies
 // preview transforms, and returns the resulting stack model.
-func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError) {
-	sf, err := stackfile.Load(content)
+func (s *previewStackService) InternalBuildStackFromContent(
+	ctx context.Context,
+	config *models.StackPreviewConfig,
+	preview *models.PreviewStack,
+	stackFileBytes []byte,
+) (*models.Stack, *errors.OperationError) {
+	sf, err := stackfile.Load(stackFileBytes)
 	if err != nil {
 		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to parse stackfile: %v", err))
 	}
+
+	// Merge env overrides into the stackfile before ToStack so that override
+	// values using {{ secret.NAME }} become connections and resolve through the
+	// same path as native stackfile env.
+	applyEnvOverrides(sf, s.fetchPreviewEnv(ctx, config, preview.CommitSHA), config.Env)
 
 	stack, err := sf.ToStack()
 	if err != nil {
@@ -358,7 +434,7 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	s.applyDomainPrefix(&stack, preview.PRNumber)
 
 	model := presenters.ConvertStack(&stack)
-	s.applyIntegrationFromConfig(model, config)
+	s.applyGitIntegrationFromConfig(model, config)
 	model.Name = preview.Name
 	model.OrganisationID = config.OrganisationID
 	model.ProjectID = config.ProjectID
@@ -373,6 +449,54 @@ func (s *previewStackService) InternalBuildStackFromContent(ctx context.Context,
 	return model, nil
 }
 
+// fetchPreviewEnv reads the optional repo-root .env.preview at the preview
+// commit. A missing or unparseable file yields no overrides (best-effort): a
+// clone-credential failure surfaces later in the actual build.
+func (s *previewStackService) fetchPreviewEnv(ctx context.Context, config *models.StackPreviewConfig, commitSHA string) map[string]string {
+	gitClient, gErr := s.gitClientForConfig(ctx, config)
+	if gErr != nil {
+		s.logger.Warn(ctx, "preview env: no git client for '%s': %v", config.GitRepository.RepoURL, gErr)
+		return nil
+	}
+	raw, err := gitClient.FetchFile(ctx, config.GitRepository.RepoURL, commitSHA, PreviewEnvFile)
+	if err != nil {
+		if !stderrors.Is(err, gitclient.ErrNotFound) {
+			s.logger.Warn(ctx, "preview env: failed to fetch %s at %s: %v", PreviewEnvFile, commitSHA, err)
+		}
+		return nil
+	}
+	if len(raw) == 0 {
+		return nil
+	}
+	parsed, perr := godotenv.Unmarshal(string(raw))
+	if perr != nil {
+		s.logger.Warn(ctx, "preview env: ignoring unparseable %s at %s: %v", PreviewEnvFile, commitSHA, perr)
+		return nil
+	}
+	return parsed
+}
+
+// applyEnvOverrides overlays env onto every stackfile resource with precedence
+// stackfile < .env.preview (repoEnv) < config.Env. Runs before ToStack so that
+// override values referencing {{ secret.NAME }} resolve like native env.
+func applyEnvOverrides(sf *stackfile.Stackfile, repoEnv map[string]string, configEnv models.EnvVars) {
+	if len(repoEnv) == 0 && len(configEnv) == 0 {
+		return
+	}
+	for name, res := range sf.Resources {
+		if res.Env == nil {
+			res.Env = map[string]string{}
+		}
+		for k, v := range repoEnv {
+			res.Env[k] = v
+		}
+		for _, e := range configEnv {
+			res.Env[e.Name] = e.Value
+		}
+		sf.Resources[name] = res
+	}
+}
+
 // applyBranchSwap sets the branch to the preview branch for resources whose git
 // repo URL matches the config's repo URL, pinning to the resolved commit SHA.
 func (s *previewStackService) applyBranchSwap(stack *openapi.Stack, repoURL, branch, commitSHA string) {
@@ -381,7 +505,7 @@ func (s *previewStackService) applyBranchSwap(stack *openapi.Stack, repoURL, bra
 		if res.Source == nil || res.Source.Git == nil {
 			continue
 		}
-		if normalizeRepoURL(res.Source.Git.RepoUrl) != normalizeRepoURL(repoURL) {
+		if models.NormalizeRepoURL(res.Source.Git.RepoUrl) != models.NormalizeRepoURL(repoURL) {
 			continue
 		}
 		res.Source.Git.SetBranch(branch)
@@ -421,12 +545,12 @@ func (s *previewStackService) applyDomainPrefix(stack *openapi.Stack, prNumber s
 	}
 }
 
-// applyIntegrationFromConfig pins the preview config's git integration onto
+// applyGitIntegrationFromConfig pins the preview config's git integration onto
 // build configs that match the config's repo URL and don't already have clone
 // auth. This runs on the converted model so preview builds follow the same
 // credential ladder as the config: integration id, then host auto-match, then
 // anonymous.
-func (s *previewStackService) applyIntegrationFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
+func (s *previewStackService) applyGitIntegrationFromConfig(stack *models.Stack, config *models.StackPreviewConfig) {
 	if config.GitRepository.IntegrationID == "" {
 		return
 	}
@@ -438,7 +562,7 @@ func (s *previewStackService) applyIntegrationFromConfig(stack *models.Stack, co
 		if git.IntegrationID != "" {
 			continue
 		}
-		if normalizeRepoURL(git.RepoURL) != normalizeRepoURL(config.GitRepository.RepoURL) {
+		if models.NormalizeRepoURL(git.RepoURL) != models.NormalizeRepoURL(config.GitRepository.RepoURL) {
 			continue
 		}
 		git.IntegrationID = config.GitRepository.IntegrationID
@@ -472,13 +596,6 @@ func sanitizePreviewName(name string) string {
 		result = result[:63]
 	}
 	return result
-}
-
-// normalizeRepoURL strips trailing .git and slashes for comparison.
-func normalizeRepoURL(url string) string {
-	url = strings.TrimSuffix(url, ".git")
-	url = strings.TrimSuffix(url, "/")
-	return strings.ToLower(url)
 }
 
 // previewSecretResolver implements stackfile.Resolver for preview environments.

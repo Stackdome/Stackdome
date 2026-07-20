@@ -290,13 +290,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:            te.Logger,
 	})
 
+	gitIntegrationStore := pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	gitInstallationStore := pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
+		SessionFactory: te.DBSession,
+	})
 	gitIntegrationService := services.NewGitIntegrationService(services.GitIntegrationServiceSpec{
-		Store: pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		InstallationStore: pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
 		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 			SessionFactory: te.DBSession,
 		}),
@@ -539,6 +541,22 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:      secretService,
 		CredentialResolver: credentialResolver,
 		Permissions:        te.PermissionService,
+		Logger:             te.Logger,
+	})
+
+	previewWebhookService := services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
+		ConfigStore:       stackPreviewConfigStore,
+		PreviewStackStore: previewStackStore,
+		PreviewService:    previewStackService,
+		Logger:            te.Logger,
+	})
+
+	githubWebhookService := services.NewGitHubWebhookService(services.GitHubWebhookServiceSpec{
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
+		EncryptionService: encryptionService,
+		PreviewWebhook:    previewWebhookService,
+		Logger:            te.Logger,
 	})
 
 	te.Services = Services{
@@ -562,6 +580,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		CredentialResolver:          credentialResolver,
 		RegistryCredentialService:   registryCredentialService,
 		GitIntegrationService:       gitIntegrationService,
+		GitHubWebhookService:        githubWebhookService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
@@ -758,17 +777,26 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 	te.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
+	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewConfigStore := pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewCommentService := services.NewPreviewCommentService(services.PreviewCommentServiceSpec{
+		ConfigStore:     previewConfigStore,
+		GitIntegrations: te.Services.GitIntegrationService,
+		Commenter:       githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
+		Logger:          te.Logger,
+	})
 	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
 		PreviewStackService: te.Services.PreviewStackService,
-		PreviewStackStore: pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		ConfigStore: pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		ReleaseService: te.Services.StackReleaseService,
-		StackService:   te.Services.StackService,
-		Env:            te.Name,
+		PreviewStackStore:   previewStackStore,
+		ConfigStore:         previewConfigStore,
+		ReleaseService:      te.Services.StackReleaseService,
+		StackService:        te.Services.StackService,
+		CommentService:      previewCommentService,
+		Env:                 te.Name,
 	})
 	te.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
