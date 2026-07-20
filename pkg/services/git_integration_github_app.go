@@ -12,6 +12,7 @@ import (
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/google/go-github/v88/github"
 	"github.com/google/uuid"
@@ -37,7 +38,19 @@ const (
 	githubInstallationActDeleted   = "deleted"
 	githubInstallationActSuspend   = "suspend"
 	githubInstallationActUnsuspend = "unsuspend"
+
+	// maxWebhookLogValueLen bounds unverified webhook values in log lines.
+	maxWebhookLogValueLen = 64
 )
+
+// truncateForLog bounds a webhook-supplied value before it reaches a log line
+// emitted ahead of signature verification.
+func truncateForLog(s string) string {
+	if len(s) > maxWebhookLogValueLen {
+		return s[:maxWebhookLogValueLen] + "..."
+	}
+	return s
+}
 
 // CreateGitHubAppManifest starts the manifest flow: it creates (or reuses) the
 // org's pending github_app integration row and returns the manifest payload
@@ -339,13 +352,13 @@ func (s *gitIntegrationService) ListRepositoryBranches(ctx context.Context, inte
 func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError {
 	if event != GitHubEventInstallation && event != GitHubEventPullRequest {
 		// push (and everything else) is accepted and dropped for now.
-		s.logger.Info(ctx, "github webhook: ignoring '%s' event", event)
+		s.logger.Info(ctx, "github webhook: ignoring '%s' event", truncateForLog(event))
 		return nil
 	}
 
 	parsed, err := github.ParseWebHook(event, payload)
 	if err != nil {
-		s.logger.Warn(ctx, "github webhook: malformed '%s' payload: %v", event, err)
+		s.logger.Warn(ctx, "github webhook: malformed '%s' payload: %s", event, truncateForLog(err.Error()))
 		return errors.BadRequest("malformed webhook payload: %s", err.Error())
 	}
 
@@ -355,10 +368,10 @@ func (s *gitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event 
 		return serr
 	}
 	if err := github.ValidateSignature(signature, payload, []byte(creds.WebhookSecret)); err != nil {
-		s.logger.Warn(ctx, "github webhook: signature verification failed for org %s ('%s' event)", integration.OrganisationID, event)
+		s.logger.WithField(logger.FieldOrgID, integration.OrganisationID).Warn(ctx, "github webhook: signature verification failed ('%s' event)", event)
 		return errors.Forbidden("webhook signature verification failed")
 	}
-	s.logger.Info(ctx, "github webhook: verified '%s' delivery for org %s", event, integration.OrganisationID)
+	s.logger.WithField(logger.FieldOrgID, integration.OrganisationID).Info(ctx, "github webhook: verified '%s' delivery", event)
 
 	switch e := parsed.(type) {
 	case *github.InstallationEvent:
@@ -413,7 +426,7 @@ func (s *gitIntegrationService) findAppByInstallation(ctx context.Context, insta
 
 func (s *gitIntegrationService) handleInstallationEvent(ctx context.Context, integration *models.GitIntegration, installEvent *github.InstallationEvent) *errors.ServiceError {
 	install := installEvent.GetInstallation()
-	s.logger.Info(ctx, "github webhook: installation '%s' by '%s' for org %s", installEvent.GetAction(), install.GetAccount().GetLogin(), integration.OrganisationID)
+	s.logger.WithField(logger.FieldOrgID, integration.OrganisationID).Info(ctx, "github webhook: installation '%s' by '%s'", installEvent.GetAction(), install.GetAccount().GetLogin())
 	switch installEvent.GetAction() {
 	case githubInstallationActCreated, githubInstallationActUnsuspend:
 		if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
