@@ -104,13 +104,17 @@ export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListPr
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-[160px]">
-                        <DropdownMenuItem onClick={() => onEdit(secret)}>
+                        {/* Both items open dialogs; deferred so the dialog
+                            mounts only after the menu has closed and released
+                            its body pointer-events lock.
+                            See https://github.com/radix-ui/primitives/issues/1836 */}
+                        <DropdownMenuItem onSelect={() => setTimeout(() => onEdit(secret), 0)}>
                           <Edit className="h-4 w-4" />
                         Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-danger focus:text-danger"
-                          onClick={() => onDelete(secret)}
+                          onSelect={() => setTimeout(() => onDelete(secret), 0)}
                         >
                           <Trash2 className="h-4 w-4" />
                         Delete

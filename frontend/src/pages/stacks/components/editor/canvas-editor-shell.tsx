@@ -205,9 +205,15 @@ export function CanvasEditorShell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[180px]">
+        {/* Defer the dialog-opening callback until after the menu has fully
+            closed. Radix's DropdownMenu→Dialog composition races the menu's
+            close (which resets document.body.style.pointerEvents) against the
+            dialog's mount, and can leave pointer-events "none" on body forever
+            once the dialog unmounts.
+            See https://github.com/radix-ui/primitives/issues/1836 */}
         <DropdownMenuItem
           className="text-danger focus:text-danger"
-          onClick={onDelete}
+          onSelect={() => setTimeout(() => onDelete(), 0)}
           disabled={!canDeleteStack}
         >
           <Trash2 className="size-4 text-danger" />
