@@ -100,9 +100,7 @@ services:
       - "6379"
 
   postgresql:
-    # Pinned to match upstream ToolJet's own compose; newer majors are untested
-    # against this ToolJet release.
-    image: postgres:13
+    image: postgres:16
     expose:
       - "5432"
     volumes:
