@@ -19,7 +19,8 @@ import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
-import { layoutGraph, NEW_NODE_GAP_X, NEW_NODE_OFFSET_Y } from "@/pages/stacks/lib/canvas/layout-graph";
+import { layoutGraph, NODE_SEP } from "@/pages/stacks/lib/canvas/layout-graph";
+import { resolveCollisions } from "@/pages/stacks/lib/canvas/resolve-collisions";
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./canvas-editor";
@@ -229,23 +230,34 @@ function StackCanvasFlow({
 
   const onNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
     (_event, node) => {
-      if (!isFloatingVolume(node)) return;
-      const target = dropTargetFor(node);
-      // Clear all rings.
-      setNodes((prev) =>
-        prev.map((n) =>
-          (n.data as ResourceNodeData).dropTarget
-            ? ({ ...n, data: { ...n.data, dropTarget: false } } as CanvasFlowNode)
-            : n,
-        ),
-      );
-      if (!target) {
-        dragStartPos.current = null;
-        return; // plain reposition
+      if (isFloatingVolume(node)) {
+        const target = dropTargetFor(node);
+        // Clear all rings.
+        setNodes((prev) =>
+          prev.map((n) =>
+            (n.data as ResourceNodeData).dropTarget
+              ? ({ ...n, data: { ...n.data, dropTarget: false } } as CanvasFlowNode)
+              : n,
+          ),
+        );
+        if (target) {
+          const volumeName = node.id.slice(NODE_ID_PREFIX.volume.length);
+          const resourceIdx = (target.data as ResourceNodeData).resourceIdx!;
+          setAttachRequest({ volumeName, resourceIdx });
+          return;
+        }
       }
-      const volumeName = node.id.slice(NODE_ID_PREFIX.volume.length);
-      const resourceIdx = (target.data as ResourceNodeData).resourceIdx!;
-      setAttachRequest({ volumeName, resourceIdx });
+      // Plain reposition (any node type): nudge apart any overlap the drag
+      // created. Everything except the dropped node stays pinned so the
+      // user's arrangement doesn't reshuffle — the dropped node yields.
+      dragStartPos.current = null;
+      setNodes(
+        (prev) =>
+          resolveCollisions(prev, {
+            margin: NODE_SEP / 2,
+            isLocked: (n) => n.id !== node.id,
+          }) as CanvasFlowNode[],
+      );
     },
     [dropTargetFor, setNodes],
   );
@@ -279,32 +291,32 @@ function StackCanvasFlow({
       const posById = new Map(prev.map((n) => [n.id, n.position]));
       // Empty canvas (no preserved nodes): use the fresh dagre layout as-is.
       if (posById.size === 0) return laid.nodes as CanvasFlowNode[];
-      // Bounding box of the PRESERVED nodes — new nodes land above-left of it so
-      // they never overlap the frozen layout (their fresh dagre coords belong to a
-      // different frame and would collide). Above = consumer side under BT ranks.
-      const preserved = [...posById.values()];
-      const minX = Math.min(...preserved.map((p) => p.x));
-      const minY = Math.min(...preserved.map((p) => p.y));
-      let newCount = 0;
+      // Node ids embed the resource NAME, so renaming mints a new id every
+      // keystroke. The session index is the stable identity — a laid node whose
+      // id is unknown but whose resourceIdx matches a previous node is a rename,
+      // not an addition, and inherits that node's position.
+      const posByResourceIdx = new Map<number, { x: number; y: number }>();
+      for (const n of prev) {
+        const idx = (n.data as ResourceNodeData).resourceIdx;
+        if (idx != null) posByResourceIdx.set(idx, n.position);
+      }
+      const keptIds = new Set<string>();
       const next = laid.nodes.map((n) => {
-        const kept = posById.get(n.id);
-        if (kept) return { ...n, position: kept } as CanvasFlowNode;
-        // Stagger multiple new nodes in one pass so they don't stack on each other.
-        const position = {
-          x: minX + newCount * NEW_NODE_GAP_X,
-          y: minY - NEW_NODE_OFFSET_Y,
-        };
-        newCount += 1;
-        return { ...n, position } as CanvasFlowNode;
+        const idx = (n.data as ResourceNodeData).resourceIdx;
+        const kept = posById.get(n.id) ?? (idx != null ? posByResourceIdx.get(idx) : undefined);
+        if (kept) {
+          keptIds.add(n.id);
+          return { ...n, position: kept } as CanvasFlowNode;
+        }
+        // Genuinely-new node: keep its fresh dagre coords (near its topological
+        // neighbours) — the collision pass below shoves it clear of the frozen
+        // layout instead of teleporting it to a corner.
+        return n as CanvasFlowNode;
       });
-      // TODO: a genuinely-new node parks above-left of the frozen layout and can
-      // land outside the current viewport (the user never sees it appear). A blind
-      // fitView here would work but is unsafe: this effect also re-runs on server
-      // topology refreshes (autosave), so it would reset the user's pan/zoom
-      // mid-edit and could jump the board during a drag. A clean "ensure-visible"
-      // (pan only when the new node is off-screen, no zoom reset) needs viewport
-      // math that risks disrupting drag UX, so it's deferred over forcing a fit.
-      return next;
+      return resolveCollisions(next, {
+        margin: NODE_SEP / 2,
+        isLocked: (n) => keptIds.has(n.id),
+      }) as CanvasFlowNode[];
     });
     setEdges(mergedGraph.edges as Edge[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on topology only
