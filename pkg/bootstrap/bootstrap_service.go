@@ -91,15 +91,16 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) upsertAdminAndOrg(ctx context.Context) (*models.User, *models.Organisation, error) {
+	org, oErr := s.organisationService.InternalGetDefaultOrg(ctx)
+	if oErr != nil {
+		return nil, nil, fmt.Errorf("default org missing: %w", oErr)
+	}
+
 	existing, gErr := s.userService.InternalGetByEmail(ctx, s.bootstrapCfg.DefaultUser.Email)
 	if gErr != nil && gErr.Code != errors.ErrorNotFound {
 		return nil, nil, fmt.Errorf("failed to look up platform admin: %w", gErr)
 	}
 	if gErr == nil {
-		org, oErr := s.organisationService.InternalGetDefaultOrg(ctx)
-		if oErr != nil {
-			return nil, nil, fmt.Errorf("default org missing for existing admin: %w", oErr)
-		}
 		if bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(s.bootstrapCfg.DefaultUser.Password)) != nil {
 			hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.DefaultUser.Password), bcrypt.DefaultCost)
 			if hErr != nil {
@@ -112,13 +113,6 @@ func (s *Service) upsertAdminAndOrg(ctx context.Context) (*models.User, *models.
 		return existing, org, nil
 	}
 
-	org, oErr := s.organisationService.InternalCreate(ctx, &models.Organisation{
-		Name:    s.bootstrapCfg.PlatformOrgName,
-		Default: true,
-	})
-	if oErr != nil {
-		return nil, nil, fmt.Errorf("failed to create platform org: %w", oErr)
-	}
 	if _, pErr := s.projectService.InternalCreateDefaultProject(ctx, org.ID); pErr != nil {
 		return nil, nil, fmt.Errorf("failed to create platform default project: %w", pErr)
 	}

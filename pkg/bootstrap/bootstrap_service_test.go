@@ -128,16 +128,12 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	When("bootstrapping a fresh install", func() {
-		It("provisions org, admin, policies, cluster, registry and domain", func() {
+		It("adopts the default org and provisions admin, policies, cluster, registry and domain", func() {
+			deps.orgSvc.EXPECT().InternalGetDefaultOrg(gomock.Any()).
+				Return(&models.Organisation{ID: orgID, Name: orgName, Default: true}, nil)
+
 			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).
 				Return(nil, errors.NotFound("user not found"))
-
-			deps.orgSvc.EXPECT().InternalCreate(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-					Expect(spec.Name).To(Equal(orgName))
-					Expect(spec.Default).To(BeTrue())
-					return &models.Organisation{ID: orgID, Name: orgName, Default: true}, nil
-				})
 
 			deps.projSvc.EXPECT().InternalCreateDefaultProject(gomock.Any(), orgID).
 				Return(&models.Project{}, nil)
