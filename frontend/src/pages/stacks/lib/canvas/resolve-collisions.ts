@@ -19,6 +19,10 @@ export interface ResolveCollisionsOptions {
   /** Locked nodes are never moved; an overlap between two locked nodes is left
    *  alone. Use to pin the user's arranged layout while placing new nodes. */
   isLocked?: (node: CollidableNode) => boolean;
+  /** Box dimensions for nodes without `measured` (fresh layout output is never
+   *  measured — React Flow only measures rendered nodes). Defaults to the
+   *  resource-card dims, which oversizes attachment nodes. */
+  fallbackSize?: (node: CollidableNode) => { width: number; height: number };
 }
 
 const DEFAULT_MAX_ITERATIONS = 50;
@@ -32,17 +36,20 @@ const DEFAULT_MAX_ITERATIONS = 50;
  */
 export function resolveCollisions<T extends CollidableNode>(
   nodes: T[],
-  { margin, maxIterations = DEFAULT_MAX_ITERATIONS, isLocked }: ResolveCollisionsOptions,
+  { margin, maxIterations = DEFAULT_MAX_ITERATIONS, isLocked, fallbackSize }: ResolveCollisionsOptions,
 ): T[] {
-  const boxes = nodes.map((n) => ({
-    node: n,
-    x: n.position.x,
-    y: n.position.y,
-    w: n.measured?.width ?? NODE_WIDTH,
-    h: n.measured?.height ?? NODE_HEIGHT,
-    locked: isLocked?.(n) ?? false,
-    moved: false,
-  }));
+  const boxes = nodes.map((n) => {
+    const fallback = fallbackSize?.(n) ?? { width: NODE_WIDTH, height: NODE_HEIGHT };
+    return {
+      node: n,
+      x: n.position.x,
+      y: n.position.y,
+      w: n.measured?.width ?? fallback.width,
+      h: n.measured?.height ?? fallback.height,
+      locked: isLocked?.(n) ?? false,
+      moved: false,
+    };
+  });
 
   let anyMoved = false;
   for (let iter = 0; iter < maxIterations; iter++) {
@@ -81,6 +88,36 @@ export function resolveCollisions<T extends CollidableNode>(
       }
     }
     if (!movedThisPass) break;
+  }
+
+  // Escape hatch: a movable node wedged in a corridor narrower than its box
+  // (between locked nodes) ping-pongs until maxIterations and would return
+  // still-overlapping. Park any such node above the bounding box of everything
+  // else, staggered — deterministic and always resolvable.
+  const stillOverlapping = (i: number) =>
+    boxes.some((other, j) => {
+      if (i === j) return false;
+      const a = boxes[i];
+      return (
+        Math.min(a.x + a.w, other.x + other.w) - Math.max(a.x, other.x) + margin > 0 &&
+        Math.min(a.y + a.h, other.y + other.h) - Math.max(a.y, other.y) + margin > 0
+      );
+    });
+  const wedged = boxes.map((_, i) => i).filter((i) => !boxes[i].locked && stillOverlapping(i));
+  // rest empty = an all-movable pile under a tiny maxIterations budget, not a
+  // locked corridor — there's no frozen layout to park against, so leave it.
+  if (wedged.length > 0 && wedged.length < boxes.length) {
+    const wedgedSet = new Set(wedged);
+    const rest = boxes.filter((_, i) => !wedgedSet.has(i));
+    const minX = Math.min(...rest.map((b) => b.x));
+    const minY = Math.min(...rest.map((b) => b.y));
+    wedged.forEach((i, k) => {
+      const b = boxes[i];
+      b.x = minX + k * (b.w + margin);
+      b.y = minY - b.h - margin;
+      b.moved = true;
+      anyMoved = true;
+    });
   }
 
   if (!anyMoved) return nodes;

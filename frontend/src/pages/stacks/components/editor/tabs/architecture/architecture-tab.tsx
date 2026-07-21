@@ -19,8 +19,24 @@ import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
-import { layoutGraph, NODE_SEP } from "@/pages/stacks/lib/canvas/layout-graph";
-import { resolveCollisions } from "@/pages/stacks/lib/canvas/resolve-collisions";
+import {
+  layoutGraph,
+  ATTACHMENT_NODE_HEIGHT,
+  ATTACHMENT_NODE_WIDTH,
+  NODE_HEIGHT,
+  NODE_SEP,
+  NODE_WIDTH,
+} from "@/pages/stacks/lib/canvas/layout-graph";
+import { resolveCollisions, type CollidableNode } from "@/pages/stacks/lib/canvas/resolve-collisions";
+import { carryPositions } from "@/pages/stacks/lib/canvas/carry-positions";
+
+/** Collision-box dims for nodes React Flow hasn't measured yet (fresh layout
+ *  output) — attachment cards are markedly smaller than resource cards. */
+function attachmentAwareFallbackSize(node: CollidableNode): { width: number; height: number } {
+  return (node as { type?: string }).type === "attachment"
+    ? { width: ATTACHMENT_NODE_WIDTH, height: ATTACHMENT_NODE_HEIGHT }
+    : { width: NODE_WIDTH, height: NODE_HEIGHT };
+}
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./canvas-editor";
@@ -256,6 +272,7 @@ function StackCanvasFlow({
           resolveCollisions(prev, {
             margin: NODE_SEP / 2,
             isLocked: (n) => n.id !== node.id,
+            fallbackSize: attachmentAwareFallbackSize,
           }) as CanvasFlowNode[],
       );
     },
@@ -288,34 +305,18 @@ function StackCanvasFlow({
   useEffect(() => {
     const laid = layoutGraph(mergedGraph);
     setNodes((prev) => {
-      const posById = new Map(prev.map((n) => [n.id, n.position]));
       // Empty canvas (no preserved nodes): use the fresh dagre layout as-is.
-      if (posById.size === 0) return laid.nodes as CanvasFlowNode[];
-      // Node ids embed the resource NAME, so renaming mints a new id every
-      // keystroke. The session index is the stable identity — a laid node whose
-      // id is unknown but whose resourceIdx matches a previous node is a rename,
-      // not an addition, and inherits that node's position.
-      const posByResourceIdx = new Map<number, { x: number; y: number }>();
-      for (const n of prev) {
-        const idx = (n.data as ResourceNodeData).resourceIdx;
-        if (idx != null) posByResourceIdx.set(idx, n.position);
-      }
-      const keptIds = new Set<string>();
-      const next = laid.nodes.map((n) => {
-        const idx = (n.data as ResourceNodeData).resourceIdx;
-        const kept = posById.get(n.id) ?? (idx != null ? posByResourceIdx.get(idx) : undefined);
-        if (kept) {
-          keptIds.add(n.id);
-          return { ...n, position: kept } as CanvasFlowNode;
-        }
-        // Genuinely-new node: keep its fresh dagre coords (near its topological
-        // neighbours) — the collision pass below shoves it clear of the frozen
-        // layout instead of teleporting it to a corner.
-        return n as CanvasFlowNode;
-      });
+      if (prev.length === 0) return laid.nodes as CanvasFlowNode[];
+      // Renames mint new ids (ids embed the name); carryPositions matches by
+      // stable session identity so a rename keeps its spot. Genuinely-new
+      // nodes keep their fresh dagre coords (near their topological
+      // neighbours) — the collision pass shoves them clear of the frozen
+      // layout instead of teleporting them to a corner.
+      const { nodes: next, keptIds } = carryPositions(prev, laid.nodes as CanvasFlowNode[]);
       return resolveCollisions(next, {
         margin: NODE_SEP / 2,
         isLocked: (n) => keptIds.has(n.id),
+        fallbackSize: attachmentAwareFallbackSize,
       }) as CanvasFlowNode[];
     });
     setEdges(mergedGraph.edges as Edge[]);

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { resolveCollisions, type CollidableNode } from "../canvas/resolve-collisions";
+import { resolveCollisions, type CollidableNode } from "../resolve-collisions";
 
 const node = (id: string, x: number, y: number, w = 216, h = 104): CollidableNode => ({
   id,
@@ -59,6 +59,39 @@ describe("resolveCollisions", () => {
     // One iteration may not fully resolve a pile; the call must still return.
     const out = resolveCollisions(nodes, { margin: 15, maxIterations: 1 });
     expect(out).toHaveLength(3);
+  });
+
+  it("parks a node wedged in a too-narrow locked corridor above the layout instead of returning overlap", () => {
+    // Two TALL locked walls 100px apart; a 216-wide movable node between them
+    // can never fit horizontally and the walls are too tall to slide past —
+    // it must escape above the layout, not stay overlapping.
+    const walls = [node("left", 0, 0, 216, 2000), node("right", 316, 0, 216, 2000)];
+    const trapped = node("t", 100, 900);
+    const out = resolveCollisions([...walls, trapped], {
+      margin: 15,
+      isLocked: (n) => n.id !== "t",
+    });
+    const t = out.find((n) => n.id === "t")!;
+    for (const w of out.filter((n) => n.id !== "t")) {
+      expect(rectsOverlap(t, w)).toBe(false);
+    }
+    expect(t.position.y).toBeLessThan(0); // parked above the frozen layout
+  });
+
+  it("uses fallbackSize for unmeasured nodes", () => {
+    // Unmeasured node sitting 60px above a locked box: with the 56px-tall
+    // attachment fallback its bottom edge (-4) clears the box; the default
+    // 104px fallback would read as overlapping and shove it.
+    const small = { id: "s", position: { x: 0, y: -60 } }; // no measured
+    const big = node("b", 0, 0);
+    const opts = { margin: 0, isLocked: (n: { id: string }) => n.id === "b" };
+    const withFallback = resolveCollisions([big, small], {
+      ...opts,
+      fallbackSize: () => ({ width: 180, height: 56 }),
+    });
+    expect(withFallback.find((n) => n.id === "s")!.position).toEqual({ x: 0, y: -60 });
+    const withoutFallback = resolveCollisions([big, small], opts);
+    expect(withoutFallback.find((n) => n.id === "s")!.position).not.toEqual({ x: 0, y: -60 });
   });
 
   it("does not mutate the input nodes", () => {

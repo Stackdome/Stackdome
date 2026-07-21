@@ -6,6 +6,11 @@ import type { CanvasGraph } from "./graph-from-connections";
 export const NODE_WIDTH = 216;
 export const NODE_HEIGHT = 104;
 
+/** Attachment (volume/secret/object-store) card box — w-[180px], two compact
+ *  rows. Used as the collision-box fallback for unmeasured attachment nodes. */
+export const ATTACHMENT_NODE_WIDTH = 180;
+export const ATTACHMENT_NODE_HEIGHT = 56;
+
 export interface LayoutOptions {
   direction?: "LR" | "TB" | "BT";
 }
