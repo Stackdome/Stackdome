@@ -37,6 +37,7 @@ type ClusterService interface {
 	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError)
+	InternalUpsertDefaultCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError)
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 }
@@ -51,10 +52,14 @@ type clusterService struct {
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
-	return &clusterService{
-		clusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+	clusterStore := spec.ClusterStore
+	if clusterStore == nil {
+		clusterStore = pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
 			SessionFactory: spec.SessionFactory,
-		}),
+		})
+	}
+	return &clusterService{
+		clusterStore:         clusterStore,
 		clusterManager:       spec.ClusterManager,
 		logger:               spec.Logger,
 		imageRegistryService: spec.ImageRegistryService,
@@ -65,6 +70,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 
 type ClusterServiceSpec struct {
 	SessionFactory       db.SessionFactory
+	ClusterStore         stores.ClusterStore
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
 	Permissions          auth.PermissionService
@@ -290,8 +296,13 @@ func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*m
 	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
-		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
-		return nil, err
+		if err.Code == errors.ErrorNotFound {
+			cluster, err = s.clusterStore.GetDefaultCluster(ctx)
+		}
+		if err != nil {
+			s.logger.Error(ctx, "failed to get cluster for org: %v", err)
+			return nil, err
+		}
 	}
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
 		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
@@ -438,4 +449,44 @@ func IsBase64(s string) bool {
 
 	_, err := base64.StdEncoding.DecodeString(s)
 	return err == nil
+}
+
+func normalizeBase64(s string) string {
+	if IsBase64(s) {
+		return s
+	}
+	return base64.StdEncoding.EncodeToString([]byte(s))
+}
+
+func (s *clusterService) InternalUpsertDefaultCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	existing, err := s.clusterStore.GetByClusterUrl(ctx, spec.ClusterURL)
+	if err != nil && err.Code != errors.ErrorNotFound {
+		return nil, err
+	}
+	if existing == nil {
+		return s.AddCluster(ctx, spec)
+	}
+	if decErr := s.decryptClusterCredentials(existing); decErr != nil {
+		return nil, decErr
+	}
+	newToken := normalizeBase64(spec.Token)
+	newCA := normalizeBase64(spec.ClusterCAData)
+	if existing.Token == newToken && existing.ClusterCAData == newCA {
+		return existing, nil
+	}
+	rotated := &models.Cluster{Token: newToken, ClusterCAData: newCA}
+	if encErr := s.encryptClusterCredentials(rotated); encErr != nil {
+		return nil, encErr
+	}
+	if uErr := s.clusterStore.UpdateCredentials(ctx, existing.ID, rotated.EncryptedToken, rotated.EncryptedClusterCAData); uErr != nil {
+		return nil, uErr
+	}
+	fresh, gErr := s.clusterStore.Get(ctx, existing.ID)
+	if gErr != nil {
+		return nil, gErr
+	}
+	if rErr := s.clusterManager.ReRegisterCluster(fresh); rErr != nil {
+		return nil, errors.GeneralError("failed to re-register rotated cluster: %s", rErr.Error())
+	}
+	return fresh, nil
 }

@@ -158,3 +158,18 @@ func (mr *MockClusterServiceMockRecorder) InternalListAllClusters(ctx any) *gomo
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListAllClusters", reflect.TypeOf((*MockClusterService)(nil).InternalListAllClusters), ctx)
 }
+
+// InternalUpsertDefaultCluster mocks base method.
+func (m *MockClusterService) InternalUpsertDefaultCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalUpsertDefaultCluster", ctx, spec)
+	ret0, _ := ret[0].(*models.Cluster)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalUpsertDefaultCluster indicates an expected call of InternalUpsertDefaultCluster.
+func (mr *MockClusterServiceMockRecorder) InternalUpsertDefaultCluster(ctx, spec any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertDefaultCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertDefaultCluster), ctx, spec)
+}

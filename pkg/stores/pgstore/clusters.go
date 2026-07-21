@@ -123,6 +123,18 @@ func (d dbClusterStore) GetDefaultCluster(ctx context.Context) (*models.Cluster,
 	return &res, nil
 }
 
+func (d dbClusterStore) UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"encrypted_token":           encToken,
+		"encrypted_cluster_ca_data": encCAData,
+	}).Error
+	if err != nil {
+		return errors.GeneralError("failed to update cluster credentials: %s", err.Error())
+	}
+	return nil
+}
+
 func (d dbClusterStore) Delete(ctx context.Context, id string) *errors.ServiceError {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("id = ?", id).Delete(&models.Cluster{}).Error
