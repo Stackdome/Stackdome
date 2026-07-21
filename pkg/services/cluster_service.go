@@ -32,6 +32,7 @@ const httpsScheme = "https"
 
 type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
+	GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
@@ -290,23 +291,31 @@ func (s *clusterService) PersistManagerState(ctx context.Context, clusterID stri
 	return nil
 }
 
-func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+// GetOwnedClusterForOrg returns the cluster owned by the org, without falling
+// back to the platform default cluster.
+func (s *clusterService) GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			cluster, err = s.clusterStore.GetDefaultCluster(ctx)
-		}
-		if err != nil {
-			s.logger.Error(ctx, "failed to get cluster for org: %v", err)
-			return nil, err
-		}
+		return nil, err
 	}
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
 		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
 		return nil, decErr
+	}
+	return cluster, nil
+}
+
+func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	cluster, err := s.GetOwnedClusterForOrg(ctx, orgID)
+	if err != nil {
+		if err.Code == errors.ErrorNotFound {
+			return s.GetDefaultCluster(ctx)
+		}
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
+		return nil, err
 	}
 	return cluster, nil
 }

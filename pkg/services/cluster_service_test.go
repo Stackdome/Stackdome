@@ -101,6 +101,29 @@ var _ = Describe("ClusterService", func() {
 		})
 	})
 
+	Describe("GetOwnedClusterForOrg", func() {
+		It("returns the org's own cluster when it owns one", func() {
+			owned := &models.Cluster{ID: "cluster-owned", OrganisationID: "org-1", Token: "tok", ClusterCAData: caData}
+			encryptCluster(owned)
+
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), "org-1").Return(owned, nil)
+
+			result, err := svc.GetOwnedClusterForOrg(ctx, "org-1")
+			Expect(err).To(BeNil())
+			Expect(result.ID).To(Equal("cluster-owned"))
+		})
+
+		It("returns NotFound without falling back to the default cluster when the org owns none", func() {
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), "org-1").
+				Return(nil, apperrors.NotFound("cluster for organisation 'org-1' not found"))
+
+			result, err := svc.GetOwnedClusterForOrg(ctx, "org-1")
+			Expect(result).To(BeNil())
+			Expect(err).ToNot(BeNil())
+			Expect(err.Code).To(Equal(apperrors.ErrorNotFound))
+		})
+	})
+
 	Describe("InternalUpsertDefaultCluster", func() {
 		It("delegates to AddCluster when no cluster exists for the URL", func() {
 			spec := &models.Cluster{
