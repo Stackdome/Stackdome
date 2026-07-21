@@ -263,9 +263,8 @@ function StackCanvasFlow({
           return;
         }
       }
-      // Plain reposition (any node type): nudge apart any overlap the drag
-      // created. Everything except the dropped node stays pinned so the
-      // user's arrangement doesn't reshuffle — the dropped node yields.
+      // Plain reposition: only the dropped node yields to any overlap it
+      // created — the rest of the user's arrangement stays pinned.
       dragStartPos.current = null;
       setNodes(
         (prev) =>
@@ -307,11 +306,9 @@ function StackCanvasFlow({
     setNodes((prev) => {
       // Empty canvas (no preserved nodes): use the fresh dagre layout as-is.
       if (prev.length === 0) return laid.nodes as CanvasFlowNode[];
-      // Renames mint new ids (ids embed the name); carryPositions matches by
-      // stable session identity so a rename keeps its spot. Genuinely-new
-      // nodes keep their fresh dagre coords (near their topological
-      // neighbours) — the collision pass shoves them clear of the frozen
-      // layout instead of teleporting them to a corner.
+      // carryPositions keeps renamed nodes in place (ids embed the name);
+      // new nodes keep their dagre coords near their topological neighbours
+      // and the locked collision pass shoves them clear of the frozen layout.
       const { nodes: next, keptIds } = carryPositions(prev, laid.nodes as CanvasFlowNode[]);
       return resolveCollisions(next, {
         margin: NODE_SEP / 2,
