@@ -83,9 +83,8 @@ export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: Dr
             data-testid={`drawer-panel-${i}`}
             className={cn(
               "fixed flex w-[680px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in slide-in-from-right-8 fade-in duration-[260ms]",
-              // Panels are position:fixed, so the ops-view overlay can't cover
-              // them — hide (not unmount) while an ops tab is active so the
-              // stack and its state survive the round trip.
+              // position:fixed escapes the ops-view overlay — hide (not
+              // unmount) so the stack's state survives the tab round trip.
               suppressed && "hidden",
             )}
             style={{

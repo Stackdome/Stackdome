@@ -727,7 +727,6 @@ function convertCommand(
     // Compose shell-form string is already the form's terminal-style text.
     return command.trim() || undefined;
   } else if (Array.isArray(command)) {
-    // Compose exec-form array → quote-aware text (form field format).
     return argvToText(command);
   } else {
     warnings.push({

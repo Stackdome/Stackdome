@@ -213,12 +213,9 @@ function StackResourceConfigurationTabImpl({
       ports: (draft.ports || []).map((port: Port, i: number) => {
         if (i !== pidx) return port;
         const next = { ...port, ...patch };
-        // Keep the auto-derived name tracking the number so the output key stays
-        // meaningful (url.port-8080). Only re-derive while the name is still the
-        // auto value; a name the user set by hand is left untouched. Matching the
-        // auto PATTERN (not `port-${port.number}`) keeps re-derivation working
-        // after the number was cleared — the old name no longer matches the
-        // (now-undefined) number but is still ours to overwrite.
+        // Re-derive the auto name (url.port-8080) only while it still matches the
+        // auto PATTERN — not the current number, which a cleared field desyncs —
+        // so a hand-set name is never overwritten.
         if (patch.number !== undefined && (!port.name || /^port-(\d+|undefined)$/.test(port.name))) {
           next.name = `port-${patch.number}`;
         }

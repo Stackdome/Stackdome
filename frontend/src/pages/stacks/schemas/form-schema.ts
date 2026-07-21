@@ -47,7 +47,6 @@ function textToArgvExplicit(text: string | undefined): string[] {
   return textToArgv(text) ?? [];
 }
 
-/** Zod-level check that a command text field will shlex-split cleanly. */
 function refineArgvText(text: string | undefined, ctx: z.RefinementCtx, path: (string | number)[]) {
   if (!text?.trim()) return;
   try {
@@ -372,9 +371,7 @@ function convertFormResourceToApiResource(
   // blank (k8s port names must contain a letter, so a bare number won't do).
   const apiPorts = rest.ports?.map((port) => ({
     ...port,
-    // A null number can't produce a meaningful auto-name ("port-undefined");
-    // validation requires the number before save, so this only guards direct
-    // callers of the exported converter.
+    // Null number → no auto-name ("port-undefined"); presence is validated before save.
     name: port.name && port.name.trim() !== "" ? port.name : port.number != null ? `port-${port.number}` : undefined,
   }));
 
