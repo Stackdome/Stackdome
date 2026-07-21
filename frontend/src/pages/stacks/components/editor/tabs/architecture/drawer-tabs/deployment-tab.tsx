@@ -20,7 +20,7 @@ interface StackResourceDeploymentTabProps {
   onPatchInitSpec: (patch: Partial<NonNullable<FormStackResourceData["init_spec"]>>) => void;
   /** Patch the command/args fields of `execution_config`, preserving other
    *  nested keys (notably `environment_variables`). Identity must be stable. */
-  onPatchExecCommandArgs: (patch: { command?: string[]; args?: string[] }) => void;
+  onPatchExecCommandArgs: (patch: { command?: string; args?: string }) => void;
   onDiscardField?: (path: string) => void;
 }
 
@@ -61,7 +61,7 @@ function StackResourceDeploymentTabImpl({
           label="Init command"
           htmlFor={`init-command-${index}`}
           alignTop
-          hint="Comma-separate the executable and its segments."
+          hint="Type as in a terminal; quotes group arguments. Not run in a shell — $VARS won't expand."
         >
           <DirtyField
             draft={draft}
@@ -72,13 +72,9 @@ function StackResourceDeploymentTabImpl({
           >
             <Input
               id={`init-command-${index}`}
-              value={draft.init_spec?.command?.join(",") || ""}
-              onChange={(e) =>
-                onPatchInitSpec({
-                  command: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                })
-              }
-              placeholder="e.g., sh,/scripts/init.sh"
+              value={draft.init_spec?.command ?? ""}
+              onChange={(e) => onPatchInitSpec({ command: e.target.value })}
+              placeholder="e.g., sh /scripts/init.sh"
               className="h-9 font-mono text-[12.5px]"
             />
           </DirtyField>
@@ -93,13 +89,9 @@ function StackResourceDeploymentTabImpl({
           >
             <Input
               id={`init-args-${index}`}
-              value={draft.init_spec?.args?.join(",") || ""}
-              onChange={(e) =>
-                onPatchInitSpec({
-                  args: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                })
-              }
-              placeholder="e.g., arg1,arg2,arg3"
+              value={draft.init_spec?.args ?? ""}
+              onChange={(e) => onPatchInitSpec({ args: e.target.value })}
+              placeholder="e.g., arg1 arg2 arg3"
               className="h-9 font-mono text-[12.5px]"
             />
           </DirtyField>
@@ -111,7 +103,7 @@ function StackResourceDeploymentTabImpl({
           label="Command"
           htmlFor={`exec-command-${index}`}
           alignTop
-          hint="Overrides the container's default ENTRYPOINT."
+          hint="Overrides the container's default ENTRYPOINT. Type as in a terminal; quotes group arguments."
         >
           <DirtyField
             draft={draft}
@@ -122,13 +114,9 @@ function StackResourceDeploymentTabImpl({
           >
             <Input
               id={`exec-command-${index}`}
-              value={draft.execution_config?.command?.join(",") || ""}
-              onChange={(e) =>
-                onPatchExecCommandArgs({
-                  command: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                })
-              }
-              placeholder="e.g., node,server.js"
+              value={draft.execution_config?.command ?? ""}
+              onChange={(e) => onPatchExecCommandArgs({ command: e.target.value })}
+              placeholder="e.g., node server.js"
               className="h-9 font-mono text-[12.5px]"
             />
           </DirtyField>
@@ -143,13 +131,9 @@ function StackResourceDeploymentTabImpl({
           >
             <Input
               id={`exec-args-${index}`}
-              value={draft.execution_config?.args?.join(",") || ""}
-              onChange={(e) =>
-                onPatchExecCommandArgs({
-                  args: e.target.value.split(",").map((s) => s.trim()).filter(Boolean),
-                })
-              }
-              placeholder="e.g., --port=3000,--verbose"
+              value={draft.execution_config?.args ?? ""}
+              onChange={(e) => onPatchExecCommandArgs({ args: e.target.value })}
+              placeholder="e.g., --port=3000 --verbose"
               className="h-9 font-mono text-[12.5px]"
             />
           </DirtyField>

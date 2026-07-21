@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { cn } from "@/lib/utils";
 import { entryKey, type DrawerEntry } from "@/pages/stacks/lib/canvas/drawer-stack";
 import {
   computeDrawerInset,
@@ -40,7 +41,7 @@ interface DrawerStackProps {
  */
 export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: DrawerStackProps) {
   const open = panels.length > 0;
-  const { setInset } = useDrawerInset();
+  const { setInset, suppressed } = useDrawerInset();
 
   // Report the occupied width (front panel + back-panel stagger, clamped like
   // max-w-[calc(100vw-24px)]) so the shell can push canvas + rail actions left.
@@ -58,7 +59,7 @@ export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: Dr
   useEffect(() => () => setInset(0), [setInset]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || suppressed) return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Escape" || e.defaultPrevented) return;
       if (e.shiftKey) onCloseAll();
@@ -66,7 +67,7 @@ export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: Dr
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onPop, onCloseAll]);
+  }, [open, suppressed, onPop, onCloseAll]);
 
   if (!open) return null;
   const frontIdx = panels.length - 1;
@@ -80,7 +81,12 @@ export function DrawerStack({ panels, front, onTruncate, onPop, onCloseAll }: Dr
           <aside
             key={entryKey(entry)}
             data-testid={`drawer-panel-${i}`}
-            className="fixed flex w-[680px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in slide-in-from-right-8 fade-in duration-[260ms]"
+            className={cn(
+              "fixed flex w-[680px] max-w-[calc(100vw-24px)] flex-col overflow-hidden rounded-lg border border-border bg-background shadow-lg animate-in slide-in-from-right-8 fade-in duration-[260ms]",
+              // position:fixed escapes the ops-view overlay — hide (not
+              // unmount) so the stack's state survives the tab round trip.
+              suppressed && "hidden",
+            )}
             style={{
               top: BASE_INSET_PX + STAGGER_Y_PX * depth,
               bottom: BASE_INSET_PX + STAGGER_Y_PX * depth,

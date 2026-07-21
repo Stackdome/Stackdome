@@ -3,6 +3,7 @@
  * These extend the API schemas with additional UI-specific fields and validations
  */
 import { z } from "zod";
+import { join as shlexJoin, split as shlexSplit } from "shlex";
 import {
   ApiStackResourceSchema,
   ApiPortSchema,
@@ -23,6 +24,41 @@ import { splitImageRef } from "@/pages/stacks/lib/image-ref";
  * Form-specific UI schema additions
  */
 const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
+
+/**
+ * Command/args are argv arrays in the API (K8s exec form). The form holds them
+ * as a single terminal-style string so typing is never re-parsed per keystroke;
+ * conversion happens only here, at the load/save boundary. shlex keeps the
+ * round-trip lossless for quoted arguments (e.g. `sh -c 'a && b'`).
+ */
+export function argvToText(argv: string[] | undefined): string | undefined {
+  return argv && argv.length > 0 ? shlexJoin(argv) : undefined;
+}
+
+export function textToArgv(text: string | undefined): string[] | undefined {
+  const trimmed = text?.trim();
+  return trimmed ? shlexSplit(trimmed) : undefined;
+}
+
+/** Save-path variant: an emptied field must serialize as an EXPLICIT empty
+ *  array — gorm's Updates() skips absent fields, so `undefined` would make a
+ *  cleared command impossible to remove server-side. */
+function textToArgvExplicit(text: string | undefined): string[] {
+  return textToArgv(text) ?? [];
+}
+
+function refineArgvText(text: string | undefined, ctx: z.RefinementCtx, path: (string | number)[]) {
+  if (!text?.trim()) return;
+  try {
+    shlexSplit(text);
+  } catch {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Unclosed quote or trailing backslash",
+      path,
+    });
+  }
+}
 
 const FormEnvVarSchema = z.union([
   z.object({
@@ -98,17 +134,43 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   stashedGitSource: ApiGitSourceSchema.optional(),
   stashedImageSource: ApiImageSourceSchema.optional(),
   // Port name is optional in the form — the API requires it, so we auto-derive
-  // `port-<number>` on save rather than asking the user for it.
-  ports: z.array(ApiPortSchema.extend({ name: z.string().optional() })).optional(),
+  // `port-<number>` on save rather than asking the user for it. Number is
+  // optional in the form so the field can be cleared while typing; presence is
+  // enforced in superRefine below.
+  ports: z.array(ApiPortSchema.extend({
+    name: z.string().optional(),
+    number: z.number().int().optional(),
+  })).optional(),
+  // Command/args as terminal-style text (see argvToText/textToArgv).
+  init_spec: z.object({
+    command: z.string().optional(),
+    args: z.string().optional(),
+  }).optional(),
   // Override execution_config to use our form env var schema. The
   // environment_variables list holds literal env-var rows (`from: "stack"`);
-  // the API array is reconstructed in the converter on save.
+  // the API array is reconstructed in the converter on save. Command/args as
+  // terminal-style text, same as init_spec.
   execution_config: z.object({
-    command: z.array(z.string()).optional(),
-    args: z.array(z.string()).optional(),
+    command: z.string().optional(),
+    args: z.string().optional(),
     environment_variables: z.array(FormEnvVarSchema).optional(),
   }).optional(),
 }).superRefine((data, ctx) => {
+  refineArgvText(data.init_spec?.command, ctx, ["init_spec", "command"]);
+  refineArgvText(data.init_spec?.args, ctx, ["init_spec", "args"]);
+  refineArgvText(data.execution_config?.command, ctx, ["execution_config", "command"]);
+  refineArgvText(data.execution_config?.args, ctx, ["execution_config", "args"]);
+
+  (data.ports ?? []).forEach((port, i) => {
+    if (port.number == null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Port number is required",
+        path: ["ports", i, "number"],
+      });
+    }
+  });
+
   // Drive validation off the actual `source` union (same discriminant the canvas
   // node card uses) rather than the `sourceType` UI helper, which can desync.
   if (data.source?.git) {
@@ -288,7 +350,20 @@ function convertFormResourceToApiResource(
   const processedExecutionConfig = rest.execution_config
     ? {
       ...rest.execution_config,
+      command: textToArgvExplicit(rest.execution_config.command),
+      args: textToArgvExplicit(rest.execution_config.args),
       environment_variables: apiEnvVars,
+    }
+    : undefined;
+
+  // A form init_spec exists once loaded from the server or touched in the
+  // drawer — keep sending it (with explicit empty arrays) so clearing the
+  // fields actually clears them server-side. Only a resource that never had
+  // an init_spec omits it.
+  const processedInitSpec = rest.init_spec
+    ? {
+      command: textToArgvExplicit(rest.init_spec.command),
+      args: textToArgvExplicit(rest.init_spec.args),
     }
     : undefined;
 
@@ -296,13 +371,15 @@ function convertFormResourceToApiResource(
   // blank (k8s port names must contain a letter, so a bare number won't do).
   const apiPorts = rest.ports?.map((port) => ({
     ...port,
-    name: port.name && port.name.trim() !== "" ? port.name : `port-${port.number}`,
+    // Null number → no auto-name ("port-undefined"); presence is validated before save.
+    name: port.name && port.name.trim() !== "" ? port.name : port.number != null ? `port-${port.number}` : undefined,
   }));
 
   return {
     ...rest,
     ports: apiPorts,
     volume_mounts: cleanedVolumeMounts,
+    init_spec: processedInitSpec,
     execution_config: processedExecutionConfig,
   } as StackResourceUpdateRequest;
 }
@@ -381,8 +458,14 @@ function convertApiResourceToFormResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
+    init_spec: resource.init_spec ? {
+      command: argvToText(resource.init_spec.command),
+      args: argvToText(resource.init_spec.args),
+    } : undefined,
     execution_config: resource.execution_config ? {
       ...resource.execution_config,
+      command: argvToText(resource.execution_config.command),
+      args: argvToText(resource.execution_config.args),
       environment_variables: processedEnvVars,
     } : undefined,
   };
