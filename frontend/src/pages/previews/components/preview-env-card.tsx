@@ -1,4 +1,4 @@
-import { Ellipsis, GitCommitHorizontal, GitPullRequest, RefreshCw, Trash2 } from "lucide-react";
+import { Ellipsis, GitPullRequest, RefreshCw, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -135,15 +135,7 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
                 rows={[
                   env.branch ? { label: "branch", value: env.branch } : null,
                   env.commit
-                    ? {
-                      label: "commit",
-                      value: (
-                        <span className="inline-flex items-center gap-1.5 tabular-nums">
-                          <GitCommitHorizontal className="h-3.5 w-3.5 flex-none" strokeWidth={1.6} />
-                          {env.commit.slice(0, 7)}
-                        </span>
-                      ),
-                    }
+                    ? { label: "commit", value: <span className="tabular-nums">{env.commit.slice(0, 7)}</span> }
                     : null,
                 ]}
               />
