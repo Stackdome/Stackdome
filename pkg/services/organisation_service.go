@@ -15,6 +15,7 @@ import (
 
 type OrganisationService interface {
 	InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
+	InternalGetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	Update(ctx context.Context, ID string, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
@@ -83,6 +84,10 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 	}
 
 	return s.organisationStore.Get(ctx, org.ID)
+}
+
+func (s *organisationService) InternalGetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
+	return s.organisationStore.GetDefaultOrg(ctx)
 }
 
 func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError) {

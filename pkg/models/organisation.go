@@ -10,6 +10,7 @@ type Organisation struct {
 	UpdatedAt time.Time
 	ID        string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	Name      string
+	Default   bool                  `gorm:"column:default"`
 	Domains   []*OrganisationDomain `gorm:"foreignKey:OrganisationID"`
 }
 
