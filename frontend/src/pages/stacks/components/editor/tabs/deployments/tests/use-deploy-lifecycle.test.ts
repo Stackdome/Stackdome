@@ -126,4 +126,41 @@ describe("deriveDeployLifecycle", () => {
     });
     expect(r.phase).toBe("clean");
   });
+
+  it("prefers draftSnapshot over the saved spec for the staged diff", () => {
+    const r = deriveDeployLifecycle({
+      stack: mkStack("nginx:1"), // server hasn't seen the edit yet
+      unsaved: false,
+      activeRelease: mkRelease({ id: "live-1", sequence: 7, state: "Released" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      liveSnapshot: snap("nginx:1"),
+      draftSnapshot: snap("nginx:2"), // the live draft carries the edit
+    });
+    expect(r.phase).toBe("staged");
+    expect(r.stagedDiff?.resources).toHaveLength(1);
+  });
+
+  it("falls back to the saved spec when draftSnapshot is undefined", () => {
+    const r = deriveDeployLifecycle({
+      stack: mkStack("nginx:1"),
+      unsaved: false,
+      activeRelease: mkRelease({ id: "live-1", sequence: 7, state: "Released" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      liveSnapshot: snap("nginx:1"),
+    });
+    expect(r.phase).toBe("clean");
+  });
+
+  it("uses draftSnapshot on the unsaved/editing path too", () => {
+    const r = deriveDeployLifecycle({
+      stack: mkStack("nginx:1"),
+      unsaved: true,
+      activeRelease: mkRelease({ id: "live-1", sequence: 7, state: "Released" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      liveSnapshot: snap("nginx:1"),
+      draftSnapshot: snap("nginx:2"),
+    });
+    expect(r.phase).toBe("editing");
+    expect(r.stagedDiff?.resources).toHaveLength(1);
+  });
 });
