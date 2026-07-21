@@ -348,9 +348,7 @@ export default function CanvasEditorPage() {
   // Bumped on every autosave refresh to trigger a topology refetch.
   const [topologyRefreshKey, setTopologyRefreshKey] = useState(0);
 
-  // Concurrent refetch writers (autosave, release transitions, revert, volume
-  // delete) all funnel through this gate: a response older than the newest
-  // applied one is dropped instead of clobbering fresher state.
+  // Total order over every stack-refetch writer on this page (see stack-fetch-gate).
   const stackFetchGateRef = useRef(createStackFetchGate());
   // The newest gate-applied payload — handed to callers whose own response was
   // dropped as stale, so downstream consumers (autosave mirror) never diverge
@@ -507,8 +505,6 @@ export default function CanvasEditorPage() {
 
   // Snapshot of the live draft for the lifecycle diff — undefined when no
   // session is active so the server spec stays authoritative on fresh loads.
-  // This is what lets the pill/changes-modal/DRAFT row update on keystroke
-  // instead of after the autosave round-trip.
   const draftSnapshot = useMemo(
     () => (session.isActive && !isNewStack ? draftToSnapshot(session.draft) : undefined),
     [session.isActive, session.draft, isNewStack],
@@ -563,7 +559,6 @@ export default function CanvasEditorPage() {
     liveSnapshot,
     fetchStack: fetchFreshStack,
     onReverted: (fresh) => {
-      // fetchStack already applied the payload to page state (ticket-gated).
       draftSync.notifyExternalUpdate(fresh);
       session.discard(); // auto-start effect restarts the session on the reverted baseline
       toast({ title: "Draft discarded", description: "Stack restored to the last deployment.", variant: "success" });

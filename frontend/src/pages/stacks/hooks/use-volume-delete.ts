@@ -91,7 +91,6 @@ export function useVolumeDelete({
 
         await deleteVolume(ids.orgId, ids.projectName, id);
 
-        // fetchStack applies the payload to page state itself (ticket-gated).
         const fresh2 = await fetchStack();
         draftSync.notifyExternalUpdate(fresh2);
         toast({ title: "Volume deleted", description: `"${name}" and its data were deleted.`, variant: "success" });
