@@ -3,17 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useToast } from "@/components/ui/use-toast";
+import { useConfirm } from "@/components/branded/confirm";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -60,11 +51,10 @@ export default function StacksPage() {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [deleting, setDeleting] = useState<Stack | null>(null);
-  const [deleteBusy, setDeleteBusy] = useState(false);
   const { canWriteAnyProject } = useCurrentUser();
   const { projectNameById } = useResourceProjects();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
 
   const { envs, loading: envsLoading } = usePreviewEnvs();
@@ -142,25 +132,26 @@ export default function StacksPage() {
     return out;
   }, [deployedStacks, statusFilter, query, sortKey]);
 
-  const confirmDelete = async () => {
-    if (!deleting) return;
+  const requestDelete = async (stack: Stack) => {
+    const ok = await confirm({
+      title: "Delete stack?",
+      description: `This permanently deletes “${stack.name}” and all of its deployed resources. This action cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const orgId = getCurrentOrganizationId();
-    const projectName = projectNameById(deleting.project_id);
-    if (!orgId || !projectName || !deleting.id) {
+    const projectName = projectNameById(stack.project_id);
+    if (!orgId || !projectName || !stack.id) {
       toast({ title: "Delete failed", description: "The stack's project could not be resolved.", variant: "destructive" });
-      setDeleting(null);
       return;
     }
-    setDeleteBusy(true);
     try {
-      await deleteStack(orgId, projectName, deleting.id);
-      setStacks((prev) => prev.filter((s) => s.id !== deleting.id));
-      toast({ title: "Stack deleted", description: `"${deleting.name}" was deleted.`, variant: "success" });
+      await deleteStack(orgId, projectName, stack.id);
+      setStacks((prev) => prev.filter((s) => s.id !== stack.id));
+      toast({ title: "Stack deleted", description: `"${stack.name}" was deleted.`, variant: "success" });
     } catch {
       toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });
-    } finally {
-      setDeleteBusy(false);
-      setDeleting(null);
     }
   };
 
@@ -323,7 +314,7 @@ export default function StacksPage() {
                 <DeployStackCard
                   key={stack.id || stack.name}
                   stack={stack}
-                  onDelete={canWriteAnyProject ? setDeleting : undefined}
+                  onDelete={canWriteAnyProject ? (s) => void requestDelete(s) : undefined}
                 />
               ))}
             </div>
@@ -332,30 +323,6 @@ export default function StacksPage() {
       )}
 
       <StackCreateWizard open={wizardOpen} onOpenChange={setWizardOpen} />
-
-      <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => !open && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete stack?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This permanently deletes “{deleting?.name}” and all of its deployed resources. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleteBusy}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={deleteBusy}
-              onClick={(e) => {
-                e.preventDefault();
-                confirmDelete();
-              }}
-            >
-              {deleteBusy ? "Deleting…" : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

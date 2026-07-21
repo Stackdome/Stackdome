@@ -2,13 +2,10 @@ import { useEffect, useState } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldShell } from "@/components/branded";
+import { useConfirm } from "@/components/branded/confirm";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -39,8 +36,11 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
   const [maxActive, setMaxActive] = useState(10);
   const [saving, setSaving] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ConfigSettingsValues, string>>>({});
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  // True from clicking "Delete configuration" until the flow settles — keeps
+  // the settings Dialog from self-dismissing while the confirm is up.
+  const [deleteFlowActive, setDeleteFlowActive] = useState(false);
+  const confirm = useConfirm();
 
   // Re-seed local state from the latest config every time the modal opens —
   // discards unsaved edits on cancel and picks up changes saved elsewhere.
@@ -90,36 +90,47 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
     }
   };
 
-  const confirmDelete = async () => {
-    const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultProjectName || !config.id) return;
-    setDeleting(true);
+  const requestDelete = async () => {
+    setDeleteFlowActive(true);
     try {
-      await deletePreviewConfig(orgId, defaultProjectName, config.id);
-      toast({ title: "Configuration deleted" });
-      setDeleteConfirmOpen(false);
-      onOpenChange(false);
-      onDeleted();
-    } catch (e) {
-      toast({ title: "Delete failed", description: getErrorMessage(e), variant: "destructive" });
+      const ok = await confirm({
+        title: `Delete ${config.name}?`,
+        description: "Delete this configuration's preview environments first.",
+        confirmLabel: "Delete",
+        variant: "destructive",
+      });
+      if (!ok) return;
+      const orgId = getCurrentOrganizationId();
+      if (!orgId || !defaultProjectName || !config.id) return;
+      setDeleting(true);
+      try {
+        await deletePreviewConfig(orgId, defaultProjectName, config.id);
+        toast({ title: "Configuration deleted" });
+        onOpenChange(false);
+        onDeleted();
+      } catch (e) {
+        toast({ title: "Delete failed", description: getErrorMessage(e), variant: "destructive" });
+      } finally {
+        setDeleting(false);
+      }
     } finally {
-      setDeleting(false);
+      setDeleteFlowActive(false);
     }
   };
 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        {/* The delete confirm portals as a sibling, so its clicks land "outside"
-            this Dialog's content — without these guards Radix dismisses the
-            settings modal underneath the confirm. */}
+        {/* The app-root confirm dialog portals as a sibling, so its clicks land
+            "outside" this Dialog's content — without these guards Radix
+            dismisses the settings modal underneath the confirm. */}
         <DialogContent
           className="sm:max-w-md"
           onInteractOutside={(e) => {
-            if (deleteConfirmOpen) e.preventDefault();
+            if (deleteFlowActive) e.preventDefault();
           }}
           onEscapeKeyDown={(e) => {
-            if (deleteConfirmOpen) e.preventDefault();
+            if (deleteFlowActive) e.preventDefault();
           }}
         >
           <DialogHeader>
@@ -178,33 +189,17 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
             <p className="text-sm text-muted-foreground">
               Deleting the configuration stops new previews for this repository.
             </p>
-            <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmOpen(true)}>
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={deleting}
+              onClick={() => void requestDelete()}
+            >
               Delete configuration
             </Button>
           </div>
         </DialogContent>
       </Dialog>
-
-      {/* Rendered as a sibling of the settings Dialog rather than nested
-          inside DialogContent (with an AlertDialogTrigger) — that composition
-          hits a Radix focus-restore bug where closing the AlertDialog leaves
-          focus lost instead of returning it to the settings Dialog. */}
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete {config.name}?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Delete this configuration&apos;s preview environments first.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()} disabled={deleting}>
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   );
 }

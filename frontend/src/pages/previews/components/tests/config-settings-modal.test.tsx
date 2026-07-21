@@ -22,6 +22,7 @@ vi.mock("@/components/ui/use-toast", () => ({
 
 import { updatePreviewConfig, deletePreviewConfig } from "@/api/preview-configs";
 import { ConfigSettingsModal } from "../config-settings-modal";
+import { ConfirmProvider } from "@/components/branded/confirm";
 import type { StackPreviewConfig } from "@/api/preview-configs";
 
 const config: StackPreviewConfig = {
@@ -39,6 +40,7 @@ describe("ConfigSettingsModal", () => {
   it("seeds fields from config when opened", () => {
     render(
       <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
     expect(screen.getByLabelText(/base branch/i)).toHaveValue("main");
     expect(screen.getByLabelText(/stackfile path/i)).toHaveValue("stackfile.yaml");
@@ -48,6 +50,7 @@ describe("ConfigSettingsModal", () => {
   it("re-seeds fields from the latest config on reopen, discarding unsaved edits", async () => {
     const { rerender } = render(
       <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
 
     const input = screen.getByLabelText(/stackfile path/i);
@@ -70,6 +73,7 @@ describe("ConfigSettingsModal", () => {
   it("re-seeds when a newer config prop arrives while still open", () => {
     const { rerender } = render(
       <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
     const updated: StackPreviewConfig = { ...config, stackfile_path: "new/path.yaml" };
     rerender(
@@ -81,6 +85,7 @@ describe("ConfigSettingsModal", () => {
   it("clamps max active previews to a positive integer", async () => {
     render(
       <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
     const input = screen.getByLabelText(/max active previews/i);
     fireEvent.change(input, { target: { value: "-5" } });
@@ -90,6 +95,7 @@ describe("ConfigSettingsModal", () => {
   it("requires a non-empty stackfile path and blocks the save", async () => {
     render(
       <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
     const input = screen.getByLabelText(/stackfile path/i);
     await userEvent.clear(input);
@@ -105,6 +111,7 @@ describe("ConfigSettingsModal", () => {
   it("clears the stackfile path error once the field is edited", async () => {
     render(
       <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
     const input = screen.getByLabelText(/stackfile path/i);
     await userEvent.clear(input);
@@ -128,6 +135,7 @@ describe("ConfigSettingsModal", () => {
 
     render(
       <ConfigSettingsModal open config={withExtras} onOpenChange={onOpenChange} onSaved={onSaved} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
 
     const input = screen.getByLabelText(/stackfile path/i);
@@ -156,6 +164,7 @@ describe("ConfigSettingsModal", () => {
 
     render(
       <ConfigSettingsModal open config={config} onOpenChange={onOpenChange} onSaved={onSaved} onDeleted={() => {}} />,
+      { wrapper: ConfirmProvider },
     );
     await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
@@ -173,6 +182,7 @@ describe("ConfigSettingsModal", () => {
 
     render(
       <ConfigSettingsModal open config={config} onOpenChange={onOpenChange} onSaved={() => {}} onDeleted={onDeleted} />,
+      { wrapper: ConfirmProvider },
     );
 
     const user = userEvent.setup();
@@ -198,6 +208,7 @@ describe("ConfigSettingsModal", () => {
 
     render(
       <ConfigSettingsModal open config={config} onOpenChange={onOpenChange} onSaved={() => {}} onDeleted={onDeleted} />,
+      { wrapper: ConfirmProvider },
     );
 
     const user = userEvent.setup();

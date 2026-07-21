@@ -3,10 +3,7 @@ import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/branded";
 import { AddIntegrationWizard } from "./add-integration-wizard";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import {
   listGitIntegrations, deleteGitIntegration,
@@ -26,8 +23,8 @@ export default function GitIntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<GitIntegration | null>(null);
-  const [removing, setRemoving] = useState<GitIntegration | null>(null);
   const [editing, setEditing] = useState<GitIntegration | null>(null);
+  const confirm = useConfirm();
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -53,6 +50,13 @@ export default function GitIntegrationsPage() {
   }, [refresh]);
 
   const remove = async (integration: GitIntegration) => {
+    const ok = await confirm({
+      title: "Remove this integration?",
+      description: "Repositories using this integration lose access for clones.",
+      confirmLabel: "Remove",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId || !integration.id) {
       toast({
@@ -65,7 +69,6 @@ export default function GitIntegrationsPage() {
     try {
       await deleteGitIntegration(orgId, integration.id);
       toast({ title: "Integration removed" });
-      setRemoving(null);
       await refresh();
     } catch (e) {
       toast({ title: "Remove failed", description: getErrorMessage(e), variant: "destructive" });
@@ -118,7 +121,7 @@ export default function GitIntegrationsPage() {
                   key={integration.id}
                   integration={integration}
                   onVerify={setVerifying}
-                  onRemove={setRemoving}
+                  onRemove={(i) => void remove(i)}
                   onUpdateCredentials={setEditing}
                 />
               ))}
@@ -145,25 +148,6 @@ export default function GitIntegrationsPage() {
         onUpdated={() => void refresh()}
       />
 
-      <AlertDialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this integration?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Repositories using this integration lose access for clones.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => removing && void remove(removing)}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

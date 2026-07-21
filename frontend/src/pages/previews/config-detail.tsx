@@ -5,10 +5,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -73,7 +70,7 @@ export default function PreviewConfigDetailPage() {
 
   const { envs, loading: envsLoading, error: envsError, refresh } = usePreviewEnvs(configId);
   const [syncing, setSyncing] = useState<PreviewStack | null>(null);
-  const [deleting, setDeleting] = useState<PreviewStack | null>(null);
+  const confirm = useConfirm();
 
   // Breadcrumb shows the config's name instead of its UUID path segment.
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
@@ -106,17 +103,22 @@ export default function PreviewConfigDetailPage() {
     };
   }, [configId, defaultProjectName, fetchNonce]);
 
-  const confirmDeleteEnv = async () => {
+  const requestDeleteEnv = async (env: PreviewStack) => {
+    const ok = await confirm({
+      title: `Delete PR #${env.pr_number} environment?`,
+      description: "The environment's stack and resources are torn down. This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const orgId = getCurrentOrganizationId();
-    if (!orgId || !defaultProjectName || !deleting?.id) return;
+    if (!orgId || !defaultProjectName || !env.id) return;
     try {
-      await deletePreviewEnv(orgId, defaultProjectName, deleting.id);
-      toast({ title: `Deleting PR #${deleting.pr_number} environment` });
+      await deletePreviewEnv(orgId, defaultProjectName, env.id);
+      toast({ title: `Deleting PR #${env.pr_number} environment` });
       await refresh();
     } catch (e) {
       toast({ title: "Delete failed", description: getErrorMessage(e), variant: "destructive" });
-    } finally {
-      setDeleting(null);
     }
   };
 
@@ -327,7 +329,7 @@ export default function PreviewConfigDetailPage() {
               key={env.id}
               env={env}
               onSync={setSyncing}
-              onDelete={setDeleting}
+              onDelete={(env) => void requestDeleteEnv(env)}
             />
           ))}
         </div>
@@ -351,21 +353,6 @@ export default function PreviewConfigDetailPage() {
         onOpenChange={(o) => !o && setSyncing(null)}
         onSynced={() => void refresh()}
       />
-      <AlertDialog open={deleting != null} onOpenChange={(o) => !o && setDeleting(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete PR #{deleting?.pr_number} environment?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The environment&apos;s stack and resources are torn down. This cannot
-              be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction variant="destructive" onClick={() => void confirmDeleteEnv()}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

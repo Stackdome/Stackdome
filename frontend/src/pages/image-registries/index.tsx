@@ -2,10 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/branded";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import {
   listRegistryCredentials, deleteRegistryCredential,
@@ -27,7 +24,7 @@ export default function ImageRegistriesPage() {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<RegistryCredential | null>(null);
   const [verifying, setVerifying] = useState<RegistryCredential | null>(null);
-  const [removing, setRemoving] = useState<RegistryCredential | null>(null);
+  const confirm = useConfirm();
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
@@ -52,6 +49,13 @@ export default function ImageRegistriesPage() {
   }, [refresh]);
 
   const remove = async (credential: RegistryCredential) => {
+    const ok = await confirm({
+      title: "Remove this registry?",
+      description: "Stacks referencing these credentials lose pull/push access.",
+      confirmLabel: "Remove",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId || !credential.id) {
       toast({
@@ -72,7 +76,6 @@ export default function ImageRegistriesPage() {
       } else {
         toast({ title: "Registry removed" });
       }
-      setRemoving(null);
       await refresh();
     } catch (e) {
       toast({ title: "Remove failed", description: getErrorMessage(e), variant: "destructive" });
@@ -123,7 +126,7 @@ export default function ImageRegistriesPage() {
                   credential={credential}
                   onVerify={setVerifying}
                   onUpdateCredentials={setEditing}
-                  onRemove={setRemoving}
+                  onRemove={(c) => void remove(c)}
                 />
               ))}
             </div>
@@ -144,25 +147,6 @@ export default function ImageRegistriesPage() {
         onOpenChange={(o) => !o && setVerifying(null)}
       />
 
-      <AlertDialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this registry?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Stacks referencing these credentials lose pull/push access.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => removing && void remove(removing)}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

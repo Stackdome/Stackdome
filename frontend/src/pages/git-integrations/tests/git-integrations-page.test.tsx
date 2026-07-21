@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import GitIntegrationsPage from "../index";
+import { ConfirmProvider } from "@/components/branded/confirm";
 import {
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   GIT_INTEGRATION_TYPE_CREDENTIALS,
@@ -38,7 +39,7 @@ describe("GitIntegrationsPage", () => {
 
   it("renders branded empty state with a Connect provider action when list is empty", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({ items: [] });
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText(/no git integrations yet/i)).toBeInTheDocument());
     // Header + empty-state both expose a connect CTA.
     expect(screen.getAllByRole("button", { name: /connect provider/i }).length).toBeGreaterThanOrEqual(1);
@@ -46,7 +47,7 @@ describe("GitIntegrationsPage", () => {
 
   it("opens the wizard from the empty-state action", async () => {
     vi.mocked(listGitIntegrations).mockResolvedValue({ items: [] });
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText(/no git integrations yet/i)).toBeInTheDocument());
     const [, emptyStateButton] = screen.getAllByRole("button", { name: /connect provider/i });
     fireEvent.click(emptyStateButton);
@@ -60,7 +61,7 @@ describe("GitIntegrationsPage", () => {
         { id: "g2", host: "gitlab.com", type: GIT_INTEGRATION_TYPE_CREDENTIALS, status: STATUS_ACTIVE, credentials_configured: true },
       ],
     });
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
     expect(screen.getByText("github.com")).toBeInTheDocument();
     expect(screen.getByText(/connected providers/i)).toBeInTheDocument();
@@ -75,7 +76,7 @@ describe("GitIntegrationsPage", () => {
         items: [{ id: "g1", host: "github.com", type: GIT_INTEGRATION_TYPE_GITHUB_APP, status: STATUS_INSTALLED, credentials_configured: true }],
       });
 
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText(/couldn't load integrations/i)).toBeInTheDocument());
 
     await userEvent.click(screen.getByRole("button", { name: /retry/i }));
@@ -90,7 +91,7 @@ describe("GitIntegrationsPage", () => {
     });
     vi.mocked(verifyGitIntegration).mockResolvedValue(undefined);
 
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("github.com")).toBeInTheDocument());
 
     const user = userEvent.setup();
@@ -114,7 +115,7 @@ describe("GitIntegrationsPage", () => {
       .mockResolvedValueOnce({ items: [] });
     vi.mocked(deleteGitIntegration).mockResolvedValue(undefined);
 
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("github.com")).toBeInTheDocument());
 
     const user = userEvent.setup();
@@ -136,7 +137,7 @@ describe("GitIntegrationsPage", () => {
     });
     vi.mocked(updateGitIntegration).mockResolvedValue({ id: "g2", host: "gitlab.com" });
     const user = userEvent.setup();
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /open row menu/i }));
@@ -162,7 +163,7 @@ describe("GitIntegrationsPage", () => {
       ],
     });
     const user = userEvent.setup();
-    render(<GitIntegrationsPage />);
+    render(<ConfirmProvider><GitIntegrationsPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("gitlab.com")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /update credentials/i }));
