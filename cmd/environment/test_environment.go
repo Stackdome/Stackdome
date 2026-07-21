@@ -8,6 +8,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
@@ -106,6 +107,7 @@ func (te *testEnvironment) Init(ctx context.Context) error {
 		te.injectClusterResourceServices,
 		te.initializeBaseResourceAccessPolicies,
 		te.startManagers,
+		te.bootstrapPlatformDefaults,
 	}
 
 	for _, step := range initializerSteps {
@@ -134,6 +136,10 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 	if err := te.BootstrapConfig.Validate(); err != nil {
 		return fmt.Errorf("invalid bootstrap config: %w", err)
 	}
+
+	if err := config.ValidateDefaultProvisioning(te.Config.DefaultCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.DefaultUser.Email); err != nil {
+		return fmt.Errorf("invalid default-provisioning config: %w", err)
+	}
 	return nil
 }
 
@@ -144,6 +150,13 @@ func (te *testEnvironment) loadSaneDefaults() {
 	// Load standard environment variables
 	// te.Config.LoadEnvVariables()
 	// te.BootstrapConfig.LoadEnvVariables()
+
+	// Default-provisioning config is opt-in: the DEFAULT_CLUSTER_* / DEFAULT_* vars
+	// are unset in unit runs (no-op), and set by the integration bootstrap to exercise
+	// the boot-time platform seeding against a real cluster.
+	te.Config.DefaultCluster.LoadEnvVariables()
+	te.BootstrapConfig.LoadEnvVariables()
+
 	if te.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
 			te.Config.JwtSecret = val
@@ -481,15 +494,20 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	signupService := services.NewSignupService(services.SignupServiceSpec{
-		UserService:         userService,
-		OrgInviteService:    orgInviteService,
-		OrganisationService: organisationService,
-		ProjectService:      projectService,
-		PolicyManager:       te.ResourceAccessPolicyManager,
-		RefreshTokenStore:   te.RefreshTokenStore,
-		JWTSecretKey:        te.Config.JwtSecret,
-		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
-		Logger:              te.Logger,
+		UserService:               userService,
+		OrgInviteService:          orgInviteService,
+		OrganisationService:       organisationService,
+		ProjectService:            projectService,
+		ClusterService:            clusterService,
+		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		PolicyManager:             te.ResourceAccessPolicyManager,
+		RefreshTokenStore:         te.RefreshTokenStore,
+		JWTSecretKey:              te.Config.JwtSecret,
+		JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
+		RegistryStorageSize:       te.BootstrapConfig.RegistryStorageSize,
+		RegistryStorageClass:      te.BootstrapConfig.RegistryStorageClass,
+		Logger:                    te.Logger,
 	})
 
 	te.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
@@ -896,6 +914,25 @@ func (te *testEnvironment) startManagers(ctx context.Context) error {
 
 	te.Logger.Debugf("Starting worker manager for test environment")
 	return te.WorkerManager.Start(ctx)
+}
+
+func (te *testEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
+	svc := bootstrap.NewService(bootstrap.Spec{
+		UserService:               te.Services.UserService,
+		OrganisationService:       te.Services.OrganisationService,
+		ProjectService:            te.Services.ProjectService,
+		ClusterService:            te.Services.ClusterService,
+		ImageRegistryService:      te.Services.ClusterImageRegistryService,
+		OrganisationDomainService: te.Services.OrganisationDomainService,
+		PolicyManager:             te.ResourceAccessPolicyManager,
+		BootstrapConfig:           te.BootstrapConfig,
+		ClusterConfig:             te.Config.DefaultCluster,
+		Logger:                    te.Logger,
+	})
+	if err := svc.Run(ctx); err != nil {
+		return fmt.Errorf("platform bootstrap failed: %w", err)
+	}
+	return nil
 }
 
 func (te *testEnvironment) Shutdown(ctx context.Context) error {

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
-	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/testutil"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
@@ -83,6 +82,13 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("MinIO deployment failed: %w", err)
 	}
 
+	// Export DEFAULT_* env from the provisioned cluster so the server seeds
+	// platform defaults (Default=true cluster, platform org, base domain) at boot.
+	logger.Info("Exporting default-provisioning environment")
+	if err := exportDefaultProvisioningEnv(ctx, env.Cluster); err != nil {
+		return fmt.Errorf("failed to export default provisioning env: %w", err)
+	}
+
 	// Initialize server
 	logger.Info("Bootstrapping server")
 	serverManager := NewServerManager(dbManager.GetSessionFactory(), dbManager.GetConfig(), logger)
@@ -91,18 +97,13 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 
-	// Initialize client and register cluster
-	logger.Info("Bootstrapping client and registering cluster")
-	clientManager := NewClientManager(serverManager.GetBaseURL(), clusterManager.GetCluster(), logger)
+	// Initialize client: log in as the platform admin the server seeded at boot
+	// and adopt the Default cluster + platform org for the suite.
+	logger.Info("Bootstrapping client against platform defaults")
+	clientManager := NewClientManager(serverManager.GetBaseURL(), logger)
 	env.clientManager = clientManager
 	if err := clientManager.Bootstrap(ctx); err != nil {
 		return fmt.Errorf("client bootstrap failed: %w", err)
-	}
-
-	// Create organisation domain for stack tests
-	logger.Info("Creating organisation domain for stack tests")
-	if err := createOrganisationDomain(ctx, dbManager, clientManager.GetOrgID()); err != nil {
-		return fmt.Errorf("failed to create organisation domain: %w", err)
 	}
 
 	// Set final client details
@@ -183,18 +184,6 @@ func (env *Environment) Cleanup() {
 	}
 
 	env.logger.Info("Integration test cleanup completed")
-}
-
-func createOrganisationDomain(ctx context.Context, dbManager *DatabaseManager, orgID string) error {
-	session := dbManager.GetSessionFactory().New(ctx)
-	domain := &models.OrganisationDomain{
-		OrganisationID: orgID,
-		Domain:         "test.example.com",
-	}
-	if err := session.Create(domain).Error; err != nil {
-		return fmt.Errorf("failed to insert organisation domain: %w", err)
-	}
-	return nil
 }
 
 func deployMinIO(ctx context.Context, k8sClient client.Client) error {

@@ -1,24 +1,19 @@
 package bootstrap
 
 import (
-	"bytes"
 	"context"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/testutil"
-	"github.com/Stackdome/stackdome/test/int/shared"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 const (
@@ -28,21 +23,13 @@ const (
 
 type ClientManager struct {
 	client    *openapi.APIClient
-	cluster   *testutil.TestCluster
-	baseURL   string
 	userToken string
 	orgID     string
 	clusterID string
 	logger    logr.Logger
 }
 
-type UserInfo struct {
-	ID    string
-	Token string
-	OrgID string
-}
-
-func NewClientManager(baseURL string, cluster *testutil.TestCluster, logger logr.Logger) *ClientManager {
+func NewClientManager(baseURL string, logger logr.Logger) *ClientManager {
 	config := openapi.NewConfiguration()
 	config.Host = strings.TrimPrefix(baseURL, "http://")
 	config.Scheme = "http"
@@ -51,10 +38,8 @@ func NewClientManager(baseURL string, cluster *testutil.TestCluster, logger logr
 	client := openapi.NewAPIClient(config)
 
 	return &ClientManager{
-		client:  client,
-		cluster: cluster,
-		baseURL: baseURL,
-		logger:  logger,
+		client: client,
+		logger: logger,
 	}
 }
 
@@ -65,25 +50,25 @@ func (cm *ClientManager) Bootstrap(ctx context.Context) error {
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	// Create test user and get authentication token
-	userInfo, err := cm.createTestUser(bootstrapCtx)
-	if err != nil {
-		return fmt.Errorf("failed to create test user: %w", err)
+	// The server, on boot, provisioned the platform org, admin and the Default
+	// cluster from the DEFAULT_* env. Log in as that admin and adopt the default
+	// cluster + its registry for the rest of the suite.
+	if err := cm.loginPlatformAdmin(bootstrapCtx); err != nil {
+		return fmt.Errorf("failed to login platform admin: %w", err)
 	}
 
-	cm.userToken = userInfo.Token
-	cm.orgID = userInfo.OrgID
-
-	// Configure client with authentication
 	cm.configureAuthentication()
 
-	// Register cluster with API server
-	clusterID, err := cm.registerCluster(bootstrapCtx)
+	clusterID, err := cm.resolveDefaultCluster(bootstrapCtx)
 	if err != nil {
-		return fmt.Errorf("failed to register cluster: %w", err)
+		return fmt.Errorf("failed to resolve default cluster: %w", err)
 	}
-
 	cm.clusterID = clusterID
+
+	cm.logger.Info("Waiting for platform image registry to become Running")
+	if err := cm.waitForRegistryRunning(bootstrapCtx, clusterID); err != nil {
+		return fmt.Errorf("failed waiting for registry: %w", err)
+	}
 
 	cm.logger.Info("Client bootstrap completed successfully",
 		"orgID", cm.orgID,
@@ -107,45 +92,40 @@ func (cm *ClientManager) GetClusterID() string {
 	return cm.clusterID
 }
 
-func (cm *ClientManager) createTestUser(ctx context.Context) (*UserInfo, error) {
-	// Create user signup request
-	email := fmt.Sprintf("test-%d@example.com", time.Now().Unix())
-	organisation := openapi.NewOrganisation()
-	organisation.SetName("stackdome")
-	req := openapi.NewUserSignupRequest("Test User", email, "testpassword123")
-	req.SetOrganisation(*organisation)
+func (cm *ClientManager) loginPlatformAdmin(ctx context.Context) error {
+	req := openapi.NewLoginRequest(defaultProvisioningAdminEmail, defaultProvisioningAdminPassword)
 
-	cm.logger.Info("Creating test user: %+v", *req)
-
-	// Make signup request
-	resp, httpResp, err := cm.client.DefaultApi.ApiV1UserSignupPost(ctx).UserSignupRequest(*req).Execute()
+	resp, httpResp, err := cm.client.DefaultApi.ApiV1AuthLoginPost(ctx).LoginRequest(*req).Execute()
 	if err != nil {
-		return nil, fmt.Errorf("user signup failed: %w", err)
+		return fmt.Errorf("platform admin login failed: %w", err)
 	}
 	defer func() { _ = httpResp.Body.Close() }()
 
-	if httpResp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(httpResp.Body)
-		return nil, fmt.Errorf("user signup failed with status %d: %s", httpResp.StatusCode, string(body))
+	if resp.GetToken() == "" {
+		return fmt.Errorf("no token in login response")
 	}
-
-	if resp.GetJwtToken() == "" {
-		return nil, fmt.Errorf("no JWT token in signup response")
-	}
-
-	if resp.User.GetId() == "" {
-		return nil, fmt.Errorf("no user ID in signup response")
-	}
-
 	if resp.User.GetOrganisationId() == "" {
-		return nil, fmt.Errorf("no organisation ID in signup response")
+		return fmt.Errorf("no organisation ID in login response")
 	}
 
-	return &UserInfo{
-		ID:    resp.User.GetId(),
-		Token: resp.GetJwtToken(),
-		OrgID: resp.User.GetOrganisationId(),
-	}, nil
+	cm.userToken = resp.GetToken()
+	cm.orgID = resp.User.GetOrganisationId()
+	return nil
+}
+
+func (cm *ClientManager) resolveDefaultCluster(ctx context.Context) (string, error) {
+	resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdClustersGet(ctx, cm.orgID).Execute()
+	if err != nil {
+		return "", fmt.Errorf("listing clusters failed: %w", err)
+	}
+	defer func() { _ = httpResp.Body.Close() }()
+
+	for _, cluster := range resp.GetItems() {
+		if cluster.Id != nil && *cluster.Id != "" {
+			return *cluster.Id, nil
+		}
+	}
+	return "", fmt.Errorf("no cluster found for platform org %s", cm.orgID)
 }
 
 func (cm *ClientManager) configureAuthentication() {
@@ -153,35 +133,8 @@ func (cm *ClientManager) configureAuthentication() {
 	cm.client.GetConfig().DefaultHeader["Authorization"] = "Bearer " + cm.userToken
 }
 
-func (cm *ClientManager) registerCluster(ctx context.Context) (string, error) {
-	// Deploy service account and get credentials
-	if err := cm.deployServiceAccount(ctx); err != nil {
-		return "", fmt.Errorf("failed to deploy service account: %w", err)
-	}
-
-	// Extract cluster connection details
-	clusterURL, caData, saToken, err := cm.extractClusterCredentials(ctx)
-	if err != nil {
-		return "", fmt.Errorf("failed to extract cluster credentials: %w", err)
-	}
-
-	// Register cluster via API
-	clusterID, err := cm.registerClusterViaAPI(ctx, clusterURL, caData, saToken)
-	if err != nil {
-		return "", fmt.Errorf("failed to register cluster via API: %w", err)
-	}
-
-	// Wait for the cluster image registry to reach Running state
-	cm.logger.Info("Waiting for cluster image registry to become Running")
-	if err := cm.waitForRegistryRunning(ctx, clusterID); err != nil {
-		return "", fmt.Errorf("failed waiting for registry: %w", err)
-	}
-
-	return clusterID, nil
-}
-
-func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
-	kubeClient, err := cm.cluster.GetKubeClient()
+func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCluster) error {
+	kubeClient, err := cluster.GetKubeClient()
 	if err != nil {
 		return fmt.Errorf("failed to get kube client: %w", err)
 	}
@@ -278,14 +231,14 @@ func (cm *ClientManager) deployServiceAccount(ctx context.Context) error {
 	return fmt.Errorf("timeout waiting for service account secret to be populated")
 }
 
-func (cm *ClientManager) extractClusterCredentials(ctx context.Context) (string, string, string, error) {
-	clientset, err := cm.cluster.GetKubeClient()
+func extractAPIServerClusterCredentials(ctx context.Context, cluster *testutil.TestCluster) (string, string, string, error) {
+	clientset, err := cluster.GetKubeClient()
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to get kube client: %w", err)
 	}
 
 	// Get cluster URL from rest config
-	config, err := cm.cluster.GetKubeConfig()
+	config, err := cluster.GetKubeConfig()
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to get kube config: %w", err)
 	}
@@ -303,62 +256,6 @@ func (cm *ClientManager) extractClusterCredentials(ctx context.Context) (string,
 	saToken := string(secret.Data["token"])
 
 	return clusterURL, caData, saToken, nil
-}
-
-func (cm *ClientManager) registerClusterViaAPI(ctx context.Context, clusterURL, caData, saToken string) (string, error) {
-	// Create cluster payload with image registry
-	cluster := openapi.Cluster{
-		Name:           "test-cluster",
-		ClusterUrl:     clusterURL,
-		ClusterCaData:  caData,
-		ClusterSaToken: saToken,
-		ClusterImageRegistry: &openapi.ClusterImageRegistry{
-			Name: shared.TestRegistryName,
-			Spec: &openapi.ClusterImageRegistrySpec{
-				BackendStorageSize:  ptr.To("10Gi"),
-				BackendStorageClass: ptr.To("standard"),
-			},
-		},
-	}
-
-	// Marshall to JSON
-	payload, err := json.Marshal(cluster)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal cluster payload: %w", err)
-	}
-
-	// Make API request to register cluster
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("%s/api/v1/organizations/%s/clusters", cm.baseURL, cm.orgID), bytes.NewBuffer(payload))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", cm.userToken))
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to make request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("failed to register cluster: status %d, body: %s", resp.StatusCode, string(body))
-	}
-
-	// Parse response to get cluster ID
-	var responseCluster openapi.Cluster
-	if err := json.NewDecoder(resp.Body).Decode(&responseCluster); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
-	}
-
-	if responseCluster.Id == nil {
-		return "", fmt.Errorf("cluster ID not found in response")
-	}
-
-	return *responseCluster.Id, nil
 }
 
 func (cm *ClientManager) waitForRegistryRunning(ctx context.Context, clusterID string) error {
