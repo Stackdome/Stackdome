@@ -238,12 +238,18 @@ export function useDraftSync({
       runningRef.current = null;
       if (queuedRef.current) {
         queuedRef.current = false;
+        // An edit made mid-cycle may also have re-armed the debounce; clear it
+        // so the drain timer below is the only pending firing (a leaked handle
+        // would fire a spurious extra cycle).
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
         idleTimerRef.current = setTimeout(() => {
           void startCycle();
         }, 0);
-      } else {
-        // Nothing queued behind this cycle: every known edit has been pushed
-        // (or is on the retry path, which keeps failureCount > 0).
+      } else if (!idleTimerRef.current && !maxWaitTimerRef.current) {
+        // Nothing queued AND no debounce armed: every known edit has been
+        // pushed (or is on the retry path, which keeps failureCount > 0). An
+        // armed timer means an edit landed DURING this cycle — it hasn't been
+        // sent, so pending must survive until its own cycle settles.
         setPending(false);
       }
     });
@@ -261,6 +267,9 @@ export function useDraftSync({
   useEffect(() => {
     if (!enabled || !draft || !idsRef.current) {
       firstArmRef.current = true;
+      // Disabled / session ended: no cycle will run to clear pending, so
+      // reset it here rather than leaving the lifecycle stuck on "editing".
+      setPending(false);
       return;
     }
     if (firstArmRef.current) firstArmRef.current = false;

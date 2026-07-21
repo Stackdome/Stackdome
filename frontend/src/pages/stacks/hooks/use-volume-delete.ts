@@ -1,7 +1,6 @@
 import { useCallback, useState } from "react";
 import axios from "axios";
 import type { Stack, Volume } from "@/api/stacks";
-import { getStackById } from "@/api/stacks";
 import { deleteVolume } from "@/api/volumes";
 
 export type VolumeDeleteToast = (t: { title: string; description?: string; variant?: "destructive" | "success" }) => void;
@@ -9,8 +8,10 @@ export type VolumeDeleteToast = (t: { title: string; description?: string; varia
 export interface UseVolumeDeleteArgs {
   ids: { orgId: string; projectName: string; stackId: string } | null;
   draftSync: { flush(): Promise<boolean>; notifyExternalUpdate(stack: Stack): void };
-  /** Same setter revert's onReverted uses — keeps the page's stack state truthful. */
-  onServerRefresh: (fresh: Stack) => void;
+  /** Page-provided, ticket-gated stack refetch — applies the payload to page
+   *  state itself and returns the newest applied stack, so this hook's own
+   *  GETs can't clobber fresher state with a late response. */
+  fetchStack: () => Promise<Stack>;
   /** Failure path: re-add the volume to the session draft (it reappears floating). */
   onRestoreVolume: (fresh: Volume) => void;
   toast: VolumeDeleteToast;
@@ -30,7 +31,7 @@ export interface UseVolumeDelete {
 export function useVolumeDelete({
   ids,
   draftSync,
-  onServerRefresh,
+  fetchStack,
   onRestoreVolume,
   toast,
 }: UseVolumeDeleteArgs): UseVolumeDelete {
@@ -43,7 +44,7 @@ export function useVolumeDelete({
     async (name: string): Promise<void> => {
       if (!ids) return;
       try {
-        const fresh = await getStackById(ids.orgId, ids.projectName, ids.stackId);
+        const fresh = await fetchStack();
         draftSync.notifyExternalUpdate(fresh);
         const vol = (fresh.spec?.volumes ?? []).find((v) => v.name === name);
         if (vol) onRestoreVolume(vol as Volume);
@@ -55,7 +56,7 @@ export function useVolumeDelete({
         });
       }
     },
-    [ids, draftSync, onRestoreVolume, toast],
+    [ids, fetchStack, draftSync, onRestoreVolume, toast],
   );
 
   const runDelete = useCallback(
@@ -79,7 +80,7 @@ export function useVolumeDelete({
           return false;
         }
 
-        const fresh = await getStackById(ids.orgId, ids.projectName, ids.stackId);
+        const fresh = await fetchStack();
         const id = fresh.spec?.volumes?.find((v) => v.name === name)?.id;
         if (id == null) {
           // Never persisted server-side (or already gone) — the local delete is
@@ -90,9 +91,9 @@ export function useVolumeDelete({
 
         await deleteVolume(ids.orgId, ids.projectName, id);
 
-        const fresh2 = await getStackById(ids.orgId, ids.projectName, ids.stackId);
+        // fetchStack applies the payload to page state itself (ticket-gated).
+        const fresh2 = await fetchStack();
         draftSync.notifyExternalUpdate(fresh2);
-        onServerRefresh(fresh2);
         toast({ title: "Volume deleted", description: `"${name}" and its data were deleted.`, variant: "success" });
         return true;
       } catch (err) {
@@ -116,7 +117,7 @@ export function useVolumeDelete({
         setDeleting(false);
       }
     },
-    [ids, draftSync, onServerRefresh, refetchAndRestore, toast],
+    [ids, fetchStack, draftSync, refetchAndRestore, toast],
   );
 
   return { deleting, deleteVolume: runDelete };

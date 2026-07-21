@@ -127,6 +127,9 @@ export default function CanvasEditorPage() {
       }
       getStackById(orgId, defaultProjectName, id)
         .then((data) => {
+          // Seed the last-applied fallback so a concurrent refetch whose
+          // response the gate drops can fall back to this payload.
+          lastAppliedStackRef.current = data;
           setFetchedStack(data);
           setLoading(false);
           setCustomLabel(path, data.name || 'Stack Details');
@@ -349,29 +352,40 @@ export default function CanvasEditorPage() {
   // delete) all funnel through this gate: a response older than the newest
   // applied one is dropped instead of clobbering fresher state.
   const stackFetchGateRef = useRef(createStackFetchGate());
+  // The newest gate-applied payload — handed to callers whose own response was
+  // dropped as stale, so downstream consumers (autosave mirror) never diverge
+  // from what the UI shows.
+  const lastAppliedStackRef = useRef<Stack | null>(null);
 
   // Server topology may have changed; re-derive edges alongside the fresh stack.
-  const applyStackResponse = useCallback((fresh: Stack, ticket: number) => {
-    if (!stackFetchGateRef.current.shouldApply(ticket)) return;
+  const applyStackResponse = useCallback((fresh: Stack, ticket: number): boolean => {
+    if (!stackFetchGateRef.current.shouldApply(ticket)) return false;
+    lastAppliedStackRef.current = fresh;
     setFetchedStack(fresh);
     // Context write-through: stale currentStack must not win after a remote refresh.
     setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
     setTopologyRefreshKey((k) => k + 1);
+    return true;
   }, [setStacks]);
 
-  /** Push-style writers (revert, volume-delete refresh) hand over a stack they
-   *  just received; the ticket taken now means "newest at time of arrival". */
+  /** Push-style writer for a stack payload the caller just received from its
+   *  own mutation response (initial load). Fetch-then-apply flows must use
+   *  fetchFreshStack instead — an arrival-time ticket would let a stale GET
+   *  win over a newer applied response. */
   const applyFreshStack = useCallback((fresh: Stack) => {
     applyStackResponse(fresh, stackFetchGateRef.current.begin());
   }, [applyStackResponse]);
 
   /** Pull-style refetch: ticket at REQUEST time, so a slow response loses to
-   *  any fetch started after it. Returns the payload for mirror-healing. */
+   *  any fetch started after it. Returns the newest APPLIED stack — the fresh
+   *  payload normally, or the gate's last-applied one when this response was
+   *  dropped as stale — so callers can heal mirrors without diverging from
+   *  what the UI shows. */
   const fetchFreshStack = useCallback(async (): Promise<Stack> => {
     const ticket = stackFetchGateRef.current.begin();
     const fresh = await getStackById(deployIds.orgId, deployIds.projectName, deployIds.stackId);
-    applyStackResponse(fresh, ticket);
-    return fresh;
+    const applied = applyStackResponse(fresh, ticket);
+    return applied ? fresh : lastAppliedStackRef.current ?? fresh;
   }, [deployIds, applyStackResponse]);
 
   // Volumes that exist server-side; their spec (PVC size) is immutable, so the
@@ -547,9 +561,9 @@ export default function CanvasEditorPage() {
     ids: idsReady ? deployIds : null,
     stack: savedStack ?? undefined,
     liveSnapshot,
+    fetchStack: fetchFreshStack,
     onReverted: (fresh) => {
-      setFetchedStack(fresh);
-      setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
+      // fetchStack already applied the payload to page state (ticket-gated).
       draftSync.notifyExternalUpdate(fresh);
       session.discard(); // auto-start effect restarts the session on the reverted baseline
       toast({ title: "Draft discarded", description: "Stack restored to the last deployment.", variant: "success" });
@@ -570,7 +584,7 @@ export default function CanvasEditorPage() {
   const volumeDelete = useVolumeDelete({
     ids: idsReady ? deployIds : null,
     draftSync,
-    onServerRefresh: applyFreshStack,
+    fetchStack: fetchFreshStack,
     onRestoreVolume: (vol) => {
       session.updateVolumes((vs) => [...vs, mapVolumeToFormData(vol)]);
     },

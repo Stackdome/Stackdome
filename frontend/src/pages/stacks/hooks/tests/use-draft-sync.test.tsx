@@ -195,6 +195,28 @@ describe("useDraftSync", () => {
     expect(hook.result.current.sync.status).toBe(SYNC_STATUS.saved);
   });
 
+  it("keeps pending true when an edit lands during an in-flight cycle", async () => {
+    const { hook } = setup(serverStack("nginx:1"));
+    let resolveUpdate!: () => void;
+    vi.mocked(updateStackResource).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveUpdate = () => resolve({} as never); }),
+    );
+    act(() => hook.result.current.session.updateResources(() => [webForm("nginx:2")]));
+    // Cycle starts and blocks on the held PUT.
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
+    // Edit lands mid-cycle: re-arms the debounce but doesn't queue a cycle.
+    act(() => hook.result.current.session.updateResources(() => [webForm("nginx:3")]));
+    resolveUpdate();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    // The first cycle settled, but the mid-cycle edit hasn't been sent yet —
+    // pending must survive until its own cycle runs.
+    expect(hook.result.current.sync.pending).toBe(true);
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
+    await act(() => Promise.resolve());
+    expect(hook.result.current.sync.pending).toBe(false);
+    expect(updateStackResource).toHaveBeenCalledTimes(2);
+  });
+
   it("does nothing when disabled", async () => {
     const onStackRefreshed = vi.fn();
     const hook = renderHook(() => {
