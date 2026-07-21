@@ -8,6 +8,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/controllers/clusterimageregistry"
@@ -76,6 +77,7 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.injectClusterResourceServices,
 		d.initializeBaseResourceAccessPolicies,
 		d.startManagers,
+		d.bootstrapPlatformDefaults,
 	}
 
 	for _, step := range initializerSteps {
@@ -843,6 +845,25 @@ func (d *developmentEnvironment) startManagers(ctx context.Context) error {
 
 	d.Logger.Debugf("Starting worker manager")
 	return d.WorkerManager.Start(ctx)
+}
+
+func (d *developmentEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
+	svc := bootstrap.NewService(bootstrap.Spec{
+		UserService:               d.Services.UserService,
+		OrganisationService:       d.Services.OrganisationService,
+		ProjectService:            d.Services.ProjectService,
+		ClusterService:            d.Services.ClusterService,
+		ImageRegistryService:      d.Services.ClusterImageRegistryService,
+		OrganisationDomainService: d.Services.OrganisationDomainService,
+		PolicyManager:             d.ResourceAccessPolicyManager,
+		BootstrapConfig:           d.BootstrapConfig,
+		ClusterConfig:             d.Config.DefaultCluster,
+		Logger:                    d.Logger,
+	})
+	if err := svc.Run(ctx); err != nil {
+		return fmt.Errorf("platform bootstrap failed: %w", err)
+	}
+	return nil
 }
 
 func (d *developmentEnvironment) Shutdown(ctx context.Context) error {

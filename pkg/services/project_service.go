@@ -16,6 +16,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 )
 
+//go:generate mockgen -destination=../mocks/mock_project_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ProjectService
+
 type ProjectService interface {
 	CreateProject(ctx context.Context, orgID string, project *models.Project) (*models.Project, *errors.ServiceError)
 	GetProject(ctx context.Context, orgID, projectID string) (*models.Project, *errors.ServiceError)

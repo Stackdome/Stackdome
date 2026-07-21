@@ -16,6 +16,8 @@ import (
 //go:embed casbin_model.conf
 var casbinModelConf string
 
+//go:generate mockgen -destination=../mocks/mock_resource_access_policy_manager.go -package=mocks github.com/Stackdome/stackdome/pkg/resourceaccess ResourceAccessPolicyManager
+
 type ResourceAccessPolicyManager interface {
 	AddPolicy(subject, domain, resource, action string) error
 	RemovePolicy(subject, domain, resource, action string) error

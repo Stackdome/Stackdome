@@ -25,7 +25,7 @@ frontend:
 
 MOCKGEN := $(shell go env GOPATH)/bin/mockgen
 mocks: $(MOCKGEN)
-	go generate ./pkg/stores/... ./pkg/logger/... ./pkg/validator/... ./pkg/services/... ./pkg/auth/... ./pkg/worker/stack/... ./pkg/worker/release/... ./pkg/clients/... ./pkg/credentials/... ./pkg/clustermanager/...
+	go generate ./pkg/stores/... ./pkg/logger/... ./pkg/validator/... ./pkg/services/... ./pkg/auth/... ./pkg/worker/stack/... ./pkg/worker/release/... ./pkg/clients/... ./pkg/credentials/... ./pkg/clustermanager/... ./pkg/resourceaccess/...
 .PHONY: mocks
 
 $(MOCKGEN):

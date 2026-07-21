@@ -13,6 +13,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 )
 
+//go:generate mockgen -destination=../mocks/mock_organisation_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services OrganisationService
+
 type OrganisationService interface {
 	InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
 	InternalGetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError)

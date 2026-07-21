@@ -14,6 +14,8 @@ import (
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
 )
 
+//go:generate mockgen -destination=../mocks/mock_image_registry_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ImageRegistryService
+
 type ImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)

@@ -20,6 +20,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//go:generate mockgen -destination=../mocks/mock_user_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services UserService
+
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	GetUserFromContext(ctx context.Context) (*models.User, []*models.ProjectMembership, *errors.ServiceError)
@@ -27,6 +29,7 @@ type UserService interface {
 	InternalGet(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	InternalGetByEmail(ctx context.Context, email string) (*models.User, *errors.ServiceError)
 	InternalCreate(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError)
+	InternalUpdatePassword(ctx context.Context, userID, hashedPassword string) *errors.ServiceError
 	InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error)
 	InternalCreateInvitedUser(ctx context.Context, user *models.User, invite *models.OrgInvite) (*models.User, *errors.ServiceError)
 	InternalCreateInvitedOAuthUser(ctx context.Context, email, name, githubID, avatarURL string, invite *models.OrgInvite) (*models.User, error)
@@ -138,6 +141,11 @@ func (u usersService) InternalGetByEmail(ctx context.Context, email string) (*mo
 
 func (u usersService) InternalCreate(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError) {
 	return u.userStore.Create(ctx, user)
+}
+
+func (u usersService) InternalUpdatePassword(ctx context.Context, userID, hashedPassword string) *errors.ServiceError {
+	_, err := u.userStore.Update(ctx, userID, &models.User{Password: hashedPassword})
+	return err
 }
 
 func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error) {
