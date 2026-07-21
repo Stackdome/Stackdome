@@ -296,15 +296,14 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
           )}
         </div>
 
-        <CardMetaGrid
-          rows={[
-            branch ? { label: "branch", value: branch } : null,
-            { label: "resources", value: String(resourceCount) },
-            { label: "volumes", value: String(volumeCount) },
-          ]}
-        />
-
         <div className="mt-auto flex flex-col gap-3.5">
+          <CardMetaGrid
+            rows={[
+              branch ? { label: "branch", value: branch } : null,
+              { label: "resources", value: String(resourceCount) },
+              { label: "volumes", value: String(volumeCount) },
+            ]}
+          />
           <CardFooterMeta
             tone={tone}
             word={word}

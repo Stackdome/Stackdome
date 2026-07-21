@@ -47,6 +47,7 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
   const phase = env.status?.phase;
   const { tone, word } = previewTone(phase);
   const urls = env.status?.outputs?.urls ?? [];
+  const hasLinks = urls.some((u) => u.url);
   const age = relativeAge(env.updated_at || env.created_at);
   const clickable = Boolean(env.stack_id);
   const menuDisabled = phase === "Deleting";
@@ -116,30 +117,42 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
           </DropdownMenu>
         </div>
 
-        <CardMetaGrid
-          rows={[
-            env.branch ? { label: "branch", value: env.branch } : null,
-            env.commit
-              ? {
-                label: "commit",
-                value: (
-                  <span className="inline-flex items-center gap-1.5 tabular-nums">
-                    <GitCommitHorizontal className="h-3.5 w-3.5 flex-none" strokeWidth={1.6} />
-                    {env.commit.slice(0, 7)}
-                  </span>
-                ),
-              }
-              : null,
-          ]}
-        />
-
-        {/* Bottom-anchored group: pills sit just above the footer. They reveal
-            on hover/focus so the resting card stays quiet; the slot is always
-            laid out, so nothing jumps. Failure details live on the stack
-            detail page, not the card — the FAILED status word is the signal. */}
+        {/* Bottom-anchored group above the footer. The meta grid and the
+            endpoint pills share one slot: at rest the meta shows; on
+            hover/focus they crossfade so the pills take its place. The swap
+            only arms when there are links, so failed/pending cards keep their
+            meta on hover. Failure details live on the stack detail page, not
+            the card — the FAILED status word is the signal. */}
         <div className="mt-auto flex flex-col gap-3.5">
-          <div className="opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100">
-            <EndpointPills urls={urls} />
+          <div className="relative">
+            <div
+              className={cn(
+                hasLinks &&
+                  "transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0",
+              )}
+            >
+              <CardMetaGrid
+                rows={[
+                  env.branch ? { label: "branch", value: env.branch } : null,
+                  env.commit
+                    ? {
+                      label: "commit",
+                      value: (
+                        <span className="inline-flex items-center gap-1.5 tabular-nums">
+                          <GitCommitHorizontal className="h-3.5 w-3.5 flex-none" strokeWidth={1.6} />
+                          {env.commit.slice(0, 7)}
+                        </span>
+                      ),
+                    }
+                    : null,
+                ]}
+              />
+            </div>
+            {hasLinks && (
+              <div className="absolute inset-x-0 bottom-0 flex items-end opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                <EndpointPills urls={urls} />
+              </div>
+            )}
           </div>
           <CardFooterMeta
             tone={tone}
