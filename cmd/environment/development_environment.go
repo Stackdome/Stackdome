@@ -635,15 +635,20 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	signupService := services.NewSignupService(services.SignupServiceSpec{
-		UserService:         userService,
-		OrgInviteService:    orgInviteService,
-		OrganisationService: organisationService,
-		ProjectService:      projectService,
-		PolicyManager:       d.ResourceAccessPolicyManager,
-		RefreshTokenStore:   d.RefreshTokenStore,
-		JWTSecretKey:        d.Config.JwtSecret,
-		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
-		Logger:              d.Logger,
+		UserService:               userService,
+		OrgInviteService:          orgInviteService,
+		OrganisationService:       organisationService,
+		ProjectService:            projectService,
+		ClusterService:            clusterService,
+		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		PolicyManager:             d.ResourceAccessPolicyManager,
+		RefreshTokenStore:         d.RefreshTokenStore,
+		JWTSecretKey:              d.Config.JwtSecret,
+		JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
+		RegistryStorageSize:       d.BootstrapConfig.RegistryStorageSize,
+		RegistryStorageClass:      d.BootstrapConfig.RegistryStorageClass,
+		Logger:                    d.Logger,
 	})
 
 	d.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{

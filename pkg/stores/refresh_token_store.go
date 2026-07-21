@@ -7,6 +7,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -source=refresh_token_store.go -destination=../mocks/mock_refresh_token_store.go -package=mocks
+
 type RefreshTokenStore interface {
 	Create(ctx context.Context, token *models.RefreshToken) (*models.RefreshToken, *errors.ServiceError)
 	GetByTokenHash(ctx context.Context, hash string) (*models.RefreshToken, *errors.ServiceError)
