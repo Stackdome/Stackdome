@@ -22,7 +22,7 @@ const baseStack = {
 afterEach(cleanup);
 
 describe("DeployStackCard", () => {
-  it("renders a healthy card driven by the release rollup, with footer meta and no rail", () => {
+  it("renders a healthy card driven by the release rollup, with meta grid, footer status and no rail", () => {
     render(
       <MemoryRouter>
         <DeployStackCard
@@ -36,9 +36,24 @@ describe("DeployStackCard", () => {
     );
     expect(screen.getByText("tooljet")).toBeTruthy();
     expect(screen.getByText("ok")).toBeTruthy();
-    expect(screen.getByText("2 res")).toBeTruthy();
-    expect(screen.getByText("1 vol")).toBeTruthy();
+    expect(screen.getByText("resources").nextElementSibling?.textContent).toBe("2");
+    expect(screen.getByText("volumes").nextElementSibling?.textContent).toBe("1");
     expect(document.querySelector("[data-rail]")).toBeNull();
+  });
+
+  it("shows the kebab Delete action only when onDelete is wired", () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <DeployStackCard stack={baseStack} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByLabelText("Actions for tooljet")).toBeNull();
+    rerender(
+      <MemoryRouter>
+        <DeployStackCard stack={baseStack} onDelete={() => {}} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByLabelText("Actions for tooljet")).toBeTruthy();
   });
 
   it("renders animated rail and progressing word while the latest release is in flight", () => {

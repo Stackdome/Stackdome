@@ -1,4 +1,4 @@
-import { Ellipsis, GitPullRequest, RefreshCw, Trash2 } from "lucide-react";
+import { Ellipsis, GitCommitHorizontal, GitPullRequest, RefreshCw, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,18 +16,17 @@ import {
 import { cn } from "@/lib/utils";
 import {
   StatusRail,
-  StatusWord,
   EndpointPills,
   CardFooterMeta,
+  CardMetaGrid,
   relativeAge,
+  absoluteAge,
   type RailTone,
 } from "@/pages/stacks/components/list/stack-card";
 import type { PreviewStack, PreviewPhase } from "@/api/preview-envs";
 
 interface PreviewEnvCardProps {
   env: PreviewStack;
-  /** Repository configuration name shown in the identity block. */
-  configName?: string;
   onSync?: (env: PreviewStack) => void;
   onDelete?: (env: PreviewStack) => void;
 }
@@ -43,17 +42,13 @@ function previewTone(phase: PreviewPhase | undefined): { tone: RailTone; word: s
  * because the endpoint pills (and the kebab trigger) inside are real
  * interactive elements — nested <a>/<button> is invalid HTML.
  */
-export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnvCardProps) {
+export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
   const navigate = useNavigate();
   const phase = env.status?.phase;
-  const variant = previewStatusVariant(phase);
   const { tone, word } = previewTone(phase);
   const urls = env.status?.outputs?.urls ?? [];
   const age = relativeAge(env.updated_at || env.created_at);
   const clickable = Boolean(env.stack_id);
-  const reason = env.status?.reason;
-  const failed = variant === "error" && Boolean(reason);
-  const stackfileHint = failed && /stackfile/i.test(reason ?? "");
   const menuDisabled = phase === "Deleting";
 
   const goToStack = () => navigate(`/stacks/${env.stack_id}`);
@@ -83,7 +78,6 @@ export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnv
           <span className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand">
             PR #{env.pr_number}
           </span>
-          <StatusWord tone={tone}>{word}</StatusWord>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -97,7 +91,8 @@ export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnv
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              align="end"
+              side="right"
+              align="start"
               className="w-[160px]"
               onClick={(e) => e.stopPropagation()}
             >
@@ -121,36 +116,37 @@ export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnv
           </DropdownMenu>
         </div>
 
-        {/* Identity: repo / branch rows */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1.5">
-          {(configName ?? env.name) && (
-            <>
-              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">repo</span>
-              <span className="truncate font-mono text-[11px] text-fg-2">{configName ?? env.name}</span>
-            </>
-          )}
-          {env.branch && (
-            <>
-              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">branch</span>
-              <span className="truncate font-mono text-[11px] text-brand">{env.branch}</span>
-            </>
-          )}
-        </div>
+        <CardMetaGrid
+          rows={[
+            env.branch ? { label: "branch", value: env.branch } : null,
+            env.commit
+              ? {
+                label: "commit",
+                value: (
+                  <span className="inline-flex items-center gap-1.5 tabular-nums">
+                    <GitCommitHorizontal className="h-3.5 w-3.5 flex-none" strokeWidth={1.6} />
+                    {env.commit.slice(0, 7)}
+                  </span>
+                ),
+              }
+              : null,
+          ]}
+        />
 
-        {/* Bottom-anchored group: pills (or the failed-reason strip) sit just
-            above the footer in every card variant. */}
+        {/* Bottom-anchored group: pills sit just above the footer. They reveal
+            on hover/focus so the resting card stays quiet; the slot is always
+            laid out, so nothing jumps. Failure details live on the stack
+            detail page, not the card — the FAILED status word is the signal. */}
         <div className="mt-auto flex flex-col gap-3.5">
-          {failed ? (
-            <div className="rounded-sm bg-danger-bg px-2 py-1.5 text-xs text-danger line-clamp-2">
-              <span className="font-semibold">{reason}:</span> {env.status?.message}
-              {stackfileHint && (
-                <span className="block">Check the stackfile path in Settings.</span>
-              )}
-            </div>
-          ) : (
+          <div className="opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 focus-within:opacity-100">
             <EndpointPills urls={urls} />
-          )}
-          <CardFooterMeta commit={env.commit ? env.commit.slice(0, 7) : null} age={age} />
+          </div>
+          <CardFooterMeta
+            tone={tone}
+            word={word}
+            age={age}
+            ageTitle={absoluteAge(env.updated_at || env.created_at)}
+          />
         </div>
       </div>
     </Card>
