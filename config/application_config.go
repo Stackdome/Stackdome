@@ -25,6 +25,8 @@ type ApplicationConfig struct {
 	ServerExternalURL string `json:"server_external_url"`
 	// GitHubAPIBaseURL overrides the GitHub API endpoint (tests, GHES).
 	GitHubAPIBaseURL string `json:"github_api_base_url"`
+	// DefaultCluster holds the DEFAULT_CLUSTER_* config seeded at boot.
+	DefaultCluster *ClusterConfig `json:"default_cluster"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -48,6 +50,7 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 
 	c.GitHubOAuth.LoadEnvVariables()
+	c.DefaultCluster.LoadEnvVariables()
 
 	if val, ok := EnvServerExternalURL.Lookup(); ok {
 		c.ServerExternalURL = val
@@ -149,6 +152,14 @@ func (c *ClusterConfig) LoadEnvVariables() {
 	}
 }
 
+func (c *ClusterConfig) IsSet() bool {
+	return c.Name != "" && c.ClusterURL != "" && c.ClusterCAData != "" && c.Token != ""
+}
+
+func (c *ClusterConfig) AnySet() bool {
+	return c.Name != "" || c.ClusterURL != "" || c.ClusterCAData != "" || c.Token != ""
+}
+
 type DatabaseConfig struct {
 	Dialect            string  `json:"dialect"`
 	SSLMode            SSLMode `json:"sslmode"`
@@ -208,11 +219,12 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:      NewServerConfig(),
-		Database:    NewDatabaseConfig(),
-		LogLevel:    "info",
-		LogFormat:   "json",
-		GitHubOAuth: NewGitHubOAuthConfig(),
+		Server:         NewServerConfig(),
+		Database:       NewDatabaseConfig(),
+		LogLevel:       "info",
+		LogFormat:      "json",
+		GitHubOAuth:    NewGitHubOAuthConfig(),
+		DefaultCluster: &ClusterConfig{},
 	}
 }
 

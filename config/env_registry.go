@@ -35,6 +35,13 @@ var (
 	EnvDefaultClusterCAData = StringVar("DEFAULT_CLUSTER_CA_DATA", "Default cluster CA cert (base64)", nil, false)
 	EnvDefaultClusterToken  = StringVar("DEFAULT_CLUSTER_TOKEN", "Default cluster auth token", nil, false)
 
+	// Default Provisioning
+	EnvDefaultBaseDomain           = StringVar("DEFAULT_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
+	EnvDefaultOrgName              = StringVar("DEFAULT_ORG_NAME", "Default platform organisation name", ptr("Platform"), false)
+	EnvDefaultRegistryStorageSize  = StringVar("DEFAULT_REGISTRY_STORAGE_SIZE", "Default per-org registry backend storage size", ptr("50Gi"), false)
+	EnvDefaultRegistryStorageClass = StringVar("DEFAULT_REGISTRY_STORAGE_CLASS", "Default per-org registry backend storage class", nil, false)
+	EnvDefaultClusterRegistryName  = StringVar("DEFAULT_CLUSTER_REGISTRY_NAME", "Optional platform registry seeded on the default cluster at boot", nil, false)
+
 	// Bootstrap User
 	EnvDefaultUserEmail    = StringVar("DEFAULT_USER_EMAIL", "Default platform admin email", nil, false)
 	EnvDefaultUserName     = StringVar("DEFAULT_USER_NAME", "Default platform admin name", ptr("Platform Admin"), false)

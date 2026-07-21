@@ -4,6 +4,10 @@ var (
 	ErrEmptyEmail    = &ConfigError{"empty email"}
 	ErrEmptyName     = &ConfigError{"empty name"}
 	ErrEmptyPassword = &ConfigError{"empty password"}
+
+	ErrIncompleteClusterConfig = &ConfigError{"DEFAULT_CLUSTER_NAME, DEFAULT_CLUSTER_API_URL, DEFAULT_CLUSTER_CA_DATA and DEFAULT_CLUSTER_TOKEN must all be set together"}
+	ErrClusterDomainMismatch   = &ConfigError{"DEFAULT_CLUSTER_* and DEFAULT_BASE_DOMAIN must be set together"}
+	ErrBootstrapAdminEmail     = &ConfigError{"DEFAULT_USER_EMAIL is required when a default cluster is configured"}
 )
 
 type ConfigError struct {
@@ -15,7 +19,30 @@ func (e *ConfigError) Error() string {
 }
 
 type BootstrapConfig struct {
-	DefaultUser *DefaultPlatformAdminConfig
+	DefaultUser          *DefaultPlatformAdminConfig
+	PlatformOrgName      string
+	BaseDomain           string
+	RegistryStorageSize  string
+	RegistryStorageClass string
+	RegistryName         string
+}
+
+func ValidateDefaultProvisioning(cluster *ClusterConfig, baseDomain, adminEmail string) error {
+	clusterSet := cluster.IsSet()
+	if !clusterSet && cluster.AnySet() {
+		return ErrIncompleteClusterConfig
+	}
+	domainSet := baseDomain != ""
+	if clusterSet != domainSet {
+		return ErrClusterDomainMismatch
+	}
+	if !clusterSet {
+		return nil
+	}
+	if adminEmail == "" {
+		return ErrBootstrapAdminEmail
+	}
+	return cluster.Validate()
 }
 
 func (b *BootstrapConfig) Validate() error {
@@ -58,5 +85,25 @@ func (b *BootstrapConfig) LoadEnvVariables() {
 
 	if val, ok := EnvDefaultUserPassword.Lookup(); ok {
 		b.DefaultUser.Password = val
+	}
+
+	if val, ok := EnvDefaultOrgName.Lookup(); ok {
+		b.PlatformOrgName = val
+	}
+
+	if val, ok := EnvDefaultBaseDomain.Lookup(); ok {
+		b.BaseDomain = val
+	}
+
+	if val, ok := EnvDefaultRegistryStorageSize.Lookup(); ok {
+		b.RegistryStorageSize = val
+	}
+
+	if val, ok := EnvDefaultRegistryStorageClass.Lookup(); ok {
+		b.RegistryStorageClass = val
+	}
+
+	if val, ok := EnvDefaultClusterRegistryName.Lookup(); ok {
+		b.RegistryName = val
 	}
 }

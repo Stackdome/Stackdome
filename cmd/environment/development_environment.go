@@ -218,6 +218,10 @@ func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 	if err := d.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
+
+	if err := config.ValidateDefaultProvisioning(d.Config.DefaultCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.DefaultUser.Email); err != nil {
+		return fmt.Errorf("invalid default-provisioning config: %w", err)
+	}
 	return nil
 }
 
