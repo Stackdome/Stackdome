@@ -45,6 +45,7 @@ type ClusterManager interface {
 	GetRestConfig(clusterID string) (*rest.Config, error)
 	IsClusterRegistered(clusterID string) bool
 	UnregisterCluster(clusterID string) error
+	ReRegisterCluster(cluster *models.Cluster) error
 	Start(ctx context.Context)
 	Stop(ctx context.Context) error
 	IsRunning() bool
@@ -275,6 +276,14 @@ func (cm *ClusterManagerImpl) UnregisterCluster(clusterID string) error {
 	delete(cm.registeredClusters, clusterID)
 	cm.log.WithField(logger.FieldClusterID, clusterID).Infof("unregistered cluster")
 	return nil
+}
+
+// ReRegisterCluster tears down an existing cluster registration and registers it again
+func (cm *ClusterManagerImpl) ReRegisterCluster(cluster *models.Cluster) error {
+	if err := cm.UnregisterCluster(cluster.ID); err != nil {
+		return fmt.Errorf("failed to unregister cluster %s for re-registration: %w", cluster.ID, err)
+	}
+	return cm.RegisterCluster(cluster)
 }
 
 // Start begins the cluster manager operations
