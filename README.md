@@ -344,3 +344,5 @@ The `samples/` directory contains example payloads:
 **Frontend:** React, TypeScript, Vite, Tailwind CSS
 
 **Infrastructure:** Kubernetes, CloudNativePG, Traefik, Cert-Manager, Kaniko, Zot
+
+<!-- stress test preview env PR 04 -->
