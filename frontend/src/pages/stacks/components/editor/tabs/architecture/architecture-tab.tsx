@@ -724,7 +724,7 @@ function StackCanvasFlow({
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deletingVolume}>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-danger text-white hover:bg-danger/90"
+              variant="destructive"
               disabled={!!deletingVolume}
               onClick={() => pendingDeleteVolume && onDeleteVolumeConfirmed(pendingDeleteVolume)}
             >
@@ -745,7 +745,7 @@ function StackCanvasFlow({
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-danger text-white hover:bg-danger/90"
+              variant="destructive"
               onClick={() => pendingDeleteResource && onDeleteResourceConfirmed(pendingDeleteResource)}
             >
               Delete service

@@ -344,6 +344,7 @@ export default function StacksPage() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleteBusy}>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               disabled={deleteBusy}
               onClick={(e) => {
                 e.preventDefault();

@@ -362,7 +362,7 @@ export default function PreviewConfigDetailPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmDeleteEnv()}>Delete</AlertDialogAction>
+            <AlertDialogAction variant="destructive" onClick={() => void confirmDeleteEnv()}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -199,7 +199,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void confirmDelete()} disabled={deleting}>
+            <AlertDialogAction variant="destructive" onClick={() => void confirmDelete()} disabled={deleting}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

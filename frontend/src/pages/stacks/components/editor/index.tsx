@@ -999,6 +999,7 @@ export default function CanvasEditorPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
+              variant="destructive"
               onClick={() => void performDelete()}
               disabled={deleting}
             >
