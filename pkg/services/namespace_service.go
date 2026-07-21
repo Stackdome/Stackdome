@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -79,13 +78,29 @@ func namespaceNameForStack(stackName string) string {
 }
 
 func (s *namespaceService) PrepareNamespaceForAddon(ctx context.Context, addon models.Addon, organisationID string) (*models.Namespace, *errors.ServiceError) {
-	// Generate a unique namespace for the addon
 	namespace := &models.Namespace{
-		Name:           fmt.Sprintf("stackdome-addons-%s-%s", addon.Type(), addon.AddonName()),
+		Name:           namespaceNameForAddon(addon.Type(), addon.AddonName()),
 		OrganisationID: organisationID,
 	}
 	namespace.AddDefaultLabels()
 	return namespace, nil
+}
+
+// namespaceNameForAddon builds "stackdome-addons-<type>-<name>-<uuid>" and
+// deterministically truncates the end so the result fits the DNS-label cap,
+// then strips any trailing separator left by the cut so it stays a valid RFC
+// 1123 DNS label. The postgres addon validator caps names at
+// models.MaxAddonNameLength so at least models.MinNamespaceUUIDSuffixLength
+// UUID characters always survive.
+func namespaceNameForAddon(addonType, addonName string) string {
+	name := models.AddonNamespacePrefix +
+		models.NamespaceNameSeparator + addonType +
+		models.NamespaceNameSeparator + addonName +
+		models.NamespaceNameSeparator + uuid.New().String()
+	if len(name) > models.KubernetesDNSLabelMaxLength {
+		name = name[:models.KubernetesDNSLabelMaxLength]
+	}
+	return strings.TrimRight(name, models.NamespaceNameSeparator)
 }
 
 func (s *namespaceService) CreateInCluster(ctx context.Context, ns *models.Namespace) *errors.ServiceError {

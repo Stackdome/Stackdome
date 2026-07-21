@@ -92,8 +92,8 @@ func (v *postgresAddonValidator) validateBasicFields(spec *models.PostgresAddon)
 		return errors.BadRequest("PostgreSQL addon name must be a valid DNS subdomain (lowercase letters, numbers, and hyphens)")
 	}
 
-	if len(spec.Name) > 63 {
-		return errors.BadRequest("PostgreSQL addon name cannot be longer than 63 characters")
+	if len(spec.Name) > models.MaxAddonNameLength {
+		return errors.BadRequest("PostgreSQL addon name cannot be longer than %d characters", models.MaxAddonNameLength)
 	}
 
 	return nil
