@@ -543,18 +543,32 @@ describe("command/args text ↔ argv round-trip", () => {
     expect(back.init_spec?.command).toEqual(["node", "-e", "console.log(1)"]);
   });
 
-  it("drops init_spec entirely when command and args are empty", () => {
+  it("serializes a cleared init_spec as explicit empty arrays (gorm skips absent fields)", () => {
     const api = baseResource({});
     const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
     const edited = { ...form, init_spec: { command: "  ", args: "" } };
     const back = convertFormResourceToApiResource(edited);
-    expect(back.init_spec).toBeUndefined();
+    expect(back.init_spec).toEqual({ command: [], args: [] });
   });
 
-  it("loads an absent init_spec as undefined", () => {
+  it("serializes cleared exec command/args as explicit empty arrays", () => {
+    const api = baseResource({ command: ["npm", "start"] });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = {
+      ...form,
+      execution_config: { ...form.execution_config, command: "", args: "" },
+    };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.execution_config?.command).toEqual([]);
+    expect(back.execution_config?.args).toEqual([]);
+  });
+
+  it("omits init_spec for a resource that never had one", () => {
     const api = baseResource({});
     const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
     expect(form.init_spec).toBeUndefined();
+    const back = convertFormResourceToApiResource(form);
+    expect(back.init_spec).toBeUndefined();
   });
 });
 
@@ -576,7 +590,7 @@ describe("FormStackResourceSchema — command text validation", () => {
       const issue = result.error.issues.find(
         (i) => i.path.join(".") === "init_spec.command",
       );
-      expect(issue?.message).toBe("Unbalanced quotes");
+      expect(issue?.message).toBe("Unclosed quote or trailing backslash");
     }
   });
 

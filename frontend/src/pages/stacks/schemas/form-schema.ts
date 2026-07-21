@@ -40,6 +40,13 @@ export function textToArgv(text: string | undefined): string[] | undefined {
   return trimmed ? shlexSplit(trimmed) : undefined;
 }
 
+/** Save-path variant: an emptied field must serialize as an EXPLICIT empty
+ *  array — gorm's Updates() skips absent fields, so `undefined` would make a
+ *  cleared command impossible to remove server-side. */
+function textToArgvExplicit(text: string | undefined): string[] {
+  return textToArgv(text) ?? [];
+}
+
 /** Zod-level check that a command text field will shlex-split cleanly. */
 function refineArgvText(text: string | undefined, ctx: z.RefinementCtx, path: (string | number)[]) {
   if (!text?.trim()) return;
@@ -48,7 +55,7 @@ function refineArgvText(text: string | undefined, ctx: z.RefinementCtx, path: (s
   } catch {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
-      message: "Unbalanced quotes",
+      message: "Unclosed quote or trailing backslash",
       path,
     });
   }
@@ -133,7 +140,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // enforced in superRefine below.
   ports: z.array(ApiPortSchema.extend({
     name: z.string().optional(),
-    number: z.number().optional(),
+    number: z.number().int().optional(),
   })).optional(),
   // Command/args as terminal-style text (see argvToText/textToArgv).
   init_spec: z.object({
@@ -344,25 +351,31 @@ function convertFormResourceToApiResource(
   const processedExecutionConfig = rest.execution_config
     ? {
       ...rest.execution_config,
-      command: textToArgv(rest.execution_config.command),
-      args: textToArgv(rest.execution_config.args),
+      command: textToArgvExplicit(rest.execution_config.command),
+      args: textToArgvExplicit(rest.execution_config.args),
       environment_variables: apiEnvVars,
     }
     : undefined;
 
-  // Empty init command AND args → drop init_spec entirely rather than sending
-  // an empty object.
-  const initCommand = textToArgv(rest.init_spec?.command);
-  const initArgs = textToArgv(rest.init_spec?.args);
-  const processedInitSpec = initCommand || initArgs
-    ? { command: initCommand, args: initArgs }
+  // A form init_spec exists once loaded from the server or touched in the
+  // drawer — keep sending it (with explicit empty arrays) so clearing the
+  // fields actually clears them server-side. Only a resource that never had
+  // an init_spec omits it.
+  const processedInitSpec = rest.init_spec
+    ? {
+      command: textToArgvExplicit(rest.init_spec.command),
+      args: textToArgvExplicit(rest.init_spec.args),
+    }
     : undefined;
 
   // The API requires a port name; derive `port-<number>` when the form left it
   // blank (k8s port names must contain a letter, so a bare number won't do).
   const apiPorts = rest.ports?.map((port) => ({
     ...port,
-    name: port.name && port.name.trim() !== "" ? port.name : `port-${port.number}`,
+    // A null number can't produce a meaningful auto-name ("port-undefined");
+    // validation requires the number before save, so this only guards direct
+    // callers of the exported converter.
+    name: port.name && port.name.trim() !== "" ? port.name : port.number != null ? `port-${port.number}` : undefined,
   }));
 
   return {
