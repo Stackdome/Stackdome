@@ -28,6 +28,8 @@ import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
 import { applyStackByName, getStackById, deleteStack } from "@/api/stacks";
+import { createStackFetchGate } from "@/pages/stacks/lib/canvas/stack-fetch-gate";
+import { draftToSnapshot } from "@/pages/stacks/lib/draft-sync/draft-snapshot";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/editor/tabs/deployments/use-releases";
@@ -343,13 +345,34 @@ export default function CanvasEditorPage() {
   // Bumped on every autosave refresh to trigger a topology refetch.
   const [topologyRefreshKey, setTopologyRefreshKey] = useState(0);
 
+  // Concurrent refetch writers (autosave, release transitions, revert, volume
+  // delete) all funnel through this gate: a response older than the newest
+  // applied one is dropped instead of clobbering fresher state.
+  const stackFetchGateRef = useRef(createStackFetchGate());
+
   // Server topology may have changed; re-derive edges alongside the fresh stack.
-  const applyFreshStack = useCallback((fresh: Stack) => {
+  const applyStackResponse = useCallback((fresh: Stack, ticket: number) => {
+    if (!stackFetchGateRef.current.shouldApply(ticket)) return;
     setFetchedStack(fresh);
     // Context write-through: stale currentStack must not win after a remote refresh.
     setStacks((prev) => prev.map((s) => (s.id === fresh.id ? fresh : s)));
     setTopologyRefreshKey((k) => k + 1);
   }, [setStacks]);
+
+  /** Push-style writers (revert, volume-delete refresh) hand over a stack they
+   *  just received; the ticket taken now means "newest at time of arrival". */
+  const applyFreshStack = useCallback((fresh: Stack) => {
+    applyStackResponse(fresh, stackFetchGateRef.current.begin());
+  }, [applyStackResponse]);
+
+  /** Pull-style refetch: ticket at REQUEST time, so a slow response loses to
+   *  any fetch started after it. Returns the payload for mirror-healing. */
+  const fetchFreshStack = useCallback(async (): Promise<Stack> => {
+    const ticket = stackFetchGateRef.current.begin();
+    const fresh = await getStackById(deployIds.orgId, deployIds.projectName, deployIds.stackId);
+    applyStackResponse(fresh, ticket);
+    return fresh;
+  }, [deployIds, applyStackResponse]);
 
   // Volumes that exist server-side; their spec (PVC size) is immutable, so the
   // drawer renders those fields read-only.
@@ -394,6 +417,7 @@ export default function CanvasEditorPage() {
     session,
     ids: idsReady ? deployIds : null,
     onStackRefreshed: (fresh) => applyFreshStack(fresh),
+    refetchStack: fetchFreshStack,
     onSyncError: ({ message, op, fieldErrors }) => {
       // No op → the save actually landed and only the post-save refetch failed;
       // don't alarm the user with a "Save failed" toast or field error.
@@ -467,14 +491,25 @@ export default function CanvasEditorPage() {
     [deployFieldErrors, session.draft.resources],
   );
 
+  // Snapshot of the live draft for the lifecycle diff — undefined when no
+  // session is active so the server spec stays authoritative on fresh loads.
+  // This is what lets the pill/changes-modal/DRAFT row update on keystroke
+  // instead of after the autosave round-trip.
+  const draftSnapshot = useMemo(
+    () => (session.isActive && !isNewStack ? draftToSnapshot(session.draft) : undefined),
+    [session.isActive, session.draft, isNewStack],
+  );
+
   const lifecycle = useDeployLifecycle({
     stack: savedStack ?? undefined,
-    // "Editing" = autosave hasn't landed yet (in flight or retrying). Saved-but-
-    // undeployed content is detected by the staged-phase content diff instead.
-    unsaved: draftSync.status === SYNC_STATUS.saving || draftSync.failureCount > 0,
+    // "Editing" = an edit the server hasn't seen yet: debounce armed, cycle in
+    // flight, or retrying. Saved-but-undeployed content is detected by the
+    // staged-phase content diff instead.
+    unsaved: draftSync.pending || draftSync.status === SYNC_STATUS.saving || draftSync.failureCount > 0,
     releases: releasesResult.releases,
     activeRelease: releasesResult.activeRelease,
     detail: releaseDetail,
+    draftSnapshot,
   });
 
   // When a release settles into ANY terminal state, the stack's converged_release /
@@ -483,12 +518,10 @@ export default function CanvasEditorPage() {
   // keyed on the polled releases list (not on the stack's own pointer).
   const refetchStack = useCallback(() => {
     if (!deployIds.stackId) return;
-    void getStackById(deployIds.orgId, deployIds.projectName, deployIds.stackId).then((fresh) => {
-      applyFreshStack(fresh);
-    }).catch(() => {
+    void fetchFreshStack().catch(() => {
       // Transient fetch failure; the next terminal transition retries.
     });
-  }, [deployIds, applyFreshStack]);
+  }, [deployIds.stackId, fetchFreshStack]);
   const activeRelease = releasesResult.activeRelease;
   const prevActiveReleaseRef = useRef<{ id?: string; state?: string } | undefined>(
     activeRelease && { id: activeRelease.id, state: activeRelease.state },
