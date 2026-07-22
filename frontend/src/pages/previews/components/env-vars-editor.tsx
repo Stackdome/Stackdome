@@ -93,7 +93,11 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
             )}
             <Select
               value={fromSecret ? "secret" : "plain"}
-              onValueChange={(source) => updateRow(index, { value: source === "secret" ? secretRef("") : "" })}
+              onValueChange={(source) =>
+                updateRow(index, {
+                  value: source === "secret" ? secretRef(genericSecrets[0]?.name ?? "") : "",
+                })
+              }
             >
               <SelectTrigger aria-label="Value source" className="w-[110px] flex-none text-xs">
                 <SelectValue />

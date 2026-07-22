@@ -102,16 +102,13 @@ describe("EnvVarsEditor", () => {
     expect(screen.queryByLabelText(/^variable value$/i)).not.toBeInTheDocument();
   });
 
-  it("writes a secret reference once the source is Secret and a secret is picked", async () => {
+  it("preselects the first secret when the source is switched to Secret", async () => {
     const onChange = vi.fn();
     render(<Harness initial={[{ name: "TOKEN", value: "plain" }]} onChange={onChange} />);
 
     await userEvent.click(screen.getByRole("combobox", { name: "Value source" }));
     await userEvent.click(screen.getByRole("option", { name: "Secret" }));
-    expect(onChange).toHaveBeenLastCalledWith([{ name: "TOKEN", value: "{{ secret. }}" }]);
 
-    await userEvent.click(screen.getByRole("combobox", { name: "Secret" }));
-    await userEvent.click(screen.getByRole("option", { name: "api-token" }));
     expect(onChange).toHaveBeenLastCalledWith([{ name: "TOKEN", value: "{{ secret.api-token }}" }]);
   });
 
