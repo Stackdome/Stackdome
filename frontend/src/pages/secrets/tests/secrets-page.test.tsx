@@ -57,7 +57,7 @@ describe("SecretsPage", () => {
     await waitFor(() => expect(screen.getByText("api-key")).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /open menu/i }), { pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: "Secret actions" }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText("Delete"), { pointerEventsCheck: 0 });
 
     const dialog = await screen.findByRole("alertdialog");
@@ -75,7 +75,7 @@ describe("SecretsPage", () => {
     await waitFor(() => expect(screen.getByText("api-key")).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /open menu/i }), { pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: "Secret actions" }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText("Delete"), { pointerEventsCheck: 0 });
 
     await screen.findByRole("alertdialog");
