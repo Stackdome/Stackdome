@@ -260,62 +260,77 @@ export function CanvasEditorShell({
   return (
     <HeaderCollapseContext.Provider value={collapseCtx}>
       <div className="flex h-full flex-col overflow-hidden bg-background">
-        {collapsed && (
-          <div
-            className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-            style={{ marginRight: effectiveDrawerInset }}
-          >
-            <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
-            {pillLabel && (
-              <span
-                aria-label={`status ${pillLabel}`}
-                className={cn(
-                  "size-2 flex-none rounded-full",
-                  pillVariant === "ready"
-                    ? "bg-success"
-                    : pillVariant === "error"
-                      ? "bg-danger"
-                      : pillVariant === "neutral"
-                        ? "bg-fg-muted"
-                        : "bg-warn",
-                )}
-              />
-            )}
-            {latestDeployFailed && (
-              <span
-                aria-label="Latest deploy failed"
-                title="Latest deploy failed"
-                className="size-2 flex-none rounded-full bg-danger"
-              />
-            )}
-            <div className="mx-2 flex items-center gap-1">
-              {TAB_ITEMS.map(({ id, label, Icon }) => (
-                <button
-                  key={id}
-                  type="button"
-                  onClick={() => onTabChange(id)}
+        {/* Both header variants stay mounted; a 1fr/0fr grid row transition
+            animates their heights in opposite directions like the sidebar's
+            width. The hidden one is inert so it can't take focus or clicks. */}
+        <div
+          className="grid flex-none transition-[grid-template-rows] duration-[260ms]"
+          style={{ gridTemplateRows: collapsed ? "1fr" : "0fr" }}
+          inert={!collapsed}
+          aria-hidden={!collapsed}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div
+              className="flex h-11 items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms]"
+              style={{ marginRight: effectiveDrawerInset }}
+            >
+              <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
+              {pillLabel && (
+                <span
+                  aria-label={`status ${pillLabel}`}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
-                    activeTab === id
-                      ? "border-brand bg-brand-bg text-brand"
-                      : "border-transparent text-muted-foreground hover:text-foreground",
+                    "size-2 flex-none rounded-full",
+                    pillVariant === "ready"
+                      ? "bg-success"
+                      : pillVariant === "error"
+                        ? "bg-danger"
+                        : pillVariant === "neutral"
+                          ? "bg-fg-muted"
+                          : "bg-warn",
                   )}
-                >
-                  <Icon className="size-3.5" />
-                  {label}
-                </button>
-              ))}
+                />
+              )}
+              {latestDeployFailed && (
+                <span
+                  aria-label="Latest deploy failed"
+                  title="Latest deploy failed"
+                  className="size-2 flex-none rounded-full bg-danger"
+                />
+              )}
+              <div className="mx-2 flex items-center gap-1">
+                {TAB_ITEMS.map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onTabChange(id)}
+                    className={cn(
+                      "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
+                      activeTab === id
+                        ? "border-brand bg-brand-bg text-brand"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-3.5" />
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="flex-1" />
+              {actionsMenu}
+              {chevron}
             </div>
-            <div className="flex-1" />
-            {actionsMenu}
-            {chevron}
           </div>
-        )}
-        {!collapsed && (
-          <>
+        </div>
+        <div
+          className="grid flex-none transition-[grid-template-rows] duration-[260ms]"
+          style={{ gridTemplateRows: collapsed ? "0fr" : "1fr" }}
+          inert={collapsed}
+          aria-hidden={collapsed}
+        >
+          <div className="min-h-0 overflow-hidden">
             {/* Stack-title header — identity only (fade/translate on expand per design sd-fade) */}
             <div
-              className="flex-none px-7 pt-6 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+              className="px-7 pt-6 transition-[margin] duration-[260ms]"
               style={{ marginRight: effectiveDrawerInset }}
             >
               {/* Chevron sits at the row's right so the title stays flush-left with
@@ -372,7 +387,7 @@ export function CanvasEditorShell({
 
             {/* Tab + action rail */}
             <div
-              className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+              className="flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms]"
               style={{ marginRight: effectiveDrawerInset }}
             >
               {TAB_ITEMS.map(({ id, label, Icon }) => {
@@ -404,8 +419,8 @@ export function CanvasEditorShell({
               {actionsMenu}
               {chevron}
             </div>
-          </>
-        )}
+          </div>
+        </div>
 
         {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
           ops views overlay it. Ops views own their own max-width + padding. */}
