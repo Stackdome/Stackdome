@@ -4,6 +4,7 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  useNodesInitialized,
   useReactFlow,
   type Edge,
   type NodeMouseHandler,
@@ -195,6 +196,20 @@ function StackCanvasFlow({
   const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
   const { fitView, getIntersectingNodes, getViewport, setViewport } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
+
+  // One-time fit when the canvas first gains measured nodes: async imports and
+  // stack loads populate nodes after mount, so ReactFlow's own fitView prop
+  // fires against an empty canvas. Never re-fits — the hook re-flips when
+  // nodes are added mid-edit, and a re-fit then would yank the viewport.
+  const nodesInitialized = useNodesInitialized();
+  const didInitialFit = useRef(false);
+  useEffect(() => {
+    if (!nodesInitialized || didInitialFit.current) return;
+    didInitialFit.current = true;
+    // One frame late: measurement flips `nodesInitialized` before the final
+    // card sizes (attachment rows) and container height settle.
+    requestAnimationFrame(() => fitView(FIT_OPTIONS));
+  }, [nodesInitialized, fitView]);
 
   // When the drawer claims/releases horizontal space, the canvas container is
   // squeezed from the right. Pan the viewport by half that delta so the point
