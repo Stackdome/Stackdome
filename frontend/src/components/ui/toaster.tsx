@@ -7,14 +7,18 @@ import {
   ToastViewport,
 } from "@/components/ui/toast"
 import { useToast } from "@/components/ui/use-toast"
-import { CheckCircle2, XCircle, Info } from "lucide-react"
+import { CheckCircle2, XCircle, AlertTriangle, Info } from "lucide-react"
 
-function variantChip(variant?: "default" | "destructive" | "success" | null) {
+function variantChip(variant?: "default" | "destructive" | "success" | "warning" | "info" | null) {
   switch (variant) {
     case "destructive":
       return { Icon: XCircle, color: "text-danger" };
     case "success":
       return { Icon: CheckCircle2, color: "text-success" };
+    case "warning":
+      return { Icon: AlertTriangle, color: "text-warn" };
+    case "info":
+      return { Icon: Info, color: "text-info" };
     default:
       return { Icon: Info, color: "text-brand" };
   }

@@ -104,7 +104,7 @@ describe("GitIntegrationsPage", () => {
     await waitFor(() =>
       expect(verifyGitIntegration).toHaveBeenCalledWith("org-1", "g1", "https://github.com/acme/webapp"),
     );
-    expect(toastMock).toHaveBeenCalledWith({ title: "Repository access verified" });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Repository access verified", variant: "success" });
   });
 
   it("removes an integration via the row menu and confirm dialog", async () => {
@@ -126,7 +126,7 @@ describe("GitIntegrationsPage", () => {
     await user.click(screen.getByRole("button", { name: "Remove" }), { pointerEventsCheck: 0 });
 
     await waitFor(() => expect(deleteGitIntegration).toHaveBeenCalledWith("org-1", "g1"));
-    expect(toastMock).toHaveBeenCalledWith({ title: "Integration removed" });
+    expect(toastMock).toHaveBeenCalledWith({ title: "Integration removed", variant: "success" });
   });
 
   it("opens the update-credentials dialog from the row menu and PUTs on submit", async () => {

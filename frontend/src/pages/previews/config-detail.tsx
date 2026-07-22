@@ -115,7 +115,7 @@ export default function PreviewConfigDetailPage() {
     if (!orgId || !defaultProjectName || !env.id) return;
     try {
       await deletePreviewEnv(orgId, defaultProjectName, env.id);
-      toast({ title: `Deleting PR #${env.pr_number} environment` });
+      toast({ title: `Deleting PR #${env.pr_number} environment`, variant: "info" });
       await refresh();
     } catch (e) {
       toast({ title: "Delete failed", description: getErrorMessage(e), variant: "destructive" });

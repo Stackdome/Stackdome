@@ -80,7 +80,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
         ...(config.labels != null ? { labels: config.labels } : {}),
         ...(config.annotations != null ? { annotations: config.annotations } : {}),
       });
-      toast({ title: "Configuration saved" });
+      toast({ title: "Configuration saved", variant: "success" });
       onSaved(updated);
       onOpenChange(false);
     } catch (e) {
@@ -105,7 +105,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
       setDeleting(true);
       try {
         await deletePreviewConfig(orgId, defaultProjectName, config.id);
-        toast({ title: "Configuration deleted" });
+        toast({ title: "Configuration deleted", variant: "success" });
         onOpenChange(false);
         onDeleted();
       } catch (e) {

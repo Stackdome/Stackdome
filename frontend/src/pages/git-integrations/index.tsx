@@ -68,7 +68,7 @@ export default function GitIntegrationsPage() {
     }
     try {
       await deleteGitIntegration(orgId, integration.id);
-      toast({ title: "Integration removed" });
+      toast({ title: "Integration removed", variant: "success" });
       await refresh();
     } catch (e) {
       toast({ title: "Remove failed", description: getErrorMessage(e), variant: "destructive" });

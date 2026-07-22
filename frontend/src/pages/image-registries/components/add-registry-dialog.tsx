@@ -80,7 +80,7 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
     setSaving(true);
     try {
       await createRegistryCredential(orgId, { ...parsed.data, purpose });
-      toast({ title: "Registry added" });
+      toast({ title: "Registry added", variant: "success" });
       onOpenChange(false);
       onCreated();
     } catch (e) {

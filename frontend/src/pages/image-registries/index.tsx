@@ -72,9 +72,10 @@ export default function ImageRegistriesPage() {
         toast({
           title: "Registry removed",
           description: `Stacks affected: ${affected.map((s) => s.name ?? s.id).join(", ")}. Their image pulls or pushes may fail until another credential covers ${credential.host}.`,
+          variant: "warning",
         });
       } else {
-        toast({ title: "Registry removed" });
+        toast({ title: "Registry removed", variant: "success" });
       }
       await refresh();
     } catch (e) {

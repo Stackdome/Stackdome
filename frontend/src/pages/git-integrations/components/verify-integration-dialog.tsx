@@ -48,7 +48,7 @@ export function VerifyIntegrationDialog({ integration, onOpenChange }: VerifyInt
     setVerifying(true);
     try {
       await verifyGitIntegration(orgId, integration.id, parsed.data.repoUrl);
-      toast({ title: "Repository access verified" });
+      toast({ title: "Repository access verified", variant: "success" });
       onOpenChange(false);
     } catch (e) {
       toast({ title: "Couldn't verify repository access", description: getErrorMessage(e), variant: "destructive" });

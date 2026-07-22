@@ -601,7 +601,7 @@ export default function CanvasEditorPage() {
   );
   const onCopyId = useCallback((releaseId: string) => {
     void navigator.clipboard?.writeText(releaseId);
-    toast({ title: "Release ID copied" });
+    toast({ title: "Release ID copied", variant: "success" });
   }, [toast]);
 
   // Draft deploy: validates name, creates the stack, starts the first release,
