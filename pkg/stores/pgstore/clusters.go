@@ -110,13 +110,13 @@ func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*mo
 	return &res, nil
 }
 
-func (d dbClusterStore) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+func (d dbClusterStore) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("\"default\" = ?", true).Preload(clause.Associations).First(&res).Error
+	err := grm.Model(&models.Cluster{}).Where("platform = ?", true).Preload(clause.Associations).First(&res).Error
 	if err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NotFound("default cluster not found")
+			return nil, errors.NotFound("platform cluster not found")
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
 	}

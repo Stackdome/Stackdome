@@ -158,15 +158,15 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 		s.logger.Error(ctx, "failed to add OrgMember policy for user: %s", policyAddErr.Error())
 	}
 
-	if seedErr := s.seedDefaultInfra(ctx, createdUser.OrganisationID, user.Organisation.Name); seedErr != nil {
+	if seedErr := s.seedPlatformInfra(ctx, createdUser.OrganisationID, user.Organisation.Name); seedErr != nil {
 		return nil, seedErr
 	}
 
 	return s.buildSignupResponse(ctx, createdUser)
 }
 
-func (s *signupService) seedDefaultInfra(ctx context.Context, orgID, orgName string) *errors.ServiceError {
-	defaultCluster, err := s.clusterService.GetDefaultCluster(ctx)
+func (s *signupService) seedPlatformInfra(ctx context.Context, orgID, orgName string) *errors.ServiceError {
+	platformCluster, err := s.clusterService.GetPlatformCluster(ctx)
 	if err != nil {
 		if err.Code == errors.ErrorNotFound {
 			return nil
@@ -175,7 +175,7 @@ func (s *signupService) seedDefaultInfra(ctx context.Context, orgID, orgName str
 	}
 	ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
 
-	platformOrg, pErr := s.organisationService.InternalGetDefaultOrg(ctx)
+	platformOrg, pErr := s.organisationService.InternalGetPlatformOrg(ctx)
 	if pErr != nil {
 		return pErr
 	}
@@ -188,7 +188,7 @@ func (s *signupService) seedDefaultInfra(ctx context.Context, orgID, orgName str
 	if sErr := s.seedOrgDomain(ctx, orgID, orgSlug, baseDomain.Domain); sErr != nil {
 		return sErr
 	}
-	return s.seedOrgRegistry(ctx, orgID, orgSlug, defaultCluster.ID)
+	return s.seedOrgRegistry(ctx, orgID, orgSlug, platformCluster.ID)
 }
 
 func (s *signupService) seedOrgDomain(ctx context.Context, orgID, orgSlug, baseDomain string) *errors.ServiceError {

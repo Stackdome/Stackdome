@@ -29,23 +29,22 @@ var (
 	EnvDBRootCertFile   = StringVar("DB_ROOT_CERT_FILE", "Root CA cert path for SSL", nil, false)
 	EnvDBDebugMode      = BoolVar("DB_DEBUG_MODE", "Enable DB query debug logging", ptr(false), false)
 
-	// Default Cluster
-	EnvDefaultClusterName   = StringVar("DEFAULT_CLUSTER_NAME", "Default cluster name", nil, false)
-	EnvDefaultClusterAPIURL = StringVar("DEFAULT_CLUSTER_API_URL", "Default cluster API URL", nil, false)
-	EnvDefaultClusterCAData = StringVar("DEFAULT_CLUSTER_CA_DATA", "Default cluster CA cert (base64)", nil, false)
-	EnvDefaultClusterToken  = StringVar("DEFAULT_CLUSTER_TOKEN", "Default cluster auth token", nil, false)
+	// Platform Cluster
+	EnvPlatformClusterName   = StringVar("PLATFORM_CLUSTER_NAME", "Platform cluster name", nil, false)
+	EnvPlatformClusterAPIURL = StringVar("PLATFORM_CLUSTER_API_URL", "Platform cluster API URL", nil, false)
+	EnvPlatformClusterCAData = StringVar("PLATFORM_CLUSTER_CA_DATA", "Platform cluster CA cert (base64)", nil, false)
+	EnvPlatformClusterToken  = StringVar("PLATFORM_CLUSTER_TOKEN", "Platform cluster auth token", nil, false)
 
-	// Default Provisioning
-	EnvDefaultBaseDomain           = StringVar("DEFAULT_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
-	EnvDefaultOrgName              = StringVar("DEFAULT_ORG_NAME", "Default platform organisation name", ptr("Platform"), false)
-	EnvDefaultRegistryStorageSize  = StringVar("DEFAULT_REGISTRY_STORAGE_SIZE", "Default per-org registry backend storage size", ptr("50Gi"), false)
-	EnvDefaultRegistryStorageClass = StringVar("DEFAULT_REGISTRY_STORAGE_CLASS", "Default per-org registry backend storage class", nil, false)
-	EnvDefaultClusterRegistryName  = StringVar("DEFAULT_CLUSTER_REGISTRY_NAME", "Optional platform registry seeded on the default cluster at boot", nil, false)
+	// Platform Provisioning
+	EnvPlatformBaseDomain           = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
+	EnvPlatformRegistryStorageSize  = StringVar("PLATFORM_REGISTRY_STORAGE_SIZE", "Default per-org registry backend storage size", ptr("50Gi"), false)
+	EnvPlatformRegistryStorageClass = StringVar("PLATFORM_REGISTRY_STORAGE_CLASS", "Default per-org registry backend storage class", nil, false)
+	EnvPlatformClusterRegistryName  = StringVar("PLATFORM_CLUSTER_REGISTRY_NAME", "Optional platform registry seeded on the platform cluster at boot", nil, false)
 
-	// Bootstrap User
-	EnvDefaultUserEmail    = StringVar("DEFAULT_USER_EMAIL", "Default platform admin email", nil, false)
-	EnvDefaultUserName     = StringVar("DEFAULT_USER_NAME", "Default platform admin name", ptr("Platform Admin"), false)
-	EnvDefaultUserPassword = StringVar("DEFAULT_USER_PASSWORD", "Default platform admin password", ptr("welcome@123"), false)
+	// Platform Admin
+	EnvPlatformAdminEmail    = StringVar("PLATFORM_ADMIN_EMAIL", "Platform admin email", nil, false)
+	EnvPlatformAdminName     = StringVar("PLATFORM_ADMIN_NAME", "Platform admin name", ptr("Platform Admin"), false)
+	EnvPlatformAdminPassword = StringVar("PLATFORM_ADMIN_PASSWORD", "Platform admin password", ptr("welcome@123"), false)
 
 	// Environment
 	EnvStackdomeEnv = StringVar("STACKDOME_ENV", "Runtime environment (DEVELOPMENT, PRODUCTION, TESTING)", ptr("DEVELOPMENT"), false)

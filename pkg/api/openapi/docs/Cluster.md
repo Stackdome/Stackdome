@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | **string** |  | 
 **OrganisationId** | Pointer to **string** |  | [optional] 
-**Default** | Pointer to **bool** |  | [optional] 
+**Platform** | Pointer to **bool** |  | [optional] 
 **ClusterUrl** | **string** |  | 
 **ClusterCaData** | **string** |  | 
 **ClusterSaToken** | **string** |  | 
@@ -102,30 +102,30 @@ SetOrganisationId sets OrganisationId field to given value.
 
 HasOrganisationId returns a boolean if a field has been set.
 
-### GetDefault
+### GetPlatform
 
-`func (o *Cluster) GetDefault() bool`
+`func (o *Cluster) GetPlatform() bool`
 
-GetDefault returns the Default field if non-nil, zero value otherwise.
+GetPlatform returns the Platform field if non-nil, zero value otherwise.
 
-### GetDefaultOk
+### GetPlatformOk
 
-`func (o *Cluster) GetDefaultOk() (*bool, bool)`
+`func (o *Cluster) GetPlatformOk() (*bool, bool)`
 
-GetDefaultOk returns a tuple with the Default field if it's non-nil, zero value otherwise
+GetPlatformOk returns a tuple with the Platform field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetDefault
+### SetPlatform
 
-`func (o *Cluster) SetDefault(v bool)`
+`func (o *Cluster) SetPlatform(v bool)`
 
-SetDefault sets Default field to given value.
+SetPlatform sets Platform field to given value.
 
-### HasDefault
+### HasPlatform
 
-`func (o *Cluster) HasDefault() bool`
+`func (o *Cluster) HasPlatform() bool`
 
-HasDefault returns a boolean if a field has been set.
+HasPlatform returns a boolean if a field has been set.
 
 ### GetClusterUrl
 

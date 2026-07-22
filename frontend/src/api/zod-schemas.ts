@@ -10,7 +10,7 @@ const Organisation = z
     id: z.string(),
     name: z.string(),
     domains: z.array(DomainName),
-    is_default: z.boolean(),
+    is_platform: z.boolean(),
     created_at: z.string().datetime({ offset: true }),
     updated_at: z.string().datetime({ offset: true }),
   })
@@ -695,7 +695,7 @@ const Cluster = z
     id: z.string().optional(),
     name: z.string(),
     organisation_id: z.string().optional(),
-    default: z.boolean().optional(),
+    platform: z.boolean().optional(),
     cluster_url: z.string(),
     cluster_ca_data: z.string(),
     cluster_sa_token: z.string(),

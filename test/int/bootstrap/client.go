@@ -50,8 +50,8 @@ func (cm *ClientManager) Bootstrap(ctx context.Context) error {
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	// The server, on boot, provisioned the platform org, admin and the Default
-	// cluster from the DEFAULT_* env. Log in as that admin and adopt the default
+	// The server, on boot, provisioned the platform org, admin and the platform
+	// cluster from the PLATFORM_* env. Log in as that admin and adopt the platform
 	// cluster + its registry for the rest of the suite.
 	if err := cm.loginPlatformAdmin(bootstrapCtx); err != nil {
 		return fmt.Errorf("failed to login platform admin: %w", err)
@@ -59,9 +59,9 @@ func (cm *ClientManager) Bootstrap(ctx context.Context) error {
 
 	cm.configureAuthentication()
 
-	clusterID, err := cm.resolveDefaultCluster(bootstrapCtx)
+	clusterID, err := cm.resolvePlatformCluster(bootstrapCtx)
 	if err != nil {
-		return fmt.Errorf("failed to resolve default cluster: %w", err)
+		return fmt.Errorf("failed to resolve platform cluster: %w", err)
 	}
 	cm.clusterID = clusterID
 
@@ -93,7 +93,7 @@ func (cm *ClientManager) GetClusterID() string {
 }
 
 func (cm *ClientManager) loginPlatformAdmin(ctx context.Context) error {
-	req := openapi.NewLoginRequest(defaultProvisioningAdminEmail, defaultProvisioningAdminPassword)
+	req := openapi.NewLoginRequest(platformProvisioningAdminEmail, platformProvisioningAdminPassword)
 
 	resp, httpResp, err := cm.client.DefaultApi.ApiV1AuthLoginPost(ctx).LoginRequest(*req).Execute()
 	if err != nil {
@@ -113,7 +113,7 @@ func (cm *ClientManager) loginPlatformAdmin(ctx context.Context) error {
 	return nil
 }
 
-func (cm *ClientManager) resolveDefaultCluster(ctx context.Context) (string, error) {
+func (cm *ClientManager) resolvePlatformCluster(ctx context.Context) (string, error) {
 	resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdClustersGet(ctx, cm.orgID).Execute()
 	if err != nil {
 		return "", fmt.Errorf("listing clusters failed: %w", err)
@@ -121,11 +121,11 @@ func (cm *ClientManager) resolveDefaultCluster(ctx context.Context) (string, err
 	defer func() { _ = httpResp.Body.Close() }()
 
 	for _, cluster := range resp.GetItems() {
-		if cluster.Id != nil && *cluster.Id != "" {
+		if cluster.Platform != nil && *cluster.Platform && cluster.Id != nil && *cluster.Id != "" {
 			return *cluster.Id, nil
 		}
 	}
-	return "", fmt.Errorf("no cluster found for platform org %s", cm.orgID)
+	return "", fmt.Errorf("no platform cluster found for platform org %s", cm.orgID)
 }
 
 func (cm *ClientManager) configureAuthentication() {

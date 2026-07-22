@@ -137,8 +137,8 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid bootstrap config: %w", err)
 	}
 
-	if err := config.ValidateDefaultProvisioning(te.Config.DefaultCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.DefaultUser.Email); err != nil {
-		return fmt.Errorf("invalid default-provisioning config: %w", err)
+	if err := config.ValidatePlatformProvisioning(te.Config.PlatformCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.PlatformAdmin.Email); err != nil {
+		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
 }
@@ -151,10 +151,10 @@ func (te *testEnvironment) loadSaneDefaults() {
 	// te.Config.LoadEnvVariables()
 	// te.BootstrapConfig.LoadEnvVariables()
 
-	// Default-provisioning config is opt-in: the DEFAULT_CLUSTER_* / DEFAULT_* vars
+	// Platform-provisioning config is opt-in: the PLATFORM_CLUSTER_* / PLATFORM_* vars
 	// are unset in unit runs (no-op), and set by the integration bootstrap to exercise
 	// the boot-time platform seeding against a real cluster.
-	te.Config.DefaultCluster.LoadEnvVariables()
+	te.Config.PlatformCluster.LoadEnvVariables()
 	te.BootstrapConfig.LoadEnvVariables()
 
 	if te.Config.JwtSecret == "" {
@@ -181,14 +181,14 @@ func (te *testEnvironment) loadSaneDefaults() {
 		}
 	}
 
-	if te.BootstrapConfig.DefaultUser.Email == "" {
-		te.BootstrapConfig.DefaultUser.Email = "test-admin@stackdome.io"
+	if te.BootstrapConfig.PlatformAdmin.Email == "" {
+		te.BootstrapConfig.PlatformAdmin.Email = "test-admin@stackdome.io"
 	}
-	if te.BootstrapConfig.DefaultUser.Name == "" {
-		te.BootstrapConfig.DefaultUser.Name = "Test Platform Admin"
+	if te.BootstrapConfig.PlatformAdmin.Name == "" {
+		te.BootstrapConfig.PlatformAdmin.Name = "Test Platform Admin"
 	}
-	if te.BootstrapConfig.DefaultUser.Password == "" {
-		te.BootstrapConfig.DefaultUser.Password = "test-welcome@123"
+	if te.BootstrapConfig.PlatformAdmin.Password == "" {
+		te.BootstrapConfig.PlatformAdmin.Password = "test-welcome@123"
 	}
 }
 
@@ -926,7 +926,7 @@ func (te *testEnvironment) bootstrapPlatformDefaults(ctx context.Context) error 
 		OrganisationDomainService: te.Services.OrganisationDomainService,
 		PolicyManager:             te.ResourceAccessPolicyManager,
 		BootstrapConfig:           te.BootstrapConfig,
-		ClusterConfig:             te.Config.DefaultCluster,
+		ClusterConfig:             te.Config.PlatformCluster,
 		Logger:                    te.Logger,
 	})
 	if err := svc.Run(ctx); err != nil {

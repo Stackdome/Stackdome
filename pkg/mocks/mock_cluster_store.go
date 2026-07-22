@@ -131,19 +131,19 @@ func (mr *MockClusterStoreMockRecorder) GetClusterForOrg(ctx, orgID any) *gomock
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterForOrg", reflect.TypeOf((*MockClusterStore)(nil).GetClusterForOrg), ctx, orgID)
 }
 
-// GetDefaultCluster mocks base method.
-func (m *MockClusterStore) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+// GetPlatformCluster mocks base method.
+func (m *MockClusterStore) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDefaultCluster", ctx)
+	ret := m.ctrl.Call(m, "GetPlatformCluster", ctx)
 	ret0, _ := ret[0].(*models.Cluster)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetDefaultCluster indicates an expected call of GetDefaultCluster.
-func (mr *MockClusterStoreMockRecorder) GetDefaultCluster(ctx any) *gomock.Call {
+// GetPlatformCluster indicates an expected call of GetPlatformCluster.
+func (mr *MockClusterStoreMockRecorder) GetPlatformCluster(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultCluster", reflect.TypeOf((*MockClusterStore)(nil).GetDefaultCluster), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformCluster", reflect.TypeOf((*MockClusterStore)(nil).GetPlatformCluster), ctx)
 }
 
 // ListAll mocks base method.

@@ -100,19 +100,19 @@ func (mr *MockOrganisationServiceMockRecorder) InternalCreate(ctx, spec any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalCreate", reflect.TypeOf((*MockOrganisationService)(nil).InternalCreate), ctx, spec)
 }
 
-// InternalGetDefaultOrg mocks base method.
-func (m *MockOrganisationService) InternalGetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
+// InternalGetPlatformOrg mocks base method.
+func (m *MockOrganisationService) InternalGetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalGetDefaultOrg", ctx)
+	ret := m.ctrl.Call(m, "InternalGetPlatformOrg", ctx)
 	ret0, _ := ret[0].(*models.Organisation)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// InternalGetDefaultOrg indicates an expected call of InternalGetDefaultOrg.
-func (mr *MockOrganisationServiceMockRecorder) InternalGetDefaultOrg(ctx any) *gomock.Call {
+// InternalGetPlatformOrg indicates an expected call of InternalGetPlatformOrg.
+func (mr *MockOrganisationServiceMockRecorder) InternalGetPlatformOrg(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetDefaultOrg", reflect.TypeOf((*MockOrganisationService)(nil).InternalGetDefaultOrg), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetPlatformOrg", reflect.TypeOf((*MockOrganisationService)(nil).InternalGetPlatformOrg), ctx)
 }
 
 // ListOrgAdmins mocks base method.

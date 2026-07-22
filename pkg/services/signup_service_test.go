@@ -16,7 +16,7 @@ import (
 
 // Suite bootstrapped by TestServices in services_suite_test.go.
 
-var _ = Describe("SignupService default-infra seeding", func() {
+var _ = Describe("SignupService platform-infra seeding", func() {
 	const (
 		orgName        = "Acme Inc"
 		orgID          = "11112222-3333-4444-5555-666677778888"
@@ -68,9 +68,9 @@ var _ = Describe("SignupService default-infra seeding", func() {
 		refreshStore.EXPECT().Create(gomock.Any(), gomock.Any()).Return(&models.RefreshToken{}, nil)
 	}
 
-	expectDefaultClusterAndPlatform := func() {
-		clusterSvc.EXPECT().GetDefaultCluster(gomock.Any()).Return(&models.Cluster{ID: "cluster-1"}, nil)
-		orgSvc.EXPECT().InternalGetDefaultOrg(gomock.Any()).Return(&models.Organisation{ID: platformOrgID}, nil)
+	expectPlatformClusterAndOrg := func() {
+		clusterSvc.EXPECT().GetPlatformCluster(gomock.Any()).Return(&models.Cluster{ID: "cluster-1"}, nil)
+		orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).Return(&models.Organisation{ID: platformOrgID}, nil)
 		domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), platformOrgID).
 			Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
 	}
@@ -108,10 +108,10 @@ var _ = Describe("SignupService default-infra seeding", func() {
 		ctrl.Finish()
 	})
 
-	It("skips seeding and signs up when no default cluster exists", func() {
+	It("skips seeding and signs up when no platform cluster exists", func() {
 		expectUserAndOrgCreation()
-		clusterSvc.EXPECT().GetDefaultCluster(gomock.Any()).
-			Return(nil, errors.NotFound("default cluster not found"))
+		clusterSvc.EXPECT().GetPlatformCluster(gomock.Any()).
+			Return(nil, errors.NotFound("platform cluster not found"))
 		expectResponseBuilt()
 
 		resp, err := svc.Signup(ctx, newUser(), "")
@@ -119,9 +119,9 @@ var _ = Describe("SignupService default-infra seeding", func() {
 		Expect(resp).ToNot(BeNil())
 	})
 
-	It("seeds the org domain and registry on the default cluster", func() {
+	It("seeds the org domain and registry on the platform cluster", func() {
 		expectUserAndOrgCreation()
-		expectDefaultClusterAndPlatform()
+		expectPlatformClusterAndOrg()
 		domainSvc.EXPECT().Create(gomock.Any(), &models.OrganisationDomain{
 			OrganisationID: orgID,
 			Domain:         expectedDomain,
@@ -142,7 +142,7 @@ var _ = Describe("SignupService default-infra seeding", func() {
 
 	It("retries the domain with a random suffix when the first attempt conflicts", func() {
 		expectUserAndOrgCreation()
-		expectDefaultClusterAndPlatform()
+		expectPlatformClusterAndOrg()
 		suffixed := regexp.MustCompile(`^` + expectedSlug + `-[0-9a-f]{6}\.` + regexp.QuoteMeta(baseDomain) + `$`)
 		gomock.InOrder(
 			domainSvc.EXPECT().Create(gomock.Any(), &models.OrganisationDomain{
@@ -165,7 +165,7 @@ var _ = Describe("SignupService default-infra seeding", func() {
 
 	It("fails signup when domain creation returns a non-conflict error", func() {
 		expectUserAndOrgCreation()
-		expectDefaultClusterAndPlatform()
+		expectPlatformClusterAndOrg()
 		boom := errors.GeneralError("domain store unavailable")
 		domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, boom)
 
@@ -176,7 +176,7 @@ var _ = Describe("SignupService default-infra seeding", func() {
 
 	It("fails signup when registry creation fails", func() {
 		expectUserAndOrgCreation()
-		expectDefaultClusterAndPlatform()
+		expectPlatformClusterAndOrg()
 		domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).Return(&models.OrganisationDomain{}, nil)
 		boom := errors.GeneralError("cluster unreachable")
 		registrySvc.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, boom)

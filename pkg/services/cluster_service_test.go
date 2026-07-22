@@ -64,7 +64,7 @@ var _ = Describe("ClusterService", func() {
 	}
 
 	Describe("GetClusterForOrg read-time fallback", func() {
-		It("returns the org's own cluster without consulting the default", func() {
+		It("returns the org's own cluster without consulting the platform cluster", func() {
 			owned := &models.Cluster{ID: "cluster-owned", OrganisationID: "org-1", Token: "tok", ClusterCAData: caData}
 			encryptCluster(owned)
 
@@ -75,24 +75,24 @@ var _ = Describe("ClusterService", func() {
 			Expect(result.ID).To(Equal("cluster-owned"))
 		})
 
-		It("falls back to the default cluster when the org owns none", func() {
-			def := &models.Cluster{ID: "cluster-default", OrganisationID: "org-platform", Default: true, Token: "tok", ClusterCAData: caData}
+		It("falls back to the platform cluster when the org owns none", func() {
+			def := &models.Cluster{ID: "cluster-platform", OrganisationID: "org-platform", Platform: true, Token: "tok", ClusterCAData: caData}
 			encryptCluster(def)
 
 			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), "org-1").
 				Return(nil, apperrors.NotFound("cluster for organisation 'org-1' not found"))
-			clusterStore.EXPECT().GetDefaultCluster(gomock.Any()).Return(def, nil)
+			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).Return(def, nil)
 
 			result, err := svc.GetClusterForOrg(ctx, "org-1")
 			Expect(err).To(BeNil())
-			Expect(result.ID).To(Equal("cluster-default"))
+			Expect(result.ID).To(Equal("cluster-platform"))
 		})
 
-		It("returns NotFound when neither an owned nor a default cluster exists", func() {
+		It("returns NotFound when neither an owned nor a platform cluster exists", func() {
 			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), "org-1").
 				Return(nil, apperrors.NotFound("cluster for organisation 'org-1' not found"))
-			clusterStore.EXPECT().GetDefaultCluster(gomock.Any()).
-				Return(nil, apperrors.NotFound("default cluster not found"))
+			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
+				Return(nil, apperrors.NotFound("platform cluster not found"))
 
 			result, err := svc.GetClusterForOrg(ctx, "org-1")
 			Expect(result).To(BeNil())
@@ -113,7 +113,7 @@ var _ = Describe("ClusterService", func() {
 			Expect(result.ID).To(Equal("cluster-owned"))
 		})
 
-		It("returns NotFound without falling back to the default cluster when the org owns none", func() {
+		It("returns NotFound without falling back to the platform cluster when the org owns none", func() {
 			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), "org-1").
 				Return(nil, apperrors.NotFound("cluster for organisation 'org-1' not found"))
 
@@ -124,7 +124,7 @@ var _ = Describe("ClusterService", func() {
 		})
 	})
 
-	Describe("InternalUpsertDefaultCluster", func() {
+	Describe("InternalUpsertPlatformCluster", func() {
 		It("delegates to AddCluster when no cluster exists for the URL", func() {
 			spec := &models.Cluster{
 				Name:           "default",
@@ -147,7 +147,7 @@ var _ = Describe("ClusterService", func() {
 			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
 			clusterManager.EXPECT().GetClient(created.ID).Return(nil, stderrors.New("no client in test"))
 
-			result, err := svc.InternalUpsertDefaultCluster(ctx, spec)
+			result, err := svc.InternalUpsertPlatformCluster(ctx, spec)
 			Expect(err).To(BeNil())
 			Expect(result.ID).To(Equal("cluster-new"))
 		})
@@ -159,7 +159,7 @@ var _ = Describe("ClusterService", func() {
 
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
 
-			result, err := svc.InternalUpsertDefaultCluster(ctx, &models.Cluster{
+			result, err := svc.InternalUpsertPlatformCluster(ctx, &models.Cluster{
 				ClusterURL:    "https://example.com:6443",
 				Token:         token,
 				ClusterCAData: caData,
@@ -180,7 +180,7 @@ var _ = Describe("ClusterService", func() {
 			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(fresh, nil)
 			clusterManager.EXPECT().ReRegisterCluster(fresh).Return(nil)
 
-			result, err := svc.InternalUpsertDefaultCluster(ctx, &models.Cluster{
+			result, err := svc.InternalUpsertPlatformCluster(ctx, &models.Cluster{
 				ClusterURL:    "https://example.com:6443",
 				Token:         newToken,
 				ClusterCAData: caData,

@@ -30,38 +30,38 @@ func exposedProvisioningStack(name string) *openapi.Stack {
 	return openapi.NewStack(name, *spec)
 }
 
-var _ = Describe("Default provisioning", func() {
-	It("seeds a Default=true cluster and the platform base domain at boot", func() {
+var _ = Describe("Platform provisioning", func() {
+	It("seeds a Platform=true cluster and the platform base domain at boot", func() {
 		ctx := context.Background()
 		db := GetEnvironment().Database.GetSessionFactory().New(ctx)
 
 		By("finding the platform organisation")
 		var platformOrg models.Organisation
-		Expect(db.Where("\"default\" = ?", true).Model(&models.Organisation{}).First(&platformOrg).Error).To(Succeed())
+		Expect(db.Where("platform = ?", true).Model(&models.Organisation{}).First(&platformOrg).Error).To(Succeed())
 
-		By("verifying the platform org owns a Default=true cluster")
-		var defaultCluster models.Cluster
-		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&defaultCluster).Error).To(Succeed())
-		Expect(defaultCluster.Default).To(BeTrue())
+		By("verifying the platform org owns a Platform=true cluster")
+		var platformCluster models.Cluster
+		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&platformCluster).Error).To(Succeed())
+		Expect(platformCluster.Platform).To(BeTrue())
 
 		By("verifying the platform org has the base domain")
 		var platformDomain models.OrganisationDomain
 		Expect(db.Where(&models.OrganisationDomain{
 			OrganisationID: platformOrg.ID,
-			Domain:         bootstrap.DefaultProvisioningBaseDomain,
+			Domain:         bootstrap.PlatformProvisioningBaseDomain,
 		}).First(&platformDomain).Error).To(Succeed())
 	})
 
-	It("seeds <slug>.<base> domain and <slug>-<shortid> registry on fresh signup, and stacks fall back to the default cluster", func() {
+	It("seeds <slug>.<base> domain and <slug>-<shortid> registry on fresh signup, and stacks fall back to the platform cluster", func() {
 		ctx := context.Background()
 		db := GetEnvironment().Database.GetSessionFactory().New(ctx)
 		projectName := models.DefaultProjectName
 
-		By("resolving the seeded default cluster")
+		By("resolving the seeded platform cluster")
 		var platformOrg models.Organisation
-		Expect(db.Where("\"default\" = ?", true).Model(&models.Organisation{}).First(&platformOrg).Error).To(Succeed())
-		var defaultCluster models.Cluster
-		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&defaultCluster).Error).To(Succeed())
+		Expect(db.Where("platform = ?", true).Model(&models.Organisation{}).First(&platformOrg).Error).To(Succeed())
+		var platformCluster models.Cluster
+		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&platformCluster).Error).To(Succeed())
 
 		By("signing up a fresh user with a new organisation")
 		ts := time.Now().UnixNano()
@@ -74,14 +74,14 @@ var _ = Describe("Default provisioning", func() {
 		Expect(newToken).NotTo(BeEmpty())
 
 		orgSlug := slug.FromOrgName(orgName)
-		expectedDomain := fmt.Sprintf("%s.%s", orgSlug, bootstrap.DefaultProvisioningBaseDomain)
+		expectedDomain := fmt.Sprintf("%s.%s", orgSlug, bootstrap.PlatformProvisioningBaseDomain)
 
 		By("verifying the org was seeded a <slug>.<base> domain")
 		var orgDomain models.OrganisationDomain
 		Expect(db.Where(&models.OrganisationDomain{OrganisationID: newOrgID}).First(&orgDomain).Error).To(Succeed())
 		Expect(orgDomain.Domain).To(Equal(expectedDomain))
 
-		By("verifying the org was seeded a <slug>-<shortid> registry on the default cluster")
+		By("verifying the org was seeded a <slug>-<shortid> registry on the platform cluster")
 		shortID := strings.ReplaceAll(newOrgID, "-", "")
 		if len(shortID) > shortOrgIDLength {
 			shortID = shortID[:shortOrgIDLength]
@@ -90,7 +90,7 @@ var _ = Describe("Default provisioning", func() {
 		var registry models.ClusterImageRegistry
 		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: newOrgID}).First(&registry).Error).To(Succeed())
 		Expect(registry.Name).To(Equal(expectedRegistry))
-		Expect(registry.ClusterID).To(Equal(defaultCluster.ID))
+		Expect(registry.ClusterID).To(Equal(platformCluster.ID))
 
 		By("creating and deploying a stack with a publicly exposed port in the new org")
 		newClient := shared.AuthenticatedClient(newToken)
@@ -103,12 +103,12 @@ var _ = Describe("Default provisioning", func() {
 			shared.WaitForStackDeleted(newClient, newOrgID, projectName, stackID, 1*time.Minute)
 		})
 
-		By("verifying the stack resolved to the default cluster via read-time fallback")
+		By("verifying the stack resolved to the platform cluster via read-time fallback")
 		var stackRow models.Stack
 		Expect(db.First(&stackRow, "id = ?", stackID).Error).To(Succeed())
-		Expect(stackRow.ClusterID).To(Equal(defaultCluster.ID))
+		Expect(stackRow.ClusterID).To(Equal(platformCluster.ID))
 
-		By("waiting for the stack to become Ready on the default cluster")
+		By("waiting for the stack to become Ready on the platform cluster")
 		shared.WaitForStackReady(newClient, newOrgID, projectName, stackID, 5*time.Minute)
 
 		By("verifying the exposed-port stack domain uses <slug>.<base>")

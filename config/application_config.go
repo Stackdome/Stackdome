@@ -25,8 +25,8 @@ type ApplicationConfig struct {
 	ServerExternalURL string `json:"server_external_url"`
 	// GitHubAPIBaseURL overrides the GitHub API endpoint (tests, GHES).
 	GitHubAPIBaseURL string `json:"github_api_base_url"`
-	// DefaultCluster holds the DEFAULT_CLUSTER_* config seeded at boot.
-	DefaultCluster *ClusterConfig `json:"default_cluster"`
+	// PlatformCluster holds the PLATFORM_CLUSTER_* config seeded at boot.
+	PlatformCluster *ClusterConfig `json:"platform_cluster"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -50,7 +50,7 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 
 	c.GitHubOAuth.LoadEnvVariables()
-	c.DefaultCluster.LoadEnvVariables()
+	c.PlatformCluster.LoadEnvVariables()
 
 	if val, ok := EnvServerExternalURL.Lookup(); ok {
 		c.ServerExternalURL = val
@@ -135,19 +135,19 @@ func (c *ClusterConfig) Validate() error {
 }
 
 func (c *ClusterConfig) LoadEnvVariables() {
-	if val, ok := EnvDefaultClusterName.Lookup(); ok {
+	if val, ok := EnvPlatformClusterName.Lookup(); ok {
 		c.Name = val
 	}
 
-	if val, ok := EnvDefaultClusterAPIURL.Lookup(); ok {
+	if val, ok := EnvPlatformClusterAPIURL.Lookup(); ok {
 		c.ClusterURL = val
 	}
 
-	if val, ok := EnvDefaultClusterCAData.Lookup(); ok {
+	if val, ok := EnvPlatformClusterCAData.Lookup(); ok {
 		c.ClusterCAData = val
 	}
 
-	if val, ok := EnvDefaultClusterToken.Lookup(); ok {
+	if val, ok := EnvPlatformClusterToken.Lookup(); ok {
 		c.Token = val
 	}
 }
@@ -219,12 +219,12 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:         NewServerConfig(),
-		Database:       NewDatabaseConfig(),
-		LogLevel:       "info",
-		LogFormat:      "json",
-		GitHubOAuth:    NewGitHubOAuthConfig(),
-		DefaultCluster: &ClusterConfig{},
+		Server:          NewServerConfig(),
+		Database:        NewDatabaseConfig(),
+		LogLevel:        "info",
+		LogFormat:       "json",
+		GitHubOAuth:     NewGitHubOAuthConfig(),
+		PlatformCluster: &ClusterConfig{},
 	}
 }
 

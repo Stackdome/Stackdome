@@ -5,9 +5,9 @@ var (
 	ErrEmptyName     = &ConfigError{"empty name"}
 	ErrEmptyPassword = &ConfigError{"empty password"}
 
-	ErrIncompleteClusterConfig = &ConfigError{"DEFAULT_CLUSTER_NAME, DEFAULT_CLUSTER_API_URL, DEFAULT_CLUSTER_CA_DATA and DEFAULT_CLUSTER_TOKEN must all be set together"}
-	ErrClusterDomainMismatch   = &ConfigError{"DEFAULT_CLUSTER_* and DEFAULT_BASE_DOMAIN must be set together"}
-	ErrBootstrapAdminEmail     = &ConfigError{"DEFAULT_USER_EMAIL is required when a default cluster is configured"}
+	ErrIncompleteClusterConfig = &ConfigError{"PLATFORM_CLUSTER_NAME, PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
+	ErrClusterDomainMismatch   = &ConfigError{"PLATFORM_CLUSTER_* and PLATFORM_BASE_DOMAIN must be set together"}
+	ErrBootstrapAdminEmail     = &ConfigError{"PLATFORM_ADMIN_EMAIL is required when a platform cluster is configured"}
 )
 
 type ConfigError struct {
@@ -19,15 +19,14 @@ func (e *ConfigError) Error() string {
 }
 
 type BootstrapConfig struct {
-	DefaultUser          *DefaultPlatformAdminConfig
-	PlatformOrgName      string
+	PlatformAdmin        *PlatformAdminConfig
 	BaseDomain           string
 	RegistryStorageSize  string
 	RegistryStorageClass string
 	RegistryName         string
 }
 
-func ValidateDefaultProvisioning(cluster *ClusterConfig, baseDomain, adminEmail string) error {
+func ValidatePlatformProvisioning(cluster *ClusterConfig, baseDomain, adminEmail string) error {
 	clusterSet := cluster.IsSet()
 	if !clusterSet && cluster.AnySet() {
 		return ErrIncompleteClusterConfig
@@ -46,16 +45,16 @@ func ValidateDefaultProvisioning(cluster *ClusterConfig, baseDomain, adminEmail 
 }
 
 func (b *BootstrapConfig) Validate() error {
-	return b.DefaultUser.Validate()
+	return b.PlatformAdmin.Validate()
 }
 
-type DefaultPlatformAdminConfig struct {
+type PlatformAdminConfig struct {
 	Email    string `json:"email"`
 	Name     string `json:"name"`
 	Password string `json:"password"`
 }
 
-func (d *DefaultPlatformAdminConfig) Validate() error {
+func (d *PlatformAdminConfig) Validate() error {
 	if d.Email == "" {
 		return ErrEmptyEmail
 	}
@@ -70,40 +69,36 @@ func (d *DefaultPlatformAdminConfig) Validate() error {
 
 func NewBootstrapConfig() *BootstrapConfig {
 	return &BootstrapConfig{
-		DefaultUser: &DefaultPlatformAdminConfig{},
+		PlatformAdmin: &PlatformAdminConfig{},
 	}
 }
 
 func (b *BootstrapConfig) LoadEnvVariables() {
-	if val, ok := EnvDefaultUserEmail.Lookup(); ok {
-		b.DefaultUser.Email = val
+	if val, ok := EnvPlatformAdminEmail.Lookup(); ok {
+		b.PlatformAdmin.Email = val
 	}
 
-	if val, ok := EnvDefaultUserName.Lookup(); ok {
-		b.DefaultUser.Name = val
+	if val, ok := EnvPlatformAdminName.Lookup(); ok {
+		b.PlatformAdmin.Name = val
 	}
 
-	if val, ok := EnvDefaultUserPassword.Lookup(); ok {
-		b.DefaultUser.Password = val
+	if val, ok := EnvPlatformAdminPassword.Lookup(); ok {
+		b.PlatformAdmin.Password = val
 	}
 
-	if val, ok := EnvDefaultOrgName.Lookup(); ok {
-		b.PlatformOrgName = val
-	}
-
-	if val, ok := EnvDefaultBaseDomain.Lookup(); ok {
+	if val, ok := EnvPlatformBaseDomain.Lookup(); ok {
 		b.BaseDomain = val
 	}
 
-	if val, ok := EnvDefaultRegistryStorageSize.Lookup(); ok {
+	if val, ok := EnvPlatformRegistryStorageSize.Lookup(); ok {
 		b.RegistryStorageSize = val
 	}
 
-	if val, ok := EnvDefaultRegistryStorageClass.Lookup(); ok {
+	if val, ok := EnvPlatformRegistryStorageClass.Lookup(); ok {
 		b.RegistryStorageClass = val
 	}
 
-	if val, ok := EnvDefaultClusterRegistryName.Lookup(); ok {
+	if val, ok := EnvPlatformClusterRegistryName.Lookup(); ok {
 		b.RegistryName = val
 	}
 }

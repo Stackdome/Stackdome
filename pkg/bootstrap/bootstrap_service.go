@@ -57,7 +57,7 @@ func NewService(spec Spec) *Service {
 
 func (s *Service) Run(ctx context.Context) error {
 	if !s.clusterCfg.IsSet() {
-		s.logger.Info(ctx, "no default cluster configured; skipping platform bootstrap")
+		s.logger.Info(ctx, "no platform cluster configured; skipping platform bootstrap")
 		return nil
 	}
 
@@ -71,16 +71,16 @@ func (s *Service) Run(ctx context.Context) error {
 		admin,
 	)
 
-	cluster, cErr := s.clusterService.InternalUpsertDefaultCluster(sysCtx, &models.Cluster{
+	cluster, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
 		Name:           s.clusterCfg.Name,
 		OrganisationID: org.ID,
-		Default:        true,
+		Platform:       true,
 		ClusterURL:     s.clusterCfg.ClusterURL,
 		ClusterCAData:  s.clusterCfg.ClusterCAData,
 		Token:          s.clusterCfg.Token,
 	})
 	if cErr != nil {
-		return fmt.Errorf("failed to upsert default cluster: %w", cErr)
+		return fmt.Errorf("failed to upsert platform cluster: %w", cErr)
 	}
 
 	if err := s.ensurePlatformRegistry(sysCtx, org.ID, cluster.ID); err != nil {
@@ -91,18 +91,18 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) upsertAdminAndOrg(ctx context.Context) (*models.User, *models.Organisation, error) {
-	org, oErr := s.organisationService.InternalGetDefaultOrg(ctx)
+	org, oErr := s.organisationService.InternalGetPlatformOrg(ctx)
 	if oErr != nil {
-		return nil, nil, fmt.Errorf("default org missing: %w", oErr)
+		return nil, nil, fmt.Errorf("platform org missing: %w", oErr)
 	}
 
-	existing, gErr := s.userService.InternalGetByEmail(ctx, s.bootstrapCfg.DefaultUser.Email)
+	existing, gErr := s.userService.InternalGetByEmail(ctx, s.bootstrapCfg.PlatformAdmin.Email)
 	if gErr != nil && gErr.Code != errors.ErrorNotFound {
 		return nil, nil, fmt.Errorf("failed to look up platform admin: %w", gErr)
 	}
 	if gErr == nil {
-		if bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(s.bootstrapCfg.DefaultUser.Password)) != nil {
-			hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.DefaultUser.Password), bcrypt.DefaultCost)
+		if bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(s.bootstrapCfg.PlatformAdmin.Password)) != nil {
+			hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.PlatformAdmin.Password), bcrypt.DefaultCost)
 			if hErr != nil {
 				return nil, nil, fmt.Errorf("failed to hash admin password: %w", hErr)
 			}
@@ -116,13 +116,13 @@ func (s *Service) upsertAdminAndOrg(ctx context.Context) (*models.User, *models.
 	if _, pErr := s.projectService.InternalCreateDefaultProject(ctx, org.ID); pErr != nil {
 		return nil, nil, fmt.Errorf("failed to create platform default project: %w", pErr)
 	}
-	hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.DefaultUser.Password), bcrypt.DefaultCost)
+	hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.PlatformAdmin.Password), bcrypt.DefaultCost)
 	if hErr != nil {
 		return nil, nil, fmt.Errorf("failed to hash admin password: %w", hErr)
 	}
 	user, uErr := s.userService.InternalCreate(ctx, &models.User{
-		Email:          s.bootstrapCfg.DefaultUser.Email,
-		Name:           s.bootstrapCfg.DefaultUser.Name,
+		Email:          s.bootstrapCfg.PlatformAdmin.Email,
+		Name:           s.bootstrapCfg.PlatformAdmin.Name,
 		Password:       string(hashed),
 		Role:           models.OrgAdminRole,
 		OrganisationID: org.ID,

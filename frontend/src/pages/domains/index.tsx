@@ -69,7 +69,7 @@ export default function DomainsPage() {
       const updatedOrg = await organizationApi.updateOrganization(orgId, {
         id: organization.id,
         name: organization.name,
-        is_default: organization.is_default,
+        is_platform: organization.is_platform,
         domains: validatedDomains,
       });
 

@@ -77,4 +77,5 @@ var MigrationList = []*gormigrate.Migration{
 	addPreviewStackCommentID(),
 	addGitInstallationIDUniqueIndex(),
 	addPreviewCommentPending(),
+	renameDefaultToPlatform(),
 }

@@ -102,21 +102,6 @@ func (mr *MockClusterServiceMockRecorder) GetClusterForOrg(ctx, orgID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetClusterForOrg), ctx, orgID)
 }
 
-// GetDefaultCluster mocks base method.
-func (m *MockClusterService) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDefaultCluster", ctx)
-	ret0, _ := ret[0].(*models.Cluster)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetDefaultCluster indicates an expected call of GetDefaultCluster.
-func (mr *MockClusterServiceMockRecorder) GetDefaultCluster(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultCluster", reflect.TypeOf((*MockClusterService)(nil).GetDefaultCluster), ctx)
-}
-
 // GetOwnedClusterForOrg mocks base method.
 func (m *MockClusterService) GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -130,6 +115,21 @@ func (m *MockClusterService) GetOwnedClusterForOrg(ctx context.Context, orgID st
 func (mr *MockClusterServiceMockRecorder) GetOwnedClusterForOrg(ctx, orgID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnedClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetOwnedClusterForOrg), ctx, orgID)
+}
+
+// GetPlatformCluster mocks base method.
+func (m *MockClusterService) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPlatformCluster", ctx)
+	ret0, _ := ret[0].(*models.Cluster)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetPlatformCluster indicates an expected call of GetPlatformCluster.
+func (mr *MockClusterServiceMockRecorder) GetPlatformCluster(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformCluster", reflect.TypeOf((*MockClusterService)(nil).GetPlatformCluster), ctx)
 }
 
 // InjectClusterManager mocks base method.
@@ -174,17 +174,17 @@ func (mr *MockClusterServiceMockRecorder) InternalListAllClusters(ctx any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListAllClusters", reflect.TypeOf((*MockClusterService)(nil).InternalListAllClusters), ctx)
 }
 
-// InternalUpsertDefaultCluster mocks base method.
-func (m *MockClusterService) InternalUpsertDefaultCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+// InternalUpsertPlatformCluster mocks base method.
+func (m *MockClusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalUpsertDefaultCluster", ctx, spec)
+	ret := m.ctrl.Call(m, "InternalUpsertPlatformCluster", ctx, spec)
 	ret0, _ := ret[0].(*models.Cluster)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// InternalUpsertDefaultCluster indicates an expected call of InternalUpsertDefaultCluster.
-func (mr *MockClusterServiceMockRecorder) InternalUpsertDefaultCluster(ctx, spec any) *gomock.Call {
+// InternalUpsertPlatformCluster indicates an expected call of InternalUpsertPlatformCluster.
+func (mr *MockClusterServiceMockRecorder) InternalUpsertPlatformCluster(ctx, spec any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertDefaultCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertDefaultCluster), ctx, spec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertPlatformCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertPlatformCluster), ctx, spec)
 }

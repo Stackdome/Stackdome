@@ -82,11 +82,11 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("MinIO deployment failed: %w", err)
 	}
 
-	// Export DEFAULT_* env from the provisioned cluster so the server seeds
-	// platform defaults (Default=true cluster, platform org, base domain) at boot.
-	logger.Info("Exporting default-provisioning environment")
-	if err := exportDefaultProvisioningEnv(ctx, env.Cluster); err != nil {
-		return fmt.Errorf("failed to export default provisioning env: %w", err)
+	// Export PLATFORM_* env from the provisioned cluster so the server seeds
+	// platform defaults (Platform=true cluster, platform org, base domain) at boot.
+	logger.Info("Exporting platform-provisioning environment")
+	if err := exportPlatformProvisioningEnv(ctx, env.Cluster); err != nil {
+		return fmt.Errorf("failed to export platform provisioning env: %w", err)
 	}
 
 	// Initialize server
@@ -98,7 +98,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	}
 
 	// Initialize client: log in as the platform admin the server seeded at boot
-	// and adopt the Default cluster + platform org for the suite.
+	// and adopt the platform cluster + platform org for the suite.
 	logger.Info("Bootstrapping client against platform defaults")
 	clientManager := NewClientManager(serverManager.GetBaseURL(), logger)
 	env.clientManager = clientManager

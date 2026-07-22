@@ -4123,7 +4123,7 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DomainName'
-        is_default:
+        is_platform:
           type: boolean
         created_at:
           type: string
@@ -4514,7 +4514,7 @@ components:
           type: string
         organisation_id:
           type: string
-        default:
+        platform:
           type: boolean
         cluster_url:
           type: string

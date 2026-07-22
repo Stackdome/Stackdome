@@ -12,7 +12,7 @@ type Cluster struct {
 	Name                   string `gorm:"not null;check:name <> ''"`
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
-	Default                bool
+	Platform               bool
 	ClusterURL             string `gorm:"not null;check:cluster_url <> ''"`
 	EncryptedClusterCAData string `gorm:"not null"`
 	EncryptedToken         string `gorm:"not null"`

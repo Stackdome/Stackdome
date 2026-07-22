@@ -13,7 +13,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-var _ = Describe("Organisation.Default", func() {
+var _ = Describe("Organisation.Platform", func() {
 	var (
 		ctrl  *gomock.Controller
 		store *mocks.MockOrganisationStore
@@ -31,32 +31,32 @@ var _ = Describe("Organisation.Default", func() {
 		}
 	})
 
-	It("persists the Default flag on InternalCreate and returns it from InternalGetDefaultOrg", func() {
-		created := &models.Organisation{ID: "org-1", Name: "platform", Default: true}
+	It("persists the Platform flag on InternalCreate and returns it from InternalGetPlatformOrg", func() {
+		created := &models.Organisation{ID: "org-1", Name: "platform", Platform: true}
 
 		store.EXPECT().Create(gomock.Any(), gomock.Any()).
 			DoAndReturn(func(_ context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-				Expect(spec.Default).To(BeTrue())
+				Expect(spec.Platform).To(BeTrue())
 				return created, nil
 			})
 		store.EXPECT().Get(gomock.Any(), "org-1").Return(created, nil)
 
-		org, serr := svc.InternalCreate(ctx, &models.Organisation{Name: "platform", Default: true})
+		org, serr := svc.InternalCreate(ctx, &models.Organisation{Name: "platform", Platform: true})
 		Expect(serr).To(BeNil())
-		Expect(org.Default).To(BeTrue())
+		Expect(org.Platform).To(BeTrue())
 
-		store.EXPECT().GetDefaultOrg(gomock.Any()).Return(created, nil)
+		store.EXPECT().GetPlatformOrg(gomock.Any()).Return(created, nil)
 
-		got, serr := svc.InternalGetDefaultOrg(ctx)
+		got, serr := svc.InternalGetPlatformOrg(ctx)
 		Expect(serr).To(BeNil())
 		Expect(got.ID).To(Equal("org-1"))
-		Expect(got.Default).To(BeTrue())
+		Expect(got.Platform).To(BeTrue())
 	})
 
-	It("returns ErrorNotFound from InternalGetDefaultOrg when no org is flagged default", func() {
-		store.EXPECT().GetDefaultOrg(gomock.Any()).Return(nil, errors.NotFound("default organisation not found"))
+	It("returns ErrorNotFound from InternalGetPlatformOrg when no org is flagged platform", func() {
+		store.EXPECT().GetPlatformOrg(gomock.Any()).Return(nil, errors.NotFound("platform organisation not found"))
 
-		org, serr := svc.InternalGetDefaultOrg(ctx)
+		org, serr := svc.InternalGetPlatformOrg(ctx)
 		Expect(org).To(BeNil())
 		Expect(serr).ToNot(BeNil())
 		Expect(serr.Code).To(Equal(errors.ErrorNotFound))

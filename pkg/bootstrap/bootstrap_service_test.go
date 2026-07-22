@@ -75,12 +75,11 @@ func (d *bootstrapDeps) service(bootstrapCfg *config.BootstrapConfig, clusterCfg
 
 func fullBootstrapConfig() *config.BootstrapConfig {
 	return &config.BootstrapConfig{
-		DefaultUser: &config.DefaultPlatformAdminConfig{
+		PlatformAdmin: &config.PlatformAdminConfig{
 			Email:    adminEmail,
 			Name:     adminName,
 			Password: adminPassword,
 		},
-		PlatformOrgName:      orgName,
 		BaseDomain:           baseDomain,
 		RegistryStorageSize:  storageSize,
 		RegistryStorageClass: storageClass,
@@ -120,7 +119,7 @@ var _ = Describe("Bootstrap", func() {
 		ctrl.Finish()
 	})
 
-	When("no default cluster is configured", func() {
+	When("no platform cluster is configured", func() {
 		It("no-ops without touching any service", func() {
 			svc := deps.service(fullBootstrapConfig(), &config.ClusterConfig{})
 			Expect(svc.Run(ctx)).To(Succeed())
@@ -128,9 +127,9 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	When("bootstrapping a fresh install", func() {
-		It("adopts the default org and provisions admin, policies, cluster, registry and domain", func() {
-			deps.orgSvc.EXPECT().InternalGetDefaultOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Name: orgName, Default: true}, nil)
+		It("adopts the platform org and provisions admin, policies, cluster, registry and domain", func() {
+			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
+				Return(&models.Organisation{ID: orgID, Name: orgName, Platform: true}, nil)
 
 			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).
 				Return(nil, errors.NotFound("user not found"))
@@ -151,11 +150,11 @@ var _ = Describe("Bootstrap", func() {
 			deps.policyMgr.EXPECT().AddGroupingPolicy(userID, string(models.OrgAdminRole), orgID).Return(nil)
 			deps.policyMgr.EXPECT().AddGroupingPolicy(userID, string(models.OrgMemberRole), orgID).Return(nil)
 
-			deps.clusterSvc.EXPECT().InternalUpsertDefaultCluster(gomock.Any(), gomock.Any()).
+			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(_ context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 					Expect(spec.Name).To(Equal(clusterName))
 					Expect(spec.OrganisationID).To(Equal(orgID))
-					Expect(spec.Default).To(BeTrue())
+					Expect(spec.Platform).To(BeTrue())
 					Expect(spec.ClusterURL).To(Equal(clusterURL))
 					Expect(spec.ClusterCAData).To(Equal(clusterCA))
 					Expect(spec.Token).To(Equal(clusterToken))
@@ -192,10 +191,10 @@ var _ = Describe("Bootstrap", func() {
 		It("is idempotent and does not update the password", func() {
 			existingUser := &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID, Password: hashOf(adminPassword)}
 			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).Return(existingUser, nil)
-			deps.orgSvc.EXPECT().InternalGetDefaultOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Name: orgName, Default: true}, nil)
+			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
+				Return(&models.Organisation{ID: orgID, Name: orgName, Platform: true}, nil)
 
-			deps.clusterSvc.EXPECT().InternalUpsertDefaultCluster(gomock.Any(), gomock.Any()).
+			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				Return(&models.Cluster{ID: clusterID}, nil)
 
 			deps.registrySvc.EXPECT().GetForOrg(gomock.Any(), orgID).
@@ -212,8 +211,8 @@ var _ = Describe("Bootstrap", func() {
 		It("rotates the password exactly once", func() {
 			existingUser := &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID, Password: hashOf("stale-password")}
 			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).Return(existingUser, nil)
-			deps.orgSvc.EXPECT().InternalGetDefaultOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Default: true}, nil)
+			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
+				Return(&models.Organisation{ID: orgID, Platform: true}, nil)
 
 			deps.userSvc.EXPECT().InternalUpdatePassword(gomock.Any(), userID, gomock.Any()).
 				DoAndReturn(func(_ context.Context, _ string, hashed string) *errors.ServiceError {
@@ -221,7 +220,7 @@ var _ = Describe("Bootstrap", func() {
 					return nil
 				})
 
-			deps.clusterSvc.EXPECT().InternalUpsertDefaultCluster(gomock.Any(), gomock.Any()).
+			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				Return(&models.Cluster{ID: clusterID}, nil)
 			deps.registrySvc.EXPECT().GetForOrg(gomock.Any(), orgID).
 				Return(&models.ClusterImageRegistry{ID: "reg-1"}, nil)
@@ -237,10 +236,10 @@ var _ = Describe("Bootstrap", func() {
 		It("skips registry provisioning entirely", func() {
 			existingUser := &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID, Password: hashOf(adminPassword)}
 			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).Return(existingUser, nil)
-			deps.orgSvc.EXPECT().InternalGetDefaultOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Default: true}, nil)
+			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
+				Return(&models.Organisation{ID: orgID, Platform: true}, nil)
 
-			deps.clusterSvc.EXPECT().InternalUpsertDefaultCluster(gomock.Any(), gomock.Any()).
+			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				Return(&models.Cluster{ID: clusterID}, nil)
 			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
 				Return(&models.OrganisationDomain{Domain: baseDomain}, nil)

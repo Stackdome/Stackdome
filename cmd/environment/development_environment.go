@@ -221,8 +221,8 @@ func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := config.ValidateDefaultProvisioning(d.Config.DefaultCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.DefaultUser.Email); err != nil {
-		return fmt.Errorf("invalid default-provisioning config: %w", err)
+	if err := config.ValidatePlatformProvisioning(d.Config.PlatformCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.PlatformAdmin.Email); err != nil {
+		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
 }
@@ -862,7 +862,7 @@ func (d *developmentEnvironment) bootstrapPlatformDefaults(ctx context.Context) 
 		OrganisationDomainService: d.Services.OrganisationDomainService,
 		PolicyManager:             d.ResourceAccessPolicyManager,
 		BootstrapConfig:           d.BootstrapConfig,
-		ClusterConfig:             d.Config.DefaultCluster,
+		ClusterConfig:             d.Config.PlatformCluster,
 		Logger:                    d.Logger,
 	})
 	if err := svc.Run(ctx); err != nil {
