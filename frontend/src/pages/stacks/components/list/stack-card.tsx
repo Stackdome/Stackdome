@@ -134,7 +134,7 @@ export function CardMetaGrid({ rows }: { rows: Array<CardMetaRow | false | null 
   const present = rows.filter((r): r is CardMetaRow => Boolean(r));
   if (present.length === 0) return null;
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1.5">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1.5">
       {present.map((r) => (
         <Fragment key={r.label}>
           <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">{r.label}</span>
