@@ -1,69 +1,37 @@
 import type { Cluster } from "../types";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Boxes, Edit, Trash2 } from "lucide-react";
+import { Boxes, ChevronRight } from "lucide-react";
 
 interface ClusterListProps {
   clusters: Cluster[];
-  onEdit: (cluster: Cluster) => void;
-  onDelete: (cluster: Cluster) => void;
+  onOpen: (cluster: Cluster) => void;
 }
 
-export function ClusterList({ clusters, onEdit, onDelete }: ClusterListProps) {
+export function ClusterList({ clusters, onOpen }: ClusterListProps) {
   if (!clusters.length) {
     return <div className="text-muted-foreground p-4">No clusters found.</div>;
   }
 
   return (
-    <TooltipProvider>
-      <div>
-        {clusters.map((cluster) => (
-          <div key={cluster.id} className="flex items-center justify-between p-4 border-b last:border-b-0">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Boxes className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <div className="font-medium">{cluster.name}</div>
-                  <div className="text-xs text-muted-foreground">ID: {cluster.id}</div>
-                </div>
-              </div>
+    <div className="divide-y divide-border">
+      {clusters.map((cluster) => (
+        <button
+          key={cluster.id}
+          type="button"
+          onClick={() => onOpen(cluster)}
+          className="flex w-full items-center gap-4 px-4 py-3 text-left hover:bg-muted/50"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card">
+              <Boxes className="h-5 w-5 shrink-0 text-muted-foreground" />
             </div>
-            <div className="flex gap-1">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onEdit(cluster)}
-                    className="h-8 w-8 p-0"
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Edit cluster</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    aria-label="Delete cluster"
-                    onClick={() => onDelete(cluster)}
-                    className="h-8 w-8 p-0 text-danger hover:text-danger hover:bg-danger-bg"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Delete cluster</p>
-                </TooltipContent>
-              </Tooltip>
+            <div className="min-w-0">
+              <p className="truncate text-[15px] font-medium text-foreground">{cluster.name}</p>
+              <p className="truncate font-mono text-[11.5px] text-fg-muted">{cluster.id}</p>
             </div>
           </div>
-        ))}
-      </div>
-    </TooltipProvider>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+        </button>
+      ))}
+    </div>
   );
 }

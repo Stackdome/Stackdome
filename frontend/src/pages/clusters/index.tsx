@@ -9,9 +9,8 @@ import type { ClusterData } from "./hooks/use-clusters";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState, LimitedAction } from "@/components/branded";
-import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteCluster, createCluster } from "@/api/clusters";
+import { createCluster } from "@/api/clusters";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
@@ -22,7 +21,6 @@ export default function ClustersPage() {
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const confirm = useConfirm();
   const { toast } = useToast();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
 
@@ -33,39 +31,8 @@ export default function ClustersPage() {
     setPathLoading(currentPath, loading);
   }, [setCustomLabel, setPathLoading, loading]);
 
-  function handleEdit(cluster: Cluster) {
+  function handleOpen(cluster: Cluster) {
     navigate(`/clusters/${cluster.id}`);
-  }
-
-  async function handleDelete(cluster: Cluster) {
-    if (!cluster.id) return;
-    const ok = await confirm({
-      title: "Delete cluster?",
-      confirmLabel: "Delete",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) {
-      toast({ title: "Failed to delete cluster", description: "No organization selected.", variant: "destructive" });
-      return;
-    }
-    try {
-      await deleteCluster(orgId, cluster.id);
-      refetch();
-      toast({
-        title: "Cluster unlinked",
-        description: "The cluster has been unlinked successfully.",
-        variant: "success",
-      });
-    } catch (e) {
-      console.error('Failed to unlink cluster:', e);
-      toast({
-        title: "Failed to unlink cluster",
-        description: "Failed to unlink cluster. Please try again.",
-        variant: "destructive",
-      });
-    }
   }
 
   async function handleAddCluster(clusterData: ClusterData) {
@@ -151,7 +118,7 @@ export default function ClustersPage() {
           />
         ) : (
           <Panel title="All Clusters" count={clusters.length} bodyClassName="p-0">
-            <ClusterList clusters={clusters} onEdit={handleEdit} onDelete={(cluster) => void handleDelete(cluster)} />
+            <ClusterList clusters={clusters} onOpen={handleOpen} />
           </Panel>
         )}
 
