@@ -61,7 +61,7 @@ export function UpdateCredentialsDialog({ integration, onOpenChange, onUpdated }
           ? { basic: { username: trimmedUsername, password: parsed.data.token } }
           : { token: parsed.data.token },
       });
-      toast({ title: "Credentials updated" });
+      toast({ title: "Credentials updated", variant: "success" });
       onOpenChange(false);
       onUpdated();
     } catch (e) {

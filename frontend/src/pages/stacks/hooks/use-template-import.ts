@@ -43,6 +43,7 @@ export function useTemplateImport(): TemplateImportState & TemplateImportActions
       toast({
         title: `Template imported with ${count} warning${count === 1 ? "" : "s"}`,
         description,
+        variant: "warning",
         // Give the reader time — these carry follow-up actions.
         duration: 15000,
       });

@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useToast } from "@/components/ui/use-toast";
+import { useConfirm } from "@/components/branded/confirm";
 import { useInvites } from "../hooks/use-invites";
 import type { PendingRow as PendingRowModel } from "../hooks/use-users";
 
@@ -19,6 +20,7 @@ interface PendingRowMenuProps {
 export function PendingRowMenu({ row, onChanged }: PendingRowMenuProps) {
   const { resend, revoke } = useInvites();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
 
   async function handleResend() {
@@ -38,6 +40,12 @@ export function PendingRowMenu({ row, onChanged }: PendingRowMenuProps) {
 
   async function handleRevoke() {
     if (busy) return;
+    const ok = await confirm({
+      title: `Revoke invite for ${row.email}?`,
+      confirmLabel: "Revoke",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       await revoke(row.id);

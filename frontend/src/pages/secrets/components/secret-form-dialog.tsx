@@ -648,7 +648,8 @@ export function SecretFormDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        {/* -mx/px pair keeps input focus rings from clipping at the scroll container's edge. */}
+        <div className="-mx-1 flex-1 overflow-y-auto px-1">
           <div className="space-y-5 py-4">
             {error && (
               <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">

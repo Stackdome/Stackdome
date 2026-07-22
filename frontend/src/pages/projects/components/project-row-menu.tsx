@@ -24,7 +24,10 @@ export function ProjectRowMenu({ project, onRename, onDelete }: ProjectRowMenuPr
   }
 
   return (
-    <DropdownMenu>
+    // Non-modal: menu items open the Rename/Delete dialogs in the same tick;
+    // a modal menu's body pointer-events lock would race those opens
+    // (radix-ui/primitives#1836).
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" aria-label="Project actions">
           <MoreHorizontal />

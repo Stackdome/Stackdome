@@ -4,6 +4,7 @@ import {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  useNodesInitialized,
   useReactFlow,
   type Edge,
   type NodeMouseHandler,
@@ -52,16 +53,7 @@ import {
   type AttachmentNodeData,
   type ResourceNodeData,
 } from "@/pages/stacks/lib/canvas/graph-from-connections";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import { DrawerStack, type DrawerPanelDescriptor } from "./drawer-stack";
 import {
   replaceStack,
@@ -105,8 +97,6 @@ interface ArchitectureTabProps {
   /** Immediate, confirm-gated server-side volume deletion. Undefined for draft
    *  (unsaved) stacks — nothing exists server-side to delete yet. */
   onDeleteVolume?: (name: string) => Promise<boolean>;
-  /** Gates double-confirm while the delete is in flight. */
-  deletingVolume?: boolean;
   /** Names of volumes that already exist server-side; their spec is immutable. */
   persistedVolumeNames?: ReadonlySet<string>;
   /** A release is in flight — node status dots show pending until it terminates
@@ -136,7 +126,6 @@ function StackCanvasFlow({
   topologyIds,
   topologyRefreshKey,
   onDeleteVolume,
-  deletingVolume,
   persistedVolumeNames,
   releaseInFlight,
   liveStatusResources,
@@ -191,10 +180,23 @@ function StackCanvasFlow({
   const [showConnections, setShowConnections] = useState(true);
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
-  const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
-  const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
+  const confirm = useConfirm();
   const { fitView, getIntersectingNodes, getViewport, setViewport } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
+
+  // One-time fit when the canvas first gains measured nodes: async imports and
+  // stack loads populate nodes after mount, so ReactFlow's own fitView prop
+  // fires against an empty canvas. Never re-fits — the hook re-flips when
+  // nodes are added mid-edit, and a re-fit then would yank the viewport.
+  const nodesInitialized = useNodesInitialized();
+  const didInitialFit = useRef(false);
+  useEffect(() => {
+    if (!nodesInitialized || didInitialFit.current) return;
+    didInitialFit.current = true;
+    // One frame late: measurement flips `nodesInitialized` before the final
+    // card sizes (attachment rows) and container height settle.
+    requestAnimationFrame(() => fitView(FIT_OPTIONS));
+  }, [nodesInitialized, fitView]);
 
   // When the drawer claims/releases horizontal space, the canvas container is
   // squeezed from the right. Pan the viewport by half that delta so the point
@@ -486,19 +488,48 @@ function StackCanvasFlow({
       // Saved stacks: destroy the volume server-side now (confirm dialog already
       // carried the data-loss warning). Draft stacks have nothing to delete yet —
       // onDeleteVolume is undefined and the local edit above is the whole story.
-      void onDeleteVolume?.(volumeName).then(() => setPendingDeleteVolume(null));
-      if (!onDeleteVolume) setPendingDeleteVolume(null);
+      void onDeleteVolume?.(volumeName);
     },
     [applyDraft, onDeleteVolume],
   );
 
-  const onDeleteResourceConfirmed = useCallback(
-    (resourceName: string) => {
+  const onRequestDeleteVolume = useCallback(
+    async (volumeName: string) => {
+      const ok = await confirm(
+        topologyIds == null
+          ? {
+            title: `Remove volume “${volumeName}”?`,
+            confirmLabel: "Remove",
+            variant: "destructive",
+          }
+          : {
+            title: `Delete volume “${volumeName}”?`,
+            description:
+                "This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone.",
+            confirmLabel: "Delete",
+            variant: "destructive",
+          },
+      );
+      if (!ok) return;
+      onDeleteVolumeConfirmed(volumeName);
+    },
+    [confirm, topologyIds, onDeleteVolumeConfirmed],
+  );
+
+  const onRequestDeleteResource = useCallback(
+    async (resourceName: string) => {
+      const ok = await confirm({
+        title: `Delete service “${resourceName}”?`,
+        description:
+          "The service and its configuration are removed when the stack deploys. This cannot be undone after deploy.",
+        confirmLabel: "Delete",
+        variant: "destructive",
+      });
+      if (!ok) return;
       applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((r) => r.name !== resourceName) }));
       setDrawerStack([]);
-      setPendingDeleteResource(null);
     },
-    [applyDraft],
+    [confirm, applyDraft],
   );
 
   const onCreateVolume = useCallback(
@@ -638,7 +669,7 @@ function StackCanvasFlow({
         volumeName={frontEntry.name}
         session={session}
         onClose={popDrawer}
-        onRequestRemove={setPendingDeleteVolume}
+        onRequestRemove={onRequestDeleteVolume}
         persisted={persistedVolumeNames?.has(frontEntry.name) ?? false}
       />
     ) : null;
@@ -696,10 +727,10 @@ function StackCanvasFlow({
             setAddVolumeOpen(true);
           });
         }}
-        onDeleteResource={(name) => deferOpen(() => setPendingDeleteResource(name))}
+        onDeleteResource={onRequestDeleteResource}
         onDisconnectVolume={onDisconnectVolume}
         onOpenVolume={openVolumeFromCanvas}
-        onRequestDeleteVolume={(name) => deferOpen(() => setPendingDeleteVolume(name))}
+        onRequestDeleteVolume={onRequestDeleteVolume}
         onRequestAttach={(volumeName) => deferOpen(() => setAttachRequest({ volumeName, resourceIdx: null }))}
       />
       <MountPathDialog
@@ -719,50 +750,6 @@ function StackCanvasFlow({
         }}
         onAttach={onAttachConfirm}
       />
-      <AlertDialog open={pendingDeleteVolume != null} onOpenChange={(o) => !o && setPendingDeleteVolume(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {topologyIds == null ? "Remove volume" : "Delete volume"} "{pendingDeleteVolume}"?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {topologyIds == null
-                ? "This volume hasn't been created yet. It will be removed from your draft."
-                : "This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingVolume}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-danger text-white hover:bg-danger/90"
-              disabled={!!deletingVolume}
-              onClick={() => pendingDeleteVolume && onDeleteVolumeConfirmed(pendingDeleteVolume)}
-            >
-              {deletingVolume ? "Deleting…" : topologyIds == null ? "Remove volume" : "Delete volume"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={pendingDeleteResource != null} onOpenChange={(o) => !o && setPendingDeleteResource(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete service “{pendingDeleteResource}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The service and its configuration are removed when the stack deploys. This cannot be undone after
-              deploy.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-danger text-white hover:bg-danger/90"
-              onClick={() => pendingDeleteResource && onDeleteResourceConfirmed(pendingDeleteResource)}
-            >
-              Delete service
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

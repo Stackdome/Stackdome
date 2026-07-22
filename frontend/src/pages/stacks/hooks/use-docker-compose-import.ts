@@ -82,6 +82,7 @@ export function useDockerComposeImport(): ImportState & ImportActions {
         toast({
           title: `Imported with ${count} warning${count === 1 ? '' : 's'}`,
           description,
+          variant: 'warning',
           // Give the reader time — these carry follow-up actions.
           duration: 15000,
         });

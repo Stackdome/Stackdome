@@ -16,18 +16,17 @@ import {
 import { cn } from "@/lib/utils";
 import {
   StatusRail,
-  StatusWord,
   EndpointPills,
   CardFooterMeta,
+  CardMetaGrid,
   relativeAge,
+  absoluteAge,
   type RailTone,
 } from "@/pages/stacks/components/list/stack-card";
 import type { PreviewStack, PreviewPhase } from "@/api/preview-envs";
 
 interface PreviewEnvCardProps {
   env: PreviewStack;
-  /** Repository configuration name shown in the identity block. */
-  configName?: string;
   onSync?: (env: PreviewStack) => void;
   onDelete?: (env: PreviewStack) => void;
 }
@@ -43,17 +42,14 @@ function previewTone(phase: PreviewPhase | undefined): { tone: RailTone; word: s
  * because the endpoint pills (and the kebab trigger) inside are real
  * interactive elements — nested <a>/<button> is invalid HTML.
  */
-export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnvCardProps) {
+export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
   const navigate = useNavigate();
   const phase = env.status?.phase;
-  const variant = previewStatusVariant(phase);
   const { tone, word } = previewTone(phase);
   const urls = env.status?.outputs?.urls ?? [];
+  const hasLinks = urls.some((u) => u.url);
   const age = relativeAge(env.updated_at || env.created_at);
   const clickable = Boolean(env.stack_id);
-  const reason = env.status?.reason;
-  const failed = variant === "error" && Boolean(reason);
-  const stackfileHint = failed && /stackfile/i.test(reason ?? "");
   const menuDisabled = phase === "Deleting";
 
   const goToStack = () => navigate(`/stacks/${env.stack_id}`);
@@ -83,7 +79,6 @@ export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnv
           <span className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand">
             PR #{env.pr_number}
           </span>
-          <StatusWord tone={tone}>{word}</StatusWord>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -97,60 +92,73 @@ export function PreviewEnvCard({ env, configName, onSync, onDelete }: PreviewEnv
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              align="end"
+              side="right"
+              align="start"
               className="w-[160px]"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Deferred so the menu finishes closing before the dialog mounts — see radix-ui/primitives#1836 (canonical note in row-menu.tsx). */}
-              <DropdownMenuItem
-                disabled={menuDisabled}
-                onSelect={() => setTimeout(() => onSync?.(env), 0)}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Sync
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={menuDisabled}
-                onSelect={() => setTimeout(() => onDelete?.(env), 0)}
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              {onSync && (
+                <DropdownMenuItem
+                  disabled={menuDisabled}
+                  onSelect={() => setTimeout(() => onSync(env), 0)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Sync
+                </DropdownMenuItem>
+              )}
+              {/* No deferral needed: the confirm service defers its own open a
+                  tick past the menu close. onSync above keeps its setTimeout —
+                  it opens a plain Dialog directly. */}
+              {onDelete && (
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={menuDisabled}
+                  onSelect={() => onDelete(env)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        {/* Identity: repo / branch rows */}
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1.5">
-          {(configName ?? env.name) && (
-            <>
-              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">repo</span>
-              <span className="truncate font-mono text-[11px] text-fg-2">{configName ?? env.name}</span>
-            </>
-          )}
-          {env.branch && (
-            <>
-              <span className="font-mono text-[9px] uppercase tracking-[1.2px] text-fg-muted">branch</span>
-              <span className="truncate font-mono text-[11px] text-brand">{env.branch}</span>
-            </>
-          )}
-        </div>
-
-        {/* Bottom-anchored group: pills (or the failed-reason strip) sit just
-            above the footer in every card variant. */}
+        {/* Bottom-anchored group above the footer. The meta grid and the
+            endpoint pills share one slot: at rest the meta shows; on
+            hover/focus they crossfade so the pills take its place. The swap
+            only arms when there are links, so failed/pending cards keep their
+            meta on hover. Failure details live on the stack detail page, not
+            the card — the FAILED status word is the signal. */}
         <div className="mt-auto flex flex-col gap-3.5">
-          {failed ? (
-            <div className="rounded-sm bg-danger-bg px-2 py-1.5 text-xs text-danger line-clamp-2">
-              <span className="font-semibold">{reason}:</span> {env.status?.message}
-              {stackfileHint && (
-                <span className="block">Check the stackfile path in Settings.</span>
+          <div className="relative">
+            <div
+              className={cn(
+                hasLinks &&
+                  "transition-opacity duration-150 group-hover:opacity-0 group-focus-within:opacity-0",
               )}
+            >
+              <CardMetaGrid
+                rows={[
+                  env.branch ? { label: "branch", value: env.branch } : null,
+                  env.commit
+                    ? { label: "commit", value: <span className="tabular-nums">{env.commit.slice(0, 7)}</span> }
+                    : null,
+                ]}
+              />
             </div>
-          ) : (
-            <EndpointPills urls={urls} />
-          )}
-          <CardFooterMeta commit={env.commit ? env.commit.slice(0, 7) : null} age={age} />
+            {hasLinks && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
+                <EndpointPills urls={urls} />
+              </div>
+            )}
+          </div>
+          <CardFooterMeta
+            tone={tone}
+            word={word}
+            age={age}
+            ageTitle={absoluteAge(env.updated_at || env.created_at)}
+          />
         </div>
       </div>
     </Card>
