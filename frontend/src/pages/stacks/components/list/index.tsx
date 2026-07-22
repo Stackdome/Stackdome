@@ -313,7 +313,12 @@ export default function StacksPage() {
               description="Try a different search or status filter."
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <div
+              // auto-fill sizes off the container (not viewport breakpoints), and
+              // the 360px cap keeps cards from stretching on in-between widths.
+              className="grid gap-4"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(300px, 360px))" }}
+            >
               {filtered.map((stack) => (
                 <DeployStackCard
                   key={stack.id || stack.name}
