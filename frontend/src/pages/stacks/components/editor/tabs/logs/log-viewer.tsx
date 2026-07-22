@@ -171,7 +171,8 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
       {/* Log Display — near-black terminal panel */}
       {logText ? (
         <div className="overflow-hidden rounded-md border border-border bg-[#070a0f]">
-          <div className="h-[560px]">
+          {/* Viewport-bound: the terminal fills the rest of the page below the toolbar. */}
+          <div style={{ height: "calc(100vh - 220px)", minHeight: 360 }}>
             <LazyLog
               text={logText}
               extraLines={1}
@@ -179,7 +180,7 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
               caseInsensitive
               selectableLines
               follow={filters.timeRange === 'live-4h'}
-              height={560}
+              height="auto"
               style={{
                 backgroundColor: '#070a0f',
                 color: '#94a3b8',
