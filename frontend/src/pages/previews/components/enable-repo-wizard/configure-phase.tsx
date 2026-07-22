@@ -148,13 +148,13 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
               setMaxActive(Number.isNaN(n) ? 1 : Math.max(1, Math.floor(n)));
               setFieldErrors((prev) => ({ ...prev, maxActive: undefined }));
             }}
-            className="w-28"
+            className="w-28 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
         </FieldShell>
 
         <FieldShell
           label="Environment variables (optional)"
-          hint="Applied to every preview. Use the Secret source to reference a saved secret — never paste raw secret values."
+          hint="Applied to every preview. Reference saved secrets with the Secret source instead of pasting raw values."
           error={fieldErrors.env}
         >
           <EnvVarsEditor

@@ -61,10 +61,15 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
                 value={refMatch[1] || ""}
                 onValueChange={(name) => updateRow(index, { value: secretRef(name) })}
               >
-                <SelectTrigger aria-label="Secret" className="flex-1 font-mono text-xs">
-                  <SelectValue placeholder="select secret..." />
+                <SelectTrigger aria-label="Secret" className="flex-1 text-xs">
+                  <SelectValue placeholder="Select secret…" />
                 </SelectTrigger>
                 <SelectContent>
+                  {genericSecrets.length === 0 && refMatch[1] === "" && (
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      No secrets yet. Create one on the Secrets page.
+                    </div>
+                  )}
                   {genericSecrets.map((s) => (
                     <SelectItem key={s.id} value={s.name}>
                       {s.name}
