@@ -63,6 +63,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import { DrawerStack, type DrawerPanelDescriptor } from "./drawer-stack";
 import {
   replaceStack,
@@ -106,8 +107,6 @@ interface ArchitectureTabProps {
   /** Immediate, confirm-gated server-side volume deletion. Undefined for draft
    *  (unsaved) stacks — nothing exists server-side to delete yet. */
   onDeleteVolume?: (name: string) => Promise<boolean>;
-  /** Gates double-confirm while the delete is in flight. */
-  deletingVolume?: boolean;
   /** Names of volumes that already exist server-side; their spec is immutable. */
   persistedVolumeNames?: ReadonlySet<string>;
   /** A release is in flight — node status dots show pending until it terminates
@@ -137,7 +136,6 @@ function StackCanvasFlow({
   topologyIds,
   topologyRefreshKey,
   onDeleteVolume,
-  deletingVolume,
   persistedVolumeNames,
   releaseInFlight,
   liveStatusResources,
@@ -192,8 +190,8 @@ function StackCanvasFlow({
   const [showConnections, setShowConnections] = useState(true);
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
-  const [pendingDeleteVolume, setPendingDeleteVolume] = useState<string | null>(null);
   const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
+  const confirm = useConfirm();
   const { fitView, getIntersectingNodes, getViewport, setViewport } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
 
@@ -501,10 +499,32 @@ function StackCanvasFlow({
       // Saved stacks: destroy the volume server-side now (confirm dialog already
       // carried the data-loss warning). Draft stacks have nothing to delete yet —
       // onDeleteVolume is undefined and the local edit above is the whole story.
-      void onDeleteVolume?.(volumeName).then(() => setPendingDeleteVolume(null));
-      if (!onDeleteVolume) setPendingDeleteVolume(null);
+      void onDeleteVolume?.(volumeName);
     },
     [applyDraft, onDeleteVolume],
+  );
+
+  const onRequestDeleteVolume = useCallback(
+    async (volumeName: string) => {
+      const ok = await confirm(
+        topologyIds == null
+          ? {
+            title: `Remove volume “${volumeName}”?`,
+            confirmLabel: "Remove",
+            variant: "destructive",
+          }
+          : {
+            title: `Delete volume “${volumeName}”?`,
+            description:
+                "This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone.",
+            confirmLabel: "Delete",
+            variant: "destructive",
+          },
+      );
+      if (!ok) return;
+      onDeleteVolumeConfirmed(volumeName);
+    },
+    [confirm, topologyIds, onDeleteVolumeConfirmed],
   );
 
   const onDeleteResourceConfirmed = useCallback(
@@ -653,7 +673,7 @@ function StackCanvasFlow({
         volumeName={frontEntry.name}
         session={session}
         onClose={popDrawer}
-        onRequestRemove={setPendingDeleteVolume}
+        onRequestRemove={onRequestDeleteVolume}
         persisted={persistedVolumeNames?.has(frontEntry.name) ?? false}
       />
     ) : null;
@@ -714,7 +734,7 @@ function StackCanvasFlow({
         onDeleteResource={(name) => deferOpen(() => setPendingDeleteResource(name))}
         onDisconnectVolume={onDisconnectVolume}
         onOpenVolume={openVolumeFromCanvas}
-        onRequestDeleteVolume={(name) => deferOpen(() => setPendingDeleteVolume(name))}
+        onRequestDeleteVolume={onRequestDeleteVolume}
         onRequestAttach={(volumeName) => deferOpen(() => setAttachRequest({ volumeName, resourceIdx: null }))}
       />
       <MountPathDialog
@@ -734,30 +754,6 @@ function StackCanvasFlow({
         }}
         onAttach={onAttachConfirm}
       />
-      <AlertDialog open={pendingDeleteVolume != null} onOpenChange={(o) => !o && setPendingDeleteVolume(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {topologyIds == null ? "Remove volume" : "Delete volume"} "{pendingDeleteVolume}"?
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {topologyIds == null
-                ? "This volume hasn't been created yet. It will be removed from your draft."
-                : "This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone."}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={deletingVolume}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              disabled={!!deletingVolume}
-              onClick={() => pendingDeleteVolume && onDeleteVolumeConfirmed(pendingDeleteVolume)}
-            >
-              {deletingVolume ? "Deleting…" : topologyIds == null ? "Remove volume" : "Delete volume"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <AlertDialog open={pendingDeleteResource != null} onOpenChange={(o) => !o && setPendingDeleteResource(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

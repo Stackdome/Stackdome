@@ -49,6 +49,7 @@ export function ClusterList({ clusters, onEdit, onDelete }: ClusterListProps) {
                   <Button
                     variant="ghost"
                     size="sm"
+                    aria-label="Delete cluster"
                     onClick={() => onDelete(cluster)}
                     className="h-8 w-8 p-0 text-danger hover:text-danger hover:bg-danger-bg"
                   >

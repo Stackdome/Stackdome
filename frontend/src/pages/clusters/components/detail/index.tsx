@@ -5,20 +5,13 @@ import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, AlertCircle, Loader2 } from "lucide-react";
+import { Trash2, Loader2 } from "lucide-react";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader, Panel, FieldShell, StatusPill } from "@/components/branded";
+import { useConfirm } from "@/components/branded/confirm";
 import { statusVariant } from "@/components/branded/status-variant";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useToast } from "@/components/ui/use-toast";
@@ -28,10 +21,10 @@ export default function ClusterDetailPage() {
   const navigate = useNavigate();
   const [cluster, setCluster] = useState<clusterApi.Cluster | null>(null);
   const [loading, setLoading] = useState(true);
-  const { deleteCluster, loading: deleting, error: deleteError } = useDeleteCluster();
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { deleteCluster } = useDeleteCluster();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (!id) return;
@@ -56,6 +49,13 @@ export default function ClusterDetailPage() {
 
   const handleDelete = async () => {
     if (!id) return;
+    const ok = await confirm({
+      title: "Delete cluster?",
+      description: "This action cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     try {
       await deleteCluster(id);
       toast({
@@ -111,7 +111,7 @@ export default function ClusterDetailPage() {
           actions={
             <Button
               variant="outline"
-              onClick={() => setShowDeleteDialog(true)}
+              onClick={() => void handleDelete()}
               className="border-danger-border text-danger hover:bg-danger-bg hover:text-danger"
             >
               <Trash2 className="h-4 w-4" />
@@ -186,40 +186,6 @@ export default function ClusterDetailPage() {
             </div>
           </div>
         </Panel>
-
-        <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Delete Cluster</DialogTitle>
-              <DialogDescription>
-                Are you sure you want to delete this cluster? This action cannot be undone.
-              </DialogDescription>
-            </DialogHeader>
-            {deleteError && (
-              <div className="bg-danger-bg text-danger p-3 rounded-md flex items-center gap-2 text-sm">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>{deleteError}</span>
-              </div>
-            )}
-            <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteDialog(false)}
-                disabled={deleting}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={handleDelete}
-                disabled={deleting}
-              >
-                {deleting && <Loader2 className="h-4 w-4 animate-spin" />}
-                Delete Cluster
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
       </div>
     </TooltipProvider>
   );

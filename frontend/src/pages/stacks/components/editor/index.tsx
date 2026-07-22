@@ -977,7 +977,6 @@ export default function CanvasEditorPage() {
               topologyIds={!isNewStack && idsReady ? deployIds : null}
               topologyRefreshKey={topologyRefreshKey}
               onDeleteVolume={idsReady ? volumeDelete.deleteVolume : undefined}
-              deletingVolume={volumeDelete.deleting}
               persistedVolumeNames={persistedVolumeNames}
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
               liveStatusResources={statusLiveStatus?.resources}

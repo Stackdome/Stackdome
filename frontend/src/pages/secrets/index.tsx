@@ -2,12 +2,12 @@ import { useState, useEffect } from "react";
 import { PlusCircle, AlertCircle, Loader2, KeyRound } from "lucide-react";
 import { useSecrets } from "./hooks/use-secrets";
 import { SecretList } from "./components/secret-list";
-import { SecretDeleteDialog } from "./components/secret-delete-dialog";
 import { SecretFormDialog } from "./components/secret-form-dialog";
 import type { Secret } from "./types";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteSecret, createSecret, updateSecret } from "@/api/secrets";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -18,13 +18,12 @@ import { useCurrentUser } from "@/hooks/use-current-user";
 
 export default function SecretsPage() {
   const { secrets, loading, error, refetch } = useSecrets();
-  const [deletingSecret, setDeletingSecret] = useState<Secret | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Secret | null>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { projectNameById, defaultProjectName } = useResourceProjects();
   const { canWrite, canWriteAnyProject } = useCurrentUser();
@@ -41,26 +40,28 @@ export default function SecretsPage() {
     setShowAddDialog(true);
   }
 
-  function handleDelete(secret: Secret) {
-    setDeletingSecret(secret);
-  }
-
-  async function handleDeleteConfirm() {
-    if (!deletingSecret?.id) return;
+  async function requestDelete(secret: Secret) {
+    if (!secret.id) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId) {
       console.error('No organization selected');
       return;
     }
-    const projectName = projectNameById(deletingSecret.project_id);
+    const projectName = projectNameById(secret.project_id);
     if (!projectName) {
       console.error('Could not resolve the project for this secret');
       toast({ title: "Failed to delete secret", description: "Could not resolve the project for this secret.", variant: "destructive" });
       return;
     }
-    setDeleteLoading(true);
+    const ok = await confirm({
+      title: "Delete secret?",
+      description: `This permanently deletes “${secret.name}”. This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     try {
-      await deleteSecret(orgId, projectName, deletingSecret.id);
+      await deleteSecret(orgId, projectName, secret.id);
       refetch();
       toast({
         title: "Secret deleted",
@@ -74,9 +75,6 @@ export default function SecretsPage() {
         description: "Failed to delete secret. Please try again.",
         variant: "destructive",
       });
-    } finally {
-      setDeleteLoading(false);
-      setDeletingSecret(null);
     }
   }
 
@@ -192,7 +190,7 @@ export default function SecretsPage() {
             <SecretList
               secrets={secrets}
               onEdit={handleEdit}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               canWrite={(projectId?: string) => canWrite(projectId ?? "")}
             />
           </Panel>
@@ -205,14 +203,6 @@ export default function SecretsPage() {
           isLoading={formLoading}
           error={formError}
           editingSecret={editingSecret}
-        />
-
-        <SecretDeleteDialog
-          open={!!deletingSecret}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeletingSecret(null)}
-          loading={deleteLoading}
-          secretName={deletingSecret?.name}
         />
       </div>
     </TooltipProvider>
