@@ -293,6 +293,7 @@ export function CanvasEditorShell({
             ))}
           </div>
           <div className="flex-1" />
+          {actionsMenu}
           {chevron}
         </div>
       )}
