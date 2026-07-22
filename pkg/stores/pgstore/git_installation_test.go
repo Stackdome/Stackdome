@@ -27,7 +27,8 @@ var _ = Describe("GitInstallationStore", func() {
 				repository_selection TEXT,
 				created_at DATETIME,
 				updated_at DATETIME,
-				UNIQUE (git_integration_id, installation_id)
+				UNIQUE (git_integration_id, installation_id),
+				UNIQUE (installation_id)
 			)
 		`)
 		store = pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{SessionFactory: sf})
@@ -58,6 +59,18 @@ var _ = Describe("GitInstallationStore", func() {
 		Expect(installations).To(HaveLen(1))
 		Expect(installations[0].AccountLogin).To(Equal("acme-renamed"))
 		Expect(installations[0].RepositorySelection).To(Equal("selected"))
+	})
+
+	It("gets an installation by its global installation id", func() {
+		installation, err := store.GetByInstallationID(ctx, 77)
+		Expect(err).To(BeNil())
+		Expect(installation.GitIntegrationID).To(Equal("gi-1"))
+	})
+
+	It("returns 404 for an unknown installation id", func() {
+		_, err := store.GetByInstallationID(ctx, 999)
+		Expect(err).ToNot(BeNil())
+		Expect(err.Is404()).To(BeTrue())
 	})
 
 	It("matches accounts case-insensitively", func() {

@@ -148,6 +148,7 @@ describe("ConfigSettingsModal", () => {
         git_repository: { repo_url: "https://github.com/acme/webapp.git", base_branch: "main" },
         stackfile_path: "deploy/stackfile.yaml",
         max_active_previews: 10,
+        env: [],
         description: "webapp previews",
         labels: [{ key: "project", value: "platform" }],
         annotations: [{ key: "note", value: "internal" }],
@@ -155,6 +156,62 @@ describe("ConfigSettingsModal", () => {
     });
     expect(onSaved).toHaveBeenCalledWith(withExtras);
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it("pre-fills existing env vars from the loaded config", () => {
+    const withEnv: StackPreviewConfig = {
+      ...config,
+      env: [{ name: "FOO", value: "bar" }, { name: "BAZ", value: "" }],
+    };
+    render(
+      <ConfigSettingsModal open config={withEnv} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+    );
+    const names = screen.getAllByLabelText(/^variable name$/i);
+    const values = screen.getAllByLabelText(/^variable value$/i);
+    expect(names.map((n) => (n as HTMLInputElement).value)).toEqual(["FOO", "BAZ"]);
+    expect(values.map((v) => (v as HTMLInputElement).value)).toEqual(["bar", ""]);
+  });
+
+  it("saves edited env vars and strips empty-named rows", async () => {
+    vi.mocked(updatePreviewConfig).mockResolvedValue(config);
+    render(
+      <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+    const names = screen.getAllByLabelText(/^variable name$/i);
+    const values = screen.getAllByLabelText(/^variable value$/i);
+    await userEvent.type(names[0], "FOO");
+    await userEvent.type(values[0], "bar");
+
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    await waitFor(() => {
+      expect(updatePreviewConfig).toHaveBeenCalledWith(
+        "org1",
+        "default",
+        "c1",
+        expect.objectContaining({ env: [{ name: "FOO", value: "bar" }] }),
+      );
+    });
+  });
+
+  it("shows a validation error and blocks save on a duplicate env var name", async () => {
+    render(
+      <ConfigSettingsModal open config={config} onOpenChange={() => {}} onSaved={() => {}} onDeleted={() => {}} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+    const names = screen.getAllByLabelText(/^variable name$/i);
+    await userEvent.type(names[0], "FOO");
+    await userEvent.type(names[1], "FOO");
+
+    await userEvent.click(screen.getByRole("button", { name: /^save$/i }));
+
+    expect(await screen.findByText(/duplicate variable name/i)).toBeInTheDocument();
+    expect(updatePreviewConfig).not.toHaveBeenCalled();
   });
 
   it("keeps the modal open on save failure", async () => {

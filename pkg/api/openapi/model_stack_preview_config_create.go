@@ -21,8 +21,10 @@ type StackPreviewConfigCreate struct {
 	Description       *string              `json:"description,omitempty"`
 	StackfilePath     *string              `json:"stackfile_path,omitempty"`
 	MaxActivePreviews *int32               `json:"max_active_previews,omitempty"`
-	Labels            []Label              `json:"labels,omitempty"`
-	Annotations       []Annotation         `json:"annotations,omitempty"`
+	// Env var overrides applied to every preview environment; may use secret references.
+	Env         []EnvVar     `json:"env,omitempty"`
+	Labels      []Label      `json:"labels,omitempty"`
+	Annotations []Annotation `json:"annotations,omitempty"`
 }
 
 // NewStackPreviewConfigCreate instantiates a new StackPreviewConfigCreate object
@@ -188,6 +190,38 @@ func (o *StackPreviewConfigCreate) SetMaxActivePreviews(v int32) {
 	o.MaxActivePreviews = &v
 }
 
+// GetEnv returns the Env field value if set, zero value otherwise.
+func (o *StackPreviewConfigCreate) GetEnv() []EnvVar {
+	if o == nil || o.Env == nil {
+		var ret []EnvVar
+		return ret
+	}
+	return o.Env
+}
+
+// GetEnvOk returns a tuple with the Env field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *StackPreviewConfigCreate) GetEnvOk() ([]EnvVar, bool) {
+	if o == nil || o.Env == nil {
+		return nil, false
+	}
+	return o.Env, true
+}
+
+// HasEnv returns a boolean if a field has been set.
+func (o *StackPreviewConfigCreate) HasEnv() bool {
+	if o != nil && o.Env != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetEnv gets a reference to the given []EnvVar and assigns it to the Env field.
+func (o *StackPreviewConfigCreate) SetEnv(v []EnvVar) {
+	o.Env = v
+}
+
 // GetLabels returns the Labels field value if set, zero value otherwise.
 func (o *StackPreviewConfigCreate) GetLabels() []Label {
 	if o == nil || o.Labels == nil {
@@ -268,6 +302,9 @@ func (o StackPreviewConfigCreate) MarshalJSON() ([]byte, error) {
 	}
 	if o.MaxActivePreviews != nil {
 		toSerialize["max_active_previews"] = o.MaxActivePreviews
+	}
+	if o.Env != nil {
+		toSerialize["env"] = o.Env
 	}
 	if o.Labels != nil {
 		toSerialize["labels"] = o.Labels

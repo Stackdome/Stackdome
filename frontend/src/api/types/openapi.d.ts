@@ -8984,6 +8984,8 @@ export interface components {
             git_repository?: components["schemas"]["PreviewGitRepository"];
             stackfile_path?: string;
             max_active_previews?: number;
+            /** @description Env var overrides applied to every preview environment; may use secret references. */
+            env?: components["schemas"]["EnvVar"][];
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
             /** Format: date-time */
@@ -8997,6 +8999,8 @@ export interface components {
             description?: string;
             stackfile_path?: string;
             max_active_previews?: number;
+            /** @description Env var overrides applied to every preview environment; may use secret references. */
+            env?: components["schemas"]["EnvVar"][];
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
         };
@@ -9005,6 +9009,8 @@ export interface components {
             stackfile_path?: string;
             max_active_previews?: number;
             git_repository?: components["schemas"]["PreviewGitRepository"];
+            /** @description Env var overrides applied to every preview environment; may use secret references. */
+            env?: components["schemas"]["EnvVar"][];
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
         };

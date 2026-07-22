@@ -4,12 +4,69 @@ import (
 	"context"
 	"testing"
 
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
 )
+
+var _ = Describe("StackPreviewConfigService repo uniqueness", func() {
+	var (
+		ctrl        *gomock.Controller
+		svc         *stackPreviewConfigService
+		store       *mocks.MockStackPreviewConfigStore
+		permissions *mocks.MockPermissionService
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		store = mocks.NewMockStackPreviewConfigStore(ctrl)
+		permissions = mocks.NewMockPermissionService(ctrl)
+		svc = &stackPreviewConfigService{
+			store:             store,
+			previewStackStore: mocks.NewMockPreviewStackStore(ctrl),
+			permissions:       permissions,
+		}
+	})
+
+	It("rejects Create when a config already owns the repo", func() {
+		permissions.EXPECT().Check(gomock.Any(), "project-1", auth.ResourcePreviewConfigs, "", auth.ActionCreate).Return(nil)
+		cfg := &models.StackPreviewConfig{
+			ProjectID:      "project-1",
+			OrganisationID: "org-1",
+			Name:           "web",
+			GitRepository:  models.PreviewGitRepository{RepoURL: "https://github.com/acme/app.git", BaseBranch: "main"},
+		}
+		store.EXPECT().GetByOrgAndRepo(gomock.Any(), "org-1", cfg.NormalizedRepoURL()).
+			Return(&models.StackPreviewConfig{ID: "other"}, nil)
+
+		_, serr := svc.Create(context.Background(), cfg)
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorConflict))
+	})
+
+	It("rejects Update when the new repo is owned by a different config", func() {
+		existing := &models.StackPreviewConfig{
+			ID: "cfg-1", ProjectID: "project-1", OrganisationID: "org-1", Name: "web",
+			GitRepository: models.PreviewGitRepository{RepoURL: "https://github.com/acme/old.git", BaseBranch: "main"},
+		}
+		store.EXPECT().GetByID(gomock.Any(), "cfg-1").Return(existing, nil)
+		permissions.EXPECT().Check(gomock.Any(), "project-1", auth.ResourcePreviewConfigs, "cfg-1", auth.ActionWrite).Return(nil)
+		updated := &models.StackPreviewConfig{
+			GitRepository: models.PreviewGitRepository{RepoURL: "https://github.com/acme/new.git", BaseBranch: "main"},
+		}
+		store.EXPECT().GetByOrgAndRepo(gomock.Any(), "org-1", models.NormalizeRepoURL("https://github.com/acme/new.git")).
+			Return(&models.StackPreviewConfig{ID: "cfg-2"}, nil)
+
+		_, serr := svc.Update(context.Background(), "cfg-1", updated)
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorConflict))
+	})
+})
 
 func newPreviewConfigDeleteService(ctrl *gomock.Controller) (*stackPreviewConfigService, *mocks.MockStackPreviewConfigStore, *mocks.MockPreviewStackStore, *mocks.MockPermissionService) {
 	store := mocks.NewMockStackPreviewConfigStore(ctrl)

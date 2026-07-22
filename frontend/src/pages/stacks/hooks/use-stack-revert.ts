@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import type { Stack } from "@/api/stacks";
-import { getStackById, applyStack } from "@/api/stacks";
+import { applyStack } from "@/api/stacks";
 import { deleteVolume } from "@/api/volumes";
 import type { StackReleaseSnapshot } from "@/api/releases";
 import { snapshotToUpdateRequest, volumesToDelete } from "@/pages/stacks/lib/draft-sync/snapshot-to-update";
@@ -10,6 +10,10 @@ export interface UseStackRevertArgs {
   ids: { orgId: string; projectName: string; stackId: string } | null;
   stack: Stack | undefined;
   liveSnapshot: StackReleaseSnapshot | undefined;
+  /** Page-provided, ticket-gated stack refetch (applies the payload to page
+   *  state itself and returns the newest applied stack) — keeps this hook's
+   *  refetch inside the page's response-ordering domain. */
+  fetchStack: () => Promise<Stack>;
   /** session.discard — the page's session auto-start effect re-seeds from the refreshed stack. */
   onReverted: (fresh: Stack) => void;
   /** Called with the backend reason when the revert throws. */
@@ -17,7 +21,7 @@ export interface UseStackRevertArgs {
 }
 
 /** Restore the authored stack to the last deployed snapshot. */
-export function useStackRevert({ ids, stack, liveSnapshot, onReverted, onError }: UseStackRevertArgs) {
+export function useStackRevert({ ids, stack, liveSnapshot, fetchStack, onReverted, onError }: UseStackRevertArgs) {
   const [reverting, setReverting] = useState(false);
 
   const revert = useCallback(async (): Promise<boolean> => {
@@ -31,7 +35,7 @@ export function useStackRevert({ ids, stack, liveSnapshot, onReverted, onError }
       for (const v of volumesToDelete(stack, liveSnapshot)) {
         await deleteVolume(ids.orgId, ids.projectName, v.id);
       }
-      const fresh = await getStackById(ids.orgId, ids.projectName, ids.stackId);
+      const fresh = await fetchStack();
       onReverted(fresh);
       return true;
     } catch (err) {
@@ -40,7 +44,7 @@ export function useStackRevert({ ids, stack, liveSnapshot, onReverted, onError }
     } finally {
       setReverting(false);
     }
-  }, [ids, stack, liveSnapshot, onReverted, onError]);
+  }, [ids, stack, liveSnapshot, fetchStack, onReverted, onError]);
 
   return { reverting, revert };
 }

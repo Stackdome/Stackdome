@@ -145,7 +145,16 @@ export function CanvasEditorShell({
   // floating drawer stack; header rows and the canvas shift left by this much
   // so the drawer pushes content instead of covering it.
   const [drawerInset, setDrawerInset] = useState(0);
-  const drawerInsetCtx = useMemo(() => ({ setInset: setDrawerInset }), []);
+  // Ops views overlay the (always-mounted) canvas, but the drawer stack renders
+  // position:fixed above that overlay — so on non-architecture tabs it must hide
+  // itself instead. The stored inset survives suppression, so switching back to
+  // Architecture restores both the drawer and the pushed-left chrome.
+  const drawerSuppressed = activeTab !== EDITOR_TABS.architecture;
+  const drawerInsetCtx = useMemo(
+    () => ({ setInset: setDrawerInset, suppressed: drawerSuppressed }),
+    [drawerSuppressed],
+  );
+  const effectiveDrawerInset = drawerSuppressed ? 0 : drawerInset;
 
   // Header status pill: "Deleting" overrides everything, "Not deployed" covers a
   // stack that has never completed a release, otherwise health drives the pill.
@@ -205,9 +214,15 @@ export function CanvasEditorShell({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[180px]">
+        {/* Defer the dialog-opening callback until after the menu has fully
+            closed. Radix's DropdownMenu→Dialog composition races the menu's
+            close (which resets document.body.style.pointerEvents) against the
+            dialog's mount, and can leave pointer-events "none" on body forever
+            once the dialog unmounts.
+            See https://github.com/radix-ui/primitives/issues/1836 */}
         <DropdownMenuItem
           className="text-danger focus:text-danger"
-          onClick={onDelete}
+          onSelect={() => setTimeout(() => onDelete(), 0)}
           disabled={!canDeleteStack}
         >
           <Trash2 className="size-4 text-danger" />
@@ -234,7 +249,7 @@ export function CanvasEditorShell({
       {collapsed && (
         <div
           className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-          style={{ marginRight: drawerInset }}
+          style={{ marginRight: effectiveDrawerInset }}
         >
           <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
           {pillLabel && (
@@ -286,7 +301,7 @@ export function CanvasEditorShell({
           {/* Stack-title header — identity only (fade/translate on expand per design sd-fade) */}
           <div
             className="flex-none px-7 pt-6 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-            style={{ marginRight: drawerInset }}
+            style={{ marginRight: effectiveDrawerInset }}
           >
             {/* Chevron sits at the row's right so the title stays flush-left with
                 the subtitle + endpoints below it (no collapse-toggle indent). */}
@@ -343,7 +358,7 @@ export function CanvasEditorShell({
           {/* Tab + action rail */}
           <div
             className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-            style={{ marginRight: drawerInset }}
+            style={{ marginRight: effectiveDrawerInset }}
           >
             {TAB_ITEMS.map(({ id, label, Icon }) => {
               const active = activeTab === id;
@@ -380,7 +395,7 @@ export function CanvasEditorShell({
       {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
           ops views overlay it. Ops views own their own max-width + padding. */}
       <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: drawerInset }}>
+        <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: effectiveDrawerInset }}>
           <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
           {activeTab === EDITOR_TABS.architecture && (
             <DeployPill

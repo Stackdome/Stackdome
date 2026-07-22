@@ -19,7 +19,24 @@ import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
-import { layoutGraph, NEW_NODE_GAP_X, NEW_NODE_OFFSET_Y } from "@/pages/stacks/lib/canvas/layout-graph";
+import {
+  layoutGraph,
+  ATTACHMENT_NODE_HEIGHT,
+  ATTACHMENT_NODE_WIDTH,
+  NODE_HEIGHT,
+  NODE_SEP,
+  NODE_WIDTH,
+} from "@/pages/stacks/lib/canvas/layout-graph";
+import { resolveCollisions, type CollidableNode } from "@/pages/stacks/lib/canvas/resolve-collisions";
+import { carryPositions } from "@/pages/stacks/lib/canvas/carry-positions";
+
+/** Collision-box dims for nodes React Flow hasn't measured yet (fresh layout
+ *  output) — attachment cards are markedly smaller than resource cards. */
+function attachmentAwareFallbackSize(node: CollidableNode): { width: number; height: number } {
+  return (node as { type?: string }).type === "attachment"
+    ? { width: ATTACHMENT_NODE_WIDTH, height: ATTACHMENT_NODE_HEIGHT }
+    : { width: NODE_WIDTH, height: NODE_HEIGHT };
+}
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./canvas-editor";
@@ -229,23 +246,34 @@ function StackCanvasFlow({
 
   const onNodeDragStop = useCallback<OnNodeDrag<CanvasFlowNode>>(
     (_event, node) => {
-      if (!isFloatingVolume(node)) return;
-      const target = dropTargetFor(node);
-      // Clear all rings.
-      setNodes((prev) =>
-        prev.map((n) =>
-          (n.data as ResourceNodeData).dropTarget
-            ? ({ ...n, data: { ...n.data, dropTarget: false } } as CanvasFlowNode)
-            : n,
-        ),
-      );
-      if (!target) {
-        dragStartPos.current = null;
-        return; // plain reposition
+      if (isFloatingVolume(node)) {
+        const target = dropTargetFor(node);
+        // Clear all rings.
+        setNodes((prev) =>
+          prev.map((n) =>
+            (n.data as ResourceNodeData).dropTarget
+              ? ({ ...n, data: { ...n.data, dropTarget: false } } as CanvasFlowNode)
+              : n,
+          ),
+        );
+        if (target) {
+          const volumeName = node.id.slice(NODE_ID_PREFIX.volume.length);
+          const resourceIdx = (target.data as ResourceNodeData).resourceIdx!;
+          setAttachRequest({ volumeName, resourceIdx });
+          return;
+        }
       }
-      const volumeName = node.id.slice(NODE_ID_PREFIX.volume.length);
-      const resourceIdx = (target.data as ResourceNodeData).resourceIdx!;
-      setAttachRequest({ volumeName, resourceIdx });
+      // Plain reposition: only the dropped node yields to any overlap it
+      // created — the rest of the user's arrangement stays pinned.
+      dragStartPos.current = null;
+      setNodes(
+        (prev) =>
+          resolveCollisions(prev, {
+            margin: NODE_SEP / 2,
+            isLocked: (n) => n.id !== node.id,
+            fallbackSize: attachmentAwareFallbackSize,
+          }) as CanvasFlowNode[],
+      );
     },
     [dropTargetFor, setNodes],
   );
@@ -276,35 +304,17 @@ function StackCanvasFlow({
   useEffect(() => {
     const laid = layoutGraph(mergedGraph);
     setNodes((prev) => {
-      const posById = new Map(prev.map((n) => [n.id, n.position]));
       // Empty canvas (no preserved nodes): use the fresh dagre layout as-is.
-      if (posById.size === 0) return laid.nodes as CanvasFlowNode[];
-      // Bounding box of the PRESERVED nodes — new nodes land above-left of it so
-      // they never overlap the frozen layout (their fresh dagre coords belong to a
-      // different frame and would collide). Above = consumer side under BT ranks.
-      const preserved = [...posById.values()];
-      const minX = Math.min(...preserved.map((p) => p.x));
-      const minY = Math.min(...preserved.map((p) => p.y));
-      let newCount = 0;
-      const next = laid.nodes.map((n) => {
-        const kept = posById.get(n.id);
-        if (kept) return { ...n, position: kept } as CanvasFlowNode;
-        // Stagger multiple new nodes in one pass so they don't stack on each other.
-        const position = {
-          x: minX + newCount * NEW_NODE_GAP_X,
-          y: minY - NEW_NODE_OFFSET_Y,
-        };
-        newCount += 1;
-        return { ...n, position } as CanvasFlowNode;
-      });
-      // TODO: a genuinely-new node parks above-left of the frozen layout and can
-      // land outside the current viewport (the user never sees it appear). A blind
-      // fitView here would work but is unsafe: this effect also re-runs on server
-      // topology refreshes (autosave), so it would reset the user's pan/zoom
-      // mid-edit and could jump the board during a drag. A clean "ensure-visible"
-      // (pan only when the new node is off-screen, no zoom reset) needs viewport
-      // math that risks disrupting drag UX, so it's deferred over forcing a fit.
-      return next;
+      if (prev.length === 0) return laid.nodes as CanvasFlowNode[];
+      // carryPositions keeps renamed nodes in place (ids embed the name);
+      // new nodes keep their dagre coords near their topological neighbours
+      // and the locked collision pass shoves them clear of the frozen layout.
+      const { nodes: next, keptIds } = carryPositions(prev, laid.nodes as CanvasFlowNode[]);
+      return resolveCollisions(next, {
+        margin: NODE_SEP / 2,
+        isLocked: (n) => keptIds.has(n.id),
+        fallbackSize: attachmentAwareFallbackSize,
+      }) as CanvasFlowNode[];
     });
     setEdges(mergedGraph.edges as Edge[]);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed on topology only

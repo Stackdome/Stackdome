@@ -62,12 +62,19 @@ describe("template conversion round-trip", () => {
     const tooljet = getTemplateById("tooljet")!;
     const { data } = templateToFormData(tooljet);
 
-    for (const name of ["tooljet", "tooljet-worker"]) {
-      const resource = data.spec.stack_resources.find((r) => r.name === name)!;
-      expect(resource.execution_config?.command).toEqual([
-        "./server/ee-entrypoint.sh", "npm", "run", "start:prod",
-      ]);
-    }
+    // Only the server runs the migration entrypoint. The worker must start
+    // with worker:prod — two containers running db:setup:prod concurrently
+    // block each other's migrations until statement_timeout kills one
+    // (pg error 57014).
+    const server = data.spec.stack_resources.find((r) => r.name === "tooljet")!;
+    expect(server.execution_config?.command).toBe(
+      "./server/ee-entrypoint.sh npm run start:prod",
+    );
+    const worker = data.spec.stack_resources.find((r) => r.name === "tooljet-worker")!;
+    expect(worker.execution_config?.command).toBe(
+      "npm --prefix server run worker:prod",
+    );
+    expect(worker.depends_on).toContain("tooljet");
 
     const otelStack = data.spec.stack_resources.find((r) => r.name === "otel-stack")!;
     const ports = (otelStack.ports ?? [])

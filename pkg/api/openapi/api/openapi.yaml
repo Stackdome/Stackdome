@@ -14057,6 +14057,13 @@ components:
           repo_url: repo_url
           base_branch: base_branch
           integration_id: integration_id
+        env:
+        - name: name
+          self_output: self_output
+          value: value
+        - name: name
+          self_output: self_output
+          value: value
         labels:
         - value: value
           key: key
@@ -14093,6 +14100,12 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          description: Env var overrides applied to every preview environment; may
+            use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
+          type: array
         labels:
           items:
             $ref: '#/components/schemas/Label'
@@ -14124,6 +14137,13 @@ components:
           base_branch: base_branch
           integration_id: integration_id
         stackfile_path: stackfile_path
+        env:
+        - name: name
+          self_output: self_output
+          value: value
+        - name: name
+          self_output: self_output
+          value: value
         max_active_previews: 0
         labels:
         - value: value
@@ -14141,6 +14161,12 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          description: Env var overrides applied to every preview environment; may
+            use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
+          type: array
         labels:
           items:
             $ref: '#/components/schemas/Label'
@@ -14166,6 +14192,13 @@ components:
           base_branch: base_branch
           integration_id: integration_id
         stackfile_path: stackfile_path
+        env:
+        - name: name
+          self_output: self_output
+          value: value
+        - name: name
+          self_output: self_output
+          value: value
         max_active_previews: 0
         labels:
         - value: value
@@ -14181,6 +14214,12 @@ components:
           type: integer
         git_repository:
           $ref: '#/components/schemas/PreviewGitRepository'
+        env:
+          description: Env var overrides applied to every preview environment; may
+            use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
+          type: array
         labels:
           items:
             $ref: '#/components/schemas/Label'
@@ -14207,6 +14246,13 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
+          env:
+          - name: name
+            self_output: self_output
+            value: value
+          - name: name
+            self_output: self_output
+            value: value
           labels:
           - value: value
             key: key
@@ -14231,6 +14277,13 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
+          env:
+          - name: name
+            self_output: self_output
+            value: value
+          - name: name
+            self_output: self_output
+            value: value
           labels:
           - value: value
             key: key

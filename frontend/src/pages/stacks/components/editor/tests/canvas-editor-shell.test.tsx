@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, within, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, within, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { CanvasEditorShell } from "../canvas-editor-shell";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 import { EDITOR_TABS } from "../editor-tabs";
@@ -142,6 +143,28 @@ describe("CanvasEditorShell actions menu", () => {
     render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={2} />);
     expect(screen.getByLabelText("Stack actions")).toBeInTheDocument();
     expect(screen.queryByText("Discard all changes")).toBeNull();
+  });
+
+  it("defers onDelete until after the menu has closed, avoiding the Radix pointer-events lock", async () => {
+    // Regression test for a Radix DropdownMenu -> AlertDialog composition bug:
+    // if the dialog-opening callback fires synchronously from the menu item,
+    // the menu's close and the dialog's mount race and can leave
+    // document.body.style.pointerEvents stuck at "none" forever (the dialog
+    // captures "none" as the value to restore on unmount). Deferring the
+    // callback lets the menu finish closing (and reset pointer-events) before
+    // the dialog mounts. See https://github.com/radix-ui/primitives/issues/1836
+    const user = userEvent.setup();
+    const pointerEventsAtCall: string[] = [];
+    const onDelete = vi.fn(() => {
+      pointerEventsAtCall.push(document.body.style.pointerEvents);
+    });
+    render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive onDelete={onDelete} />);
+    await user.click(screen.getByLabelText("Stack actions"), { pointerEventsCheck: 0 });
+    await user.click(await screen.findByText("Delete stack"), { pointerEventsCheck: 0 });
+    await waitFor(() => expect(onDelete).toHaveBeenCalled());
+    // At the moment the dialog-opening callback runs, the menu must already
+    // have released its body pointer-events lock.
+    expect(pointerEventsAtCall[0]).not.toBe("none");
   });
 });
 

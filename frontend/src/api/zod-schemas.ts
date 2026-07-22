@@ -1443,6 +1443,7 @@ const StackPreviewConfigCreate = z
     description: z.string().optional(),
     stackfile_path: z.string().optional(),
     max_active_previews: z.number().int().optional(),
+    env: z.array(EnvVar).optional(),
     labels: z.array(Label).optional(),
     annotations: z.array(Annotation).optional(),
   })
@@ -1458,6 +1459,7 @@ const StackPreviewConfig = z
     git_repository: PreviewGitRepository,
     stackfile_path: z.string(),
     max_active_previews: z.number().int(),
+    env: z.array(EnvVar),
     labels: z.array(Label),
     annotations: z.array(Annotation),
     created_at: z.string().datetime({ offset: true }),
@@ -1481,6 +1483,7 @@ const StackPreviewConfigUpdate = z
     stackfile_path: z.string(),
     max_active_previews: z.number().int(),
     git_repository: PreviewGitRepository,
+    env: z.array(EnvVar),
     labels: z.array(Label),
     annotations: z.array(Annotation),
   })

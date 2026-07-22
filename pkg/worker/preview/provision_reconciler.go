@@ -50,7 +50,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		return resultNil, fmt.Errorf("failed to get config: %w", sErr)
 	}
 
-	content, hash, opErr := r.resolveStackfileContent(ctx, preview, config)
+	stackFileContent, hash, opErr := r.resolveStackfileContent(ctx, preview, config)
 	if opErr != nil {
 		if errors.IsRetryable(opErr) {
 			return resultNil, opErr
@@ -71,7 +71,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		if needsUpdate {
 			// Build the stack model from the content
 			var buildErr *errors.OperationError
-			model, buildErr = r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
+			model, buildErr = r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, stackFileContent)
 			if buildErr != nil {
 				if errors.IsRetryable(buildErr) {
 					return resultNil, buildErr
@@ -118,7 +118,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 
 	// Create path: no stack yet
 	overridesHash := hashOverrides(preview.ImageOverrides)
-	model, opErr := r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, content)
+	model, opErr := r.previewStackService.InternalBuildStackFromContent(ctx, config, preview, stackFileContent)
 	if opErr != nil {
 		if errors.IsRetryable(opErr) {
 			return resultNil, opErr

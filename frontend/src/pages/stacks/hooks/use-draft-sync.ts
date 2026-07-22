@@ -41,11 +41,21 @@ export interface UseDraftSyncArgs {
   onStackRefreshed: (stack: Stack) => void;
   /** Called when a sync op throws, before the mirror heals. */
   onSyncError?: (info: SyncErrorInfo) => void;
+  /** When provided, replaces the hook's own getStackById for post-save and
+   *  error-heal refetches. The provider owns applying the result to UI state
+   *  (ticket-guarded), so onStackRefreshed is NOT called on those paths — the
+   *  hook still heals its mirror from the returned stack. */
+  refetchStack?: () => Promise<Stack>;
 }
 
 export interface UseDraftSync {
   status: SyncStatus;
   failureCount: number;
+  /** True from the moment a draft change arms the debounce until the settling
+   *  cycle finishes with nothing queued. Distinguishes "an edit exists that the
+   *  server hasn't seen yet" from the status flags, which read settled during
+   *  the pre-PUT debounce window. */
+  pending: boolean;
   flush: () => Promise<boolean>;
   /** External writers (revert) hand the fresh stack here so the mirror stays truthful. */
   notifyExternalUpdate: (stack: Stack) => void;
@@ -92,9 +102,11 @@ export function useDraftSync({
   ids,
   onStackRefreshed,
   onSyncError,
+  refetchStack,
 }: UseDraftSyncArgs): UseDraftSync {
   const [status, setStatus] = useState<SyncStatus>(SYNC_STATUS.idle);
   const [failureCount, setFailureCount] = useState(0);
+  const [pending, setPending] = useState(false);
 
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -104,6 +116,8 @@ export function useDraftSync({
   onRefreshedRef.current = onStackRefreshed;
   const onSyncErrorRef = useRef(onSyncError);
   onSyncErrorRef.current = onSyncError;
+  const refetchStackRef = useRef(refetchStack);
+  refetchStackRef.current = refetchStack;
 
   const mirrorRef = useRef<ServerStackState | null>(null);
   const runningRef = useRef<Promise<boolean> | null>(null);
@@ -170,9 +184,12 @@ export function useDraftSync({
           await executeOp(op, currentIds);
         }
         opsSucceeded = true;
-        const fresh = await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
+        const fetchFresh = refetchStackRef.current;
+        const fresh = fetchFresh
+          ? await fetchFresh()
+          : await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
         mirrorRef.current = serverStateFromStack(fresh);
-        onRefreshedRef.current(fresh);
+        if (!fetchFresh) onRefreshedRef.current(fresh);
         // Deliberately NOT rebasing the session here: the diff baseline stays
         // pinned to the deployed release so autosaved edits remain visibly
         // dirty/revertable. Only deploy or discard moves the baseline.
@@ -195,9 +212,12 @@ export function useDraftSync({
         });
         // Heal the mirror from server truth; the draft stays authoritative locally.
         try {
-          const fresh = await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
+          const fetchFresh = refetchStackRef.current;
+          const fresh = fetchFresh
+            ? await fetchFresh()
+            : await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
           mirrorRef.current = serverStateFromStack(fresh);
-          onRefreshedRef.current(fresh);
+          if (!fetchFresh) onRefreshedRef.current(fresh);
         } catch {
           /* keep the stale mirror; the next attempt refetches again */
         }
@@ -218,9 +238,19 @@ export function useDraftSync({
       runningRef.current = null;
       if (queuedRef.current) {
         queuedRef.current = false;
+        // An edit made mid-cycle may also have re-armed the debounce; clear it
+        // so the drain timer below is the only pending firing (a leaked handle
+        // would fire a spurious extra cycle).
+        if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
         idleTimerRef.current = setTimeout(() => {
           void startCycle();
         }, 0);
+      } else if (!idleTimerRef.current && !maxWaitTimerRef.current) {
+        // Nothing queued AND no debounce armed: every known edit has been
+        // pushed (or is on the retry path, which keeps failureCount > 0). An
+        // armed timer means an edit landed DURING this cycle — it hasn't been
+        // sent, so pending must survive until its own cycle settles.
+        setPending(false);
       }
     });
     runningRef.current = run;
@@ -230,8 +260,20 @@ export function useDraftSync({
   // Debounce: every draft change (while active+enabled) restarts the idle
   // window; a max-wait timer guarantees persistence under continuous typing.
   const draft = session.isActive ? session.draft : null;
+  // The debounce effect also fires once when a session starts (initial draft
+  // identity, no edit yet) — that arm schedules a no-op cycle and must not
+  // read as "pending edits". Only arms after the first one mark pending.
+  const firstArmRef = useRef(true);
   useEffect(() => {
-    if (!enabled || !draft || !idsRef.current) return;
+    if (!enabled || !draft || !idsRef.current) {
+      firstArmRef.current = true;
+      // Disabled / session ended: no cycle will run to clear pending, so
+      // reset it here rather than leaving the lifecycle stuck on "editing".
+      setPending(false);
+      return;
+    }
+    if (firstArmRef.current) firstArmRef.current = false;
+    else setPending(true);
     if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
     idleTimerRef.current = setTimeout(() => {
       clearDebounceTimers();
@@ -289,7 +331,7 @@ export function useDraftSync({
   );
 
   return useMemo(
-    () => ({ status, failureCount, flush, notifyExternalUpdate }),
-    [status, failureCount, flush, notifyExternalUpdate],
+    () => ({ status, failureCount, pending, flush, notifyExternalUpdate }),
+    [status, failureCount, pending, flush, notifyExternalUpdate],
   );
 }

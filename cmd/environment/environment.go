@@ -71,6 +71,7 @@ type Services struct {
 	CredentialResolver          services.CredentialResolver
 	RegistryCredentialService   services.RegistryCredentialService
 	GitIntegrationService       services.GitIntegrationService
+	GitHubWebhookService        services.GitHubWebhookService
 	EncryptionService           services.EncryptionService
 	ObjectStoreService          services.ObjectStoreService
 	PostgresAddonService        services.PostgresAddonService
