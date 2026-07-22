@@ -53,16 +53,6 @@ import {
   type AttachmentNodeData,
   type ResourceNodeData,
 } from "@/pages/stacks/lib/canvas/graph-from-connections";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { useConfirm } from "@/components/branded/confirm";
 import { DrawerStack, type DrawerPanelDescriptor } from "./drawer-stack";
 import {
@@ -190,7 +180,6 @@ function StackCanvasFlow({
   const [showConnections, setShowConnections] = useState(true);
   const [drawerStack, setDrawerStack] = useState<DrawerEntry[]>([]);
   const [menuTarget, setMenuTarget] = useState<CanvasMenuTarget | null>(null);
-  const [pendingDeleteResource, setPendingDeleteResource] = useState<string | null>(null);
   const confirm = useConfirm();
   const { fitView, getIntersectingNodes, getViewport, setViewport } = useReactFlow();
   const dragStartPos = useRef<XYPosition | null>(null);
@@ -527,13 +516,20 @@ function StackCanvasFlow({
     [confirm, topologyIds, onDeleteVolumeConfirmed],
   );
 
-  const onDeleteResourceConfirmed = useCallback(
-    (resourceName: string) => {
+  const onRequestDeleteResource = useCallback(
+    async (resourceName: string) => {
+      const ok = await confirm({
+        title: `Delete service “${resourceName}”?`,
+        description:
+          "The service and its configuration are removed when the stack deploys. This cannot be undone after deploy.",
+        confirmLabel: "Delete",
+        variant: "destructive",
+      });
+      if (!ok) return;
       applyDraft((draft) => ({ ...draft, resources: draft.resources.filter((r) => r.name !== resourceName) }));
       setDrawerStack([]);
-      setPendingDeleteResource(null);
     },
-    [applyDraft],
+    [confirm, applyDraft],
   );
 
   const onCreateVolume = useCallback(
@@ -731,7 +727,7 @@ function StackCanvasFlow({
             setAddVolumeOpen(true);
           });
         }}
-        onDeleteResource={(name) => deferOpen(() => setPendingDeleteResource(name))}
+        onDeleteResource={onRequestDeleteResource}
         onDisconnectVolume={onDisconnectVolume}
         onOpenVolume={openVolumeFromCanvas}
         onRequestDeleteVolume={onRequestDeleteVolume}
@@ -754,26 +750,6 @@ function StackCanvasFlow({
         }}
         onAttach={onAttachConfirm}
       />
-      <AlertDialog open={pendingDeleteResource != null} onOpenChange={(o) => !o && setPendingDeleteResource(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete service “{pendingDeleteResource}”?</AlertDialogTitle>
-            <AlertDialogDescription>
-              The service and its configuration are removed when the stack deploys. This cannot be undone after
-              deploy.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              variant="destructive"
-              onClick={() => pendingDeleteResource && onDeleteResourceConfirmed(pendingDeleteResource)}
-            >
-              Delete service
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -9,17 +9,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
 import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
-import { getErrorMessage, getErrorStatus } from "@/api/client";
+import { getErrorMessage } from "@/api/client";
 import { deleteObjectStore } from "@/api/object-stores";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useCurrentUser } from "@/hooks/use-current-user";
 
-// The backend currently returns HTTP 400 with a reason describing that the
-// store is in use; a future fix may switch to 409. Handle both so the
-// conflict is always surfaced.
-const IN_USE_PATTERN = /in use/i;
 const IN_USE_FALLBACK = "This Object Store is in use by one or more Postgres add-ons.";
 
 export default function ObjectStoresPage() {
@@ -66,13 +62,9 @@ export default function ObjectStoresPage() {
       toast({ title: "Object store deleted", variant: "success" });
       refetch();
     } catch (e: unknown) {
-      const status = getErrorStatus(e);
-      const reason = getErrorMessage(e);
-      const isReferencedConflict =
-        status === 409 || (status === 400 && IN_USE_PATTERN.test(reason));
       toast({
         title: "Failed to delete",
-        description: isReferencedConflict ? reason || IN_USE_FALLBACK : reason,
+        description: getErrorMessage(e) || IN_USE_FALLBACK,
         variant: "destructive",
       });
     }

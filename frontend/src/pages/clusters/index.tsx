@@ -47,7 +47,7 @@ export default function ClustersPage() {
     if (!ok) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId) {
-      console.error('No organization selected');
+      toast({ title: "Failed to delete cluster", description: "No organization selected.", variant: "destructive" });
       return;
     }
     try {

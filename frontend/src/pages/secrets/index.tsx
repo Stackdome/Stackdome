@@ -42,17 +42,6 @@ export default function SecretsPage() {
 
   async function requestDelete(secret: Secret) {
     if (!secret.id) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) {
-      console.error('No organization selected');
-      return;
-    }
-    const projectName = projectNameById(secret.project_id);
-    if (!projectName) {
-      console.error('Could not resolve the project for this secret');
-      toast({ title: "Failed to delete secret", description: "Could not resolve the project for this secret.", variant: "destructive" });
-      return;
-    }
     const ok = await confirm({
       title: "Delete secret?",
       description: `This permanently deletes “${secret.name}”. This cannot be undone.`,
@@ -60,6 +49,16 @@ export default function SecretsPage() {
       variant: "destructive",
     });
     if (!ok) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      toast({ title: "Failed to delete secret", description: "No organization selected.", variant: "destructive" });
+      return;
+    }
+    const projectName = projectNameById(secret.project_id);
+    if (!projectName) {
+      toast({ title: "Failed to delete secret", description: "Could not resolve the project for this secret.", variant: "destructive" });
+      return;
+    }
     try {
       await deleteSecret(orgId, projectName, secret.id);
       refetch();
