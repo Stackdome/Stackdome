@@ -4125,6 +4125,7 @@ components:
             $ref: '#/components/schemas/DomainName'
         is_platform:
           type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -4516,6 +4517,7 @@ components:
           type: string
         platform:
           type: boolean
+          readOnly: true
         cluster_url:
           type: string
         cluster_ca_data:

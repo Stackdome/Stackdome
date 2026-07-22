@@ -6208,6 +6208,7 @@ components:
             $ref: '#/components/schemas/DomainName'
           type: array
         is_platform:
+          readOnly: true
           type: boolean
         created_at:
           format: date-time
@@ -7009,6 +7010,7 @@ components:
         organisation_id:
           type: string
         platform:
+          readOnly: true
           type: boolean
         cluster_url:
           type: string

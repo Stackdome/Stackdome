@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | **string** |  | 
 **OrganisationId** | Pointer to **string** |  | [optional] 
-**Platform** | Pointer to **bool** |  | [optional] 
+**Platform** | Pointer to **bool** |  | [optional] [readonly] 
 **ClusterUrl** | **string** |  | 
 **ClusterCaData** | **string** |  | 
 **ClusterSaToken** | **string** |  | 

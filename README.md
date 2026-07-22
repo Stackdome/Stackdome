@@ -134,9 +134,9 @@ DB_PORT=5432
 DB_NAME=stackdome
 DB_USERNAME=postgres
 DB_PASSWORD=mypassword
-DEFAULT_USER_EMAIL=admin@stackdome.local
-DEFAULT_USER_NAME=admin
-DEFAULT_USER_PASS=admin123
+PLATFORM_ADMIN_EMAIL=admin@stackdome.local
+PLATFORM_ADMIN_NAME=admin
+PLATFORM_ADMIN_PASSWORD=admin123
 EOF
 
 # 3. Build, migrate, and run
@@ -266,9 +266,9 @@ The integration test suite uses real Kind clusters with the full operator stack 
 | `DB_PASSWORD` | Database password | (required) |
 | `DB_DEBUG_MODE` | Enable SQL query logging | false |
 | `LOG_LEVEL` | Log level (debug, info, warn, error) | info |
-| `DEFAULT_USER_EMAIL` | Initial admin user email | (required) |
-| `DEFAULT_USER_NAME` | Initial admin user name | (required) |
-| `DEFAULT_USER_PASS` | Initial admin user password | (required) |
+| `PLATFORM_ADMIN_EMAIL` | Initial platform admin email | (required) |
+| `PLATFORM_ADMIN_NAME` | Initial platform admin name | Platform Admin |
+| `PLATFORM_ADMIN_PASSWORD` | Initial platform admin password | (required) |
 
 ## API
 

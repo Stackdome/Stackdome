@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | Pointer to **string** |  | [optional] 
 **Domains** | Pointer to [**[]DomainName**](DomainName.md) |  | [optional] 
-**IsPlatform** | Pointer to **bool** |  | [optional] 
+**IsPlatform** | Pointer to **bool** |  | [optional] [readonly] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
 

@@ -7446,7 +7446,7 @@ export interface components {
             id?: string;
             name?: string;
             domains?: components["schemas"]["DomainName"][];
-            is_platform?: boolean;
+            readonly is_platform?: boolean;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -7650,7 +7650,7 @@ export interface components {
             id?: string;
             name: string;
             organisation_id?: string;
-            platform?: boolean;
+            readonly platform?: boolean;
             cluster_url: string;
             cluster_ca_data: string;
             cluster_sa_token: string;
