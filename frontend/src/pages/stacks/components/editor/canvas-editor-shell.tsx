@@ -15,6 +15,7 @@ import {
 import { AutosaveStatus } from "./autosave-status";
 import { DeployPill } from "./deploy-pill";
 import { DrawerInsetContext } from "@/pages/stacks/lib/canvas/drawer-inset";
+import { HeaderCollapseContext } from "@/pages/stacks/lib/canvas/header-collapse";
 import type { SyncStatus } from "@/pages/stacks/lib/draft-sync/constants";
 import { PublicEndpointRow, type PublicEndpoint } from "./public-endpoint-row";
 import { EDITOR_TABS, type EditorTabId } from "./editor-tabs";
@@ -170,6 +171,14 @@ export function CanvasEditorShell({
       return false;
     }
   });
+  const applyCollapsed = useCallback((next: boolean) => {
+    setCollapsed(next);
+    try {
+      localStorage.setItem(collapseKey, next ? "1" : "0");
+    } catch {
+      /* storage unavailable — collapse stays session-local */
+    }
+  }, [collapseKey]);
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
       const next = !c;
@@ -181,6 +190,10 @@ export function CanvasEditorShell({
       return next;
     });
   }, [collapseKey]);
+  const collapseCtx = useMemo(
+    () => ({ collapsed, setCollapsed: applyCollapsed }),
+    [collapsed, applyCollapsed],
+  );
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -245,179 +258,181 @@ export function CanvasEditorShell({
   );
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
-      {collapsed && (
-        <div
-          className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-          style={{ marginRight: effectiveDrawerInset }}
-        >
-          <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
-          {pillLabel && (
-            <span
-              aria-label={`status ${pillLabel}`}
-              className={cn(
-                "size-2 flex-none rounded-full",
-                pillVariant === "ready"
-                  ? "bg-success"
-                  : pillVariant === "error"
-                    ? "bg-danger"
-                    : pillVariant === "neutral"
-                      ? "bg-fg-muted"
-                      : "bg-warn",
-              )}
-            />
-          )}
-          {latestDeployFailed && (
-            <span
-              aria-label="Latest deploy failed"
-              title="Latest deploy failed"
-              className="size-2 flex-none rounded-full bg-danger"
-            />
-          )}
-          <div className="mx-2 flex items-center gap-1">
-            {TAB_ITEMS.map(({ id, label, Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => onTabChange(id)}
+    <HeaderCollapseContext.Provider value={collapseCtx}>
+      <div className="flex h-full flex-col overflow-hidden bg-background">
+        {collapsed && (
+          <div
+            className="flex h-11 flex-none items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+            style={{ marginRight: effectiveDrawerInset }}
+          >
+            <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
+            {pillLabel && (
+              <span
+                aria-label={`status ${pillLabel}`}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
-                  activeTab === id
-                    ? "border-brand bg-brand-bg text-brand"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
+                  "size-2 flex-none rounded-full",
+                  pillVariant === "ready"
+                    ? "bg-success"
+                    : pillVariant === "error"
+                      ? "bg-danger"
+                      : pillVariant === "neutral"
+                        ? "bg-fg-muted"
+                        : "bg-warn",
                 )}
-              >
-                <Icon className="size-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1" />
-          {actionsMenu}
-          {chevron}
-        </div>
-      )}
-      {!collapsed && (
-        <>
-          {/* Stack-title header — identity only (fade/translate on expand per design sd-fade) */}
-          <div
-            className="flex-none px-7 pt-6 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-            style={{ marginRight: effectiveDrawerInset }}
-          >
-            {/* Chevron sits at the row's right so the title stays flush-left with
-                the subtitle + endpoints below it (no collapse-toggle indent). */}
-            <div className="flex items-center gap-3.5">
-              {nameEditable ? (
-                // Same type metrics as the post-create h1; the dashed underline +
-                // pencil signal that the name is still editable (it freezes at deploy).
-                <div className="group flex min-w-0 items-center gap-2.5">
-                  <Input
-                    aria-label="Stack name"
-                    aria-invalid={!!nameError}
-                    value={stackName}
-                    onChange={(e) => onNameChange?.(e.target.value)}
-                    placeholder="name-your-stack"
-                    className={cn(
-                      "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0 md:text-[29px]",
-                      nameError
-                        ? "border-danger"
-                        : "border-border/60 hover:border-border focus-visible:border-brand",
-                    )}
-                  />
-                  <Pencil className="size-4 flex-none text-muted-foreground/60 transition-opacity group-focus-within:opacity-0" />
-                </div>
-              ) : (
-                <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
-              )}
-              {pillLabel && (
-                <StatusPill variant={pillVariant} className="flex-none">
-                  {pillLabel}
-                </StatusPill>
-              )}
-              {latestDeployFailed && (
-                <button
-                  type="button"
-                  onClick={() => onTabChange(EDITOR_TABS.deployments)}
-                  className="flex-none"
-                  aria-label="Latest deploy failed — view deployments"
-                >
-                  <StatusPill variant="error" pulse={false} className="cursor-pointer hover:opacity-80">
-                    Deploy failed
-                  </StatusPill>
-                </button>
-              )}
-              <div className="flex-1" />
-            </div>
-            {nameEditable && nameError && (
-              <p className="mt-1 text-[12px] text-danger">{nameError}</p>
+              />
             )}
-            <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
-            <PublicEndpointRow endpoints={publicEndpoints ?? []} />
-            {notice}
-          </div>
-
-          {/* Tab + action rail */}
-          <div
-            className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
-            style={{ marginRight: effectiveDrawerInset }}
-          >
-            {TAB_ITEMS.map(({ id, label, Icon }) => {
-              const active = activeTab === id;
-              return (
+            {latestDeployFailed && (
+              <span
+                aria-label="Latest deploy failed"
+                title="Latest deploy failed"
+                className="size-2 flex-none rounded-full bg-danger"
+              />
+            )}
+            <div className="mx-2 flex items-center gap-1">
+              {TAB_ITEMS.map(({ id, label, Icon }) => (
                 <button
                   key={id}
                   type="button"
                   onClick={() => onTabChange(id)}
                   className={cn(
-                    "flex items-center gap-2 rounded-md border px-[15px] py-2 text-sm font-medium transition-colors",
-                    active
+                    "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
+                    activeTab === id
                       ? "border-brand bg-brand-bg text-brand"
                       : "border-transparent text-muted-foreground hover:text-foreground",
                   )}
                 >
-                  <Icon className="size-[15px]" />
+                  <Icon className="size-3.5" />
                   {label}
-                  {id === EDITOR_TABS.architecture && dirtyResourceCount > 0 && (
-                    <span className="ml-0.5 rounded-full bg-brand-bg px-1.5 py-px font-mono text-[9.5px] font-medium text-brand">
-                      {dirtyResourceCount}
-                    </span>
-                  )}
                 </button>
-              );
-            })}
+              ))}
+            </div>
             <div className="flex-1" />
-            {!isNewStack && <AutosaveStatus status={syncStatus} />}
             {actionsMenu}
             {chevron}
           </div>
-        </>
-      )}
+        )}
+        {!collapsed && (
+          <>
+            {/* Stack-title header — identity only (fade/translate on expand per design sd-fade) */}
+            <div
+              className="flex-none px-7 pt-6 transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+              style={{ marginRight: effectiveDrawerInset }}
+            >
+              {/* Chevron sits at the row's right so the title stays flush-left with
+                the subtitle + endpoints below it (no collapse-toggle indent). */}
+              <div className="flex items-center gap-3.5">
+                {nameEditable ? (
+                // Same type metrics as the post-create h1; the dashed underline +
+                // pencil signal that the name is still editable (it freezes at deploy).
+                  <div className="group flex min-w-0 items-center gap-2.5">
+                    <Input
+                      aria-label="Stack name"
+                      aria-invalid={!!nameError}
+                      value={stackName}
+                      onChange={(e) => onNameChange?.(e.target.value)}
+                      placeholder="name-your-stack"
+                      className={cn(
+                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0 md:text-[29px]",
+                        nameError
+                          ? "border-danger"
+                          : "border-border/60 hover:border-border focus-visible:border-brand",
+                      )}
+                    />
+                    <Pencil className="size-4 flex-none text-muted-foreground/60 transition-opacity group-focus-within:opacity-0" />
+                  </div>
+                ) : (
+                  <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
+                )}
+                {pillLabel && (
+                  <StatusPill variant={pillVariant} className="flex-none">
+                    {pillLabel}
+                  </StatusPill>
+                )}
+                {latestDeployFailed && (
+                  <button
+                    type="button"
+                    onClick={() => onTabChange(EDITOR_TABS.deployments)}
+                    className="flex-none"
+                    aria-label="Latest deploy failed — view deployments"
+                  >
+                    <StatusPill variant="error" pulse={false} className="cursor-pointer hover:opacity-80">
+                    Deploy failed
+                    </StatusPill>
+                  </button>
+                )}
+                <div className="flex-1" />
+              </div>
+              {nameEditable && nameError && (
+                <p className="mt-1 text-[12px] text-danger">{nameError}</p>
+              )}
+              <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
+              <PublicEndpointRow endpoints={publicEndpoints ?? []} />
+              {notice}
+            </div>
 
-      {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
+            {/* Tab + action rail */}
+            <div
+              className="flex-none flex items-center gap-2 border-b border-border px-7 py-[18px] transition-[margin] duration-[260ms] animate-in fade-in slide-in-from-top-1"
+              style={{ marginRight: effectiveDrawerInset }}
+            >
+              {TAB_ITEMS.map(({ id, label, Icon }) => {
+                const active = activeTab === id;
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => onTabChange(id)}
+                    className={cn(
+                      "flex items-center gap-2 rounded-md border px-[15px] py-2 text-sm font-medium transition-colors",
+                      active
+                        ? "border-brand bg-brand-bg text-brand"
+                        : "border-transparent text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    <Icon className="size-[15px]" />
+                    {label}
+                    {id === EDITOR_TABS.architecture && dirtyResourceCount > 0 && (
+                      <span className="ml-0.5 rounded-full bg-brand-bg px-1.5 py-px font-mono text-[9.5px] font-medium text-brand">
+                        {dirtyResourceCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+              <div className="flex-1" />
+              {!isNewStack && <AutosaveStatus status={syncStatus} />}
+              {actionsMenu}
+              {chevron}
+            </div>
+          </>
+        )}
+
+        {/* Mode body. The canvas is always mounted (keeps its drawer/selection);
           ops views overlay it. Ops views own their own max-width + padding. */}
-      <div className="relative min-h-0 flex-1 overflow-hidden">
-        <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: effectiveDrawerInset }}>
-          <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
-          {activeTab === EDITOR_TABS.architecture && (
-            <DeployPill
-              isDraft={isNewStack}
-              hasResources={hasResources}
-              dirtyTotal={dirtyTotal}
-              isStaged={isStaged}
-              isActive={isActive}
-              deployBusy={deployBusy}
-              draftDeploying={draftDeploying}
-              canWrite={canWrite}
-              onDeploy={onDeploy}
-              onDraftDeploy={onDraftDeploy}
-              onViewChanges={onViewChanges}
-              canDiscardDraft={canDiscardDraft}
-              onDiscardDraft={onDiscardDraft}
-            />
-          )}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: effectiveDrawerInset }}>
+            <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
+            {activeTab === EDITOR_TABS.architecture && (
+              <DeployPill
+                isDraft={isNewStack}
+                hasResources={hasResources}
+                dirtyTotal={dirtyTotal}
+                isStaged={isStaged}
+                isActive={isActive}
+                deployBusy={deployBusy}
+                draftDeploying={draftDeploying}
+                canWrite={canWrite}
+                onDeploy={onDeploy}
+                onDraftDeploy={onDraftDeploy}
+                onViewChanges={onViewChanges}
+                canDiscardDraft={canDiscardDraft}
+                onDiscardDraft={onDiscardDraft}
+              />
+            )}
+          </div>
+          {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
         </div>
-        {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
       </div>
-    </div>
+    </HeaderCollapseContext.Provider>
   );
 }
