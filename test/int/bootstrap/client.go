@@ -162,22 +162,107 @@ func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCl
 		return fmt.Errorf("failed to create service account: %w", err)
 	}
 
-	// Create cluster role
+	// Create cluster role — rules mirror install/manifests/rbac.yaml (keep in sync)
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "stackdome-api-server-role",
 		},
 		Rules: []rbacv1.PolicyRule{
 			{
-				APIGroups: []string{"*"},
-				Resources: []string{"*"},
-				Verbs:     []string{"*"},
+				APIGroups: []string{"core.stackdome.io"},
+				Resources: []string{"stacks", "stackresources"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"storage.stackdome.io"},
+				Resources: []string{"volumes"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"users.stackdome.io"},
+				Resources: []string{"users"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"registry.stackdome.io"},
+				Resources: []string{"clusterregistries"},
+				Verbs:     []string{"get", "list", "watch", "create", "delete"},
+			},
+			{
+				APIGroups: []string{"addons.stackdome.io"},
+				Resources: []string{"postgresclusters"},
+				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{"builds.stackdome.io"},
+				Resources: []string{"imagebuilds"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"cert-manager.io"},
+				Resources: []string{"clusterissuers"},
+				Verbs:     []string{"get", "create"},
+			},
+			{
+				APIGroups: []string{"postgresql.cnpg.io"},
+				Resources: []string{"imagecatalogs"},
+				Verbs:     []string{"get", "create"},
+			},
+			{
+				APIGroups: []string{"postgresql.cnpg.io"},
+				Resources: []string{"backups"},
+				Verbs:     []string{"get", "list", "watch"},
+			},
+			{
+				APIGroups: []string{"barmancloud.cnpg.io"},
+				Resources: []string{"objectstores"},
+				Verbs:     []string{"get", "create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"namespaces"},
+				Verbs:     []string{"get", "create", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"secrets"},
+				Verbs:     []string{"get", "create", "update", "delete"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "list"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"pods/log"},
+				Verbs:     []string{"get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"services"},
+				Verbs:     []string{"get"},
+			},
+			{
+				APIGroups: []string{""},
+				Resources: []string{"nodes"},
+				Verbs:     []string{"list"},
+			},
+			{
+				APIGroups: []string{"metrics.k8s.io"},
+				Resources: []string{"pods"},
+				Verbs:     []string{"get", "list"},
 			},
 		},
 	}
 	_, err = kubeClient.RbacV1().ClusterRoles().Create(ctx, clusterRole, metav1.CreateOptions{})
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return fmt.Errorf("failed to create cluster role: %w", err)
+	if err != nil {
+		if !strings.Contains(err.Error(), "already exists") {
+			return fmt.Errorf("failed to create cluster role: %w", err)
+		}
+		if _, err := kubeClient.RbacV1().ClusterRoles().Update(ctx, clusterRole, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("failed to update cluster role: %w", err)
+		}
 	}
 
 	// Create cluster role binding
