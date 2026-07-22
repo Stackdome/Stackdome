@@ -1,10 +1,38 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { useState } from "react";
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeAll } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EnvVarsEditor, type EnvVarFormRow } from "../env-vars-editor";
+import type { Secret } from "@/api/secrets";
+
+vi.mock("@/pages/secrets/hooks/use-secrets", () => ({
+  useSecrets: () => ({
+    secrets: [
+      { id: "s1", name: "api-token", type: "Generic" },
+      { id: "s2", name: "tls-cert", type: "TLS" },
+    ] as Secret[],
+    loading: false,
+    error: null,
+    refetch: vi.fn(),
+  }),
+}));
+
+// Radix Select uses pointer-capture APIs that jsdom doesn't implement.
+// Stub them so userEvent.click on a SelectTrigger opens the popover.
+beforeAll(() => {
+  const stubs: Record<string, () => unknown> = {
+    hasPointerCapture: () => false,
+    releasePointerCapture: () => undefined,
+    setPointerCapture: () => undefined,
+    scrollIntoView: () => undefined,
+  };
+  for (const [name, impl] of Object.entries(stubs)) {
+    const proto = Element.prototype as unknown as Record<string, unknown>;
+    if (!proto[name]) proto[name] = vi.fn(impl);
+  }
+});
 
 afterEach(() => cleanup());
 
@@ -64,5 +92,30 @@ describe("EnvVarsEditor", () => {
     await userEvent.click(screen.getAllByRole("button", { name: /remove variable/i })[0]);
 
     expect(onChange).toHaveBeenLastCalledWith([{ name: "BAR", value: "2" }]);
+  });
+
+  it("round-trips a {{ secret.NAME }} value into Secret mode with the secret selected", () => {
+    render(<Harness initial={[{ name: "TOKEN", value: "{{ secret.api-token }}" }]} onChange={vi.fn()} />);
+
+    expect(screen.getByRole("combobox", { name: "Value source" })).toHaveTextContent("Secret");
+    expect(screen.getByRole("combobox", { name: "Secret" })).toHaveTextContent("api-token");
+    expect(screen.queryByLabelText(/^variable value$/i)).not.toBeInTheDocument();
+  });
+
+  it("preselects the first secret when the source is switched to Secret", async () => {
+    const onChange = vi.fn();
+    render(<Harness initial={[{ name: "TOKEN", value: "plain" }]} onChange={onChange} />);
+
+    await userEvent.click(screen.getByRole("combobox", { name: "Value source" }));
+    await userEvent.click(screen.getByRole("option", { name: "Secret" }));
+
+    expect(onChange).toHaveBeenLastCalledWith([{ name: "TOKEN", value: "{{ secret.api-token }}" }]);
+  });
+
+  it("keeps literal values editable as plain text", () => {
+    render(<Harness initial={[{ name: "PORT", value: "8080" }]} onChange={vi.fn()} />);
+
+    expect(screen.getByRole("combobox", { name: "Value source" })).toHaveTextContent("Plain text");
+    expect(screen.getByLabelText(/^variable value$/i)).toHaveValue("8080");
   });
 });

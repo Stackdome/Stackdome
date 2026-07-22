@@ -86,7 +86,6 @@ describe("useVolumeDelete", () => {
       description: '"data" and its data were deleted.',
       variant: "success",
     });
-    expect(result.current.deleting).toBe(false);
   });
 
   it("ids null: returns true immediately, makes zero network calls", async () => {

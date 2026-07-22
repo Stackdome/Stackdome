@@ -94,26 +94,11 @@ export function useCreateCluster() {
 
 export function useDeleteCluster() {
   const orgId = getCurrentOrganizationId();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const deleteCluster = useCallback(async (clusterId: string) => {
     if (!orgId) throw new Error("No organization selected");
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
-    try {
-      await clusterApi.deleteCluster(orgId, clusterId);
-      setSuccess(true);
-      return true;
-    } catch (e) {
-      setError(getErrorMessage(e));
-      throw e;
-    } finally {
-      setLoading(false);
-    }
+    await clusterApi.deleteCluster(orgId, clusterId);
   }, [orgId]);
 
-  return { deleteCluster, loading, error, success };
+  return { deleteCluster };
 }

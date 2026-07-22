@@ -32,7 +32,7 @@ function changedNames(diff?: SnapshotDiff): string[] {
  * Leads the rail when there are saved-but-undeployed changes. Mirrors a release node's
  * shape but with a dashed amber ring/border ("not deployed") and shows the staged diff.
  */
-export function DraftNode({ phase, diff, vsSeq, isLast, defaultOpen = true }: DraftNodeProps) {
+export function DraftNode({ phase, diff, vsSeq, isLast, defaultOpen = false }: DraftNodeProps) {
   const [open, setOpen] = useState(defaultOpen);
   const names = changedNames(diff);
   const hasChanges = names.length > 0;

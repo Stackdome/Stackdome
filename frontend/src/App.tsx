@@ -21,6 +21,7 @@ import { StackProvider } from "@/pages/stacks/contexts/stack-context"
 import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common"
 import { AppLayout } from "@/components/app-layout"
 import { Toaster } from "@/components/ui/toaster"
+import { ConfirmProvider } from "@/components/branded/confirm"
 import { ThemeProvider } from "@/contexts/theme-provider"
 import { CurrentUserProvider } from "@/contexts/current-user-context"
 import { RequireAdmin } from "@/components/require-admin"
@@ -79,12 +80,32 @@ const router = createBrowserRouter(
   )
 )
 
+// Safety net for the Radix body pointer-events wedge: a modal layer unmounted
+// mid-close (e.g. by navigation) can "restore" a stale pointer-events:none to
+// <body> and dead-lock the page (radix-ui/primitives#1836 class). After any
+// navigation, a body lock with no open body-locking layer (dialog/menu — not
+// tooltips/accordions, which never lock) is stale by definition — clear it.
+// Checked twice: once after the unmounts flush, once after close animations.
+const OPEN_LOCKING_LAYER =
+  "[data-state='open']:is([role='dialog'],[role='alertdialog'],[role='menu'])";
+router.subscribe(() => {
+  for (const delay of [0, 300]) {
+    setTimeout(() => {
+      if (!document.querySelector(OPEN_LOCKING_LAYER)) {
+        document.body.style.pointerEvents = "";
+      }
+    }, delay);
+  }
+})
+
 function App() {
   return (
     <ThemeProvider defaultTheme="system" storageKey="stackdome-ui-theme">
       <StackProvider>
         <CurrentUserProvider>
-          <RouterProvider router={router} />
+          <ConfirmProvider>
+            <RouterProvider router={router} />
+          </ConfirmProvider>
         </CurrentUserProvider>
         <Toaster />
       </StackProvider>

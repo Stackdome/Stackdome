@@ -4,6 +4,10 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import StickyActionBar from "../sticky-action-bar";
+import { ConfirmProvider } from "@/components/branded/confirm";
+
+const renderBar: typeof render = ((ui: Parameters<typeof render>[0]) =>
+  render(ui, { wrapper: ConfirmProvider })) as typeof render;
 
 afterEach(cleanup);
 
@@ -23,12 +27,12 @@ const noopPrimary = (over: Partial<Parameters<typeof StickyActionBar>[0]["primar
 
 describe("StickyActionBar — segment rendering", () => {
   it("renders the lead label", () => {
-    render(<StickyActionBar leadLabel="Draft" segments={[]} primary={noopPrimary()} />);
+    renderBar(<StickyActionBar leadLabel="Draft" segments={[]} primary={noopPrimary()} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
   });
 
   it("renders each segment's number and label", () => {
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[
@@ -49,7 +53,7 @@ describe("StickyActionBar — primary button", () => {
   it("fires onClick when clicked", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    renderBar(
       <StickyActionBar leadLabel="Draft" segments={[]} primary={noopPrimary({ onClick })} />,
     );
     await user.click(screen.getByRole("button", { name: /deploy/i }));
@@ -57,7 +61,7 @@ describe("StickyActionBar — primary button", () => {
   });
 
   it("disables both buttons and shows loadingLabel while loading", () => {
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[]}
@@ -77,7 +81,7 @@ describe("StickyActionBar — secondary confirm gating", () => {
   it("calls secondary.onClick directly when no `confirm` is configured", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[]}
@@ -92,7 +96,7 @@ describe("StickyActionBar — secondary confirm gating", () => {
   it("calls secondary.onClick directly when dirtyCount is below threshold", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[]}
@@ -117,7 +121,7 @@ describe("StickyActionBar — secondary confirm gating", () => {
   it("opens the confirm dialog instead of firing onClick when dirtyCount meets threshold", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[]}
@@ -143,7 +147,7 @@ describe("StickyActionBar — secondary confirm gating", () => {
   it("fires onClick after the dialog's confirm action", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[]}
@@ -169,7 +173,7 @@ describe("StickyActionBar — secondary confirm gating", () => {
   it("does NOT fire onClick when the dialog is cancelled", async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Draft"
         segments={[]}
@@ -195,13 +199,13 @@ describe("StickyActionBar — secondary confirm gating", () => {
 
 describe("StickyActionBar — tone / optional primary", () => {
   it("clean tone renders the lead label with no action buttons", () => {
-    render(<StickyActionBar leadLabel="All deployed" segments={[]} tone="clean" />);
+    renderBar(<StickyActionBar leadLabel="All deployed" segments={[]} tone="clean" />);
     expect(screen.getByText("All deployed")).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
   it("deploying tone shows only the secondary (Cancel) — no primary", () => {
-    render(
+    renderBar(
       <StickyActionBar
         leadLabel="Deploying"
         segments={[]}

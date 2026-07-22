@@ -58,7 +58,7 @@ export function VerifyRegistryDialog({ credential, onOpenChange }: VerifyRegistr
     setVerifying(true);
     try {
       await verifyRegistryCredential(orgId, credential.id, qualifyRepository(parsed.data.repository, credential.host));
-      toast({ title: "Registry access verified" });
+      toast({ title: "Registry access verified", variant: "success" });
       onOpenChange(false);
     } catch (e) {
       toast({ title: "Couldn't verify registry access", description: getErrorMessage(e), variant: "destructive" });

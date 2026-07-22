@@ -63,7 +63,7 @@ export function UpdateCredentialsDialog({ credential, onOpenChange, onUpdated }:
         username: parsed.data.username,
         password: parsed.data.password,
       });
-      toast({ title: "Credentials updated" });
+      toast({ title: "Credentials updated", variant: "success" });
       onOpenChange(false);
       onUpdated();
     } catch (e) {

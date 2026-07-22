@@ -141,7 +141,7 @@ describe("CanvasEditorShell actions menu", () => {
     // Radix dropdown content mounts on pointer interaction (not in jsdom), so we
     // assert the trigger exists and that the removed item never renders eagerly.
     render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive dirtyTotal={2} />);
-    expect(screen.getByLabelText("Stack actions")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Stack actions" })).toBeInTheDocument();
     expect(screen.queryByText("Discard all changes")).toBeNull();
   });
 
@@ -159,7 +159,7 @@ describe("CanvasEditorShell actions menu", () => {
       pointerEventsAtCall.push(document.body.style.pointerEvents);
     });
     render(<CanvasEditorShell {...base} nameEditable={false} stackName="api" isActive onDelete={onDelete} />);
-    await user.click(screen.getByLabelText("Stack actions"), { pointerEventsCheck: 0 });
+    await user.click(screen.getByRole("button", { name: "Stack actions" }), { pointerEventsCheck: 0 });
     await user.click(await screen.findByText("Delete stack"), { pointerEventsCheck: 0 });
     await waitFor(() => expect(onDelete).toHaveBeenCalled());
     // At the moment the dialog-opening callback runs, the menu must already
@@ -175,8 +175,10 @@ describe("CanvasEditorShell collapse", () => {
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
     expect(screen.getByText("0 services · 0 volumes")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
-    expect(screen.queryByText("0 services · 0 volumes")).toBeNull();
-    expect(screen.getByText("acme")).toBeInTheDocument(); // compact bar name
+    // The expanded header stays mounted for the height animation but is
+    // inert + aria-hidden; the compact bar becomes the visible surface.
+    expect(screen.getByText("0 services · 0 volumes").closest("[inert]")).not.toBeNull();
+    expect(screen.getAllByText("acme").length).toBeGreaterThan(0); // compact bar name
     expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
   });
 

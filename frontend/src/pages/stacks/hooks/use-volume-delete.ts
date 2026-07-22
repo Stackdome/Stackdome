@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import axios from "axios";
 import type { Stack, Volume } from "@/api/stacks";
 import { deleteVolume } from "@/api/volumes";
@@ -18,7 +18,6 @@ export interface UseVolumeDeleteArgs {
 }
 
 export interface UseVolumeDelete {
-  deleting: boolean;
   deleteVolume: (name: string) => Promise<boolean>;
 }
 
@@ -35,8 +34,6 @@ export function useVolumeDelete({
   onRestoreVolume,
   toast,
 }: UseVolumeDeleteArgs): UseVolumeDelete {
-  const [deleting, setDeleting] = useState(false);
-
   /** Refetch the stack, keep the autosave mirror truthful, and — if the volume
    *  still exists server-side — restore it into the local draft (it never
    *  actually disappeared, so the local edit must not lie about that). */
@@ -62,7 +59,6 @@ export function useVolumeDelete({
   const runDelete = useCallback(
     async (name: string): Promise<boolean> => {
       if (!ids) return true;
-      setDeleting(true);
       try {
         // Let React commit the caller's draft edit first — flush()'s startCycle
         // reads the current session draft, and buildDesiredState already drops
@@ -112,12 +108,10 @@ export function useVolumeDelete({
           variant: "destructive",
         });
         return false;
-      } finally {
-        setDeleting(false);
       }
     },
     [ids, fetchStack, draftSync, refetchAndRestore, toast],
   );
 
-  return { deleting, deleteVolume: runDelete };
+  return { deleteVolume: runDelete };
 }
