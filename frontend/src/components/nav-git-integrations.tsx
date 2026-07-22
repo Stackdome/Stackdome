@@ -17,13 +17,13 @@ export function NavGitIntegrations() {
     <SidebarMenu>
       <SidebarMenuItem>
         <SidebarMenuButton
-          tooltip="Git Integrations"
+          tooltip="Git Providers"
           asChild
           isActive={isGitIntegrationsActive}
         >
           <Link to="/git-integrations">
             <GitBranch />
-            <span>Git Integrations</span>
+            <span>Git Providers</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>

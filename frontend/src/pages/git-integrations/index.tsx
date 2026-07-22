@@ -11,6 +11,7 @@ import {
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
 import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
 import { IntegrationRow } from "./components/integration-row";
@@ -26,6 +27,11 @@ export default function GitIntegrationsPage() {
   const [editing, setEditing] = useState<GitIntegration | null>(null);
   const confirm = useConfirm();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { setCustomLabel } = useBreadcrumb();
+
+  useEffect(() => {
+    setCustomLabel("/git-integrations", "Git providers");
+  }, [setCustomLabel]);
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
@@ -96,7 +102,7 @@ export default function GitIntegrationsPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         eyebrow="Integrations"
-        title="Git integrations"
+        title="Git providers"
         subtitle="Grant Stackdome access to your repositories for clones, builds, and preview environments."
         actions={addButton}
       />
