@@ -315,9 +315,9 @@ export default function StacksPage() {
           ) : (
             <div
               // auto-fill sizes off the container (not viewport breakpoints), and
-              // the 320px cap keeps cards from stretching on in-between widths.
+              // the 300px cap keeps cards from stretching on in-between widths.
               className="grid gap-4"
-              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 320px))" }}
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 300px))" }}
             >
               {filtered.map((stack) => (
                 <DeployStackCard
