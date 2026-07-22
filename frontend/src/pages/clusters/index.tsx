@@ -9,7 +9,7 @@ import type { Cluster } from "./types";
 import type { ClusterData } from "./hooks/use-clusters";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { PageHeader, Panel, EmptyState, LimitedAction } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteCluster, createCluster } from "@/api/clusters";
 import { getCurrentOrganizationId } from "@/helpers/common";
@@ -26,13 +26,6 @@ export default function ClustersPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
-
-  // Automatically redirect to cluster detail page if a cluster exists
-  useEffect(() => {
-    if (!loading && clusters.length === 1) {
-      navigate(`/clusters/${clusters[0].id}`);
-    }
-  }, [clusters, loading, navigate]);
 
   // Set breadcrumb
   useEffect(() => {
@@ -135,10 +128,15 @@ export default function ClustersPage() {
           title="Clusters"
           subtitle="Compute targets for your stacks"
           actions={
-            <Button onClick={() => setShowAddDialog(true)}>
-              <PlusCircle className="h-4 w-4" />
-              Add Cluster
-            </Button>
+            <LimitedAction
+              limitReached={clusters.length >= 1}
+              limitMessage="Currently only one cluster is supported."
+            >
+              <Button onClick={() => setShowAddDialog(true)}>
+                <PlusCircle className="h-4 w-4" />
+                Add Cluster
+              </Button>
+            </LimitedAction>
           }
         />
 
