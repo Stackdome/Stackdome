@@ -126,7 +126,7 @@ describe('convertDockerComposeToStackData', () => {
     expect(resource.source?.git).toBeDefined();
     expect(resource.source!.git!.build_context).toBe('./api');
     expect(resource.source!.git!.dockerfile_path).toBe('Dockerfile.prod');
-    expect(resource.execution_config.command).toEqual(['npm', 'start']);
+    expect(resource.execution_config.command).toBe('npm start');
     expect(resource.execution_config.environment_variables).toHaveLength(2);
 
     // Should have warnings about build args and placeholders
@@ -337,7 +337,7 @@ describe('convertServiceToStackResource', () => {
     expect(result.data!.sourceType).toBe('git');
     expect(result.data!.source?.git).toBeDefined();
     expect(result.data!.source!.git!.build_context).toBe('./backend');
-    expect(result.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
+    expect(result.data!.execution_config.command).toBe('npm run start:prod');
   });
 
   it('should fail when neither image nor build is specified', () => {
@@ -493,10 +493,10 @@ describe('convertServiceToStackResource', () => {
     const resultArray = convertServiceToStackResource('app2', serviceArray);
 
     expect(resultString.success).toBe(true);
-    expect(resultString.data!.execution_config.command).toEqual(['npm', 'start']);
+    expect(resultString.data!.execution_config.command).toBe('npm start');
 
     expect(resultArray.success).toBe(true);
-    expect(resultArray.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
+    expect(resultArray.data!.execution_config.command).toBe('npm run start:prod');
   });
 
   it('should map internal ports as exposed when external mapping exists', () => {

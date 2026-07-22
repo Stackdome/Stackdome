@@ -84,6 +84,9 @@ export interface AttachmentNodeData {
   kind: AttachmentKind;
   name: string;
   kindLabel: string; // "SECRET" | "VOLUME" | "OBJECT STORE"
+  /** Index into the draft's volumeNames array — the stable identity a volume
+   *  keeps while being renamed (its node id embeds the name). Volume kind only. */
+  volumeIdx?: number;
   [key: string]: unknown;
 }
 
@@ -282,13 +285,13 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
   const edges: CanvasEdge[] = [];
   const seen = new Set<string>();
 
-  const ensureAttachment = (id: string, kind: AttachmentKind, name: string) => {
+  const ensureAttachment = (id: string, kind: AttachmentKind, name: string, volumeIdx?: number) => {
     if (nodeById.has(id)) return;
     const node: CanvasNode = {
       id,
       type: "attachment",
       position: { x: 0, y: 0 },
-      data: { kind, name, kindLabel: ATTACHMENT_LABEL[kind] },
+      data: { kind, name, kindLabel: ATTACHMENT_LABEL[kind], volumeIdx },
     };
     nodeById.set(id, node);
     nodes.push(node);
@@ -327,10 +330,10 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
       if (m.source_volume_name) mountedVolumes.add(m.source_volume_name as string);
     }
   }
-  for (const volumeName of input.volumeNames ?? []) {
-    if (!volumeName || mountedVolumes.has(volumeName)) continue;
-    ensureAttachment(NODE_ID_PREFIX.volume + volumeName, NODE_KIND.volume, volumeName);
-  }
+  (input.volumeNames ?? []).forEach((volumeName, volumeIdx) => {
+    if (!volumeName || mountedVolumes.has(volumeName)) return;
+    ensureAttachment(NODE_ID_PREFIX.volume + volumeName, NODE_KIND.volume, volumeName, volumeIdx);
+  });
 
   for (const resource of input.resources) {
     for (const dep of resource.depends_on ?? []) {

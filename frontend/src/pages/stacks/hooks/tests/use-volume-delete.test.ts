@@ -7,16 +7,13 @@ import type { Stack, Volume } from "@/api/stacks";
 vi.mock("@/api/volumes", () => ({
   deleteVolume: vi.fn(),
 }));
-vi.mock("@/api/stacks", () => ({
-  getStackById: vi.fn(),
-}));
 
 import { deleteVolume } from "@/api/volumes";
-import { getStackById } from "@/api/stacks";
 import { useVolumeDelete } from "../use-volume-delete";
 
 const mockedDelete = vi.mocked(deleteVolume);
-const mockedGetStack = vi.mocked(getStackById);
+// The hook no longer fetches itself — the page injects a ticket-gated fetch.
+const mockedGetStack = vi.fn<() => Promise<Stack>>();
 
 const ids = { orgId: "org-1", projectName: "alpha", stackId: "stack-1" };
 
@@ -42,21 +39,19 @@ function mkAxiosError(status: number): AxiosError {
 function mkArgs(overrides: Partial<Parameters<typeof useVolumeDelete>[0]> = {}) {
   const flush = vi.fn().mockResolvedValue(true);
   const notifyExternalUpdate = vi.fn();
-  const onServerRefresh = vi.fn();
   const onRestoreVolume = vi.fn();
   const toast = vi.fn();
   return {
     args: {
       ids,
       draftSync: { flush, notifyExternalUpdate },
-      onServerRefresh,
+      fetchStack: mockedGetStack,
       onRestoreVolume,
       toast,
       ...overrides,
     },
     flush,
     notifyExternalUpdate,
-    onServerRefresh,
     onRestoreVolume,
     toast,
   };
@@ -69,7 +64,7 @@ beforeEach(() => {
 
 describe("useVolumeDelete", () => {
   it("happy path: flush -> refetch (id lookup) -> deleteVolume(id) -> refetch -> notify+refresh, true", async () => {
-    const { args, flush, notifyExternalUpdate, onServerRefresh, toast } = mkArgs();
+    const { args, flush, notifyExternalUpdate, toast } = mkArgs();
     mockedGetStack
       .mockResolvedValueOnce(mkStack([{ id: "vol-1", name: "data" }]))
       .mockResolvedValueOnce(mkStack([]));
@@ -86,7 +81,6 @@ describe("useVolumeDelete", () => {
     expect(mockedGetStack).toHaveBeenCalledTimes(2);
     expect(mockedDelete).toHaveBeenCalledWith("org-1", "alpha", "vol-1");
     expect(notifyExternalUpdate).toHaveBeenCalledTimes(1);
-    expect(onServerRefresh).toHaveBeenCalledTimes(1);
     expect(toast).toHaveBeenCalledWith({
       title: "Volume deleted",
       description: '"data" and its data were deleted.',
@@ -128,7 +122,7 @@ describe("useVolumeDelete", () => {
   });
 
   it("volume absent post-flush (never persisted): no delete call, true", async () => {
-    const { args, onServerRefresh, onRestoreVolume } = mkArgs();
+    const { args, onRestoreVolume } = mkArgs();
     mockedGetStack.mockResolvedValueOnce(mkStack([]));
 
     const { result } = renderHook(() => useVolumeDelete(args));
@@ -139,7 +133,6 @@ describe("useVolumeDelete", () => {
 
     expect(ok).toBe(true);
     expect(mockedDelete).not.toHaveBeenCalled();
-    expect(onServerRefresh).not.toHaveBeenCalled();
     expect(onRestoreVolume).not.toHaveBeenCalled();
   });
 

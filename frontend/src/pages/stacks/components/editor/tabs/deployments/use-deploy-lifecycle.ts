@@ -34,6 +34,11 @@ export interface DeriveDeployLifecycleArgs {
   activeSnapshot?: StackReleaseSnapshot;
   /** Snapshot of the live release — what is actually running. */
   liveSnapshot?: StackReleaseSnapshot;
+  /** Live edit-session draft in snapshot shape. When present it is the "user's
+   *  spec" side of every diff, replacing the server-fetched spec — staged
+   *  surfaces then update on keystroke instead of after the autosave
+   *  round-trip. Absent → server spec (no session, read-only viewers). */
+  draftSnapshot?: StackReleaseSnapshot;
 }
 
 function diffIsEmpty(d: SnapshotDiff): boolean {
@@ -80,7 +85,7 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
     // saved-so-far changes instead of a placeholder. Baseline follows the same rules
     // as the staged path; undefined only while a live snapshot is still loading.
     const base = baselineSnapshot(args);
-    const stagedDiff = base ? diffSnapshots(base, specToSnapshot(stack)) : undefined;
+    const stagedDiff = base ? diffSnapshots(base, args.draftSnapshot ?? specToSnapshot(stack)) : undefined;
     // Mirror the staged path's "vs #N" anchor so the label doesn't vanish while an
     // edit is still autosaving: the in-flight release when deploying, else live.
     const deploying = !!activeRelease && !isTerminal(activeRelease.state);
@@ -88,7 +93,7 @@ export function deriveDeployLifecycle(args: DeriveDeployLifecycleArgs): DeployLi
     return { phase: "editing", stagedDiff, vsSeq, nextSeq };
   }
 
-  const spec = specToSnapshot(stack);
+  const spec = args.draftSnapshot ?? specToSnapshot(stack);
   const deploying = !!activeRelease && !isTerminal(activeRelease.state);
 
   // Deploy in flight: measure the draft against the IN-FLIGHT release, not live. Matches it →
@@ -139,13 +144,15 @@ export interface UseDeployLifecycleArgs {
   releases: StackRelease[];
   activeRelease?: StackRelease;
   detail: ReleaseDetail;
+  /** See DeriveDeployLifecycleArgs.draftSnapshot. */
+  draftSnapshot?: StackReleaseSnapshot;
 }
 
 /**
  * React wrapper: resolves the live + latest-attempt releases, lazily loads both
  * snapshots, and derives the lifecycle phase.
  */
-export function useDeployLifecycle({ stack, unsaved, releases, activeRelease, detail }: UseDeployLifecycleArgs): DeployLifecycle {
+export function useDeployLifecycle({ stack, unsaved, releases, activeRelease, detail, draftSnapshot }: UseDeployLifecycleArgs): DeployLifecycle {
   const liveReleaseId = stack?.converged_release?.id;
   const liveRelease = liveReleaseId ? releases.find((r) => r.id === liveReleaseId) : undefined;
   const activeId = activeRelease?.id;
@@ -158,5 +165,5 @@ export function useDeployLifecycle({ stack, unsaved, releases, activeRelease, de
 
   const liveSnapshot = detail.peek(liveReleaseId).data?.snapshot;
   const activeSnapshot = detail.peek(activeId).data?.snapshot;
-  return deriveDeployLifecycle({ stack, unsaved, activeRelease, liveRelease, activeSnapshot, liveSnapshot });
+  return deriveDeployLifecycle({ stack, unsaved, activeRelease, liveRelease, activeSnapshot, liveSnapshot, draftSnapshot });
 }

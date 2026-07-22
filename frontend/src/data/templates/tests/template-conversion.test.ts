@@ -67,13 +67,13 @@ describe("template conversion round-trip", () => {
     // block each other's migrations until statement_timeout kills one
     // (pg error 57014).
     const server = data.spec.stack_resources.find((r) => r.name === "tooljet")!;
-    expect(server.execution_config?.command).toEqual([
-      "./server/ee-entrypoint.sh", "npm", "run", "start:prod",
-    ]);
+    expect(server.execution_config?.command).toBe(
+      "./server/ee-entrypoint.sh npm run start:prod",
+    );
     const worker = data.spec.stack_resources.find((r) => r.name === "tooljet-worker")!;
-    expect(worker.execution_config?.command).toEqual([
-      "npm", "--prefix", "server", "run", "worker:prod",
-    ]);
+    expect(worker.execution_config?.command).toBe(
+      "npm --prefix server run worker:prod",
+    );
     expect(worker.depends_on).toContain("tooljet");
 
     const otelStack = data.spec.stack_resources.find((r) => r.name === "otel-stack")!;

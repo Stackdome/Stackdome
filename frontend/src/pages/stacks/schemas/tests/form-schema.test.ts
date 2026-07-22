@@ -511,3 +511,114 @@ describe("FormStackSchema — depends_on cross-validation", () => {
     }
   });
 });
+
+describe("command/args text ↔ argv round-trip", () => {
+  it("loads argv arrays as terminal-style text", () => {
+    const api = baseResource({ command: ["npm", "run", "start:prod"] });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    expect(form.execution_config?.command).toBe("npm run start:prod");
+    expect(form.execution_config?.args).toBe("npm run start:prod");
+  });
+
+  it("quotes argv elements containing spaces on load, losslessly", () => {
+    const api = baseResource({
+      command: ["sh", "-c", "npm run migrate && npm start"],
+      args: [],
+    });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    expect(form.execution_config?.command).toBe("sh -c 'npm run migrate && npm start'");
+
+    const back = convertFormResourceToApiResource(form);
+    expect(back.execution_config?.command).toEqual(["sh", "-c", "npm run migrate && npm start"]);
+  });
+
+  it("saves quoted text as a single argv element", () => {
+    const api = baseResource({});
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = {
+      ...form,
+      init_spec: { command: 'node -e "console.log(1)"', args: "" },
+    };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.init_spec?.command).toEqual(["node", "-e", "console.log(1)"]);
+  });
+
+  it("serializes a cleared init_spec as explicit empty arrays (gorm skips absent fields)", () => {
+    const api = baseResource({});
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = { ...form, init_spec: { command: "  ", args: "" } };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.init_spec).toEqual({ command: [], args: [] });
+  });
+
+  it("serializes cleared exec command/args as explicit empty arrays", () => {
+    const api = baseResource({ command: ["npm", "start"] });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = {
+      ...form,
+      execution_config: { ...form.execution_config, command: "", args: "" },
+    };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.execution_config?.command).toEqual([]);
+    expect(back.execution_config?.args).toEqual([]);
+  });
+
+  it("omits init_spec for a resource that never had one", () => {
+    const api = baseResource({});
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    expect(form.init_spec).toBeUndefined();
+    const back = convertFormResourceToApiResource(form);
+    expect(back.init_spec).toBeUndefined();
+  });
+});
+
+describe("FormStackResourceSchema — command text validation", () => {
+  const valid = {
+    name: "web",
+    sourceType: "image",
+    source: { image: { ref: "nginx:latest" } },
+  };
+
+  it("rejects unbalanced quotes in a command field", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      ...valid,
+      init_spec: { command: "sh -c 'npm start" },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "init_spec.command",
+      );
+      expect(issue?.message).toBe("Unclosed quote or trailing backslash");
+    }
+  });
+
+  it("accepts balanced quoted command text", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      ...valid,
+      execution_config: { command: "sh -c 'npm run migrate && npm start'" },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("FormStackResourceSchema — port number validation", () => {
+  it("rejects a port with no number (cleared field)", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "nginx:latest" } },
+      ports: [{ protocol: "tcp", exposed_to_public: false }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "ports.0.number",
+      );
+      expect(issue?.message).toBe("Port number is required");
+    }
+  });
+});

@@ -126,7 +126,7 @@ export function LedgerRow({
     <div className={cn("border-b border-secondary/80 py-1", className)}>
       <div
         className={cn(
-          "flex gap-4 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20",
+          "flex gap-4 rounded-md px-1.5 py-1.5",
           alignTop ? "items-start" : "items-center",
         )}
       >

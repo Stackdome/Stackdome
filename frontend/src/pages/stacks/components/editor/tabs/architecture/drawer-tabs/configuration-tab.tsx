@@ -213,10 +213,10 @@ function StackResourceConfigurationTabImpl({
       ports: (draft.ports || []).map((port: Port, i: number) => {
         if (i !== pidx) return port;
         const next = { ...port, ...patch };
-        // Keep the auto-derived name tracking the number so the output key stays
-        // meaningful (url.port-8080). Only re-derive while the name is still the
-        // auto value; a name the user set by hand is left untouched.
-        if (patch.number !== undefined && (!port.name || port.name === `port-${port.number}`)) {
+        // Re-derive the auto name (url.port-8080) only while it still matches the
+        // auto PATTERN — not the current number, which a cleared field desyncs —
+        // so a hand-set name is never overwritten.
+        if (patch.number !== undefined && (!port.name || /^port-(\d+|undefined)$/.test(port.name))) {
           next.name = `port-${patch.number}`;
         }
         return next;
@@ -627,10 +627,11 @@ function StackResourceConfigurationTabImpl({
                 <Input
                   id={`port-number-${index}-${pidx}`}
                   inputMode="numeric"
-                  value={port.number?.toString() || ""}
-                  onChange={(e) =>
-                    updatePort(pidx, { number: parseInt(e.target.value.replace(/\D/g, "")) || 0 })
-                  }
+                  value={port.number?.toString() ?? ""}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, "");
+                    updatePort(pidx, { number: digits === "" ? undefined : parseInt(digits, 10) });
+                  }}
                   className={`h-9 w-[84px] shrink-0 font-mono text-[13px] ${getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}`}
                   required
                 />
