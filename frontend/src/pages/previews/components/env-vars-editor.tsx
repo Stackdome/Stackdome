@@ -21,8 +21,9 @@ interface EnvVarsEditorProps {
 }
 
 /** A value that is exactly one secret reference, e.g. "{{ secret.api-token }}".
- *  The name may be empty — that's a Secret-mode row whose secret isn't picked yet. */
-const EXACT_SECRET_REF = /^\{\{\s*secret\.([\w-]*)\s*\}\}$/;
+ *  The name may be empty — that's a Secret-mode row whose secret isn't picked
+ *  yet. Dots are allowed: the stackfile ref grammar accepts them in names. */
+const EXACT_SECRET_REF = /^\{\{\s*secret\.([\w.-]*)\s*\}\}$/;
 
 const secretRef = (name: string) => `{{ secret.${name} }}`;
 

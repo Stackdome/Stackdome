@@ -98,24 +98,28 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Deferred so the menu finishes closing before the dialog mounts — see radix-ui/primitives#1836 (canonical note in row-menu.tsx). */}
-              <DropdownMenuItem
-                disabled={menuDisabled}
-                onSelect={() => setTimeout(() => onSync?.(env), 0)}
-              >
-                <RefreshCw className="h-4 w-4" />
-                Sync
-              </DropdownMenuItem>
+              {onSync && (
+                <DropdownMenuItem
+                  disabled={menuDisabled}
+                  onSelect={() => setTimeout(() => onSync(env), 0)}
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Sync
+                </DropdownMenuItem>
+              )}
               {/* No deferral needed: the confirm service defers its own open a
                   tick past the menu close. onSync above keeps its setTimeout —
                   it opens a plain Dialog directly. */}
-              <DropdownMenuItem
-                variant="destructive"
-                disabled={menuDisabled}
-                onSelect={() => onDelete?.(env)}
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </DropdownMenuItem>
+              {onDelete && (
+                <DropdownMenuItem
+                  variant="destructive"
+                  disabled={menuDisabled}
+                  onSelect={() => onDelete(env)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

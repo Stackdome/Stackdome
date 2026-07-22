@@ -261,7 +261,7 @@ export default function SecretsPage() {
                     onCloseAutoFocus={(e) => e.preventDefault()}
                   >
                     <DropdownMenuItem
-                      onClick={() => setTypeFilter(ALL_TYPES)}
+                      onSelect={() => setTypeFilter(ALL_TYPES)}
                       className={cn(
                         "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
                         typeFilter === ALL_TYPES && "text-brand"
@@ -273,7 +273,7 @@ export default function SecretsPage() {
                     {typeOptions.map((o) => (
                       <DropdownMenuItem
                         key={o.type}
-                        onClick={() => setTypeFilter(o.type)}
+                        onSelect={() => setTypeFilter(o.type)}
                         className={cn(
                           "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
                           typeFilter === o.type && "text-brand"
@@ -303,7 +303,7 @@ export default function SecretsPage() {
                     {SORT_OPTIONS.map((o) => (
                       <DropdownMenuItem
                         key={o.key}
-                        onClick={() => setSortKey(o.key)}
+                        onSelect={() => setSortKey(o.key)}
                         className={cn(
                           "font-mono text-[11px] uppercase tracking-[1.5px]",
                           sortKey === o.key && "text-brand"

@@ -240,7 +240,7 @@ export default function PreviewConfigDetailPage() {
                   onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                   <DropdownMenuItem
-                    onClick={() => setStatusFilter(ALL_STATUSES)}
+                    onSelect={() => setStatusFilter(ALL_STATUSES)}
                     className={cn(
                       "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
                       statusFilter === ALL_STATUSES && "text-brand"
@@ -252,7 +252,7 @@ export default function PreviewConfigDetailPage() {
                   {statusOptions.map((o) => (
                     <DropdownMenuItem
                       key={o.word}
-                      onClick={() => setStatusFilter(o.word)}
+                      onSelect={() => setStatusFilter(o.word)}
                       className={cn(
                         "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
                         statusFilter === o.word && "text-brand"
@@ -282,7 +282,7 @@ export default function PreviewConfigDetailPage() {
                   {SORT_OPTIONS.map((o) => (
                     <DropdownMenuItem
                       key={o.key}
-                      onClick={() => setSortKey(o.key)}
+                      onSelect={() => setSortKey(o.key)}
                       className={cn(
                         "font-mono text-[11px] uppercase tracking-[1.5px]",
                         sortKey === o.key && "text-brand"

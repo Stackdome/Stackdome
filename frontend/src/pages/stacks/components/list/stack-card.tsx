@@ -192,7 +192,10 @@ const AGE_UNIT_ABBREV: Record<string, string> = {
 export function relativeAge(timestamp?: string | null): string | null {
   if (!timestamp) return null;
   const date = new Date(timestamp);
-  if (Date.now() - date.getTime() < 60_000) return "just now";
+  if (Number.isNaN(date.getTime())) return null;
+  // Server clocks can run slightly ahead; a future timestamp reads as "just
+  // now" rather than a nonsense token from the "in 5 minutes" phrasing.
+  if (date.getTime() - Date.now() > -60_000) return "just now";
   const [value, unit] = formatDistanceToNowStrict(date, { roundingMethod: "floor" }).split(" ");
   return `${value}${AGE_UNIT_ABBREV[unit.replace(/s$/, "")]} ago`;
 }

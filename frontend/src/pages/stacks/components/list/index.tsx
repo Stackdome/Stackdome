@@ -51,7 +51,7 @@ export default function StacksPage() {
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { canWriteAnyProject } = useCurrentUser();
+  const { canWriteAnyProject, canWrite } = useCurrentUser();
   const { projectNameById } = useResourceProjects();
   const { toast } = useToast();
   const confirm = useConfirm();
@@ -141,8 +141,12 @@ export default function StacksPage() {
     });
     if (!ok) return;
     const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      toast({ title: "Delete failed", description: "No organization selected.", variant: "destructive" });
+      return;
+    }
     const projectName = projectNameById(stack.project_id);
-    if (!orgId || !projectName || !stack.id) {
+    if (!projectName || !stack.id) {
       toast({ title: "Delete failed", description: "The stack's project could not be resolved.", variant: "destructive" });
       return;
     }
@@ -246,7 +250,7 @@ export default function StacksPage() {
                   onCloseAutoFocus={(e) => e.preventDefault()}
                 >
                   <DropdownMenuItem
-                    onClick={() => setStatusFilter(ALL_STATUSES)}
+                    onSelect={() => setStatusFilter(ALL_STATUSES)}
                     className={cn(
                       "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
                       statusFilter === ALL_STATUSES && "text-brand"
@@ -258,7 +262,7 @@ export default function StacksPage() {
                   {statusOptions.map((o) => (
                     <DropdownMenuItem
                       key={o.label}
-                      onClick={() => setStatusFilter(o.label)}
+                      onSelect={() => setStatusFilter(o.label)}
                       className={cn(
                         "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
                         statusFilter === o.label && "text-brand"
@@ -288,7 +292,7 @@ export default function StacksPage() {
                   {SORT_OPTIONS.map((o) => (
                     <DropdownMenuItem
                       key={o.key}
-                      onClick={() => setSortKey(o.key)}
+                      onSelect={() => setSortKey(o.key)}
                       className={cn(
                         "font-mono text-[11px] uppercase tracking-[1.5px]",
                         sortKey === o.key && "text-brand"
@@ -314,7 +318,7 @@ export default function StacksPage() {
                 <DeployStackCard
                   key={stack.id || stack.name}
                   stack={stack}
-                  onDelete={canWriteAnyProject ? (s) => void requestDelete(s) : undefined}
+                  onDelete={canWrite(stack.project_id ?? "") ? (s) => void requestDelete(s) : undefined}
                 />
               ))}
             </div>
