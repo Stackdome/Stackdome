@@ -95,7 +95,12 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
   ];
 
   return (
-    <div className={`mx-auto max-w-[1100px] px-[30px] py-6 ${className}`}>
+    // Viewport-bound flex column: banners and the header shrink the terminal
+    // instead of pushing it past the fold. 110px = page header + tab bar.
+    <div
+      className={`mx-auto flex w-full max-w-[1100px] flex-col px-[30px] py-6 ${className}`}
+      style={{ height: "calc(100vh - 110px)" }}
+    >
       {/* Header with integrated filter controls */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -170,9 +175,8 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
 
       {/* Log Display — near-black terminal panel */}
       {logText ? (
-        <div className="overflow-hidden rounded-md border border-border bg-[#070a0f]">
-          {/* Viewport-bound: the terminal fills the rest of the page below the toolbar. */}
-          <div style={{ height: "calc(100vh - 220px)", minHeight: 360 }}>
+        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-[#070a0f]">
+          <div className="h-full">
             <LazyLog
               text={logText}
               extraLines={1}
