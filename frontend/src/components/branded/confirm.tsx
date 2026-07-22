@@ -86,12 +86,14 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     <ConfirmContext.Provider value={confirm}>
       {children}
       <AlertDialog open={open} onOpenChange={(o) => !o && settle(false)}>
-        <AlertDialogContent aria-describedby={pending?.opts.description ? undefined : ""}>
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{pending?.opts.title}</AlertDialogTitle>
-            {pending?.opts.description != null && (
-              <AlertDialogDescription>{pending.opts.description}</AlertDialogDescription>
-            )}
+            {/* Always rendered so Radix's aria-describedby wiring stays valid;
+                visually hidden when the caller gave no description. */}
+            <AlertDialogDescription className={pending?.opts.description == null ? "sr-only" : undefined}>
+              {pending?.opts.description ?? pending?.opts.title}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{pending?.opts.cancelLabel ?? "Cancel"}</AlertDialogCancel>

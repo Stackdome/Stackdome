@@ -83,14 +83,19 @@ const router = createBrowserRouter(
 // Safety net for the Radix body pointer-events wedge: a modal layer unmounted
 // mid-close (e.g. by navigation) can "restore" a stale pointer-events:none to
 // <body> and dead-lock the page (radix-ui/primitives#1836 class). After any
-// navigation, once the unmounts flush, a body lock with no open layer left is
-// stale by definition — clear it.
+// navigation, a body lock with no open body-locking layer (dialog/menu — not
+// tooltips/accordions, which never lock) is stale by definition — clear it.
+// Checked twice: once after the unmounts flush, once after close animations.
+const OPEN_LOCKING_LAYER =
+  "[data-state='open']:is([role='dialog'],[role='alertdialog'],[role='menu'])";
 router.subscribe(() => {
-  setTimeout(() => {
-    if (!document.querySelector("[data-state='open']")) {
-      document.body.style.pointerEvents = "";
-    }
-  }, 0);
+  for (const delay of [0, 300]) {
+    setTimeout(() => {
+      if (!document.querySelector(OPEN_LOCKING_LAYER)) {
+        document.body.style.pointerEvents = "";
+      }
+    }, delay);
+  }
 })
 
 function App() {

@@ -253,7 +253,7 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
       }}
       className="group flex h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40"
     >
-      <StatusRail tone={tone === "neutral" ? "success" : tone} />
+      {tone !== "neutral" && <StatusRail tone={tone} />}
       <div className="flex flex-1 flex-col gap-3.5 p-5">
         <div className="flex items-center gap-[11px]">
           <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
@@ -282,11 +282,12 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
                 className="w-[160px]"
                 onClick={(e) => e.stopPropagation()}
               >
-                {/* Deferred so the menu finishes closing before the dialog mounts — see radix-ui/primitives#1836 (canonical note in row-menu.tsx). */}
+                {/* No deferral needed: the confirm service defers its own open
+                    a tick past the menu close (radix-ui/primitives#1836). */}
                 <DropdownMenuItem
                   variant="destructive"
                   disabled={menuDisabled}
-                  onSelect={() => setTimeout(() => onDelete(stack), 0)}
+                  onSelect={() => onDelete(stack)}
                 >
                   <Trash2 className="h-4 w-4" />
                   Delete
@@ -311,9 +312,7 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
             ageTitle={absoluteAge(stack.updated_at || stack.created_at)}
             alert={
               deployFailed ? (
-                <AlertTriangle className="h-3 w-3 flex-none text-danger" aria-label="Latest deploy failed">
-                  <title>Latest deploy failed</title>
-                </AlertTriangle>
+                <AlertTriangle className="h-3 w-3 flex-none text-danger" aria-label="Latest deploy failed" />
               ) : undefined
             }
           />

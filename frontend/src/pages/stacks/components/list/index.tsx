@@ -150,8 +150,8 @@ export default function StacksPage() {
       await deleteStack(orgId, projectName, stack.id);
       setStacks((prev) => prev.filter((s) => s.id !== stack.id));
       toast({ title: "Stack deleted", description: `"${stack.name}" was deleted.`, variant: "success" });
-    } catch {
-      toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Delete failed", description: getErrorMessage(err), variant: "destructive" });
     }
   };
 

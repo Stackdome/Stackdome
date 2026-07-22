@@ -1,16 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, Loader2 } from "lucide-react";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import { Button } from "@/components/ui/button";
 
 export type StickyActionBarSegment = { num: number; label: string };
@@ -63,21 +54,26 @@ export default function StickyActionBar({
   secondary,
   tone = "pending",
 }: StickyActionBarProps) {
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
+  const confirm = useConfirm();
 
   useEffect(() => {
     setSlot(document.getElementById("page-sticky-bar"));
   }, []);
 
-  const handleSecondaryClick = () => {
+  const handleSecondaryClick = async () => {
     if (!secondary) return;
     const dirty = secondary.dirtyCount ?? 0;
     if (secondary.confirm && dirty >= secondary.confirm.threshold) {
-      setConfirmOpen(true);
-    } else {
-      secondary.onClick();
+      const ok = await confirm({
+        title: secondary.confirm.title,
+        description: secondary.confirm.description,
+        confirmLabel: secondary.confirm.confirmLabel ?? secondary.label,
+        cancelLabel: secondary.confirm.cancelLabel,
+      });
+      if (!ok) return;
     }
+    secondary.onClick();
   };
 
   const dot =
@@ -116,7 +112,7 @@ export default function StickyActionBar({
           type="button"
           variant="railGhost"
           size="rail"
-          onClick={handleSecondaryClick}
+          onClick={() => void handleSecondaryClick()}
           disabled={primary?.isLoading}
         >
           {secondary.label}
@@ -146,34 +142,5 @@ export default function StickyActionBar({
     </div>
   );
 
-  return (
-    <>
-      {slot ? createPortal(bar, slot) : null}
-      {secondary?.confirm && (
-        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{secondary.confirm.title}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {secondary.confirm.description}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>
-                {secondary.confirm.cancelLabel ?? "Cancel"}
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => {
-                  setConfirmOpen(false);
-                  secondary.onClick();
-                }}
-              >
-                {secondary.confirm.confirmLabel ?? secondary.label}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      )}
-    </>
-  );
+  return slot ? createPortal(bar, slot) : null;
 }

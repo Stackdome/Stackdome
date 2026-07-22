@@ -105,10 +105,13 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
                 <RefreshCw className="h-4 w-4" />
                 Sync
               </DropdownMenuItem>
+              {/* No deferral needed: the confirm service defers its own open a
+                  tick past the menu close. onSync above keeps its setTimeout —
+                  it opens a plain Dialog directly. */}
               <DropdownMenuItem
                 variant="destructive"
                 disabled={menuDisabled}
-                onSelect={() => setTimeout(() => onDelete?.(env), 0)}
+                onSelect={() => onDelete?.(env)}
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
@@ -141,7 +144,7 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
               />
             </div>
             {hasLinks && (
-              <div className="absolute inset-x-0 bottom-0 flex items-end opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 flex items-end opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
                 <EndpointPills urls={urls} />
               </div>
             )}
