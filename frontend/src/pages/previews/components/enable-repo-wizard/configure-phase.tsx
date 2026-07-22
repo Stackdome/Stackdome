@@ -154,7 +154,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
 
         <FieldShell
           label="Environment variables (optional)"
-          hint="Applied to every preview. Use {{ secret.NAME }} for secrets — never paste raw secret values."
+          hint="Applied to every preview. Use the Secret source to reference a saved secret — never paste raw secret values."
           error={fieldErrors.env}
         >
           <EnvVarsEditor

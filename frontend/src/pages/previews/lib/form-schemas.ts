@@ -31,7 +31,9 @@ export const overridesTextSchema = z.string().refine(isValidOverridesText, {
  *  expected to be non-empty; the check here just guards that invariant. */
 const envVarRowSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
-  value: z.string(),
+  value: z.string().refine((v) => !/^\{\{\s*secret\.\s*\}\}$/.test(v), {
+    message: "Pick a secret for the Secret-sourced variable.",
+  }),
 });
 export type EnvVarFormRow = z.infer<typeof envVarRowSchema>;
 

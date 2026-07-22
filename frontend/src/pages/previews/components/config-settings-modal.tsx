@@ -131,7 +131,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
             "outside" this Dialog's content — without these guards Radix
             dismisses the settings modal underneath the confirm. */}
         <DialogContent
-          className="sm:max-w-md"
+          className="sm:max-w-xl"
           onInteractOutside={(e) => {
             if (deleteFlowActive) e.preventDefault();
           }}
@@ -142,7 +142,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
           <DialogHeader>
             <DialogTitle>Repository settings</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-5">
             <FieldShell label="Base branch" htmlFor="cs-branch" required error={fieldErrors.baseBranch}>
               <Input
                 id="cs-branch"
@@ -187,7 +187,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
             </FieldShell>
             <FieldShell
               label="Environment variables (optional)"
-              hint="Applied to every preview. Use {{ secret.NAME }} for secrets — never paste raw secret values."
+              hint="Applied to every preview. Use the Secret source to reference a saved secret — never paste raw secret values."
               error={fieldErrors.env}
             >
               <EnvVarsEditor
@@ -201,7 +201,7 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
             <Button onClick={() => void save()} disabled={saving}>Save</Button>
           </div>
 
-          <Separator className="my-2" />
+          <Separator className="my-3" />
 
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-danger">Danger zone</h3>
