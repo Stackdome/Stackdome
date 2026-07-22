@@ -19,6 +19,19 @@ import (
 const (
 	controlPlaneNamespace   = "stackdome-control-plane"
 	apiServerServiceAccount = "stackdome-api-server-account"
+
+	verbGet    = "get"
+	verbList   = "list"
+	verbWatch  = "watch"
+	verbCreate = "create"
+	verbUpdate = "update"
+	verbDelete = "delete"
+)
+
+var (
+	verbsFull      = []string{verbGet, verbList, verbWatch, verbCreate, verbUpdate, verbDelete}
+	verbsReadOnly  = []string{verbGet, verbList, verbWatch}
+	verbsGetCreate = []string{verbGet, verbCreate}
 )
 
 type ClientManager struct {
@@ -161,87 +174,87 @@ func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCl
 			{
 				APIGroups: []string{"core.stackdome.io"},
 				Resources: []string{"stacks", "stackresources"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+				Verbs:     verbsFull,
 			},
 			{
 				APIGroups: []string{"storage.stackdome.io"},
 				Resources: []string{"volumes"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+				Verbs:     verbsFull,
 			},
 			{
 				APIGroups: []string{"users.stackdome.io"},
 				Resources: []string{"users"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+				Verbs:     verbsFull,
 			},
 			{
 				APIGroups: []string{"registry.stackdome.io"},
 				Resources: []string{"clusterregistries"},
-				Verbs:     []string{"get", "list", "watch", "create", "delete"},
+				Verbs:     []string{verbGet, verbList, verbWatch, verbCreate, verbDelete},
 			},
 			{
 				APIGroups: []string{"addons.stackdome.io"},
 				Resources: []string{"postgresclusters"},
-				Verbs:     []string{"get", "list", "watch", "create", "update", "delete"},
+				Verbs:     verbsFull,
 			},
 			{
 				APIGroups: []string{"builds.stackdome.io"},
 				Resources: []string{"imagebuilds"},
-				Verbs:     []string{"get", "list", "watch"},
+				Verbs:     verbsReadOnly,
 			},
 			{
 				APIGroups: []string{"cert-manager.io"},
 				Resources: []string{"clusterissuers"},
-				Verbs:     []string{"get", "create"},
+				Verbs:     verbsGetCreate,
 			},
 			{
 				APIGroups: []string{"postgresql.cnpg.io"},
 				Resources: []string{"imagecatalogs"},
-				Verbs:     []string{"get", "create"},
+				Verbs:     verbsGetCreate,
 			},
 			{
 				APIGroups: []string{"postgresql.cnpg.io"},
 				Resources: []string{"backups"},
-				Verbs:     []string{"get", "list", "watch"},
+				Verbs:     verbsReadOnly,
 			},
 			{
 				APIGroups: []string{"barmancloud.cnpg.io"},
 				Resources: []string{"objectstores"},
-				Verbs:     []string{"get", "create", "update", "delete"},
+				Verbs:     []string{verbGet, verbCreate, verbUpdate, verbDelete},
 			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"namespaces"},
-				Verbs:     []string{"get", "create", "delete"},
+				Verbs:     []string{verbGet, verbCreate, verbDelete},
 			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"secrets"},
-				Verbs:     []string{"get", "create", "update", "delete"},
+				Verbs:     []string{verbGet, verbCreate, verbUpdate, verbDelete},
 			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list"},
+				Verbs:     []string{verbGet, verbList},
 			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"pods/log"},
-				Verbs:     []string{"get"},
+				Verbs:     []string{verbGet},
 			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"services"},
-				Verbs:     []string{"get"},
+				Verbs:     []string{verbGet},
 			},
 			{
 				APIGroups: []string{""},
 				Resources: []string{"nodes"},
-				Verbs:     []string{"list"},
+				Verbs:     []string{verbList},
 			},
 			{
 				APIGroups: []string{"metrics.k8s.io"},
 				Resources: []string{"pods"},
-				Verbs:     []string{"get", "list"},
+				Verbs:     []string{verbGet, verbList},
 			},
 		},
 	}
