@@ -5,7 +5,7 @@ function Row({ row }: { row: DiffRow }) {
     <div className="flex items-start gap-2.5 px-3 pb-2 pt-1">
       <span className="w-[150px] flex-none font-mono text-[11px] text-fg-muted">{row.key}</span>
       <span className="flex flex-wrap items-center gap-1.5 font-mono text-[11px]">
-        {row.kind === "added" && <span className="text-success">— → {row.to}</span>}
+        {row.kind === "added" && <span className="text-success">{row.to}</span>}
         {row.kind === "removed" && <span className="text-danger">{row.from}</span>}
         {row.kind === "changed" && (
           <>

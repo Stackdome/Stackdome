@@ -45,13 +45,7 @@ function RowLine({ row }: { row: DiffRow }) {
     <div className="grid grid-cols-[140px_1fr] items-baseline gap-2.5 px-3 py-0.5 font-mono text-[11px]">
       <span className="text-fg-muted [overflow-wrap:anywhere]">{row.key}</span>
       <span className="flex flex-wrap items-baseline gap-1.5">
-        {row.kind === "added" && (
-          <>
-            <span className="text-fg-muted">—</span>
-            <span className="text-fg-muted">→</span>
-            <span className="text-success">{row.to}</span>
-          </>
-        )}
+        {row.kind === "added" && <span className="text-success">{row.to}</span>}
         {row.kind === "removed" && <span className="text-danger">{row.from}</span>}
         {row.kind === "changed" && (
           <>
