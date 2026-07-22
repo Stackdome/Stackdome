@@ -7,7 +7,7 @@ const validResource = {
   sourceType: "image" as const,
   source: { image: { ref: "nginx:1" } },
   execution_config: {
-    command: ["sh", "-c", "echo hi"],
+    command: 'sh -c "echo hi"',
     environment_variables: [
       { from: "stack" as const, name: "MODE", value: "prod" },
       { from: "secret" as const, name: "TOKEN", secretId: "s-1", secretKey: "token" },
