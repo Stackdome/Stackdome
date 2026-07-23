@@ -54,7 +54,11 @@ func (s *Service) Run(ctx context.Context) error {
 		return err
 	}
 
-	sysCtx := auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: org.ID})
+	sysCtx := auth.SetIdentityInContext(ctx, &auth.Identity{
+		IsSystem:     true,
+		OrgID:        org.ID,
+		ContactEmail: s.bootstrapCfg.Email,
+	})
 
 	if _, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
 		Name:           s.clusterCfg.Name,

@@ -349,7 +349,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:               te.Logger,
 		Permissions:          te.PermissionService,
 		EncryptionService:    encryptionService,
-		PlatformEmail:        te.BootstrapConfig.Email,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{

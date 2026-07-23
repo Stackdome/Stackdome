@@ -45,13 +45,13 @@ func exportPlatformProvisioningEnv(ctx context.Context, cluster *testutil.TestCl
 	}
 
 	envs := map[string]string{
-		config.EnvPlatformClusterName.Name:         platformProvisioningClusterName,
-		config.EnvPlatformClusterAPIURL.Name:       clusterURL,
-		config.EnvPlatformClusterCAData.Name:       caData,
-		config.EnvPlatformClusterToken.Name:        saToken,
-		config.EnvPlatformBaseDomain.Name:          PlatformProvisioningBaseDomain,
-		config.EnvPlatformEmail.Name:               platformProvisioningEmail,
-		config.EnvPlatformRegistryStorageSize.Name: platformProvisioningRegistrySize,
+		config.EnvPlatformClusterName.Name:            platformProvisioningClusterName,
+		config.EnvPlatformClusterAPIURL.Name:          clusterURL,
+		config.EnvPlatformClusterCAData.Name:          caData,
+		config.EnvPlatformClusterToken.Name:           saToken,
+		config.EnvPlatformBaseDomain.Name:             PlatformProvisioningBaseDomain,
+		config.EnvPlatformEmail.Name:                  platformProvisioningEmail,
+		config.EnvPlatformOrgRegistryStorageSize.Name: platformProvisioningRegistrySize,
 	}
 	for name, value := range envs {
 		if err := os.Setenv(name, value); err != nil {

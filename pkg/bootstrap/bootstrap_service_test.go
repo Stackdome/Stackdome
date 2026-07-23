@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -14,6 +15,7 @@ import (
 )
 
 const (
+	contactEmail = "ops@example.com"
 	baseDomain   = "apps.example.com"
 	storageSize  = "50Gi"
 	storageClass = "standard"
@@ -56,6 +58,7 @@ func (d *bootstrapDeps) service(bootstrapCfg *config.BootstrapConfig, clusterCfg
 
 func fullBootstrapConfig() *config.BootstrapConfig {
 	return &config.BootstrapConfig{
+		Email:                contactEmail,
 		BaseDomain:           baseDomain,
 		RegistryStorageSize:  storageSize,
 		RegistryStorageClass: storageClass,
@@ -107,7 +110,10 @@ var _ = Describe("Bootstrap", func() {
 				})
 
 			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+				DoAndReturn(func(callCtx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+					identity := auth.GetIdentityFromCtx(callCtx)
+					Expect(identity.IsSystem).To(BeTrue())
+					Expect(identity.ContactEmail).To(Equal(contactEmail))
 					Expect(spec.Name).To(Equal(clusterName))
 					Expect(spec.OrganisationID).To(Equal(orgID))
 					Expect(spec.Platform).To(BeTrue())

@@ -488,7 +488,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 		Permissions:          d.PermissionService,
 		EncryptionService:    encryptionService,
-		PlatformEmail:        d.BootstrapConfig.Email,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{

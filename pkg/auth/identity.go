@@ -27,6 +27,9 @@ type Identity struct {
 	TokenScopes []string
 	ResourceIDs []string
 	IsSystem    bool
+	// ContactEmail carries the operator contact for system identities,
+	// which have no backing user.
+	ContactEmail string
 }
 
 func (i *Identity) IsOrgAdmin() bool {

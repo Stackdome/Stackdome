@@ -52,11 +52,11 @@ func (b *BootstrapConfig) LoadEnvVariables() {
 		b.BaseDomain = val
 	}
 
-	if val, ok := EnvPlatformRegistryStorageSize.Lookup(); ok {
+	if val, ok := EnvPlatformOrgRegistryStorageSize.Lookup(); ok {
 		b.RegistryStorageSize = val
 	}
 
-	if val, ok := EnvPlatformRegistryStorageClass.Lookup(); ok {
+	if val, ok := EnvPlatformOrgRegistryStorageClass.Lookup(); ok {
 		b.RegistryStorageClass = val
 	}
 }
