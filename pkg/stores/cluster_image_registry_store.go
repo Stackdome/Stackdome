@@ -7,6 +7,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -destination=../mocks/mock_cluster_image_registry_store.go -package=mocks github.com/Stackdome/stackdome/pkg/stores ClusterImageRegistryStore
+
 type ClusterImageRegistryStore interface {
 	GetByID(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)

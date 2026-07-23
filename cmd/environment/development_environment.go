@@ -392,8 +392,16 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+		Permissions:    d.PermissionService,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		OrgRegistryDefaults:       d.BootstrapConfig.OrgRegistry,
 		StackQueryService:         d.Services.StackService,
 		SessionFactory:            d.DBSession,
 		ProjectService:            projectService,
@@ -473,12 +481,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Permissions:                 d.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           d.RefreshTokenStore,
-	})
-
-	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
-		Permissions:    d.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -635,19 +637,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	signupService := services.NewSignupService(services.SignupServiceSpec{
-		UserService:               userService,
-		OrgInviteService:          orgInviteService,
-		OrganisationService:       organisationService,
-		ProjectService:            projectService,
-		ClusterService:            clusterService,
-		OrganisationDomainService: organisationDomainService,
-		ImageRegistryService:      imageRegistryService,
-		PolicyManager:             d.ResourceAccessPolicyManager,
-		RefreshTokenStore:         d.RefreshTokenStore,
-		JWTSecretKey:              d.Config.JwtSecret,
-		JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
-		OrgRegistryDefaults:       d.BootstrapConfig.OrgRegistry,
-		Logger:                    d.Logger,
+		UserService:         userService,
+		OrgInviteService:    orgInviteService,
+		OrganisationService: organisationService,
+		ProjectService:      projectService,
+		PolicyManager:       d.ResourceAccessPolicyManager,
+		RefreshTokenStore:   d.RefreshTokenStore,
+		JWTSecretKey:        d.Config.JwtSecret,
+		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
+		Logger:              d.Logger,
 	})
 
 	d.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{

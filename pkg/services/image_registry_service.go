@@ -23,6 +23,7 @@ type ImageRegistryService interface {
 	ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
+	InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
@@ -81,20 +82,18 @@ func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string
 	return s.clusterImageRegistryStore.GetByID(ctx, ID)
 }
 
-// validateClusterForOrg mirrors the read-time fallback: the target cluster
-// must be the org's own cluster, or the platform cluster when the org owns none.
-func (s *clusterImageRegistryService) validateClusterForOrg(ctx context.Context, orgID, clusterID string) *errors.ServiceError {
-	resolved, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
-	if err != nil && err.Code == errors.ErrorNotFound {
-		resolved, err = s.clusterStore.GetPlatformCluster(ctx)
-	}
+// validateOwnedCluster requires the target cluster to be owned by the org.
+// Seed registries on the shared platform cluster go through
+// InternalCreateSeedRegistry instead.
+func (s *clusterImageRegistryService) validateOwnedCluster(ctx context.Context, orgID, clusterID string) *errors.ServiceError {
+	owned, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
 		if err.Code == errors.ErrorNotFound {
 			return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
 		}
 		return err
 	}
-	if resolved.ID != clusterID {
+	if owned.ID != clusterID {
 		return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
 	}
 	return nil
@@ -154,7 +153,46 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	if permErr := s.permissions.Check(ctx, spec.OrganisationID, auth.ResourceImageRegistries, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
+	if err := s.validateSpec(spec); err != nil {
+		return nil, err
+	}
+	if serr := s.validateOwnedCluster(ctx, spec.OrganisationID, spec.ClusterID); serr != nil {
+		return nil, serr
+	}
+	return s.create(ctx, spec)
+}
 
+// InternalCreateSeedRegistry creates the org's seed registry on the shared
+// platform cluster. Org-provisioning only — the API Create path requires an
+// org-owned target cluster.
+func (s *clusterImageRegistryService) InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	if err := s.validateSpec(spec); err != nil {
+		return nil, err
+	}
+	platform, err := s.clusterStore.GetPlatformCluster(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if platform.ID != spec.ClusterID {
+		return nil, errors.NotFound("cluster '%s' is not the platform cluster", spec.ClusterID)
+	}
+	return s.create(ctx, spec)
+}
+
+func (s *clusterImageRegistryService) validateSpec(spec *models.ClusterImageRegistry) *errors.ServiceError {
+	if spec.ClusterID == "" {
+		return errors.GeneralError("cluster ID is required")
+	}
+	if spec.OrganisationID == "" {
+		return errors.GeneralError("organisation ID is required")
+	}
+	if spec.Name == "" {
+		return errors.GeneralError("name is required")
+	}
+	return s.validateBackendStorageSize(spec.BackendStorageSize)
+}
+
+func (s *clusterImageRegistryService) create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	var createdRegistry *models.ClusterImageRegistry
 	var err *errors.ServiceError
 
@@ -164,24 +202,6 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 			State:      models.RegistryStatePending,
 			Conditions: []models.Condition{},
 		}
-	}
-
-	if spec.ClusterID == "" {
-		return nil, errors.GeneralError("cluster ID is required")
-	}
-	if spec.OrganisationID == "" {
-		return nil, errors.GeneralError("organisation ID is required")
-	}
-	if spec.Name == "" {
-		return nil, errors.GeneralError("name is required")
-	}
-
-	if serr := s.validateClusterForOrg(ctx, spec.OrganisationID, spec.ClusterID); serr != nil {
-		return nil, serr
-	}
-
-	if err := s.validateBackendStorageSize(spec.BackendStorageSize); err != nil {
-		return nil, err
 	}
 	s.setDefaultValues(spec)
 
@@ -220,17 +240,7 @@ func (s *clusterImageRegistryService) CreateWithTx(ctx context.Context, spec *mo
 		}
 	}
 
-	if spec.ClusterID == "" {
-		return nil, errors.GeneralError("cluster ID is required")
-	}
-	if spec.OrganisationID == "" {
-		return nil, errors.GeneralError("organisation ID is required")
-	}
-	if spec.Name == "" {
-		return nil, errors.GeneralError("name is required")
-	}
-
-	if err := s.validateBackendStorageSize(spec.BackendStorageSize); err != nil {
+	if err := s.validateSpec(spec); err != nil {
 		return nil, err
 	}
 	s.setDefaultValues(spec)

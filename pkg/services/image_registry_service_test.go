@@ -54,50 +54,82 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 		ctrl.Finish()
 	})
 
-	It("rejects a cluster the org does not own when it owns another", func() {
-		clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-			Return(&models.Cluster{ID: ownedClusterID}, nil)
+	Describe("Create", func() {
+		It("rejects a cluster the org does not own when it owns another", func() {
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
+				Return(&models.Cluster{ID: ownedClusterID}, nil)
 
-		_, serr := svc.Create(ctx, newSpec(foreignClusterID))
-		Expect(serr).ToNot(BeNil())
-		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+			_, serr := svc.Create(ctx, newSpec(foreignClusterID))
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+		})
+
+		It("rejects the platform cluster when the org owns none — seed registries are not an API path", func() {
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
+				Return(nil, errors.NotFound("no cluster"))
+
+			_, serr := svc.Create(ctx, newSpec(platformCluster))
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+		})
+
+		It("propagates non-NotFound owned-cluster lookup errors", func() {
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
+				Return(nil, errors.GeneralError("db down"))
+
+			_, serr := svc.Create(ctx, newSpec(ownedClusterID))
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorGeneral))
+		})
+
+		It("accepts the org's own cluster", func() {
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
+				Return(&models.Cluster{ID: ownedClusterID}, nil)
+
+			Expect(svc.validateOwnedCluster(ctx, guardOrgID, ownedClusterID)).To(BeNil())
+		})
 	})
 
-	It("rejects a non-platform cluster when the org owns none", func() {
-		clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-			Return(nil, errors.NotFound("no cluster"))
-		clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-			Return(&models.Cluster{ID: platformCluster}, nil)
+	Describe("InternalCreateSeedRegistry", func() {
+		It("rejects a target that is not the platform cluster", func() {
+			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
+				Return(&models.Cluster{ID: platformCluster}, nil)
 
-		_, serr := svc.Create(ctx, newSpec(foreignClusterID))
-		Expect(serr).ToNot(BeNil())
-		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
-	})
+			_, serr := svc.InternalCreateSeedRegistry(ctx, newSpec(ownedClusterID))
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+		})
 
-	It("rejects any cluster when the org owns none and no platform cluster exists", func() {
-		clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-			Return(nil, errors.NotFound("no cluster"))
-		clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-			Return(nil, errors.NotFound("platform cluster not found"))
+		It("propagates a missing platform cluster", func() {
+			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
+				Return(nil, errors.NotFound("platform cluster not found"))
 
-		_, serr := svc.Create(ctx, newSpec(platformCluster))
-		Expect(serr).ToNot(BeNil())
-		Expect(serr.Code).To(Equal(errors.ErrorNotFound))
-	})
+			_, serr := svc.InternalCreateSeedRegistry(ctx, newSpec(platformCluster))
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
+		})
 
-	It("accepts the org's own cluster", func() {
-		clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-			Return(&models.Cluster{ID: ownedClusterID}, nil)
+		It("creates the registry on the platform cluster", func() {
+			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
+				Return(&models.Cluster{ID: platformCluster}, nil)
 
-		Expect(svc.validateClusterForOrg(ctx, guardOrgID, ownedClusterID)).To(BeNil())
-	})
+			registryStore := mocks.NewMockClusterImageRegistryStore(ctrl)
+			crs := mocks.NewMockClusterResourceImageRegistryService(ctrl)
+			svc.clusterImageRegistryStore = registryStore
+			svc.clusterResourceService = crs
 
-	It("accepts the platform cluster when the org owns none", func() {
-		clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-			Return(nil, errors.NotFound("no cluster"))
-		clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-			Return(&models.Cluster{ID: platformCluster}, nil)
+			spec := newSpec(platformCluster)
+			registryStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+					return fn(ctx)
+				})
+			registryStore.EXPECT().CreateWithTx(gomock.Any(), spec).Return(spec, nil)
+			crs.EXPECT().CreateImageRegistryInCluster(gomock.Any(), spec).Return(nil)
 
-		Expect(svc.validateClusterForOrg(ctx, guardOrgID, platformCluster)).To(BeNil())
+			created, serr := svc.InternalCreateSeedRegistry(ctx, spec)
+			Expect(serr).To(BeNil())
+			Expect(created).To(Equal(spec))
+			Expect(created.BackendStorageSize).To(Equal(models.DefaultRegistryStorageSize))
+		})
 	})
 })

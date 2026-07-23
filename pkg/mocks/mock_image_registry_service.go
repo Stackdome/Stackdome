@@ -129,6 +129,21 @@ func (mr *MockImageRegistryServiceMockRecorder) InjectClusterResourceService(reg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectClusterResourceService", reflect.TypeOf((*MockImageRegistryService)(nil).InjectClusterResourceService), registryClusterService)
 }
 
+// InternalCreateSeedRegistry mocks base method.
+func (m *MockImageRegistryService) InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalCreateSeedRegistry", ctx, spec)
+	ret0, _ := ret[0].(*models.ClusterImageRegistry)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalCreateSeedRegistry indicates an expected call of InternalCreateSeedRegistry.
+func (mr *MockImageRegistryServiceMockRecorder) InternalCreateSeedRegistry(ctx, spec any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalCreateSeedRegistry", reflect.TypeOf((*MockImageRegistryService)(nil).InternalCreateSeedRegistry), ctx, spec)
+}
+
 // InternalGet mocks base method.
 func (m *MockImageRegistryService) InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	m.ctrl.T.Helper()

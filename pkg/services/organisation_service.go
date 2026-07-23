@@ -2,6 +2,8 @@ package services
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -9,11 +11,17 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
+	"github.com/Stackdome/stackdome/pkg/slug"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 )
 
 //go:generate mockgen -destination=../mocks/mock_organisation_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services OrganisationService
+
+const (
+	shortOrgIDLength      = 8
+	maxDomainSeedAttempts = 5
+)
 
 type OrganisationService interface {
 	InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
@@ -32,6 +40,9 @@ type organisationService struct {
 	organisationDomainService OrganisationDomainsService
 	stackQueryService         StackQueryService
 	userStore                 stores.UserStore
+	clusterStore              stores.ClusterStore
+	imageRegistryService      ImageRegistryService
+	orgRegistryDefaults       models.OrgRegistryDefaults
 	projectService            ProjectService
 	atomicExecutor            stores.AtomicExecutor
 	policyMgr                 resourceaccess.ResourceAccessPolicyManager
@@ -47,8 +58,13 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		userStore: pgstore.NewUserStore(pgstore.UserStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		clusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		stackQueryService:         spec.StackQueryService,
 		organisationDomainService: spec.OrganisationDomainService,
+		imageRegistryService:      spec.ImageRegistryService,
+		orgRegistryDefaults:       spec.OrgRegistryDefaults,
 		projectService:            spec.ProjectService,
 		atomicExecutor:            pgstore.NewAtomicExecutor(spec.SessionFactory),
 		policyMgr:                 spec.PolicyManager,
@@ -60,6 +76,8 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 type OrganisationServiceSpec struct {
 	SessionFactory            db.SessionFactory
 	OrganisationDomainService OrganisationDomainsService
+	ImageRegistryService      ImageRegistryService
+	OrgRegistryDefaults       models.OrgRegistryDefaults
 	StackQueryService         StackQueryService
 	ProjectService            ProjectService
 	PolicyManager             resourceaccess.ResourceAccessPolicyManager
@@ -85,7 +103,75 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 		}
 	}
 
+	if !org.Platform {
+		if seedErr := s.seedPlatformInfra(ctx, org.ID, org.Name); seedErr != nil {
+			return nil, seedErr
+		}
+	}
+
 	return s.organisationStore.Get(ctx, org.ID)
+}
+
+// seedPlatformInfra gives a new tenant org a subdomain of the platform base
+// domain and a seed registry on the shared platform cluster. No platform
+// cluster configured (self-hosted install) → no-op.
+func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgName string) *errors.ServiceError {
+	platformCluster, err := s.clusterStore.GetPlatformCluster(ctx)
+	if err != nil {
+		if err.Code == errors.ErrorNotFound {
+			return nil
+		}
+		return err
+	}
+	ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
+
+	platformOrg, pErr := s.InternalGetPlatformOrg(ctx)
+	if pErr != nil {
+		return pErr
+	}
+	baseDomain, dErr := s.organisationDomainService.GetDefaultDomainForOrganisation(ctx, platformOrg.ID)
+	if dErr != nil {
+		return dErr
+	}
+
+	orgSlug := slug.FromOrgName(orgName)
+	if sErr := s.seedOrgDomain(ctx, orgID, orgSlug, baseDomain.Domain); sErr != nil {
+		return sErr
+	}
+	return s.seedOrgRegistry(ctx, orgID, orgSlug, platformCluster.ID)
+}
+
+func (s *organisationService) seedOrgDomain(ctx context.Context, orgID, orgSlug, baseDomain string) *errors.ServiceError {
+	candidate := fmt.Sprintf("%s.%s", orgSlug, baseDomain)
+	for attempt := 0; attempt < maxDomainSeedAttempts; attempt++ {
+		_, err := s.organisationDomainService.Create(ctx, &models.OrganisationDomain{
+			OrganisationID: orgID,
+			Domain:         candidate,
+		})
+		if err == nil {
+			return nil
+		}
+		if err.Code != errors.ErrorConflict {
+			return err
+		}
+		candidate = fmt.Sprintf("%s-%s.%s", orgSlug, slug.RandomSuffix(), baseDomain)
+	}
+	return errors.Conflict("could not allocate a unique domain for organisation")
+}
+
+func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgSlug, clusterID string) *errors.ServiceError {
+	shortID := strings.ReplaceAll(orgID, "-", "")
+	if len(shortID) > shortOrgIDLength {
+		shortID = shortID[:shortOrgIDLength]
+	}
+	_, err := s.imageRegistryService.InternalCreateSeedRegistry(ctx, &models.ClusterImageRegistry{
+		ClusterID:           clusterID,
+		OrganisationID:      orgID,
+		Name:                fmt.Sprintf("%s-%s", orgSlug, shortID),
+		BackendStorageSize:  s.orgRegistryDefaults.StorageSize,
+		BackendStorageClass: s.orgRegistryDefaults.StorageClass,
+	})
+	return err
 }
 
 func (s *organisationService) InternalGetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {

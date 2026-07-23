@@ -2,9 +2,7 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"net/mail"
-	"strings"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
@@ -14,16 +12,10 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
-	"github.com/Stackdome/stackdome/pkg/slug"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/golang-jwt/jwt"
 	"golang.org/x/crypto/bcrypt"
 	"k8s.io/utils/ptr"
-)
-
-const (
-	shortOrgIDLength      = 8
-	maxDomainSeedAttempts = 5
 )
 
 type SignupService interface {
@@ -31,52 +23,40 @@ type SignupService interface {
 }
 
 type SignupServiceSpec struct {
-	UserService               UserService
-	OrgInviteService          OrgInviteService
-	OrganisationService       OrganisationService
-	ProjectService            ProjectService
-	ClusterService            ClusterService
-	OrganisationDomainService OrganisationDomainsService
-	ImageRegistryService      ImageRegistryService
-	PolicyManager             resourceaccess.ResourceAccessPolicyManager
-	RefreshTokenStore         stores.RefreshTokenStore
-	JWTSecretKey              string
-	JWTClaimsBuilder          jwtClaimsBuilder
-	OrgRegistryDefaults       models.OrgRegistryDefaults
-	Logger                    logger.Logger
+	UserService         UserService
+	OrgInviteService    OrgInviteService
+	OrganisationService OrganisationService
+	ProjectService      ProjectService
+	PolicyManager       resourceaccess.ResourceAccessPolicyManager
+	RefreshTokenStore   stores.RefreshTokenStore
+	JWTSecretKey        string
+	JWTClaimsBuilder    jwtClaimsBuilder
+	Logger              logger.Logger
 }
 
 type signupService struct {
-	userService               UserService
-	orgInviteService          OrgInviteService
-	organisationService       OrganisationService
-	projectService            ProjectService
-	clusterService            ClusterService
-	organisationDomainService OrganisationDomainsService
-	imageRegistryService      ImageRegistryService
-	policyManager             resourceaccess.ResourceAccessPolicyManager
-	refreshTokenStore         stores.RefreshTokenStore
-	jwtSecretKey              string
-	jwtClaimsBuilder          jwtClaimsBuilder
-	orgRegistryDefaults       models.OrgRegistryDefaults
-	logger                    logger.Logger
+	userService         UserService
+	orgInviteService    OrgInviteService
+	organisationService OrganisationService
+	projectService      ProjectService
+	policyManager       resourceaccess.ResourceAccessPolicyManager
+	refreshTokenStore   stores.RefreshTokenStore
+	jwtSecretKey        string
+	jwtClaimsBuilder    jwtClaimsBuilder
+	logger              logger.Logger
 }
 
 func NewSignupService(spec SignupServiceSpec) SignupService {
 	return &signupService{
-		userService:               spec.UserService,
-		orgInviteService:          spec.OrgInviteService,
-		organisationService:       spec.OrganisationService,
-		projectService:            spec.ProjectService,
-		clusterService:            spec.ClusterService,
-		organisationDomainService: spec.OrganisationDomainService,
-		imageRegistryService:      spec.ImageRegistryService,
-		policyManager:             spec.PolicyManager,
-		refreshTokenStore:         spec.RefreshTokenStore,
-		jwtSecretKey:              spec.JWTSecretKey,
-		jwtClaimsBuilder:          spec.JWTClaimsBuilder,
-		orgRegistryDefaults:       spec.OrgRegistryDefaults,
-		logger:                    spec.Logger,
+		userService:         spec.UserService,
+		orgInviteService:    spec.OrgInviteService,
+		organisationService: spec.OrganisationService,
+		projectService:      spec.ProjectService,
+		policyManager:       spec.PolicyManager,
+		refreshTokenStore:   spec.RefreshTokenStore,
+		jwtSecretKey:        spec.JWTSecretKey,
+		jwtClaimsBuilder:    spec.JWTClaimsBuilder,
+		logger:              spec.Logger,
 	}
 }
 
@@ -155,70 +135,7 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 		s.logger.Error(ctx, "failed to add OrgMember policy for user: %s", policyAddErr.Error())
 	}
 
-	if seedErr := s.seedPlatformInfra(ctx, createdUser.OrganisationID, user.Organisation.Name); seedErr != nil {
-		return nil, seedErr
-	}
-
 	return s.buildSignupResponse(ctx, createdUser)
-}
-
-func (s *signupService) seedPlatformInfra(ctx context.Context, orgID, orgName string) *errors.ServiceError {
-	platformCluster, err := s.clusterService.GetPlatformCluster(ctx)
-	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			return nil
-		}
-		return err
-	}
-	ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
-
-	platformOrg, pErr := s.organisationService.InternalGetPlatformOrg(ctx)
-	if pErr != nil {
-		return pErr
-	}
-	baseDomain, dErr := s.organisationDomainService.GetDefaultDomainForOrganisation(ctx, platformOrg.ID)
-	if dErr != nil {
-		return dErr
-	}
-
-	orgSlug := slug.FromOrgName(orgName)
-	if sErr := s.seedOrgDomain(ctx, orgID, orgSlug, baseDomain.Domain); sErr != nil {
-		return sErr
-	}
-	return s.seedOrgRegistry(ctx, orgID, orgSlug, platformCluster.ID)
-}
-
-func (s *signupService) seedOrgDomain(ctx context.Context, orgID, orgSlug, baseDomain string) *errors.ServiceError {
-	candidate := fmt.Sprintf("%s.%s", orgSlug, baseDomain)
-	for attempt := 0; attempt < maxDomainSeedAttempts; attempt++ {
-		_, err := s.organisationDomainService.Create(ctx, &models.OrganisationDomain{
-			OrganisationID: orgID,
-			Domain:         candidate,
-		})
-		if err == nil {
-			return nil
-		}
-		if err.Code != errors.ErrorConflict {
-			return err
-		}
-		candidate = fmt.Sprintf("%s-%s.%s", orgSlug, slug.RandomSuffix(), baseDomain)
-	}
-	return errors.Conflict("could not allocate a unique domain for organisation")
-}
-
-func (s *signupService) seedOrgRegistry(ctx context.Context, orgID, orgSlug, clusterID string) *errors.ServiceError {
-	shortID := strings.ReplaceAll(orgID, "-", "")
-	if len(shortID) > shortOrgIDLength {
-		shortID = shortID[:shortOrgIDLength]
-	}
-	_, err := s.imageRegistryService.Create(ctx, &models.ClusterImageRegistry{
-		ClusterID:           clusterID,
-		OrganisationID:      orgID,
-		Name:                fmt.Sprintf("%s-%s", orgSlug, shortID),
-		BackendStorageSize:  s.orgRegistryDefaults.StorageSize,
-		BackendStorageClass: s.orgRegistryDefaults.StorageClass,
-	})
-	return err
 }
 
 func (s *signupService) buildSignupResponse(ctx context.Context, createdUser *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {

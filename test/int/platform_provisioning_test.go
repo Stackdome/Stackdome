@@ -157,6 +157,16 @@ var _ = Describe("Platform provisioning", func() {
 		By("registering the org's own cluster via the API")
 		clusterURL, caData, saToken, err := bootstrap.ExtractAPIServerClusterCredentials(ctx, env.Cluster)
 		Expect(err).NotTo(HaveOccurred())
+		// Cluster URLs are globally unique, so the single Kind cluster is
+		// re-registered under a hostname alias (its API cert covers both SANs).
+		switch {
+		case strings.Contains(clusterURL, "127.0.0.1"):
+			clusterURL = strings.Replace(clusterURL, "127.0.0.1", "localhost", 1)
+		case strings.Contains(clusterURL, "localhost"):
+			clusterURL = strings.Replace(clusterURL, "localhost", "127.0.0.1", 1)
+		default:
+			Fail(fmt.Sprintf("cannot derive an alias for cluster URL %q", clusterURL))
+		}
 		clusterReq := openapi.NewCluster(fmt.Sprintf("owned-cluster-%d", ts), clusterURL, caData, saToken)
 		createdCluster, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdClustersPost(ctx, orgID).Cluster(*clusterReq).Execute()
 		Expect(err).NotTo(HaveOccurred())

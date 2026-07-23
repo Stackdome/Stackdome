@@ -253,8 +253,16 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
+		SessionFactory: te.DBSession,
+		Logger:         te.Logger,
+		Permissions:    te.PermissionService,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		OrgRegistryDefaults:       te.BootstrapConfig.OrgRegistry,
 		StackQueryService:         te.Services.StackService,
 		SessionFactory:            te.DBSession,
 		ProjectService:            projectService,
@@ -334,12 +342,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Permissions:                 te.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           te.RefreshTokenStore,
-	})
-
-	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
-		SessionFactory: te.DBSession,
-		Logger:         te.Logger,
-		Permissions:    te.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -481,19 +483,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 	})
 
 	signupService := services.NewSignupService(services.SignupServiceSpec{
-		UserService:               userService,
-		OrgInviteService:          orgInviteService,
-		OrganisationService:       organisationService,
-		ProjectService:            projectService,
-		ClusterService:            clusterService,
-		OrganisationDomainService: organisationDomainService,
-		ImageRegistryService:      imageRegistryService,
-		PolicyManager:             te.ResourceAccessPolicyManager,
-		RefreshTokenStore:         te.RefreshTokenStore,
-		JWTSecretKey:              te.Config.JwtSecret,
-		JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
-		OrgRegistryDefaults:       te.BootstrapConfig.OrgRegistry,
-		Logger:                    te.Logger,
+		UserService:         userService,
+		OrgInviteService:    orgInviteService,
+		OrganisationService: organisationService,
+		ProjectService:      projectService,
+		PolicyManager:       te.ResourceAccessPolicyManager,
+		RefreshTokenStore:   te.RefreshTokenStore,
+		JWTSecretKey:        te.Config.JwtSecret,
+		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
+		Logger:              te.Logger,
 	})
 
 	te.OAuthStateStore = pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
