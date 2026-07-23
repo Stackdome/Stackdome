@@ -17,6 +17,13 @@ const (
 	RegistryStateError   RegistryState = "Error"
 )
 
+// OrgRegistryDefaults are install-level storage defaults for the registry
+// seeded for each org at signup.
+type OrgRegistryDefaults struct {
+	StorageSize  string
+	StorageClass string
+}
+
 type ClusterImageRegistry struct {
 	ID                  string `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	ClusterID           string `gorm:"not null;index:idx_cluster_image_registry_cluster_id" json:"cluster_id"`

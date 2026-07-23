@@ -646,8 +646,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		RefreshTokenStore:         d.RefreshTokenStore,
 		JWTSecretKey:              d.Config.JwtSecret,
 		JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
-		RegistryStorageSize:       d.BootstrapConfig.RegistryStorageSize,
-		RegistryStorageClass:      d.BootstrapConfig.RegistryStorageClass,
+		OrgRegistryDefaults:       d.BootstrapConfig.OrgRegistry,
 		Logger:                    d.Logger,
 	})
 

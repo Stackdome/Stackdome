@@ -58,10 +58,9 @@ func (d *bootstrapDeps) service(bootstrapCfg *config.BootstrapConfig, clusterCfg
 
 func fullBootstrapConfig() *config.BootstrapConfig {
 	return &config.BootstrapConfig{
-		Email:                contactEmail,
-		BaseDomain:           baseDomain,
-		RegistryStorageSize:  storageSize,
-		RegistryStorageClass: storageClass,
+		Email:       contactEmail,
+		BaseDomain:  baseDomain,
+		OrgRegistry: models.OrgRegistryDefaults{StorageSize: storageSize, StorageClass: storageClass},
 	}
 }
 

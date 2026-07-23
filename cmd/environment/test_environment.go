@@ -492,8 +492,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		RefreshTokenStore:         te.RefreshTokenStore,
 		JWTSecretKey:              te.Config.JwtSecret,
 		JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
-		RegistryStorageSize:       te.BootstrapConfig.RegistryStorageSize,
-		RegistryStorageClass:      te.BootstrapConfig.RegistryStorageClass,
+		OrgRegistryDefaults:       te.BootstrapConfig.OrgRegistry,
 		Logger:                    te.Logger,
 	})
 

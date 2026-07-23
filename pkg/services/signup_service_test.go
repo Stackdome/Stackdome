@@ -97,8 +97,7 @@ var _ = Describe("SignupService platform-infra seeding", func() {
 			RefreshTokenStore:         refreshStore,
 			JWTSecretKey:              "test-secret",
 			JWTClaimsBuilder:          auth.NewJWTClaimsBuilder(),
-			RegistryStorageSize:       storageSize,
-			RegistryStorageClass:      storageClass,
+			OrgRegistryDefaults:       models.OrgRegistryDefaults{StorageSize: storageSize, StorageClass: storageClass},
 			Logger:                    logger.NewLogger(),
 		})
 		ctx = context.Background()

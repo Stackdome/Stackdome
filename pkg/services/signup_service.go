@@ -42,8 +42,7 @@ type SignupServiceSpec struct {
 	RefreshTokenStore         stores.RefreshTokenStore
 	JWTSecretKey              string
 	JWTClaimsBuilder          jwtClaimsBuilder
-	RegistryStorageSize       string
-	RegistryStorageClass      string
+	OrgRegistryDefaults       models.OrgRegistryDefaults
 	Logger                    logger.Logger
 }
 
@@ -59,8 +58,7 @@ type signupService struct {
 	refreshTokenStore         stores.RefreshTokenStore
 	jwtSecretKey              string
 	jwtClaimsBuilder          jwtClaimsBuilder
-	registryStorageSize       string
-	registryStorageClass      string
+	orgRegistryDefaults       models.OrgRegistryDefaults
 	logger                    logger.Logger
 }
 
@@ -77,8 +75,7 @@ func NewSignupService(spec SignupServiceSpec) SignupService {
 		refreshTokenStore:         spec.RefreshTokenStore,
 		jwtSecretKey:              spec.JWTSecretKey,
 		jwtClaimsBuilder:          spec.JWTClaimsBuilder,
-		registryStorageSize:       spec.RegistryStorageSize,
-		registryStorageClass:      spec.RegistryStorageClass,
+		orgRegistryDefaults:       spec.OrgRegistryDefaults,
 		logger:                    spec.Logger,
 	}
 }
@@ -218,8 +215,8 @@ func (s *signupService) seedOrgRegistry(ctx context.Context, orgID, orgSlug, clu
 		ClusterID:           clusterID,
 		OrganisationID:      orgID,
 		Name:                fmt.Sprintf("%s-%s", orgSlug, shortID),
-		BackendStorageSize:  s.registryStorageSize,
-		BackendStorageClass: s.registryStorageClass,
+		BackendStorageSize:  s.orgRegistryDefaults.StorageSize,
+		BackendStorageClass: s.orgRegistryDefaults.StorageClass,
 	})
 	return err
 }

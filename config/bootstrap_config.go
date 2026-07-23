@@ -1,5 +1,7 @@
 package config
 
+import "github.com/Stackdome/stackdome/pkg/models"
+
 var (
 	ErrIncompleteClusterConfig = &ConfigError{"PLATFORM_CLUSTER_NAME, PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
 	ErrClusterDomainMismatch   = &ConfigError{"PLATFORM_CLUSTER_* and PLATFORM_BASE_DOMAIN must be set together"}
@@ -15,10 +17,9 @@ func (e *ConfigError) Error() string {
 }
 
 type BootstrapConfig struct {
-	Email                string
-	BaseDomain           string
-	RegistryStorageSize  string
-	RegistryStorageClass string
+	Email       string
+	BaseDomain  string
+	OrgRegistry models.OrgRegistryDefaults
 }
 
 func ValidatePlatformProvisioning(cluster *ClusterConfig, baseDomain, email string) error {
@@ -53,10 +54,10 @@ func (b *BootstrapConfig) LoadEnvVariables() {
 	}
 
 	if val, ok := EnvPlatformOrgRegistryStorageSize.Lookup(); ok {
-		b.RegistryStorageSize = val
+		b.OrgRegistry.StorageSize = val
 	}
 
 	if val, ok := EnvPlatformOrgRegistryStorageClass.Lookup(); ok {
-		b.RegistryStorageClass = val
+		b.OrgRegistry.StorageClass = val
 	}
 }

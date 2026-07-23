@@ -175,12 +175,11 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-	// // Unregister the cluster from the cluster manager
-	// cerr := s.clusterManager.UnregisterCluster(cluster.ID)
-	// if cerr != nil {
-	// 	s.logger.Errorf("failed to unregister cluster from manager: %v", cerr)
-	// 	return errors.GeneralError("failed to unregister cluster from manager: %v", cerr)
-	// }
+	// Unregister the cluster from the cluster manager
+	cerr := s.clusterManager.UnregisterCluster(cluster.ID)
+	if cerr != nil {
+		return errors.InternalServerError("failed to unregister cluster from manager: %v", cerr)
+	}
 
 	if len(cluster.ImageRegistries) != 0 {
 		for _, registry := range cluster.ImageRegistries {
