@@ -138,7 +138,7 @@ func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgN
 	if sErr := s.seedOrgDomain(ctx, orgID, orgSlug, baseDomain.Domain); sErr != nil {
 		return sErr
 	}
-	return s.seedOrgRegistry(ctx, orgID, orgSlug, platformCluster.ID)
+	return s.seedOrgRegistry(ctx, orgID, orgName, platformCluster.ID)
 }
 
 func (s *organisationService) seedOrgDomain(ctx context.Context, orgID, orgSlug, baseDomain string) *errors.ServiceError {
@@ -159,19 +159,26 @@ func (s *organisationService) seedOrgDomain(ctx context.Context, orgID, orgSlug,
 	return errors.Conflict("could not allocate a unique domain for organisation")
 }
 
-func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgSlug, clusterID string) *errors.ServiceError {
-	shortID := strings.ReplaceAll(orgID, "-", "")
-	if len(shortID) > shortOrgIDLength {
-		shortID = shortID[:shortOrgIDLength]
-	}
+func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgName, clusterID string) *errors.ServiceError {
 	_, err := s.imageRegistryService.InternalCreateSeedRegistry(ctx, &models.ClusterImageRegistry{
 		ClusterID:           clusterID,
 		OrganisationID:      orgID,
-		Name:                fmt.Sprintf("%s-%s", orgSlug, shortID),
+		Name:                orgRegistryName(orgName, orgID),
 		BackendStorageSize:  s.orgRegistryDefaults.StorageSize,
 		BackendStorageClass: s.orgRegistryDefaults.StorageClass,
 	})
 	return err
+}
+
+// orgRegistryName derives the org's registry name: the CR name lands on the
+// cluster verbatim, so the deterministic org-ID suffix keeps it collision-free
+// per cluster.
+func orgRegistryName(orgName, orgID string) string {
+	shortID := strings.ReplaceAll(orgID, "-", "")
+	if len(shortID) > shortOrgIDLength {
+		shortID = shortID[:shortOrgIDLength]
+	}
+	return fmt.Sprintf("%s-%s", slug.FromOrgName(orgName), shortID)
 }
 
 func (s *organisationService) InternalGetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {

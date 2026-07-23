@@ -45,6 +45,7 @@ type ClusterService interface {
 
 type clusterService struct {
 	clusterStore         stores.ClusterStore
+	organisationStore    stores.OrganisationStore
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
@@ -60,7 +61,10 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		})
 	}
 	return &clusterService{
-		clusterStore:         clusterStore,
+		clusterStore: clusterStore,
+		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		clusterManager:       spec.ClusterManager,
 		logger:               spec.Logger,
 		imageRegistryService: spec.ImageRegistryService,
@@ -130,6 +134,23 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		return nil, encErr
 	}
 
+	// Builds resolve the registry on the stack's cluster, so every owned
+	// cluster ships with one: fall back to a default when none was supplied.
+	// The platform org stays infrastructure-only — no registry on its cluster.
+	var registry *models.ClusterImageRegistry
+	if len(cluster.ImageRegistries) != 0 {
+		registry = cluster.ImageRegistries[0]
+	} else {
+		org, oerr := s.organisationStore.Get(ctx, cluster.OrganisationID)
+		if oerr != nil {
+			s.logger.Error(ctx, "failed to get organisation for default registry: %v", oerr)
+			return nil, oerr
+		}
+		if !org.Platform {
+			registry = &models.ClusterImageRegistry{Name: orgRegistryName(org.Name, org.ID)}
+		}
+	}
+
 	cerr := s.clusterStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		createdCluster, createdErr = s.clusterStore.CreateWithTx(ctx, cluster)
 		if createdErr != nil {
@@ -140,9 +161,7 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		if merr != nil {
 			return errors.GeneralError("failed to register cluster with manager")
 		}
-		if len(cluster.ImageRegistries) != 0 {
-			// Create the image registry in the cluster
-			registry := cluster.ImageRegistries[0]
+		if registry != nil {
 			registry.ClusterID = createdCluster.ID
 			registry.OrganisationID = createdCluster.OrganisationID
 			createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)

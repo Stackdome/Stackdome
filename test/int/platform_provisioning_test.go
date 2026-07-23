@@ -4,11 +4,15 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -155,6 +159,22 @@ var _ = Describe("Platform provisioning", func() {
 		orgID := resp.User.GetOrganisationId()
 		client := shared.AuthenticatedClient(resp.GetJwtToken())
 
+		By("deleting the seeded platform-cluster registry — the graduating org brings its own")
+		// Both "clusters" are the same physical Kind cluster here, and the
+		// auto-created registry CR would collide with the seeded one's name.
+		var seededRegistry models.ClusterImageRegistry
+		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: orgID}).First(&seededRegistry).Error).To(Succeed())
+		delResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(
+			ctx, orgID, seededRegistry.ClusterID, seededRegistry.ID).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(delResp.StatusCode).To(Equal(http.StatusNoContent))
+		clusterClient := env.Cluster.GetClient()
+		Eventually(func() bool {
+			cr := &registryv1alpha1.ClusterRegistry{}
+			gerr := clusterClient.Get(ctx, k8stypes.NamespacedName{Name: seededRegistry.Name}, cr)
+			return k8serrors.IsNotFound(gerr)
+		}, 2*time.Minute, 2*time.Second).Should(BeTrue(), "seeded registry CR should be deleted from the cluster")
+
 		By("registering the org's own cluster via the API")
 		clusterURL, caData, saToken, err := bootstrap.ExtractAPIServerClusterCredentials(ctx, env.Cluster)
 		Expect(err).NotTo(HaveOccurred())
@@ -174,6 +194,14 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))
 		ownedClusterID := createdCluster.GetId()
 		Expect(ownedClusterID).NotTo(BeEmpty())
+		DeferCleanup(func() {
+			// Deregister the second registration of the shared Kind cluster so
+			// its duplicate controller set doesn't keep reconciling for the
+			// rest of the suite.
+			resp, derr := client.DefaultApi.ApiV1OrganizationsOrgIdClustersIdDelete(ctx, orgID, ownedClusterID).Execute()
+			Expect(derr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
+		})
 
 		By("attaching a custom domain to the organisation")
 		ownedDomain := fmt.Sprintf("owned-%d.test", ts)
@@ -218,5 +246,79 @@ var _ = Describe("Platform provisioning", func() {
 
 		By("waiting for the stack to become Ready on the owned cluster")
 		shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
+
+		By("verifying AddCluster auto-created a <slug>-<shortid> registry on the owned cluster")
+		shortID := strings.ReplaceAll(orgID, "-", "")
+		if len(shortID) > shortOrgIDLength {
+			shortID = shortID[:shortOrgIDLength]
+		}
+		expectedRegistry := fmt.Sprintf("%s-%s", slug.FromOrgName(orgName), shortID)
+		var ownedRegistry models.ClusterImageRegistry
+		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: orgID, ClusterID: ownedClusterID}).
+			First(&ownedRegistry).Error).To(Succeed())
+		Expect(ownedRegistry.Name).To(Equal(expectedRegistry))
+
+		if githubToken := os.Getenv("GITHUB_TOKEN"); githubToken != "" {
+			By("building from source: the build must push to the owned cluster's registry")
+			integration := shared.CreateGitCredentialsIntegration(client, orgID, shared.BuildSourceGitHost, shared.BuildSourceGitUsername, githubToken)
+			DeferCleanup(func() {
+				shared.DeleteGitIntegration(client, orgID, integration.GetId())
+			})
+
+			buildStack := shared.CreateStackWithBuildSource("owned-build", shared.BuildSourceRepoURL)
+			buildCreated, _ := shared.CreateStackAndDeploy(client, orgID, projectName, buildStack)
+			buildStackID := buildCreated.GetId()
+			DeferCleanup(func() {
+				shared.DeleteStack(client, orgID, projectName, buildStackID)
+				shared.WaitForStackDeleted(client, orgID, projectName, buildStackID, 2*time.Minute)
+			})
+
+			var buildStackRow models.Stack
+			Expect(db.First(&buildStackRow, "id = ?", buildStackID).Error).To(Succeed())
+			Expect(buildStackRow.ClusterID).To(Equal(ownedClusterID))
+
+			By("verifying the build resource resolved the owned cluster's registry")
+			var buildResource models.StackResource
+			Expect(db.Where(&models.StackResource{StackID: buildStackID, Name: shared.BuildSourceResourceName}).
+				First(&buildResource).Error).To(Succeed())
+			Expect(buildResource.BuildConfig).NotTo(BeNil())
+			Expect(buildResource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(Equal(ownedRegistry.Name))
+
+			By("waiting for the built stack to become Ready on the owned cluster")
+			shared.WaitForStackReady(client, orgID, projectName, buildStackID, 10*time.Minute)
+
+			By("verifying the deployment runs an image from the owned cluster's registry")
+			clusterClient := env.Cluster.GetClient()
+			deploy, derr := shared.GetDeploymentForStackResource(ctx, clusterClient, buildCreated.GetNamespace(), shared.BuildSourceResourceName)
+			Expect(derr).NotTo(HaveOccurred())
+			Expect(deploy.Spec.Template.Spec.Containers).To(HaveLen(1))
+			Expect(deploy.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring(ownedRegistry.Name))
+		} else {
+			By("skipping the build case: GITHUB_TOKEN not set")
+		}
+
+		By("verifying builds fail fast once the owned cluster has no registry, even though another cluster's registry row exists")
+		// DB-only row on the platform cluster: resolution must ignore it.
+		otherClusterRegistry := &models.ClusterImageRegistry{
+			OrganisationID:     orgID,
+			ClusterID:          platformCluster.ID,
+			Name:               fmt.Sprintf("other-cluster-reg-%d", ts),
+			BackendStorageSize: models.DefaultRegistryStorageSize,
+		}
+		Expect(db.Create(otherClusterRegistry).Error).To(Succeed())
+		httpResp, err = client.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(ctx, orgID, ownedClusterID, ownedRegistry.ID).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent))
+
+		noRegStack := shared.CreateStackWithBuildSource("owned-noreg", shared.BuildSourceRepoURL)
+		thin, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost(ctx, orgID, projectName).Stack(*noRegStack).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))
+		DeferCleanup(func() {
+			shared.DeleteStack(client, orgID, projectName, thin.GetId())
+		})
+		_, httpResp, err = client.DefaultApi.ApplyStack(ctx, orgID, projectName, thin.GetId()).Stack(*noRegStack).Execute()
+		Expect(err).To(HaveOccurred())
+		Expect(httpResp.StatusCode).To(Equal(http.StatusBadRequest))
 	})
 })

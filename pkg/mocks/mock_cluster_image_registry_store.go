@@ -115,19 +115,19 @@ func (mr *MockClusterImageRegistryStoreMockRecorder) GetByID(ctx, ID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).GetByID), ctx, ID)
 }
 
-// GetForOrg mocks base method.
-func (m *MockClusterImageRegistryStore) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+// GetForOrgAndCluster mocks base method.
+func (m *MockClusterImageRegistryStore) GetForOrgAndCluster(ctx context.Context, orgID, clusterID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetForOrg", ctx, orgID)
+	ret := m.ctrl.Call(m, "GetForOrgAndCluster", ctx, orgID, clusterID)
 	ret0, _ := ret[0].(*models.ClusterImageRegistry)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetForOrg indicates an expected call of GetForOrg.
-func (mr *MockClusterImageRegistryStoreMockRecorder) GetForOrg(ctx, orgID any) *gomock.Call {
+// GetForOrgAndCluster indicates an expected call of GetForOrgAndCluster.
+func (mr *MockClusterImageRegistryStoreMockRecorder) GetForOrgAndCluster(ctx, orgID, clusterID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForOrg", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).GetForOrg), ctx, orgID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForOrgAndCluster", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).GetForOrgAndCluster), ctx, orgID, clusterID)
 }
 
 // ListByClusterID mocks base method.

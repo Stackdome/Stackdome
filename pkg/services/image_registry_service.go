@@ -19,7 +19,6 @@ import (
 type ImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
-	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
@@ -27,7 +26,7 @@ type ImageRegistryService interface {
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
-	PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, stackName string, resource *models.StackResource) *errors.ServiceError
+	PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError
 	Delete(ctx context.Context, orgID, ID string) *errors.ServiceError
 }
 
@@ -123,30 +122,23 @@ func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID
 	return registries, nil
 }
 
-func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, stackName string, resource *models.StackResource) *errors.ServiceError {
+// PopulateInClusterRegistryUrlForResource resolves the registry on the
+// stack's cluster: builds must push where the workload pulls.
+func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError {
 	if resource.BuildConfig == nil || !resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
 		return nil
 	}
 
-	clusterRegistry, err := s.GetForOrg(ctx, orgID)
+	clusterRegistry, err := s.clusterImageRegistryStore.GetForOrgAndCluster(ctx, orgID, clusterID)
 	if err != nil {
 		if err.Code == errors.ErrorNotFound {
-			return errors.BadRequest("no cluster registry found for organisation '%s'", orgID)
+			return errors.BadRequest("no cluster registry found for organisation '%s' on cluster '%s'", orgID, clusterID)
 		}
 		return errors.GeneralError("failed to get cluster registry for organisation '%s': %s", orgID, err.Error())
 	}
 
 	resource.BuildConfig.BuildImageRepository.ClusterRegistryName = clusterRegistry.Name
 	return nil
-}
-
-func (s *clusterImageRegistryService) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
-	registry, err := s.clusterImageRegistryStore.GetForOrg(ctx, orgID)
-	if err != nil {
-		s.logger.Error(ctx, "failed to get cluster image registry for org: %v", err)
-		return nil, err
-	}
-	return registry, nil
 }
 
 func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {

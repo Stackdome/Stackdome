@@ -90,6 +90,45 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 		})
 	})
 
+	Describe("PopulateInClusterRegistryUrlForResource", func() {
+		newBuildResource := func() *models.StackResource {
+			return &models.StackResource{
+				Name: "web",
+				BuildConfig: &models.BuildConfigSpec{
+					BuildImageRepository: models.BuildImageRepository{UseInClusterRegistry: true},
+				},
+			}
+		}
+
+		It("resolves the registry on the stack's cluster", func() {
+			registryStore := mocks.NewMockClusterImageRegistryStore(ctrl)
+			svc.clusterImageRegistryStore = registryStore
+			registryStore.EXPECT().GetForOrgAndCluster(gomock.Any(), guardOrgID, ownedClusterID).
+				Return(&models.ClusterImageRegistry{Name: "owned-reg"}, nil)
+
+			resource := newBuildResource()
+			serr := svc.PopulateInClusterRegistryUrlForResource(ctx, guardOrgID, ownedClusterID, "stack", resource)
+			Expect(serr).To(BeNil())
+			Expect(resource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(Equal("owned-reg"))
+		})
+
+		It("fails fast when the stack's cluster has no registry, even if another cluster does", func() {
+			registryStore := mocks.NewMockClusterImageRegistryStore(ctrl)
+			svc.clusterImageRegistryStore = registryStore
+			registryStore.EXPECT().GetForOrgAndCluster(gomock.Any(), guardOrgID, ownedClusterID).
+				Return(nil, errors.NotFound("cluster image registry not found"))
+
+			serr := svc.PopulateInClusterRegistryUrlForResource(ctx, guardOrgID, ownedClusterID, "stack", newBuildResource())
+			Expect(serr).ToNot(BeNil())
+			Expect(serr.Code).To(Equal(errors.ErrorBadRequest))
+		})
+
+		It("is a no-op for resources not using the in-cluster registry", func() {
+			serr := svc.PopulateInClusterRegistryUrlForResource(ctx, guardOrgID, ownedClusterID, "stack", &models.StackResource{Name: "web"})
+			Expect(serr).To(BeNil())
+		})
+	})
+
 	Describe("InternalCreateSeedRegistry", func() {
 		It("rejects a target that is not the platform cluster", func() {
 			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).

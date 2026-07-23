@@ -45,9 +45,9 @@ func (c *clusterImageRegistryStore) CreateWithTx(ctx context.Context, spec *mode
 	return c.GetByID(ctx, spec.ID)
 }
 
-func (c *clusterImageRegistryStore) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+func (c *clusterImageRegistryStore) GetForOrgAndCluster(ctx context.Context, orgID, clusterID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	var registry models.ClusterImageRegistry
-	if err := c.sessionFactory.New(ctx).Where("organisation_id = ?", orgID).First(&registry).Error; err != nil {
+	if err := c.sessionFactory.New(ctx).Where("organisation_id = ? AND cluster_id = ?", orgID, clusterID).First(&registry).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("cluster image registry not found")
 		}

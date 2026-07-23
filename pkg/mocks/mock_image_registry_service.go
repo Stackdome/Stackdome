@@ -102,21 +102,6 @@ func (mr *MockImageRegistryServiceMockRecorder) Get(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockImageRegistryService)(nil).Get), ctx, ID)
 }
 
-// GetForOrg mocks base method.
-func (m *MockImageRegistryService) GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetForOrg", ctx, orgID)
-	ret0, _ := ret[0].(*models.ClusterImageRegistry)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetForOrg indicates an expected call of GetForOrg.
-func (mr *MockImageRegistryServiceMockRecorder) GetForOrg(ctx, orgID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetForOrg", reflect.TypeOf((*MockImageRegistryService)(nil).GetForOrg), ctx, orgID)
-}
-
 // InjectClusterResourceService mocks base method.
 func (m *MockImageRegistryService) InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService) {
 	m.ctrl.T.Helper()
@@ -190,17 +175,17 @@ func (mr *MockImageRegistryServiceMockRecorder) ListForOrg(ctx, orgID any) *gomo
 }
 
 // PopulateInClusterRegistryUrlForResource mocks base method.
-func (m *MockImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, stackName string, resource *models.StackResource) *errors.ServiceError {
+func (m *MockImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PopulateInClusterRegistryUrlForResource", ctx, orgID, stackName, resource)
+	ret := m.ctrl.Call(m, "PopulateInClusterRegistryUrlForResource", ctx, orgID, clusterID, stackName, resource)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
 // PopulateInClusterRegistryUrlForResource indicates an expected call of PopulateInClusterRegistryUrlForResource.
-func (mr *MockImageRegistryServiceMockRecorder) PopulateInClusterRegistryUrlForResource(ctx, orgID, stackName, resource any) *gomock.Call {
+func (mr *MockImageRegistryServiceMockRecorder) PopulateInClusterRegistryUrlForResource(ctx, orgID, clusterID, stackName, resource any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulateInClusterRegistryUrlForResource", reflect.TypeOf((*MockImageRegistryService)(nil).PopulateInClusterRegistryUrlForResource), ctx, orgID, stackName, resource)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulateInClusterRegistryUrlForResource", reflect.TypeOf((*MockImageRegistryService)(nil).PopulateInClusterRegistryUrlForResource), ctx, orgID, clusterID, stackName, resource)
 }
 
 // UpdateStatus mocks base method.

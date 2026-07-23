@@ -25,6 +25,8 @@ var _ = Describe("ClusterService", func() {
 		ctrl           *gomock.Controller
 		clusterStore   *mocks.MockClusterStore
 		clusterManager *mocks.MockClusterManager
+		orgStore       *mocks.MockOrganisationStore
+		registrySvc    *mocks.MockImageRegistryService
 		encryption     EncryptionService
 		svc            *clusterService
 		ctx            context.Context
@@ -44,12 +46,16 @@ var _ = Describe("ClusterService", func() {
 		Expect(certErr).ToNot(HaveOccurred())
 		caData = base64.StdEncoding.EncodeToString(certPEM)
 
+		orgStore = mocks.NewMockOrganisationStore(ctrl)
+		registrySvc = mocks.NewMockImageRegistryService(ctrl)
 		svc = &clusterService{
-			clusterStore:      clusterStore,
-			clusterManager:    clusterManager,
-			logger:            logger.NewLogger(),
-			permissions:       auth.NewPermissionService(auth.PermissionServiceSpec{}),
-			encryptionService: encryption,
+			clusterStore:         clusterStore,
+			organisationStore:    orgStore,
+			imageRegistryService: registrySvc,
+			clusterManager:       clusterManager,
+			logger:               logger.NewLogger(),
+			permissions:          auth.NewPermissionService(auth.PermissionServiceSpec{}),
+			encryptionService:    encryption,
 		}
 
 		ctx = auth.SetIdentityInContext(context.Background(), &auth.Identity{IsSystem: true})
@@ -124,6 +130,96 @@ var _ = Describe("ClusterService", func() {
 		})
 	})
 
+	Describe("AddCluster registry provisioning", func() {
+		const tenantOrgID = "org-tenant"
+
+		newClusterSpec := func() *models.Cluster {
+			return &models.Cluster{
+				Name:           "owned",
+				OrganisationID: tenantOrgID,
+				ClusterURL:     "https://example.com:6443",
+				Token:          "tok",
+				ClusterCAData:  caData,
+			}
+		}
+
+		expectClusterCreated := func(created *models.Cluster) {
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), tenantOrgID).
+				Return(nil, apperrors.NotFound("no cluster"))
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), gomock.Any()).
+				Return(nil, apperrors.NotFound("not found")).AnyTimes()
+			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
+					return fn(ctx)
+				})
+			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
+			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
+			clusterManager.EXPECT().GetClient(created.ID).Return(nil, stderrors.New("no client in test"))
+		}
+
+		It("auto-creates a default registry named <slug>-<shortOrgID> when none is supplied", func() {
+			orgID := "11112222-3333-4444-5555-666677778888"
+			spec := newClusterSpec()
+			spec.OrganisationID = orgID
+			created := &models.Cluster{ID: "cluster-owned", OrganisationID: orgID}
+
+			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), orgID).
+				Return(nil, apperrors.NotFound("no cluster"))
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), gomock.Any()).
+				Return(nil, apperrors.NotFound("not found")).AnyTimes()
+			orgStore.EXPECT().Get(gomock.Any(), orgID).
+				Return(&models.Organisation{ID: orgID, Name: "Acme Inc"}, nil)
+			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
+					return fn(ctx)
+				})
+			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
+			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
+			registrySvc.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, r *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *apperrors.ServiceError) {
+					Expect(r.Name).To(Equal("acme-inc-11112222"))
+					Expect(r.ClusterID).To(Equal("cluster-owned"))
+					Expect(r.OrganisationID).To(Equal(orgID))
+					return r, nil
+				})
+			clusterManager.EXPECT().GetClient(created.ID).Return(nil, stderrors.New("no client in test"))
+
+			result, err := svc.AddCluster(ctx, spec)
+			Expect(err).To(BeNil())
+			Expect(result.ImageRegistries).To(HaveLen(1))
+		})
+
+		It("keeps the explicitly supplied registry", func() {
+			spec := newClusterSpec()
+			spec.ImageRegistries = []*models.ClusterImageRegistry{{Name: "custom-registry"}}
+			created := &models.Cluster{ID: "cluster-owned", OrganisationID: tenantOrgID}
+
+			expectClusterCreated(created)
+			registrySvc.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, r *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *apperrors.ServiceError) {
+					Expect(r.Name).To(Equal("custom-registry"))
+					return r, nil
+				})
+
+			result, err := svc.AddCluster(ctx, spec)
+			Expect(err).To(BeNil())
+			Expect(result.ImageRegistries).To(HaveLen(1))
+		})
+
+		It("creates no registry for the platform org", func() {
+			spec := newClusterSpec()
+			created := &models.Cluster{ID: "cluster-platform", OrganisationID: tenantOrgID}
+
+			expectClusterCreated(created)
+			orgStore.EXPECT().Get(gomock.Any(), tenantOrgID).
+				Return(&models.Organisation{ID: tenantOrgID, Name: "platform", Platform: true}, nil)
+
+			result, err := svc.AddCluster(ctx, spec)
+			Expect(err).To(BeNil())
+			Expect(result.ImageRegistries).To(BeEmpty())
+		})
+	})
+
 	Describe("InternalUpsertPlatformCluster", func() {
 		It("delegates to AddCluster when no cluster exists for the URL", func() {
 			spec := &models.Cluster{
@@ -139,6 +235,8 @@ var _ = Describe("ClusterService", func() {
 				Return(nil, apperrors.NotFound("cluster with this api URL not found")).AnyTimes()
 			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), "org-platform").
 				Return(nil, apperrors.NotFound("cluster for organisation 'org-platform' not found"))
+			orgStore.EXPECT().Get(gomock.Any(), "org-platform").
+				Return(&models.Organisation{ID: "org-platform", Name: "platform", Platform: true}, nil)
 			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
 					return fn(ctx)
