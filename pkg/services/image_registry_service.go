@@ -268,6 +268,6 @@ func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID stri
 
 func (s *clusterImageRegistryService) setDefaultValues(registry *models.ClusterImageRegistry) {
 	if registry.BackendStorageSize == "" {
-		registry.BackendStorageSize = "50Gi"
+		registry.BackendStorageSize = models.DefaultRegistryStorageSize
 	}
 }

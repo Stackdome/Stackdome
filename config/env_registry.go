@@ -1,5 +1,7 @@
 package config
 
+import "github.com/Stackdome/stackdome/pkg/models"
+
 var (
 	// Application
 	EnvJWTSecret     = StringVar("JWT_SECRET", "JWT token signing secret", nil, true)
@@ -38,7 +40,7 @@ var (
 	// Platform Provisioning
 	EnvPlatformEmail                   = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform cluster issuer", nil, false)
 	EnvPlatformBaseDomain              = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
-	EnvPlatformOrgRegistryStorageSize  = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_SIZE", "Default storage size for each org's registry seeded at signup", ptr("50Gi"), false)
+	EnvPlatformOrgRegistryStorageSize  = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_SIZE", "Default storage size for each org's registry seeded at signup", ptr(models.DefaultPlatformOrgRegistryStorageSize), false)
 	EnvPlatformOrgRegistryStorageClass = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_CLASS", "Default storage class for each org's registry seeded at signup", nil, false)
 
 	// Environment
