@@ -5,18 +5,22 @@ import (
 	"encoding/hex"
 	"regexp"
 	"strings"
+
+	goslug "github.com/gosimple/slug"
 )
 
 const MaxSlugLength = 40
 
 var (
-	nonAlphanumeric = regexp.MustCompile(`[^a-z0-9]+`)
-	fallbackSlug    = "org"
+	// gosimple/slug allows underscores; DNS-1123 labels do not.
+	hyphenRuns   = regexp.MustCompile(`-{2,}`)
+	fallbackSlug = "org"
 )
 
 func FromOrgName(name string) string {
-	s := strings.ToLower(name)
-	s = nonAlphanumeric.ReplaceAllString(s, "-")
+	s := goslug.Make(name)
+	s = strings.ReplaceAll(s, "_", "-")
+	s = hyphenRuns.ReplaceAllString(s, "-")
 	s = strings.Trim(s, "-")
 	if len(s) > MaxSlugLength {
 		s = strings.Trim(s[:MaxSlugLength], "-")

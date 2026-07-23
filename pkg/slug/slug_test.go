@@ -47,6 +47,14 @@ var _ = Describe("slug.FromOrgName", func() {
 		registryName := orgSlug + "-" + strings.Repeat("a", 8)
 		Expect(len(registryName)).To(BeNumerically("<=", 63))
 	})
+
+	It("transliterates unicode instead of dropping it", func() {
+		Expect(slug.FromOrgName("Über Örg")).To(Equal("uber-org"))
+	})
+
+	It("converts underscores to hyphens for DNS-1123 validity", func() {
+		Expect(slug.FromOrgName("my_org_name")).To(Equal("my-org-name"))
+	})
 })
 
 var _ = Describe("slug.RandomSuffix", func() {
