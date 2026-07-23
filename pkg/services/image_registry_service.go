@@ -20,6 +20,7 @@ type ImageRegistryService interface {
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	GetForOrg(ctx context.Context, orgID string) (*models.ClusterImageRegistry, *errors.ServiceError)
+	ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
@@ -40,6 +41,9 @@ func NewClusterImageRegistryService(spec ImageRegistryServiceSpec) ImageRegistry
 		clusterImageRegistryStore: pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		clusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
 		logger:      spec.Logger,
 		permissions: spec.Permissions,
 	}
@@ -47,6 +51,7 @@ func NewClusterImageRegistryService(spec ImageRegistryServiceSpec) ImageRegistry
 
 type clusterImageRegistryService struct {
 	clusterImageRegistryStore stores.ClusterImageRegistryStore
+	clusterStore              stores.ClusterStore
 	clusterResourceService    clusterresource.ClusterImageRegistryService
 	permissions               auth.PermissionService
 	logger                    logger.Logger
@@ -76,11 +81,42 @@ func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string
 	return s.clusterImageRegistryStore.GetByID(ctx, ID)
 }
 
+// validateClusterForOrg mirrors the read-time fallback: the target cluster
+// must be the org's own cluster, or the platform cluster when the org owns none.
+func (s *clusterImageRegistryService) validateClusterForOrg(ctx context.Context, orgID, clusterID string) *errors.ServiceError {
+	resolved, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
+	if err != nil && err.Code == errors.ErrorNotFound {
+		resolved, err = s.clusterStore.GetPlatformCluster(ctx)
+	}
+	if err != nil {
+		if err.Code == errors.ErrorNotFound {
+			return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
+		}
+		return err
+	}
+	if resolved.ID != clusterID {
+		return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
+	}
+	return nil
+}
+
+func (s *clusterImageRegistryService) ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, "", auth.ActionList); permErr != nil {
+		return nil, permErr
+	}
+	registries, err := s.clusterImageRegistryStore.ListForOrg(ctx, orgID)
+	if err != nil {
+		s.logger.Error(ctx, "failed to list cluster image registries for org: %v", err)
+		return nil, err
+	}
+	return registries, nil
+}
+
 func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	registries, err := s.clusterImageRegistryStore.ListByClusterID(ctx, clusterID)
+	registries, err := s.clusterImageRegistryStore.ListByClusterID(ctx, orgID, clusterID)
 	if err != nil {
 		s.logger.Error(ctx, "failed to list cluster image registries: %v", err)
 		return nil, err
@@ -138,6 +174,10 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	}
 	if spec.Name == "" {
 		return nil, errors.GeneralError("name is required")
+	}
+
+	if serr := s.validateClusterForOrg(ctx, spec.OrganisationID, spec.ClusterID); serr != nil {
+		return nil, serr
 	}
 
 	if err := s.validateBackendStorageSize(spec.BackendStorageSize); err != nil {

@@ -63,7 +63,7 @@ func (cm *ClientManager) Bootstrap(ctx context.Context, platformClusterID string
 	cm.clusterID = platformClusterID
 
 	cm.logger.Info("Waiting for the seeded org image registry to become Running")
-	if err := cm.waitForRegistryRunning(bootstrapCtx, platformClusterID); err != nil {
+	if err := cm.waitForRegistryRunning(bootstrapCtx); err != nil {
 		return fmt.Errorf("failed waiting for registry: %w", err)
 	}
 
@@ -221,7 +221,7 @@ func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCl
 	return fmt.Errorf("timeout waiting for service account secret to be populated")
 }
 
-func extractAPIServerClusterCredentials(ctx context.Context, cluster *testutil.TestCluster) (string, string, string, error) {
+func ExtractAPIServerClusterCredentials(ctx context.Context, cluster *testutil.TestCluster) (string, string, string, error) {
 	clientset, err := cluster.GetKubeClient()
 	if err != nil {
 		return "", "", "", fmt.Errorf("failed to get kube client: %w", err)
@@ -248,12 +248,12 @@ func extractAPIServerClusterCredentials(ctx context.Context, cluster *testutil.T
 	return clusterURL, caData, saToken, nil
 }
 
-func (cm *ClientManager) waitForRegistryRunning(ctx context.Context, clusterID string) error {
+func (cm *ClientManager) waitForRegistryRunning(ctx context.Context) error {
 	timeout := 5 * time.Minute
 	deadline := time.Now().Add(timeout)
 
 	for time.Now().Before(deadline) {
-		resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesGet(ctx, cm.orgID, clusterID).Execute()
+		resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdImageRegistriesGet(ctx, cm.orgID).Execute()
 		if err != nil {
 			cm.logger.Info("Registry list request failed, retrying", "error", err.Error())
 			time.Sleep(5 * time.Second)

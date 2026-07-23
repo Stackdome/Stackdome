@@ -3,6 +3,7 @@ package int
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -24,6 +25,15 @@ func exposedProvisioningStack(name string) *openapi.Stack {
 	resource := openapi.NewStackResource("web")
 	resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 	resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, true)})
+
+	spec := openapi.NewStackSpec()
+	spec.SetStackResources([]openapi.StackResource{*resource})
+	return openapi.NewStack(name, *spec)
+}
+
+func basicProvisioningStack(name string) *openapi.Stack {
+	resource := openapi.NewStackResource("web")
+	resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 
 	spec := openapi.NewStackSpec()
 	spec.SetStackResources([]openapi.StackResource{*resource})
@@ -128,5 +138,67 @@ var _ = Describe("Platform provisioning", func() {
 			g.Expect(db.Where(&models.StackDomain{StackID: stackID}).First(&stackDomain).Error).To(Succeed())
 			g.Expect(stackDomain.Fqdn).To(HaveSuffix("." + expectedDomain))
 		}, 2*time.Minute, 5*time.Second).Should(Succeed())
+	})
+
+	It("deploys onto an org-owned cluster registered via the API, beating the platform fallback", func() {
+		ctx := context.Background()
+		env := GetEnvironment()
+		db := env.Database.GetSessionFactory().New(ctx)
+		projectName := models.DefaultProjectName
+
+		By("signing up a fresh user with a new organisation")
+		ts := time.Now().UnixNano()
+		orgName := fmt.Sprintf("Owned Cluster Org %d", ts)
+		email := fmt.Sprintf("owned-%d@example.com", ts)
+		resp := shared.SignupNewUser("Owned Admin", email, "supersecret123", orgName)
+		orgID := resp.User.GetOrganisationId()
+		client := shared.AuthenticatedClient(resp.GetJwtToken())
+
+		By("registering the org's own cluster via the API")
+		clusterURL, caData, saToken, err := bootstrap.ExtractAPIServerClusterCredentials(ctx, env.Cluster)
+		Expect(err).NotTo(HaveOccurred())
+		clusterReq := openapi.NewCluster(fmt.Sprintf("owned-cluster-%d", ts), clusterURL, caData, saToken)
+		createdCluster, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdClustersPost(ctx, orgID).Cluster(*clusterReq).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))
+		ownedClusterID := createdCluster.GetId()
+		Expect(ownedClusterID).NotTo(BeEmpty())
+
+		By("attaching a custom domain to the organisation")
+		ownedDomain := fmt.Sprintf("owned-%d.test", ts)
+		orgResp, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdGet(ctx, orgID).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
+		domains := append(orgResp.GetDomains(), openapi.DomainName{Fqdn: &ownedDomain})
+		orgResp.SetDomains(domains)
+		updatedOrg, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdPut(ctx, orgID).Organisation(*orgResp).Execute()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
+		updatedFqdns := []string{}
+		for _, d := range updatedOrg.GetDomains() {
+			updatedFqdns = append(updatedFqdns, d.GetFqdn())
+		}
+		Expect(updatedFqdns).To(ContainElement(ownedDomain))
+
+		By("creating and deploying a basic stack in the new org")
+		created, _ := shared.CreateStackAndDeploy(client, orgID, projectName, basicProvisioningStack("owned-web"))
+		stackID := created.GetId()
+		Expect(stackID).NotTo(BeEmpty())
+
+		DeferCleanup(func() {
+			shared.DeleteStack(client, orgID, projectName, stackID)
+			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
+		})
+
+		By("verifying the stack resolved to the org's own cluster, not the platform cluster")
+		var stackRow models.Stack
+		Expect(db.First(&stackRow, "id = ?", stackID).Error).To(Succeed())
+		Expect(stackRow.ClusterID).To(Equal(ownedClusterID))
+		var platformCluster models.Cluster
+		Expect(db.Where(&models.Cluster{Platform: true}).First(&platformCluster).Error).To(Succeed())
+		Expect(stackRow.ClusterID).NotTo(Equal(platformCluster.ID))
+
+		By("waiting for the stack to become Ready on the owned cluster")
+		shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
 	})
 })

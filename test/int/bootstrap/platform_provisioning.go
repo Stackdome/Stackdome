@@ -11,8 +11,6 @@ import (
 
 // PlatformProvisioningBaseDomain is the platform base domain the integration
 // bootstrap seeds. Per-org subdomains derive as <slug>.<PlatformProvisioningBaseDomain>.
-// Kept distinct from the stack-test organisation domain so the globally-unique
-// organisation_domains.domain constraint never collides at boot.
 const PlatformProvisioningBaseDomain = "sd.test"
 
 const (
@@ -39,7 +37,7 @@ func exportPlatformProvisioningEnv(ctx context.Context, cluster *testutil.TestCl
 		return fmt.Errorf("failed to deploy api-server service account: %w", err)
 	}
 
-	clusterURL, caData, saToken, err := extractAPIServerClusterCredentials(ctx, cluster)
+	clusterURL, caData, saToken, err := ExtractAPIServerClusterCredentials(ctx, cluster)
 	if err != nil {
 		return fmt.Errorf("failed to extract cluster credentials: %w", err)
 	}

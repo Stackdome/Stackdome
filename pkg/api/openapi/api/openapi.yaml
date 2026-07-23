@@ -1448,6 +1448,33 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific cluster
+  /api/v1/organizations/{org_id}/image_registries:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterImageRegistryList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all image registries for an organisation
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     get:
       parameters:

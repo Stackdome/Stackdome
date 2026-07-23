@@ -3134,6 +3134,37 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/image_registries",
+    alias: "getApiv1organizationsOrg_idimage_registries",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ClusterImageRegistryList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
     method: "post",
     path: "/api/v1/organizations/:org_id/invites",
     alias: "postApiv1organizationsOrg_idinvites",

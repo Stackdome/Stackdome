@@ -67,9 +67,17 @@ func (c *clusterImageRegistryStore) GetByID(ctx context.Context, ID string) (*mo
 	return &registry, nil
 }
 
-func (c *clusterImageRegistryStore) ListByClusterID(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+func (c *clusterImageRegistryStore) ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
 	var registries []*models.ClusterImageRegistry
-	if err := c.sessionFactory.New(ctx).Where("cluster_id = ?", clusterID).Find(&registries).Error; err != nil {
+	if err := c.sessionFactory.New(ctx).Where("organisation_id = ?", orgID).Find(&registries).Error; err != nil {
+		return nil, errors.GeneralError("failed to list cluster image registries: %s", err.Error())
+	}
+	return registries, nil
+}
+
+func (c *clusterImageRegistryStore) ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	var registries []*models.ClusterImageRegistry
+	if err := c.sessionFactory.New(ctx).Where("organisation_id = ? AND cluster_id = ?", orgID, clusterID).Find(&registries).Error; err != nil {
 		return nil, errors.GeneralError("failed to list cluster image registries: %s", err.Error())
 	}
 	return registries, nil

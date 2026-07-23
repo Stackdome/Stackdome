@@ -159,6 +159,21 @@ func (mr *MockImageRegistryServiceMockRecorder) ListByClusterID(ctx, orgID, clus
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByClusterID", reflect.TypeOf((*MockImageRegistryService)(nil).ListByClusterID), ctx, orgID, clusterID)
 }
 
+// ListForOrg mocks base method.
+func (m *MockImageRegistryService) ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListForOrg", ctx, orgID)
+	ret0, _ := ret[0].([]*models.ClusterImageRegistry)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListForOrg indicates an expected call of ListForOrg.
+func (mr *MockImageRegistryServiceMockRecorder) ListForOrg(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForOrg", reflect.TypeOf((*MockImageRegistryService)(nil).ListForOrg), ctx, orgID)
+}
+
 // PopulateInClusterRegistryUrlForResource mocks base method.
 func (m *MockImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, stackName string, resource *models.StackResource) *errors.ServiceError {
 	m.ctrl.T.Helper()

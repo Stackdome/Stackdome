@@ -154,6 +154,9 @@ func (s apiServer) routes() *mux.Router {
 	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}", gitIntegrationHandler.Delete).Methods(http.MethodDelete)
 	organizationsRouter.HandleFunc("/{org_id}/git-integrations/{id}/verify", gitIntegrationHandler.Verify).Methods(http.MethodPost)
 
+	// Org-scoped image registry listing (no cluster in path)
+	organizationsRouter.HandleFunc("/{org_id}/image_registries", clusterImageRegistryHandler.ListRegistriesForOrg).Methods(http.MethodGet)
+
 	// Cluster routes (org-scoped)
 	clusterRouter := apiV1Router.PathPrefix("/organizations/{org_id}/clusters").Subrouter()
 	clusterRouter.HandleFunc("", clusterHandler.ListClustersForOrg).Methods(http.MethodGet)
