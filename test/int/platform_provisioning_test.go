@@ -15,6 +15,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/slug"
 	"github.com/Stackdome/stackdome/test/int/bootstrap"
 	"github.com/Stackdome/stackdome/test/int/shared"
+	"k8s.io/utils/ptr"
 )
 
 // shortOrgIDLength mirrors the unexported services.shortOrgIDLength used by
@@ -179,9 +180,16 @@ var _ = Describe("Platform provisioning", func() {
 		orgResp, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdGet(ctx, orgID).Execute()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
-		domains := append(orgResp.GetDomains(), openapi.DomainName{Fqdn: &ownedDomain})
-		orgResp.SetDomains(domains)
-		updatedOrg, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdPut(ctx, orgID).Organisation(*orgResp).Execute()
+		// Round-tripping the GET response fails request validation (readOnly
+		// DomainName.id), and the update reconciles domains by fqdn — send
+		// fqdn-only entries for every domain the org should end up with.
+		domains := []openapi.DomainName{}
+		for _, d := range orgResp.GetDomains() {
+			domains = append(domains, openapi.DomainName{Fqdn: ptr.To(d.GetFqdn())})
+		}
+		domains = append(domains, openapi.DomainName{Fqdn: &ownedDomain})
+		orgUpdate := openapi.Organisation{Name: orgResp.Name, Domains: domains}
+		updatedOrg, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdPut(ctx, orgID).Organisation(orgUpdate).Execute()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
 		updatedFqdns := []string{}
