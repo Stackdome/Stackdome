@@ -40,9 +40,6 @@ DB_PORT=5432
 DB_NAME=stackdome
 DB_USERNAME=postgres
 DB_PASSWORD=mypassword
-PLATFORM_ADMIN_EMAIL=admin@stackdome.127.0.0.1.nip.io
-PLATFORM_ADMIN_NAME=admin
-PLATFORM_ADMIN_PASSWORD=admin123
 EOF
 
 # Build and run

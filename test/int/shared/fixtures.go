@@ -10,9 +10,6 @@ import (
 // Shared test image used across all stack fixtures
 const TestImage = "nginx:1.25-alpine"
 
-// Cluster registration fixture values
-const TestRegistryName = "test-registry"
-
 // InitContainer fixture values
 const (
 	InitImage   = "busybox:1.36"

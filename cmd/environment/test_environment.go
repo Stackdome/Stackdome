@@ -133,11 +133,7 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := te.BootstrapConfig.Validate(); err != nil {
-		return fmt.Errorf("invalid bootstrap config: %w", err)
-	}
-
-	if err := config.ValidatePlatformProvisioning(te.Config.PlatformCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.PlatformAdmin.Email); err != nil {
+	if err := config.ValidatePlatformProvisioning(te.Config.PlatformCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.Email); err != nil {
 		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
@@ -181,15 +177,6 @@ func (te *testEnvironment) loadSaneDefaults() {
 		}
 	}
 
-	if te.BootstrapConfig.PlatformAdmin.Email == "" {
-		te.BootstrapConfig.PlatformAdmin.Email = "test-admin@stackdome.io"
-	}
-	if te.BootstrapConfig.PlatformAdmin.Name == "" {
-		te.BootstrapConfig.PlatformAdmin.Name = "Test Platform Admin"
-	}
-	if te.BootstrapConfig.PlatformAdmin.Password == "" {
-		te.BootstrapConfig.PlatformAdmin.Password = "test-welcome@123"
-	}
 }
 
 func (te *testEnvironment) setupLogger(ctx context.Context) error {
@@ -362,6 +349,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:               te.Logger,
 		Permissions:          te.PermissionService,
 		EncryptionService:    encryptionService,
+		PlatformEmail:        te.BootstrapConfig.Email,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
@@ -918,13 +906,9 @@ func (te *testEnvironment) startManagers(ctx context.Context) error {
 
 func (te *testEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
 	svc := bootstrap.NewService(bootstrap.Spec{
-		UserService:               te.Services.UserService,
 		OrganisationService:       te.Services.OrganisationService,
-		ProjectService:            te.Services.ProjectService,
 		ClusterService:            te.Services.ClusterService,
-		ImageRegistryService:      te.Services.ClusterImageRegistryService,
 		OrganisationDomainService: te.Services.OrganisationDomainService,
-		PolicyManager:             te.ResourceAccessPolicyManager,
 		BootstrapConfig:           te.BootstrapConfig,
 		ClusterConfig:             te.Config.PlatformCluster,
 		Logger:                    te.Logger,

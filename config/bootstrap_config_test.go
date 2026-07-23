@@ -63,12 +63,12 @@ var _ = Describe("ValidatePlatformProvisioning", func() {
 			ClusterURL: "https://cluster.example.com",
 			Token:      "token",
 		}
-		Expect(ValidatePlatformProvisioning(partial, "example.com", "admin@example.com")).
+		Expect(ValidatePlatformProvisioning(partial, "example.com", "ops@example.com")).
 			To(MatchError(ErrIncompleteClusterConfig))
 	})
 
 	It("rejects a full cluster with no base domain", func() {
-		Expect(ValidatePlatformProvisioning(fullCluster(), "", "admin@example.com")).
+		Expect(ValidatePlatformProvisioning(fullCluster(), "", "ops@example.com")).
 			To(MatchError(ErrClusterDomainMismatch))
 	})
 
@@ -77,13 +77,13 @@ var _ = Describe("ValidatePlatformProvisioning", func() {
 			To(MatchError(ErrClusterDomainMismatch))
 	})
 
-	It("requires an admin email when a cluster is configured", func() {
+	It("requires a platform email when a cluster is configured", func() {
 		Expect(ValidatePlatformProvisioning(fullCluster(), "example.com", "")).
-			To(MatchError(ErrBootstrapAdminEmail))
+			To(MatchError(ErrPlatformEmailRequired))
 	})
 
 	It("accepts a fully valid configuration", func() {
-		Expect(ValidatePlatformProvisioning(fullCluster(), "example.com", "admin@example.com")).To(Succeed())
+		Expect(ValidatePlatformProvisioning(fullCluster(), "example.com", "ops@example.com")).To(Succeed())
 	})
 
 	It("surfaces a cluster validation error", func() {

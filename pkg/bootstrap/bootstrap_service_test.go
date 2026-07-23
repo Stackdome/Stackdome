@@ -11,62 +11,43 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
-	"golang.org/x/crypto/bcrypt"
 )
 
 const (
-	adminEmail    = "admin@platform.test"
-	adminName     = "Platform Admin"
-	adminPassword = "sup3r-s3cret"
-	orgName       = "Platform"
-	baseDomain    = "apps.example.com"
-	registryName  = "platform-registry"
-	storageSize   = "50Gi"
-	storageClass  = "standard"
-	clusterName   = "default"
-	clusterURL    = "https://cluster.example.com"
-	clusterCA     = "ca-data"
-	clusterToken  = "token-data"
-	orgID         = "org-123"
-	userID        = "user-123"
-	clusterID     = "cluster-123"
+	baseDomain   = "apps.example.com"
+	storageSize  = "50Gi"
+	storageClass = "standard"
+	clusterName  = "default"
+	clusterURL   = "https://cluster.example.com"
+	clusterCA    = "ca-data"
+	clusterToken = "token-data"
+	orgID        = "org-123"
+	clusterID    = "cluster-123"
 )
 
 type bootstrapDeps struct {
-	userSvc     *mocks.MockUserService
-	orgSvc      *mocks.MockOrganisationService
-	projSvc     *mocks.MockProjectService
-	clusterSvc  *mocks.MockClusterService
-	registrySvc *mocks.MockImageRegistryService
-	domainSvc   *mocks.MockOrganisationDomainsService
-	policyMgr   *mocks.MockResourceAccessPolicyManager
-	logger      *mocks.MockLogger
+	orgSvc     *mocks.MockOrganisationService
+	clusterSvc *mocks.MockClusterService
+	domainSvc  *mocks.MockOrganisationDomainsService
+	logger     *mocks.MockLogger
 }
 
 func newBootstrapDeps(ctrl *gomock.Controller) *bootstrapDeps {
 	logger := mocks.NewMockLogger(ctrl)
 	logger.EXPECT().Info(gomock.Any(), gomock.Any()).AnyTimes()
 	return &bootstrapDeps{
-		userSvc:     mocks.NewMockUserService(ctrl),
-		orgSvc:      mocks.NewMockOrganisationService(ctrl),
-		projSvc:     mocks.NewMockProjectService(ctrl),
-		clusterSvc:  mocks.NewMockClusterService(ctrl),
-		registrySvc: mocks.NewMockImageRegistryService(ctrl),
-		domainSvc:   mocks.NewMockOrganisationDomainsService(ctrl),
-		policyMgr:   mocks.NewMockResourceAccessPolicyManager(ctrl),
-		logger:      logger,
+		orgSvc:     mocks.NewMockOrganisationService(ctrl),
+		clusterSvc: mocks.NewMockClusterService(ctrl),
+		domainSvc:  mocks.NewMockOrganisationDomainsService(ctrl),
+		logger:     logger,
 	}
 }
 
 func (d *bootstrapDeps) service(bootstrapCfg *config.BootstrapConfig, clusterCfg *config.ClusterConfig) *bootstrap.Service {
 	return bootstrap.NewService(bootstrap.Spec{
-		UserService:               d.userSvc,
 		OrganisationService:       d.orgSvc,
-		ProjectService:            d.projSvc,
 		ClusterService:            d.clusterSvc,
-		ImageRegistryService:      d.registrySvc,
 		OrganisationDomainService: d.domainSvc,
-		PolicyManager:             d.policyMgr,
 		BootstrapConfig:           bootstrapCfg,
 		ClusterConfig:             clusterCfg,
 		Logger:                    d.logger,
@@ -75,15 +56,9 @@ func (d *bootstrapDeps) service(bootstrapCfg *config.BootstrapConfig, clusterCfg
 
 func fullBootstrapConfig() *config.BootstrapConfig {
 	return &config.BootstrapConfig{
-		PlatformAdmin: &config.PlatformAdminConfig{
-			Email:    adminEmail,
-			Name:     adminName,
-			Password: adminPassword,
-		},
 		BaseDomain:           baseDomain,
 		RegistryStorageSize:  storageSize,
 		RegistryStorageClass: storageClass,
-		RegistryName:         registryName,
 	}
 }
 
@@ -94,12 +69,6 @@ func setClusterConfig() *config.ClusterConfig {
 		ClusterCAData: clusterCA,
 		Token:         clusterToken,
 	}
-}
-
-func hashOf(pw string) string {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(pw), bcrypt.DefaultCost)
-	Expect(err).NotTo(HaveOccurred())
-	return string(hashed)
 }
 
 var _ = Describe("Bootstrap", func() {
@@ -127,28 +96,15 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	When("bootstrapping a fresh install", func() {
-		It("adopts the platform org and provisions admin, policies, cluster, registry and domain", func() {
+		It("creates the platform org and provisions cluster and domain", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Name: orgName, Platform: true}, nil)
-
-			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).
-				Return(nil, errors.NotFound("user not found"))
-
-			deps.projSvc.EXPECT().InternalCreateDefaultProject(gomock.Any(), orgID).
-				Return(&models.Project{}, nil)
-
-			deps.userSvc.EXPECT().InternalCreate(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, u *models.User) (*models.User, *errors.ServiceError) {
-					Expect(u.Email).To(Equal(adminEmail))
-					Expect(u.Name).To(Equal(adminName))
-					Expect(u.Role).To(Equal(models.OrgAdminRole))
-					Expect(u.OrganisationID).To(Equal(orgID))
-					Expect(bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(adminPassword))).To(Succeed())
-					return &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID}, nil
+				Return(nil, errors.NotFound("platform organisation not found"))
+			deps.orgSvc.EXPECT().InternalCreate(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
+					Expect(spec.Name).To(Equal(models.PlatformOrganisationName))
+					Expect(spec.Platform).To(BeTrue())
+					return &models.Organisation{ID: orgID, Name: models.PlatformOrganisationName, Platform: true}, nil
 				})
-
-			deps.policyMgr.EXPECT().AddGroupingPolicy(userID, string(models.OrgAdminRole), orgID).Return(nil)
-			deps.policyMgr.EXPECT().AddGroupingPolicy(userID, string(models.OrgMemberRole), orgID).Return(nil)
 
 			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(_ context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
@@ -159,18 +115,6 @@ var _ = Describe("Bootstrap", func() {
 					Expect(spec.ClusterCAData).To(Equal(clusterCA))
 					Expect(spec.Token).To(Equal(clusterToken))
 					return &models.Cluster{ID: clusterID}, nil
-				})
-
-			deps.registrySvc.EXPECT().GetForOrg(gomock.Any(), orgID).
-				Return(nil, errors.NotFound("registry not found"))
-			deps.registrySvc.EXPECT().Create(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
-					Expect(spec.Name).To(Equal(registryName))
-					Expect(spec.ClusterID).To(Equal(clusterID))
-					Expect(spec.OrganisationID).To(Equal(orgID))
-					Expect(spec.BackendStorageSize).To(Equal(storageSize))
-					Expect(spec.BackendStorageClass).To(Equal(storageClass))
-					return &models.ClusterImageRegistry{ID: "reg-1"}, nil
 				})
 
 			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
@@ -188,17 +132,13 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	When("re-running against an already-provisioned install", func() {
-		It("is idempotent and does not update the password", func() {
-			existingUser := &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID, Password: hashOf(adminPassword)}
-			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).Return(existingUser, nil)
+		It("adopts the existing platform org and is idempotent", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Name: orgName, Platform: true}, nil)
+				Return(&models.Organisation{ID: orgID, Name: models.PlatformOrganisationName, Platform: true}, nil)
 
 			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				Return(&models.Cluster{ID: clusterID}, nil)
 
-			deps.registrySvc.EXPECT().GetForOrg(gomock.Any(), orgID).
-				Return(&models.ClusterImageRegistry{ID: "reg-1"}, nil)
 			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
 				Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
 
@@ -207,47 +147,14 @@ var _ = Describe("Bootstrap", func() {
 		})
 	})
 
-	When("the admin password changed", func() {
-		It("rotates the password exactly once", func() {
-			existingUser := &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID, Password: hashOf("stale-password")}
-			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).Return(existingUser, nil)
+	When("the platform org lookup fails", func() {
+		It("propagates the error without provisioning anything", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Platform: true}, nil)
-
-			deps.userSvc.EXPECT().InternalUpdatePassword(gomock.Any(), userID, gomock.Any()).
-				DoAndReturn(func(_ context.Context, _ string, hashed string) *errors.ServiceError {
-					Expect(bcrypt.CompareHashAndPassword([]byte(hashed), []byte(adminPassword))).To(Succeed())
-					return nil
-				})
-
-			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
-				Return(&models.Cluster{ID: clusterID}, nil)
-			deps.registrySvc.EXPECT().GetForOrg(gomock.Any(), orgID).
-				Return(&models.ClusterImageRegistry{ID: "reg-1"}, nil)
-			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
-				Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
+				Return(nil, errors.GeneralError("db down"))
 
 			svc := deps.service(fullBootstrapConfig(), setClusterConfig())
-			Expect(svc.Run(ctx)).To(Succeed())
+			Expect(svc.Run(ctx)).NotTo(Succeed())
 		})
 	})
 
-	When("no registry name is configured", func() {
-		It("skips registry provisioning entirely", func() {
-			existingUser := &models.User{ID: userID, Email: adminEmail, OrganisationID: orgID, Password: hashOf(adminPassword)}
-			deps.userSvc.EXPECT().InternalGetByEmail(gomock.Any(), adminEmail).Return(existingUser, nil)
-			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
-				Return(&models.Organisation{ID: orgID, Platform: true}, nil)
-
-			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
-				Return(&models.Cluster{ID: clusterID}, nil)
-			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
-				Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
-
-			cfg := fullBootstrapConfig()
-			cfg.RegistryName = ""
-			svc := deps.service(cfg, setClusterConfig())
-			Expect(svc.Run(ctx)).To(Succeed())
-		})
-	})
 })

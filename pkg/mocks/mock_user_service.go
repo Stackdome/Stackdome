@@ -165,20 +165,6 @@ func (mr *MockUserServiceMockRecorder) InternalGetByEmail(ctx, email any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetByEmail", reflect.TypeOf((*MockUserService)(nil).InternalGetByEmail), ctx, email)
 }
 
-// InternalUpdatePassword mocks base method.
-func (m *MockUserService) InternalUpdatePassword(ctx context.Context, userID, hashedPassword string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalUpdatePassword", ctx, userID, hashedPassword)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// InternalUpdatePassword indicates an expected call of InternalUpdatePassword.
-func (mr *MockUserServiceMockRecorder) InternalUpdatePassword(ctx, userID, hashedPassword any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdatePassword", reflect.TypeOf((*MockUserService)(nil).InternalUpdatePassword), ctx, userID, hashedPassword)
-}
-
 // ListByOrgID mocks base method.
 func (m *MockUserService) ListByOrgID(ctx context.Context, orgID string, params stores.ListParams) (*stores.PaginatedResult[*models.User], *errors.ServiceError) {
 	m.ctrl.T.Helper()

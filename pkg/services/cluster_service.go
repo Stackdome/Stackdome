@@ -50,6 +50,7 @@ type clusterService struct {
 	imageRegistryService ImageRegistryService
 	permissions          auth.PermissionService
 	encryptionService    EncryptionService
+	platformEmail        string
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -66,6 +67,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		imageRegistryService: spec.ImageRegistryService,
 		permissions:          spec.Permissions,
 		encryptionService:    spec.EncryptionService,
+		platformEmail:        spec.PlatformEmail,
 	}
 }
 
@@ -76,6 +78,7 @@ type ClusterServiceSpec struct {
 	ImageRegistryService ImageRegistryService
 	Permissions          auth.PermissionService
 	EncryptionService    EncryptionService
+	PlatformEmail        string
 	Logger               logger.Logger
 }
 
@@ -394,9 +397,14 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 		return fmt.Errorf("getting cluster client: %w", err)
 	}
 
-	user, uerr := auth.GetCurrentUserFromCtx(ctx)
-	if uerr != nil {
-		return fmt.Errorf("getting current user: %w", uerr)
+	// ACME contact: the registering user's email on the API path; the userless
+	// boot bootstrap falls back to the operator's PLATFORM_EMAIL.
+	email := s.platformEmail
+	if user, uerr := auth.GetCurrentUserFromCtx(ctx); uerr == nil {
+		email = user.Email
+	}
+	if email == "" {
+		return fmt.Errorf("no ACME contact email available for ClusterIssuer")
 	}
 
 	issuer := &cmv1.ClusterIssuer{
@@ -411,7 +419,7 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 			IssuerConfig: cmv1.IssuerConfig{
 				ACME: &cmacme.ACMEIssuer{
 					Server: "https://acme-v02.api.letsencrypt.org/directory",
-					Email:  user.Email,
+					Email:  email,
 					PrivateKey: cmmeta.SecretKeySelector{
 						LocalObjectReference: cmmeta.LocalObjectReference{
 							Name: "letsencrypt-prod-key",

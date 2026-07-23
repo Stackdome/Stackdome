@@ -7,7 +7,6 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/testutil"
-	"github.com/Stackdome/stackdome/test/int/shared"
 )
 
 // PlatformProvisioningBaseDomain is the platform base domain the integration
@@ -17,11 +16,18 @@ import (
 const PlatformProvisioningBaseDomain = "sd.test"
 
 const (
-	platformProvisioningClusterName   = "platform-cluster"
-	platformProvisioningAdminEmail    = "platform-admin@stackdome.io"
-	platformProvisioningAdminName     = "Platform Admin"
-	platformProvisioningAdminPassword = "platform-welcome@123"
-	platformProvisioningRegistrySize  = "10Gi"
+	platformProvisioningClusterName  = "platform-cluster"
+	platformProvisioningEmail        = "ops@stackdome.io"
+	platformProvisioningRegistrySize = "10Gi"
+)
+
+// Suite tenant org: signed up by the client bootstrap; signup seeds its domain
+// and registry on the platform cluster via the read-time fallback.
+const (
+	suiteOrgName      = "Integration Tests"
+	suiteUserName     = "Integration Tester"
+	suiteUserEmail    = "int-tests@stackdome.io"
+	suiteUserPassword = "int-welcome@123"
 )
 
 // exportPlatformProvisioningEnv provisions API-server credentials on the test
@@ -44,11 +50,8 @@ func exportPlatformProvisioningEnv(ctx context.Context, cluster *testutil.TestCl
 		config.EnvPlatformClusterCAData.Name:       caData,
 		config.EnvPlatformClusterToken.Name:        saToken,
 		config.EnvPlatformBaseDomain.Name:          PlatformProvisioningBaseDomain,
-		config.EnvPlatformAdminEmail.Name:          platformProvisioningAdminEmail,
-		config.EnvPlatformAdminName.Name:           platformProvisioningAdminName,
-		config.EnvPlatformAdminPassword.Name:       platformProvisioningAdminPassword,
+		config.EnvPlatformEmail.Name:               platformProvisioningEmail,
 		config.EnvPlatformRegistryStorageSize.Name: platformProvisioningRegistrySize,
-		config.EnvPlatformClusterRegistryName.Name: shared.TestRegistryName,
 	}
 	for name, value := range envs {
 		if err := os.Setenv(name, value); err != nil {

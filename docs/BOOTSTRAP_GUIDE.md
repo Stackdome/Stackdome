@@ -338,14 +338,10 @@ DB_USERNAME="postgres"
 DB_PASSWORD="your-secure-password"
 DB_DEBUG_MODE="false"
 
-# Platform Admin (created on first start)
-PLATFORM_ADMIN_EMAIL="admin@stackdome.local"
-PLATFORM_ADMIN_NAME="admin"
-PLATFORM_ADMIN_PASSWORD="changeme123"
-
 # Platform Cluster + Domain (optional; when the full set below is provided
-# alongside PLATFORM_BASE_DOMAIN, admin bootstrap also provisions the
-# platform org, cluster, and base domain)
+# alongside PLATFORM_BASE_DOMAIN and PLATFORM_EMAIL, boot provisions the
+# infrastructure-only platform org, cluster, and base domain)
+PLATFORM_EMAIL=""
 PLATFORM_BASE_DOMAIN=""
 PLATFORM_CLUSTER_NAME=""
 PLATFORM_CLUSTER_API_URL=""

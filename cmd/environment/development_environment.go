@@ -221,7 +221,7 @@ func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := config.ValidatePlatformProvisioning(d.Config.PlatformCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.PlatformAdmin.Email); err != nil {
+	if err := config.ValidatePlatformProvisioning(d.Config.PlatformCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.Email); err != nil {
 		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
@@ -488,6 +488,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:               d.Logger,
 		Permissions:          d.PermissionService,
 		EncryptionService:    encryptionService,
+		PlatformEmail:        d.BootstrapConfig.Email,
 	})
 
 	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
@@ -854,13 +855,9 @@ func (d *developmentEnvironment) startManagers(ctx context.Context) error {
 
 func (d *developmentEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
 	svc := bootstrap.NewService(bootstrap.Spec{
-		UserService:               d.Services.UserService,
 		OrganisationService:       d.Services.OrganisationService,
-		ProjectService:            d.Services.ProjectService,
 		ClusterService:            d.Services.ClusterService,
-		ImageRegistryService:      d.Services.ClusterImageRegistryService,
 		OrganisationDomainService: d.Services.OrganisationDomainService,
-		PolicyManager:             d.ResourceAccessPolicyManager,
 		BootstrapConfig:           d.BootstrapConfig,
 		ClusterConfig:             d.Config.PlatformCluster,
 		Logger:                    d.Logger,

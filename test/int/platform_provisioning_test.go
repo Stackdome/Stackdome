@@ -50,6 +50,17 @@ var _ = Describe("Platform provisioning", func() {
 			OrganisationID: platformOrg.ID,
 			Domain:         bootstrap.PlatformProvisioningBaseDomain,
 		}).First(&platformDomain).Error).To(Succeed())
+
+		By("verifying the platform org is infrastructure-only: no users, no projects, no registries")
+		var userCount int64
+		Expect(db.Model(&models.User{}).Where(&models.User{OrganisationID: platformOrg.ID}).Count(&userCount).Error).To(Succeed())
+		Expect(userCount).To(BeZero())
+		var projectCount int64
+		Expect(db.Model(&models.Project{}).Where(&models.Project{OrganisationID: platformOrg.ID}).Count(&projectCount).Error).To(Succeed())
+		Expect(projectCount).To(BeZero())
+		var registryCount int64
+		Expect(db.Model(&models.ClusterImageRegistry{}).Where(&models.ClusterImageRegistry{OrganisationID: platformOrg.ID}).Count(&registryCount).Error).To(Succeed())
+		Expect(registryCount).To(BeZero())
 	})
 
 	It("seeds <slug>.<base> domain and <slug>-<shortid> registry on fresh signup, and stacks fall back to the platform cluster", func() {

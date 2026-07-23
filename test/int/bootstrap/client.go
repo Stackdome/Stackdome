@@ -22,11 +22,12 @@ const (
 )
 
 type ClientManager struct {
-	client    *openapi.APIClient
-	userToken string
-	orgID     string
-	clusterID string
-	logger    logr.Logger
+	client       *openapi.APIClient
+	userToken    string
+	orgID        string
+	clusterID    string
+	registryName string
+	logger       logr.Logger
 }
 
 func NewClientManager(baseURL string, logger logr.Logger) *ClientManager {
@@ -43,36 +44,33 @@ func NewClientManager(baseURL string, logger logr.Logger) *ClientManager {
 	}
 }
 
-func (cm *ClientManager) Bootstrap(ctx context.Context) error {
+func (cm *ClientManager) Bootstrap(ctx context.Context, platformClusterID string) error {
 	cm.logger.Info("Starting client bootstrap")
 
 	// Create context with 10-minute timeout for client bootstrap
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	// The server, on boot, provisioned the platform org, admin and the platform
-	// cluster from the PLATFORM_* env. Log in as that admin and adopt the platform
-	// cluster + its registry for the rest of the suite.
-	if err := cm.loginPlatformAdmin(bootstrapCtx); err != nil {
-		return fmt.Errorf("failed to login platform admin: %w", err)
+	// The server, on boot, provisioned the infrastructure-only platform org,
+	// cluster and base domain from the PLATFORM_* env. Sign up a tenant org for
+	// the suite; signup seeds its <slug>.<base> domain and registry on the
+	// platform cluster, which stacks resolve via the read-time fallback.
+	if err := cm.signupSuiteUser(bootstrapCtx); err != nil {
+		return fmt.Errorf("failed to sign up suite user: %w", err)
 	}
 
 	cm.configureAuthentication()
+	cm.clusterID = platformClusterID
 
-	clusterID, err := cm.resolvePlatformCluster(bootstrapCtx)
-	if err != nil {
-		return fmt.Errorf("failed to resolve platform cluster: %w", err)
-	}
-	cm.clusterID = clusterID
-
-	cm.logger.Info("Waiting for platform image registry to become Running")
-	if err := cm.waitForRegistryRunning(bootstrapCtx, clusterID); err != nil {
+	cm.logger.Info("Waiting for the seeded org image registry to become Running")
+	if err := cm.waitForRegistryRunning(bootstrapCtx, platformClusterID); err != nil {
 		return fmt.Errorf("failed waiting for registry: %w", err)
 	}
 
 	cm.logger.Info("Client bootstrap completed successfully",
 		"orgID", cm.orgID,
-		"clusterID", cm.clusterID)
+		"clusterID", cm.clusterID,
+		"registryName", cm.registryName)
 	return nil
 }
 
@@ -92,40 +90,32 @@ func (cm *ClientManager) GetClusterID() string {
 	return cm.clusterID
 }
 
-func (cm *ClientManager) loginPlatformAdmin(ctx context.Context) error {
-	req := openapi.NewLoginRequest(platformProvisioningAdminEmail, platformProvisioningAdminPassword)
-
-	resp, httpResp, err := cm.client.DefaultApi.ApiV1AuthLoginPost(ctx).LoginRequest(*req).Execute()
-	if err != nil {
-		return fmt.Errorf("platform admin login failed: %w", err)
-	}
-	defer func() { _ = httpResp.Body.Close() }()
-
-	if resp.GetToken() == "" {
-		return fmt.Errorf("no token in login response")
-	}
-	if resp.User.GetOrganisationId() == "" {
-		return fmt.Errorf("no organisation ID in login response")
-	}
-
-	cm.userToken = resp.GetToken()
-	cm.orgID = resp.User.GetOrganisationId()
-	return nil
+func (cm *ClientManager) GetRegistryName() string {
+	return cm.registryName
 }
 
-func (cm *ClientManager) resolvePlatformCluster(ctx context.Context) (string, error) {
-	resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdClustersGet(ctx, cm.orgID).Execute()
+func (cm *ClientManager) signupSuiteUser(ctx context.Context) error {
+	org := openapi.NewOrganisation()
+	org.SetName(suiteOrgName)
+	req := openapi.NewUserSignupRequest(suiteUserName, suiteUserEmail, suiteUserPassword)
+	req.SetOrganisation(*org)
+
+	resp, httpResp, err := cm.client.DefaultApi.ApiV1UserSignupPost(ctx).UserSignupRequest(*req).Execute()
 	if err != nil {
-		return "", fmt.Errorf("listing clusters failed: %w", err)
+		return fmt.Errorf("suite user signup failed: %w", err)
 	}
 	defer func() { _ = httpResp.Body.Close() }()
 
-	for _, cluster := range resp.GetItems() {
-		if cluster.Platform != nil && *cluster.Platform && cluster.Id != nil && *cluster.Id != "" {
-			return *cluster.Id, nil
-		}
+	if resp.GetJwtToken() == "" {
+		return fmt.Errorf("no token in signup response")
 	}
-	return "", fmt.Errorf("no platform cluster found for platform org %s", cm.orgID)
+	if resp.User.GetOrganisationId() == "" {
+		return fmt.Errorf("no organisation ID in signup response")
+	}
+
+	cm.userToken = resp.GetJwtToken()
+	cm.orgID = resp.User.GetOrganisationId()
+	return nil
 }
 
 func (cm *ClientManager) configureAuthentication() {
@@ -277,6 +267,7 @@ func (cm *ClientManager) waitForRegistryRunning(ctx context.Context, clusterID s
 		for _, reg := range resp.GetItems() {
 			if reg.Status != nil && reg.Status.State != nil && *reg.Status.State == openapi.IMAGE_REGISTRY_RUNNING {
 				cm.logger.Info("Cluster image registry is Running", "name", reg.Name)
+				cm.registryName = reg.GetName()
 				return nil
 			}
 			if reg.Status != nil {

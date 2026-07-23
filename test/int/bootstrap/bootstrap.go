@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/testutil"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
@@ -21,12 +22,13 @@ import (
 )
 
 type Environment struct {
-	Client    *openapi.APIClient
-	ClusterID string
-	OrgID     string
-	UserToken string
-	Database  *DatabaseManager
-	Cluster   *testutil.TestCluster
+	Client       *openapi.APIClient
+	ClusterID    string
+	OrgID        string
+	UserToken    string
+	RegistryName string
+	Database     *DatabaseManager
+	Cluster      *testutil.TestCluster
 
 	// Internal managers
 	clusterManager *ClusterManager
@@ -97,12 +99,19 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 
-	// Initialize client: log in as the platform admin the server seeded at boot
-	// and adopt the platform cluster + platform org for the suite.
+	// The booted server seeded the infrastructure-only platform org + cluster.
+	// Resolve the platform cluster from the DB (tenants never see it via API),
+	// then sign up the suite's tenant org, which inherits it at read time.
+	var platformCluster models.Cluster
+	if err := dbManager.GetSessionFactory().New(ctx).
+		Where("platform = ?", true).First(&platformCluster).Error; err != nil {
+		return fmt.Errorf("failed to resolve platform cluster: %w", err)
+	}
+
 	logger.Info("Bootstrapping client against platform defaults")
 	clientManager := NewClientManager(serverManager.GetBaseURL(), logger)
 	env.clientManager = clientManager
-	if err := clientManager.Bootstrap(ctx); err != nil {
+	if err := clientManager.Bootstrap(ctx, platformCluster.ID); err != nil {
 		return fmt.Errorf("client bootstrap failed: %w", err)
 	}
 
@@ -111,6 +120,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	env.ClusterID = clientManager.GetClusterID()
 	env.OrgID = clientManager.GetOrgID()
 	env.UserToken = clientManager.GetUserToken()
+	env.RegistryName = clientManager.GetRegistryName()
 
 	logger.Info("Integration test bootstrap completed successfully",
 		"orgID", env.OrgID,

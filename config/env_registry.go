@@ -36,15 +36,10 @@ var (
 	EnvPlatformClusterToken  = StringVar("PLATFORM_CLUSTER_TOKEN", "Platform cluster auth token", nil, false)
 
 	// Platform Provisioning
+	EnvPlatformEmail                = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform cluster issuer", nil, false)
 	EnvPlatformBaseDomain           = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
 	EnvPlatformRegistryStorageSize  = StringVar("PLATFORM_REGISTRY_STORAGE_SIZE", "Default per-org registry backend storage size", ptr("50Gi"), false)
 	EnvPlatformRegistryStorageClass = StringVar("PLATFORM_REGISTRY_STORAGE_CLASS", "Default per-org registry backend storage class", nil, false)
-	EnvPlatformClusterRegistryName  = StringVar("PLATFORM_CLUSTER_REGISTRY_NAME", "Optional platform registry seeded on the platform cluster at boot", nil, false)
-
-	// Platform Admin
-	EnvPlatformAdminEmail    = StringVar("PLATFORM_ADMIN_EMAIL", "Platform admin email", nil, false)
-	EnvPlatformAdminName     = StringVar("PLATFORM_ADMIN_NAME", "Platform admin name", ptr("Platform Admin"), false)
-	EnvPlatformAdminPassword = StringVar("PLATFORM_ADMIN_PASSWORD", "Platform admin password", ptr("welcome@123"), false)
 
 	// Environment
 	EnvStackdomeEnv = StringVar("STACKDOME_ENV", "Runtime environment (DEVELOPMENT, PRODUCTION, TESTING)", ptr("DEVELOPMENT"), false)

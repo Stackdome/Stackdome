@@ -78,4 +78,5 @@ var MigrationList = []*gormigrate.Migration{
 	addGitInstallationIDUniqueIndex(),
 	addPreviewCommentPending(),
 	renameDefaultToPlatform(),
+	deleteOrphanPlatformOrg(),
 }

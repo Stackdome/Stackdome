@@ -9,32 +9,22 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type Spec struct {
-	UserService               services.UserService
 	OrganisationService       services.OrganisationService
-	ProjectService            services.ProjectService
 	ClusterService            services.ClusterService
-	ImageRegistryService      services.ImageRegistryService
 	OrganisationDomainService services.OrganisationDomainsService
-	PolicyManager             resourceaccess.ResourceAccessPolicyManager
 	BootstrapConfig           *config.BootstrapConfig
 	ClusterConfig             *config.ClusterConfig
 	Logger                    logger.Logger
 }
 
 type Service struct {
-	userService               services.UserService
 	organisationService       services.OrganisationService
-	projectService            services.ProjectService
 	clusterService            services.ClusterService
-	imageRegistryService      services.ImageRegistryService
 	organisationDomainService services.OrganisationDomainsService
-	policyManager             resourceaccess.ResourceAccessPolicyManager
 	bootstrapCfg              *config.BootstrapConfig
 	clusterCfg                *config.ClusterConfig
 	logger                    logger.Logger
@@ -42,122 +32,61 @@ type Service struct {
 
 func NewService(spec Spec) *Service {
 	return &Service{
-		userService:               spec.UserService,
 		organisationService:       spec.OrganisationService,
-		projectService:            spec.ProjectService,
 		clusterService:            spec.ClusterService,
-		imageRegistryService:      spec.ImageRegistryService,
 		organisationDomainService: spec.OrganisationDomainService,
-		policyManager:             spec.PolicyManager,
 		bootstrapCfg:              spec.BootstrapConfig,
 		clusterCfg:                spec.ClusterConfig,
 		logger:                    spec.Logger,
 	}
 }
 
+// Run provisions the platform org, cluster and base domain.
+// The platform org is infrastructure-only: no users, no projects.
 func (s *Service) Run(ctx context.Context) error {
 	if !s.clusterCfg.IsSet() {
 		s.logger.Info(ctx, "no platform cluster configured; skipping platform bootstrap")
 		return nil
 	}
 
-	admin, org, err := s.upsertAdminAndOrg(ctx)
+	org, err := s.ensurePlatformOrg(ctx)
 	if err != nil {
 		return err
 	}
 
-	sysCtx := auth.SetUserInContext(
-		auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, UserID: admin.ID, OrgID: org.ID}),
-		admin,
-	)
+	sysCtx := auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: org.ID})
 
-	cluster, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
+	if _, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
 		Name:           s.clusterCfg.Name,
 		OrganisationID: org.ID,
 		Platform:       true,
 		ClusterURL:     s.clusterCfg.ClusterURL,
 		ClusterCAData:  s.clusterCfg.ClusterCAData,
 		Token:          s.clusterCfg.Token,
-	})
-	if cErr != nil {
+	}); cErr != nil {
 		return fmt.Errorf("failed to upsert platform cluster: %w", cErr)
-	}
-
-	if err := s.ensurePlatformRegistry(sysCtx, org.ID, cluster.ID); err != nil {
-		return err
 	}
 
 	return s.ensurePlatformDomain(sysCtx, org.ID)
 }
 
-func (s *Service) upsertAdminAndOrg(ctx context.Context) (*models.User, *models.Organisation, error) {
-	org, oErr := s.organisationService.InternalGetPlatformOrg(ctx)
-	if oErr != nil {
-		return nil, nil, fmt.Errorf("platform org missing: %w", oErr)
-	}
-
-	existing, gErr := s.userService.InternalGetByEmail(ctx, s.bootstrapCfg.PlatformAdmin.Email)
-	if gErr != nil && gErr.Code != errors.ErrorNotFound {
-		return nil, nil, fmt.Errorf("failed to look up platform admin: %w", gErr)
-	}
+func (s *Service) ensurePlatformOrg(ctx context.Context) (*models.Organisation, error) {
+	org, gErr := s.organisationService.InternalGetPlatformOrg(ctx)
 	if gErr == nil {
-		if bcrypt.CompareHashAndPassword([]byte(existing.Password), []byte(s.bootstrapCfg.PlatformAdmin.Password)) != nil {
-			hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.PlatformAdmin.Password), bcrypt.DefaultCost)
-			if hErr != nil {
-				return nil, nil, fmt.Errorf("failed to hash admin password: %w", hErr)
-			}
-			if uErr := s.userService.InternalUpdatePassword(ctx, existing.ID, string(hashed)); uErr != nil {
-				return nil, nil, fmt.Errorf("failed to update admin password: %w", uErr)
-			}
-		}
-		return existing, org, nil
+		return org, nil
+	}
+	if gErr.Code != errors.ErrorNotFound {
+		return nil, fmt.Errorf("failed to look up platform org: %w", gErr)
 	}
 
-	if _, pErr := s.projectService.InternalCreateDefaultProject(ctx, org.ID); pErr != nil {
-		return nil, nil, fmt.Errorf("failed to create platform default project: %w", pErr)
-	}
-	hashed, hErr := bcrypt.GenerateFromPassword([]byte(s.bootstrapCfg.PlatformAdmin.Password), bcrypt.DefaultCost)
-	if hErr != nil {
-		return nil, nil, fmt.Errorf("failed to hash admin password: %w", hErr)
-	}
-	user, uErr := s.userService.InternalCreate(ctx, &models.User{
-		Email:          s.bootstrapCfg.PlatformAdmin.Email,
-		Name:           s.bootstrapCfg.PlatformAdmin.Name,
-		Password:       string(hashed),
-		Role:           models.OrgAdminRole,
-		OrganisationID: org.ID,
+	created, cErr := s.organisationService.InternalCreate(ctx, &models.Organisation{
+		Name:     models.PlatformOrganisationName,
+		Platform: true,
 	})
-	if uErr != nil {
-		return nil, nil, fmt.Errorf("failed to create platform admin: %w", uErr)
+	if cErr != nil {
+		return nil, fmt.Errorf("failed to create platform org: %w", cErr)
 	}
-	if pErr := s.policyManager.AddGroupingPolicy(user.ID, string(models.OrgAdminRole), org.ID); pErr != nil {
-		return nil, nil, fmt.Errorf("failed to add OrgAdmin policy: %w", pErr)
-	}
-	if pErr := s.policyManager.AddGroupingPolicy(user.ID, string(models.OrgMemberRole), org.ID); pErr != nil {
-		return nil, nil, fmt.Errorf("failed to add OrgMember policy: %w", pErr)
-	}
-	return user, org, nil
-}
-
-func (s *Service) ensurePlatformRegistry(ctx context.Context, orgID, clusterID string) error {
-	if s.bootstrapCfg.RegistryName == "" {
-		return nil
-	}
-	if _, err := s.imageRegistryService.GetForOrg(ctx, orgID); err == nil {
-		return nil
-	} else if err.Code != errors.ErrorNotFound {
-		return fmt.Errorf("failed to check platform registry: %w", err)
-	}
-	if _, cErr := s.imageRegistryService.Create(ctx, &models.ClusterImageRegistry{
-		ClusterID:           clusterID,
-		OrganisationID:      orgID,
-		Name:                s.bootstrapCfg.RegistryName,
-		BackendStorageSize:  s.bootstrapCfg.RegistryStorageSize,
-		BackendStorageClass: s.bootstrapCfg.RegistryStorageClass,
-	}); cErr != nil {
-		return fmt.Errorf("failed to create platform registry: %w", cErr)
-	}
-	return nil
+	return created, nil
 }
 
 func (s *Service) ensurePlatformDomain(ctx context.Context, orgID string) error {
