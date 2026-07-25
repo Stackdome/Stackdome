@@ -173,15 +173,15 @@ describe("buildCreateInput", () => {
     expect(input.spec.storage.storage_class).toBe("io2");
   });
 
-  it('storage_class defaults to "standard" when not set in JSON', () => {
+  it("storage_class is empty (use cluster default) when not set in JSON", () => {
     const input = buildCreateInput(baseValues({ advancedJson: "" }));
-    expect(input.spec.storage.storage_class).toBe("standard");
+    expect(input.spec.storage.storage_class).toBe("");
   });
 
-  it('blank storage_class in JSON falls back to form default "standard"', () => {
+  it("blank storage_class in JSON stays empty (use cluster default)", () => {
     const advancedJson = JSON.stringify({ storage: { storage_class: "" } });
     const input = buildCreateInput(baseValues({ advancedJson }));
-    expect(input.spec.storage.storage_class).toBe("standard");
+    expect(input.spec.storage.storage_class).toBe("");
   });
 
   it("labels and annotations from advanced JSON appear at top level", () => {
@@ -219,7 +219,7 @@ describe("addonToFormValues", () => {
         enable_auto_major_upgrade: false,
       },
       instances: { count: 1 },
-      storage: { size: "10Gi", storage_class: "standard" },
+      storage: { size: "10Gi", storage_class: "" },
     },
     ...overrides,
   });
@@ -327,13 +327,13 @@ describe("addonToFormValues", () => {
     expect(parsed.instances.placement.policy).toBe("preferred");
     expect(parsed.configuration.parameters.max_connections).toBe("200");
     expect(parsed.labels).toEqual([{ key: "env", value: "prod" }]);
-    // Default storage_class "standard" is intentionally omitted so the
-    // hydrated JSON only reflects user-set overrides.
+    // Empty storage_class (use cluster default) is intentionally omitted so
+    // the hydrated JSON only reflects user-set overrides.
     expect(parsed.storage).toBeUndefined();
   });
 
   it("hydrates as empty when addon has no meaningful overrides", () => {
-    // Minimal addon, default storage_class, no placement/parameters/labels.
+    // Minimal addon, empty (default) storage_class, no placement/parameters/labels.
     const v = addonToFormValues(minimalAddon());
     expect(v.advancedJson).toBe("");
   });

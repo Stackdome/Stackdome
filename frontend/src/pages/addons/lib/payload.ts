@@ -80,9 +80,11 @@ function buildFormSpec(values: PostgresAddonFormValues): PostgresAddonSpec {
     instances: { count: replicas },
     storage: {
       size: `${values.storageGB}Gi`,
-      // Default to "standard" — works for Kind/AKS/GKE defaults. Power users
-      // override via the Advanced JSON area's storage.storage_class field.
-      storage_class: "standard",
+      // Empty storage class means "use the cluster's default StorageClass".
+      // Never hardcode a provider-specific name here — the default varies per
+      // cluster (k3s: local-path, LKE: linode-block-storage, GKE: standard).
+      // Power users override via the Advanced JSON area's storage.storage_class.
+      storage_class: "",
     },
     resources: presetResources ?? customResources,
     configuration: { enable_superuser_access: values.superuserAccess },
@@ -198,10 +200,6 @@ function parseStorageGB(size?: string): number {
   return Number.isFinite(n) && n > 0 ? n : 10;
 }
 
-// Default value the form sends for storage_class. We strip this from the
-// hydrated JSON so the user doesn't see a "set" field they didn't actually set.
-const DEFAULT_STORAGE_CLASS = "standard";
-
 function buildAdvancedJson(addon: PostgresAddon): string {
   // Surface only fields the user has *meaningfully* configured. Empty objects,
   // empty arrays, defaults, and the no-op "new" initialization are omitted so
@@ -219,7 +217,7 @@ function buildAdvancedJson(addon: PostgresAddon): string {
   }
 
   const storageClass = addon.spec.storage.storage_class;
-  if (storageClass && storageClass !== DEFAULT_STORAGE_CLASS) {
+  if (storageClass) {
     obj.storage = { storage_class: storageClass };
   }
 
@@ -308,7 +306,7 @@ export function buildCreateInput(
   ) as unknown as PostgresAddonSpec;
 
   // Special case: storage_class isn't surfaced in the form, so any value the
-  // user typed in the JSON area should win over the form's "standard" fallback.
+  // user typed in the JSON area should win over the form's empty default.
   const advancedStorage = (advancedSpec.storage as Json | undefined);
   const advancedStorageClass = typeof advancedStorage?.storage_class === "string"
     ? advancedStorage.storage_class
