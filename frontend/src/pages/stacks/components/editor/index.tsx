@@ -27,7 +27,8 @@ import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, F
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
-import { applyStackByName, getStackById, deleteStack } from "@/api/stacks";
+import { applyStackByName, getStackById, deleteStack, getStacksByOrg } from "@/api/stacks";
+import { stackNameConflictError } from "@/pages/stacks/lib/stack-name-conflict";
 import { createStackFetchGate } from "@/pages/stacks/lib/canvas/stack-fetch-gate";
 import { draftToSnapshot } from "@/pages/stacks/lib/draft-sync/draft-snapshot";
 import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
@@ -85,7 +86,7 @@ export default function CanvasEditorPage() {
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { toast } = useToast();
-  const { projectNameById, defaultProjectName } = useResourceProjects();
+  const { projects, projectNameById, defaultProjectName } = useResourceProjects();
   const { canWrite } = useCurrentUser();
 
   const currentStack = stacks.find((stack) => stack.id === id);
@@ -735,6 +736,26 @@ export default function CanvasEditorPage() {
           description: "Could not resolve a project to save into.",
           variant: "destructive",
         });
+        setDraftDeploying(false);
+        return;
+      }
+
+      const projectId = projects.find((p) => p.default_project)?.id ?? "";
+      let existingStacks: Stack[] = [];
+      try {
+        existingStacks = (await getStacksByOrg(orgId)).items ?? [];
+      } catch {
+        existingStacks = [];
+      }
+      const conflict = stackNameConflictError({
+        isCreate: isNewStack,
+        name: formStackData.name,
+        projectId,
+        existingStacks,
+      });
+      if (conflict) {
+        setNameError(conflict);
+        toast({ title: "Name already taken", description: conflict, variant: "destructive" });
         setDraftDeploying(false);
         return;
       }
