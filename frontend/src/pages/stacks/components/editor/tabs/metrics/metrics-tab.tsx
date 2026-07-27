@@ -76,13 +76,13 @@ interface MetricsTabProps {
 }
 
 export function MetricsTab({ stackId, organizationId, resources, liveStatusResources }: MetricsTabProps) {
-  const readyNames = useMemo(
-    () =>
-      resources
-        .map((r) => r.name)
-        .filter((name): name is string => !!name && isResourceReady(liveStatusResources?.[name]?.state)),
-    [resources, liveStatusResources],
-  );
+  // With no live_status at all (still loading), readiness is unknown: fail
+  // open rather than blocking streams that may be fine.
+  const readyNames = useMemo(() => {
+    const names = resources.map((r) => r.name).filter((name): name is string => !!name);
+    if (!liveStatusResources) return names;
+    return names.filter((name) => isResourceReady(liveStatusResources[name]?.state));
+  }, [resources, liveStatusResources]);
 
   const { stackMetrics, resourceMetrics, connectionStatus, error } = useMetricsStream({
     stackId,
@@ -104,15 +104,20 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
   }, [stackMetrics]);
 
   // Every resource gets a card: metrics when streaming, a placeholder while
-  // not ready or before the first sample lands.
+  // not ready or before the first sample lands. With unknown readiness (no
+  // live_status from the API), flowing metrics are the only proof of life —
+  // don't claim Ready without either signal.
   const resourceCards = resources
     .filter((r): r is StackResource & { name: string } => !!r.name)
     .map((r) => {
       const metrics = resourceMetrics.get(r.name);
+      const state = liveStatusResources?.[r.name]?.state;
+      const ready = state != null ? isResourceReady(state) : !!metrics;
       return {
         resourceName: r.name,
-        ready: readyNames.includes(r.name),
-        state: liveStatusResources?.[r.name]?.state,
+        ready,
+        stateLabel: ready ? 'Ready' : state ?? '—',
+        placeholder: state != null && !isResourceReady(state) ? 'Waiting for resource' : 'Waiting for data',
         metrics,
         displayMetrics: metrics ? convertToDisplayMetrics(metrics) : null,
       };
@@ -207,7 +212,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
                     r.ready ? "text-success" : "text-fg-muted",
                   )}
                 >
-                  {r.ready ? 'Ready' : r.state ?? 'Pending'}
+                  {r.stateLabel}
                 </span>
               </div>
               {r.metrics && r.displayMetrics ? (
@@ -228,7 +233,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
               ) : (
                 <div className="flex items-center gap-2 py-3 text-[12px] text-fg-muted">
                   <Clock className="size-3.5" aria-hidden />
-                  {r.ready ? 'Waiting for data' : 'Waiting for resource'}
+                  {r.placeholder}
                 </div>
               )}
             </div>

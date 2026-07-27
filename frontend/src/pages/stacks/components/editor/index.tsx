@@ -170,6 +170,13 @@ export default function CanvasEditorPage() {
       releaseDetail,
     });
 
+  // Per-resource rollout states for the logs/metrics stream gating. When the
+  // stack never converged and the latest release is terminal (e.g. a failed
+  // first deploy), statusLiveStatus is undefined — fall back to the baseline
+  // release's live_status, which still records which resources came up.
+  const observabilityLiveResources =
+    statusLiveStatus?.resources ?? releaseDetail.peek(baselineReleaseId).data?.live_status?.resources;
+
   // Publicly exposed services → best live ingress URL, for the header's
   // PUBLIC row. Drafts have no live ingress, so the row stays empty. Each chip's
   // dot carries its OWN resource's rollout state (same status release as the
@@ -891,7 +898,7 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
-      liveStatusResources={statusLiveStatus?.resources}
+      liveStatusResources={observabilityLiveResources}
       initialSources={logsInitialSource ? [logsInitialSource] : undefined}
     />
   ) : (
@@ -903,7 +910,7 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources || []}
-      liveStatusResources={statusLiveStatus?.resources}
+      liveStatusResources={observabilityLiveResources}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>

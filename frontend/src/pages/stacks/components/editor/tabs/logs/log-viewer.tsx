@@ -62,12 +62,12 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
 
   // Streams only open for Ready resources — the backend rejects the rest with
   // a pre-stream HTTP error that EventSource can't distinguish from an outage.
+  // With no live_status at all (still loading), readiness is unknown: fail
+  // open rather than blocking streams that may be fine.
   const readySources = useMemo(() => {
-    return new Set(
-      resources
-        .map((r) => r.name)
-        .filter((name) => name && isResourceReady(liveStatusResources?.[name]?.state)),
-    );
+    const names = resources.map((r) => r.name).filter(Boolean);
+    if (!liveStatusResources) return new Set(names);
+    return new Set(names.filter((name) => isResourceReady(liveStatusResources[name]?.state)));
   }, [resources, liveStatusResources]);
 
   const streamSources = useMemo(

@@ -70,12 +70,13 @@ describe("attachSseHandlers", () => {
 describe("aggregateStreamStatus", () => {
   const agg = (...statuses: SseStreamStatus[]) => aggregateStreamStatus(statuses);
 
-  it("is connected only when every stream is connected", () => {
+  it("is connected while any stream delivers, even if another is dead", () => {
     expect(agg("connected", "connected")).toBe("connected");
-    expect(agg("connected", "connecting")).toBe("connecting");
+    expect(agg("connected", "disconnected")).toBe("connected");
   });
 
-  it("prefers reconnecting over connecting", () => {
+  it("surfaces in-flight states over settled ones", () => {
+    expect(agg("connected", "connecting")).toBe("connecting");
     expect(agg("connected", "reconnecting", "connecting")).toBe("reconnecting");
   });
 

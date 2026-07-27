@@ -32,11 +32,14 @@ export function attachSseHandlers(
   });
 }
 
-/** Rolls up many per-connection statuses into one pill-worthy status. */
+/** Rolls up many per-connection statuses into one pill-worthy status. A single
+ *  permanently-dead stream (e.g. the backend refused it pre-stream) must not
+ *  mask the streams that ARE delivering, so connected wins over disconnected;
+ *  in-flight states win over both so degradation stays visible. */
 export function aggregateStreamStatus(statuses: SseStreamStatus[]): SseStreamStatus {
-  if (statuses.length > 0 && statuses.every((s) => s === 'connected')) return 'connected';
   if (statuses.some((s) => s === 'reconnecting')) return 'reconnecting';
   if (statuses.some((s) => s === 'connecting')) return 'connecting';
+  if (statuses.some((s) => s === 'connected')) return 'connected';
   return 'disconnected';
 }
 
