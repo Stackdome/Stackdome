@@ -282,6 +282,7 @@ export function CanvasEditorShell({
                 ))}
               </div>
               <div className="flex-1" />
+              <PublicEndpointRow endpoints={publicEndpoints ?? []} compact />
               {actionsMenu}
             </div>
           </div>

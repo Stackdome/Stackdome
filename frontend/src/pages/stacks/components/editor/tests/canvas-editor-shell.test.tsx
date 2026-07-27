@@ -200,4 +200,20 @@ describe("CanvasEditorShell collapse", () => {
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" isActive dirtyTotal={2} />);
     expect(screen.getByTestId("deploy-pill")).toBeInTheDocument();
   });
+
+  it("collapsed bar keeps public endpoint links reachable", () => {
+    localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
+    render(
+      <CanvasEditorShell
+        {...base}
+        stackName="acme"
+        nameEditable={false}
+        stackId="s1"
+        publicEndpoints={[{ service: "web", url: "https://web.acme.dev" }]}
+      />,
+    );
+    // The compact bar's chip (not inert) — the expanded row's copy is hidden.
+    const links = screen.getAllByRole("link", { name: "Go to https://web.acme.dev" });
+    expect(links.some((l) => l.closest("[inert]") === null)).toBe(true);
+  });
 });

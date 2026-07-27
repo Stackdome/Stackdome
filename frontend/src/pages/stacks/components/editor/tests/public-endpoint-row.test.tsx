@@ -69,3 +69,22 @@ describe("PublicEndpointRow", () => {
     expect(container.querySelectorAll(".bg-fg-muted")).toHaveLength(1);
   });
 });
+
+describe("PublicEndpointRow compact", () => {
+  it("renders label-less go-to chips; URL only in tooltip, no copy button", () => {
+    render(<PublicEndpointRow compact endpoints={endpoints} />);
+    expect(screen.queryByText("PUBLIC")).toBeNull();
+    // Hostname never renders inline; the tooltip (closed at rest) carries it.
+    expect(screen.queryByText("web.acme.stackdome.app")).toBeNull();
+    expect(screen.getByRole("link", { name: "Go to https://web.acme.stackdome.app" }))
+      .toHaveAttribute("target", "_blank");
+    expect(screen.queryByRole("button", { name: /Copy/ })).toBeNull();
+  });
+
+  it("folds endpoints beyond the cap into a +N chip", () => {
+    const many = Array.from({ length: 5 }, (_, i) => ({ service: `svc${i}`, url: `https://svc${i}.example.com` }));
+    render(<PublicEndpointRow compact endpoints={many} />);
+    expect(screen.getByText("+2")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Go to https://svc4.example.com" })).toBeNull();
+  });
+});

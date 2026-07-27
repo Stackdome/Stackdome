@@ -5,6 +5,8 @@ import type { StatusVariant } from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
+/** Compact mode caps visible chips; the rest fold into a "+N" tooltip chip. */
+const COMPACT_MAX_CHIPS = 3;
 
 /** Per-endpoint resource status variant → dot colour (semantic tokens only). */
 const DOT_CLASS: Record<StatusVariant, string> = {
@@ -46,11 +48,93 @@ async function copyText(text: string): Promise<void> {
   ta.remove();
 }
 
-/** Header row mapping each publicly exposed service to its best live URL. */
+interface ChipProps {
+  endpoint: PublicEndpoint;
+  /** "inline": hostname expands inside the chip on hover (expanded header).
+   *  "tooltip": chip stays icon-compact; the URL lives in a tooltip (zen bar). */
+  reveal: "inline" | "tooltip";
+  copiedUrl: string | null;
+  onCopy: (url: string) => void;
+}
+
+function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copiedUrl, onCopy }: ChipProps) {
+  const compact = reveal === "tooltip";
+
+  const serviceLabel = (
+    <span className="flex items-center gap-1.5 text-fg-muted">
+      <span aria-hidden className={cn("size-[5px] rounded-full", DOT_CLASS[variant ?? "neutral"])} />
+      {service}
+    </span>
+  );
+
+  const chip = (
+    <span
+      className={cn(
+        "group inline-flex items-center rounded-lg border border-border/60 bg-muted/25 font-mono transition-colors hover:border-border hover:bg-muted/40",
+        compact ? "gap-1 py-0.5 pl-2 pr-1 text-[11px]" : "gap-1.5 py-1 pl-2.5 pr-1.5 text-[12px]",
+      )}
+    >
+      {reveal === "inline" ? (
+        <Tooltip delayDuration={300}>
+          <TooltipTrigger asChild>{serviceLabel}</TooltipTrigger>
+          <TooltipContent side="top">
+            Mapped to {service}{port != null ? ` · :${port}` : ""}
+          </TooltipContent>
+        </Tooltip>
+      ) : (
+        serviceLabel
+      )}
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={`Go to ${url}`}
+        className="flex h-5 min-w-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+      >
+        {reveal === "inline" && (
+          <span className="flex max-w-0 items-center overflow-hidden whitespace-nowrap text-foreground/90 opacity-0 transition-[max-width,opacity] duration-200 group-focus-within:max-w-[360px] group-focus-within:opacity-100 group-hover:max-w-[360px] group-hover:opacity-100">
+            <span aria-hidden className="pr-1.5 text-border">|</span>
+            <span className="pr-1.5 hover:underline">{hostOf(url)}</span>
+          </span>
+        )}
+        <ExternalLink className="size-3 shrink-0" />
+      </a>
+      {/* Copy earns its keep in the full header; the zen bar keeps go-to only. */}
+      {reveal === "inline" && (
+        <button
+          type="button"
+          onClick={() => onCopy(url)}
+          aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
+          className="flex size-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+        >
+          {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+        </button>
+      )}
+    </span>
+  );
+
+  if (reveal === "inline") return chip;
+
+  // Compact: one tooltip for the whole chip carries mapping + URL.
+  return (
+    <Tooltip delayDuration={300}>
+      <TooltipTrigger asChild>{chip}</TooltipTrigger>
+      <TooltipContent side="bottom">
+        {service}{port != null ? ` · :${port}` : ""} — {url}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** Public service → best live URL chips. Expanded header: labelled row with
+ *  hover-expanding hostnames. `compact`: label-less tooltip chips sized for
+ *  the zen/collapsed header bar. */
 export function PublicEndpointRow({
   endpoints,
+  compact = false,
 }: {
   endpoints: PublicEndpoint[];
+  compact?: boolean;
 }) {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(null);
@@ -66,51 +150,37 @@ export function PublicEndpointRow({
 
   if (endpoints.length === 0) return null;
 
+  if (compact) {
+    const shown = endpoints.slice(0, COMPACT_MAX_CHIPS);
+    const overflow = endpoints.slice(COMPACT_MAX_CHIPS);
+    return (
+      <div className="flex flex-none items-center gap-1.5">
+        {shown.map((e) => (
+          <EndpointChip key={`${e.service}-${e.url}`} endpoint={e} reveal="tooltip" copiedUrl={copiedUrl} onCopy={onCopy} />
+        ))}
+        {overflow.length > 0 && (
+          <Tooltip delayDuration={300}>
+            <TooltipTrigger asChild>
+              <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/25 px-2 py-0.5 font-mono text-[11px] text-fg-muted">
+                +{overflow.length}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {overflow.map((e) => e.service).join(", ")}
+            </TooltipContent>
+          </Tooltip>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-3.5 flex flex-wrap items-center gap-2">
       <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-fg-muted">
         PUBLIC
       </span>
-      {endpoints.map(({ service, url, port, variant }) => (
-        <span
-          key={`${service}-${url}`}
-          className="group inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/25 py-1 pl-2.5 pr-1.5 font-mono text-[12px] transition-colors hover:border-border hover:bg-muted/40"
-        >
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <span className="flex items-center gap-1.5 text-fg-muted">
-                <span aria-hidden className={cn("size-[5px] rounded-full", DOT_CLASS[variant ?? "neutral"])} />
-                {service}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top">
-              Mapped to {service}{port != null ? ` · :${port}` : ""}
-            </TooltipContent>
-          </Tooltip>
-          {/* Hostname stays collapsed until the chip is hovered or focused;
-                the always-visible icons carry the affordance at rest. */}
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Go to ${url}`}
-            className="flex h-5 min-w-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
-          >
-            <span className="flex max-w-0 items-center overflow-hidden whitespace-nowrap text-foreground/90 opacity-0 transition-[max-width,opacity] duration-200 group-focus-within:max-w-[360px] group-focus-within:opacity-100 group-hover:max-w-[360px] group-hover:opacity-100">
-              <span aria-hidden className="pr-1.5 text-border">|</span>
-              <span className="pr-1.5 hover:underline">{hostOf(url)}</span>
-            </span>
-            <ExternalLink className="size-3 shrink-0" />
-          </a>
-          <button
-            type="button"
-            onClick={() => onCopy(url)}
-            aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
-            className="flex size-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
-          >
-            {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-          </button>
-        </span>
+      {endpoints.map((e) => (
+        <EndpointChip key={`${e.service}-${e.url}`} endpoint={e} reveal="inline" copiedUrl={copiedUrl} onCopy={onCopy} />
       ))}
     </div>
   );
