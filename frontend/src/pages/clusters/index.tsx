@@ -3,36 +3,26 @@ import { useNavigate } from "react-router-dom";
 import { Boxes, PlusCircle, AlertCircle, Loader2 } from "lucide-react";
 import { useClusters } from "./hooks/use-clusters";
 import { ClusterList } from "./components/cluster-list";
-import { ClusterDeleteDialog } from "./components/cluster-delete-dialog";
 import AddClusterDialog from "./components/add-cluster-dialog";
 import type { Cluster } from "./types";
 import type { ClusterData } from "./hooks/use-clusters";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { PageHeader, Panel, EmptyState, LimitedAction } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
-import { deleteCluster, createCluster } from "@/api/clusters";
+import { createCluster } from "@/api/clusters";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 
 export default function ClustersPage() {
   const { clusters, loading, error, refetch } = useClusters();
-  const [deletingCluster, setDeletingCluster] = useState<Cluster | null>(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [createLoading, setCreateLoading] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
-
-  // Automatically redirect to cluster detail page if a cluster exists
-  useEffect(() => {
-    if (!loading && clusters.length === 1) {
-      navigate(`/clusters/${clusters[0].id}`);
-    }
-  }, [clusters, loading, navigate]);
 
   // Set breadcrumb
   useEffect(() => {
@@ -41,41 +31,8 @@ export default function ClustersPage() {
     setPathLoading(currentPath, loading);
   }, [setCustomLabel, setPathLoading, loading]);
 
-  function handleEdit(cluster: Cluster) {
+  function handleOpen(cluster: Cluster) {
     navigate(`/clusters/${cluster.id}`);
-  }
-
-  function handleDelete(cluster: Cluster) {
-    setDeletingCluster(cluster);
-  }
-
-  async function handleDeleteConfirm() {
-    if (!deletingCluster?.id) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) {
-      console.error('No organization selected');
-      return;
-    }
-    setDeleteLoading(true);
-    try {
-      await deleteCluster(orgId, deletingCluster.id);
-      refetch();
-      toast({
-        title: "Cluster unlinked",
-        description: "The cluster has been unlinked successfully.",
-        variant: "success",
-      });
-    } catch (e) {
-      console.error('Failed to unlink cluster:', e);
-      toast({
-        title: "Failed to unlink cluster",
-        description: "Failed to unlink cluster. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteLoading(false);
-      setDeletingCluster(null);
-    }
   }
 
   async function handleAddCluster(clusterData: ClusterData) {
@@ -135,10 +92,15 @@ export default function ClustersPage() {
           title="Clusters"
           subtitle="Compute targets for your stacks"
           actions={
-            <Button onClick={() => setShowAddDialog(true)}>
-              <PlusCircle className="h-4 w-4" />
-              Add Cluster
-            </Button>
+            <LimitedAction
+              limitReached={clusters.length >= 1}
+              limitMessage="Currently only one cluster is supported."
+            >
+              <Button onClick={() => setShowAddDialog(true)}>
+                <PlusCircle className="h-4 w-4" />
+                Add Cluster
+              </Button>
+            </LimitedAction>
           }
         />
 
@@ -156,7 +118,7 @@ export default function ClustersPage() {
           />
         ) : (
           <Panel title="All Clusters" count={clusters.length} bodyClassName="p-0">
-            <ClusterList clusters={clusters} onEdit={handleEdit} onDelete={handleDelete} />
+            <ClusterList clusters={clusters} onOpen={handleOpen} />
           </Panel>
         )}
 
@@ -166,13 +128,6 @@ export default function ClustersPage() {
           onAddCluster={handleAddCluster}
           isLoading={createLoading}
           error={createError}
-        />
-
-        <ClusterDeleteDialog
-          open={!!deletingCluster}
-          onConfirm={handleDeleteConfirm}
-          onCancel={() => setDeletingCluster(null)}
-          loading={deleteLoading}
         />
       </div>
     </TooltipProvider>

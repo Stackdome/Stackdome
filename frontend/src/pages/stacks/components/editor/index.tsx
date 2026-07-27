@@ -51,16 +51,7 @@ import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { useVolumeDelete } from "@/pages/stacks/hooks/use-volume-delete";
 import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 
 export default function CanvasEditorPage() {
   const { id } = useParams();
@@ -548,10 +539,9 @@ export default function CanvasEditorPage() {
   // here to gate canDiscardDraft and pass to the revert hook.
   const liveSnapshot = convergedReleaseDetail?.snapshot;
 
-  const [revertConfirmOpen, setRevertConfirmOpen] = useState(false);
   const [viewChangesOpen, setViewChangesOpen] = useState(false);
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const confirm = useConfirm();
 
   const stackRevert = useStackRevert({
     ids: idsReady ? deployIds : null,
@@ -653,7 +643,7 @@ export default function CanvasEditorPage() {
   );
   const onCopyId = useCallback((releaseId: string) => {
     void navigator.clipboard?.writeText(releaseId);
-    toast({ title: "Release ID copied" });
+    toast({ title: "Release ID copied", variant: "success" });
   }, [toast]);
 
   // Draft deploy: validates name, creates the stack, starts the first release,
@@ -759,7 +749,14 @@ export default function CanvasEditorPage() {
   };
 
   const performDelete = useCallback(async () => {
-    if (!deployIds) return;
+    if (!deployIds || deleting) return;
+    const ok = await confirm({
+      title: "Delete stack?",
+      description: `This permanently deletes "${savedStack?.name}", its resources, volumes and deployments. This cannot be undone.`,
+      confirmLabel: "Delete stack",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setDeleting(true);
     try {
       await deleteStack(deployIds.orgId, deployIds.projectName, deployIds.stackId);
@@ -770,9 +767,24 @@ export default function CanvasEditorPage() {
       toast({ title: "Delete failed", description: "The stack could not be deleted.", variant: "destructive" });
     } finally {
       setDeleting(false);
-      setDeleteConfirmOpen(false);
     }
-  }, [deployIds, setStacks, savedStack?.name, toast, navigate]);
+  }, [deployIds, deleting, confirm, setStacks, savedStack?.name, toast, navigate]);
+
+  // Confirm, then flush any pending autosave and revert to the last
+  // deployment. Failure surfaces via the revert hook's onError toast.
+  const requestRevert = useCallback(async () => {
+    const ok = await confirm({
+      title: "Discard draft changes?",
+      description:
+        "This restores the stack to its last deployment. Volumes added since the last deployment will be deleted, and previously deleted volumes will be recreated empty. Lost volume data cannot be recovered. This action cannot be undone.",
+      confirmLabel: "Discard draft",
+      cancelLabel: "Keep editing",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    await draftSync.flush();
+    await stackRevert.revert();
+  }, [confirm, draftSync, stackRevert]);
 
   const handleNameChange = useCallback((name: string) => {
     setDraftName(name);
@@ -933,9 +945,9 @@ export default function CanvasEditorPage() {
         draftDeploying={draftDeploying}
         onDeploy={onDeploy}
         canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
-        onDiscardDraft={() => setRevertConfirmOpen(true)}
+        onDiscardDraft={() => void requestRevert()}
         canDeleteStack={canWriteStack}
-        onDelete={() => setDeleteConfirmOpen(true)}
+        onDelete={() => void performDelete()}
         publicEndpoints={publicEndpoints}
         architecture={
           <>
@@ -967,7 +979,6 @@ export default function CanvasEditorPage() {
               topologyIds={!isNewStack && idsReady ? deployIds : null}
               topologyRefreshKey={topologyRefreshKey}
               onDeleteVolume={idsReady ? volumeDelete.deleteVolume : undefined}
-              deletingVolume={volumeDelete.deleting}
               persistedVolumeNames={persistedVolumeNames}
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
               liveStatusResources={statusLiveStatus?.resources}
@@ -997,7 +1008,7 @@ export default function CanvasEditorPage() {
           // nothing saved to roll back — clearing the local session is all
           // "discard" can mean.
           if (lifecycle.phase === "staged" && liveSnapshot) {
-            setRevertConfirmOpen(true);
+            void requestRevert();
           } else {
             session.discard();
           }
@@ -1006,51 +1017,6 @@ export default function CanvasEditorPage() {
         deployBusy={deployBusy}
         canWrite={canWriteStack}
       />
-      <AlertDialog open={revertConfirmOpen} onOpenChange={setRevertConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Discard draft changes?</AlertDialogTitle>
-            <AlertDialogDescription>
-            This restores the stack to its last deployment. Volumes added since the last deployment will be deleted, and previously deleted volumes will be recreated empty. Lost volume data cannot be recovered. This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Keep editing</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => {
-                void (async () => {
-                  // Flush any pending autosave before reverting (don't block on failure)
-                  await draftSync.flush();
-                  // Failure surfaces via the hook's onError toast.
-                  await stackRevert.revert();
-                })();
-              }}
-              disabled={stackRevert.reverting}
-            >
-            Discard draft
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete stack?</AlertDialogTitle>
-            <AlertDialogDescription>
-            This permanently deletes "{savedStack?.name}", its resources, volumes and deployments. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => void performDelete()}
-              disabled={deleting}
-            >
-            Delete stack
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </ReleaseDetailProvider>
   );
 }

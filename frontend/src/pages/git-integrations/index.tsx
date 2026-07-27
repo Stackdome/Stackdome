@@ -1,12 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/branded";
 import { AddIntegrationWizard } from "./add-integration-wizard";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import {
   listGitIntegrations, deleteGitIntegration,
@@ -14,6 +11,7 @@ import {
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/helpers/common";
+import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
 import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
 import { IntegrationRow } from "./components/integration-row";
@@ -26,9 +24,14 @@ export default function GitIntegrationsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState<GitIntegration | null>(null);
-  const [removing, setRemoving] = useState<GitIntegration | null>(null);
   const [editing, setEditing] = useState<GitIntegration | null>(null);
+  const confirm = useConfirm();
   const [wizardOpen, setWizardOpen] = useState(false);
+  const { setCustomLabel } = useBreadcrumb();
+
+  useEffect(() => {
+    setCustomLabel("/git-integrations", "Git providers");
+  }, [setCustomLabel]);
 
   const refresh = useCallback(async () => {
     const orgId = getCurrentOrganizationId();
@@ -53,6 +56,13 @@ export default function GitIntegrationsPage() {
   }, [refresh]);
 
   const remove = async (integration: GitIntegration) => {
+    const ok = await confirm({
+      title: "Remove this integration?",
+      description: "Repositories using this integration lose access for clones.",
+      confirmLabel: "Remove",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId || !integration.id) {
       toast({
@@ -64,8 +74,7 @@ export default function GitIntegrationsPage() {
     }
     try {
       await deleteGitIntegration(orgId, integration.id);
-      toast({ title: "Integration removed" });
-      setRemoving(null);
+      toast({ title: "Integration removed", variant: "success" });
       await refresh();
     } catch (e) {
       toast({ title: "Remove failed", description: getErrorMessage(e), variant: "destructive" });
@@ -93,7 +102,7 @@ export default function GitIntegrationsPage() {
     <div className="space-y-6 p-6">
       <PageHeader
         eyebrow="Integrations"
-        title="Git integrations"
+        title="Git providers"
         subtitle="Grant Stackdome access to your repositories for clones, builds, and preview environments."
         actions={addButton}
       />
@@ -118,7 +127,7 @@ export default function GitIntegrationsPage() {
                   key={integration.id}
                   integration={integration}
                   onVerify={setVerifying}
-                  onRemove={setRemoving}
+                  onRemove={(i) => void remove(i)}
                   onUpdateCredentials={setEditing}
                 />
               ))}
@@ -145,25 +154,6 @@ export default function GitIntegrationsPage() {
         onUpdated={() => void refresh()}
       />
 
-      <AlertDialog open={removing != null} onOpenChange={(o) => !o && setRemoving(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Remove this integration?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Repositories using this integration lose access for clones.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className={buttonVariants({ variant: "destructive" })}
-              onClick={() => removing && void remove(removing)}
-            >
-              Remove
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

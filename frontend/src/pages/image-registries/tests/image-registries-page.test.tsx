@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import ImageRegistriesPage from "../index";
+import { ConfirmProvider } from "@/components/branded/confirm";
 import { PURPOSE_BOTH } from "../lib/providers";
 
 afterEach(cleanup);
@@ -34,14 +35,14 @@ describe("ImageRegistriesPage", () => {
 
   it("shows the empty state with an add action when list is empty", async () => {
     vi.mocked(listRegistryCredentials).mockResolvedValue({ items: [] });
-    render(<ImageRegistriesPage />);
+    render(<ConfirmProvider><ImageRegistriesPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText(/no image registries yet/i)).toBeInTheDocument());
     expect(screen.getAllByRole("button", { name: /add registry/i }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("lists registries in the panel", async () => {
     vi.mocked(listRegistryCredentials).mockResolvedValue({ items: [row] });
-    render(<ImageRegistriesPage />);
+    render(<ConfirmProvider><ImageRegistriesPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("index.docker.io")).toBeInTheDocument());
     expect(screen.getByText(/connected registries/i)).toBeInTheDocument();
     expect(screen.getByText("Pull & push")).toBeInTheDocument();
@@ -51,7 +52,7 @@ describe("ImageRegistriesPage", () => {
     vi.mocked(listRegistryCredentials).mockResolvedValue({ items: [row] });
     vi.mocked(updateRegistryCredential).mockResolvedValue(row);
     const user = userEvent.setup();
-    render(<ImageRegistriesPage />);
+    render(<ConfirmProvider><ImageRegistriesPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("index.docker.io")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /open row menu/i }));
@@ -77,7 +78,7 @@ describe("ImageRegistriesPage", () => {
       affected_stacks: [{ id: "s1", name: "webapp" }],
     });
     const user = userEvent.setup();
-    render(<ImageRegistriesPage />);
+    render(<ConfirmProvider><ImageRegistriesPage /></ConfirmProvider>);
     await waitFor(() => expect(screen.getByText("index.docker.io")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /open row menu/i }));

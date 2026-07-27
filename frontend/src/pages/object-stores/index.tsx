@@ -3,21 +3,72 @@ import { PlusCircle, AlertCircle, Loader2, Cloud } from "lucide-react";
 import { useObjectStores } from "./hooks/use-object-stores";
 import { ObjectStoreList } from "./components/object-store-list";
 import { ObjectStoreFormDialog } from "./components/object-store-form-dialog";
-import { ObjectStoreDeleteDialog } from "./components/object-store-delete-dialog";
 import type { ObjectStore } from "./types";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { useConfirm } from "@/components/branded/confirm";
+import { useToast } from "@/components/ui/use-toast";
+import { getErrorMessage } from "@/api/client";
+import { deleteObjectStore } from "@/api/object-stores";
+import { getCurrentOrganizationId } from "@/helpers/common";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useCurrentUser } from "@/hooks/use-current-user";
+
+const IN_USE_FALLBACK = "This Object Store is in use by one or more Postgres add-ons.";
 
 export default function ObjectStoresPage() {
   const { objectStores, loading, error, refetch } = useObjectStores();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
   const { canWrite, canWriteAnyProject } = useCurrentUser();
+  const { projectNameById } = useResourceProjects();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingStore, setEditingStore] = useState<ObjectStore | null>(null);
-  const [deletingStore, setDeletingStore] = useState<ObjectStore | null>(null);
+
+  async function requestDelete(store: ObjectStore) {
+    if (!store.id) return;
+    const ok = await confirm({
+      title: "Delete object store?",
+      description: (
+        <>
+          <span className="font-mono">{store.name}</span> will no longer be available as a backup
+          destination. Existing backup files in the destination are not removed. This cannot be
+          undone.
+        </>
+      ),
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+
+    const orgId = getCurrentOrganizationId();
+    const projectName = projectNameById(store.project_id);
+    if (!orgId || !projectName) {
+      toast({
+        title: "Could not delete Object Store",
+        description: orgId
+          ? "Could not resolve the project for this object store."
+          : "No organization selected.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await deleteObjectStore(orgId, projectName, store.id);
+      toast({ title: "Object store deleted", variant: "success" });
+      refetch();
+    } catch (e: unknown) {
+      toast({
+        title: "Failed to delete",
+        description: getErrorMessage(e) || IN_USE_FALLBACK,
+        variant: "destructive",
+      });
+    }
+  }
 
   useEffect(() => {
     const path = `/object-stores`;
@@ -96,7 +147,7 @@ export default function ObjectStoresPage() {
                 setEditingStore(store);
                 setShowAddDialog(true);
               }}
-              onDelete={(store) => setDeletingStore(store)}
+              onDelete={(store) => void requestDelete(store)}
               canWrite={(projectId?: string) => canWrite(projectId ?? "")}
             />
           </Panel>
@@ -110,16 +161,6 @@ export default function ObjectStoresPage() {
           }}
           editing={editingStore}
           onSaved={() => {
-            refetch();
-          }}
-        />
-
-        <ObjectStoreDeleteDialog
-          store={deletingStore}
-          onOpenChange={(open) => {
-            if (!open) setDeletingStore(null);
-          }}
-          onDeleted={() => {
             refetch();
           }}
         />

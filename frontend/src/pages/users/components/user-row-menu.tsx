@@ -74,7 +74,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
   async function handleCopyId() {
     try {
       await navigator.clipboard.writeText(row.id);
-      toast({ title: "Copied", description: "User ID copied to clipboard." });
+      toast({ title: "Copied", description: "User ID copied to clipboard.", variant: "success" });
     } catch (err) {
       toast({
         title: "Couldn't copy ID",

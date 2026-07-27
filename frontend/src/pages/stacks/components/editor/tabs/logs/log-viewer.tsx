@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { LazyLog } from 'react-lazylog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,21 @@ function connectionStatusInfo(status: ConnectionStatus): { variant: StatusVarian
 
 export function LogViewer({ stackId, organizationId, resources = [], liveStatusResources, initialSources, className = '' }: LogViewerProps) {
   const [sourceSelectOpen, setSourceSelectOpen] = useState(false);
+  // Fit the viewer to the space below whatever chrome sits above it — the
+  // offset varies with the stack header, so it's measured, not hardcoded.
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const fit = () => {
+    const el = rootRef.current;
+    if (!el) return;
+    el.style.height = `${Math.max(420, window.innerHeight - el.getBoundingClientRect().top)}px`;
+  };
+  // No deps: chrome above the viewer (stack header, banners) can change size
+  // between renders, so every render re-measures.
+  useLayoutEffect(fit);
+  useLayoutEffect(() => {
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
   const [filters, setFilters] = useState<LogFilters>({
     sources: initialSources ?? [],
     timeRange: 'live-4h',
@@ -115,7 +130,7 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
   ];
 
   return (
-    <div className={`mx-auto max-w-[1100px] px-[30px] py-6 ${className}`}>
+    <div ref={rootRef} className={`mx-auto flex w-full max-w-[1100px] flex-col px-[30px] py-6 ${className}`}>
       {/* Header with integrated filter controls */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -203,8 +218,8 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
           }
         />
       ) : logText ? (
-        <div className="overflow-hidden rounded-md border border-border bg-[#070a0f]">
-          <div className="h-[560px]">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-[#070a0f]">
+          <div className="h-full">
             <LazyLog
               text={logText}
               extraLines={1}
@@ -212,7 +227,7 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
               caseInsensitive
               selectableLines
               follow={filters.timeRange === 'live-4h'}
-              height={560}
+              height="auto"
               style={{
                 backgroundColor: '#070a0f',
                 color: '#94a3b8',

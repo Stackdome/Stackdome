@@ -15,12 +15,12 @@ const diff: SnapshotDiff = {
 };
 
 describe("DraftNode", () => {
-  it("staged: shows the DRAFT chip and the staged diff (open by default)", () => {
+  it("staged: shows the DRAFT chip and starts collapsed", () => {
     render(<DraftNode phase="staged" diff={diff} vsSeq={7} />);
     expect(screen.getByText("Draft")).toBeInTheDocument();
     expect(screen.getByText(/web-server changed/)).toBeInTheDocument();
-    // The diff card renders the changed resource + values.
-    expect(screen.getByText("web-server")).toBeInTheDocument();
+    // Collapsed by default: the diff card body is not rendered.
+    expect(screen.queryByText("web-server")).not.toBeInTheDocument();
   });
 
   it("editing: shows the UNSAVED chip", () => {
@@ -28,15 +28,16 @@ describe("DraftNode", () => {
     expect(screen.getByText("Unsaved")).toBeInTheDocument();
   });
 
-  it("collapses the card when the row is clicked", async () => {
+  it("expands the card when the row is clicked", async () => {
     render(<DraftNode phase="staged" diff={diff} vsSeq={7} />);
-    expect(screen.getByText("web-server")).toBeInTheDocument();
-    await userEvent.click(screen.getByText("Staged changes"));
     expect(screen.queryByText("web-server")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Staged changes"));
+    expect(screen.getByText("web-server")).toBeInTheDocument();
   });
 
-  it("falls back to a plain note when there is no diff to show", () => {
+  it("falls back to a plain note when there is no diff to show", async () => {
     render(<DraftNode phase="staged" />);
+    await userEvent.click(screen.getByText("Staged changes"));
     expect(screen.getByText(/staged for deploy/i)).toBeInTheDocument();
   });
 });

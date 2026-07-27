@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, cleanup, fireEvent, within, act } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, within, act, waitFor } from "@testing-library/react";
 import { ArchitectureTab } from "../architecture-tab";
+import { ConfirmProvider } from "@/components/branded/confirm";
 import { useStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 
 afterEach(cleanup);
@@ -61,27 +62,27 @@ const NO_ERRORS = {};
 function Harness(props: {
   topologyIds: { orgId: string; projectName: string; stackId: string } | null;
   onDeleteVolume?: (name: string) => Promise<boolean>;
-  deletingVolume?: boolean;
 }) {
   const session = useStackEditSession();
   if (!session.isActive) {
     session.start({ resources: RESOURCES, volumes: VOLUMES }, { openTab: "configuration" });
   }
   return (
-    <ArchitectureTab
-      session={session}
-      baselineResources={RESOURCES}
-      baselineVolumes={VOLUMES}
-      draftResources={RESOURCES}
-      draftVolumes={VOLUMES}
-      connectionAddonIds={NO_ADDON_IDS}
-      addonNameById={NO_ADDON_NAMES}
-      errors={NO_ERRORS}
-      topologyIds={props.topologyIds}
-      topologyRefreshKey={0}
-      onDeleteVolume={props.onDeleteVolume}
-      deletingVolume={props.deletingVolume}
-    />
+    <ConfirmProvider>
+      <ArchitectureTab
+        session={session}
+        baselineResources={RESOURCES}
+        baselineVolumes={VOLUMES}
+        draftResources={RESOURCES}
+        draftVolumes={VOLUMES}
+        connectionAddonIds={NO_ADDON_IDS}
+        addonNameById={NO_ADDON_NAMES}
+        errors={NO_ERRORS}
+        topologyIds={props.topologyIds}
+        topologyRefreshKey={0}
+        onDeleteVolume={props.onDeleteVolume}
+      />
+    </ConfirmProvider>
   );
 }
 
@@ -100,25 +101,16 @@ describe("ArchitectureTab volume delete", () => {
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText(/immediately and permanently destroys/i)).toBeInTheDocument();
     expect(within(dialog).getByText(/cannot be undone/i)).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Delete volume" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Delete" })).toBeInTheDocument();
   });
 
-  it("draft stack (topologyIds null): dialog carries the draft-removal copy", async () => {
+  it("draft stack (topologyIds null): dialog is the lean remove confirm", async () => {
     render(<Harness topologyIds={null} />);
     await openDeleteConfirm();
 
     const dialog = await screen.findByRole("alertdialog");
-    expect(within(dialog).getByText(/hasn't been created yet/i)).toBeInTheDocument();
-    expect(within(dialog).getByRole("button", { name: "Remove volume" })).toBeInTheDocument();
-  });
-
-  it("Action is disabled and reads 'Deleting…' while a delete is in flight", async () => {
-    render(<Harness topologyIds={{ orgId: "o", projectName: "t", stackId: "s" }} deletingVolume />);
-    await openDeleteConfirm();
-
-    const dialog = await screen.findByRole("alertdialog");
-    const action = within(dialog).getByRole("button", { name: "Deleting…" });
-    expect(action).toBeDisabled();
+    expect(within(dialog).getByRole("heading", { name: "Remove volume “data”?" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Remove" })).toBeInTheDocument();
   });
 
   it("applies the local draft edit (volume node gone) before onDeleteVolume settles", async () => {
@@ -129,12 +121,12 @@ describe("ArchitectureTab volume delete", () => {
     await openDeleteConfirm();
 
     const dialog = await screen.findByRole("alertdialog");
-    fireEvent.click(within(dialog).getByRole("button", { name: "Delete volume" }));
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     // The local draft mutation (dropping the volume from the draft) has
     // already applied — its node is gone from the canvas — even though
     // onDeleteVolume's promise hasn't settled yet.
-    expect(onDeleteVolume).toHaveBeenCalledWith("data");
+    await waitFor(() => expect(onDeleteVolume).toHaveBeenCalledWith("data"));
     expect(screen.queryByRole("button", { name: "data" })).not.toBeInTheDocument();
 
     await act(async () => {

@@ -112,24 +112,28 @@ describe("PreviewConfigDetailPage", () => {
     expect(screen.getByLabelText(/max active previews/i)).toHaveValue(10);
   });
 
-  it("shows status pills with counts for a mixed-phase fixture", async () => {
-    mockEnvs(mixedEnvs);
-    renderPage();
-    await screen.findByText("PR #101");
-
-    expect(screen.getByRole("button", { name: /^all/i })).toHaveTextContent(/all\s*3/i);
-    expect(screen.getByRole("button", { name: /ready/i })).toHaveTextContent(/ready\s*1/i);
-    expect(screen.getByRole("button", { name: /pending/i })).toHaveTextContent(/pending\s*1/i);
-    expect(screen.getByRole("button", { name: /failed/i })).toHaveTextContent(/failed\s*1/i);
-  });
-
-  it("filters the grid to failed environments when the failed pill is selected", async () => {
+  it("lists every card status word with counts in the status dropdown", async () => {
     mockEnvs(mixedEnvs);
     renderPage();
     await screen.findByText("PR #101");
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("button", { name: /failed/i }));
+    await user.click(screen.getByRole("button", { name: /status:/i }));
+
+    expect(screen.getByRole("menuitem", { name: /^all/i })).toHaveTextContent(/all\s*3/i);
+    expect(screen.getByRole("menuitem", { name: /ready/i })).toHaveTextContent(/ready\s*1/i);
+    expect(screen.getByRole("menuitem", { name: /pending/i })).toHaveTextContent(/pending\s*1/i);
+    expect(screen.getByRole("menuitem", { name: /failed/i })).toHaveTextContent(/failed\s*1/i);
+  });
+
+  it("filters the grid to failed environments via the status dropdown", async () => {
+    mockEnvs(mixedEnvs);
+    renderPage();
+    await screen.findByText("PR #101");
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: /status:/i }));
+    await user.click(screen.getByRole("menuitem", { name: /failed/i }));
 
     expect(screen.getByText("PR #303")).toBeInTheDocument();
     expect(screen.queryByText("PR #101")).not.toBeInTheDocument();
