@@ -16,17 +16,18 @@ describe("PublicEndpointRow", () => {
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
   });
 
-  it("renders one pill per endpoint with service chip and host", () => {
+  it("renders one pill per endpoint with service chip and hover-revealed host", () => {
     render(<PublicEndpointRow endpoints={endpoints} />);
     expect(screen.getByText("PUBLIC")).toBeInTheDocument();
     expect(screen.getByText("web")).toBeInTheDocument();
+    // Host text is in the DOM (revealed on hover via CSS), inside the go-to link.
     expect(screen.getByText("web.acme.stackdome.app")).toBeInTheDocument();
     expect(screen.getByText("api.mycompany.com")).toBeInTheDocument();
   });
 
-  it("link opens in a new tab", () => {
+  it("go-to link opens in a new tab", () => {
     render(<PublicEndpointRow endpoints={endpoints} />);
-    const link = screen.getByRole("link", { name: /web\.acme\.stackdome\.app/ });
+    const link = screen.getByRole("link", { name: "Go to https://web.acme.stackdome.app" });
     expect(link).toHaveAttribute("href", "https://web.acme.stackdome.app");
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noreferrer");

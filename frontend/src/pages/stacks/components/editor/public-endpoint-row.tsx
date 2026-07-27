@@ -75,7 +75,7 @@ export function PublicEndpointRow({
         {endpoints.map(({ service, url, port, variant }) => (
           <span
             key={`${service}-${url}`}
-            className="group inline-flex items-center gap-2 rounded-lg border border-border/60 bg-muted/25 py-1 pl-2.5 pr-1.5 font-mono text-[12px] transition-colors hover:border-border hover:bg-muted/40"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-muted/25 py-1 pl-2.5 pr-1.5 font-mono text-[12px] transition-colors hover:border-border hover:bg-muted/40"
           >
             <Tooltip delayDuration={300}>
               <TooltipTrigger asChild>
@@ -88,21 +88,26 @@ export function PublicEndpointRow({
               Mapped to {service}{port != null ? ` · :${port}` : ""}
               </TooltipContent>
             </Tooltip>
-            <span aria-hidden className="text-border">|</span>
+            {/* Hostname stays collapsed until the chip is hovered or focused;
+                the always-visible icons carry the affordance at rest. */}
             <a
               href={url}
               target="_blank"
               rel="noreferrer"
-              className="flex items-center gap-1.5 text-foreground/90 hover:text-foreground hover:underline"
+              aria-label={`Go to ${url}`}
+              className="flex h-5 min-w-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
             >
-              {hostOf(url)}
-              <ExternalLink className="size-3 text-fg-muted" />
+              <span className="flex max-w-0 items-center overflow-hidden whitespace-nowrap text-foreground/90 opacity-0 transition-[max-width,opacity] duration-200 group-focus-within:max-w-[360px] group-focus-within:opacity-100 group-hover:max-w-[360px] group-hover:opacity-100">
+                <span aria-hidden className="pr-1.5 text-border">|</span>
+                <span className="pr-1.5 hover:underline">{hostOf(url)}</span>
+              </span>
+              <ExternalLink className="size-3 shrink-0" />
             </a>
             <button
               type="button"
               onClick={() => onCopy(url)}
               aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
-              className="flex size-5 items-center justify-center rounded text-fg-muted opacity-0 transition-opacity hover:bg-muted hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+              className="flex size-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
             >
               {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
             </button>
