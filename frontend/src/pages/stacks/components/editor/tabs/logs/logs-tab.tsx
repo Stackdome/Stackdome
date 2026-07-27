@@ -5,6 +5,7 @@ export function LogsTab({
   stackId,
   organizationId,
   resources,
+  liveStatusResources,
   initialSources
 }: LogsTabProps) {
   return (
@@ -13,6 +14,7 @@ export function LogsTab({
         stackId={stackId}
         organizationId={organizationId}
         resources={resources}
+        liveStatusResources={liveStatusResources}
         initialSources={initialSources}
       />
     </div>

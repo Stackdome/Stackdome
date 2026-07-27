@@ -3,6 +3,43 @@ import { API_BASE_URL } from "./base-url";
 
 // Logs/metrics (incl. SSE) served from project-scoped stack endpoints; UI scopes to the org's default project.
 
+/** Status of a single SSE connection, from the browser's perspective. */
+export type SseStreamStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+
+/**
+ * Wires an EventSource, separating the backend's `event: error` stream errors
+ * (the only real API error signal — see pkg/handlers/handler_helper.go) from
+ * the browser's native connection-lifecycle errors. Backend errors arrive as a
+ * MessageEvent with a payload; native errors are plain Events without one.
+ * Native errors with readyState CONNECTING mean the browser is auto-retrying.
+ */
+export function attachSseHandlers(
+  es: EventSource,
+  handlers: {
+    onData: (data: string) => void;
+    onStreamError: (message: string) => void;
+    onStatusChange: (status: SseStreamStatus) => void;
+  },
+): void {
+  es.onopen = () => handlers.onStatusChange('connected');
+  es.onmessage = (event) => handlers.onData(event.data);
+  es.addEventListener('error', (event) => {
+    if (event instanceof MessageEvent) {
+      handlers.onStreamError(String(event.data));
+      return;
+    }
+    handlers.onStatusChange(es.readyState === EventSource.CLOSED ? 'disconnected' : 'reconnecting');
+  });
+}
+
+/** Rolls up many per-connection statuses into one pill-worthy status. */
+export function aggregateStreamStatus(statuses: SseStreamStatus[]): SseStreamStatus {
+  if (statuses.length > 0 && statuses.every((s) => s === 'connected')) return 'connected';
+  if (statuses.some((s) => s === 'reconnecting')) return 'reconnecting';
+  if (statuses.some((s) => s === 'connecting')) return 'connecting';
+  return 'disconnected';
+}
+
 interface LogStreamParams {
   follow?: boolean;
   since?: string;

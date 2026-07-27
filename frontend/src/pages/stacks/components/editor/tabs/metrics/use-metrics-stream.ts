@@ -1,208 +1,117 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { ResourceMetrics } from './types';
 import { useResourceProjects } from '@/hooks/use-resource-projects';
-import { API_BASE_URL } from '@/api/base-url';
+import {
+  buildStackMetricsStreamUrl,
+  buildStackResourceMetricsStreamUrl,
+  attachSseHandlers,
+  aggregateStreamStatus,
+  type SseStreamStatus,
+} from '@/api/observability';
 
-type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error';
+type ConnectionStatus = SseStreamStatus;
 
 interface UseMetricsStreamProps {
   stackId: string;
   organizationId: string;
+  /** Names must already be filtered to ready resources by the caller. */
+  resourceNames: string[];
   enabled?: boolean;
 }
 
 interface UseMetricsStreamReturn {
   stackMetrics: ResourceMetrics | null;
   resourceMetrics: Map<string, ResourceMetrics>;
-  isStreaming: boolean;
   connectionStatus: ConnectionStatus;
+  /** Set only from the backend's `event: error` SSE events — never from
+   *  connection drops, which surface through connectionStatus instead. */
   error: string | null;
-  startStreaming: () => void;
-  stopStreaming: () => void;
   retry: () => void;
-  lastUpdated: Date | null;
-  updateResources: (resources: string[]) => void;
 }
+
+// Key for the whole-stack stream in the per-source status map.
+const STACK_STREAM_KEY = '__stack__';
 
 export function useMetricsStream({
   stackId,
   organizationId,
+  resourceNames,
   enabled = true,
 }: UseMetricsStreamProps): UseMetricsStreamReturn {
   const [stackMetrics, setStackMetrics] = useState<ResourceMetrics | null>(null);
   const [resourceMetrics, setResourceMetrics] = useState<Map<string, ResourceMetrics>>(new Map());
-  const [isStreaming, setIsStreaming] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
+  const [retryNonce, setRetryNonce] = useState(0);
   const eventSourcesRef = useRef<EventSource[]>([]);
-  const resourcesRef = useRef<string[]>([]);
-  const enabledRef = useRef(enabled);
   const { defaultProjectName } = useResourceProjects();
 
-  // Update enabled ref when prop changes
+  const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
+
+  // resourceNames identity changes on unrelated re-renders; key on content.
+  const namesKey = resourceNames.join(',');
+
   useEffect(() => {
-    enabledRef.current = enabled;
-  }, [enabled]);
-
-  const buildStackMetricsStreamUrl = useCallback(() => {
-    const baseUrl = API_BASE_URL;
-    return `${baseUrl}/organizations/${organizationId}/projects/${defaultProjectName}/stacks/${stackId}/metrics?stream=true`;
-  }, [organizationId, defaultProjectName, stackId]);
-
-  const buildResourceMetricsStreamUrl = useCallback((resourceName: string) => {
-    const baseUrl = API_BASE_URL;
-    return `${baseUrl}/organizations/${organizationId}/projects/${defaultProjectName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
-  }, [organizationId, defaultProjectName, stackId]);
-
-  const parseMetricsData = useCallback((data: string): ResourceMetrics | null => {
-    try {
-      const parsed = JSON.parse(data);
-      return parsed;
-    } catch (err) {
-      console.warn('Failed to parse metrics data:', err);
-      return null;
-    }
-  }, []);
-
-  const handleConnectionError = useCallback(() => {
-    console.warn('Metrics stream connection error, attempting reconnection...');
-    setConnectionStatus('error');
-    setError('Connection lost. Please refresh to retry.');
-    // The browser will automatically attempt to reconnect EventSource
-  }, []);
-
-  const stopStreaming = useCallback(() => {
-    console.log('Stopping metrics streaming...');
-
-    // Close all event sources
-    eventSourcesRef.current.forEach(eventSource => {
-      eventSource.close();
-    });
-    eventSourcesRef.current = [];
-
-    setIsStreaming(false);
-    setConnectionStatus('disconnected');
-    setError(null);
-  }, []);
-
-  const startStreaming = useCallback(() => {
-    if (isStreaming) {
-      return;
-    }
-    if (!defaultProjectName) {
+    if (!enabled || !stackId || !organizationId || !defaultProjectName) {
+      setConnectionStatus('disconnected');
       return;
     }
 
-    console.log('Starting metrics streaming...');
-    setIsStreaming(true);
     setConnectionStatus('connecting');
     setError(null);
 
-    const activeConnections = 1 + resourcesRef.current.length; // Stack + resources
-    let connectedSources = 0;
+    const names = namesKey ? namesKey.split(',') : [];
+    const streamKeys = [STACK_STREAM_KEY, ...names];
+    const statuses = new Map<string, SseStreamStatus>(streamKeys.map((key) => [key, 'connecting']));
 
-    const handleConnectionOpen = () => {
-      connectedSources++;
-      if (connectedSources === activeConnections) {
-        setConnectionStatus('connected');
-        setError(null);
+    const applyStatus = (key: string, status: SseStreamStatus) => {
+      statuses.set(key, status);
+      setConnectionStatus(aggregateStreamStatus([...statuses.values()]));
+    };
+
+    const parseMetrics = (data: string): ResourceMetrics | null => {
+      try {
+        return JSON.parse(data);
+      } catch {
+        return null;
       }
     };
 
-    // Stream stack-level metrics
-    const stackUrl = buildStackMetricsStreamUrl();
-    const stackEventSource = new EventSource(stackUrl);
-    eventSourcesRef.current.push(stackEventSource);
+    eventSourcesRef.current = streamKeys.map((key) => {
+      const url =
+        key === STACK_STREAM_KEY
+          ? buildStackMetricsStreamUrl(organizationId, defaultProjectName, stackId)
+          : buildStackResourceMetricsStreamUrl(organizationId, defaultProjectName, stackId, key);
+      const eventSource = new EventSource(url);
 
-    stackEventSource.onopen = () => {
-      console.log('Stack metrics stream connected');
-      handleConnectionOpen();
-    };
+      attachSseHandlers(eventSource, {
+        onData: (data) => {
+          const metrics = parseMetrics(data);
+          if (!metrics) return;
+          if (key === STACK_STREAM_KEY) {
+            setStackMetrics(metrics);
+          } else {
+            setResourceMetrics((prev) => new Map(prev).set(key, metrics));
+          }
+        },
+        onStreamError: (message) => setError(message),
+        onStatusChange: (status) => applyStatus(key, status),
+      });
 
-    stackEventSource.onmessage = (event) => {
-      const metrics = parseMetricsData(event.data);
-      if (metrics) {
-        setStackMetrics(metrics);
-        setLastUpdated(new Date());
-      }
-    };
-
-    stackEventSource.onerror = () => {
-      handleConnectionError();
-    };
-
-    // Stream resource-level metrics for each resource
-    resourcesRef.current.forEach(resourceName => {
-      const resourceUrl = buildResourceMetricsStreamUrl(resourceName);
-      const resourceEventSource = new EventSource(resourceUrl);
-      eventSourcesRef.current.push(resourceEventSource);
-
-      resourceEventSource.onopen = () => {
-        console.log(`Resource metrics stream connected for ${resourceName}`);
-        handleConnectionOpen();
-      };
-
-      resourceEventSource.onmessage = (event) => {
-        const metrics = parseMetricsData(event.data);
-        if (metrics) {
-          setResourceMetrics(prev => {
-            const newMap = new Map(prev);
-            newMap.set(resourceName, metrics);
-            return newMap;
-          });
-          setLastUpdated(new Date());
-        }
-      };
-
-      resourceEventSource.onerror = () => {
-        console.warn(`Resource metrics stream error for ${resourceName}`);
-        handleConnectionError();
-      };
+      return eventSource;
     });
-  }, [isStreaming, defaultProjectName, buildStackMetricsStreamUrl, buildResourceMetricsStreamUrl, parseMetricsData, handleConnectionError]);
 
-  // Update resources list - simplified to avoid infinite loops
-  const updateResources = useCallback((resources: string[]) => {
-    resourcesRef.current = resources;
-  }, []);
-
-  // Auto-start streaming when enabled
-  useEffect(() => {
-    if (enabled && !isStreaming) {
-      const timer = setTimeout(() => {
-        if (enabledRef.current && !isStreaming) {
-          startStreaming();
-        }
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [enabled, isStreaming, startStreaming]);
-
-  // Cleanup on unmount
-  useEffect(() => {
     return () => {
-      stopStreaming();
+      eventSourcesRef.current.forEach((source) => source.close());
+      eventSourcesRef.current = [];
     };
-  }, [stopStreaming]);
-
-  // Tearing down clears connections + flips isStreaming to false. The
-  // auto-start effect above then sees enabled && !isStreaming and reconnects.
-  const retry = useCallback(() => {
-    stopStreaming();
-  }, [stopStreaming]);
+  }, [stackId, organizationId, defaultProjectName, namesKey, enabled, retryNonce]);
 
   return {
     stackMetrics,
     resourceMetrics,
-    isStreaming,
     connectionStatus,
     error,
-    startStreaming,
-    stopStreaming,
     retry,
-    lastUpdated,
-    updateResources,
   };
 }

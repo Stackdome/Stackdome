@@ -879,6 +879,7 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+      liveStatusResources={statusLiveStatus?.resources}
       initialSources={logsInitialSource ? [logsInitialSource] : undefined}
     />
   ) : (
@@ -890,6 +891,7 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources || []}
+      liveStatusResources={statusLiveStatus?.resources}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
