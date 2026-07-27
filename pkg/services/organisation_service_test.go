@@ -216,3 +216,22 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		Expect(serr).To(Equal(boom))
 	})
 })
+
+var _ = Describe("orgRegistryName", func() {
+	const (
+		nameOrgID     = "11112222-3333-4444-5555-666677778888"
+		nameClusterID = "aaaabbbb-cccc-dddd-eeee-ffff00001111"
+	)
+
+	It("joins the slug and short IDs when within budget", func() {
+		Expect(orgRegistryName("Acme Inc", nameOrgID, nameClusterID)).
+			To(Equal("acme-inc-11112222-aaaabbbb"))
+	})
+
+	It("truncates the slug so the name fits Kubernetes label budgets", func() {
+		name := orgRegistryName("Owned Cluster Org 1785184642064461000", nameOrgID, nameClusterID)
+		Expect(len(name)).To(BeNumerically("<=", maxRegistryNameLength))
+		Expect(name).To(HavePrefix("owned-cluster-org-"))
+		Expect(name).To(HaveSuffix("-11112222-aaaabbbb"))
+	})
+})

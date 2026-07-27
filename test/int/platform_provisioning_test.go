@@ -160,7 +160,7 @@ var _ = Describe("Platform provisioning", func() {
 
 		By("signing up a fresh user with a new organisation")
 		ts := time.Now().UnixNano()
-		orgName := fmt.Sprintf("Owned Cluster Org %d", ts)
+		orgName := fmt.Sprintf("Owned Org %d", ts)
 		email := fmt.Sprintf("owned-%d@example.com", ts)
 		resp := shared.SignupNewUser("Owned Admin", email, "supersecret123", orgName)
 		orgID := resp.User.GetOrganisationId()

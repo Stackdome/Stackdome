@@ -21,6 +21,10 @@ import (
 const (
 	shortOrgIDLength      = 8
 	maxDomainSeedAttempts = 5
+	// maxRegistryNameLength keeps the registry CR name inside Kubernetes
+	// limits on the cluster: the StatefulSet's controller-revision-hash pod
+	// label appends "-<10 char hash>" and must fit a 63-character label.
+	maxRegistryNameLength = 50
 )
 
 type OrganisationService interface {
@@ -176,7 +180,12 @@ func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgNam
 // disambiguates across orgs on a shared cluster, cluster suffix disambiguates
 // one org's registries across its clusters.
 func orgRegistryName(orgName, orgID, clusterID string) string {
-	return fmt.Sprintf("%s-%s-%s", slug.FromOrgName(orgName), shortUUID(orgID), shortUUID(clusterID))
+	suffix := fmt.Sprintf("-%s-%s", shortUUID(orgID), shortUUID(clusterID))
+	orgSlug := slug.FromOrgName(orgName)
+	if budget := maxRegistryNameLength - len(suffix); len(orgSlug) > budget {
+		orgSlug = strings.Trim(orgSlug[:budget], "-")
+	}
+	return orgSlug + suffix
 }
 
 func shortUUID(id string) string {
