@@ -33,7 +33,6 @@ const httpsScheme = "https"
 type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
-	GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
@@ -138,17 +137,15 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 	// cluster ships with one: fall back to a default when none was supplied.
 	// The platform org stays infrastructure-only — no registry on its cluster.
 	var registry *models.ClusterImageRegistry
+	org, oerr := s.organisationStore.Get(ctx, cluster.OrganisationID)
+	if oerr != nil {
+		s.logger.Error(ctx, "failed to get organisation for default registry: %v", oerr)
+		return nil, oerr
+	}
 	if len(cluster.ImageRegistries) != 0 {
 		registry = cluster.ImageRegistries[0]
-	} else {
-		org, oerr := s.organisationStore.Get(ctx, cluster.OrganisationID)
-		if oerr != nil {
-			s.logger.Error(ctx, "failed to get organisation for default registry: %v", oerr)
-			return nil, oerr
-		}
-		if !org.Platform {
-			registry = &models.ClusterImageRegistry{Name: orgRegistryName(org.Name, org.ID)}
-		}
+	} else if !org.Platform {
+		registry = &models.ClusterImageRegistry{}
 	}
 
 	cerr := s.clusterStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
@@ -162,6 +159,9 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 			return errors.GeneralError("failed to register cluster with manager")
 		}
 		if registry != nil {
+			if registry.Name == "" {
+				registry.Name = orgRegistryName(org.Name, org.ID, createdCluster.ID)
+			}
 			registry.ClusterID = createdCluster.ID
 			registry.OrganisationID = createdCluster.OrganisationID
 			createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)
@@ -330,23 +330,10 @@ func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*m
 	cluster, err := s.GetOwnedClusterForOrg(ctx, orgID)
 	if err != nil {
 		if err.Code == errors.ErrorNotFound {
-			return s.GetPlatformCluster(ctx)
+			return s.getPlatformCluster(ctx)
 		}
 		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return nil, err
-	}
-	return cluster, nil
-}
-
-func (s *clusterService) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
-	cluster, err := s.clusterStore.GetPlatformCluster(ctx)
-	if err != nil {
-		s.logger.Error(ctx, "failed to get platform cluster: %v", err)
-		return nil, err
-	}
-	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
-		return nil, decErr
 	}
 	return cluster, nil
 }
@@ -463,28 +450,6 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 	return nil
 }
 
-func IsBase64(s string) bool {
-	// Base64 string must be a multiple of 4
-	if len(s)%4 != 0 {
-		return false
-	}
-
-	// Basic character check: must only contain valid base64 characters
-	if strings.ContainsAny(s, " \t\r\n") {
-		return false
-	}
-
-	_, err := base64.StdEncoding.DecodeString(s)
-	return err == nil
-}
-
-func normalizeBase64(s string) string {
-	if IsBase64(s) {
-		return s
-	}
-	return base64.StdEncoding.EncodeToString([]byte(s))
-}
-
 func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	// Canonicalize before create AND compare, so the stored encoding never
 	// depends on which path first persisted the credentials.
@@ -531,4 +496,39 @@ func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec
 		return nil, decErr
 	}
 	return fresh, nil
+}
+
+func (s *clusterService) getPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+	cluster, err := s.clusterStore.GetPlatformCluster(ctx)
+	if err != nil {
+		s.logger.Error(ctx, "failed to get platform cluster: %v", err)
+		return nil, err
+	}
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
+		return nil, decErr
+	}
+	return cluster, nil
+}
+
+func IsBase64(s string) bool {
+	// Base64 string must be a multiple of 4
+	if len(s)%4 != 0 {
+		return false
+	}
+
+	// Basic character check: must only contain valid base64 characters
+	if strings.ContainsAny(s, " \t\r\n") {
+		return false
+	}
+
+	_, err := base64.StdEncoding.DecodeString(s)
+	return err == nil
+}
+
+func normalizeBase64(s string) string {
+	if IsBase64(s) {
+		return s
+	}
+	return base64.StdEncoding.EncodeToString([]byte(s))
 }

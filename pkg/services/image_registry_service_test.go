@@ -90,7 +90,7 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 		})
 	})
 
-	Describe("PopulateInClusterRegistryUrlForResource", func() {
+	Describe("PopulateInClusterRegistryNameForResource", func() {
 		newBuildResource := func() *models.StackResource {
 			return &models.StackResource{
 				Name: "web",
@@ -107,7 +107,7 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 				Return(&models.ClusterImageRegistry{Name: "owned-reg"}, nil)
 
 			resource := newBuildResource()
-			serr := svc.PopulateInClusterRegistryUrlForResource(ctx, guardOrgID, ownedClusterID, "stack", resource)
+			serr := svc.PopulateInClusterRegistryNameForResource(ctx, guardOrgID, ownedClusterID, "stack", resource)
 			Expect(serr).To(BeNil())
 			Expect(resource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(Equal("owned-reg"))
 		})
@@ -118,13 +118,13 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 			registryStore.EXPECT().GetForOrgAndCluster(gomock.Any(), guardOrgID, ownedClusterID).
 				Return(nil, errors.NotFound("cluster image registry not found"))
 
-			serr := svc.PopulateInClusterRegistryUrlForResource(ctx, guardOrgID, ownedClusterID, "stack", newBuildResource())
+			serr := svc.PopulateInClusterRegistryNameForResource(ctx, guardOrgID, ownedClusterID, "stack", newBuildResource())
 			Expect(serr).ToNot(BeNil())
 			Expect(serr.Code).To(Equal(errors.ErrorBadRequest))
 		})
 
 		It("is a no-op for resources not using the in-cluster registry", func() {
-			serr := svc.PopulateInClusterRegistryUrlForResource(ctx, guardOrgID, ownedClusterID, "stack", &models.StackResource{Name: "web"})
+			serr := svc.PopulateInClusterRegistryNameForResource(ctx, guardOrgID, ownedClusterID, "stack", &models.StackResource{Name: "web"})
 			Expect(serr).To(BeNil())
 		})
 	})

@@ -10,9 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	k8stypes "k8s.io/apimachinery/pkg/types"
-	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -23,8 +20,16 @@ import (
 )
 
 // shortOrgIDLength mirrors the unexported services.shortOrgIDLength used by
-// signup seeding to derive the <slug>-<shortid> registry name.
+// registry naming to derive <slug>-<shortOrgID>-<shortClusterID>.
 const shortOrgIDLength = 8
+
+func shortTestID(id string) string {
+	s := strings.ReplaceAll(id, "-", "")
+	if len(s) > shortOrgIDLength {
+		s = s[:shortOrgIDLength]
+	}
+	return s
+}
 
 func exposedProvisioningStack(name string) *openapi.Stack {
 	resource := openapi.NewStackResource("web")
@@ -107,12 +112,8 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(db.Where(&models.OrganisationDomain{OrganisationID: newOrgID}).First(&orgDomain).Error).To(Succeed())
 		Expect(orgDomain.Domain).To(Equal(expectedDomain))
 
-		By("verifying the org was seeded a <slug>-<shortid> registry on the platform cluster")
-		shortID := strings.ReplaceAll(newOrgID, "-", "")
-		if len(shortID) > shortOrgIDLength {
-			shortID = shortID[:shortOrgIDLength]
-		}
-		expectedRegistry := fmt.Sprintf("%s-%s", orgSlug, shortID)
+		By("verifying the org was seeded a <slug>-<shortOrgID>-<shortClusterID> registry on the platform cluster")
+		expectedRegistry := fmt.Sprintf("%s-%s-%s", orgSlug, shortTestID(newOrgID), shortTestID(platformCluster.ID))
 		var registry models.ClusterImageRegistry
 		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: newOrgID}).First(&registry).Error).To(Succeed())
 		Expect(registry.Name).To(Equal(expectedRegistry))
@@ -164,22 +165,6 @@ var _ = Describe("Platform provisioning", func() {
 		resp := shared.SignupNewUser("Owned Admin", email, "supersecret123", orgName)
 		orgID := resp.User.GetOrganisationId()
 		client := shared.AuthenticatedClient(resp.GetJwtToken())
-
-		By("deleting the seeded platform-cluster registry — the graduating org brings its own")
-		// Both "clusters" are the same physical Kind cluster here, and the
-		// auto-created registry CR would collide with the seeded one's name.
-		var seededRegistry models.ClusterImageRegistry
-		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: orgID}).First(&seededRegistry).Error).To(Succeed())
-		delResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(
-			ctx, orgID, seededRegistry.ClusterID, seededRegistry.ID).Execute()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(delResp.StatusCode).To(Equal(http.StatusNoContent))
-		clusterClient := env.Cluster.GetClient()
-		Eventually(func() bool {
-			cr := &registryv1alpha1.ClusterRegistry{}
-			gerr := clusterClient.Get(ctx, k8stypes.NamespacedName{Name: seededRegistry.Name}, cr)
-			return k8serrors.IsNotFound(gerr)
-		}, 2*time.Minute, 2*time.Second).Should(BeTrue(), "seeded registry CR should be deleted from the cluster")
 
 		By("registering the org's own cluster via the API")
 		clusterURL, caData, saToken, err := bootstrap.ExtractAPIServerClusterCredentials(ctx, env.Cluster)
@@ -253,12 +238,8 @@ var _ = Describe("Platform provisioning", func() {
 		By("waiting for the stack to become Ready on the owned cluster")
 		shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
 
-		By("verifying AddCluster auto-created a <slug>-<shortid> registry on the owned cluster")
-		shortID := strings.ReplaceAll(orgID, "-", "")
-		if len(shortID) > shortOrgIDLength {
-			shortID = shortID[:shortOrgIDLength]
-		}
-		expectedRegistry := fmt.Sprintf("%s-%s", slug.FromOrgName(orgName), shortID)
+		By("verifying AddCluster auto-created a <slug>-<shortOrgID>-<shortClusterID> registry on the owned cluster")
+		expectedRegistry := fmt.Sprintf("%s-%s-%s", slug.FromOrgName(orgName), shortTestID(orgID), shortTestID(ownedClusterID))
 		var ownedRegistry models.ClusterImageRegistry
 		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: orgID, ClusterID: ownedClusterID}).
 			First(&ownedRegistry).Error).To(Succeed())

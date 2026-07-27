@@ -174,18 +174,18 @@ func (mr *MockImageRegistryServiceMockRecorder) ListForOrg(ctx, orgID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForOrg", reflect.TypeOf((*MockImageRegistryService)(nil).ListForOrg), ctx, orgID)
 }
 
-// PopulateInClusterRegistryUrlForResource mocks base method.
-func (m *MockImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError {
+// PopulateInClusterRegistryNameForResource mocks base method.
+func (m *MockImageRegistryService) PopulateInClusterRegistryNameForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PopulateInClusterRegistryUrlForResource", ctx, orgID, clusterID, stackName, resource)
+	ret := m.ctrl.Call(m, "PopulateInClusterRegistryNameForResource", ctx, orgID, clusterID, stackName, resource)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
-// PopulateInClusterRegistryUrlForResource indicates an expected call of PopulateInClusterRegistryUrlForResource.
-func (mr *MockImageRegistryServiceMockRecorder) PopulateInClusterRegistryUrlForResource(ctx, orgID, clusterID, stackName, resource any) *gomock.Call {
+// PopulateInClusterRegistryNameForResource indicates an expected call of PopulateInClusterRegistryNameForResource.
+func (mr *MockImageRegistryServiceMockRecorder) PopulateInClusterRegistryNameForResource(ctx, orgID, clusterID, stackName, resource any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulateInClusterRegistryUrlForResource", reflect.TypeOf((*MockImageRegistryService)(nil).PopulateInClusterRegistryUrlForResource), ctx, orgID, clusterID, stackName, resource)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PopulateInClusterRegistryNameForResource", reflect.TypeOf((*MockImageRegistryService)(nil).PopulateInClusterRegistryNameForResource), ctx, orgID, clusterID, stackName, resource)
 }
 
 // UpdateStatus mocks base method.

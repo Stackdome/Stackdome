@@ -157,7 +157,7 @@ var _ = Describe("ClusterService", func() {
 			clusterManager.EXPECT().GetClient(created.ID).Return(nil, stderrors.New("no client in test"))
 		}
 
-		It("auto-creates a default registry named <slug>-<shortOrgID> when none is supplied", func() {
+		It("auto-creates a default registry named <slug>-<shortOrgID>-<shortClusterID> when none is supplied", func() {
 			orgID := "11112222-3333-4444-5555-666677778888"
 			spec := newClusterSpec()
 			spec.OrganisationID = orgID
@@ -177,7 +177,7 @@ var _ = Describe("ClusterService", func() {
 			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
 			registrySvc.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(_ context.Context, r *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *apperrors.ServiceError) {
-					Expect(r.Name).To(Equal("acme-inc-11112222"))
+					Expect(r.Name).To(Equal("acme-inc-11112222-clustero"))
 					Expect(r.ClusterID).To(Equal("cluster-owned"))
 					Expect(r.OrganisationID).To(Equal(orgID))
 					return r, nil
@@ -194,6 +194,8 @@ var _ = Describe("ClusterService", func() {
 			spec.ImageRegistries = []*models.ClusterImageRegistry{{Name: "custom-registry"}}
 			created := &models.Cluster{ID: "cluster-owned", OrganisationID: tenantOrgID}
 
+			orgStore.EXPECT().Get(gomock.Any(), tenantOrgID).
+				Return(&models.Organisation{ID: tenantOrgID, Name: "Tenant Org"}, nil)
 			expectClusterCreated(created)
 			registrySvc.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(_ context.Context, r *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *apperrors.ServiceError) {

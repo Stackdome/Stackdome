@@ -26,7 +26,7 @@ type ImageRegistryService interface {
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
 	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
-	PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError
+	PopulateInClusterRegistryNameForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError
 	Delete(ctx context.Context, orgID, ID string) *errors.ServiceError
 }
 
@@ -122,9 +122,9 @@ func (s *clusterImageRegistryService) ListByClusterID(ctx context.Context, orgID
 	return registries, nil
 }
 
-// PopulateInClusterRegistryUrlForResource resolves the registry on the
+// PopulateInClusterRegistryNameForResource resolves the registry on the
 // stack's cluster: builds must push where the workload pulls.
-func (s *clusterImageRegistryService) PopulateInClusterRegistryUrlForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError {
+func (s *clusterImageRegistryService) PopulateInClusterRegistryNameForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError {
 	if resource.BuildConfig == nil || !resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
 		return nil
 	}

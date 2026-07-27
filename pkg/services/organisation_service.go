@@ -163,22 +163,28 @@ func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgNam
 	_, err := s.imageRegistryService.InternalCreateSeedRegistry(ctx, &models.ClusterImageRegistry{
 		ClusterID:           clusterID,
 		OrganisationID:      orgID,
-		Name:                orgRegistryName(orgName, orgID),
+		Name:                orgRegistryName(orgName, orgID, clusterID),
 		BackendStorageSize:  s.orgRegistryDefaults.StorageSize,
 		BackendStorageClass: s.orgRegistryDefaults.StorageClass,
 	})
 	return err
 }
 
-// orgRegistryName derives the org's registry name: the CR name lands on the
-// cluster verbatim, so the deterministic org-ID suffix keeps it collision-free
-// per cluster.
-func orgRegistryName(orgName, orgID string) string {
-	shortID := strings.ReplaceAll(orgID, "-", "")
-	if len(shortID) > shortOrgIDLength {
-		shortID = shortID[:shortOrgIDLength]
+// orgRegistryName derives a registry name from the registry's identity — the
+// org AND the cluster it runs on. The CR name lands on the cluster verbatim,
+// so both halves of the (org, cluster) key must be in the name: org suffix
+// disambiguates across orgs on a shared cluster, cluster suffix disambiguates
+// one org's registries across its clusters.
+func orgRegistryName(orgName, orgID, clusterID string) string {
+	return fmt.Sprintf("%s-%s-%s", slug.FromOrgName(orgName), shortUUID(orgID), shortUUID(clusterID))
+}
+
+func shortUUID(id string) string {
+	s := strings.ReplaceAll(id, "-", "")
+	if len(s) > shortOrgIDLength {
+		s = s[:shortOrgIDLength]
 	}
-	return fmt.Sprintf("%s-%s", slug.FromOrgName(orgName), shortID)
+	return s
 }
 
 func (s *organisationService) InternalGetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {

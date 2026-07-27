@@ -117,21 +117,6 @@ func (mr *MockClusterServiceMockRecorder) GetOwnedClusterForOrg(ctx, orgID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnedClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetOwnedClusterForOrg), ctx, orgID)
 }
 
-// GetPlatformCluster mocks base method.
-func (m *MockClusterService) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlatformCluster", ctx)
-	ret0, _ := ret[0].(*models.Cluster)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetPlatformCluster indicates an expected call of GetPlatformCluster.
-func (mr *MockClusterServiceMockRecorder) GetPlatformCluster(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformCluster", reflect.TypeOf((*MockClusterService)(nil).GetPlatformCluster), ctx)
-}
-
 // InjectClusterManager mocks base method.
 func (m *MockClusterService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
 	m.ctrl.T.Helper()

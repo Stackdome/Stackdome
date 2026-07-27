@@ -22,10 +22,14 @@ import (
 )
 
 type Environment struct {
-	Client       *openapi.APIClient
-	ClusterID    string
-	OrgID        string
-	UserToken    string
+	Client    *openapi.APIClient
+	ClusterID string
+	OrgID     string
+	UserToken string
+	// RegistryName is the suite org's signup-seeded registry,
+	// <org-slug>-<shortOrgID>: the suffix comes from the org UUID minted at
+	// signup, so the name differs every run and is read back from the API
+	// after signup instead of being a test constant.
 	RegistryName string
 	Database     *DatabaseManager
 	Cluster      *testutil.TestCluster

@@ -72,7 +72,7 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		baseDomain     = "apps.example.com"
 		expectedSlug   = "acme-inc"
 		expectedDomain = expectedSlug + "." + baseDomain
-		registryName   = expectedSlug + "-11112222"
+		registryName   = expectedSlug + "-11112222-cluster1"
 		storageSize    = "50Gi"
 		storageClass   = "standard"
 	)
