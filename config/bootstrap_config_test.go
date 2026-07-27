@@ -7,7 +7,6 @@ import (
 
 func fullCluster() *ClusterConfig {
 	return &ClusterConfig{
-		Name:          "default",
 		ClusterURL:    "https://cluster.example.com",
 		ClusterCAData: "Y2FkYXRh",
 		Token:         "token",
@@ -16,7 +15,7 @@ func fullCluster() *ClusterConfig {
 
 var _ = Describe("ClusterConfig set predicates", func() {
 	Describe("IsSet", func() {
-		It("is true only when all four fields are set", func() {
+		It("is true only when all three fields are set", func() {
 			Expect(fullCluster().IsSet()).To(BeTrue())
 		})
 
@@ -26,7 +25,6 @@ var _ = Describe("ClusterConfig set predicates", func() {
 				mutate(c)
 				Expect(c.IsSet()).To(BeFalse())
 			},
-			Entry("no name", func(c *ClusterConfig) { c.Name = "" }),
 			Entry("no url", func(c *ClusterConfig) { c.ClusterURL = "" }),
 			Entry("no ca data", func(c *ClusterConfig) { c.ClusterCAData = "" }),
 			Entry("no token", func(c *ClusterConfig) { c.Token = "" }),
@@ -45,7 +43,6 @@ var _ = Describe("ClusterConfig set predicates", func() {
 				mutate(c)
 				Expect(c.AnySet()).To(BeTrue())
 			},
-			Entry("only name", func(c *ClusterConfig) { c.Name = "x" }),
 			Entry("only url", func(c *ClusterConfig) { c.ClusterURL = "x" }),
 			Entry("only ca data", func(c *ClusterConfig) { c.ClusterCAData = "x" }),
 			Entry("only token", func(c *ClusterConfig) { c.Token = "x" }),

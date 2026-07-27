@@ -123,6 +123,18 @@ func (d dbClusterStore) GetPlatformCluster(ctx context.Context) (*models.Cluster
 	return &res, nil
 }
 
+func (d dbClusterStore) UpdateNameAndPlatform(ctx context.Context, id, name string) *errors.ServiceError {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":     name,
+		"platform": true,
+	}).Error
+	if err != nil {
+		return errors.GeneralError("failed to update cluster name/platform: %s", err.Error())
+	}
+	return nil
+}
+
 func (d dbClusterStore) UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{

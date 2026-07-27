@@ -127,6 +127,12 @@ var _ = Describe("Platform provisioning", func() {
 		DeferCleanup(func() {
 			shared.DeleteStack(newClient, newOrgID, projectName, stackID)
 			shared.WaitForStackDeleted(newClient, newOrgID, projectName, stackID, 1*time.Minute)
+			// The seeded registry is a real workload + PVC on the shared
+			// cluster — drop it so specs don't accumulate registries.
+			resp, derr := newClient.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(
+				ctx, newOrgID, registry.ClusterID, registry.ID).Execute()
+			Expect(derr).NotTo(HaveOccurred())
+			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
 		By("verifying the stack resolved to the platform cluster via read-time fallback")
@@ -265,7 +271,11 @@ var _ = Describe("Platform provisioning", func() {
 				shared.DeleteGitIntegration(client, orgID, integration.GetId())
 			})
 
-			buildStack := shared.CreateStackWithBuildSource("owned-build", shared.BuildSourceRepoURL)
+			// Distinct resource name: image_builds rows are keyed by the CR
+			// name <resource>-<commit>, and the shared-fixture name at the
+			// same commit collides with the platform-cluster build spec.
+			const ownedBuildResourceName = "owned-app"
+			buildStack := shared.CreateStackWithNamedBuildSource("owned-build", ownedBuildResourceName, shared.BuildSourceRepoURL)
 			buildCreated, _ := shared.CreateStackAndDeploy(client, orgID, projectName, buildStack)
 			buildStackID := buildCreated.GetId()
 			DeferCleanup(func() {
@@ -279,7 +289,7 @@ var _ = Describe("Platform provisioning", func() {
 
 			By("verifying the build resource resolved the owned cluster's registry")
 			var buildResource models.StackResource
-			Expect(db.Where(&models.StackResource{StackID: buildStackID, Name: shared.BuildSourceResourceName}).
+			Expect(db.Where(&models.StackResource{StackID: buildStackID, Name: ownedBuildResourceName}).
 				First(&buildResource).Error).To(Succeed())
 			Expect(buildResource.BuildConfig).NotTo(BeNil())
 			Expect(buildResource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(Equal(ownedRegistry.Name))
@@ -289,7 +299,7 @@ var _ = Describe("Platform provisioning", func() {
 
 			By("verifying the deployment runs an image from the owned cluster's registry")
 			clusterClient := env.Cluster.GetClient()
-			deploy, derr := shared.GetDeploymentForStackResource(ctx, clusterClient, buildCreated.GetNamespace(), shared.BuildSourceResourceName)
+			deploy, derr := shared.GetDeploymentForStackResource(ctx, clusterClient, buildCreated.GetNamespace(), ownedBuildResourceName)
 			Expect(derr).NotTo(HaveOccurred())
 			Expect(deploy.Spec.Template.Spec.Containers).To(HaveLen(1))
 			Expect(deploy.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring(ownedRegistry.Name))
@@ -310,7 +320,7 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent))
 
-		noRegStack := shared.CreateStackWithBuildSource("owned-noreg", shared.BuildSourceRepoURL)
+		noRegStack := shared.CreateStackWithNamedBuildSource("owned-noreg", "owned-noreg-app", shared.BuildSourceRepoURL)
 		thin, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost(ctx, orgID, projectName).Stack(*noRegStack).Execute()
 		Expect(err).NotTo(HaveOccurred())
 		Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))

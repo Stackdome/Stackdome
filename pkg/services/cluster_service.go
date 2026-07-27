@@ -486,6 +486,11 @@ func normalizeBase64(s string) string {
 }
 
 func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	// Canonicalize before create AND compare, so the stored encoding never
+	// depends on which path first persisted the credentials.
+	spec.Token = normalizeBase64(spec.Token)
+	spec.ClusterCAData = normalizeBase64(spec.ClusterCAData)
+
 	existing, err := s.clusterStore.GetByClusterUrl(ctx, spec.ClusterURL)
 	if err != nil && err.Code != errors.ErrorNotFound {
 		return nil, err
@@ -493,15 +498,22 @@ func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec
 	if existing == nil {
 		return s.AddCluster(ctx, spec)
 	}
+
+	if existing.Name != spec.Name || !existing.Platform {
+		if uErr := s.clusterStore.UpdateNameAndPlatform(ctx, existing.ID, spec.Name); uErr != nil {
+			return nil, uErr
+		}
+		existing.Name = spec.Name
+		existing.Platform = true
+	}
+
 	if decErr := s.decryptClusterCredentials(existing); decErr != nil {
 		return nil, decErr
 	}
-	newToken := normalizeBase64(spec.Token)
-	newCA := normalizeBase64(spec.ClusterCAData)
-	if existing.Token == newToken && existing.ClusterCAData == newCA {
+	if existing.Token == spec.Token && existing.ClusterCAData == spec.ClusterCAData {
 		return existing, nil
 	}
-	rotated := &models.Cluster{Token: newToken, ClusterCAData: newCA}
+	rotated := &models.Cluster{Token: spec.Token, ClusterCAData: spec.ClusterCAData}
 	if encErr := s.encryptClusterCredentials(rotated); encErr != nil {
 		return nil, encErr
 	}
@@ -514,6 +526,9 @@ func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec
 	}
 	if rErr := s.clusterManager.ReRegisterCluster(fresh); rErr != nil {
 		return nil, errors.GeneralError("failed to re-register rotated cluster: %s", rErr.Error())
+	}
+	if decErr := s.decryptClusterCredentials(fresh); decErr != nil {
+		return nil, decErr
 	}
 	return fresh, nil
 }

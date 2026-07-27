@@ -32,7 +32,6 @@ var (
 	EnvDBDebugMode      = BoolVar("DB_DEBUG_MODE", "Enable DB query debug logging", ptr(false), false)
 
 	// Platform Cluster
-	EnvPlatformClusterName   = StringVar("PLATFORM_CLUSTER_NAME", "Platform cluster name", nil, false)
 	EnvPlatformClusterAPIURL = StringVar("PLATFORM_CLUSTER_API_URL", "Platform cluster API URL", nil, false)
 	EnvPlatformClusterCAData = StringVar("PLATFORM_CLUSTER_CA_DATA", "Platform cluster CA cert (base64)", nil, false)
 	EnvPlatformClusterToken  = StringVar("PLATFORM_CLUSTER_TOKEN", "Platform cluster auth token", nil, false)

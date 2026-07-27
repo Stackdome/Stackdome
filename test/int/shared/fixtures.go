@@ -807,7 +807,14 @@ func HostMapping() openapi.ConnectionMapping {
 }
 
 func CreateStackWithBuildSource(name string, repoURL string) *openapi.Stack {
-	resource := openapi.NewStackResource(BuildSourceResourceName)
+	return CreateStackWithNamedBuildSource(name, BuildSourceResourceName, repoURL)
+}
+
+// CreateStackWithNamedBuildSource lets a spec pick its own resource name:
+// image_builds rows are keyed by the CR name <resource>-<commit>, so two
+// stacks building the same commit under the same resource name collide.
+func CreateStackWithNamedBuildSource(name, resourceName, repoURL string) *openapi.Stack {
+	resource := openapi.NewStackResource(resourceName)
 
 	// push omitted so builds go to the internal (in-cluster Zot) registry.
 	gitSource := openapi.NewGitSource(repoURL)

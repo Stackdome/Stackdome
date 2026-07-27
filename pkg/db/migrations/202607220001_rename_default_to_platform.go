@@ -8,6 +8,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// legacySeededOrgName is the organisation name the retired 202501260933 seed
+// migration created; the rename must match it verbatim.
+const legacySeededOrgName = "DefaultOrganisation"
+
 func renameDefaultToPlatform() *gormigrate.Migration {
 	return &gormigrate.Migration{
 		ID: "202607220001",
@@ -20,7 +24,7 @@ func renameDefaultToPlatform() *gormigrate.Migration {
 			}
 			if err := tx.Exec(
 				`UPDATE organisations SET name = ? WHERE platform = true AND name = ?`,
-				models.PlatformOrganisationName, "DefaultOrganisation",
+				models.PlatformOrganisationName, legacySeededOrgName,
 			).Error; err != nil {
 				return fmt.Errorf("rename seeded platform organisation: %w", err)
 			}

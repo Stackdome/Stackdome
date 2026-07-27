@@ -108,17 +108,12 @@ func (c *ApplicationConfig) Validate() error {
 }
 
 type ClusterConfig struct {
-	Name          string `yaml:"name"`
 	ClusterURL    string `yaml:"cluster_url"`
 	ClusterCAData string `yaml:"cluster_ca_data"`
 	Token         string `yaml:"token"`
 }
 
 func (c *ClusterConfig) Validate() error {
-	if c.Name == "" {
-		return fmt.Errorf("cluster name is required")
-	}
-
 	if c.ClusterURL == "" {
 		return fmt.Errorf("cluster url is required")
 	}
@@ -135,10 +130,6 @@ func (c *ClusterConfig) Validate() error {
 }
 
 func (c *ClusterConfig) LoadEnvVariables() {
-	if val, ok := EnvPlatformClusterName.Lookup(); ok {
-		c.Name = val
-	}
-
 	if val, ok := EnvPlatformClusterAPIURL.Lookup(); ok {
 		c.ClusterURL = val
 	}
@@ -153,11 +144,11 @@ func (c *ClusterConfig) LoadEnvVariables() {
 }
 
 func (c *ClusterConfig) IsSet() bool {
-	return c.Name != "" && c.ClusterURL != "" && c.ClusterCAData != "" && c.Token != ""
+	return c.ClusterURL != "" && c.ClusterCAData != "" && c.Token != ""
 }
 
 func (c *ClusterConfig) AnySet() bool {
-	return c.Name != "" || c.ClusterURL != "" || c.ClusterCAData != "" || c.Token != ""
+	return c.ClusterURL != "" || c.ClusterCAData != "" || c.Token != ""
 }
 
 type DatabaseConfig struct {

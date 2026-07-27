@@ -18,6 +18,7 @@ type ClusterStore interface {
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	GetByClusterUrl(ctx context.Context, clusterURL string) (*models.Cluster, *errors.ServiceError)
 	UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError
+	UpdateNameAndPlatform(ctx context.Context, id, name string) *errors.ServiceError
 	ListAll(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	AtomicExecutor
 }

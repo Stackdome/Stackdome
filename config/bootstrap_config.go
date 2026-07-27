@@ -3,7 +3,7 @@ package config
 import "github.com/Stackdome/stackdome/pkg/models"
 
 var (
-	ErrIncompleteClusterConfig = &ConfigError{"PLATFORM_CLUSTER_NAME, PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
+	ErrIncompleteClusterConfig = &ConfigError{"PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
 	ErrClusterDomainMismatch   = &ConfigError{"PLATFORM_CLUSTER_* and PLATFORM_BASE_DOMAIN must be set together"}
 	ErrPlatformEmailRequired   = &ConfigError{"PLATFORM_EMAIL is required when a platform cluster is configured"}
 )

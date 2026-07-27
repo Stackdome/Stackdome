@@ -6,6 +6,10 @@ import (
 
 const DefaultClusterIssuerName = "letsencrypt-prod"
 
+// PlatformClusterName is the fixed name of the bootstrap-provisioned platform
+// cluster row; it is not configurable.
+const PlatformClusterName = "platform"
+
 type Cluster struct {
 	ID                     string `gorm:"primary_key;default:gen_random_uuid()"`
 	OrganisationID         string `gorm:"unique;not null"`

@@ -252,7 +252,7 @@ var _ = Describe("ClusterService", func() {
 
 		It("is a no-op when the stored credentials already match", func() {
 			token := base64.StdEncoding.EncodeToString([]byte("token-v1"))
-			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Token: token, ClusterCAData: caData}
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Platform: true, Token: token, ClusterCAData: caData}
 			encryptCluster(existing)
 
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
@@ -266,12 +266,50 @@ var _ = Describe("ClusterService", func() {
 			Expect(result.ID).To(Equal("cluster-1"))
 		})
 
-		It("rotates credentials and re-registers the cluster when they change", func() {
+		It("normalizes raw credentials before comparing, so a raw env token is not a rotation", func() {
+			raw := "token-v1"
+			stored := base64.StdEncoding.EncodeToString([]byte(raw))
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Platform: true, Token: stored, ClusterCAData: caData}
+			encryptCluster(existing)
+
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
+
+			result, err := svc.InternalUpsertPlatformCluster(ctx, &models.Cluster{
+				ClusterURL:    "https://example.com:6443",
+				Token:         raw,
+				ClusterCAData: caData,
+			})
+			Expect(err).To(BeNil())
+			Expect(result.ID).To(Equal("cluster-1"))
+		})
+
+		It("reconciles drifted name and platform flag without rotating credentials", func() {
+			token := base64.StdEncoding.EncodeToString([]byte("token-v1"))
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Name: "old-name", Platform: false, Token: token, ClusterCAData: caData}
+			encryptCluster(existing)
+
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
+			clusterStore.EXPECT().UpdateNameAndPlatform(gomock.Any(), "cluster-1", "platform-cluster").Return(nil)
+
+			result, err := svc.InternalUpsertPlatformCluster(ctx, &models.Cluster{
+				Name:          "platform-cluster",
+				ClusterURL:    "https://example.com:6443",
+				Token:         token,
+				ClusterCAData: caData,
+			})
+			Expect(err).To(BeNil())
+			Expect(result.Name).To(Equal("platform-cluster"))
+			Expect(result.Platform).To(BeTrue())
+		})
+
+		It("rotates credentials, re-registers the cluster, and returns decrypted credentials", func() {
 			oldToken := base64.StdEncoding.EncodeToString([]byte("token-v1"))
 			newToken := base64.StdEncoding.EncodeToString([]byte("token-v2"))
-			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Token: oldToken, ClusterCAData: caData}
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Platform: true, Token: oldToken, ClusterCAData: caData}
 			encryptCluster(existing)
-			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform"}
+			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Platform: true, Token: newToken, ClusterCAData: caData}
+			encryptCluster(fresh)
+			fresh.Token, fresh.ClusterCAData = "", ""
 
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
 			clusterStore.EXPECT().UpdateCredentials(gomock.Any(), "cluster-1", gomock.Not(""), gomock.Not("")).Return(nil)
@@ -285,6 +323,8 @@ var _ = Describe("ClusterService", func() {
 			})
 			Expect(err).To(BeNil())
 			Expect(result.ID).To(Equal("cluster-1"))
+			Expect(result.Token).To(Equal(newToken))
+			Expect(result.ClusterCAData).To(Equal(caData))
 		})
 	})
 })

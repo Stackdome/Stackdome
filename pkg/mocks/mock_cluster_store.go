@@ -189,6 +189,20 @@ func (mr *MockClusterStoreMockRecorder) UpdateCredentials(ctx, id, encToken, enc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockClusterStore)(nil).UpdateCredentials), ctx, id, encToken, encCAData)
 }
 
+// UpdateNameAndPlatform mocks base method.
+func (m *MockClusterStore) UpdateNameAndPlatform(ctx context.Context, id, name string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateNameAndPlatform", ctx, id, name)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// UpdateNameAndPlatform indicates an expected call of UpdateNameAndPlatform.
+func (mr *MockClusterStoreMockRecorder) UpdateNameAndPlatform(ctx, id, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNameAndPlatform", reflect.TypeOf((*MockClusterStore)(nil).UpdateNameAndPlatform), ctx, id, name)
+}
+
 // WithTransaction mocks base method.
 func (m *MockClusterStore) WithTransaction(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 	m.ctrl.T.Helper()

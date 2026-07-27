@@ -61,7 +61,7 @@ func (s *Service) Run(ctx context.Context) error {
 	})
 
 	if _, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
-		Name:           s.clusterCfg.Name,
+		Name:           models.PlatformClusterName,
 		OrganisationID: org.ID,
 		Platform:       true,
 		ClusterURL:     s.clusterCfg.ClusterURL,

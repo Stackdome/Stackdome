@@ -19,7 +19,6 @@ const (
 	baseDomain   = "apps.example.com"
 	storageSize  = "50Gi"
 	storageClass = "standard"
-	clusterName  = "default"
 	clusterURL   = "https://cluster.example.com"
 	clusterCA    = "ca-data"
 	clusterToken = "token-data"
@@ -66,7 +65,6 @@ func fullBootstrapConfig() *config.BootstrapConfig {
 
 func setClusterConfig() *config.ClusterConfig {
 	return &config.ClusterConfig{
-		Name:          clusterName,
 		ClusterURL:    clusterURL,
 		ClusterCAData: clusterCA,
 		Token:         clusterToken,
@@ -113,7 +111,7 @@ var _ = Describe("Bootstrap", func() {
 					identity := auth.GetIdentityFromCtx(callCtx)
 					Expect(identity.IsSystem).To(BeTrue())
 					Expect(identity.ContactEmail).To(Equal(contactEmail))
-					Expect(spec.Name).To(Equal(clusterName))
+					Expect(spec.Name).To(Equal(models.PlatformClusterName))
 					Expect(spec.OrganisationID).To(Equal(orgID))
 					Expect(spec.Platform).To(BeTrue())
 					Expect(spec.ClusterURL).To(Equal(clusterURL))

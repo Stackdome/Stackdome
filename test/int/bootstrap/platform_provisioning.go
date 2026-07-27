@@ -14,7 +14,6 @@ import (
 const PlatformProvisioningBaseDomain = "sd.test"
 
 const (
-	platformProvisioningClusterName  = "platform-cluster"
 	platformProvisioningEmail        = "ops@stackdome.io"
 	platformProvisioningRegistrySize = "10Gi"
 )
@@ -43,7 +42,6 @@ func exportPlatformProvisioningEnv(ctx context.Context, cluster *testutil.TestCl
 	}
 
 	envs := map[string]string{
-		config.EnvPlatformClusterName.Name:            platformProvisioningClusterName,
 		config.EnvPlatformClusterAPIURL.Name:          clusterURL,
 		config.EnvPlatformClusterCAData.Name:          caData,
 		config.EnvPlatformClusterToken.Name:           saToken,
