@@ -171,42 +171,33 @@ describe("CanvasEditorShell actions menu", () => {
 describe("CanvasEditorShell collapse", () => {
   afterEach(() => localStorage.clear());
 
-  it("collapses to a compact bar and hides the subtitle", () => {
-    render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
-    expect(screen.getByText("0 services · 0 volumes")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
-    // The expanded header stays mounted for the height animation but is
-    // inert + aria-hidden; the compact bar becomes the visible surface.
-    expect(screen.getByText("0 services · 0 volumes").closest("[inert]")).not.toBeNull();
-    expect(screen.getAllByText("acme").length).toBeGreaterThan(0); // compact bar name
-    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
-  });
-
-  it("persists collapsed state per stack id", () => {
+  // Collapse is driven by zen mode (canvas control / ⌘.) through
+  // HeaderCollapseContext; the shell only persists and renders the state.
+  it("restores the persisted collapsed state as a compact bar", () => {
     localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
-    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
+    // The expanded header stays mounted for the height animation but is
+    // inert + aria-hidden; the compact bar becomes the visible surface.
+    expect(screen.getByRole("heading", { name: "acme", hidden: true }).closest("[inert]")).not.toBeNull();
+    expect(screen.getAllByText("acme").length).toBeGreaterThan(0); // compact bar name
   });
 
-  it("toggles via Cmd+.", () => {
+  it("has no collapse chevron of its own", () => {
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
-    fireEvent.keyDown(window, { key: ".", metaKey: true });
-    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Collapse header|Expand header/ })).toBeNull();
   });
 
   it("keeps tabs clickable while collapsed", () => {
     const onTabChange = vi.fn();
+    localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" onTabChange={onTabChange} />);
-    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
     fireEvent.click(screen.getByRole("button", { name: /Logs/ }));
     expect(onTabChange).toHaveBeenCalledWith(EDITOR_TABS.logs);
   });
 
-  it("collapsed mini-row has no deploy actions, only tabs + expand chevron", () => {
+  it("collapsed mini-row still serves deploys via the pill", () => {
+    localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" isActive dirtyTotal={2} />);
-    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
-    // The pill still serves deploys; the mini-row itself carries no buttons besides tabs + chevron.
     expect(screen.getByTestId("deploy-pill")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Expand header" })).toBeInTheDocument();
   });
 });
