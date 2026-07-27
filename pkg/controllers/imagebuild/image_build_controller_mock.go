@@ -57,6 +57,45 @@ func (mr *MockreleaseActiveCheckerMockRecorder) InternalGetActiveByStackID(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseActiveChecker)(nil).InternalGetActiveByStackID), ctx, stackID)
 }
 
+// MockstackClusterResolver is a mock of stackClusterResolver interface.
+type MockstackClusterResolver struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackClusterResolverMockRecorder
+	isgomock struct{}
+}
+
+// MockstackClusterResolverMockRecorder is the mock recorder for MockstackClusterResolver.
+type MockstackClusterResolverMockRecorder struct {
+	mock *MockstackClusterResolver
+}
+
+// NewMockstackClusterResolver creates a new mock instance.
+func NewMockstackClusterResolver(ctrl *gomock.Controller) *MockstackClusterResolver {
+	mock := &MockstackClusterResolver{ctrl: ctrl}
+	mock.recorder = &MockstackClusterResolverMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackClusterResolver) EXPECT() *MockstackClusterResolverMockRecorder {
+	return m.recorder
+}
+
+// InternalGetStack mocks base method.
+func (m *MockstackClusterResolver) InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetStack", ctx, ID)
+	ret0, _ := ret[0].(*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetStack indicates an expected call of InternalGetStack.
+func (mr *MockstackClusterResolverMockRecorder) InternalGetStack(ctx, ID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetStack", reflect.TypeOf((*MockstackClusterResolver)(nil).InternalGetStack), ctx, ID)
+}
+
 // MockbuildEventRecorder is a mock of buildEventRecorder interface.
 type MockbuildEventRecorder struct {
 	ctrl     *gomock.Controller

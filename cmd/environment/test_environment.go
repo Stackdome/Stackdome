@@ -657,11 +657,13 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:             clusterID,
 					DBImageBuildService:   te.Services.ImageBuildService,
 					DBResourceService:     te.Services.StackResourceService,
 					GitIntegrationService: te.Services.GitIntegrationService,
 					ReleaseChecker:        te.Services.StackReleaseService,
 					EventRecorder:         te.Services.ReleaseEventRecorder,
+					StackService:          te.Services.StackService,
 				})
 			},
 			func(clusterID string) clustermanager.Controller {

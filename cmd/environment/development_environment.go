@@ -304,11 +304,13 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:             clusterID,
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
 					ReleaseChecker:        d.Services.StackReleaseService,
 					EventRecorder:         d.Services.ReleaseEventRecorder,
+					StackService:          d.Services.StackService,
 				})
 			},
 			func(clusterID string) clustermanager.Controller {

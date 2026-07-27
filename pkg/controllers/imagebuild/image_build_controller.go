@@ -31,6 +31,10 @@ type releaseActiveChecker interface {
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
 }
 
+type stackClusterResolver interface {
+	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *apperrors.ServiceError)
+}
+
 type buildEventRecorder interface {
 	RecordBuildEvent(
 		ctx context.Context,
@@ -45,6 +49,7 @@ type buildEventRecorder interface {
 
 type ImageBuildReconciler struct {
 	Client                client.Client
+	ClusterID             string
 	DBImageBuildService   services.ImageBuildService
 	DBResourceService     services.StackResourceService
 	DBVolumeService       services.VolumeService
@@ -52,6 +57,7 @@ type ImageBuildReconciler struct {
 	Logger                logger.Logger
 	releaseChecker        releaseActiveChecker
 	eventRecorder         buildEventRecorder
+	stackResolver         stackClusterResolver
 
 	// clock is injectable for tests; defaults to time.Now.
 	clock func() time.Time
@@ -59,23 +65,27 @@ type ImageBuildReconciler struct {
 
 type ImageBuildReconcilerSpec struct {
 	Client                client.Client
+	ClusterID             string
 	DBImageBuildService   services.ImageBuildService
 	DBResourceService     services.StackResourceService
 	GitIntegrationService services.GitIntegrationService
 	Log                   logger.Logger
 	ReleaseChecker        releaseActiveChecker
 	EventRecorder         buildEventRecorder
+	StackService          stackClusterResolver
 }
 
 func NewImageBuildReconciler(spec ImageBuildReconcilerSpec) *ImageBuildReconciler {
 	return &ImageBuildReconciler{
 		Client:                spec.Client,
+		ClusterID:             spec.ClusterID,
 		DBImageBuildService:   spec.DBImageBuildService,
 		DBResourceService:     spec.DBResourceService,
 		GitIntegrationService: spec.GitIntegrationService,
 		Logger:                spec.Log,
 		releaseChecker:        spec.ReleaseChecker,
 		eventRecorder:         spec.EventRecorder,
+		stackResolver:         spec.StackService,
 		clock:                 time.Now,
 	}
 }
@@ -119,6 +129,29 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	stackID, ok := imageBuild.Labels[corev1alpha1.LabelStackID]
 	if !ok {
 		r.Logger.Error(ctx, "imageBuild %v does not have stack ID label", req.NamespacedName)
+		return ctrl.Result{}, nil
+	}
+
+	stack, serviceErr := r.stackResolver.InternalGetStack(ctx, stackID)
+	if serviceErr != nil {
+		if serviceErr.Code == apperrors.ErrorNotFound {
+			r.Logger.Info(ctx,
+				"stack '%s' not found, it might have been deleted. Ignoring image build '%s'",
+				stackID,
+				client.ObjectKeyFromObject(imageBuild).String(),
+			)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to get stack %s for build '%s': %w", stackID, client.ObjectKeyFromObject(imageBuild).String(), serviceErr)
+	}
+
+	if stack.ClusterID != r.ClusterID {
+		r.Logger.Info(ctx,
+			"image build '%s' belongs to cluster %s, this controller serves %s — skipping",
+			client.ObjectKeyFromObject(imageBuild).String(),
+			stack.ClusterID,
+			r.ClusterID,
+		)
 		return ctrl.Result{}, nil
 	}
 
