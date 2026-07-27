@@ -21,11 +21,15 @@ interface CanvasControlsProps {
  */
 export function CanvasControls({ showConnections, onToggleConnections, onAutoLayout }: CanvasControlsProps) {
   const { zoomIn, zoomOut, fitView } = useReactFlow();
-  const { open: sidebarOpen, setOpen: setSidebarOpen } = useSidebar();
+  const { setOpen: setSidebarOpen } = useSidebar();
   const { collapsed: headerCollapsed, setCollapsed: setHeaderCollapsed } = useContext(HeaderCollapseContext);
 
-  // Zen: header collapsed + sidebar closed, toggled as one.
-  const zenActive = headerCollapsed && !sidebarOpen;
+  // Zen collapses the header and sidebar together. The header flag alone is
+  // the zen source of truth: sidebar state can drift (own toggle, cookie
+  // default on reload), and requiring both to agree traps exit behind a
+  // re-enter — the first toggle would close the sidebar again instead of
+  // expanding the header.
+  const zenActive = headerCollapsed;
   const toggleZen = useCallback(() => {
     const next = !zenActive;
     setHeaderCollapsed(next);

@@ -22,8 +22,14 @@ window.matchMedia ??= ((query: string) => ({
   dispatchEvent: () => false,
 })) as typeof window.matchMedia;
 
-function Harness({ onAutoLayout = () => {} }: { onAutoLayout?: () => void }) {
-  const [collapsed, setCollapsed] = useState(false);
+function Harness({
+  onAutoLayout = () => {},
+  initialCollapsed = false,
+}: {
+  onAutoLayout?: () => void;
+  initialCollapsed?: boolean;
+}) {
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
   return (
     <SidebarProvider>
       <HeaderCollapseContext.Provider value={{ collapsed, setCollapsed }}>
@@ -59,6 +65,15 @@ describe("CanvasControls", () => {
     render(<Harness />);
     fireEvent.click(screen.getByRole("button", { name: "Zen mode" }));
     expect(screen.getByRole("button", { name: "Exit zen mode" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("exits zen in one click from a mixed state (header collapsed, sidebar open)", () => {
+    // Collapsed header persisted across a reload while the sidebar came back
+    // open (its own cookie): the button must offer exit, not re-entry.
+    render(<Harness initialCollapsed />);
+    const exit = screen.getByRole("button", { name: "Exit zen mode" });
+    fireEvent.click(exit);
+    expect(screen.getByRole("button", { name: "Zen mode" })).toBeInTheDocument();
   });
 
   it("auto layout button fires the callback", () => {
