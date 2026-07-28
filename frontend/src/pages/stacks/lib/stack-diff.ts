@@ -28,7 +28,6 @@ export interface StackDiff {
   dirtyVolumeIdx: Set<number>;
   perResourceDirty: Map<number, PerResourceDirty>;
   perVolumeDirty: Map<number, PerVolumeDirty>;
-  addonLinkCount: number;
 }
 
 /** Recursive structural equality that treats `undefined` like a missing key. */
@@ -146,29 +145,6 @@ function countEnvRowsChanged(
   return n;
 }
 
-function uniqueAddonIds(_resources: ResourceArr): Set<string> {
-  // Env vars no longer carry addon-backed sources, so resources never imply an
-  // addon link. Addon links now come solely from the explicit "addons in stack"
-  // panel (`linkedAddonIds`).
-  return new Set<string>();
-}
-
-/**
- * Count distinct addons attached to a draft stack. Used by the create page's
- * sticky action bar where there is no baseline to diff against — every linked
- * addon counts. Sources are unioned: addons linked explicitly via the
- * AddonsInStackPanel (`linkedAddonIds`) plus addons referenced as env-var
- * sources on resources (`from: "addon"`). The same id in both is counted once.
- */
-export function getAddonLinkCount(
-  linkedAddonIds: ReadonlySet<string> | Iterable<string>,
-  resources: ResourceArr,
-): number {
-  const ids = new Set<string>(linkedAddonIds);
-  for (const id of uniqueAddonIds(resources)) ids.add(id);
-  return ids.size;
-}
-
 /**
  * Per-resource and per-volume diff caches, keyed by draft ref. Most
  * resources are reference-stable across keystrokes (only the resource
@@ -266,22 +242,11 @@ export function diffStack(
     perVolumeDirty.set(i, entry.stats);
   }
 
-  // Only count addons that are *newly* linked in this session — IDs present
-  // in the draft env vars but absent from the baseline. Pre-existing addon
-  // links shouldn't be flagged as pending changes.
-  const baselineAddonIds = uniqueAddonIds(baseline.resources);
-  const draftAddonIds = uniqueAddonIds(draft.resources);
-  let addonLinkCount = 0;
-  for (const id of draftAddonIds) {
-    if (!baselineAddonIds.has(id)) addonLinkCount += 1;
-  }
-
   return {
     dirtyResourceIdx,
     dirtyVolumeIdx,
     perResourceDirty,
     perVolumeDirty,
-    addonLinkCount,
   };
 }
 
@@ -600,68 +565,6 @@ export function isPathDirty(
   path: string,
 ): boolean {
   return !deepEqual(getAtPath(draft, path), getAtPath(baseline, path));
-}
-
-/**
- * Walk an entire resource (or any object subtree) once and produce a Set of
- * every dot-path whose draft value differs from baseline. Includes ALL
- * prefix paths of every dirty leaf — so a `<DirtyField path="ports.0">`
- * lookup hits even when only `ports.0.number` actually differs.
- *
- * This replaces N individual `isPathDirty` walks (one per <DirtyField>) with
- * a single O(resource size) walk; the field-side lookup becomes O(1) via
- * `Set.has`.
- */
-export function dirtyPathsForResource(
-  draft: unknown,
-  baseline: unknown,
-): Set<string> {
-  const acc = new Set<string>();
-  walkPaths(omitServerComputed(draft), omitServerComputed(baseline), "", acc);
-  return acc;
-}
-
-function walkPaths(
-  draft: unknown,
-  baseline: unknown,
-  prefix: string,
-  acc: Set<string>,
-): void {
-  if (deepEqual(draft, baseline)) return;
-
-  // Mark this prefix and every parent prefix as dirty (so wrappers at
-  // ancestor levels light up too).
-  if (prefix) {
-    acc.add(prefix);
-    for (let i = prefix.indexOf("."); i !== -1; i = prefix.indexOf(".", i + 1)) {
-      acc.add(prefix.slice(0, i));
-    }
-  }
-
-  const draftIsObj = draft && typeof draft === "object";
-  const baseIsObj = baseline && typeof baseline === "object";
-  const draftIsArr = Array.isArray(draft);
-  const baseIsArr = Array.isArray(baseline);
-
-  // Type mismatch (or one side is primitive) — leaf is already marked above.
-  if (!draftIsObj || !baseIsObj || draftIsArr !== baseIsArr) return;
-
-  if (draftIsArr && baseIsArr) {
-    const dArr = draft as unknown[];
-    const bArr = baseline as unknown[];
-    const max = Math.max(dArr.length, bArr.length);
-    for (let i = 0; i < max; i++) {
-      walkPaths(dArr[i], bArr[i], prefix ? `${prefix}.${i}` : String(i), acc);
-    }
-    return;
-  }
-
-  const dObj = draft as Record<string, unknown>;
-  const bObj = baseline as Record<string, unknown>;
-  const keys = new Set<string>([...Object.keys(dObj), ...Object.keys(bObj)]);
-  for (const k of keys) {
-    walkPaths(dObj[k], bObj[k], prefix ? `${prefix}.${k}` : k, acc);
-  }
 }
 
 /** Revert a single dot-path field on a resource to its baseline value. */

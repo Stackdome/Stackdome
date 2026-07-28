@@ -4,6 +4,7 @@ import { ReleaseEventType, type ReleaseEvent, type StackRelease, type ReleaseLiv
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState, isTerminal } from "./release-states";
+import { gitUnpinned } from "./release-snapshot-diff";
 
 export type Stack = components["schemas"]["Stack"];
 export type ReleaseHealth = components["schemas"]["ReleaseHealth"];
@@ -39,8 +40,7 @@ export function stripUnpinnedGitRevisions(
   const savedByName = new Map(savedResources.map((r) => [r.name, r]));
   return snapshotResources.map((r) => {
     const git = r.source?.git;
-    const savedGit = savedByName.get(r.name)?.source?.git;
-    if (!git || !savedGit || savedGit.branch || savedGit.commit || savedGit.tag) return r;
+    if (!git || !gitUnpinned(savedByName.get(r.name))) return r;
     const { branch: _b, commit: _c, tag: _t, ...unpinned } = git;
     return { ...r, source: { ...r.source, git: unpinned } };
   });

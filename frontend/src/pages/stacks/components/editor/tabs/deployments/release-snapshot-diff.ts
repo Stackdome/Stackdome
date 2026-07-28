@@ -1,5 +1,5 @@
 import type { components } from "@/api/types/openapi";
-import { pairByFingerprint } from "@/pages/stacks/lib/stack-diff";
+import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-diff";
 
 export type Snap = components["schemas"]["StackReleaseSnapshot"];
 type SnapResource = components["schemas"]["StackResource"];
@@ -37,9 +37,50 @@ const REVISION_KEYS = ["branch", "tag", "commit"] as const;
 
 /** True when the resource's git source pins no revision — the resolver picks
  *  one at deploy time and records it in the snapshot. */
-function gitUnpinned(r: SnapResource | undefined): boolean {
+export function gitUnpinned(r: SnapResource | undefined): boolean {
   const git = r?.source?.git;
   return !!git && !git.branch && !git.tag && !git.commit;
+}
+
+/** Server-written fields — never user intent, excluded from the catch-all. */
+const RESOURCE_SERVER_FIELDS = ["id", "stack_id", "revision", "outputs"] as const;
+const VOLUME_SERVER_FIELDS = ["id", "project_id", "status"] as const;
+
+const GENERIC_ROW = (): DiffRow => ({ key: "other configuration", kind: "changed" });
+
+function canonicalResource(r: SnapResource, dropRevisions: boolean): unknown {
+  const out = { ...r } as Record<string, unknown>;
+  for (const k of RESOURCE_SERVER_FIELDS) delete out[k];
+  if (dropRevisions && r.source?.git) {
+    const git = { ...r.source.git } as Record<string, unknown>;
+    for (const k of REVISION_KEYS) delete git[k];
+    out.source = { ...r.source, git };
+  }
+  const env = r.execution_config?.environment_variables;
+  if (env) {
+    out.execution_config = {
+      ...r.execution_config,
+      environment_variables: [...env].sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "")),
+    };
+  }
+  return out;
+}
+
+/** Real config drift outside the projected scalar set. Both sides are
+ *  canonicalized the same way, so resolver-written revisions on the baseline
+ *  of an unpinned spec never count. */
+function resourceResidual(prev: SnapResource, cur: SnapResource): boolean {
+  const drop = gitUnpinned(cur);
+  return !deepEqual(canonicalResource(prev, drop), canonicalResource(cur, drop));
+}
+
+function volumeResidual(prev: SnapVolume, cur: SnapVolume): boolean {
+  const canon = (v: SnapVolume) => {
+    const out = { ...v } as Record<string, unknown>;
+    for (const k of VOLUME_SERVER_FIELDS) delete out[k];
+    return out;
+  };
+  return !deepEqual(canon(prev), canon(cur));
 }
 
 function envMap(r: SnapResource): Record<string, string> {
@@ -116,6 +157,11 @@ function diffResources(prev: unknown, cur: unknown): ResourceDiff[] {
     if (p && !c) { removed.push(p); continue; }
     if (!p && c) { added.push(c); continue; }
     const sections = sectionsFor(p, c);
+    // Catch-all: a change outside the projected scalars must still surface —
+    // an invisible real diff is how the phantom-pill class of bugs starts.
+    if (!sections.length && resourceResidual(p!, c!)) {
+      sections.push({ kind: "configuration", rows: [GENERIC_ROW()] });
+    }
     if (sections.length) out.push({ name, change: "modified", sections });
   }
   // Collapse a removed + added pair with identical config into a single rename
@@ -151,8 +197,10 @@ function scalarRows(p: Record<string, string | undefined>, c: Record<string, str
   return rows;
 }
 
-/** Diff two name-keyed lists into added/removed/modified ItemDiffs by their scalar fields. */
-function diffNamed<T>(prev: T[], cur: T[], nameOf: (t: T) => string, scalars: (t: T) => Record<string, string | undefined>, removedNote: string): ItemDiff[] {
+/** Diff two name-keyed lists into added/removed/modified ItemDiffs by their scalar
+ *  fields. `residual` (optional) detects real drift outside the scalar set and
+ *  degrades it to one generic row instead of silence. */
+function diffNamed<T>(prev: T[], cur: T[], nameOf: (t: T) => string, scalars: (t: T) => Record<string, string | undefined>, removedNote: string, residual?: (a: T, b: T) => boolean): ItemDiff[] {
   const p = new Map(prev.map((t) => [nameOf(t), t]));
   const c = new Map(cur.map((t) => [nameOf(t), t]));
   const out: ItemDiff[] = [];
@@ -162,6 +210,7 @@ function diffNamed<T>(prev: T[], cur: T[], nameOf: (t: T) => string, scalars: (t
     if (a && !b) { out.push({ name, change: "removed", rows: scalarRows(scalars(a as T), {}), note: removedNote }); continue; }
     if (!a && b) { out.push({ name, change: "added", rows: scalarRows({}, scalars(b)) }); continue; }
     const rows = scalarRows(scalars(a as T), scalars(b as T));
+    if (!rows.length && residual?.(a as T, b as T)) rows.push(GENERIC_ROW());
     if (rows.length) out.push({ name, change: "modified", rows });
   }
   return out;
@@ -212,7 +261,7 @@ export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
   const renames = new Map(
     resources.filter((r) => r.change === "renamed" && r.fromName).map((r) => [r.fromName!, r.name]),
   );
-  const volumes = diffNamed(prev.volumes ?? [], cur?.volumes ?? [], (v) => v.name ?? "", volumeScalars, "Volume removed from this release.");
+  const volumes = diffNamed(prev.volumes ?? [], cur?.volumes ?? [], (v) => v.name ?? "", volumeScalars, "Volume removed from this release.", volumeResidual);
   const connections = diffNamed(
     remapConnResources(prev.connections ?? [], renames),
     cur?.connections ?? [],

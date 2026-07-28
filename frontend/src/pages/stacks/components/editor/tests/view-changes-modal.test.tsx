@@ -77,8 +77,10 @@ describe("ViewChangesModal", () => {
     expect(screen.getByRole("button", { name: /deploy/i })).toBeDisabled();
   });
 
-  it("shows a saving hint when the diff has not resolved yet", () => {
+  it("shows a loading hint when the diff has not resolved yet", () => {
+    // The staged diff's cur side is the in-memory draft snapshot, so an absent
+    // diff means "not derivable yet" (release detail loading), never "saving".
     render(<ViewChangesModal {...base} diff={undefined} />);
-    expect(screen.getByText(/saving changes/i)).toBeInTheDocument();
+    expect(screen.getByText(/loading changes/i)).toBeInTheDocument();
   });
 });

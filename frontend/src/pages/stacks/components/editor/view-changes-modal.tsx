@@ -26,9 +26,6 @@ export interface ViewChangesModalProps {
   /** Autosave is in a terminal error state — the empty diff means "not saved",
    *  not "nothing pending". */
   errored?: boolean;
-  /** Unsaved session dirt exists even though the staged diff (saved-vs-release)
-   *  is empty — the edit is still in flight, so the diff can't show it yet. */
-  dirty?: boolean;
   stackName: string;
   /** Revert one resource/volume by name. Removed entries can't be reverted in
    *  isolation (no draft slot to restore into) — use Discard all for those. */
@@ -182,7 +179,6 @@ export function ViewChangesModal({
   diff,
   count,
   errored,
-  dirty,
   stackName,
   onDiscardResource,
   onDiscardVolume,
@@ -215,11 +211,9 @@ export function ViewChangesModal({
             >
               {errored
                 ? "Changes couldn't be saved. Fix the highlighted error and try again."
-                : dirty
-                  ? "Saving changes… they'll appear here once saved."
-                  : diff
-                    ? "No pending changes."
-                    : "Saving changes… they'll appear here once saved."}
+                : diff
+                  ? "No pending changes."
+                  : "Loading changes…"}
             </p>
           ) : (
             <>

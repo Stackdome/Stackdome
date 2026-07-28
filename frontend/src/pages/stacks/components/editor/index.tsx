@@ -22,7 +22,6 @@ import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-edito
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
-import { resolveChangeCount } from "@/pages/stacks/components/editor/lib/resolve-change-count";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
@@ -918,10 +917,16 @@ export default function CanvasEditorPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const dirtyTotal =
-    session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
+  const dirtyTotal = session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size;
 
-  const changeCount = resolveChangeCount(lifecycle.stagedDiff, dirtyTotal, isNewStack ? SYNC_STATUS.idle : draftSync.status);
+  // The staged diff is the single change authority: its cur side is the
+  // in-memory draft snapshot, so autosave settledness can't lag it. Session
+  // dirt only fills the window where the diff isn't derivable yet (release
+  // detail still loading, or a new-stack draft outside the lifecycle).
+  const staged = lifecycle.stagedDiff;
+  const changeCount = staged
+    ? staged.resources.length + staged.volumes.length + staged.connections.length
+    : dirtyTotal;
 
   return (
     <ReleaseDetailProvider value={releaseDetail}>
@@ -1005,7 +1010,6 @@ export default function CanvasEditorPage() {
         diff={lifecycle.stagedDiff}
         count={changeCount}
         errored={draftSync.status === SYNC_STATUS.error}
-        dirty={dirtyTotal > 0}
         stackName={effectiveStack?.name ?? ""}
         onDiscardResource={discardResourceByName}
         onDiscardVolume={discardVolumeByName}
