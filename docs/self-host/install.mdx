@@ -1,0 +1,165 @@
+---
+title: "Install Stackdome"
+description: "Installer flags, prerequisites, DNS, and what a fresh install creates."
+---
+
+`stackdome-install` takes one bare Linux server to a complete Stackdome install: a Kubernetes cluster, the platform's own database and API server, an image registry, and an admin account you can sign in with. It runs unattended in numbered phases and waits for each piece to become ready before moving on.
+
+This page is the reference for the flags, what has to be true of the server before you start, and exactly what the installer puts on it.
+
+## Prerequisites
+
+The installer runs a preflight check and refuses to continue unless all of the following hold.
+
+| Requirement | Why |
+| --- | --- |
+| **Root** | The installer stops unless it is running as uid 0. Start it with `sudo`. |
+| **Linux on `amd64` or `arm64`** | Any other operating system or architecture is rejected outright. |
+| **Ports 80, 443, and 6443 free** | The installer stops if it finds any of the three in use. If k3s is already running on the server, the check is skipped for those ports — k3s is what will be holding them. The check reads `ss -tlnp`; if that command fails, the port is treated as free, so this is a best-effort check rather than a guarantee. |
+| **`curl` on the `PATH`** | The installer stops if `curl` is missing. It uses `curl` to detect the server's public IP (`curl -4 ifconfig.me`, with a 10-second timeout) and to fetch k3s and Helm. |
+| **Outbound internet access** | Public-IP detection cannot continue if `ifconfig.me` is unreachable or returns something that is not an IP address. The installer also pulls k3s, Helm, the platform chart, and container images. |
+
+Two more things matter but are not enforced up front:
+
+- **Ports 80 and 443 open for inbound traffic.** After installing, the installer fetches `http://<your-domain>/health` and warns you if the dashboard is not reachable from the internet. Open them in your firewall or cloud security group beforehand and you avoid the warning.
+- **Capacity.** The installer warns, without stopping, if the server has fewer than **2 CPUs**, less than **4 GB of RAM**, or less than **20 GB of free disk** on `/`. Treat those as the practical floor.
+
+## Flags
+
+You need the `stackdome-install` binary built for your server's platform — Linux on `amd64` or `arm64`.
+
+<Warning>
+A public download for `stackdome-install` is not available yet. This page documents the flags and behavior of the installer; once downloads are published, this section will point you at them.
+</Warning>
+
+With the binary on the server, give it the execute bit and run it as root:
+
+```bash
+chmod +x ./stackdome-install
+sudo ./stackdome-install --email you@company.com
+```
+
+The `sudo` is not optional. Without root the installer exits during preflight and tells you to re-run it with `sudo`.
+
+| Flag | Required | Default | What it sets |
+| --- | --- | --- | --- |
+| `--email` | Yes | — | The admin user's email address. It is also the contact address registered with Let's Encrypt when you install on a custom domain, so use a real one. Omitting it prints usage and exits with status 1. |
+| `--domain` | No | `stackdome.<PUBLIC_IP>.nip.io` | The dashboard domain, and the domain your applications' generated hostnames are built under. |
+| `--image` | No | `quay.io/stackdome/stackdome:latest` | The API server container image. Override it to pin a specific version. |
+
+Those three flags are the whole surface. Everything else the installer needs — the database password, the JWT signing secret, the encryption key, and your admin password — it generates for itself; there is no flag or config file to supply them.
+
+<Warning>
+The final summary prints your admin password once and tells you it will not be shown again. Copy it into your password manager before you close the terminal.
+</Warning>
+
+## DNS
+
+### For a trial: nothing to do
+
+Leave `--domain` off and the installer builds a domain from the public IP it detected: `stackdome.203.0.113.10.nip.io` for a server at `203.0.113.10`. `nip.io` is a public DNS service that resolves any hostname containing an IP address straight back to that IP, so the name works the moment the installer picks it. No records to create, no propagation to wait for.
+
+### For a domain you own
+
+Create an **`A` record** for the name you intend to pass to `--domain`, pointing at the server's public IP, and let it propagate **before** you run the installer:
+
+```text
+stackdome.example.com.   A   203.0.113.10
+```
+
+That one name carries two things. It is the dashboard URL you sign in at, and it is the base for the hostnames Stackdome generates for your applications, which sit below it and look like `<generated-prefix>.<resource-name>.stackdome.example.com`. Those application hostnames have to resolve to the same server, so a single `A` record for the dashboard is not the end of the DNS work.
+
+<Card title="Domains and TLS" icon="globe" href="/guides/domains-and-tls">
+  The records to create for application hostnames, and how custom domains work once you are running.
+</Card>
+
+## What the install creates
+
+### On the server
+
+- **An inotify sysctl drop-in** at `/etc/sysctl.d/90-stackdome-inotify.conf`, raising `fs.inotify.max_user_instances` and `fs.inotify.max_user_watches`. The kernel defaults run out after a few dozen pods.
+- **k3s**, installed if the `k3s` binary is not already present, with its kubeconfig at `/etc/rancher/k3s/k3s.yaml` (mode `0600`). If k3s is already installed, this step is skipped. The installer then waits up to two minutes for the node to report `Ready`.
+- **Helm**, installed if `helm` is not already on the `PATH`.
+
+```bash
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+```
+
+### In the cluster
+
+Everything lands in the `stackdome-control-plane` namespace.
+
+- **The `stackdome-agent` chart**, installed with `helm upgrade --install`. This is the operator that turns Stackdome's custom resources into Kubernetes workloads. The installer waits for its pods to be ready.
+- **A bootstrap Secret**, `stackdome-bootstrap-secrets`, holding the credentials the installer generated: the database password, the JWT signing secret, the encryption key, your admin password, plus your admin email and the domain.
+- **RBAC for the API server**: a `stackdome-api-server-account` ServiceAccount, a ClusterRole and binding, and a service-account token Secret. The API server authenticates to the cluster with that token. Be aware that the ClusterRole is currently unrestricted — it grants all verbs on all resources in all API groups, so this account has full control of the cluster.
+- **A `Volume`**, `stackdome-db-data` — 10Gi, `ReadWriteOnce`, storage class `local-path` — backing the platform database.
+- **A `Stack`**, `stackdome-platform`, grouping the two resources below.
+- **A `db` `StackResource`** running `postgres:16-alpine` on port 5432, not exposed publicly, with the volume mounted at `/var/lib/postgresql/data`.
+- **An `api-server` `StackResource`** running the image from `--image`. It runs database migrations as an init step, then serves on port 8000, exposed publicly at your domain.
+- **A `ClusterIssuer`** — only when you install on a real domain. See [TLS](#tls) below.
+
+The installer then polls the API server's `/health` endpoint for up to five minutes before continuing.
+
+### In Stackdome
+
+With the API server up, the installer finishes the setup through Stackdome's own API:
+
+- An **admin user** named `Platform Admin`, with the email from `--email` and the generated password.
+- An organization named **Default**, with your domain configured on it.
+- A cluster named **local** — the server itself — registered with the credentials from the RBAC step, so the platform can deploy to it.
+- An **in-cluster image registry** named `default-registry` with 50Gi of backing storage, attached to that cluster. It holds the images Stackdome builds from your git repositories.
+
+<Note>
+The in-cluster registry belongs to the cluster and is created with it. It is not one of the entries on the **Image registries** page — that page is for credentials you add for external registries, and it is empty on a fresh install.
+</Note>
+
+## TLS
+
+What the installer does about certificates depends on the shape of your domain. A domain ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` is classified as a non-TLS domain; any other non-empty domain is classified as a real one.
+
+### On a `nip.io` or other local-style domain
+
+No `ClusterIssuer` is applied and no Let's Encrypt certificate is requested. The `api-server` resource is created with `tls: false` on its public port and without a cluster-issuer annotation, so no part of the install asks for a certificate for that hostname.
+
+The final summary still prints an `https://` URL for the dashboard. Because the install configured no certificate for that name, treat a browser certificate warning on a trial install as the expected outcome rather than a sign that something went wrong.
+
+### On a real domain
+
+The installer applies a `ClusterIssuer` named `letsencrypt-prod`, and annotates the `api-server` resource to use it with `tls: true` on its public port. The issuer is configured with:
+
+- ACME server: Let's Encrypt production, `https://acme-v02.api.letsencrypt.org/directory`
+- Contact email: the address you passed to `--email`
+- Account key stored in a Secret named `letsencrypt-prod-key`
+- An HTTP-01 solver, so validation happens over port **80** on your hostname
+
+<Warning>
+That manifest is a `cert-manager.io/v1` resource, so **cert-manager must already be installed in the cluster** for this step to succeed. The installer does not install cert-manager itself, and it treats a failure to apply the issuer as fatal — a `--domain` install stops there if the CRD is not present. Confirm cert-manager is available on the cluster before you install on a real domain.
+</Warning>
+
+<Note>
+Even once the issuer is applied, the installer does not wait for, or verify, that a certificate was actually issued. If HTTPS on your domain still shows a certificate error after the install finishes, inspect the `ClusterIssuer` and `Certificate` resources in the cluster rather than re-running the installer.
+</Note>
+
+## Re-running the installer
+
+Re-running with the same flags is handled at every step, and the installer says so as it goes:
+
+| Step | On a second run |
+| --- | --- |
+| Port checks | Skipped for 80, 443, and 6443 once k3s is running. |
+| k3s, Helm | Skipped if the binaries exist. |
+| `stackdome-agent` chart | Re-applied with `helm upgrade --install`. |
+| Generated secrets | Reused. The installer reads `stackdome-bootstrap-secrets` and, if all four values are present, keeps them — so your admin password does not change. |
+| Manifests (RBAC, volume, stack, resources, issuer) | Re-applied declaratively with `kubectl apply`. |
+| Admin user | Login is tried first. Signup only runs if login fails, and if signup fails too the installer waits two seconds and tries login once more. |
+| Organization domain | Skipped if that exact domain is already on the organization. |
+| Cluster registration | Skipped if the organization already has **any** cluster — see the warning below. |
+
+<Warning>
+Cluster reuse is not matched to this server. On a re-run the installer lists the organization's clusters and, if the list is not empty, keeps the **first** entry without checking that it points at this machine. On an organization that already has clusters, a re-run therefore adopts an arbitrary existing one and never registers the local cluster.
+</Warning>
+
+Two more consequences are worth knowing before you rely on this:
+
+- **Do not delete `stackdome-bootstrap-secrets`.** Reuse depends on it. If it is gone or incomplete, the installer generates a fresh database password, JWT secret, encryption key, and admin password — against a database and an API server that were set up with the old ones.
+- **Changing `--domain` or `--image` on a re-run changes the cluster.** The `api-server` resource is re-templated and re-applied with whatever you pass, and a domain that is not already on the organization is added to it. A re-run is not a no-op if the flags differ.

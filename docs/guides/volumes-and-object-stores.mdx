@@ -1,0 +1,145 @@
+---
+title: "Volumes and object stores"
+description: "Give a resource persistent storage, and register object stores for backups."
+---
+
+Two kinds of storage share this page, and they have almost nothing to do with each other.
+
+A **volume** is a disk. It belongs to a **stack**, and one or more **resources** in that stack **mount** it at a **mount path** inside the container. What you write there survives a restart and a redeploy.
+
+An **object store** is a bucket somewhere else — S3, Azure, GCS. Nothing mounts one. Its only job today is to be the destination for **Postgres addon** backups.
+
+## Prerequisites
+
+- **A stack with at least one resource.** A volume is created already attached to a resource, so the **Volume** tile stays disabled until the stack has one.
+- **A cluster whose default storage class can provision disks.** Stackdome never asks you which storage class to use for a volume — there is no field in the dialog, and the API sends none — so your cluster's default `StorageClass` is what provisions it. Check what that is before you start:
+
+  ```bash
+  kubectl get storageclass
+  ```
+
+- **A Secret holding the bucket credentials**, if you are registering an object store. The form only ever *references* a Secret; you never type a key into it. See [Create the secret](/guides/environment-variables#create-the-secret).
+
+## A volume belongs to the stack, not to a resource
+
+This is the part that surprises people. A volume is a stack-level object with its own name, size and lifecycle. Resources reference it by name. That is why a stack card counts the two separately — `3 resources · 2 volumes` — and why deleting a resource does not delete the disk it was using.
+
+Its spec is also fixed the moment it is created. Name, size, access mode and storage class are all write-once: there is no update endpoint for a volume, only create, read and delete. Plan the size before you create it.
+
+## Declare a volume
+
+<Steps>
+  <Step title="Open the Architecture tab">
+    Open the stack and stay on **the canvas**.
+  </Step>
+  <Step title="Choose + Add resource → Volume">
+    The panel lists it under the **Storage** heading as **Volume** — *"persistent storage"*. If the tile is greyed out, the stack has no resource yet.
+  </Step>
+  <Step title="Fill in the dialog">
+    Four fields, described below.
+  </Step>
+  <Step title="Deploy">
+    The volume itself is provisioned as soon as the editor saves. The **mount** only reaches the cluster on your next deploy.
+  </Step>
+</Steps>
+
+![The Add volume dialog with a Name field prefilled volume, a Size field prefilled 1Gi and hinted e.g., 1Gi, 500Mi., a required select labelled Attach to service, and a required Mount path field placeholdered slash var slash lib slash data](/images/volumes-declare.png)
+
+The dialog is titled **Add volume**:
+
+| Field | Notes |
+| --- | --- |
+| **Name** | Required. Prefilled with `volume`, then `volume-2`, `volume-3` and so on. Must be unique within the stack — a clash is rejected inline with *"Volume name must be unique"*. Cannot be changed later. |
+| **Size** | Prefilled `1Gi`, hinted *"e.g., 1Gi, 500Mi."* Kubernetes quantity notation. Leave it blank and you get `1Gi`. Cannot be changed later. |
+| `Attach to service` | Required. Despite the label, what you pick here is a **resource** — the one that mounts the volume. Preselected when the stack has exactly one resource, or when you started from a resource's **Add volume…** menu entry. |
+| **Mount path** | Required. An absolute path inside the container, for example `/var/lib/data`. A relative path is rejected with *"Must be an absolute path (start with /)"*, and a path the chosen resource already mounts something at is rejected too. |
+
+There is no storage-class field, no access-mode field, and no source field. Every volume the dashboard creates is an empty disk.
+
+<Note>
+**Creating the volume and mounting it are one gesture, but two things.** The dialog writes a stack-level volume *and* a mount on the resource you picked. The volume is created on the server as soon as the editor autosaves, and provisioning starts immediately — you do not have to deploy for the disk to exist. The mount, like every other spec change, only reaches the cluster when you deploy. The pill above the canvas counts what has not been released yet — **Apply 1 change**, next to **Deploy**.
+</Note>
+
+## Where a volume shows up
+
+A volume that some resource mounts appears as a chip along the bottom of that resource's node, showing the volume's name; hover it for the mount path. A volume nothing mounts appears instead as its own node, badged **VOLUME**, floating on the canvas.
+
+![The Architecture canvas showing three resource nodes — web at the top, with postgres and redis below it — where the postgres and redis cards each carry a volume chip along the bottom edge reading pgdata and redis-data](/images/volumes-canvas.png)
+
+Click a chip to open **the drawer** for that volume.
+
+![The volume drawer for pgdata, headed 1Gi ReadWriteOnce, with a disabled Name field marked rename from volumes list, a disabled Size field marked fixed once provisioned, an Access mode row reading ReadWriteOnce parenthesis RWO with the note single resource read slash write, and a MOUNTS section listing postgres at slash var slash lib slash postgresql slash data](/images/volumes-drawer.png)
+
+The header repeats the size and access mode. Under **Specification**, **Name** and **Size** are both disabled — **Size** is annotated *"fixed once provisioned"* — and **Access mode** is a value, not a control. **Mounts** lists every resource that mounts this volume, and the path each one mounts it at.
+
+Right-clicking a chip offers **Disconnect volume**, **Volume settings** and **Delete volume**. Right-clicking a floating volume node offers an attach entry instead of the disconnect one, which asks for a resource and an absolute mount path.
+
+## Mounts, seen from the resource
+
+Open a resource's drawer and its **Configuration** tab has a **Mounts** section, annotated *"managed on canvas"*. It is deliberately read-only there: it shows the volume, the path, and a shortcut arrow to the volume's own settings.
+
+![The Mounts section of the postgres resource drawer, headed MOUNTS with the note 1 volume managed on canvas, listing pgdata mounted at slash var slash lib slash postgresql slash data and the hint drag a volume onto the node to attach](/images/volumes-mount.png)
+
+With nothing mounted it says so, and points you back at **+ Add resource → Volume**. To attach an existing volume to a resource, drag the volume onto that resource's node.
+
+## Access modes
+
+Every volume Stackdome creates is `ReadWriteOnce`. The drawer shows it as `ReadWriteOnce (RWO)` and offers no alternative; the dialog has no access-mode field. The REST contract's `Volume` schema does define three values — `ReadWriteOnce`, `ReadWriteMany` and `ReadOnlyMany` — but the dashboard only ever sends the first, and the field cannot be changed after creation.
+
+What that means in practice: **one node can mount the volume, and only that node.** Two resources both scheduled onto that node can share it. A resource whose replicas land on different nodes cannot — the replicas that land elsewhere will not start, because the disk is not available to them.
+
+<Warning>
+**This bites when you add a second node, not when you add a second replica.** On a single-node install every pod lands on the same node, so a shared volume and a scaled-up resource both appear to work. Add a node to the cluster and the same stack can start failing to schedule, with no change on your side. If a resource needs storage and more than one replica, give each replica its own volume, or keep the resource at one replica.
+</Warning>
+
+## Changing a volume on a running stack
+
+| What you want | What actually happens |
+| --- | --- |
+| **Add a volume** | Created and queued for provisioning as soon as the editor saves — you do not wait for a deploy. The mount lands on the cluster at the next deploy. |
+| **Mount an existing volume somewhere else** | A spec change on the resource. Takes effect at the next deploy. Remember the single-node constraint above. |
+| **Resize, rename, or change the access mode** | Not possible. Those fields are write-once in the API and disabled in the drawer. Delete the volume and create a new one — which means losing the data. |
+| **Delete a volume** | Immediate and permanent, independent of any deploy. The confirmation says so: *"This immediately and permanently destroys the volume and all data stored on it. Any mounts are removed first. This cannot be undone."* A volume you added but have not saved yet is just **Remove**d from **a draft**. |
+
+<Warning>
+**Deleting a volume a live release still mounts will fail that release.** A release is pinned to the spec it was cut from, so it keeps referencing the volume by name. Stackdome checks that every volume a release references still exists before it applies anything, and fails the release outright with `release references volume(s) that no longer exist: <name>` rather than leaving the cluster half-applied. Deploy again once the stack no longer mounts the deleted volume.
+</Warning>
+
+## Object stores
+
+An object store is a registered backup destination. Nothing in a stack mounts it, and it is not a substitute for a volume — the only thing that reads one today is the **Postgres addon**, for scheduled backups, WAL archiving, and restoring a new instance from an existing instance's backups.
+
+Find them under **PLATFORM → Object Stores** in the sidebar, at `/object-stores`. The page is headed **Object Stores** — *"Backup destinations for Postgres add-ons. Supports AWS S3, S3-compatible (e.g. MinIO), Azure, and GCS."* — and reads **NO OBJECT STORES YET** until you register one. Registered stores are listed under **Organization Object Stores**: they belong to the organization, not to a stack.
+
+Choose **New Object Store**.
+
+![The New Object Store dialog, subtitled Configure a backup destination. Credentials reference an existing Secret. It has required Name, Destination path and Retention fields, provider tabs for S3 slash S3-compatible, Azure and GCS, and on the S3 tab a required Region, an optional Endpoint URL, and Access Key ID and Secret Access Key rows that each select a Generic secret and then a key inside it](/images/object-stores.png)
+
+| Field | Notes |
+| --- | --- |
+| **Name** | Required. Placeholder `minio-local`. A DNS subdomain — lowercase letters, numbers and hyphens, 63 characters maximum. Cannot be changed later; the edit form disables it. |
+| **Destination path** | Required. The bucket URL, placeholder `s3://stackdome-backups/db1`. Validated per provider: S3 must start `s3://` and name a bucket, GCS must start `gs://`, Azure must look like `https://<account>.<service>.core.windows.net/<container>/<blob>`. |
+| **Retention** | Required, defaults to `7d`. **Use days or weeks** — `7d`, `30d`, `4w`. The field's own hint also offers an hours value such as `24h`, and the field will accept one, but the API rejects it on save; days and weeks are the values that go through. Stackdome passes whatever you set through to the backup configuration on the cluster; nothing in the dashboard deletes a backup for you. |
+| Provider tabs | **S3 / S3-compatible**, **Azure**, **GCS**. Pick the tab before filling in credentials — only the active tab's fields are sent. |
+| **Region** (S3) | Required. Placeholder `us-east-1`. S3-compatible services that do not care still need something here. |
+| **Endpoint URL (optional)** (S3) | The base URL for anything that is not AWS — MinIO, and other S3-compatible services. Leave it empty for AWS. |
+| **Access Key ID**, **Secret Access Key** (S3) | Two selects each: a **Generic** Secret, then the key inside it. |
+| **Connection string** (Azure), **Service account credentials** (GCS) | Same shape — a Generic Secret plus a key. **Storage account name** is optional on Azure. |
+
+<Note>
+**Credentials are never typed into this form.** Every credential field picks a **Generic** Secret and a key inside it, which is what the dialog means by *"Credentials reference an existing Secret."* Create the Secret first — see [Create the secret](/guides/environment-variables#create-the-secret) — then come back. If the select is empty, you have no Generic Secret yet.
+</Note>
+
+<Warning>
+**An Azure or GCS store cannot be edited afterwards.** The dialog refuses with *"Editing Azure/GCS stores is not yet supported in the UI. Please delete and re-create the store."* S3 stores can be edited, except for the name.
+</Warning>
+
+### Using one
+
+Turn on backups on the Postgres addon and pick the store there — the addon's **Backups** section has the **Object Store** select, and it refuses to enable scheduled backups or WAL archiving without one. Restoring a new instance from a store's backups goes through the same list.
+
+Deleting a store that an addon still points at is refused. The toast shows the reason the API gives; when the API returns no message, the dashboard falls back to *"This Object Store is in use by one or more Postgres add-ons."* Either way, detach it from the addon first.
+
+<Card title="Postgres" icon="database" href="/guides/postgres">
+  Enabling scheduled backups, WAL archiving, and restoring an instance from an object store.
+</Card>

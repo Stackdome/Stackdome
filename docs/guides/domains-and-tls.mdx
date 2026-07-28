@@ -1,0 +1,203 @@
+---
+title: "Domains and TLS"
+description: "Configure your organization domain and understand the hostnames Stackdome generates."
+---
+
+Your organization has one **domain**, and every hostname Stackdome hands out sits underneath it. You do not name those hostnames — Stackdome derives them from the **stack**, the **resource**, and the **port**. This page covers where the domain comes from, the DNS you have to create for it, the exact shape of a generated hostname, and what Stackdome does and does not do about certificates.
+
+## Prerequisites
+
+- **You are an organization admin.** **Domains** is admin-only, as is **Clusters**.
+- **A domain whose DNS you control.** You will be creating records on it. If you only want to try Stackdome, you do not need one — see [Install Stackdome](/self-host/install) for the `nip.io` path, and read [Certificates](#certificates) for what you give up.
+- **A domain already configured**, if you are only reading the hostname rules. The installer puts one on the organization for you.
+
+## The organization domain
+
+The domain is a property of the organization, not of a stack or a **cluster**. There is one, and generated hostnames are built under it.
+
+The installer sets the first one. Whatever you passed to `--domain` — or the `stackdome.<PUBLIC_IP>.nip.io` it picked for you — is written onto the organization named **Default** during install. So on a fresh install there is nothing to do here.
+
+To see it, open **Domains** under **PLATFORM** in the sidebar, at `/domains`.
+
+![The Domains page in the Stackdome dashboard, with Domains highlighted under PLATFORM in the sidebar and the page headed PLATFORM Domains above the subtitle Configure custom domains for your organization, and an ALL DOMAINS panel counting 2 rows — stackdome.io and test.com — each with a globe icon](/images/domains-list.png)
+
+Each row is a globe icon, the domain, and a trash icon. The trash icon removes the domain **immediately** — there is no confirmation step.
+
+### Adding one
+
+Choose **Add Domain**. The dialog is a single field:
+
+| Field | Notes |
+| --- | --- |
+| **Domain Name** | Required. Placeholder `example.com`, hinted *"Examples: example.com, subdomain.example.org, app.company.co.uk"*. Lowercased and trimmed before it is saved. |
+
+It has to be a fully qualified domain name: at least one dot, a top-level label of two or more letters, each label alphanumeric with hyphens allowed only in the middle, and 253 characters at most. Anything else stays in the form — an empty field is `Domain name is required`, a malformed one is `Please enter a valid domain name`, and one you already have is `This domain already exists`.
+
+Adding or removing a domain rewrites the organization's whole domain list in one request. That is normally invisible, but it is why a failure here surfaces as a **Failed to update domains** toast rather than a per-row error.
+
+<Warning>
+**Keep exactly one domain.** Once one is configured, the **Add Domain** button is disabled and hovering it explains why: *"Currently only one domain is supported."*
+
+![Close-up of the Domains page header: the Add Domain button greyed out, with a tooltip above it reading Currently only one domain is supported](/images/domains-add-limit.png)
+
+That cap lives in the dashboard, not in the API — the API will store more than one, so an organization can end up holding several. When it does, generated hostnames are built under whichever one the database returns first, and that query has no ordering, so which domain wins is not something you can rely on. If the list holds more than one row, delete the extras.
+</Warning>
+
+## DNS
+
+Two kinds of name have to resolve to the same place: the dashboard's own name, and every hostname Stackdome generates for a **resource**'s public **port**, all of which sit beneath it.
+
+For the dashboard, an `A` record is enough:
+
+```text
+example.com.   A   203.0.113.10
+```
+
+Generated hostnames sit **two labels below** the domain — `<prefix>.<resource>.example.com` — so a record for the dashboard alone does not cover them. Add a wildcard:
+
+```text
+*.example.com.   A       203.0.113.10
+*.example.com.   CNAME   example.com.
+```
+
+Either form works; use one, not both. A DNS wildcard answers for names at any depth beneath it, not just one label down, so a single `*.example.com` covers every hostname Stackdome will ever generate. That is verified against a live install: a two-labels-deep name under a wildcard `CNAME` resolves to the same address as the apex.
+
+<Note>
+A wildcard is matched against the closest ancestor of the name that actually exists in the zone. So if you later create a record for `web.example.com` in its own right, `*.example.com` stops answering for `<prefix>.web.example.com` — the generated hostnames for a resource named `web` go dark. If you want a vanity name for a resource, put it somewhere the wildcard does not shadow, or add the explicit records for the generated names too.
+</Note>
+
+Two more things to open, both on the server your cluster runs on:
+
+- **Port 443**, for the traffic itself.
+- **Port 80**, because certificate validation happens over HTTP. See below.
+
+## Generated hostnames
+
+Only a **public** port gets a hostname. An internal port is reachable inside the stack and has no name outside it. Nothing you do on the Domains page changes that — it is the port's **Expose to public** setting, on the resource in **the drawer**.
+
+The pattern is:
+
+```text
+<generated-prefix>.<resource-name>.<organization-domain>
+```
+
+The prefix is derived, not random. Stackdome takes the stack's ID, the resource's name and the port number, joins them with colons, MD5s that, base32-encodes the digest with the standard alphabet and no padding, lowercases it, and keeps the first 16 characters.
+
+You can reproduce it:
+
+```bash
+STACK_ID=f4c1e2a0-6b52-4a5e-9d3f-8c7b1e0a2d64
+RESOURCE=web
+PORT=3000
+printf '%s:%s:%s' "$STACK_ID" "$RESOURCE" "$PORT" \
+  | openssl dgst -md5 -binary \
+  | base32 | tr -d '=' | cut -c1-16 | tr 'A-Z' 'a-z'
+# ba6xykaf6wkmco2c
+```
+
+So a stack with that ID, holding a resource named `web` with public port `3000`, on an organization whose domain is `example.com`, is served at:
+
+```text
+ba6xykaf6wkmco2c.web.example.com
+```
+
+Two consequences follow from the inputs:
+
+- **The hostname is stable.** Redeploys, rollbacks and edits to anything else leave it alone, because none of the three inputs change. The stack ID in particular survives everything short of deleting the stack.
+- **Renaming the resource or changing the port number changes the hostname.** The name is part of the input twice — once in the hash, once as the second label — so a rename gives you a new hostname and retires the old one. Change the port number and the prefix changes too. Treat a rename as a URL change.
+
+The stack header lists the public endpoints it has as a pill — the resource name and the hostname — and it links straight out to it. A resource with a public port also gains `public_host` and `public_url` outputs, which is the supported way for another resource to refer to it without you pasting the hash anywhere.
+
+<Note>
+**A fixed prefix, through the API only.** A public port accepts a `subdomain_prefix`. Set it and the hostname becomes `<subdomain_prefix>.<organization-domain>` — one label, and the resource name drops out. There is no field for this in the drawer; it is only reachable through the API. Two ports in the same stack asking for the same prefix are rejected with `subdomain_duplicate`.
+</Note>
+
+## Certificates
+
+Stackdome configures certificate issuance. It does not perform it, and it does not check that it happened.
+
+### What gets configured
+
+A `cert-manager.io/v1` **`ClusterIssuer` named `letsencrypt-prod`**, with:
+
+| Setting | Value |
+| --- | --- |
+| ACME server | Let's Encrypt production, `https://acme-v02.api.letsencrypt.org/directory` |
+| Contact email | The admin email — `--email` at install, or the signed-in admin's address when a cluster is registered later |
+| Account key | A Secret named `letsencrypt-prod-key` |
+| Solver | HTTP-01, over an ingress, pinned to a fixed ingress class |
+
+It is applied at two moments. The installer applies it during a `--domain` install, and treats a failure as fatal — the install stops there. Registering a cluster from the dashboard applies the same issuer to that cluster, but only **logs** a failure; the cluster is created either way, so a cluster can exist with no issuer on it and nothing in the dashboard says so.
+
+A resource then opts into it. When a public port's hostname is eligible, the port is written with `tls: true` and the resource's custom resource is annotated `core.stackdome.io/cluster-issuer: letsencrypt-prod`.
+
+<Warning>
+**The cluster has to provide two things before a certificate can be issued.**
+
+`cert-manager` has to be present — the `ClusterIssuer` above is one of its custom resources, so without it there is nothing for the issuer to be applied to and nothing to drive an ACME order. And the HTTP-01 solver is pinned to a fixed ingress class, so an ingress controller answering to that class has to be running for a challenge to be served.
+
+Both are readable from the cluster. Confirm cert-manager first, then read the class the issuer is actually asking for and check that something serves it:
+
+```bash
+kubectl get crd clusterissuers.cert-manager.io
+kubectl get clusterissuer letsencrypt-prod \
+  -o jsonpath='{.spec.acme.solvers[*].http01.ingress.class}'
+kubectl get ingressclass
+```
+
+`NotFound` on the first means cert-manager is not installed. The second prints the class the solver will label its challenge ingress with — nothing printed means the issuer has no HTTP-01 ingress solver configured. The third lists the classes your cluster's controllers claim. The second value and the third list have to line up; if nothing in the list corresponds to it, no controller will pick the challenge up.
+
+Establish both before you install on a real domain, and use [Did a certificate actually get issued?](#did-a-certificate-actually-get-issued) below to check the result rather than assuming it.
+</Warning>
+
+### When no certificate is requested at all
+
+A hostname ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` is classified as a non-TLS name. For those, the port is written with `tls: false`, no cluster-issuer annotation is added, and on a `--domain`-less install no `ClusterIssuer` is applied either. Nothing asks for a certificate, so a browser certificate warning on a trial install is the expected outcome, not a fault.
+
+That exclusion is also the pragmatic answer for `nip.io` and `sslip.io`: they are shared domains, so every user of them sits under the same registered domain from Let's Encrypt's point of view and its per-domain issuance limits are consumed collectively. Requests against them routinely fail. Do not try to work around the exclusion — move to a domain you own instead.
+
+### Did a certificate actually get issued?
+
+Nothing in the dashboard answers this. A green pill on a stack means the workload is running, not that HTTPS works. Check it directly.
+
+From anywhere, read what the hostname actually serves and who signed it:
+
+```bash
+echo | openssl s_client -connect ba6xykaf6wkmco2c.web.example.com:443 \
+  -servername ba6xykaf6wkmco2c.web.example.com 2>/dev/null \
+  | openssl x509 -noout -issuer -subject -dates
+```
+
+An `issuer` naming Let's Encrypt and a `subject` matching your hostname means the whole chain worked. A self-signed issuer, or a subject that is not your hostname, means the ingress fell back to a default certificate and cert-manager never delivered one.
+
+From the cluster, walk the objects cert-manager creates, in the order it creates them:
+
+```bash
+kubectl get clusterissuer letsencrypt-prod
+kubectl get certificate -A
+kubectl describe certificate <name> -n <namespace>
+kubectl get certificaterequest,order,challenge -A
+```
+
+`kubectl get clusterissuer letsencrypt-prod` returning `NotFound` means the issuer was never applied — likely a cluster registered while cert-manager was absent. A `Certificate` stuck `False`/`Pending` with a `Challenge` that never completes is the DNS-or-port-80 case in [Troubleshooting](#troubleshooting).
+
+## Troubleshooting
+
+**The hostname resolves but nothing is served.** The port is internal. A hostname is only generated for a port marked public, so if you are guessing at a hostname for an internal port, there isn't one. Open the resource in the drawer, check the port, and confirm it appears in the stack header's public endpoints afterwards. If the header lists no endpoint, no public port exists.
+
+**A resource with a public port refuses to deploy, complaining about domains.** The organization has none configured. Stackdome cannot build a hostname without one, and the failure reads `no domains found for organisation <id>`. Add one on `/domains`.
+
+**The certificate stays pending.** HTTP-01 validation is a request Let's Encrypt makes to the exact hostname on port **80**. It has to work from the public internet, not just from your laptop. In order:
+
+1. Resolve the hostname from off your network. If a wildcard is supposed to cover it, confirm the wildcard exists and that no record for an intermediate name is shadowing it.
+2. Confirm port 80 is open inbound on the server and not being redirected to 443 before the challenge path is served.
+3. `kubectl describe challenge -A` and read the reason. It reports what the ACME server saw.
+4. Confirm an ingress controller matching the solver's ingress class is running — the three commands in [Certificates](#certificates) print the class the issuer asks for and the classes your cluster serves. If nothing matches, there is nothing to serve the challenge, and it fails with no useful clue on the Stackdome side.
+
+**A URL that used to work now 404s.** Someone renamed the resource or changed the port number. Both are inputs to the generated prefix, so both mint a new hostname. Read the current one off the stack header.
+
+**HTTPS breaks after you change the organization domain.** Generated hostnames are rebuilt from the organization's domain, so changing it changes every hostname the next time a resource is saved. Update DNS for the new domain, and expect fresh certificates to be requested for the new names.
+
+<Card title="Stacks and resources" icon="cube" href="/concepts/stacks-and-resources">
+  What a port is, and the difference between a public and an internal one.
+</Card>

@@ -1,0 +1,97 @@
+---
+title: "Quickstart"
+description: "Install Stackdome on a server and sign in to the dashboard."
+---
+
+One installer takes a bare Linux server to a working Stackdome install: a Kubernetes cluster, the API server, a database, an image registry, and an admin account you can sign in with. It runs unattended and waits for each piece to come up before moving on, so the slow part is pulling images.
+
+## Prerequisites
+
+You need a Linux server you can log in to. Before it changes anything on that server, the installer checks all of the following and stops if any of them fails:
+
+- **Root access.** The installer reads the current user's id and refuses to continue unless it is 0. Its own error tells you to rerun it under `sudo`.
+- **Linux on `amd64` or `arm64`.** Any other operating system or architecture is rejected outright.
+- **Ports 80, 443, and 6443 free.** The installer stops if any of the three is already in use. If k3s is already running on the server, the check is skipped for those ports, since k3s is what will be holding them.
+- **`curl` on the `PATH`.** The installer uses it to fetch k3s and Helm, and to look up the server's public IP.
+- **Outbound internet access.** The installer detects your server's public IP by calling `ifconfig.me`, and cannot continue if that fails.
+
+Two more things are checked but never block the install. Capacity: the installer warns if the server has fewer than **2 CPUs**, less than **4 GB of RAM**, or less than **20 GB of free disk** on `/`. Treat those numbers as the practical floor. And reachability: once everything is up it probes your domain over port 80 and warns you if the dashboard is not reachable from the internet, so open **ports 80 and 443 for inbound traffic** in your firewall or cloud security group and you will not see that warning.
+
+## Install
+
+You need the `stackdome-install` binary for your server's architecture, `amd64` or `arm64`.
+
+<Note>
+A public download for `stackdome-install` is not available yet. Once one is published, this page will point at it.
+</Note>
+
+Put the binary on the server as `stackdome-install`, make it executable, and run it as root:
+
+```bash
+chmod +x ./stackdome-install
+sudo ./stackdome-install --email you@company.com
+```
+
+`--email` is the only required flag. It becomes your admin account's email address, and it is also the contact address registered with Let's Encrypt when you install on a custom domain, so use a real one.
+
+To put the dashboard on a domain you own, pass `--domain`:
+
+```bash
+sudo ./stackdome-install --email you@company.com --domain stackdome.example.com
+```
+
+Point that name's DNS `A` record at the server before you run the installer. Stackdome requests a Let's Encrypt certificate for a custom domain and the validation happens over port 80 on that hostname, so the name has to resolve and the port has to be open.
+
+<Warning>
+A `--domain` install also needs **cert-manager** already present in the cluster. The installer applies a Let's Encrypt issuer, which is one of cert-manager's own custom resources, and it treats a failure to apply it as fatal — the install stops there. The installer does not install cert-manager for you. If you are only trying Stackdome out, omit `--domain` and take the `nip.io` path below, which asks for no certificate at all. See [TLS](/self-host/install#tls) for the detail.
+</Warning>
+
+Omit `--domain` and the installer derives one for you: `stackdome.<PUBLIC_IP>.nip.io`, using the public IP it detected.
+
+<Note>
+`nip.io` is a public DNS service that resolves any hostname containing an IP address straight back to that IP — `stackdome.203.0.113.10.nip.io` resolves to `203.0.113.10`. That is why a trial install needs no DNS setup at all: the name works the moment the installer picks it.
+</Note>
+
+A third flag, `--image`, overrides the API server container image and defaults to `quay.io/stackdome/stackdome:latest`. Leave it alone unless you are pinning a specific version.
+
+<Note>
+Certificates are only requested for real domains. On a `nip.io` address — and on `.sslip.io`, `.local`, and `.localhost` — the installer skips Let's Encrypt entirely, so no trusted certificate is issued for your dashboard and your browser will warn you the first time you visit. Continue past the warning; it is expected on a trial install.
+</Note>
+
+## What the installer created
+
+When it finishes, the installer prints a summary of what is ready:
+
+- An **admin user** called `Platform Admin`, with the email you passed to `--email` and a generated password.
+- An organization named **Default**, with your dashboard domain configured on it.
+- A cluster named **local**, registered and connected — the server itself, which is where your apps will run.
+- An **in-cluster image registry** with 50Gi of storage, used to hold the images Stackdome builds for you.
+- A **PostgreSQL database** on a 10Gi persistent volume, holding Stackdome's own state.
+
+<Warning>
+The summary prints your admin password, and the installer tells you plainly that it will not be shown again. Copy it into your password manager before you close the terminal.
+</Warning>
+
+## Sign in
+
+Open the dashboard URL from the summary — `https://` followed by your domain. You land on the sign-in page:
+
+![The Stackdome sign-in form, headed "Welcome back.", with empty Email and Password fields and a Continue button](/images/quickstart-sign-in.png)
+
+Enter the email you passed to `--email` and the password from the summary, then press **Continue →**.
+
+<Note>
+Stackdome can also offer a **Continue with GitHub** button, but only when the server has been configured with a GitHub OAuth client ID and client secret. Until you set both, email and password is the only way in and the button does not appear.
+</Note>
+
+Signing in lands you on your dashboard, which opens on **Stacks** — the list of your applications. Every stack gets a card showing its resource and volume counts, its current status, and when it last changed, and the controls above the list filter and sort them. Here is how it looks on an install with a handful of stacks already running:
+
+![The Stacks list, with a "Filter stacks" box above stack cards showing resource and volume counts, an OK status, and when each stack last changed](/images/quickstart-dashboard.png)
+
+The sidebar is your map: **Stacks**, **Previews**, **Secrets**, **Object Stores**, and **Addons** under Platform, and **Git Providers** and **Image Registries** under Integrations. As an organization admin you also see **Clusters** and **Domains** — the `local` cluster the installer registered is already listed there.
+
+## Next step
+
+<Card title="Deploy your first app" icon="circle-play" href="/deploy-first-app">
+  Take a container image or a git repository from nothing to a live URL.
+</Card>

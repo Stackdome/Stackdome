@@ -1,0 +1,199 @@
+---
+title: "Add a cluster"
+description: "Register an additional Kubernetes cluster with your Stackdome install."
+---
+
+Registering a cluster gives an organization its own compute target. Stackdome's hub — the API server you sign in to — keeps no workloads of its own on the clusters it manages: it writes custom resources, and the `stackdome-agent` running on the cluster turns them into Deployments, Services, and Ingresses. Registering a cluster is therefore two things: telling the hub how to reach the cluster's API server, and giving it credentials with enough authority to write there.
+
+The [installer](/self-host/install) registers the server it runs on, so a fresh install already has one cluster. This page is for the next one: a separate Kubernetes cluster you want an organization to deploy onto.
+
+## Prerequisites
+
+- **You are an organization admin.** **Clusters** and **Domains** appear in the sidebar only for organization admins; members never see them and cannot register a cluster.
+- **The target cluster runs `stackdome-agent`.** Without the agent, the hub will happily store your credentials and write custom resources that nothing ever reconciles. Install the chart into the `stackdome-control-plane` namespace on the target cluster before you register it.
+- **The cluster's API server is reachable from the hub.** The hub opens outbound connections to the URL you register. For a cluster on another machine that means its API port — commonly `6443` — has to be open to the machine running Stackdome, not just to your laptop.
+- **`kubectl` access to the target cluster**, to create the service account in the next section.
+- **An `https://` URL.** Registration rejects any other scheme.
+
+<Note>
+**An organization can own one cluster.** The dashboard disables **Add Cluster** once a cluster is listed, with the message *"Currently only one cluster is supported."*, and the API rejects a second one with `409 cluster already exists for org`. To move an organization to a different cluster today you delete the existing one first. An organization with no cluster of its own falls back to the platform cluster the installer created.
+</Note>
+
+## Get the credentials
+
+Stackdome authenticates to the cluster as a service account, using a long-lived token from a `kubernetes.io/service-account-token` Secret. Run this against the **target** cluster:
+
+```bash
+kubectl apply -f - <<'EOF'
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: stackdome-admin
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: stackdome-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: stackdome-admin
+    namespace: kube-system
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: stackdome-admin-token
+  namespace: kube-system
+  annotations:
+    kubernetes.io/service-account.name: stackdome-admin
+type: kubernetes.io/service-account-token
+EOF
+```
+
+Kubernetes populates that Secret a moment later. Then read the two values out of it:
+
+```bash
+# CA certificate — leave it base64-encoded, exactly as the Secret stores it.
+kubectl -n kube-system get secret stackdome-admin-token -o jsonpath='{.data.ca\.crt}'
+
+# Service account token — decode it to plaintext.
+kubectl -n kube-system get secret stackdome-admin-token -o jsonpath='{.data.token}' | base64 -d
+```
+
+**The encoding is the part that matters, and the two fields are not treated the same way.** This is the same split the installer's own `extractClusterCredentials` performs when it registers the server it is installing on:
+
+| Field | What to paste |
+| --- | --- |
+| CA certificate | The `data."ca.crt"` value **unchanged**. Secret data is already base64, and that is the form Stackdome wants. Do not decode it. |
+| Service account token | The token **base64-decoded** to its plaintext JWT — the `eyJ...` string, dots and all. |
+
+Getting the CA wrong produces one specific message, and it is worth knowing which one. Registration only base64-decodes the value when it *is* valid base64; a PEM certificate is not, so a decoded CA skips the decode entirely and the certificate pool is then built from nothing. The failure you see is:
+
+```text
+400 cluster CA data is not valid: data does not contain any valid RSA or ECDSA certificates
+```
+
+That is the message for a decoded CA, for a truncated one, and for anything else that is not a base64-wrapped certificate. Search for `cluster CA data is not valid` — the sibling message `cluster CA data is not valid base64` exists in the code but cannot be reached, so you will never see it.
+
+You also need the cluster's API server URL. Read it off your kubeconfig, but sanity-check it against the machine running Stackdome rather than trusting it blindly: a kubeconfig written on the cluster host often says `https://127.0.0.1:6443`, which means nothing to a hub somewhere else. Use the address the hub can actually dial, such as `https://203.0.113.10:6443`.
+
+<Warning>
+That token is long-lived and bound to `cluster-admin`. Anyone holding it has full control of the cluster. It does not expire on its own, so it stays valid until you delete the Secret or the service account. Keep it out of shell history, tickets, and screenshots, and narrow the ClusterRole if your threat model calls for it.
+</Warning>
+
+<Note>
+Do not substitute `kubectl create token stackdome-admin`. That mints a short-lived, expiring token; the cluster works for an hour and then quietly stops accepting the hub's calls. The Secret above is what keeps the credential durable.
+</Note>
+
+## Register it in the dashboard
+
+<Steps>
+  <Step title="Open Clusters">
+    In the sidebar, under **PLATFORM**, choose **Clusters**. The page lists the organization's clusters under **ALL CLUSTERS**.
+  </Step>
+  <Step title="Start the form">
+    Choose **Add Cluster**. The **Add New Cluster** dialog opens. If the control is greyed out, the organization already has a cluster — see the note above.
+  </Step>
+  <Step title="Fill in the four required fields">
+    Every field marked with an asterisk is required, and **Add Cluster** stays disabled until all four have a value.
+  </Step>
+  <Step title="Submit">
+    Choose **Add Cluster**. On success the dialog closes, a *"Cluster added"* toast appears, and the new cluster shows up in the list.
+  </Step>
+</Steps>
+
+![The Add New Cluster dialog in the Stackdome dashboard, showing the Cluster Name, Cluster URL, CA Certificate Data, and Service Account Token fields, the Enable Image Registry toggle, and the Backend Storage Size field](/images/add-cluster-form.png)
+
+| Field | What goes in it |
+| --- | --- |
+| **Cluster Name** | A label for you. It is what the list and the detail page show. |
+| **Cluster URL** | The API server URL the hub will dial, for example `https://k8s-api.example.com:6443`. Must be `https://`, and must not already be registered — a duplicate is rejected with `409 cluster with this api URL already exists`. |
+| **CA Certificate Data** | The base64 CA from the Secret. The field is masked; use the eye control to check what you pasted. Its hint reads *"Base64-encoded."* |
+| **Service Account Token** | The decoded plaintext token. Also masked. |
+| **Enable Image Registry** | On by default. See below. |
+| **Backend Storage Size** | Only shown when the toggle is on. Defaults to `20Gi`. |
+
+Both credentials are encrypted before they are stored, and neither is ever displayed again — the detail page shows dots. There is no rotate action: to change a cluster's credentials you delete the cluster and register it again.
+
+## Image registry
+
+Leave **Enable Image Registry** on unless you have a specific reason not to.
+
+Stackdome builds container images from your git repositories, and a build has to push what it produces somewhere the cluster can pull it back from. It resolves that destination on **the cluster the stack runs on**, so a cluster without a registry cannot run git-based deploys — only resources that reference an image you already host elsewhere.
+
+Turning the toggle on provisions a private registry inside the new cluster, backed by a persistent volume of the size you enter. `20Gi` is the form's default; the installer gives the cluster it registers `50Gi`. Pick according to how many image versions you expect to accumulate.
+
+**The dashboard does not ask you to name the registry.** It always sends the same fixed name, `default-registry`, so there is nothing to get wrong and the length limit described next never comes into play when you register through the UI.
+
+### Naming the registry through the API
+
+`cluster_image_registry.name` is yours to set if you register a cluster by calling the API directly, and that is the one path where the length limit matters.
+
+Leave the name empty and Stackdome derives one from the identity of the registry — the organization and the cluster it lives on — as `<org-slug>-<8 hex of org id>-<8 hex of cluster id>`, capping the result at **50 characters** (`maxRegistryNameLength` in `pkg/services/organisation_service.go`) by truncating the organization slug to fit.
+
+That number is not arbitrary. The registry runs as a StatefulSet, whose pods carry a `controller-revision-hash` label built by appending `-<10-character hash>` to the registry name, and a Kubernetes label value cannot exceed 63 characters. A longer name produces pods Kubernetes refuses to admit.
+
+The cap only guards the *derived* name. A name you supply yourself is used verbatim and is not truncated for you, so keep your own names inside the same 50 characters.
+
+<Note>
+This registry belongs to the cluster and is created with it. It is **not** one of the entries under **INTEGRATIONS → Image Registries** — that page holds credentials you add for *external* registries, and it stays empty even when your cluster's own registry is running.
+</Note>
+
+## Verify
+
+Open the cluster from the list to reach its detail page.
+
+![The registry part of a registered cluster's Cluster Configuration panel, with the Stackdome Image Registry toggle on, a Registry Size of 50Gi, and a Registry Status pill reading Running](/images/add-cluster-detail.png)
+
+Under **CLUSTER CONFIGURATION** you get the API server URL you registered, the two credentials masked behind *"Encrypted at rest. Re-create the cluster to rotate."*, and — when you enabled the registry — **Registry Size** plus a **Registry Status** pill.
+
+**Registry Status is your connectivity signal.** There is no separate "connected" badge on this page, and none is needed: that pill is end-to-end proof of the whole round trip. Stackdome wrote a custom resource to the cluster with the credentials you supplied, the agent picked it up and built the registry, the agent wrote status back, and the hub's watchers recorded it. Read it like this:
+
+| Registry Status | What it means |
+| --- | --- |
+| **Running** | The credentials work, the agent is alive, and the loop closes. The cluster is ready for stacks. |
+| **Pending** | The resource exists but is not ready yet. Expect this for the first minute or two while the volume binds and the registry starts. |
+| **Error** | The agent reached the resource and failed on it. This is a problem on the cluster, not with your credentials. |
+| **Unknown**, or stuck on **Pending** | Nothing has written status back. Start with reachability and the token. |
+
+If you registered the cluster without a registry there is no pill to read, and your first deploy is the test.
+
+### When it does not connect
+
+Work through these in order.
+
+- **Reachability from the hub, not from you.** The URL has to resolve and connect *from the machine running Stackdome*. Test it there rather than from your laptop:
+
+  ```bash
+  curl -sk -o /dev/null -w '%{http_code}\n' https://203.0.113.10:6443/version
+  ```
+
+  A `401` is a good result — it means you reached a Kubernetes API server and it declined an unauthenticated request. A hang or a connection refusal points at a firewall or cloud security group that does not allow the hub's IP on that port. A `127.0.0.1` or private address copied straight out of a kubeconfig is the single most common cause.
+
+- **Token validity.** Confirm the Secret was populated and still authenticates, from a machine that can reach the cluster:
+
+  ```bash
+  kubectl -n kube-system get secret stackdome-admin-token \
+    -o jsonpath='{.data.token}' | base64 -d | \
+    xargs -I{} curl -sk -o /dev/null -w '%{http_code}\n' \
+    -H 'Authorization: Bearer {}' https://203.0.113.10:6443/api
+  ```
+
+  `200` means the credential is good. `401` means the token is wrong, was pasted still base64-encoded, or has expired because it came from `kubectl create token` instead of the Secret. `403` means the token authenticates but the ClusterRoleBinding did not apply.
+
+- **The agent is actually running.** Credentials and reachability can both be fine while nothing reconciles. Check the operator on the target cluster:
+
+  ```bash
+  kubectl -n stackdome-control-plane get pods
+  ```
+
+- **Registration errors are explicit.** If the form itself rejects the submission, the message names the cause: `cluster CA data is not valid: data does not contain any valid RSA or ECDSA certificates` (the value is not a base64-wrapped certificate — most often because it was decoded first), `cluster URL must use https scheme`, `cluster with this api URL already exists`, or `cluster already exists for org`.
+
+<Note>
+Right after registering, Stackdome also tries to create a `letsencrypt-prod` ClusterIssuer on the new cluster so your applications can get certificates. It needs cert-manager to be installed there. Failure is logged and does **not** fail registration — so a cluster can register cleanly and still have no working certificate issuer. See [Install Stackdome](/self-host/install) for what the issuer is configured with.
+</Note>

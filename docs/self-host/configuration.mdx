@@ -1,0 +1,145 @@
+---
+title: "Configuration"
+description: "Environment variables that configure the Stackdome API server."
+---
+
+The API server takes all of its configuration from environment variables. If you installed Stackdome with the installer, the secrets it needs were already generated and wired in for you — see [Install](/self-host/install). This page is the reference for changing those values afterwards, or for running the API server yourself.
+
+## How values are read
+
+Each variable is read once at startup. When a variable is unset, the server falls back to the default listed below; where no default is listed, the value stays empty.
+
+<Note>
+A value the server cannot parse is discarded. What happens next depends on whether the variable has a default. With a default, you silently get the default: `DB_MAX_CONNECTIONS=abc` gives you `50` and `DB_DEBUG_MODE=yes` gives you `false`, with no warning either time. Without a default, the value stays empty and startup validation rejects it — `DB_PORT=not-a-number` exits with `port is required`. Double-check spelling when a setting appears to have no effect.
+</Note>
+
+### Values validated at startup
+
+The server validates its configuration before it serves traffic and **refuses to start** on the first problem it finds, reporting it as `<field> is required`. It checks, in order:
+
+- `bind_address`, from `SERVER_BIND_ADDRESS`
+- the database — SSL mode, max connections, host, port, name, username, password, and the root certificate when SSL mode is `require`
+- `jwt secret`, from `JWT_SECRET`
+- `log level`, from `LOG_LEVEL`
+- `encryption key`, from `ENCRYPTION_KEY`, which must also be 64–1024 characters
+
+The database dialect is validated too, but it is fixed to `postgres` in code and has no environment variable, so it never fails in practice.
+
+## Database
+
+The API server stores all of its state in PostgreSQL.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `DB_HOST` | Yes | — | PostgreSQL host |
+| `DB_PORT` | Yes | — | PostgreSQL port |
+| `DB_NAME` | Yes | — | Database name |
+| `DB_USERNAME` | Yes | — | Database user |
+| `DB_PASSWORD` | Yes | — | Database password |
+| `DB_SSL_MODE` | No | `disable` | TLS mode for the connection. Only `disable` and `require` are accepted. Any other value is discarded, which leaves the mode empty, and the server then refuses to start with `sslmode is required`. |
+| `DB_ROOT_CERT_FILE` | When `DB_SSL_MODE=require` | — | Path to the root CA certificate. Once SSL mode is `require`, leaving this unset makes the server refuse to start with `root_cert_file is required when sslmode is require`. |
+| `DB_MAX_CONNECTIONS` | No | `50` | Maximum open connections in the pool. Setting it to `0` makes the server refuse to start with `max_connections is required`. |
+| `DB_DEBUG_MODE` | No | `false` | Log every SQL query. Useful when debugging, noisy in production. |
+
+## Security
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `JWT_SECRET` | Yes | — | Signing secret for the session and API tokens the server issues |
+| `ENCRYPTION_KEY` | Yes | — | Master key used to encrypt sensitive values before they are written to the database. Must be 64–1024 characters. |
+
+`ENCRYPTION_KEY` is the master key for AES-256-GCM encryption, with a per-value key derived from it via PBKDF2. It protects:
+
+- stack and resource secrets, and the environment-variable values you set on a resource
+- the credentials of every cluster you have registered — both the service-account token and the cluster CA data
+- registry credential passwords
+- git integration credentials
+
+<Warning>
+Changing `ENCRYPTION_KEY` after any data exists makes every previously encrypted value unreadable. The key is not stored alongside the ciphertext, and there is no re-key path — the server will fail to decrypt your existing stack secrets, registry credentials, and git integration credentials, and it will no longer be able to reach any registered cluster, because the stored token and CA data cannot be decrypted. Treat this value as permanent for the life of the installation, and back it up.
+</Warning>
+
+Rotating `JWT_SECRET` is safe by comparison: it only invalidates tokens that are already issued, so everyone is signed out and has to sign in again.
+
+## Server
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `SERVER_BIND_ADDRESS` | No | `0.0.0.0:8000` | Address and port the HTTP server listens on |
+| `SERVER_HOSTNAME` | No | — | Hostname or domain the server identifies itself as |
+| `SERVER_EXTERNAL_URL` | No | — | The externally reachable base URL of the hub, for example `https://stackdome.example.com`. GitHub sends browser redirects and webhook deliveries here, so set it if you use the GitHub App flow. |
+
+## Logging
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `LOG_LEVEL` | No | `info` | One of `debug`, `info`, `warn`, `error` |
+| `LOG_FORMAT` | No | `json` | Either `json` or `text`. Keep `json` when a log collector consumes the output. |
+
+## GitHub
+
+`GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` come from a GitHub OAuth app and enable "sign in with GitHub".
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `GITHUB_CLIENT_ID` | No | — | GitHub OAuth app client ID |
+| `GITHUB_CLIENT_SECRET` | No | — | GitHub OAuth app client secret |
+| `GITHUB_REDIRECT_URI` | No | derived from `SERVER_EXTERNAL_URL` | Where GitHub sends the browser after the user authorizes |
+| `GITHUB_API_BASE_URL` | No | `https://api.github.com` | GitHub API endpoint. Point this at your GitHub Enterprise Server instance if you do not use github.com. |
+
+GitHub sign-in is off until **both** the client ID and the client secret are set. Only then does the server register the `/api/v1/auth/github` routes, and only then does the web UI show the "Continue with GitHub" button — the UI reads that state from `GET /api/v1/config`, so setting one of the two without the other leaves sign-in exactly as it was.
+
+### Setting the redirect URI
+
+`GITHUB_REDIRECT_URI` must equal your frontend origin plus `/auth/github/callback`, and it must match the **Authorization callback URL** registered on the GitHub OAuth app exactly. GitHub rejects the sign-in attempt if the two differ.
+
+```bash
+# Frontend origin is https://stackdome.example.com
+GITHUB_REDIRECT_URI=https://stackdome.example.com/auth/github/callback
+```
+
+<Warning>
+Set this one explicitly. When `GITHUB_REDIRECT_URI` is unset, the server derives it from `SERVER_EXTERNAL_URL` as `<SERVER_EXTERNAL_URL>/api/v1/auth/github/callback` — that points at the API endpoint rather than the UI page that completes the sign-in, so the derived default is not the value you want in a browser flow.
+</Warning>
+
+## Platform cluster
+
+These seed a cluster and its base domain into the database the first time the server boots, so an install can come up with a cluster already registered instead of you adding one by hand. Leave them unset if you would rather register clusters through the UI.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `PLATFORM_CLUSTER_API_URL` | No | — | Kubernetes API URL of the cluster to seed |
+| `PLATFORM_CLUSTER_CA_DATA` | No | — | That cluster's CA certificate, base64-encoded |
+| `PLATFORM_CLUSTER_TOKEN` | No | — | Service-account token for that cluster |
+| `PLATFORM_BASE_DOMAIN` | No | — | Base domain for the platform organization and per-organization subdomains |
+| `PLATFORM_EMAIL` | No | — | Operator contact email, also used as the ACME contact for the platform cluster's certificate issuer |
+| `PLATFORM_ORG_REGISTRY_STORAGE_SIZE` | No | `10Gi` | Storage size for the image registry seeded for each new organization |
+| `PLATFORM_ORG_REGISTRY_STORAGE_CLASS` | No | — | Storage class for that registry. Leave unset to use the cluster's default. |
+
+The server validates this group as a unit at startup and refuses to boot on a partial configuration:
+
+- the three `PLATFORM_CLUSTER_*` variables must all be set, or all be unset
+- `PLATFORM_CLUSTER_*` and `PLATFORM_BASE_DOMAIN` must be set together — one without the other is an error
+- `PLATFORM_EMAIL` is required once a platform cluster is configured
+
+## Runtime environment
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `STACKDOME_ENV` | No | `DEVELOPMENT` | Which runtime environment the server initializes as. `DEVELOPMENT` is the only value the server accepts. |
+
+<Warning>
+Leave `STACKDOME_ENV` unset, or set it to `DEVELOPMENT`. Any other value — including `PRODUCTION` — makes the server panic at startup with `env: <value> not defined`, before it reaches configuration validation. A self-hosted production install runs with this variable unset.
+</Warning>
+
+## What the installer already set
+
+The installer generates the three secret values on first run, keeps them in a Kubernetes secret named `stackdome-bootstrap-secrets` in the `stackdome-control-plane` namespace, and reuses them on every later run so a re-install does not invalidate your data:
+
+- `DB_PASSWORD` — a random 24-character alphanumeric password
+- `JWT_SECRET` — 48 random bytes, base64-encoded
+- `ENCRYPTION_KEY` — 32 random bytes, hex-encoded, which is the 64 characters the validator requires
+
+It also sets `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, and `LOG_LEVEL=info` to point the server at the PostgreSQL instance it deployed alongside it. Everything else on this page is unset and falls back to the defaults above.
+
+To change a value afterwards, edit the environment variables on the `api-server` resource and let it redeploy. Read the warning about `ENCRYPTION_KEY` before you touch that one.
