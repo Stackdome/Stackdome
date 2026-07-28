@@ -91,12 +91,6 @@ function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copie
         aria-label={`Go to ${url}`}
         className="flex h-5 min-w-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
       >
-        {reveal === "inline" && (
-          <span className="flex max-w-0 items-center overflow-hidden whitespace-nowrap text-foreground/90 opacity-0 transition-[max-width,opacity] duration-200 group-focus-within:max-w-[360px] group-focus-within:opacity-100 group-hover:max-w-[360px] group-hover:opacity-100">
-            <span aria-hidden className="pr-1.5 text-border">|</span>
-            <span className="pr-1.5 hover:underline">{hostOf(url)}</span>
-          </span>
-        )}
         <ExternalLink className="size-3 shrink-0" />
       </a>
       {/* Copy earns its keep in the full header; the zen bar keeps go-to only. */}
@@ -109,6 +103,24 @@ function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copie
         >
           {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
         </button>
+      )}
+      {/* Hostname expands AFTER the icons so the click targets never move
+          mid-hover. Redundant with the go-to icon, so it's out of the tab
+          order and hidden from readers. */}
+      {reveal === "inline" && (
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          tabIndex={-1}
+          aria-hidden
+          className="flex items-center text-foreground/90 hover:text-foreground"
+        >
+          <span className="flex max-w-0 items-center overflow-hidden whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 group-focus-within:max-w-[360px] group-focus-within:opacity-100 group-hover:max-w-[360px] group-hover:opacity-100">
+            <span className="px-1 text-border">|</span>
+            <span className="pr-1 hover:underline">{hostOf(url)}</span>
+          </span>
+        </a>
       )}
     </span>
   );
