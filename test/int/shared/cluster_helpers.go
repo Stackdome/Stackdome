@@ -395,7 +395,10 @@ func DumpNamespaceDiagnostics(ctx context.Context, clusterClient client.Client, 
 		for _, ib := range builds.Items {
 			fmt.Fprintf(&b, "imagebuild %s phase=%s imageUrl=%q\n", ib.Name, ib.Status.Phase, ib.Status.ImageUrl)
 			for _, c := range ib.Status.Conditions {
-				fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s\n", c.Type, c.Status, c.Reason, c.Message)
+				fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s at=%s\n", c.Type, c.Status, c.Reason, c.Message, c.LastTransitionTime.Format(time.RFC3339))
+			}
+			if d := ib.Status.LastBuildFailureDetail; d != nil {
+				fmt.Fprintf(&b, "  lastBuildFailureDetail: %+v\n", *d)
 			}
 		}
 		if len(builds.Items) == 0 {
@@ -410,7 +413,7 @@ func DumpNamespaceDiagnostics(ctx context.Context, clusterClient client.Client, 
 		for _, j := range jobs.Items {
 			fmt.Fprintf(&b, "job %s active=%d succeeded=%d failed=%d suspend=%v\n", j.Name, j.Status.Active, j.Status.Succeeded, j.Status.Failed, j.Spec.Suspend != nil && *j.Spec.Suspend)
 			for _, c := range j.Status.Conditions {
-				fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s\n", c.Type, c.Status, c.Reason, c.Message)
+				fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s at=%s\n", c.Type, c.Status, c.Reason, c.Message, c.LastTransitionTime.Format(time.RFC3339))
 			}
 		}
 		if len(jobs.Items) == 0 {
@@ -443,7 +446,7 @@ func DumpNamespaceDiagnostics(ctx context.Context, clusterClient client.Client, 
 		fmt.Fprintf(&b, "events: list error: %v\n", err)
 	} else {
 		for _, e := range events.Items {
-			fmt.Fprintf(&b, "event %s %s %s/%s: %s\n", e.Type, e.Reason, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
+			fmt.Fprintf(&b, "event %s %s %s %s/%s: %s\n", e.LastTimestamp.Format(time.RFC3339), e.Type, e.Reason, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
 		}
 	}
 	fmt.Fprintf(&b, "===== end diagnostics =====\n")
