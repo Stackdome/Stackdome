@@ -110,8 +110,10 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
   const resourceCards = resources
     .filter((r): r is StackResource & { name: string } => !!r.name)
     .map((r) => {
-      const metrics = resourceMetrics.get(r.name);
       const state = liveStatusResources?.[r.name]?.state;
+      // Not-ready resources drop their last sample: a stale reading under a
+      // Degraded label reads as live data.
+      const metrics = state == null || isResourceReady(state) ? resourceMetrics.get(r.name) : undefined;
       const ready = state != null ? isResourceReady(state) : !!metrics;
       return {
         resourceName: r.name,
@@ -161,7 +163,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
           <div className="mt-3 flex items-end justify-between gap-4">
             <div>
               <div className="text-[30px] font-medium leading-none tracking-[-0.02em] text-foreground">
-                {stackMetrics?.cpu_usage ? `${toNumber(stackMetrics.cpu_usage)}m` : '—'}
+                {stackMetrics?.cpu_usage != null ? `${toNumber(stackMetrics.cpu_usage)}m` : '—'}
               </div>
               <div className="mt-1 font-mono text-[11px] text-fg-muted">millicores</div>
             </div>
@@ -177,8 +179,8 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
           <div className="mt-3 flex items-end justify-between gap-4">
             <div>
               <div className="text-[30px] font-medium leading-none tracking-[-0.02em] text-foreground">
-                {stackMetrics?.memory_usage ? `${toNumber(stackMetrics.memory_usage)}` : '—'}
-                {stackMetrics?.memory_usage && <span className="ml-1 text-[15px] text-fg-muted">MiB</span>}
+                {stackMetrics?.memory_usage != null ? `${toNumber(stackMetrics.memory_usage)}` : '—'}
+                {stackMetrics?.memory_usage != null && <span className="ml-1 text-[15px] text-fg-muted">MiB</span>}
               </div>
               <div className="mt-1 font-mono text-[11px] text-fg-muted">mebibytes</div>
             </div>

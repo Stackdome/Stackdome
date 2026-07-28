@@ -5,8 +5,6 @@ import type { StatusVariant } from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
-/** Compact mode caps visible chips; the rest fold into a "+N" tooltip chip. */
-const COMPACT_MAX_CHIPS = 3;
 
 /** Per-endpoint resource status variant → dot colour (semantic tokens only). */
 const DOT_CLASS: Record<StatusVariant, string> = {
@@ -58,8 +56,6 @@ interface ChipProps {
 }
 
 function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copiedUrl, onCopy }: ChipProps) {
-  const compact = reveal === "tooltip";
-
   const serviceLabel = (
     <span className="flex items-center gap-1.5 text-fg-muted">
       <span aria-hidden className={cn("size-[5px] rounded-full", DOT_CLASS[variant ?? "neutral"])} />
@@ -71,7 +67,7 @@ function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copie
     <span
       className={cn(
         "group inline-flex items-center rounded-lg border border-border/60 bg-muted/25 font-mono transition-colors hover:border-border hover:bg-muted/40",
-        compact ? "gap-1 py-0.5 pl-2 pr-1 text-[11px]" : "gap-1.5 py-1 pl-2.5 pr-1.5 text-[12px]",
+        reveal === "tooltip" ? "gap-1 py-0.5 pl-2 pr-1 text-[11px]" : "gap-1.5 py-1 pl-2.5 pr-1.5 text-[12px]",
       )}
     >
       {reveal === "inline" ? (
@@ -163,25 +159,11 @@ export function PublicEndpointRow({
   if (endpoints.length === 0) return null;
 
   if (compact) {
-    const shown = endpoints.slice(0, COMPACT_MAX_CHIPS);
-    const overflow = endpoints.slice(COMPACT_MAX_CHIPS);
     return (
       <div className="flex flex-none items-center gap-1.5">
-        {shown.map((e) => (
+        {endpoints.map((e) => (
           <EndpointChip key={`${e.service}-${e.url}`} endpoint={e} reveal="tooltip" copiedUrl={copiedUrl} onCopy={onCopy} />
         ))}
-        {overflow.length > 0 && (
-          <Tooltip delayDuration={300}>
-            <TooltipTrigger asChild>
-              <span className="inline-flex items-center rounded-lg border border-border/60 bg-muted/25 px-2 py-0.5 font-mono text-[11px] text-fg-muted">
-                +{overflow.length}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {overflow.map((e) => e.service).join(", ")}
-            </TooltipContent>
-          </Tooltip>
-        )}
       </div>
     );
   }

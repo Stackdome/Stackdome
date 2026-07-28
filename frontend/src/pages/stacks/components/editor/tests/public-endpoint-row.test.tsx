@@ -81,10 +81,4 @@ describe("PublicEndpointRow compact", () => {
     expect(screen.queryByRole("button", { name: /Copy/ })).toBeNull();
   });
 
-  it("folds endpoints beyond the cap into a +N chip", () => {
-    const many = Array.from({ length: 5 }, (_, i) => ({ service: `svc${i}`, url: `https://svc${i}.example.com` }));
-    render(<PublicEndpointRow compact endpoints={many} />);
-    expect(screen.getByText("+2")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Go to https://svc4.example.com" })).toBeNull();
-  });
 });

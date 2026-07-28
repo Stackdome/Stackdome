@@ -6,6 +6,7 @@ import {
   buildStackResourceLogStreamUrl,
   attachSseHandlers,
   aggregateStreamStatus,
+  STACK_STREAM_KEY,
   type SseStreamStatus,
 } from '@/api/observability';
 import { useResourceProjects } from '@/hooks/use-resource-projects';
@@ -26,9 +27,6 @@ interface UseLogStreamReturn {
   error: string | null;
   retry: () => void;
 }
-
-// Key for the whole-stack stream in the per-source status map.
-const STACK_STREAM_KEY = '__stack__';
 
 export function useLogStream({
   stackId,
@@ -80,6 +78,7 @@ export function useLogStream({
       attachSseHandlers(eventSource, {
         onData: (data) => {
           if (!data || !data.trim()) return;
+          setError(null); // flowing data supersedes a stale stream error
           const logEntry = parseLogEntry(data.trim());
           if (key !== STACK_STREAM_KEY) {
             logEntry.source = key;

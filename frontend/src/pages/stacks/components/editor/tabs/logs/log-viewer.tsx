@@ -77,10 +77,11 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
   const canStream =
     readySources.size > 0 && (filters.sources.length === 0 || streamSources.length > 0);
 
+  // No memo: the hook keys its effect on filter CONTENT, so object identity is free.
   const { logs, connectionStatus, error, retry } = useLogStream({
     stackId,
     organizationId,
-    filters: useMemo(() => ({ ...filters, sources: streamSources }), [filters, streamSources]),
+    filters: { ...filters, sources: streamSources },
     enabled: canStream,
   });
 

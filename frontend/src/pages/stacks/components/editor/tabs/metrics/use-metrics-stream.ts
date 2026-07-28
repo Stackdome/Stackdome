@@ -6,10 +6,9 @@ import {
   buildStackResourceMetricsStreamUrl,
   attachSseHandlers,
   aggregateStreamStatus,
+  STACK_STREAM_KEY,
   type SseStreamStatus,
 } from '@/api/observability';
-
-type ConnectionStatus = SseStreamStatus;
 
 interface UseMetricsStreamProps {
   stackId: string;
@@ -22,15 +21,12 @@ interface UseMetricsStreamProps {
 interface UseMetricsStreamReturn {
   stackMetrics: ResourceMetrics | null;
   resourceMetrics: Map<string, ResourceMetrics>;
-  connectionStatus: ConnectionStatus;
+  connectionStatus: SseStreamStatus;
   /** Set only from the backend's `event: error` SSE events — never from
    *  connection drops, which surface through connectionStatus instead. */
   error: string | null;
   retry: () => void;
 }
-
-// Key for the whole-stack stream in the per-source status map.
-const STACK_STREAM_KEY = '__stack__';
 
 export function useMetricsStream({
   stackId,
@@ -40,7 +36,7 @@ export function useMetricsStream({
 }: UseMetricsStreamProps): UseMetricsStreamReturn {
   const [stackMetrics, setStackMetrics] = useState<ResourceMetrics | null>(null);
   const [resourceMetrics, setResourceMetrics] = useState<Map<string, ResourceMetrics>>(new Map());
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
+  const [connectionStatus, setConnectionStatus] = useState<SseStreamStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const eventSourcesRef = useRef<EventSource[]>([]);
@@ -88,6 +84,7 @@ export function useMetricsStream({
         onData: (data) => {
           const metrics = parseMetrics(data);
           if (!metrics) return;
+          setError(null); // flowing data supersedes a stale stream error
           if (key === STACK_STREAM_KEY) {
             setStackMetrics(metrics);
           } else {

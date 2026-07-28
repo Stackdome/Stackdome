@@ -6,6 +6,9 @@ import { API_BASE_URL } from "./base-url";
 /** Status of a single SSE connection, from the browser's perspective. */
 export type SseStreamStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
+/** Key for the whole-stack stream in the hooks' per-source status maps. */
+export const STACK_STREAM_KEY = '__stack__';
+
 /**
  * Wires an EventSource, separating the backend's `event: error` stream errors
  * (the only real API error signal — see pkg/handlers/handler_helper.go) from

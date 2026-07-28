@@ -1,4 +1,5 @@
 import type { ReleaseLiveStatus } from "@/api/releases";
+import type { SseStreamStatus } from "@/api/observability";
 
 export interface LogEntry {
   id: string;
@@ -8,7 +9,7 @@ export interface LogEntry {
   source?: string;
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
+export type ConnectionStatus = SseStreamStatus;
 
 export type TimeRangeOption =
   | 'live-4h'
