@@ -171,20 +171,21 @@ describe("CanvasEditorShell actions menu", () => {
 describe("CanvasEditorShell collapse", () => {
   afterEach(() => localStorage.clear());
 
-  // Collapse is driven by zen mode (canvas control / ⌘.) through
-  // HeaderCollapseContext; the shell only persists and renders the state.
-  it("restores the persisted collapsed state as a compact bar", () => {
-    localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
+  it("chevron collapses to a compact bar and back", () => {
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse header" }));
     // The expanded header stays mounted for the height animation but is
     // inert + aria-hidden; the compact bar becomes the visible surface.
     expect(screen.getByRole("heading", { name: "acme", hidden: true }).closest("[inert]")).not.toBeNull();
-    expect(screen.getAllByText("acme").length).toBeGreaterThan(0); // compact bar name
+    fireEvent.click(screen.getByRole("button", { name: "Expand header" }));
+    expect(screen.getByRole("heading", { name: "acme" }).closest("[inert]")).toBeNull();
   });
 
-  it("has no collapse chevron of its own", () => {
+  it("restores the persisted collapsed state as a compact bar", () => {
+    localStorage.setItem("stackdome.editor-header-collapsed.s1", "1");
     render(<CanvasEditorShell {...base} stackName="acme" nameEditable={false} stackId="s1" />);
-    expect(screen.queryByRole("button", { name: /Collapse header|Expand header/ })).toBeNull();
+    expect(screen.getByRole("heading", { name: "acme", hidden: true }).closest("[inert]")).not.toBeNull();
+    expect(screen.getAllByText("acme").length).toBeGreaterThan(0); // compact bar name
   });
 
   it("keeps tabs clickable while collapsed", () => {

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, type ReactNode } from "react";
-import { Activity, History, LayoutGrid, MoreHorizontal, Pencil, ScrollText, Trash2 } from "lucide-react";
+import { Activity, ChevronDown, ChevronRight, History, LayoutGrid, MoreHorizontal, Pencil, ScrollText, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -100,9 +100,10 @@ export interface CanvasEditorShellProps {
  * Full-bleed editor chrome shown when the canvas flag is on. The title row is
  * identity only (name + single status pill); deploy actions now live in the
  * floating canvas deploy pill (see DeployPill) rather than the rail. The rail
- * keeps tabs on the left and, on the right, the autosave indicator and the
- * stack ⋮ actions menu. Header collapse is driven by zen mode (⌘. or the
- * canvas control) through HeaderCollapseContext.
+ * keeps tabs on the left and, on the right, the autosave indicator, the stack
+ * ⋮ actions menu, and the collapse chevron (header-only). Zen mode (⌘. or the
+ * canvas control) also collapses the header through HeaderCollapseContext,
+ * folding the sidebar with it.
  *
  * Presentation only: it owns no stack state. The autosave indicator and
  * deploy pill are wired straight to the caller's session + deploy lifecycle.
@@ -184,6 +185,9 @@ export function CanvasEditorShell({
     () => ({ collapsed, setCollapsed: applyCollapsed }),
     [collapsed, applyCollapsed],
   );
+  // Header-only toggle (chevron). Zen (⌘. / canvas control) also folds the
+  // sidebar; this only trades the two header variants.
+  const toggleCollapsed = useCallback(() => applyCollapsed(!collapsed), [applyCollapsed, collapsed]);
 
   // The canvas (Configuration) stays mounted so its open drawer + node
   // selection survive tab switches; ops views render as an opaque overlay on
@@ -221,6 +225,18 @@ export function CanvasEditorShell({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+
+  const chevron = (
+    <button
+      type="button"
+      onClick={toggleCollapsed}
+      aria-label={collapsed ? "Expand header" : "Collapse header"}
+      title={`${collapsed ? "Expand" : "Collapse"} header`}
+      className="flex size-6 flex-none items-center justify-center rounded text-fg-muted hover:bg-muted hover:text-foreground"
+    >
+      {collapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
+    </button>
   );
 
   return (
@@ -284,6 +300,7 @@ export function CanvasEditorShell({
               <div className="flex-1" />
               <PublicEndpointRow endpoints={publicEndpoints ?? []} compact />
               {actionsMenu}
+              {chevron}
             </div>
           </div>
         </div>
@@ -380,6 +397,7 @@ export function CanvasEditorShell({
               <div className="flex-1" />
               {!isNewStack && <AutosaveStatus status={syncStatus} />}
               {actionsMenu}
+              {chevron}
             </div>
           </div>
         </div>
