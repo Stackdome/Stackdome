@@ -276,10 +276,10 @@ var _ = Describe("Platform provisioning", func() {
 			Expect(buildResource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(Equal(ownedRegistry.Name))
 
 			By("waiting for the built stack to become Ready on the owned cluster")
-			shared.WaitForStackReady(client, orgID, projectName, buildStackID, 10*time.Minute)
+			clusterClient := env.Cluster.GetClient()
+			shared.WaitForStackReadyWithDump(client, orgID, projectName, buildStackID, 10*time.Minute, clusterClient, buildCreated.GetNamespace())
 
 			By("verifying the deployment runs an image from the owned cluster's registry")
-			clusterClient := env.Cluster.GetClient()
 			deploy, derr := shared.GetDeploymentForStackResource(ctx, clusterClient, buildCreated.GetNamespace(), ownedBuildResourceName)
 			Expect(derr).NotTo(HaveOccurred())
 			Expect(deploy.Spec.Template.Spec.Containers).To(HaveLen(1))
