@@ -17,12 +17,29 @@ function resourcesOf(snap: unknown): SnapResource[] {
 }
 
 function configScalars(r: SnapResource): Record<string, string | undefined> {
+  const git = r.source?.git;
   return {
     "image": r.source?.image?.ref,
+    "repo": git?.repo_url,
+    "branch": git?.branch,
+    "tag": git?.tag,
+    "commit": git?.commit,
+    "dockerfile": git?.dockerfile_path,
+    "build context": git?.build_context,
     "ports": (r.ports ?? []).map((p) => p.number).join(", ") || undefined,
     "command": (r.execution_config?.command ?? []).join(" ") || undefined,
     "args": (r.execution_config?.args ?? []).join(" ") || undefined,
   };
+}
+
+/** Revision keys the deploy-time pin resolver writes into snapshots. */
+const REVISION_KEYS = ["branch", "tag", "commit"] as const;
+
+/** True when the resource's git source pins no revision — the resolver picks
+ *  one at deploy time and records it in the snapshot. */
+function gitUnpinned(r: SnapResource | undefined): boolean {
+  const git = r?.source?.git;
+  return !!git && !git.branch && !git.tag && !git.commit;
 }
 
 function envMap(r: SnapResource): Record<string, string> {
@@ -36,6 +53,11 @@ function envMap(r: SnapResource): Record<string, string> {
 function configRows(prev: SnapResource | undefined, cur: SnapResource | undefined): DiffRow[] {
   const p = prev ? configScalars(prev) : {};
   const c = cur ? configScalars(cur) : {};
+  // `cur` is the user's spec side. When it pins no revision, the baseline's
+  // branch/commit are deploy-time resolver facts, not drift — drop them.
+  if (gitUnpinned(cur)) {
+    for (const k of REVISION_KEYS) delete p[k];
+  }
   const rows: DiffRow[] = [];
   for (const key of new Set([...Object.keys(p), ...Object.keys(c)])) {
     const from = p[key];
@@ -73,9 +95,13 @@ function sectionsFor(prev: SnapResource | undefined, cur: SnapResource | undefin
 }
 
 /** Identity of a resource by its config + env, ignoring the name. A removed and an
- *  added resource with the same fingerprint are the same resource renamed. */
+ *  added resource with the same fingerprint are the same resource renamed.
+ *  Revisions are excluded: the snapshot side carries resolver-written
+ *  branch/commit an unpinned spec side lacks, which would break the pairing. */
 function resourceFingerprint(r: SnapResource): string {
-  return JSON.stringify({ cfg: configScalars(r), env: envMap(r) });
+  const cfg = configScalars(r);
+  for (const k of REVISION_KEYS) delete cfg[k];
+  return JSON.stringify({ cfg, env: envMap(r) });
 }
 
 function diffResources(prev: unknown, cur: unknown): ResourceDiff[] {
