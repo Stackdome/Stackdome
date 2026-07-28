@@ -1,0 +1,132 @@
+---
+title: "Releases"
+description: "How a deploy becomes a release, how status is reported, and how to roll back."
+---
+
+A stack is what you edit. A **release** is what you shipped. Every deploy creates one, and the **Deployments** tab of a stack is the list of them, newest first.
+
+## What a release is
+
+A release is one deploy of one stack, numbered per stack — `#1`, `#2`, `#3` — and it carries a complete copy of the stack as it was at the moment you pressed deploy: every resource, its source, its ports, its environment, every volume and every mount, and the connections between nodes on the canvas.
+
+It also carries the artifacts those resources resolved to:
+
+- A resource with a git source pins the **commit** the revision pointed at. `main` moving on does not change the release.
+- A resource with an image source pins the image **digest** behind the tag. `postgres:16` being re-published does not change the release.
+
+That pinning is the point. A release is a fixed thing you can identify, compare, and return to. Editing the stack afterwards never quietly changes what is running — your edits collect as **a draft** and take effect on the next deploy. So the release timeline is an honest record: `#4` is what `#4` was.
+
+## Deploying
+
+You deploy from the canvas, on the **Architecture** tab. Once you have unshipped edits, a pill appears above the canvas:
+
+- **Apply 1 change** (or `Apply 3 changes`) counts what is in your draft.
+- **Details** opens the diff, so you can read the change before it ships.
+- **Deploy** ships it. <kbd>Cmd</kbd>/<kbd>Ctrl</kbd> + <kbd>Enter</kbd> does the same thing.
+- The **···** menu next to it offers **Discard draft changes** if you would rather throw the draft away.
+
+Pressing deploy hands the work to the hub, which then, in order:
+
+1. **Snapshots and pins** the stack — the copy and the artifact coordinates described above.
+2. **Validates** the snapshot. A bad snapshot fails the release here, before anything reaches your cluster, and the errors are attached to the release and addressed to the resource and field that caused them.
+3. **Renders** the snapshot into Kubernetes custom resources.
+4. **Writes** those to the cluster the stack runs on.
+5. **Waits** for the cluster's agent to reconcile them and report back.
+
+Step 5 is the one that takes time, and it is strict on purpose: the release only succeeds when the cluster reports the whole stack converged on *this* release's revision. Every resource ready, all conditions holding, one answer for the stack — not a per-resource partial pass. That is what makes "released" mean something you can roll back to.
+
+While a deploy is in flight, and afterwards, the **Deployments** tab shows the deploy timeline. If you have unshipped edits, a **Staged changes** node sits at the top of the rail, above the newest release, marked `vs #2` against the release it differs from.
+
+## Status
+
+Each release has one state. These are the values the API returns, and the words the rest of this documentation uses:
+
+| State | What it means |
+| --- | --- |
+| `Pending` | Created and queued. Nothing has been written to the cluster yet. |
+| `InProgress` | Being validated, rendered, applied, or waited on. |
+| `Released` | Converged. The stack is running this release. |
+| `Failed` | It will not converge — validation rejected it, a build failed, a resource never became ready, or it ran past the deploy timeout. |
+| `Superseded` | You deployed again while this one was still in flight. The newer release won and this one stopped. |
+| `Cancelled` | You cancelled it before it reached the cluster. |
+
+`Released`, `Failed`, `Superseded`, and `Cancelled` are final — a release in one of those states never changes again.
+
+The timeline is deliberately quieter than that list. It labels only what you need to notice:
+
+- **LIVE**, on the one release that is currently serving traffic. This is the release the cluster last converged on, which is not always the newest one — if your latest deploy failed, `LIVE` stays on the release before it.
+- **FAILED**, with a **Deploy failed** box in the release's card carrying the reason, for example `timed out waiting for convergence after 15m0s`.
+- **DEPLOYING** while a release is `Pending` or `InProgress`.
+
+A release that succeeded but has since been replaced carries no label at all — just its number, its cause, its commit and how long it took. Same for `Superseded` and `Cancelled` releases, which instead show their reason as the row's subtitle, such as `Release superseded by release #2`.
+
+![A close crop of an expanded release in the deploy timeline: the row reads release number 1, Manual deploy, LIVE, took 52s, above a Build, Deploy and Ready tracker with Deploy and Ready ticked, the Outcomes and Changes tabs, a RESOURCES panel reading 6 of 6 ready with otel-stack, postgresql, postgrest, redis, tooljet and tooljet-worker each marked READY, and the left part of the ACTIVITY console listing timestamped release and per-resource events from Release created onwards, longer event messages running past the right edge of the crop](/images/releases-timeline.png)
+
+Every row also names what triggered it, and there are two things it can say: **Manual deploy** when you pressed deploy, and **Rollback to #2** for a rollback. That is the whole list, because a release only ever comes from you asking for one — [pushing to a branch does not deploy](/guides/deploy-from-git#pushing-to-git-does-not-deploy). The single exception is a [preview environment](/guides/preview-environments), whose releases Stackdome creates for you as the pull request moves.
+
+### Inside a release
+
+Expanding a release opens its card:
+
+- A **Build → Deploy → Ready** tracker across the top. `Build` is inert for a stack whose resources all come from images — there is nothing to build — and ticked for one with `git build` resources.
+- **Outcomes**, which is the default view: a **RESOURCES** panel counting how many are ready (`6/6 ready`) with each resource's state beside it, and an **ACTIVITY** console of everything that happened, timestamped. Click a resource in the panel to filter the console to just that resource, and `all resources` to zoom back out.
+- **Changes**, which diffs this release's configuration against the previous one — resources, volumes, and connections — headed `vs #3`.
+
+A release that is still in flight streams its activity into that console as it happens. A finished one shows the same console, replayed from what was recorded.
+
+You can also stop a deploy: the release's **⋮** menu offers **Cancel release** while it is `Pending`. Once it is `InProgress` the rollout has already been handed to the cluster, so cancelling is no longer offered — deploy again, or roll back.
+
+A stack keeps its recent releases and prunes the rest: 10 by default, always keeping at least 5 successful ones. Both are per-stack settings. So is the deploy timeout, 15 minutes by default.
+
+## Logs
+
+Two different things are worth reading, and they live in two places.
+
+**Runtime logs** are on the stack's **Logs** tab. It opens one stream for the whole stack, tagged per line with the resource that wrote it, and it shows `CONNECTED` while the stream is live. Narrow it with:
+
+- **Resources** — a multi-select of the resources in the stack, searchable, so you can watch one or a few.
+- The time-range control — `Live Tail (4h)` follows new lines as they arrive; `Last 30 minutes`, `Last 1 hour`, `Last 4 hours`, `Last 24 hours` and `Since beginning` look backwards instead.
+- The panel's own search box, which highlights matches and counts them.
+
+![A close crop of the Logs tab: the heading Stack logs with a CONNECTED pill, above a dark terminal panel of numbered log lines each prefixed with the resource that emitted it, a run of redis lines followed by the first tooljet-worker line, with the Resources filter and the time-range control outside the crop](/images/releases-logs.png)
+
+**Build progress** is on the release instead, in that release's activity console, as events against the resource being built: `Building web`, then `Build succeeded for web` — or the failure, with the reason, if it did not. That is where you look when a deploy stalls before anything starts running.
+
+## Metrics
+
+The **Metrics** tab shows live usage for the running stack, refreshed continuously with the time of the last update:
+
+- **STACK CPU** in millicores and **STACK MEMORY** in mebibytes for the stack as a whole, each with a short sparkline of recent samples.
+- A **PER RESOURCE** card for each resource, with its state and its own CPU and memory reading. The bars compare resources against each other, not against a limit.
+
+![A close crop of the Metrics tab: the heading Stack metrics with a LIVE pill, a STACK CPU card reading 47m millicores and a STACK MEMORY card reading 1825 mebibytes, and four of the six PER RESOURCE cards — postgresql, otel-stack, redis and postgrest — each marked READY with its own CPU and memory readings and bars; the tooljet and tooljet-worker cards sit outside the crop](/images/releases-metrics.png)
+
+## Rolling back
+
+A release you can name is a release you can return to.
+
+1. Open the stack and go to **Deployments**.
+2. Find the release you want to be running again.
+3. Open its **⋮** menu — the one at the right of the row — and choose **Rollback to this**.
+
+The option is only offered on a release that reached `Released`. A `Failed`, `Superseded`, or `Cancelled` release never ran to completion, so there is nothing there to return to, and its menu offers only **Copy release ID**.
+
+![A close crop of a deploy timeline with four releases, newest first — number 4 reading Rollback to number 2, labelled LIVE, took 27s, then releases 3, 2 and 1, each a Manual deploy with its own duration — with the per-row menus at the right of each row outside the crop](/images/releases-rollback.png)
+
+What the rollback does is create a **new** release at the top of the timeline, reusing the old one's snapshot and its pins. History moves forward, never backwards: you get `#5`, labelled `Rollback to #2`, and it goes `LIVE` once the cluster converges on it. Because the pins come along, the same commit and the same image digests are deployed — nothing is rebuilt and nothing is re-resolved, which is why a rollback is usually much faster than the deploy it undoes.
+
+Two things a rollback does not do:
+
+- **It does not touch your data.** Volumes, addons, and anything written inside them are unaffected. Rolling back reverts configuration and code, not state.
+- **It does not discard your draft.** Unshipped edits stay staged, and are still waiting the next time you look at the canvas.
+
+Because a `Released` release stays a valid rollback target, Stackdome protects what it references: while it is still in the stack's history, the secrets, volumes, and addons it depends on cannot be deleted out from under it.
+
+<CardGroup cols={2}>
+  <Card title="Stacks and resources" icon="layer-group" href="/concepts/stacks-and-resources">
+    The vocabulary a release is built from: stacks, resources, sources, ports, volumes.
+  </Card>
+  <Card title="Deploy from git" icon="code-branch" href="/guides/deploy-from-git">
+    Connect a repository, and let Stackdome build the image each release pins.
+  </Card>
+</CardGroup>

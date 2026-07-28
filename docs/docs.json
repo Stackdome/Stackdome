@@ -1,0 +1,53 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "Stackdome",
+  "colors": {
+    "primary": "#0F172A",
+    "light": "#7C93B8",
+    "dark": "#0F172A"
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get started",
+            "pages": ["index", "quickstart", "deploy-first-app"]
+          },
+          {
+            "group": "Concepts",
+            "pages": ["concepts/stacks-and-resources", "concepts/releases"]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/deploy-from-git",
+              "guides/deploy-from-image",
+              "guides/environment-variables",
+              "guides/domains-and-tls",
+              "guides/postgres",
+              "guides/volumes-and-object-stores",
+              "guides/preview-environments"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Self-hosting",
+        "groups": [
+          {
+            "group": "Run Stackdome",
+            "pages": ["self-host/install", "self-host/add-a-cluster", "self-host/configuration"]
+          }
+        ]
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Stackdome/stackdome"
+    }
+  }
+}

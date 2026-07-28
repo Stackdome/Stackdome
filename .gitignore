@@ -16,6 +16,9 @@ dev_env.yaml
 .worktrees/
 docs/superpowers/
 
+# Internal engineering notes (specs, plans, guides). Product docs live in docs/.
+dev-docs/
+
 # Vite output. .gitkeep tracked so //go:embed succeeds before first build.
 pkg/web/dist/*
 !pkg/web/dist/.gitkeep
@@ -29,6 +32,8 @@ pkg/web/dist/*
 .playwright-mcp/
 *.png
 !frontend/**/*.png
+# Published docs screenshots — these ARE the site's images and must be committed.
+!docs/images/**/*.png
 .vite/
 
 # Integration test output (Makefile tees here)

@@ -1,0 +1,252 @@
+---
+title: "Postgres"
+description: "Create a managed Postgres instance and connect it to your resources."
+---
+
+An **addon** is a database Stackdome runs and looks after for you. It lives outside any **stack** — you create it once from the **Addons** page, and any **resource** in any stack can then read its credentials. Postgres is the only addon type available today.
+
+This is not the same thing as the **Postgres** tile in a stack's **+ Add resource** panel. That tile adds an ordinary **resource** running the `postgres:16` image: your container, your **volume**, your problem when it comes to backups and upgrades. An addon is the managed path — Stackdome provisions the database, holds its credentials, and hands out only the fields you ask for.
+
+## Prerequisites
+
+- **A registered cluster.** An addon is placed on your organization's cluster automatically — the create form has no cluster field, and the API rejects one (`cluster_id` is read-only). See [Add a cluster](/self-host/add-a-cluster).
+- **A storage class named `standard`, or the override below.** The form always asks for that name, and it cannot be changed after creation. If your cluster names its class something else, expect creation to fail — see the warning below.
+- **An Object Store, if you want backups.** Scheduled backups cannot be enabled without one. See [Volumes and object stores](/guides/volumes-and-object-stores).
+- **An account that can create addons.** If yours cannot, the **Add Addon** button is not rendered at all.
+
+<Warning>
+**Storage class is hardcoded to `standard`.** Three things are true of it: the create form has no storage-class field and always sends `standard`, the hub requires the field and never substitutes a default, and the value cannot be changed once the instance exists (`Storage class cannot be changed`). Kubernetes distributions disagree about the name — a k3s cluster, which is what the Stackdome installer builds, calls its default class `local-path`. So unless your cluster really has a class called `standard`, expect creation to fail, and set the real name under **Advanced** before you create it:
+
+```json
+{
+  "storage": {
+    "storage_class": "local-path"
+  }
+}
+```
+
+The storage class cannot be changed afterwards (`Storage class cannot be changed`), so getting it right on the first attempt saves you a delete-and-recreate.
+</Warning>
+
+## Create an instance
+
+The sidebar lists this under **PLATFORM → Addons**. The page is headed **Addons** — *"Manage hosted addon services for your stacks"* — and reads **NO ADDONS YET** until you have one.
+
+Choose **Add Addon**. The dialog is **Add Addon**, *"Pick a service to provision for your stacks."*
+
+![The Add Addon dialog listing three tiles — PostgreSQL, described as a managed Postgres database with automated backups and high availability, plus Redis and Ollama, both greyed out and marked SOON](/images/postgres-addon-picker.png)
+
+Only **PostgreSQL** is selectable. **Redis** and **Ollama** are marked **SOON** and cannot be clicked. Choosing PostgreSQL opens **Create Postgres addon** — *"Provision a managed PostgreSQL database for your stacks."*
+
+![The Create Postgres addon form, showing the General panel with a Name field and a Create select reading New empty database, and the Configuration panel with the six-row plan table, Storage size 10 GB, Version PG 17, and switches for High availability and Generate superuser credentials](/images/postgres-create.png)
+
+The fields, in the order the form presents them:
+
+### General
+
+| Field | Notes |
+| --- | --- |
+| **Name** | Required. Placeholder `e.g. main-db`. *"Lowercase letters, numbers, and hyphens. Must start and end with a letter or number."* 63 characters maximum, and it must be unique in the organization — a clash is rejected with `PostgreSQL addon with name '<name>' already exists`. **The name cannot be changed later**; the edit form disables the field and says so. |
+| **Create** | A select with two choices: **New empty database** (the default) and **Restore from backup**. *"Start empty, or restore from an existing addon's backups."* Restoring is covered in [Restore into a new instance](#restore-into-a-new-instance). Create-only — the edit form does not show it. |
+
+### Configuration
+
+**Plan** is a radio table with columns **Plan**, **CPU**, **Memory**. It is a shorthand for CPU and memory requests and limits:
+
+| Plan | Shown as | CPU request / limit | Memory request / limit |
+| --- | --- | --- | --- |
+| **Basic** (default) | `0.5 CPU` · `1 GiB` | `250m` / `500m` | `1Gi` / `1Gi` |
+| **Starter** | `1 CPU` · `2 GiB` | `500m` / `1` | `2Gi` / `2Gi` |
+| **Launch** | `2 CPU` · `8 GiB` | `1` / `2` | `8Gi` / `8Gi` |
+| **Scale** | `4 CPU` · `32 GiB` | `2` / `4` | `32Gi` / `32Gi` |
+| **Performance** | `8 CPU` · `64 GiB` | `4` / `8` | `64Gi` / `64Gi` |
+| **Custom** | `Configure manually` | you type them | you type them |
+
+The label is the *limit*; the request underneath it is lower on every plan except memory, where request and limit are equal. Choosing **Custom** reveals a **Custom resources** block with four fields — **CPU request** (`250m`), **CPU limit** (`500m`), **Memory request** (`512Mi`), **Memory limit** (`1Gi`), all shown as placeholders. Leave all four empty and you get `Set at least one CPU or memory value for the Custom plan`.
+
+The rest of the panel:
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| **Storage size** | `10` | *"Allocated disk in GB."* A number with a `GB` suffix, minimum 1 (`Storage must be at least 1 GB`), sent as `<n>Gi`. **Cannot be changed after creation** — `Storage size cannot be changed`. |
+| **Version** | `PG 17 (default)` | A select offering **PG 17**, **PG 16**, **PG 15**, **PG 14**, **PG 13**. **Cannot be changed after creation** — `PostgreSQL version cannot be changed`. |
+| **High availability** | off | *"Replicated across 2 instances."* Off runs one instance; on runs two. |
+| **Generate superuser credentials** | off | *"By default the database only exposes a limited app user. Enable to also generate a privileged secret for migrations and admin tasks."* |
+
+Then two collapsed disclosures — **Backups**, badged `OFF` or `ON`, and **Advanced**. Both are covered below.
+
+The sticky bar at the top of the page reads **NEW ADDON** with **CANCEL** and **CREATE ADDON**. Choosing **CREATE ADDON** returns you to **Addons** with the toast *"Addon created — Provisioning has started; status will update as it's ready."* The list polls every five seconds while anything is still settling.
+
+### The database you get
+
+**The form has no field for declaring databases.** You get exactly one, named `app`: the hub appends it whenever the request does not name it, so a database called `app` always exists.
+
+That is enough for most resources — one addon, one application, one database. To get more than one you have to go outside the form, either through the API or through the **Advanced** JSON area:
+
+```json
+{
+  "databases": [
+    { "name": "app" },
+    { "name": "analytics", "extensions": ["vector"] }
+  ]
+}
+```
+
+Two constraints worth knowing before you do. `vector` is the only supported extension — anything else is rejected with `Unsupported PostgreSQL extension '<name>' for database '<db>'`. And every database in one instance shares a single owner and a single credential, which is a security boundary you should read about in [One owner, one secret](#one-owner-one-secret) before you split an instance across applications.
+
+### Watching it come up
+
+The list row shows a status pill, the major version, the storage size, and `backups on` / `backups off`. The states an instance moves through are **Pending**, **Creating**, **Initializing**, **Ready**, **Updating**, **Backing Up**, **Restoring**, **Error**, **Deleting**, **Hibernated** and **Fenced**. On the detail page, a state that is not **Ready** carries a tooltip with the reason.
+
+**Ready is a gate, not a decoration.** A resource cannot read credentials until the instance has been ready at least once — before that the deploy stops with `credentials not available until addon has been ready at least once`, and a database that the operator has not applied yet gives `database '<name>' not applied yet, awaiting operator reconciliation`.
+
+## Connect it to a resource
+
+Two things happen when you wire an addon into a stack: the addon appears on **the canvas**, and one or more environment variables are bound to its credentials. The binding is what matters — the node is just the picture.
+
+Open the stack, go to the **Architecture** tab, and choose **+ Add resource**. The last section of the panel is **MANAGED ADD-ONS**.
+
+![The Add resource panel on a stack's Architecture tab, scrolled to the bottom, showing the DATABASES and CACHE, SEARCH & ANALYTICS block tiles above a MANAGED ADD-ONS section whose only entry is a dashed Create an add-on tile reading No managed add-ons yet. Set one up in the Addons page](/images/postgres-link-addon.png)
+
+Every provisioned addon appears here as a tile subtitled `managed postgres`, with a tick if this stack already uses it. When the organization has none, the section offers **Create an add-on** — *"No managed add-ons yet. Set one up in the Addons page."* — which opens **Addons** in a new tab.
+
+Then bind the variables. Click the resource's node to open **the drawer**, go to its **Environment** tab, and:
+
+<Steps>
+  <Step title="Add a variable and switch its source">
+    **Add variable** appends a plain row. Its **From** select offers **Plain text**, **Secret**, **Addon**, **Resource** and **Self** — choose **Addon**.
+  </Step>
+  <Step title="Pick the addon">
+    The row moves into an **Addon** group: a bordered block whose header carries an addon picker (`Pick addon`). If no addon is provisioned it reads *"No addons linked. Add one from the bottom panel."*
+  </Step>
+  <Step title="Confirm the database">
+    The group header shows the database next to the addon. With a single database — the normal case — it is chosen for you and shown as plain text, `db: app`. With more than one you get a **Pick database** select, and a database already used by another group in this resource is greyed out as `in use`.
+  </Step>
+  <Step title="Choose the field and name the variable">
+    Each row inside the group has a **KEY** on the left and a **Select field** picker on the right, listing the eight credential fields. Name the variable whatever your application expects — `DATABASE_URL`, `PGPASSWORD`, anything. **Add binding** adds another row against the same addon and database, so one group can fill in a whole set of variables.
+  </Step>
+  <Step title="Apply and deploy">
+    Editing the drawer builds **a draft**. Nothing reaches the running container until the draft is applied and the stack is deployed. See [Environment variables](/guides/environment-variables).
+  </Step>
+</Steps>
+
+Incomplete rows are called out in place: **Pick an addon**, **Pick a database**, **Pick a field**.
+
+<Note>
+**The superuser is not reachable from the UI.** The **Generate superuser credentials** switch decides whether a privileged secret exists, but the env-var row has no control for choosing it — every binding the dashboard creates uses the database's own limited owner. Requesting the superuser is an API-only capability (`config.superuser`, or `config.credential_scope: "superuser"` on the connection), and it is refused unless the switch was on: `connection '<label>' requests superuser access but addon '<id>' does not have superuser access enabled`.
+</Note>
+
+If the addon is later deleted, bound rows do not silently break — they turn read-only, show `⚙ <missing addon> · <db> · <field>`, and warn *"Addon was deleted. This variable won't resolve. Remove to clean up."*
+
+## Credential fields
+
+These eight are everything a resource can read from an addon. Four of them are the same for every database in the instance and are tagged `cluster` in the picker.
+
+| Field | What it contains | Scope |
+| --- | --- | --- |
+| `host` | The in-cluster hostname of the primary, writable instance. Not reachable from outside the cluster. | `cluster` |
+| `port` | The port Postgres listens on, as a number — `5432` unless the operator says otherwise. | `cluster` |
+| `database` | The name of the database this binding points at — `app`, unless you declared others. | per database |
+| `username` | The role the binding authenticates as: the database's owner. | per database |
+| `password` | That role's password. Secret. | per database |
+| `sslmode` | The SSL mode the instance expects, for drivers that want it separately from the URL. | `cluster` |
+| `ca_certificate` | The PEM-encoded CA certificate that signed the server's certificate, for drivers that verify it. | `cluster` |
+| `url` | A complete connection string — `postgresql://<user>:<password>@<host>:<port>/<database>?sslmode=<mode>`. **This embeds the password.** Secret. | per database |
+
+Bind `url` when your framework wants one string, and the separate fields when it wants them separately. There is no reason to bind both.
+
+<Warning>
+**`url` and `password` are credentials.** The hub does not store them. It fetches them from the cluster when you deploy, writes them into a Kubernetes secret next to the workload, and injects the variable as a reference to that secret — so the value never lands in the stack's configuration and is never displayed in the dashboard.
+
+**It is still readable through the API.** The contract exposes a `GET` on `/api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/credentials/{database}`, with an optional `?superuser=true`. It authenticates with a Bearer JWT and returns the username, the password, the full connection string and the CA certificate, read live from the cluster. Authorization is *read* permission on the addon: **any token that can view an instance can also retrieve its credentials**, and `?superuser=true` returns the superuser password whenever **Generate superuser credentials** is on. Treat a token that can read your addons as equivalent to the database passwords themselves.
+
+And nothing protects the value once your own code has it — do not log a variable bound to `url` or `password`, and do not dump the environment in a crash handler.
+</Warning>
+
+## Backups
+
+Everything the dashboard offers lives in the create form's **Backups** disclosure and the detail page's **Backups** section.
+
+![The create form's Backups section expanded, with Enable scheduled backups switched on, an Object Store select disabled and hinted No Object Stores yet, a WAL archiving switch, and a Schedule set to Custom cron showing the expression 0 0 3 star star star described as At 03:00 UTC](/images/postgres-create-backups.png)
+
+| Field | Notes |
+| --- | --- |
+| **Enable scheduled backups** | *"When off, only manual backups can run."* |
+| **Object Store** | Required once scheduled backups are on — without one the form refuses with *"Pick an Object Store to enable scheduled backups"*. With no object stores configured the select is disabled and hints *"No Object Stores yet. Create one to enable backups."* with a link to **Object Stores**. |
+| **WAL archiving** | *"Continuously ships WAL segments. Required for point-in-time recovery."* Turning it on without an object store is rejected: `WAL archiving requires an object store to be configured`. |
+| **Schedule** | Disabled until scheduled backups are on. A frequency select — **Hourly**, **Daily**, **Weekly**, **Monthly**, **Custom (cron)** — with the matching inputs: a minute for hourly, a time for daily, a weekday plus time for weekly, a day-of-month plus time for monthly. **Custom (cron)** exposes the raw expression and describes it back to you in words. |
+
+Two details that catch people out. The cron expression has **six** fields, not five — seconds first — so the default `0 0 3 * * *` means 03:00, not three minutes past midnight; a five-field expression is rejected with *"Use 6 space-separated fields: sec min hour day-of-month month day-of-week (or @daily)."* And **every schedule is UTC**, which the form labels but is easy to skim past.
+
+On the detail page, once a destination is set, **Run backup now** triggers one immediately and the table below lists what has run: **Name**, **Type** (`Scheduled` or `Manual`), **Phase** (`pending`, `running`, `completed`, `failed` — a failure carries its error in a tooltip), **Started**, **Completed** and **Size**. It pages when there is more than one page of history.
+
+<Note>
+**Retention is not exposed.** There is no field in the form or the API for how long backups are kept or how many to keep, and nothing in the dashboard deletes one. Whatever your object store's own lifecycle rules do is what happens.
+</Note>
+
+## High availability and placement
+
+**High availability** is the one switch: off runs a single instance, on runs two. That is the whole of it in the UI — there is no field for three or more instances, no synchronous-replication setting, and no read-replica endpoint to bind a resource to.
+
+**Placement is not in the form.** Pinning instances to particular nodes or spreading them across failure domains — topology key, policy, node selectors, tolerations — is an API capability with no control anywhere in the dashboard. The **Advanced** disclosure is the one place you can reach it without leaving the UI: it takes raw JSON that is merged into the request.
+
+![The create form's Advanced disclosure expanded, showing an empty JSON text area whose placeholder is a configuration object setting max_connections to 200](/images/postgres-create-advanced.png)
+
+```json
+{
+  "instances": {
+    "placement": {
+      "topology_key": "topology.kubernetes.io/zone",
+      "policy": "required",
+      "node_selector": { "node-type": "database" }
+    }
+  },
+  "configuration": {
+    "parameters": { "max_connections": "200" }
+  },
+  "storage": { "storage_class": "local-path" }
+}
+```
+
+The rules for that box: the fields the form owns win over anything you type here, so overriding **Storage size** or **Version** from JSON does not work — the two exceptions are `storage.storage_class`, which the form never surfaces and always defers to you on, and `databases`, which the form never sends. Invalid JSON is rejected in place with `Invalid JSON: <reason>`. On an existing addon the disclosure is badged **Modified** as soon as you touch it, clearing it warns *"These advanced fields will be removed on save."*, and saving asks you to confirm.
+
+Two more lifecycle capabilities — hibernating an instance and fencing it — exist as API endpoints with no UI at all.
+
+## Restore into a new instance
+
+Restoring always produces a **new** addon; there is no in-place restore. Set **Create** to **Restore from backup** on the create form and the panel grows:
+
+| Field | Notes |
+| --- | --- |
+| **Source addon** | *"Addons that have an object store for backups."* Anything without one is not offered, and with no eligible source the field reads *"No addon has backups in an object store to restore from."* |
+| **Object store** | Read-only. It follows the source addon — you do not choose it. |
+| **Recover to** | Only when the source has **WAL archiving** on. **Latest** — *"Latest restores to the most recent archived WAL."* — or **Specific time (UTC)**, which adds a **Target time (UTC)** picker. |
+| **Backup** | Only when the source does *not* have WAL archiving: *"WAL archiving was off, so point-in-time isn't available. Pick a completed backup."* If the source has none, *"This addon has no completed backups to restore from."* |
+
+So WAL archiving is the difference between picking a moment and picking a backup. Turn it on before you need it — you cannot recover to a point in time that was never archived.
+
+Restore settings are frozen at creation: `Initialization configuration cannot be changed after creation`, and the edit form does not show them. Importing from an external Postgres you run yourself is an API-only capability with no field in the form.
+
+## One owner, one secret
+
+<Warning>
+**Every database in one instance shares a single owner and a single credential.** Stackdome cannot ask for a per-database user — the resource it writes to the cluster has no owner field, and the operator assigns every database the same owner, `app`. So the `username` and `password` a resource receives for one database are the same credentials that reach every other database in that instance.
+
+The practical consequence: **a resource you granted one database can connect to all of them.** If two applications must not be able to read each other's data, give them separate addons rather than separate databases inside one addon. Splitting an instance into `app` and `analytics` organizes your schema; it does not isolate anything.
+</Warning>
+
+Read that together with the [credentials endpoint](#credential-fields) and you have the whole blast radius of one leaked token: read permission on an instance yields the owner password, the owner is the same for every database in the instance, and `?superuser=true` yields the superuser password wherever that switch is on. So a token that can read your addons can reach every database in every instance it can see. Scope tokens accordingly, and rotate one you have exposed.
+
+## Edit an instance
+
+The detail page's **Edit** reopens the same form. What you can change: the plan and custom resources, **High availability**, **Generate superuser credentials**, everything under **Backups**, and the **Advanced** JSON. What is fixed for the life of the instance: the **Name**, the **Version**, the **Storage size**, the storage class, and the restore settings. Each is refused with its own message rather than silently ignored.
+
+## Delete an instance
+
+Open the instance from **Addons** and choose **Delete**. The confirmation is blunt, and accurate: **Delete addon?** — *"The underlying database and storage for “&lt;name&gt;” are removed. This cannot be undone."*
+
+<Warning>
+**Deleting an addon destroys the data.** The database and its disk go with it. If the instance has backups in an object store, those are the only copies that survive, and restoring from one produces a new addon rather than putting this one back. Take a backup you have verified before you delete anything you might want again.
+</Warning>
+
+A referenced instance cannot be deleted. The API refuses with `addon '<id>' is in use by <references> and cannot be deleted`, and the dashboard adds *"Remove the stack references first, then try again."* Unbind the variables in every stack that reads it, deploy those stacks, then delete. Once accepted, the instance moves to **Deleting** and is torn down in the background — *"&lt;name&gt; is being torn down."*

@@ -115,7 +115,8 @@ Press `Ctrl+C` to tear down all resources.
 
 ### Manual Setup
 
-See [docs/QUICK_START.md](docs/QUICK_START.md) for a 5-minute setup, or [docs/BOOTSTRAP_GUIDE.md](docs/BOOTSTRAP_GUIDE.md) for a comprehensive walkthrough.
+The **TL;DR** below covers a manual dev-machine setup. For installing Stackdome on a server, see
+the product documentation in `docs/` (Quickstart and Self-hosting).
 
 **TL;DR:**
 
@@ -312,10 +313,12 @@ The cluster agent reconciles these CRDs (defined in the [cluster-agent](https://
 
 ## Documentation
 
-- [Quick Start](docs/QUICK_START.md) -- 5-minute setup guide
-- [Bootstrap Guide](docs/BOOTSTRAP_GUIDE.md) -- Complete walkthrough with troubleshooting
-- [Casbin RBAC](docs/casbin-explained.md) -- How authorization policies work
-- [Env Interpolation](docs/env-interpolation.md) -- Cross-service environment variable templates
+Product documentation lives in `docs/` as a Mintlify site — installing Stackdome, deploying an
+application, managed Postgres, domains, preview environments, and self-hosting reference. Preview it
+locally with `cd docs && npx mint dev`.
+
+Internal engineering notes (specs, plans, RBAC explainers, gap analyses) live in `dev-docs/`, which
+is git-ignored and therefore local to each machine — not available in a fresh clone.
 
 ## Sample Configurations
 
