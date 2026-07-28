@@ -989,6 +989,7 @@ export default function CanvasEditorPage() {
               persistedVolumeNames={persistedVolumeNames}
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
               liveStatusResources={statusLiveStatus?.resources}
+              publicEndpoints={publicEndpoints}
             />
           </>
         }

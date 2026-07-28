@@ -46,6 +46,54 @@ async function copyText(text: string): Promise<void> {
   ta.remove();
 }
 
+function useCopyFlash() {
+  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+
+  const onCopy = useCallback((url: string) => {
+    void copyText(url).then(() => {
+      setCopiedUrl(url);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setCopiedUrl(null), COPY_FLASH_MS);
+    });
+  }, []);
+
+  return { copiedUrl, onCopy };
+}
+
+/** Hostname + go-to + copy on one static line — for drawer headers, where
+ *  there's room to show the address and hover-reveal would be ceremony. */
+export function EndpointInline({ url }: { url: string }) {
+  const { copiedUrl, onCopy } = useCopyFlash();
+  return (
+    <span className="flex min-w-0 items-center gap-0.5">
+      <Tooltip delayDuration={300}>
+        <TooltipTrigger asChild>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-fg-2 hover:text-foreground"
+          >
+            <span className="truncate hover:underline">{hostOf(url)}</span>
+            <ExternalLink className="size-3 shrink-0 text-fg-muted" />
+          </a>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">{url}</TooltipContent>
+      </Tooltip>
+      <button
+        type="button"
+        onClick={() => onCopy(url)}
+        aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
+        className="flex size-5 shrink-0 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+      >
+        {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+      </button>
+    </span>
+  );
+}
+
 interface ChipProps {
   endpoint: PublicEndpoint;
   /** "inline": hostname expands inside the chip on hover (expanded header).
@@ -144,17 +192,7 @@ export function PublicEndpointRow({
   endpoints: PublicEndpoint[];
   compact?: boolean;
 }) {
-  const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-
-  const onCopy = useCallback((url: string) => {
-    void copyText(url).then(() => {
-      setCopiedUrl(url);
-      if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setCopiedUrl(null), COPY_FLASH_MS);
-    });
-  }, []);
+  const { copiedUrl, onCopy } = useCopyFlash();
 
   if (endpoints.length === 0) return null;
 

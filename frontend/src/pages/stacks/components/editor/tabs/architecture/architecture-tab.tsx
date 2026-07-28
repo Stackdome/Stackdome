@@ -18,6 +18,7 @@ import type {
 import type { EditSessionDraft, EditSessionTab, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import type { ReleaseLiveStatus } from "@/api/releases";
+import type { PublicEndpoint } from "@/pages/stacks/components/editor/public-endpoint-row";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
 import {
@@ -105,6 +106,9 @@ interface ArchitectureTabProps {
   /** Live per-resource status, keyed by resource name — from the status
    *  release's live_status.resources. Drives node dots + the resource drawer. */
   liveStatusResources?: ReleaseLiveStatus["resources"];
+  /** Service → best live URL (as shown in the header's PUBLIC row); feeds the
+   *  resource drawer's endpoint line. */
+  publicEndpoints?: PublicEndpoint[];
   /** Bumped by the parent to request opening a resource drawer (banner "jump to
    *  error") on the tab holding the field; the nonce distinguishes repeat jumps
    *  to the same resource. */
@@ -129,6 +133,7 @@ function StackCanvasFlow({
   persistedVolumeNames,
   releaseInFlight,
   liveStatusResources,
+  publicEndpoints,
   openResourceSignal,
 }: ArchitectureTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
@@ -662,6 +667,7 @@ function StackCanvasFlow({
         onViewLogs={onViewLogs}
         onOpenVolume={openVolume}
         liveStatusResources={liveStatusResources}
+        publicUrl={publicEndpoints?.find((e) => e.service === resources[frontEntry.index]?.name)?.url}
       />
     ) : frontEntry ? (
       <VolumeDrawer
