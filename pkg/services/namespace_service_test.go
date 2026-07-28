@@ -7,7 +7,78 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/google/uuid"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
+
+type fakeAddon struct {
+	addonType string
+	addonName string
+}
+
+func (f fakeAddon) Type() string      { return f.addonType }
+func (f fakeAddon) AddonName() string { return f.addonName }
+
+var _ = Describe("namespaceNameForAddon", func() {
+	const addonType = "postgres"
+
+	It("truncates a max-length name to a valid RFC 1123 label keeping the entropy floor", func() {
+		addon := fakeAddon{
+			addonType: addonType,
+			addonName: strings.Repeat("a", models.MaxAddonNameLength),
+		}
+		s := &namespaceService{}
+
+		ns, err := s.PrepareNamespaceForAddon(context.Background(), addon, "org-1")
+
+		Expect(err).To(BeNil())
+		Expect(len(ns.Name)).To(BeNumerically("<=", models.KubernetesDNSLabelMaxLength))
+		Expect(validation.IsDNS1123Label(ns.Name)).To(BeEmpty())
+		Expect(ns.Name).NotTo(HaveSuffix(models.NamespaceNameSeparator))
+
+		prefix := addonPrefix(addonType, addon.addonName)
+		Expect(ns.Name).To(HavePrefix(prefix))
+		survivingUUID := strings.TrimPrefix(ns.Name, prefix)
+		Expect(len(survivingUUID)).To(BeNumerically(">=", models.MinNamespaceUUIDSuffixLength))
+	})
+
+	It("generates different names for the same type and name", func() {
+		addon := fakeAddon{addonType: addonType, addonName: "mydb"}
+		s := &namespaceService{}
+
+		first, err := s.PrepareNamespaceForAddon(context.Background(), addon, "org-1")
+		Expect(err).To(BeNil())
+		second, err := s.PrepareNamespaceForAddon(context.Background(), addon, "org-1")
+		Expect(err).To(BeNil())
+
+		Expect(first.Name).NotTo(Equal(second.Name))
+	})
+
+	It("keeps more UUID entropy for a short name than for a max-length name", func() {
+		s := &namespaceService{}
+
+		shortAddon := fakeAddon{addonType: addonType, addonName: "mydb"}
+		short, err := s.PrepareNamespaceForAddon(context.Background(), shortAddon, "org-1")
+		Expect(err).To(BeNil())
+		shortSuffix := strings.TrimPrefix(short.Name, addonPrefix(addonType, shortAddon.addonName))
+
+		maxAddon := fakeAddon{addonType: addonType, addonName: strings.Repeat("a", models.MaxAddonNameLength)}
+		max, err := s.PrepareNamespaceForAddon(context.Background(), maxAddon, "org-1")
+		Expect(err).To(BeNil())
+		maxSuffix := strings.TrimPrefix(max.Name, addonPrefix(addonType, maxAddon.addonName))
+
+		Expect(len(shortSuffix)).To(BeNumerically(">", len(maxSuffix)))
+		Expect(len(shortSuffix)).To(BeNumerically(">=", models.MinNamespaceUUIDSuffixLength))
+	})
+})
+
+func addonPrefix(addonType, addonName string) string {
+	return models.AddonNamespacePrefix +
+		models.NamespaceNameSeparator + addonType +
+		models.NamespaceNameSeparator + addonName +
+		models.NamespaceNameSeparator
+}
 
 // TestPrepareNamespaceForStackTruncatesToDNSLabelAtMaxNameLength pins the
 // contract behind models.MaxStackNameLength: a stack name at the validator's

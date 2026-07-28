@@ -1116,6 +1116,26 @@ paths:
           description: Internal server error
 
   # Cluster image registry routes
+  /api/v1/organizations/{org_id}/image_registries:
+    get:
+      summary: List all image registries for an organisation
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterImageRegistryList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     post:
       summary: Create a new image registry
@@ -4123,8 +4143,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DomainName'
-        is_default:
+        is_platform:
           type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -4514,8 +4535,9 @@ components:
           type: string
         organisation_id:
           type: string
-        default:
+        platform:
           type: boolean
+          readOnly: true
         cluster_url:
           type: string
         cluster_ca_data:

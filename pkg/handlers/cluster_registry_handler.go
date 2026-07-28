@@ -25,6 +25,21 @@ func NewClusterImageRegistryHandler(spec ClusterImageRegistryHandlerSpec) *clust
 }
 
 // GET /api/v1/organizations/{org_id}/clusters/{cluster_id}/registries
+func (h *clusterImageRegistryHandler) ListRegistriesForOrg(w http.ResponseWriter, r *http.Request) {
+	cfg := &handlerConfig{
+		Action: func() (interface{}, *errors.ServiceError) {
+			ctx := r.Context()
+			orgID := mux.Vars(r)["org_id"]
+			registries, serr := h.clusterImageRegistryService.ListForOrg(ctx, orgID)
+			if serr != nil {
+				return nil, serr
+			}
+			return presenters.PresentClusterImageRegistryList(registries), nil
+		},
+	}
+	handleGet(w, r, cfg)
+}
+
 func (h *clusterImageRegistryHandler) ListRegistriesForCluster(w http.ResponseWriter, r *http.Request) {
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {

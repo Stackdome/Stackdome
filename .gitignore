@@ -30,3 +30,6 @@ pkg/web/dist/*
 *.png
 !frontend/**/*.png
 .vite/
+
+# Integration test output (Makefile tees here)
+test/int/last-run.log

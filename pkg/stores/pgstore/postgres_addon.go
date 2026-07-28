@@ -239,21 +239,6 @@ func (s *postgresAddonStore) ListByProjectIDs(ctx context.Context, projectIDs []
 	return addons, nil
 }
 
-func (s *postgresAddonStore) ListByCluster(ctx context.Context, clusterID string) ([]*models.PostgresAddon, *errors.ServiceError) {
-	var addons []*models.PostgresAddon
-
-	if err := s.sessionFactory.New(ctx).
-		Preload("Databases").
-		Preload("Backups").
-		Where("cluster_id = ?", clusterID).
-		Order("created_at DESC").
-		Find(&addons).Error; err != nil {
-		return nil, errors.GeneralError("failed to list postgres addons by cluster: %s", err.Error())
-	}
-
-	return addons, nil
-}
-
 func (s *postgresAddonStore) ValidateAddonExists(ctx context.Context, addonID string) (bool, *errors.ServiceError) {
 	var count int64
 	if err := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).

@@ -32,17 +32,19 @@ const httpsScheme = "https"
 
 type ClusterService interface {
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
-	GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError)
+	GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError)
+	InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError)
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 }
 
 type clusterService struct {
 	clusterStore         stores.ClusterStore
+	organisationStore    stores.OrganisationStore
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
@@ -51,8 +53,15 @@ type clusterService struct {
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
+	clusterStore := spec.ClusterStore
+	if clusterStore == nil {
+		clusterStore = pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		})
+	}
 	return &clusterService{
-		clusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+		clusterStore: clusterStore,
+		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
 		clusterManager:       spec.ClusterManager,
@@ -65,6 +74,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 
 type ClusterServiceSpec struct {
 	SessionFactory       db.SessionFactory
+	ClusterStore         stores.ClusterStore
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
 	Permissions          auth.PermissionService
@@ -123,6 +133,21 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		return nil, encErr
 	}
 
+	// Builds resolve the registry on the stack's cluster, so every owned
+	// cluster ships with one: fall back to a default when none was supplied.
+	// The platform org stays infrastructure-only — no registry on its cluster.
+	var registry *models.ClusterImageRegistry
+	org, oerr := s.organisationStore.Get(ctx, cluster.OrganisationID)
+	if oerr != nil {
+		s.logger.Error(ctx, "failed to get organisation for default registry: %v", oerr)
+		return nil, oerr
+	}
+	if len(cluster.ImageRegistries) != 0 {
+		registry = cluster.ImageRegistries[0]
+	} else if !org.Platform {
+		registry = &models.ClusterImageRegistry{}
+	}
+
 	cerr := s.clusterStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		createdCluster, createdErr = s.clusterStore.CreateWithTx(ctx, cluster)
 		if createdErr != nil {
@@ -133,9 +158,10 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		if merr != nil {
 			return errors.GeneralError("failed to register cluster with manager")
 		}
-		if len(cluster.ImageRegistries) != 0 {
-			// Create the image registry in the cluster
-			registry := cluster.ImageRegistries[0]
+		if registry != nil {
+			if registry.Name == "" {
+				registry.Name = orgRegistryName(org.Name, org.ID, createdCluster.ID)
+			}
 			registry.ClusterID = createdCluster.ID
 			registry.OrganisationID = createdCluster.OrganisationID
 			createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)
@@ -168,12 +194,11 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-	// // Unregister the cluster from the cluster manager
-	// cerr := s.clusterManager.UnregisterCluster(cluster.ID)
-	// if cerr != nil {
-	// 	s.logger.Errorf("failed to unregister cluster from manager: %v", cerr)
-	// 	return errors.GeneralError("failed to unregister cluster from manager: %v", cerr)
-	// }
+	// Unregister the cluster from the cluster manager
+	cerr := s.clusterManager.UnregisterCluster(cluster.ID)
+	if cerr != nil {
+		return errors.InternalServerError("failed to unregister cluster from manager: %v", cerr)
+	}
 
 	if len(cluster.ImageRegistries) != 0 {
 		for _, registry := range cluster.ImageRegistries {
@@ -284,13 +309,14 @@ func (s *clusterService) PersistManagerState(ctx context.Context, clusterID stri
 	return nil
 }
 
-func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+// GetOwnedClusterForOrg returns the cluster owned by the org, without falling
+// back to the platform cluster.
+func (s *clusterService) GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
 	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
 	if err != nil {
-		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return nil, err
 	}
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
@@ -300,15 +326,14 @@ func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*m
 	return cluster, nil
 }
 
-func (s *clusterService) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
-	cluster, err := s.clusterStore.GetDefaultCluster(ctx)
+func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	cluster, err := s.GetOwnedClusterForOrg(ctx, orgID)
 	if err != nil {
-		s.logger.Error(ctx, "failed to get default cluster: %v", err)
+		if err.Code == errors.ErrorNotFound {
+			return s.getPlatformCluster(ctx)
+		}
+		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return nil, err
-	}
-	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
-		return nil, decErr
 	}
 	return cluster, nil
 }
@@ -374,9 +399,9 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 		return fmt.Errorf("getting cluster client: %w", err)
 	}
 
-	user, uerr := auth.GetCurrentUserFromCtx(ctx)
-	if uerr != nil {
-		return fmt.Errorf("getting current user: %w", uerr)
+	email := auth.ContactEmailFromCtx(ctx)
+	if email == "" {
+		return fmt.Errorf("no ACME contact email available for ClusterIssuer")
 	}
 
 	issuer := &cmv1.ClusterIssuer{
@@ -391,7 +416,7 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 			IssuerConfig: cmv1.IssuerConfig{
 				ACME: &cmacme.ACMEIssuer{
 					Server: "https://acme-v02.api.letsencrypt.org/directory",
-					Email:  user.Email,
+					Email:  email,
 					PrivateKey: cmmeta.SecretKeySelector{
 						LocalObjectReference: cmmeta.LocalObjectReference{
 							Name: "letsencrypt-prod-key",
@@ -425,6 +450,67 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 	return nil
 }
 
+func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	// Canonicalize before create AND compare, so the stored encoding never
+	// depends on which path first persisted the credentials.
+	spec.Token = normalizeBase64(spec.Token)
+	spec.ClusterCAData = normalizeBase64(spec.ClusterCAData)
+
+	existing, err := s.clusterStore.GetByClusterUrl(ctx, spec.ClusterURL)
+	if err != nil && err.Code != errors.ErrorNotFound {
+		return nil, err
+	}
+	if existing == nil {
+		return s.AddCluster(ctx, spec)
+	}
+
+	if existing.Name != spec.Name || !existing.Platform {
+		if uErr := s.clusterStore.UpdateNameAndPlatform(ctx, existing.ID, spec.Name); uErr != nil {
+			return nil, uErr
+		}
+		existing.Name = spec.Name
+		existing.Platform = true
+	}
+
+	if decErr := s.decryptClusterCredentials(existing); decErr != nil {
+		return nil, decErr
+	}
+	if existing.Token == spec.Token && existing.ClusterCAData == spec.ClusterCAData {
+		return existing, nil
+	}
+	rotated := &models.Cluster{Token: spec.Token, ClusterCAData: spec.ClusterCAData}
+	if encErr := s.encryptClusterCredentials(rotated); encErr != nil {
+		return nil, encErr
+	}
+	if uErr := s.clusterStore.UpdateCredentials(ctx, existing.ID, rotated.EncryptedToken, rotated.EncryptedClusterCAData); uErr != nil {
+		return nil, uErr
+	}
+	fresh, gErr := s.clusterStore.Get(ctx, existing.ID)
+	if gErr != nil {
+		return nil, gErr
+	}
+	if rErr := s.clusterManager.ReRegisterCluster(fresh); rErr != nil {
+		return nil, errors.GeneralError("failed to re-register rotated cluster: %s", rErr.Error())
+	}
+	if decErr := s.decryptClusterCredentials(fresh); decErr != nil {
+		return nil, decErr
+	}
+	return fresh, nil
+}
+
+func (s *clusterService) getPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+	cluster, err := s.clusterStore.GetPlatformCluster(ctx)
+	if err != nil {
+		s.logger.Error(ctx, "failed to get platform cluster: %v", err)
+		return nil, err
+	}
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
+		return nil, decErr
+	}
+	return cluster, nil
+}
+
 func IsBase64(s string) bool {
 	// Base64 string must be a multiple of 4
 	if len(s)%4 != 0 {
@@ -438,4 +524,11 @@ func IsBase64(s string) bool {
 
 	_, err := base64.StdEncoding.DecodeString(s)
 	return err == nil
+}
+
+func normalizeBase64(s string) string {
+	if IsBase64(s) {
+		return s
+	}
+	return base64.StdEncoding.EncodeToString([]byte(s))
 }

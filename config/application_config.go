@@ -25,6 +25,8 @@ type ApplicationConfig struct {
 	ServerExternalURL string `json:"server_external_url"`
 	// GitHubAPIBaseURL overrides the GitHub API endpoint (tests, GHES).
 	GitHubAPIBaseURL string `json:"github_api_base_url"`
+	// PlatformCluster holds the PLATFORM_CLUSTER_* config seeded at boot.
+	PlatformCluster *ClusterConfig `json:"platform_cluster"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() {
@@ -48,6 +50,7 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 
 	c.GitHubOAuth.LoadEnvVariables()
+	c.PlatformCluster.LoadEnvVariables()
 
 	if val, ok := EnvServerExternalURL.Lookup(); ok {
 		c.ServerExternalURL = val
@@ -105,17 +108,12 @@ func (c *ApplicationConfig) Validate() error {
 }
 
 type ClusterConfig struct {
-	Name          string `yaml:"name"`
 	ClusterURL    string `yaml:"cluster_url"`
 	ClusterCAData string `yaml:"cluster_ca_data"`
 	Token         string `yaml:"token"`
 }
 
 func (c *ClusterConfig) Validate() error {
-	if c.Name == "" {
-		return fmt.Errorf("cluster name is required")
-	}
-
 	if c.ClusterURL == "" {
 		return fmt.Errorf("cluster url is required")
 	}
@@ -132,21 +130,25 @@ func (c *ClusterConfig) Validate() error {
 }
 
 func (c *ClusterConfig) LoadEnvVariables() {
-	if val, ok := EnvDefaultClusterName.Lookup(); ok {
-		c.Name = val
-	}
-
-	if val, ok := EnvDefaultClusterAPIURL.Lookup(); ok {
+	if val, ok := EnvPlatformClusterAPIURL.Lookup(); ok {
 		c.ClusterURL = val
 	}
 
-	if val, ok := EnvDefaultClusterCAData.Lookup(); ok {
+	if val, ok := EnvPlatformClusterCAData.Lookup(); ok {
 		c.ClusterCAData = val
 	}
 
-	if val, ok := EnvDefaultClusterToken.Lookup(); ok {
+	if val, ok := EnvPlatformClusterToken.Lookup(); ok {
 		c.Token = val
 	}
+}
+
+func (c *ClusterConfig) IsSet() bool {
+	return c.ClusterURL != "" && c.ClusterCAData != "" && c.Token != ""
+}
+
+func (c *ClusterConfig) AnySet() bool {
+	return c.ClusterURL != "" || c.ClusterCAData != "" || c.Token != ""
 }
 
 type DatabaseConfig struct {
@@ -208,11 +210,12 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:      NewServerConfig(),
-		Database:    NewDatabaseConfig(),
-		LogLevel:    "info",
-		LogFormat:   "json",
-		GitHubOAuth: NewGitHubOAuthConfig(),
+		Server:          NewServerConfig(),
+		Database:        NewDatabaseConfig(),
+		LogLevel:        "info",
+		LogFormat:       "json",
+		GitHubOAuth:     NewGitHubOAuthConfig(),
+		PlatformCluster: &ClusterConfig{},
 	}
 }
 

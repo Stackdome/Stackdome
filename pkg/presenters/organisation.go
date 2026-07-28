@@ -7,11 +7,12 @@ import (
 
 func PresentOrganisation(in *models.Organisation) openapi.Organisation {
 	return openapi.Organisation{
-		Id:        &in.ID,
-		Name:      &in.Name,
-		Domains:   PresentDomains(in.Domains),
-		CreatedAt: &in.CreatedAt,
-		UpdatedAt: &in.UpdatedAt,
+		Id:         &in.ID,
+		Name:       &in.Name,
+		IsPlatform: &in.Platform,
+		Domains:    PresentDomains(in.Domains),
+		CreatedAt:  &in.CreatedAt,
+		UpdatedAt:  &in.UpdatedAt,
 	}
 
 }

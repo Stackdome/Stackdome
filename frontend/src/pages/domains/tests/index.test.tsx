@@ -22,7 +22,7 @@ vi.mock("@/helpers/common", async (importOriginal) => ({
 const baseOrganization = {
   id: "org-1",
   name: "Acme",
-  is_default: true,
+  is_platform: true,
 } as Organization;
 
 afterEach(cleanup);

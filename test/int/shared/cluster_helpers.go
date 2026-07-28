@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/gomega"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -339,28 +340,117 @@ func WaitForStackActive(apiClient *openapi.APIClient, orgID, projectName, stackI
 func WaitForStackReady(apiClient *openapi.APIClient, orgID, projectName, stackID string, timeout time.Duration) *openapi.Stack {
 	var stack *openapi.Stack
 	Eventually(func(g Gomega) {
-		ctx := context.Background()
-		resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdGet(ctx, orgID, projectName, stackID).Execute()
-		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(httpResp.StatusCode).To(Equal(200))
-
-		current, ok := resp.GetConvergedReleaseOk()
-		g.Expect(ok).To(BeTrue(), "stack should have a converged_release")
-
-		state, stateOk := current.GetStateOk()
-		g.Expect(stateOk).To(BeTrue(), "converged_release should have a state")
-		if *state == openapi.RELEASE_STATE_FAILED {
-			StopTrying(fmt.Sprintf("stack %s release %s went terminal Failed while waiting for Released", stackID, current.GetId())).Now()
-		}
-		g.Expect(*state).To(Equal(openapi.RELEASE_STATE_RELEASED), "current release should be Released, got: %s", *state)
-
-		health, healthOk := current.GetHealthOk()
-		g.Expect(healthOk).To(BeTrue(), "converged_release should have health")
-		g.Expect(*health).To(Equal(openapi.RELEASE_HEALTH_OK), "current release should be healthy, got: %s", *health)
-
-		stack = resp
+		stack = assertStackConverged(g, apiClient, orgID, projectName, stackID)
 	}, timeout, 5*time.Second).Should(Succeed())
 	return stack
+}
+
+// WaitForStackReadyWithDump is WaitForStackReady plus a cluster-state dump
+// (ImageBuild CRs, Jobs, Pods, Events in the stack namespace) appended to the
+// failure message when the wait times out.
+func WaitForStackReadyWithDump(apiClient *openapi.APIClient, orgID, projectName, stackID string, timeout time.Duration, clusterClient client.Client, namespace string) *openapi.Stack {
+	var stack *openapi.Stack
+	Eventually(func(g Gomega) {
+		stack = assertStackConverged(g, apiClient, orgID, projectName, stackID)
+	}, timeout, 5*time.Second).Should(Succeed(), func() string {
+		return DumpNamespaceDiagnostics(context.Background(), clusterClient, namespace)
+	})
+	return stack
+}
+
+func assertStackConverged(g Gomega, apiClient *openapi.APIClient, orgID, projectName, stackID string) *openapi.Stack {
+	ctx := context.Background()
+	resp, httpResp, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdGet(ctx, orgID, projectName, stackID).Execute()
+	g.Expect(err).NotTo(HaveOccurred())
+	g.Expect(httpResp.StatusCode).To(Equal(200))
+
+	current, ok := resp.GetConvergedReleaseOk()
+	g.Expect(ok).To(BeTrue(), "stack should have a converged_release")
+
+	state, stateOk := current.GetStateOk()
+	g.Expect(stateOk).To(BeTrue(), "converged_release should have a state")
+	if *state == openapi.RELEASE_STATE_FAILED {
+		StopTrying(fmt.Sprintf("stack %s release %s went terminal Failed while waiting for Released", stackID, current.GetId())).Now()
+	}
+	g.Expect(*state).To(Equal(openapi.RELEASE_STATE_RELEASED), "current release should be Released, got: %s", *state)
+
+	health, healthOk := current.GetHealthOk()
+	g.Expect(healthOk).To(BeTrue(), "converged_release should have health")
+	g.Expect(*health).To(Equal(openapi.RELEASE_HEALTH_OK), "current release should be healthy, got: %s", *health)
+
+	return resp
+}
+
+// DumpNamespaceDiagnostics renders the build-relevant state of a namespace —
+// ImageBuild CRs (phase + conditions), Jobs, Pods (phase + container states),
+// and Events — for inclusion in a timeout failure message.
+func DumpNamespaceDiagnostics(ctx context.Context, clusterClient client.Client, namespace string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "\n===== diagnostics for namespace %s =====\n", namespace)
+
+	builds := &buildsv1alpha1.ImageBuildList{}
+	if err := clusterClient.List(ctx, builds, client.InNamespace(namespace)); err != nil {
+		fmt.Fprintf(&b, "imagebuilds: list error: %v\n", err)
+	} else {
+		for _, ib := range builds.Items {
+			fmt.Fprintf(&b, "imagebuild %s phase=%s imageUrl=%q\n", ib.Name, ib.Status.Phase, ib.Status.ImageUrl)
+			for _, c := range ib.Status.Conditions {
+				fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s at=%s\n", c.Type, c.Status, c.Reason, c.Message, c.LastTransitionTime.Format(time.RFC3339))
+			}
+			if d := ib.Status.LastBuildFailureDetail; d != nil {
+				fmt.Fprintf(&b, "  lastBuildFailureDetail: %+v\n", *d)
+			}
+		}
+		if len(builds.Items) == 0 {
+			fmt.Fprintf(&b, "imagebuilds: none\n")
+		}
+	}
+
+	jobs := &batchv1.JobList{}
+	if err := clusterClient.List(ctx, jobs, client.InNamespace(namespace)); err != nil {
+		fmt.Fprintf(&b, "jobs: list error: %v\n", err)
+	} else {
+		for _, j := range jobs.Items {
+			fmt.Fprintf(&b, "job %s active=%d succeeded=%d failed=%d suspend=%v\n", j.Name, j.Status.Active, j.Status.Succeeded, j.Status.Failed, j.Spec.Suspend != nil && *j.Spec.Suspend)
+			for _, c := range j.Status.Conditions {
+				fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s at=%s\n", c.Type, c.Status, c.Reason, c.Message, c.LastTransitionTime.Format(time.RFC3339))
+			}
+		}
+		if len(jobs.Items) == 0 {
+			fmt.Fprintf(&b, "jobs: none\n")
+		}
+	}
+
+	pods := &corev1.PodList{}
+	if err := clusterClient.List(ctx, pods, client.InNamespace(namespace)); err != nil {
+		fmt.Fprintf(&b, "pods: list error: %v\n", err)
+	} else {
+		for _, p := range pods.Items {
+			fmt.Fprintf(&b, "pod %s phase=%s\n", p.Name, p.Status.Phase)
+			for _, cs := range p.Status.ContainerStatuses {
+				fmt.Fprintf(&b, "  container %s ready=%v state=%+v\n", cs.Name, cs.Ready, cs.State)
+			}
+			for _, c := range p.Status.Conditions {
+				if c.Status != corev1.ConditionTrue {
+					fmt.Fprintf(&b, "  condition %s=%s reason=%s msg=%s\n", c.Type, c.Status, c.Reason, c.Message)
+				}
+			}
+		}
+		if len(pods.Items) == 0 {
+			fmt.Fprintf(&b, "pods: none\n")
+		}
+	}
+
+	events := &corev1.EventList{}
+	if err := clusterClient.List(ctx, events, client.InNamespace(namespace)); err != nil {
+		fmt.Fprintf(&b, "events: list error: %v\n", err)
+	} else {
+		for _, e := range events.Items {
+			fmt.Fprintf(&b, "event %s %s %s %s/%s: %s\n", e.LastTimestamp.Format(time.RFC3339), e.Type, e.Reason, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
+		}
+	}
+	fmt.Fprintf(&b, "===== end diagnostics =====\n")
+	return b.String()
 }
 
 func WaitForStackDeleted(apiClient *openapi.APIClient, orgID, projectName, stackID string, timeout time.Duration) {

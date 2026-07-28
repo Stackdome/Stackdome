@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | Pointer to **string** |  | [optional] 
 **Domains** | Pointer to [**[]DomainName**](DomainName.md) |  | [optional] 
-**IsDefault** | Pointer to **bool** |  | [optional] 
+**IsPlatform** | Pointer to **bool** |  | [optional] [readonly] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] 
 **UpdatedAt** | Pointer to **time.Time** |  | [optional] 
 
@@ -105,30 +105,30 @@ SetDomains sets Domains field to given value.
 
 HasDomains returns a boolean if a field has been set.
 
-### GetIsDefault
+### GetIsPlatform
 
-`func (o *Organisation) GetIsDefault() bool`
+`func (o *Organisation) GetIsPlatform() bool`
 
-GetIsDefault returns the IsDefault field if non-nil, zero value otherwise.
+GetIsPlatform returns the IsPlatform field if non-nil, zero value otherwise.
 
-### GetIsDefaultOk
+### GetIsPlatformOk
 
-`func (o *Organisation) GetIsDefaultOk() (*bool, bool)`
+`func (o *Organisation) GetIsPlatformOk() (*bool, bool)`
 
-GetIsDefaultOk returns a tuple with the IsDefault field if it's non-nil, zero value otherwise
+GetIsPlatformOk returns a tuple with the IsPlatform field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetIsDefault
+### SetIsPlatform
 
-`func (o *Organisation) SetIsDefault(v bool)`
+`func (o *Organisation) SetIsPlatform(v bool)`
 
-SetIsDefault sets IsDefault field to given value.
+SetIsPlatform sets IsPlatform field to given value.
 
-### HasIsDefault
+### HasIsPlatform
 
-`func (o *Organisation) HasIsDefault() bool`
+`func (o *Organisation) HasIsPlatform() bool`
 
-HasIsDefault returns a boolean if a field has been set.
+HasIsPlatform returns a boolean if a field has been set.
 
 ### GetCreatedAt
 

@@ -12,6 +12,8 @@ import (
 	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
 )
 
+//go:generate mockgen -destination=../../mocks/mock_cluster_resource_image_registry_service.go -package=mocks -mock_names=ClusterImageRegistryService=MockClusterResourceImageRegistryService github.com/Stackdome/stackdome/pkg/services/clusterresource ClusterImageRegistryService
+
 type ClusterImageRegistryService interface {
 	CreateImageRegistryInCluster(ctx context.Context, registry *models.ClusterImageRegistry) *ClusterResourceError
 	DeleteImageRegistryInCluster(ctx context.Context, registry *models.ClusterImageRegistry) *ClusterResourceError

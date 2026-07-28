@@ -110,17 +110,41 @@ func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*mo
 	return &res, nil
 }
 
-func (d dbClusterStore) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+func (d dbClusterStore) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("\"default\" = ?", true).Preload(clause.Associations).First(&res).Error
+	err := grm.Model(&models.Cluster{}).Where("platform = ?", true).Preload(clause.Associations).First(&res).Error
 	if err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NotFound("default cluster not found")
+			return nil, errors.NotFound("platform cluster not found")
 		}
 		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
 	}
 	return &res, nil
+}
+
+func (d dbClusterStore) UpdateNameAndPlatform(ctx context.Context, id, name string) *errors.ServiceError {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"name":     name,
+		"platform": true,
+	}).Error
+	if err != nil {
+		return errors.GeneralError("failed to update cluster name/platform: %s", err.Error())
+	}
+	return nil
+}
+
+func (d dbClusterStore) UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
+		"encrypted_token":           encToken,
+		"encrypted_cluster_ca_data": encCAData,
+	}).Error
+	if err != nil {
+		return errors.GeneralError("failed to update cluster credentials: %s", err.Error())
+	}
+	return nil
 }
 
 func (d dbClusterStore) Delete(ctx context.Context, id string) *errors.ServiceError {

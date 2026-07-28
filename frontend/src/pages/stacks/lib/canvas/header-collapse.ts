@@ -6,4 +6,4 @@ import { createContext } from "react";
 export const HeaderCollapseContext = createContext<{
   collapsed: boolean;
   setCollapsed: (collapsed: boolean) => void;
-}>({ collapsed: false, setCollapsed: () => {} });
+    }>({ collapsed: false, setCollapsed: () => {} });

@@ -213,10 +213,12 @@ func TestPropagateBuildFailure_nilStatusWithoutFailureIsNoOp(t *testing.T) {
 }
 
 const (
-	testEventStackID      = "stack-1"
-	testEventResourceName = "api"
-	testEventBuildID      = "build-1"
-	testEventNamespace    = "ns-1"
+	testEventStackID        = "stack-1"
+	testEventResourceName   = "api"
+	testEventBuildID        = "build-1"
+	testEventNamespace      = "ns-1"
+	testEventClusterID      = "cluster-1"
+	testEventOtherClusterID = "cluster-2"
 )
 
 func newEventReconciler() (*ImageBuildReconciler, *MockreleaseActiveChecker, *MockbuildEventRecorder) {
@@ -467,7 +469,7 @@ func reconcileCR(phase buildsv1alpha1.BuildPhase, statusHash string) *buildsv1al
 }
 
 func newReconcileHarness(cr *buildsv1alpha1.ImageBuild) (
-	*ImageBuildReconciler, *mocks.MockStackResourceService, *mocks.MockImageBuildService, *MockreleaseActiveChecker, *MockbuildEventRecorder,
+	*ImageBuildReconciler, *mocks.MockStackResourceService, *mocks.MockImageBuildService, *MockreleaseActiveChecker, *MockbuildEventRecorder, *MockstackClusterResolver,
 ) {
 	ctrl := gomock.NewController(GinkgoT())
 
@@ -475,26 +477,36 @@ func newReconcileHarness(cr *buildsv1alpha1.ImageBuild) (
 	builds := mocks.NewMockImageBuildService(ctrl)
 	checker := NewMockreleaseActiveChecker(ctrl)
 	recorder := NewMockbuildEventRecorder(ctrl)
+	resolver := NewMockstackClusterResolver(ctrl)
 
 	fakeClient := fake.NewClientBuilder().WithScheme(eventsTestScheme()).WithObjects(cr).Build()
 
 	r := &ImageBuildReconciler{
 		Client:              fakeClient,
+		ClusterID:           testEventClusterID,
 		DBResourceService:   resources,
 		DBImageBuildService: builds,
 		Logger:              logger.NewLoggerWithPrefix(context.Background(), "reconcile-test"),
 		releaseChecker:      checker,
 		eventRecorder:       recorder,
+		stackResolver:       resolver,
 	}
-	return r, resources, builds, checker, recorder
+	return r, resources, builds, checker, recorder, resolver
+}
+
+func expectOwnedStack(resolver *MockstackClusterResolver) {
+	resolver.EXPECT().
+		InternalGetStack(gomock.Any(), testEventStackID).
+		Return(&models.Stack{ID: testEventStackID, ClusterID: testEventClusterID}, nil)
 }
 
 var _ = Describe("Reconcile build event hook", func() {
 	// The hook lives strictly inside the StatusHash-change gate.
 	It("records no event when the status hash is unchanged", func() {
 		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "same-hash")
-		r, resources, builds, _, _ := newReconcileHarness(cr)
+		r, resources, builds, _, _, resolver := newReconcileHarness(cr)
 
+		expectOwnedStack(resolver)
 		resources.EXPECT().
 			InternalGetByStackIDAndResourceName(gomock.Any(), testEventStackID, testEventResourceName).
 			Return(&models.StackResource{ID: "res-1", StackID: testEventStackID, Name: testEventResourceName}, nil)
@@ -514,8 +526,9 @@ var _ = Describe("Reconcile build event hook", func() {
 
 	It("updates status and skips the recorder when the hash changed but no release is active", func() {
 		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "new-hash")
-		r, resources, builds, checker, _ := newReconcileHarness(cr)
+		r, resources, builds, checker, _, resolver := newReconcileHarness(cr)
 
+		expectOwnedStack(resolver)
 		resources.EXPECT().
 			InternalGetByStackIDAndResourceName(gomock.Any(), testEventStackID, testEventResourceName).
 			Return(&models.StackResource{ID: "res-1", StackID: testEventStackID, Name: testEventResourceName}, nil)
@@ -537,5 +550,52 @@ var _ = Describe("Reconcile build event hook", func() {
 			NamespacedName: client.ObjectKey{Name: testEventBuildID, Namespace: testEventNamespace},
 		})
 		Expect(err).NotTo(HaveOccurred())
+	})
+})
+
+var _ = Describe("Reconcile cluster ownership guard", func() {
+	It("skips builds owned by another cluster without touching services", func() {
+		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "any-hash")
+		r, _, _, _, _, resolver := newReconcileHarness(cr)
+
+		resolver.EXPECT().
+			InternalGetStack(gomock.Any(), testEventStackID).
+			Return(&models.Stack{ID: testEventStackID, ClusterID: testEventOtherClusterID}, nil)
+		// No resource/build/checker/recorder EXPECTs: strict mocks prove the skip.
+
+		result, err := r.Reconcile(context.Background(), ctrlreconcile.Request{
+			NamespacedName: client.ObjectKey{Name: testEventBuildID, Namespace: testEventNamespace},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(ctrlreconcile.Result{}))
+	})
+
+	It("ignores the build when the stack is not found", func() {
+		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "any-hash")
+		r, _, _, _, _, resolver := newReconcileHarness(cr)
+
+		resolver.EXPECT().
+			InternalGetStack(gomock.Any(), testEventStackID).
+			Return(nil, apperrors.NotFound("stack not found"))
+
+		result, err := r.Reconcile(context.Background(), ctrlreconcile.Request{
+			NamespacedName: client.ObjectKey{Name: testEventBuildID, Namespace: testEventNamespace},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(result).To(Equal(ctrlreconcile.Result{}))
+	})
+
+	It("surfaces resolver errors", func() {
+		cr := reconcileCR(buildsv1alpha1.BuildPhasePending, "any-hash")
+		r, _, _, _, _, resolver := newReconcileHarness(cr)
+
+		resolver.EXPECT().
+			InternalGetStack(gomock.Any(), testEventStackID).
+			Return(nil, apperrors.GeneralError("db down"))
+
+		_, err := r.Reconcile(context.Background(), ctrlreconcile.Request{
+			NamespacedName: client.ObjectKey{Name: testEventBuildID, Namespace: testEventNamespace},
+		})
+		Expect(err).To(HaveOccurred())
 	})
 })
