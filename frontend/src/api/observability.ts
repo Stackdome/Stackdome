@@ -25,7 +25,11 @@ export function attachSseHandlers(
   es.onmessage = (event) => handlers.onData(event.data);
   es.addEventListener('error', (event) => {
     if (event instanceof MessageEvent) {
+      // The server closes the stream after a terminal error event — close our
+      // side too, or the browser retry-loops and re-fires the error forever.
+      es.close();
       handlers.onStreamError(String(event.data));
+      handlers.onStatusChange('disconnected');
       return;
     }
     handlers.onStatusChange(es.readyState === EventSource.CLOSED ? 'disconnected' : 'reconnecting');

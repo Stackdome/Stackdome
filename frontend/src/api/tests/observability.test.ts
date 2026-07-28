@@ -12,6 +12,8 @@ class FakeEventSource {
   readyState = FakeEventSource.CONNECTING;
   private listeners: Record<string, ((e: Event) => void)[]> = {};
 
+  close = vi.fn();
+
   addEventListener(type: string, cb: (e: Event) => void) {
     (this.listeners[type] ??= []).push(cb);
   }
@@ -46,10 +48,13 @@ describe("attachSseHandlers", () => {
     expect(onData).toHaveBeenCalledWith("a log line");
   });
 
-  it("routes the backend's named error event to onStreamError", () => {
+  it("routes the backend's named error event to onStreamError and stops retrying", () => {
     es.emit("error", new MessageEvent("error", { data: "[web]: pod unreachable" }));
     expect(onStreamError).toHaveBeenCalledWith("[web]: pod unreachable");
-    expect(onStatusChange).not.toHaveBeenCalled();
+    // Server closes after a terminal error; our side must too, or the browser
+    // reconnect-loops and re-fires the error forever.
+    expect(es.close).toHaveBeenCalled();
+    expect(onStatusChange).toHaveBeenCalledWith("disconnected");
   });
 
   it("treats a native error while retrying as reconnecting, not an error", () => {
