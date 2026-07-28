@@ -243,6 +243,24 @@ describe("status is server telemetry, never dirt", () => {
     expect(isResourceDirty(live as never, deployed as never)).toBe(false);
   });
 
+  it("isResourceDirty ignores server-computed outputs drift", () => {
+    // After a port edit deploys, the draft still holds outputs derived from the
+    // OLD port while the rebased baseline has the new ones — the server owns
+    // outputs, so they must never read as user dirt (the pre-fix behavior left
+    // a phantom "1 change" after every deploy until a page refresh).
+    const draftRes = {
+      name: "web",
+      ports: [{ number: 88 }],
+      outputs: [{ name: "port.port-87", sensitive: false, type: "integer" }],
+    };
+    const baseRes = {
+      name: "web",
+      ports: [{ number: 88 }],
+      outputs: [{ name: "port.port-88", sensitive: false, type: "integer" }],
+    };
+    expect(isResourceDirty(draftRes as never, baseRes as never)).toBe(false);
+  });
+
   it("dirtyTabsForResource does not light any tab for status drift", () => {
     const tabs = dirtyTabsForResource(live as never, deployed as never);
     expect(tabs).toEqual({ configuration: false, deployment: false, environment: false });

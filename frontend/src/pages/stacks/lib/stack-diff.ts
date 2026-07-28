@@ -97,10 +97,16 @@ function countChangedFields(
  * status was captured at deploy time while the draft carries the live status —
  * that drift must never read as an undeployed change.
  */
-function omitStatus<T>(x: T): T {
+/** Server-computed fields carried on form data for display only. `status` is
+ *  live telemetry; `outputs` are derived from the spec by the server (e.g. a
+ *  port edit renames its outputs), and the session never rewrites the draft's
+ *  copy after a save — comparing either as user intent manufactures phantom
+ *  dirt that survives a deploy until a full page refresh. */
+function omitServerComputed<T>(x: T): T {
   if (!x || typeof x !== "object" || Array.isArray(x)) return x;
-  const { status, ...rest } = x as Record<string, unknown>;
+  const { status, outputs, ...rest } = x as Record<string, unknown>;
   void status;
+  void outputs;
   return rest as T;
 }
 
@@ -108,14 +114,14 @@ export function isResourceDirty(
   draftResource: Partial<FormStackResourceData> | undefined,
   baselineResource: Partial<FormStackResourceData> | undefined,
 ): boolean {
-  return !deepEqual(omitStatus(draftResource), omitStatus(baselineResource));
+  return !deepEqual(omitServerComputed(draftResource), omitServerComputed(baselineResource));
 }
 
 export function isVolumeDirty(
   draftVolume: Partial<FormVolumeExtendedData> | undefined,
   baselineVolume: Partial<FormVolumeExtendedData> | undefined,
 ): boolean {
-  return !deepEqual(omitStatus(draftVolume), omitStatus(baselineVolume));
+  return !deepEqual(omitServerComputed(draftVolume), omitServerComputed(baselineVolume));
 }
 
 function getEnvVars(
@@ -611,7 +617,7 @@ export function dirtyPathsForResource(
   baseline: unknown,
 ): Set<string> {
   const acc = new Set<string>();
-  walkPaths(omitStatus(draft), omitStatus(baseline), "", acc);
+  walkPaths(omitServerComputed(draft), omitServerComputed(baseline), "", acc);
   return acc;
 }
 

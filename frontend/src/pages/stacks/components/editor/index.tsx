@@ -34,7 +34,7 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/editor/tabs/deployments/use-releases";
 import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/editor/tabs/deployments/use-release-detail";
-import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
+import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
 import { useDeployLifecycle } from "@/pages/stacks/components/editor/tabs/deployments/use-deploy-lifecycle";
 import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-release-anchors";
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
@@ -522,25 +522,27 @@ export default function CanvasEditorPage() {
 
   // When a release settles into ANY terminal state, the stack's converged_release /
   // latest_release summaries are stale until refetched — the staged panel would
-  // keep diffing against the old snapshot otherwise. Refetch once per transition,
-  // keyed on the polled releases list (not on the stack's own pointer).
+  // keep diffing against the old snapshot otherwise. The backend updates those
+  // pointers asynchronously after convergence, so a single refetch can race them
+  // and capture the old summaries; poll until the fetched stack actually reflects
+  // the terminal release. `summariesStale` is a boolean, so the interval survives
+  // stale refetches (same-value dep) and tears down the moment it catches up.
   const refetchStack = useCallback(() => {
     if (!deployIds.stackId) return;
     void fetchFreshStack().catch(() => {
-      // Transient fetch failure; the next terminal transition retries.
+      // Transient fetch failure; the poll below retries.
     });
   }, [deployIds.stackId, fetchFreshStack]);
   const activeRelease = releasesResult.activeRelease;
-  const prevActiveReleaseRef = useRef<{ id?: string; state?: string } | undefined>(
-    activeRelease && { id: activeRelease.id, state: activeRelease.state },
-  );
+  const summariesStale = stackSummariesStale(activeRelease, savedStack ?? undefined);
   useEffect(() => {
-    const prev = prevActiveReleaseRef.current;
-    prevActiveReleaseRef.current = activeRelease && { id: activeRelease.id, state: activeRelease.state };
-    if (shouldRefetchStackSummaries(prev, activeRelease, savedStack?.latest_release)) {
-      refetchStack();
-    }
-  }, [activeRelease, savedStack?.latest_release, refetchStack]);
+    if (!summariesStale) return;
+    refetchStack();
+    const t = setInterval(() => {
+      if (document.visibilityState !== "hidden") refetchStack();
+    }, 2000);
+    return () => clearInterval(t);
+  }, [summariesStale, refetchStack]);
 
   // Live snapshot: already lazily fetched above (convergedReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
