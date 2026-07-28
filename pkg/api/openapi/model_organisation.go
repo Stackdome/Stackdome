@@ -17,12 +17,12 @@ import (
 
 // Organisation struct for Organisation
 type Organisation struct {
-	Id        *string      `json:"id,omitempty"`
-	Name      *string      `json:"name,omitempty"`
-	Domains   []DomainName `json:"domains,omitempty"`
-	IsDefault *bool        `json:"is_default,omitempty"`
-	CreatedAt *time.Time   `json:"created_at,omitempty"`
-	UpdatedAt *time.Time   `json:"updated_at,omitempty"`
+	Id         *string      `json:"id,omitempty"`
+	Name       *string      `json:"name,omitempty"`
+	Domains    []DomainName `json:"domains,omitempty"`
+	IsPlatform *bool        `json:"is_platform,omitempty"`
+	CreatedAt  *time.Time   `json:"created_at,omitempty"`
+	UpdatedAt  *time.Time   `json:"updated_at,omitempty"`
 }
 
 // NewOrganisation instantiates a new Organisation object
@@ -138,36 +138,36 @@ func (o *Organisation) SetDomains(v []DomainName) {
 	o.Domains = v
 }
 
-// GetIsDefault returns the IsDefault field value if set, zero value otherwise.
-func (o *Organisation) GetIsDefault() bool {
-	if o == nil || o.IsDefault == nil {
+// GetIsPlatform returns the IsPlatform field value if set, zero value otherwise.
+func (o *Organisation) GetIsPlatform() bool {
+	if o == nil || o.IsPlatform == nil {
 		var ret bool
 		return ret
 	}
-	return *o.IsDefault
+	return *o.IsPlatform
 }
 
-// GetIsDefaultOk returns a tuple with the IsDefault field value if set, nil otherwise
+// GetIsPlatformOk returns a tuple with the IsPlatform field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Organisation) GetIsDefaultOk() (*bool, bool) {
-	if o == nil || o.IsDefault == nil {
+func (o *Organisation) GetIsPlatformOk() (*bool, bool) {
+	if o == nil || o.IsPlatform == nil {
 		return nil, false
 	}
-	return o.IsDefault, true
+	return o.IsPlatform, true
 }
 
-// HasIsDefault returns a boolean if a field has been set.
-func (o *Organisation) HasIsDefault() bool {
-	if o != nil && o.IsDefault != nil {
+// HasIsPlatform returns a boolean if a field has been set.
+func (o *Organisation) HasIsPlatform() bool {
+	if o != nil && o.IsPlatform != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetIsDefault gets a reference to the given bool and assigns it to the IsDefault field.
-func (o *Organisation) SetIsDefault(v bool) {
-	o.IsDefault = &v
+// SetIsPlatform gets a reference to the given bool and assigns it to the IsPlatform field.
+func (o *Organisation) SetIsPlatform(v bool) {
+	o.IsPlatform = &v
 }
 
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
@@ -245,8 +245,8 @@ func (o Organisation) MarshalJSON() ([]byte, error) {
 	if o.Domains != nil {
 		toSerialize["domains"] = o.Domains
 	}
-	if o.IsDefault != nil {
-		toSerialize["is_default"] = o.IsDefault
+	if o.IsPlatform != nil {
+		toSerialize["is_platform"] = o.IsPlatform
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

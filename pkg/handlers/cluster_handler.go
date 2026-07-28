@@ -31,7 +31,7 @@ func (h *clusterHandler) ListClustersForOrg(w http.ResponseWriter, r *http.Reque
 		Action: func() (interface{}, *errors.ServiceError) {
 			ctx := r.Context()
 			orgID := mux.Vars(r)["org_id"]
-			cluster, serr := h.clusterService.GetClusterForOrg(ctx, orgID)
+			cluster, serr := h.clusterService.GetOwnedClusterForOrg(ctx, orgID)
 			if serr != nil {
 				return nil, serr
 			}

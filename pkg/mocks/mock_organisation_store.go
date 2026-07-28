@@ -86,19 +86,19 @@ func (mr *MockOrganisationStoreMockRecorder) Get(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockOrganisationStore)(nil).Get), ctx, ID)
 }
 
-// GetDefaultOrg mocks base method.
-func (m *MockOrganisationStore) GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
+// GetPlatformOrg mocks base method.
+func (m *MockOrganisationStore) GetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDefaultOrg", ctx)
+	ret := m.ctrl.Call(m, "GetPlatformOrg", ctx)
 	ret0, _ := ret[0].(*models.Organisation)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetDefaultOrg indicates an expected call of GetDefaultOrg.
-func (mr *MockOrganisationStoreMockRecorder) GetDefaultOrg(ctx any) *gomock.Call {
+// GetPlatformOrg indicates an expected call of GetPlatformOrg.
+func (mr *MockOrganisationStoreMockRecorder) GetPlatformOrg(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultOrg", reflect.TypeOf((*MockOrganisationStore)(nil).GetDefaultOrg), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformOrg", reflect.TypeOf((*MockOrganisationStore)(nil).GetPlatformOrg), ctx)
 }
 
 // OrganisationNameExists mocks base method.

@@ -19,7 +19,7 @@ type Cluster struct {
 	Id                   *string               `json:"id,omitempty"`
 	Name                 string                `json:"name"`
 	OrganisationId       *string               `json:"organisation_id,omitempty"`
-	Default              *bool                 `json:"default,omitempty"`
+	Platform             *bool                 `json:"platform,omitempty"`
 	ClusterUrl           string                `json:"cluster_url"`
 	ClusterCaData        string                `json:"cluster_ca_data"`
 	ClusterSaToken       string                `json:"cluster_sa_token"`
@@ -135,36 +135,36 @@ func (o *Cluster) SetOrganisationId(v string) {
 	o.OrganisationId = &v
 }
 
-// GetDefault returns the Default field value if set, zero value otherwise.
-func (o *Cluster) GetDefault() bool {
-	if o == nil || o.Default == nil {
+// GetPlatform returns the Platform field value if set, zero value otherwise.
+func (o *Cluster) GetPlatform() bool {
+	if o == nil || o.Platform == nil {
 		var ret bool
 		return ret
 	}
-	return *o.Default
+	return *o.Platform
 }
 
-// GetDefaultOk returns a tuple with the Default field value if set, nil otherwise
+// GetPlatformOk returns a tuple with the Platform field value if set, nil otherwise
 // and a boolean to check if the value has been set.
-func (o *Cluster) GetDefaultOk() (*bool, bool) {
-	if o == nil || o.Default == nil {
+func (o *Cluster) GetPlatformOk() (*bool, bool) {
+	if o == nil || o.Platform == nil {
 		return nil, false
 	}
-	return o.Default, true
+	return o.Platform, true
 }
 
-// HasDefault returns a boolean if a field has been set.
-func (o *Cluster) HasDefault() bool {
-	if o != nil && o.Default != nil {
+// HasPlatform returns a boolean if a field has been set.
+func (o *Cluster) HasPlatform() bool {
+	if o != nil && o.Platform != nil {
 		return true
 	}
 
 	return false
 }
 
-// SetDefault gets a reference to the given bool and assigns it to the Default field.
-func (o *Cluster) SetDefault(v bool) {
-	o.Default = &v
+// SetPlatform gets a reference to the given bool and assigns it to the Platform field.
+func (o *Cluster) SetPlatform(v bool) {
+	o.Platform = &v
 }
 
 // GetClusterUrl returns the ClusterUrl field value
@@ -282,8 +282,8 @@ func (o Cluster) MarshalJSON() ([]byte, error) {
 	if o.OrganisationId != nil {
 		toSerialize["organisation_id"] = o.OrganisationId
 	}
-	if o.Default != nil {
-		toSerialize["default"] = o.Default
+	if o.Platform != nil {
+		toSerialize["platform"] = o.Platform
 	}
 	if true {
 		toSerialize["cluster_url"] = o.ClusterUrl

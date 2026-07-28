@@ -62,3 +62,16 @@ func GetCurrentUserFromCtx(ctx context.Context) (*models.User, error) {
 	}
 	return user, nil
 }
+
+// ContactEmailFromCtx resolves the contact email for the caller: the
+// authenticated user's email, or the identity's ContactEmail for system
+// identities. Empty when neither is present.
+func ContactEmailFromCtx(ctx context.Context) string {
+	if user, err := GetCurrentUserFromCtx(ctx); err == nil && user.Email != "" {
+		return user.Email
+	}
+	if identity := GetIdentityFromCtx(ctx); identity != nil {
+		return identity.ContactEmail
+	}
+	return ""
+}

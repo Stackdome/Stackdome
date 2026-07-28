@@ -26,8 +26,13 @@ type Environment struct {
 	ClusterID string
 	OrgID     string
 	UserToken string
-	Database  *DatabaseManager
-	Cluster   *testutil.TestCluster
+	// RegistryName is the suite org's signup-seeded registry,
+	// <org-slug>-<shortOrgID>: the suffix comes from the org UUID minted at
+	// signup, so the name differs every run and is read back from the API
+	// after signup instead of being a test constant.
+	RegistryName string
+	Database     *DatabaseManager
+	Cluster      *testutil.TestCluster
 
 	// Internal managers
 	clusterManager *ClusterManager
@@ -83,6 +88,13 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("MinIO deployment failed: %w", err)
 	}
 
+	// Export PLATFORM_* env from the provisioned cluster so the server seeds
+	// platform defaults (Platform=true cluster, platform org, base domain) at boot.
+	logger.Info("Exporting platform-provisioning environment")
+	if err := exportPlatformProvisioningEnv(ctx, env.Cluster); err != nil {
+		return fmt.Errorf("failed to export platform provisioning env: %w", err)
+	}
+
 	// Initialize server
 	logger.Info("Bootstrapping server")
 	serverManager := NewServerManager(dbManager.GetSessionFactory(), dbManager.GetConfig(), logger)
@@ -91,18 +103,20 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 
-	// Initialize client and register cluster
-	logger.Info("Bootstrapping client and registering cluster")
-	clientManager := NewClientManager(serverManager.GetBaseURL(), clusterManager.GetCluster(), logger)
-	env.clientManager = clientManager
-	if err := clientManager.Bootstrap(ctx); err != nil {
-		return fmt.Errorf("client bootstrap failed: %w", err)
+	// The booted server seeded the infrastructure-only platform org + cluster.
+	// Resolve the platform cluster from the DB (tenants never see it via API),
+	// then sign up the suite's tenant org, which inherits it at read time.
+	var platformCluster models.Cluster
+	if err := dbManager.GetSessionFactory().New(ctx).
+		Where("platform = ?", true).First(&platformCluster).Error; err != nil {
+		return fmt.Errorf("failed to resolve platform cluster: %w", err)
 	}
 
-	// Create organisation domain for stack tests
-	logger.Info("Creating organisation domain for stack tests")
-	if err := createOrganisationDomain(ctx, dbManager, clientManager.GetOrgID()); err != nil {
-		return fmt.Errorf("failed to create organisation domain: %w", err)
+	logger.Info("Bootstrapping client against platform defaults")
+	clientManager := NewClientManager(serverManager.GetBaseURL(), logger)
+	env.clientManager = clientManager
+	if err := clientManager.Bootstrap(ctx, platformCluster.ID); err != nil {
+		return fmt.Errorf("client bootstrap failed: %w", err)
 	}
 
 	// Set final client details
@@ -110,6 +124,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	env.ClusterID = clientManager.GetClusterID()
 	env.OrgID = clientManager.GetOrgID()
 	env.UserToken = clientManager.GetUserToken()
+	env.RegistryName = clientManager.GetRegistryName()
 
 	logger.Info("Integration test bootstrap completed successfully",
 		"orgID", env.OrgID,
@@ -183,18 +198,6 @@ func (env *Environment) Cleanup() {
 	}
 
 	env.logger.Info("Integration test cleanup completed")
-}
-
-func createOrganisationDomain(ctx context.Context, dbManager *DatabaseManager, orgID string) error {
-	session := dbManager.GetSessionFactory().New(ctx)
-	domain := &models.OrganisationDomain{
-		OrganisationID: orgID,
-		Domain:         "test.example.com",
-	}
-	if err := session.Create(domain).Error; err != nil {
-		return fmt.Errorf("failed to insert organisation domain: %w", err)
-	}
-	return nil
 }
 
 func deployMinIO(ctx context.Context, k8sClient client.Client) error {

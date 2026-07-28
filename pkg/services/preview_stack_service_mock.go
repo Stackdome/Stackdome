@@ -100,18 +100,18 @@ func (mr *MockPreviewStackServiceMockRecorder) InjectBackgroundJobEnqueuer(dep a
 }
 
 // InternalBuildStackFromContent mocks base method.
-func (m *MockPreviewStackService) InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, content []byte) (*models.Stack, *errors.OperationError) {
+func (m *MockPreviewStackService) InternalBuildStackFromContent(ctx context.Context, config *models.StackPreviewConfig, preview *models.PreviewStack, stackFileBytes []byte) (*models.Stack, *errors.OperationError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalBuildStackFromContent", ctx, config, preview, content)
+	ret := m.ctrl.Call(m, "InternalBuildStackFromContent", ctx, config, preview, stackFileBytes)
 	ret0, _ := ret[0].(*models.Stack)
 	ret1, _ := ret[1].(*errors.OperationError)
 	return ret0, ret1
 }
 
 // InternalBuildStackFromContent indicates an expected call of InternalBuildStackFromContent.
-func (mr *MockPreviewStackServiceMockRecorder) InternalBuildStackFromContent(ctx, config, preview, content any) *gomock.Call {
+func (mr *MockPreviewStackServiceMockRecorder) InternalBuildStackFromContent(ctx, config, preview, stackFileBytes any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalBuildStackFromContent", reflect.TypeOf((*MockPreviewStackService)(nil).InternalBuildStackFromContent), ctx, config, preview, content)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalBuildStackFromContent", reflect.TypeOf((*MockPreviewStackService)(nil).InternalBuildStackFromContent), ctx, config, preview, stackFileBytes)
 }
 
 // InternalCreateFromWebhook mocks base method.

@@ -693,7 +693,7 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(deploy.Spec.Template.Spec.Containers).To(HaveLen(1))
 			containerImage := deploy.Spec.Template.Spec.Containers[0].Image
 			Expect(containerImage).NotTo(BeEmpty(), "container image should be set")
-			Expect(containerImage).To(ContainSubstring(shared.TestRegistryName), "image should be from the in-cluster registry")
+			Expect(containerImage).To(ContainSubstring(GetEnvironment().RegistryName), "image should be from the in-cluster registry")
 
 			By("Verifying Service has port 3000")
 			svc, err := shared.GetServiceForStackResource(ctx, clusterClient, namespace, shared.BuildSourceResourceName)

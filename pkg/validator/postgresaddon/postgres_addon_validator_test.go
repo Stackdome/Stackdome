@@ -1,54 +1,63 @@
-package postgresaddon_test
+package postgresaddon
 
 import (
 	"context"
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/validator/postgresaddon"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestPostgresAddonValidator(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Postgres Addon Validator Suite")
-}
-
-func validAddon() *models.PostgresAddon {
+func validPostgresAddonSpec(name string) *models.PostgresAddon {
 	return &models.PostgresAddon{
-		Name:            "test-pg",
+		Name:            name,
 		OrganisationID:  "org-1",
 		UserID:          "user-1",
 		ProjectID:       "project-1",
-		PostgresVersion: models.PostgresVersion{Major: 15},
+		PostgresVersion: models.PostgresVersion{Major: 16},
 		Instances:       models.PostgresInstances{Count: 1},
-		Storage:         models.PostgresStorage{Size: "10Gi"},
+		Storage:         models.PostgresStorage{Size: "10Gi", StorageClass: "standard"},
 	}
 }
 
-var _ = Describe("PostgresAddonValidator storage class", func() {
-	var v = postgresaddon.NewPostgresAddonValidator()
+var _ = Describe("ValidateForCreate name length", func() {
+	It("accepts a name of MaxAddonNameLength characters", func() {
+		spec := validPostgresAddonSpec(strings.Repeat("a", models.MaxAddonNameLength))
 
+		err := NewPostgresAddonValidator().ValidateForCreate(context.Background(), spec)
+
+		Expect(err).To(BeNil())
+	})
+
+	It("rejects a name one character over MaxAddonNameLength", func() {
+		spec := validPostgresAddonSpec(strings.Repeat("a", models.MaxAddonNameLength+1))
+
+		err := NewPostgresAddonValidator().ValidateForCreate(context.Background(), spec)
+
+		Expect(err).NotTo(BeNil())
+	})
+})
+
+var _ = Describe("ValidateForCreate storage class", func() {
 	It("accepts an empty storage class (use cluster default)", func() {
-		addon := validAddon()
-		addon.Storage.StorageClass = ""
+		spec := validPostgresAddonSpec("test-pg")
+		spec.Storage.StorageClass = ""
 
-		Expect(v.ValidateForCreate(context.Background(), addon)).To(BeNil())
+		Expect(NewPostgresAddonValidator().ValidateForCreate(context.Background(), spec)).To(BeNil())
 	})
 
 	It("accepts an explicit storage class", func() {
-		addon := validAddon()
-		addon.Storage.StorageClass = "local-path"
+		spec := validPostgresAddonSpec("test-pg")
+		spec.Storage.StorageClass = "local-path"
 
-		Expect(v.ValidateForCreate(context.Background(), addon)).To(BeNil())
+		Expect(NewPostgresAddonValidator().ValidateForCreate(context.Background(), spec)).To(BeNil())
 	})
 
 	It("still rejects an empty storage size", func() {
-		addon := validAddon()
-		addon.Storage.Size = ""
+		spec := validPostgresAddonSpec("test-pg")
+		spec.Storage.Size = ""
 
-		Expect(v.ValidateForCreate(context.Background(), addon)).ToNot(BeNil())
+		Expect(NewPostgresAddonValidator().ValidateForCreate(context.Background(), spec)).ToNot(BeNil())
 	})
 })

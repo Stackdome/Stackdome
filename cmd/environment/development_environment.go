@@ -8,6 +8,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/controllers/clusterimageregistry"
@@ -76,6 +77,7 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.injectClusterResourceServices,
 		d.initializeBaseResourceAccessPolicies,
 		d.startManagers,
+		d.bootstrapPlatformDefaults,
 	}
 
 	for _, step := range initializerSteps {
@@ -218,6 +220,10 @@ func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 	if err := d.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
+
+	if err := config.ValidatePlatformProvisioning(d.Config.PlatformCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.Email); err != nil {
+		return fmt.Errorf("invalid platform-provisioning config: %w", err)
+	}
 	return nil
 }
 
@@ -298,11 +304,13 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:             clusterID,
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
 					ReleaseChecker:        d.Services.StackReleaseService,
 					EventRecorder:         d.Services.ReleaseEventRecorder,
+					StackService:          d.Services.StackService,
 				})
 			},
 			func(clusterID string) clustermanager.Controller {
@@ -386,8 +394,16 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+		Permissions:    d.PermissionService,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		OrgRegistryDefaults:       d.BootstrapConfig.OrgRegistry,
 		StackQueryService:         d.Services.StackService,
 		SessionFactory:            d.DBSession,
 		ProjectService:            projectService,
@@ -467,12 +483,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Permissions:                 d.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           d.RefreshTokenStore,
-	})
-
-	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
-		Permissions:    d.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -839,6 +849,21 @@ func (d *developmentEnvironment) startManagers(ctx context.Context) error {
 
 	d.Logger.Debugf("Starting worker manager")
 	return d.WorkerManager.Start(ctx)
+}
+
+func (d *developmentEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
+	svc := bootstrap.NewService(bootstrap.Spec{
+		OrganisationService:       d.Services.OrganisationService,
+		ClusterService:            d.Services.ClusterService,
+		OrganisationDomainService: d.Services.OrganisationDomainService,
+		BootstrapConfig:           d.BootstrapConfig,
+		ClusterConfig:             d.Config.PlatformCluster,
+		Logger:                    d.Logger,
+	})
+	if err := svc.Run(ctx); err != nil {
+		return fmt.Errorf("platform bootstrap failed: %w", err)
+	}
+	return nil
 }
 
 func (d *developmentEnvironment) Shutdown(ctx context.Context) error {

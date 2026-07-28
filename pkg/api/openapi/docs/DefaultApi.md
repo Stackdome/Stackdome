@@ -40,6 +40,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdRepositoriesOwnerRepoGet) | **Get** /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo} | Get repository details through the GitHub App installation
 [**ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsIdVerifyPost) | **Post** /api/v1/organizations/{org_id}/git-integrations/{id}/verify | Verify a git integration against a repository
 [**ApiV1OrganizationsOrgIdGitIntegrationsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdGitIntegrationsPost) | **Post** /api/v1/organizations/{org_id}/git-integrations | Create a git integration for the organization
+[**ApiV1OrganizationsOrgIdImageRegistriesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdImageRegistriesGet) | **Get** /api/v1/organizations/{org_id}/image_registries | List all image registries for an organisation
 [**ApiV1OrganizationsOrgIdInvitesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesGet) | **Get** /api/v1/organizations/{org_id}/invites | List invites for an organization
 [**ApiV1OrganizationsOrgIdInvitesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesIdDelete) | **Delete** /api/v1/organizations/{org_id}/invites/{id} | Revoke a pending invite
 [**ApiV1OrganizationsOrgIdInvitesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesIdGet) | **Get** /api/v1/organizations/{org_id}/invites/{id} | Get an invite by ID
@@ -2597,6 +2598,74 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: application/json
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdImageRegistriesGet
+
+> ClusterImageRegistryList ApiV1OrganizationsOrgIdImageRegistriesGet(ctx, orgId).Execute()
+
+List all image registries for an organisation
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdImageRegistriesGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdImageRegistriesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdImageRegistriesGet`: ClusterImageRegistryList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdImageRegistriesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdImageRegistriesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**ClusterImageRegistryList**](ClusterImageRegistryList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

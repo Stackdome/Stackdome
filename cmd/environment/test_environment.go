@@ -8,6 +8,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
@@ -106,6 +107,7 @@ func (te *testEnvironment) Init(ctx context.Context) error {
 		te.injectClusterResourceServices,
 		te.initializeBaseResourceAccessPolicies,
 		te.startManagers,
+		te.bootstrapPlatformDefaults,
 	}
 
 	for _, step := range initializerSteps {
@@ -131,8 +133,8 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := te.BootstrapConfig.Validate(); err != nil {
-		return fmt.Errorf("invalid bootstrap config: %w", err)
+	if err := config.ValidatePlatformProvisioning(te.Config.PlatformCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.Email); err != nil {
+		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
 }
@@ -144,6 +146,13 @@ func (te *testEnvironment) loadSaneDefaults() {
 	// Load standard environment variables
 	// te.Config.LoadEnvVariables()
 	// te.BootstrapConfig.LoadEnvVariables()
+
+	// Platform-provisioning config is opt-in: the PLATFORM_CLUSTER_* / PLATFORM_* vars
+	// are unset in unit runs (no-op), and set by the integration bootstrap to exercise
+	// the boot-time platform seeding against a real cluster.
+	te.Config.PlatformCluster.LoadEnvVariables()
+	te.BootstrapConfig.LoadEnvVariables()
+
 	if te.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
 			te.Config.JwtSecret = val
@@ -168,15 +177,6 @@ func (te *testEnvironment) loadSaneDefaults() {
 		}
 	}
 
-	if te.BootstrapConfig.DefaultUser.Email == "" {
-		te.BootstrapConfig.DefaultUser.Email = "test-admin@stackdome.io"
-	}
-	if te.BootstrapConfig.DefaultUser.Name == "" {
-		te.BootstrapConfig.DefaultUser.Name = "Test Platform Admin"
-	}
-	if te.BootstrapConfig.DefaultUser.Password == "" {
-		te.BootstrapConfig.DefaultUser.Password = "test-welcome@123"
-	}
 }
 
 func (te *testEnvironment) setupLogger(ctx context.Context) error {
@@ -253,8 +253,16 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
+		SessionFactory: te.DBSession,
+		Logger:         te.Logger,
+		Permissions:    te.PermissionService,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		OrgRegistryDefaults:       te.BootstrapConfig.OrgRegistry,
 		StackQueryService:         te.Services.StackService,
 		SessionFactory:            te.DBSession,
 		ProjectService:            projectService,
@@ -334,12 +342,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Permissions:                 te.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           te.RefreshTokenStore,
-	})
-
-	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
-		SessionFactory: te.DBSession,
-		Logger:         te.Logger,
-		Permissions:    te.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -655,11 +657,13 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:             clusterID,
 					DBImageBuildService:   te.Services.ImageBuildService,
 					DBResourceService:     te.Services.StackResourceService,
 					GitIntegrationService: te.Services.GitIntegrationService,
 					ReleaseChecker:        te.Services.StackReleaseService,
 					EventRecorder:         te.Services.ReleaseEventRecorder,
+					StackService:          te.Services.StackService,
 				})
 			},
 			func(clusterID string) clustermanager.Controller {
@@ -896,6 +900,21 @@ func (te *testEnvironment) startManagers(ctx context.Context) error {
 
 	te.Logger.Debugf("Starting worker manager for test environment")
 	return te.WorkerManager.Start(ctx)
+}
+
+func (te *testEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
+	svc := bootstrap.NewService(bootstrap.Spec{
+		OrganisationService:       te.Services.OrganisationService,
+		ClusterService:            te.Services.ClusterService,
+		OrganisationDomainService: te.Services.OrganisationDomainService,
+		BootstrapConfig:           te.BootstrapConfig,
+		ClusterConfig:             te.Config.PlatformCluster,
+		Logger:                    te.Logger,
+	})
+	if err := svc.Run(ctx); err != nil {
+		return fmt.Errorf("platform bootstrap failed: %w", err)
+	}
+	return nil
 }
 
 func (te *testEnvironment) Shutdown(ctx context.Context) error {

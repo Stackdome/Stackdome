@@ -338,16 +338,14 @@ DB_USERNAME="postgres"
 DB_PASSWORD="your-secure-password"
 DB_DEBUG_MODE="false"
 
-# Default User (created on first start)
-DEFAULT_USER_EMAIL="admin@stackdome.local"
-DEFAULT_USER_NAME="admin"
-DEFAULT_USER_PASS="changeme123"
-
-# Cluster Config (will be configured later)
-DEFAULT_CLUSTER_NAME=""
-DEFAULT_CLUSTER_API_URL=""
-DEFAULT_CLUSTER_CA_DATA=""
-DEFAULT_CLUSTER_TOKEN=""
+# Platform Cluster + Domain (optional; when the full set below is provided
+# alongside PLATFORM_BASE_DOMAIN and PLATFORM_EMAIL, boot provisions the
+# infrastructure-only platform org, cluster, and base domain)
+PLATFORM_EMAIL=""
+PLATFORM_BASE_DOMAIN=""
+PLATFORM_CLUSTER_API_URL=""
+PLATFORM_CLUSTER_CA_DATA=""
+PLATFORM_CLUSTER_TOKEN=""
 ```
 
 **Generate secure secrets:**

@@ -39,6 +39,24 @@ const (
 	MaxStackNameLength = KubernetesDNSLabelMaxLength - len(NamespaceNameSeparator) - MinNamespaceUUIDSuffixLength
 )
 
+// Addon namespaces are generated as
+// "stackdome-addons-<type>-<name>-<uuid>" and truncated from the end to the
+// DNS-label cap (see PrepareNamespaceForAddon in
+// pkg/services/namespace_service.go). These constants are the single source
+// of truth for the addon-name budget, mirroring the stack-name budget above.
+const (
+	// AddonNamespacePrefix prefixes every generated addon namespace name.
+	AddonNamespacePrefix = "stackdome-addons"
+	// MaxAddonTypeLength reserves room for the longest addon type slug
+	// ("postgres") in the addon-name budget.
+	MaxAddonTypeLength = 8
+	// MaxAddonNameLength is the addon-name budget inside a generated
+	// namespace name: the DNS-label cap minus the prefix, the type reservation,
+	// the three separators (prefix-type, type-name, name-uuid), and the entropy
+	// floor (63 - 16 - 8 - 3 - 8 = 28).
+	MaxAddonNameLength = KubernetesDNSLabelMaxLength - len(AddonNamespacePrefix) - MaxAddonTypeLength - 3*len(NamespaceNameSeparator) - MinNamespaceUUIDSuffixLength
+)
+
 type Namespace struct {
 	ID             string      `gorm:"primary_key;default:gen_random_uuid()"`
 	Name           string      `gorm:"not null;unique"`

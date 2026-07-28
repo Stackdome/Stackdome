@@ -199,8 +199,8 @@ func (s *stackResourceService) populateRegistryUrlForResource(ctx context.Contex
 	if s.clusterRegistryService == nil {
 		return errors.GeneralError("cluster registry service is not configured")
 	}
-	return s.clusterRegistryService.PopulateInClusterRegistryUrlForResource(
-		ctx, stack.OrganisationID, stack.Name, resource)
+	return s.clusterRegistryService.PopulateInClusterRegistryNameForResource(
+		ctx, stack.OrganisationID, stack.ClusterID, stack.Name, resource)
 }
 
 func (s *stackResourceService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
