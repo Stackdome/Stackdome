@@ -958,7 +958,13 @@ export default function CanvasEditorPage() {
         onDraftDeploy={() => void performDraftDeploy()}
         draftDeploying={draftDeploying}
         onDeploy={onDeploy}
-        canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
+        canDiscardDraft={
+          // Keyed on "changes exist", not phase === "staged": every keystroke
+          // flips the phase to "editing" while autosave is pending, which
+          // unmounted and remounted the pill's ⋯ menu mid-typing. changeCount
+          // derives from the in-memory draft, so it holds steady while typing.
+          changeCount > 0 && !!liveSnapshot && canWriteStack
+        }
         onDiscardDraft={() => void requestRevert()}
         canDeleteStack={canWriteStack}
         onDelete={() => void performDelete()}
