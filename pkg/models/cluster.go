@@ -21,6 +21,7 @@ type Cluster struct {
 	EncryptedClusterCAData string `gorm:"not null"`
 	EncryptedToken         string `gorm:"not null"`
 	ManagerRunning         bool
+	ClusterInfo            *ClusterInfo            `gorm:"type:jsonb"`
 	ImageRegistries        []*ClusterImageRegistry `gorm:"foreignKey:ClusterID"`
 
 	// Transient fields — populated by service layer after decryption, never persisted

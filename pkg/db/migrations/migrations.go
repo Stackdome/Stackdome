@@ -79,4 +79,5 @@ var MigrationList = []*gormigrate.Migration{
 	addPreviewCommentPending(),
 	renameDefaultToPlatform(),
 	deleteOrphanPlatformOrg(),
+	addClusterInfo(),
 }
