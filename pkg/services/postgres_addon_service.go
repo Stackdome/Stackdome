@@ -126,11 +126,6 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, permErr
 	}
 
-	// Validate input
-	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
-		return nil, err
-	}
-
 	namespace, err := s.namespaceService.PrepareNamespaceForAddon(ctx, postgresAddon, postgresAddon.OrganisationID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to prepare namespace for PostgreSQL addon: %s", err.Error())
@@ -142,6 +137,21 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 	}
 	postgresAddon.ClusterID = cluster.ID
 	postgresAddon.Namespace = namespace.Name
+
+	if postgresAddon.Storage.StorageClass == "" {
+		storageClass, scErr := s.clusterService.DefaultStorageClass(ctx, cluster.ID)
+		if scErr != nil {
+			return nil, scErr
+		}
+		if storageClass == "" {
+			return nil, errors.BadRequest("cluster '%s' has no default storage class; set storage.storage_class explicitly", cluster.ID)
+		}
+		postgresAddon.Storage.StorageClass = storageClass
+	}
+
+	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
+		return nil, err
+	}
 
 	// Check if PostgreSQL addon with same name already exists
 	existingPostgresAddon, _ := s.GetPostgresAddonByName(ctx, postgresAddon.OrganisationID, postgresAddon.Name)
@@ -295,6 +305,10 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 	postgresAddon.Namespace = existingPostgresAddon.Namespace
 	postgresAddon.OrganisationID = existingPostgresAddon.OrganisationID
 	postgresAddon.ProjectID = existingPostgresAddon.ProjectID
+
+	if postgresAddon.Storage.StorageClass == "" {
+		postgresAddon.Storage.StorageClass = existingPostgresAddon.Storage.StorageClass
+	}
 
 	// Validate update using validator
 	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {

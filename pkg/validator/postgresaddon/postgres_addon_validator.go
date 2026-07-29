@@ -229,10 +229,6 @@ func (v *postgresAddonValidator) validateStorage(spec *models.PostgresAddon) *er
 		return errors.BadRequest("Storage size must be in valid Kubernetes storage format (e.g., '10Gi', '100Mi', '1Ti')")
 	}
 
-	if spec.Storage.StorageClass == "" {
-		return errors.BadRequest("Storage class cannot be empty")
-	}
-
 	return nil
 }
 
