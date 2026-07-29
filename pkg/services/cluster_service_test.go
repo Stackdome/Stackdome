@@ -329,4 +329,39 @@ var _ = Describe("ClusterService", func() {
 			Expect(result.ClusterCAData).To(Equal(caData))
 		})
 	})
+
+	Describe("DefaultStorageClass", func() {
+		It("returns the default class from the persisted snapshot", func() {
+			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(&models.Cluster{
+				ID: "cluster-1",
+				ClusterInfo: &models.ClusterInfo{StorageClasses: []models.ClusterStorageClass{
+					{Name: "local-path", IsDefault: true},
+				}},
+			}, nil)
+
+			name, err := svc.DefaultStorageClass(ctx, "cluster-1")
+			Expect(err).To(BeNil())
+			Expect(name).To(Equal("local-path"))
+		})
+
+		It("returns empty without an error when the cluster has no info yet", func() {
+			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(&models.Cluster{ID: "cluster-1"}, nil)
+
+			name, err := svc.DefaultStorageClass(ctx, "cluster-1")
+			Expect(err).To(BeNil())
+			Expect(name).To(BeEmpty())
+		})
+	})
+
+	Describe("InternalUpdateClusterInfo", func() {
+		It("delegates to the cluster store", func() {
+			info := &models.ClusterInfo{StorageClasses: []models.ClusterStorageClass{
+				{Name: "local-path", IsDefault: true},
+			}}
+			clusterStore.EXPECT().UpdateClusterInfo(gomock.Any(), "cluster-1", info).Return(nil)
+
+			err := svc.InternalUpdateClusterInfo(ctx, "cluster-1", info)
+			Expect(err).To(BeNil())
+		})
+	})
 })

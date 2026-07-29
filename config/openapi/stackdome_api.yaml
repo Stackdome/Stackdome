@@ -6416,7 +6416,6 @@ components:
       type: object
       required:
         - size
-        - storage_class
       properties:
         size:
           type: string
@@ -6424,7 +6423,7 @@ components:
           description: Storage size (e.g., 10Gi, 100Gi)
         storage_class:
           type: string
-          description: Kubernetes storage class name
+          description: Kubernetes storage class name. Omit to use the cluster's default storage class.
 
     PostgresResources:
       type: object

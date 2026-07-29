@@ -12,6 +12,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/controllers/clusterimageregistry"
+	clusterinfocontroller "github.com/Stackdome/stackdome/pkg/controllers/clusterinfo"
 	imagebuildcontroller "github.com/Stackdome/stackdome/pkg/controllers/imagebuild"
 	postgresaddoncontroller "github.com/Stackdome/stackdome/pkg/controllers/postgres_addon"
 	postgresbackupcontroller "github.com/Stackdome/stackdome/pkg/controllers/postgres_backup"
@@ -330,6 +331,13 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresBackupService: d.Services.PostgresBackupService,
+				})
+			},
+			func(clusterID string) clustermanager.Controller {
+				return clusterinfocontroller.NewClusterInfoReconciler(clusterinfocontroller.ClusterInfoReconcilerSpec{
+					Log:            applogger.NewLoggerWithPrefix(ctx, "cluster-info-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:      clusterID,
+					ClusterService: d.Services.ClusterService,
 				})
 			},
 		},

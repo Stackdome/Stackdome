@@ -40,6 +40,8 @@ type ClusterService interface {
 	InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError)
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
+	InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError
+	DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError)
 }
 
 type clusterService struct {
@@ -496,6 +498,18 @@ func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec
 		return nil, decErr
 	}
 	return fresh, nil
+}
+
+func (s *clusterService) InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError {
+	return s.clusterStore.UpdateClusterInfo(ctx, clusterID, info)
+}
+
+func (s *clusterService) DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError) {
+	cluster, err := s.clusterStore.Get(ctx, clusterID)
+	if err != nil {
+		return "", err
+	}
+	return cluster.ClusterInfo.DefaultStorageClass(), nil
 }
 
 func (s *clusterService) getPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {

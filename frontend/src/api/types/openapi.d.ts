@@ -8564,8 +8564,8 @@ export interface components {
         PostgresStorage: {
             /** @description Storage size (e.g., 10Gi, 100Gi) */
             size: string;
-            /** @description Kubernetes storage class name */
-            storage_class: string;
+            /** @description Kubernetes storage class name. Omit to use the cluster's default storage class. */
+            storage_class?: string;
         };
         PostgresResources: {
             cpu?: {

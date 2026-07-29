@@ -3856,7 +3856,7 @@ func main() {
     orgId := "orgId_example" // string | The ID of the organization
     projectName := "projectName_example" // string | The name of the project
     id := "id_example" // string | The id of record
-    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example", "StorageClass_example"))) // PostgresAddon | 
+    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example"))) // PostgresAddon | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
@@ -3933,7 +3933,7 @@ import (
 func main() {
     orgId := "orgId_example" // string | The ID of the organization
     projectName := "projectName_example" // string | The name of the project
-    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example", "StorageClass_example"))) // PostgresAddon | 
+    postgresAddon := *openapiclient.NewPostgresAddon("Name_example", *openapiclient.NewPostgresAddonSpec(*openapiclient.NewPostgresVersion(int32(123)), *openapiclient.NewPostgresInstances(int32(123)), *openapiclient.NewPostgresStorage("Size_example"))) // PostgresAddon | 
 
     configuration := openapiclient.NewConfiguration()
     apiClient := openapiclient.NewAPIClient(configuration)
