@@ -71,6 +71,20 @@ function useCopyFlash() {
   return { copiedUrl, onCopy };
 }
 
+/** Copy-to-clipboard button with the shared copied-flash treatment. */
+function CopyButton({ url, copiedUrl, onCopy }: { url: string; copiedUrl: string | null; onCopy: (url: string) => void }) {
+  return (
+    <button
+      type="button"
+      onClick={() => onCopy(url)}
+      aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
+      className="flex size-5 shrink-0 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+    >
+      {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+    </button>
+  );
+}
+
 /** Hostname + go-to + copy on one static line — for drawer headers, where
  *  there's room to show the address and hover-reveal would be ceremony. */
 export function EndpointInline({ url }: { url: string }) {
@@ -90,14 +104,7 @@ export function EndpointInline({ url }: { url: string }) {
         </TooltipTrigger>
         <TooltipContent side="bottom">{url}</TooltipContent>
       </Tooltip>
-      <button
-        type="button"
-        onClick={() => onCopy(url)}
-        aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
-        className="flex size-5 shrink-0 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
-      >
-        {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-      </button>
+      <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />
     </span>
   );
 }
@@ -172,14 +179,7 @@ function EndpointOverflow({
             >
               {u.url}
             </a>
-            <button
-              type="button"
-              onClick={() => onCopy(u.url)}
-              aria-label={copiedUrl === u.url ? "Copied" : `Copy ${u.url}`}
-              className="flex size-5 flex-none items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
-            >
-              {copiedUrl === u.url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-            </button>
+            <CopyButton url={u.url} copiedUrl={copiedUrl} onCopy={onCopy} />
           </div>
         ))}
       </PopoverContent>
@@ -222,16 +222,7 @@ function EndpointChip({ endpoint: { service, url, port, variant, urls }, reveal,
         <ExternalLink className="size-3 shrink-0" />
       </a>
       {/* Copy earns its keep in the full header; the zen bar keeps go-to only. */}
-      {reveal === "inline" && (
-        <button
-          type="button"
-          onClick={() => onCopy(url)}
-          aria-label={copiedUrl === url ? "Copied" : `Copy ${url}`}
-          className="flex size-5 items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
-        >
-          {copiedUrl === url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
-        </button>
-      )}
+      {reveal === "inline" && <CopyButton url={url} copiedUrl={copiedUrl} onCopy={onCopy} />}
       {/* Hostname expands AFTER the icons so the click targets never move
           mid-hover. Redundant with the go-to icon, so it's out of the tab
           order and hidden from readers. */}

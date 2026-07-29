@@ -63,18 +63,18 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
             <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5">
               <span>ports:</span>
               {(data.details ?? []).map((line, i) => {
-                const url = line.port != null ? data.portUrls?.[line.port] : undefined;
+                const url = data.portUrls?.[line.port];
                 const sep = i > 0 && <span className="opacity-40">·</span>;
                 if (!url) {
                   return (
-                    <Fragment key={line.text}>
+                    <Fragment key={`${line.port}-${i}`}>
                       {sep}
                       <span title={line.text}>{line.port}</span>
                     </Fragment>
                   );
                 }
                 return (
-                  <Fragment key={line.text}>
+                  <Fragment key={`${line.port}-${i}`}>
                     {sep}
                     <a
                       href={url}

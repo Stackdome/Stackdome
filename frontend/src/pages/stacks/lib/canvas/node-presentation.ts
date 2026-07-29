@@ -36,16 +36,14 @@ export interface NodePresentation {
   brandSlug?: string;
   /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
-  /** One card line per declared port: `port N · public|internal`. Overflow
-   *  fold lines ("+N more ports") carry text only. */
+  /** One entry per declared port: `port N · public|internal`. */
   details: PortLine[];
 }
 
 export interface PortLine {
   text: string;
-  /** Declared port number — absent on the overflow fold line. */
-  port?: number;
-  public?: boolean;
+  port: number;
+  public: boolean;
 }
 
 /** Internal kind keys → their display metadata. */
@@ -127,7 +125,7 @@ function buildSummary(image: string, hasBuild: boolean | undefined): string {
  *  as the per-port tooltip), so no overflow fold is needed. */
 function buildPortLines(ports: PresentationPort[] | undefined): PortLine[] {
   return (ports ?? [])
-    .filter((p) => p.number != null)
+    .filter((p): p is PresentationPort & { number: number } => p.number != null)
     .map((p) => ({
       text: `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`,
       port: p.number,

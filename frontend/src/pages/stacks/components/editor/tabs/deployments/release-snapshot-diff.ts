@@ -46,7 +46,7 @@ export function gitUnpinned(r: SnapResource | undefined): boolean {
 const RESOURCE_SERVER_FIELDS = ["id", "stack_id", "revision", "outputs"] as const;
 const VOLUME_SERVER_FIELDS = ["id", "project_id", "status"] as const;
 
-const GENERIC_ROW = (): DiffRow => ({ key: "other configuration", kind: "changed" });
+const GENERIC_ROW: DiffRow = { key: "other configuration", kind: "changed" };
 
 function canonicalResource(r: SnapResource, dropRevisions: boolean): unknown {
   const out = { ...r } as Record<string, unknown>;
@@ -160,7 +160,7 @@ function diffResources(prev: unknown, cur: unknown): ResourceDiff[] {
     // Catch-all: a change outside the projected scalars must still surface —
     // an invisible real diff is how the phantom-pill class of bugs starts.
     if (!sections.length && resourceResidual(p!, c!)) {
-      sections.push({ kind: "configuration", rows: [GENERIC_ROW()] });
+      sections.push({ kind: "configuration", rows: [GENERIC_ROW] });
     }
     if (sections.length) out.push({ name, change: "modified", sections });
   }
@@ -210,7 +210,7 @@ function diffNamed<T>(prev: T[], cur: T[], nameOf: (t: T) => string, scalars: (t
     if (a && !b) { out.push({ name, change: "removed", rows: scalarRows(scalars(a as T), {}), note: removedNote }); continue; }
     if (!a && b) { out.push({ name, change: "added", rows: scalarRows({}, scalars(b)) }); continue; }
     const rows = scalarRows(scalars(a as T), scalars(b as T));
-    if (!rows.length && residual?.(a as T, b as T)) rows.push(GENERIC_ROW());
+    if (!rows.length && residual?.(a as T, b as T)) rows.push(GENERIC_ROW);
     if (rows.length) out.push({ name, change: "modified", rows });
   }
   return out;

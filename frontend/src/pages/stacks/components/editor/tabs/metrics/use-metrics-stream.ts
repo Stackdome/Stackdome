@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { ResourceMetrics } from './types';
 import { useResourceProjects } from '@/hooks/use-resource-projects';
 import {
@@ -25,7 +25,6 @@ interface UseMetricsStreamReturn {
   /** Set only from the backend's `event: error` SSE events — never from
    *  connection drops, which surface through connectionStatus instead. */
   error: string | null;
-  retry: () => void;
 }
 
 export function useMetricsStream({
@@ -38,11 +37,8 @@ export function useMetricsStream({
   const [resourceMetrics, setResourceMetrics] = useState<Map<string, ResourceMetrics>>(new Map());
   const [connectionStatus, setConnectionStatus] = useState<SseStreamStatus>('disconnected');
   const [error, setError] = useState<string | null>(null);
-  const [retryNonce, setRetryNonce] = useState(0);
   const eventSourcesRef = useRef<EventSource[]>([]);
   const { defaultProjectName } = useResourceProjects();
-
-  const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 
   // resourceNames identity changes on unrelated re-renders; key on content.
   const namesKey = resourceNames.join(',');
@@ -50,6 +46,9 @@ export function useMetricsStream({
   useEffect(() => {
     if (!enabled || !stackId || !organizationId || !defaultProjectName) {
       setConnectionStatus('disconnected');
+      // Disabled is a deliberate state (e.g. no ready resources) — a terminal
+      // error from a previous stream must not linger over it.
+      setError(null);
       return;
     }
 
@@ -102,13 +101,12 @@ export function useMetricsStream({
       eventSourcesRef.current.forEach((source) => source.close());
       eventSourcesRef.current = [];
     };
-  }, [stackId, organizationId, defaultProjectName, namesKey, enabled, retryNonce]);
+  }, [stackId, organizationId, defaultProjectName, namesKey, enabled]);
 
   return {
     stackMetrics,
     resourceMetrics,
     connectionStatus,
     error,
-    retry,
   };
 }

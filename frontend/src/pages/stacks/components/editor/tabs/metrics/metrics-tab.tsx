@@ -7,7 +7,7 @@ import { useMetricsStream } from "./use-metrics-stream";
 import type { StackResource } from "@/pages/stacks/types";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import type { SseStreamStatus } from "@/api/observability";
-import { isResourceReady } from "@/pages/stacks/lib/resource-readiness";
+import { isResourceReady, readyResourceNames } from "@/pages/stacks/lib/resource-readiness";
 import { convertToDisplayMetrics } from "./utils";
 
 function connectionStatusInfo(status: SseStreamStatus): { variant: StatusVariant; label: string } {
@@ -76,13 +76,10 @@ interface MetricsTabProps {
 }
 
 export function MetricsTab({ stackId, organizationId, resources, liveStatusResources }: MetricsTabProps) {
-  // With no live_status at all (still loading), readiness is unknown: fail
-  // open rather than blocking streams that may be fine.
-  const readyNames = useMemo(() => {
-    const names = resources.map((r) => r.name).filter((name): name is string => !!name);
-    if (!liveStatusResources) return names;
-    return names.filter((name) => isResourceReady(liveStatusResources[name]?.state));
-  }, [resources, liveStatusResources]);
+  const readyNames = useMemo(
+    () => readyResourceNames(resources, liveStatusResources),
+    [resources, liveStatusResources],
+  );
 
   const { stackMetrics, resourceMetrics, connectionStatus, error } = useMetricsStream({
     stackId,

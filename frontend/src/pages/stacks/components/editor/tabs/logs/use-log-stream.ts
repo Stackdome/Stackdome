@@ -49,6 +49,9 @@ export function useLogStream({
   useEffect(() => {
     if (!enabled || !stackId || !organizationId || !defaultProjectName) {
       setConnectionStatus('disconnected');
+      // Disabled is a deliberate state (e.g. no ready resources) — a terminal
+      // error from a previous stream must not linger over it.
+      setError(null);
       return;
     }
 

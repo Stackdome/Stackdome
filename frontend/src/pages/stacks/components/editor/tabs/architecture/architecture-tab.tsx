@@ -183,9 +183,12 @@ function StackCanvasFlow({
       nodes: mergedGraphBare.nodes.map((n) => {
         const urls = n.type === "resource" ? byService.get((n.data as { name: string }).name) : undefined;
         if (!urls?.length) return n;
-        const portUrls = Object.fromEntries(
-          urls.filter((u) => u.target_port != null).map((u) => [u.target_port!, u.url]),
-        );
+        // urls is best-first; first URL per port wins when several ingresses
+        // share a target_port (e.g. custom domain + generated).
+        const portUrls: Record<number, string> = {};
+        for (const u of urls) {
+          if (u.target_port != null && portUrls[u.target_port] === undefined) portUrls[u.target_port] = u.url;
+        }
         return { ...n, data: { ...n.data, portUrls } };
       }),
     };
