@@ -60,7 +60,7 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
         <div className="mt-1.5 pl-[18px] font-mono text-[11px] text-muted-foreground">
           <div className="truncate">{data.summary}</div>
           {(data.details ?? []).length > 0 && (
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5">
               <span>ports:</span>
               {(data.details ?? []).map((line, i) => {
                 const url = line.port != null ? data.portUrls?.[line.port] : undefined;
