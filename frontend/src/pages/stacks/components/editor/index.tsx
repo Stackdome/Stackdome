@@ -613,16 +613,18 @@ export default function CanvasEditorPage() {
 
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
-  const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
+  const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string): Promise<boolean> => {
     setDeployBusy(true);
     try {
       await fn();
       toast({ title: ok, variant: "success" });
       refetchReleases();
+      return true;
     } catch (e) {
       if (!applyValidationFailure(e)) {
         toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
       }
+      return false;
     } finally {
       setDeployBusy(false);
     }
@@ -639,7 +641,13 @@ export default function CanvasEditorPage() {
       });
       return;
     }
-    runDeploy(() => createRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId), "Deploy started");
+    const started = await runDeploy(
+      () => createRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId),
+      "Deploy started",
+    );
+    // Deploying is a "watch it roll out" moment — land the user on the
+    // timeline. Cancel/rollback start there already, so only deploy jumps.
+    if (started) setActiveTab(EDITOR_TABS.deployments);
   }, [draftSync, deployIds, runDeploy, toast]);
   const onCancelDeploy = useCallback(
     (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId, releaseId), "Release cancelled"),
