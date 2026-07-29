@@ -126,6 +126,10 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, permErr
 	}
 
+	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
+		return nil, err
+	}
+
 	namespace, err := s.namespaceService.PrepareNamespaceForAddon(ctx, postgresAddon, postgresAddon.OrganisationID)
 	if err != nil {
 		return nil, errors.GeneralError("failed to prepare namespace for PostgreSQL addon: %s", err.Error())
@@ -147,10 +151,6 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 			return nil, errors.BadRequest("cluster '%s' has no default storage class; set storage.storage_class explicitly", cluster.ID)
 		}
 		postgresAddon.Storage.StorageClass = storageClass
-	}
-
-	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
-		return nil, err
 	}
 
 	// Check if PostgreSQL addon with same name already exists
