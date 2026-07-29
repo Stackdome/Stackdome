@@ -91,9 +91,9 @@ describe("PublicEndpointRow multi-url overflow", () => {
     render(<PublicEndpointRow endpoints={[multi]} />);
     fireEvent.click(screen.getByRole("button", { name: "1 more endpoint for web" }));
     // Only the second endpoint is listed (the best one lives on the chip);
-    // named port shows its name.
-    expect(await screen.findByText("admin")).toBeInTheDocument();
-    expect(screen.queryByText(":80")).toBeNull();
+    // the PORT column shows the bare number.
+    expect(await screen.findByText("89")).toBeInTheDocument();
+    expect(screen.queryByText("80")).toBeNull();
     const rowLink = screen.getByRole("link", { name: "Go to https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app" });
     expect(rowLink).toHaveAttribute("target", "_blank");
     expect(

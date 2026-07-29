@@ -162,7 +162,7 @@ function EndpointOverflow({
         {rest.map((u) => (
           <div key={u.url} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted/40">
             <span className="w-14 flex-none font-mono text-[10.5px] text-fg-muted">
-              {u.portName ?? (u.target_port != null ? `:${u.target_port}` : "")}
+              {u.target_port ?? ""}
             </span>
             <a
               href={u.url}
