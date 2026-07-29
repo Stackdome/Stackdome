@@ -40,7 +40,7 @@ describe("ResourceNode port lines", () => {
         <ResourceNode {...withPorts({ 80: "https://web.acme.stackdome.app" })} />
       </ReactFlowProvider>,
     );
-    expect(screen.getByText("ports")).toBeInTheDocument();
+    expect(screen.getByText("ports:")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: "80" });
     expect(link).toHaveAttribute("href", "https://web.acme.stackdome.app");
     expect(link).toHaveAttribute("target", "_blank");
