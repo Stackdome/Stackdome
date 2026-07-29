@@ -88,7 +88,6 @@ export function EndpointInline({ url }: { url: string }) {
             className="flex min-w-0 items-center gap-1 font-mono text-[11px] text-fg-2 hover:text-foreground"
           >
             <span className="truncate hover:underline">{hostOf(url)}</span>
-            <ExternalLink className="size-3 shrink-0 text-fg-muted" />
           </a>
         </TooltipTrigger>
         <TooltipContent side="bottom">{url}</TooltipContent>
@@ -156,8 +155,9 @@ function EndpointOverflow({
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto max-w-[420px] p-1.5">
-        <div className="px-1.5 pb-1 font-mono text-[9px] uppercase tracking-[0.14em] text-fg-muted">
-          {service} · more endpoints
+        <div className="flex items-center gap-2 px-1.5 pb-1 font-mono text-[9px] uppercase tracking-[0.14em] text-fg-muted">
+          <span className="w-14 flex-none">port</span>
+          <span>endpoint</span>
         </div>
         {rest.map((u) => (
           <div key={u.url} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted/40">
