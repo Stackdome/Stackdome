@@ -112,25 +112,25 @@ describe("EndpointInlineList (drawer header)", () => {
     { url: "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app", target_port: 89 },
   ];
 
-  it("renders only the first url plus a collapsed '+1 more' toggle", () => {
-    render(<EndpointInlineList urls={urls} />);
+  it("renders the first url plus the same '+N' popover trigger the chips use", () => {
+    render(<EndpointInlineList service="web" urls={urls} />);
     expect(screen.getByText("web.acme.stackdome.app")).toBeInTheDocument();
-    expect(screen.queryByText("mqrkc2xw4t7b4dnz.web.acme.stackdome.app")).toBeNull();
-    expect(screen.getByRole("button", { name: "Show 1 more endpoint" })).toBeInTheDocument();
+    expect(screen.queryByText(/mqrkc2xw4t7b4dnz/)).toBeNull();
+    expect(screen.getByRole("button", { name: "1 more endpoint for web" })).toBeInTheDocument();
   });
 
-  it("expands remaining urls in place and flips to 'show less'", () => {
-    render(<EndpointInlineList urls={urls} />);
-    fireEvent.click(screen.getByRole("button", { name: "Show 1 more endpoint" }));
-    expect(screen.getByText("mqrkc2xw4t7b4dnz.web.acme.stackdome.app")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Show less" }));
-    expect(screen.queryByText("mqrkc2xw4t7b4dnz.web.acme.stackdome.app")).toBeNull();
+  it("popover lists every endpoint", async () => {
+    render(<EndpointInlineList service="web" urls={urls} />);
+    fireEvent.click(screen.getByRole("button", { name: "1 more endpoint for web" }));
+    expect(
+      await screen.findByRole("link", { name: "Go to https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app" }),
+    ).toBeInTheDocument();
   });
 
-  it("single url renders inline with no toggle; empty renders nothing", () => {
-    render(<EndpointInlineList urls={[urls[0]]} />);
-    expect(screen.queryByRole("button", { name: /Show/ })).toBeNull();
-    const { container } = render(<EndpointInlineList urls={[]} />);
+  it("single url renders inline with no trigger; empty renders nothing", () => {
+    render(<EndpointInlineList service="web" urls={[urls[0]]} />);
+    expect(screen.queryByRole("button", { name: /more endpoint/ })).toBeNull();
+    const { container } = render(<EndpointInlineList service="web" urls={[]} />);
     expect(container).toBeEmptyDOMElement();
   });
 });

@@ -105,36 +105,18 @@ export function EndpointInline({ url }: { url: string }) {
   );
 }
 
-/** Drawer-header endpoint block: first (best) URL always visible, the rest
- *  behind a "+N more" toggle that expands in place — no popover in a drawer. */
-export function EndpointInlineList({ urls }: { urls: EndpointUrl[] }) {
-  const [expanded, setExpanded] = useState(false);
+/** Drawer-header endpoint block: first (best) URL always visible; the rest
+ *  behind the same "+N" popover the stack-header chip uses. */
+export function EndpointInlineList({ service, urls }: { service: string; urls: EndpointUrl[] }) {
+  const { copiedUrl, onCopy } = useCopyFlash();
   if (urls.length === 0) return null;
-  const rest = urls.slice(1);
   return (
-    <div className="flex flex-col items-start gap-px">
+    <span className="flex min-w-0 items-center gap-1">
       <EndpointInline url={urls[0].url} />
-      {expanded &&
-        rest.map((u) => (
-          <span key={u.url} className="flex min-w-0 items-center gap-1">
-            <EndpointInline url={u.url} />
-            {u.target_port != null && (
-              <span className="font-mono text-[10px] text-fg-muted">{u.portName ?? `:${u.target_port}`}</span>
-            )}
-          </span>
-        ))}
-      {rest.length > 0 && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          aria-expanded={expanded}
-          aria-label={expanded ? "Show less" : `Show ${rest.length} more endpoint${rest.length > 1 ? "s" : ""}`}
-          className="font-mono text-[10px] text-fg-muted transition-colors hover:text-foreground"
-        >
-          {expanded ? "show less" : `+${rest.length} more`}
-        </button>
+      {urls.length > 1 && (
+        <EndpointOverflow service={service} urls={urls} copiedUrl={copiedUrl} onCopy={onCopy} />
       )}
-    </div>
+    </span>
   );
 }
 

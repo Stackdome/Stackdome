@@ -179,7 +179,9 @@ export function ResourceDrawer({
             {resource.name || `Resource ${resourceIndex + 1}`}
           </div>
           <div className="truncate font-mono text-[11px] text-fg-muted">{pres.summary}</div>
-          {publicUrls && publicUrls.length > 0 && <EndpointInlineList urls={publicUrls} />}
+          {publicUrls && publicUrls.length > 0 && (
+            <EndpointInlineList service={resource.name || "resource"} urls={publicUrls} />
+          )}
         </div>
         {isDirty ? (
           <span className="flex shrink-0 items-center gap-1 rounded-md border border-brand pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
