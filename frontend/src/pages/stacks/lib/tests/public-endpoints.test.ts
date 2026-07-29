@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyIngressUrl, pickBestIngress } from "../public-endpoints";
+import { classifyIngressUrl, pickBestIngress, sortIngresses } from "../public-endpoints";
 
 const ORG = ["acme.stackdome.app"];
 const GENERATED = "https://k7x2m3qp4rt6w3ab.web.acme.stackdome.app";
@@ -40,5 +40,39 @@ describe("pickBestIngress", () => {
   });
   it("returns null when nothing has a url", () => {
     expect(pickBestIngress([{}, { target_port: 80 }], ORG)).toBeNull();
+  });
+});
+
+describe("sortIngresses", () => {
+  it("orders best-first: custom > prefix > generated", () => {
+    const sorted = sortIngresses(
+      [
+        { url: GENERATED, target_port: 80 },
+        { url: CUSTOM, target_port: 443 },
+        { url: PREFIX, target_port: 80 },
+      ],
+      ORG,
+    );
+    expect(sorted.map((i) => i.url)).toEqual([CUSTOM, PREFIX, GENERATED]);
+  });
+  it("breaks equal-rank ties by lowest target_port (deterministic, not array order)", () => {
+    const gen89 = "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app";
+    const sorted = sortIngresses(
+      [
+        { url: gen89, target_port: 89 },
+        { url: GENERATED, target_port: 80 },
+      ],
+      ORG,
+    );
+    expect(sorted.map((i) => i.target_port)).toEqual([80, 89]);
+  });
+  it("port-less entries sort after ported ones of the same rank", () => {
+    const gen2 = "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app";
+    const sorted = sortIngresses([{ url: gen2 }, { url: GENERATED, target_port: 80 }], ORG);
+    expect(sorted.map((i) => i.url)).toEqual([GENERATED, gen2]);
+  });
+  it("drops url-less entries and returns [] for empty input", () => {
+    expect(sortIngresses([{ target_port: 80 }, {}], ORG)).toEqual([]);
+    expect(sortIngresses([], ORG)).toEqual([]);
   });
 });

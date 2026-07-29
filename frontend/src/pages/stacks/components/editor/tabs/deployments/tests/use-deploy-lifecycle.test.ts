@@ -80,6 +80,26 @@ describe("deriveDeployLifecycle", () => {
     expect(r.stagedDiff?.resources[0]).toMatchObject({ name: "web", change: "modified" });
   });
 
+  it("staged — drift in a field outside the projected scalars still stages", () => {
+    // Before the catch-all, unprojected-only drift diffed empty and the phase
+    // read "clean" while a real undeployed change existed.
+    const withInit = (image: string, cmd: string[]): StackReleaseSnapshot => ({
+      resources: [{ name: "web", source: { image: { ref: image } }, init_spec: { command: cmd } } as never],
+    });
+    const r = deriveDeployLifecycle({
+      stack: {
+        spec: { stack_resources: [{ name: "web", source: { image: { ref: "nginx:1.25" } }, init_spec: { command: ["migrate", "--seed"] } }] },
+        converged_release: { id: "live-1" },
+      } as unknown as Stack,
+      unsaved: false,
+      activeRelease: mkRelease({ sequence: 7, state: "Released" }),
+      liveRelease: mkRelease({ id: "live-1", sequence: 7 }),
+      liveSnapshot: withInit("nginx:1.25", ["migrate"]),
+    });
+    expect(r.phase).toBe("staged");
+    expect(r.stagedDiff?.resources[0]).toMatchObject({ name: "web", change: "modified" });
+  });
+
   it("clean — saved spec matches the live snapshot", () => {
     const r = deriveDeployLifecycle({
       stack: mkStack("nginx:1.25"),

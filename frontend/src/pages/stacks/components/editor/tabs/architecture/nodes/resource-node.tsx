@@ -1,6 +1,6 @@
-import { memo } from "react";
+import { Fragment, memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { HardDrive } from "lucide-react";
+import { ExternalLink, HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import type { StatusVariant } from "@/components/branded/status-variant";
@@ -59,9 +59,41 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
         </div>
         <div className="mt-1.5 pl-[18px] font-mono text-[11px] text-muted-foreground">
           <div className="truncate">{data.summary}</div>
-          {(data.details ?? []).map((line) => (
-            <div key={line} className="mt-0.5 truncate">{line}</div>
-          ))}
+          {(data.details ?? []).length > 0 && (
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1 gap-y-0.5">
+              <span>ports:</span>
+              {(data.details ?? []).map((line, i) => {
+                const url = data.portUrls?.[line.port];
+                const sep = i > 0 && <span className="opacity-40">·</span>;
+                if (!url) {
+                  return (
+                    <Fragment key={`${line.port}-${i}`}>
+                      {sep}
+                      <span title={line.text}>{line.port}</span>
+                    </Fragment>
+                  );
+                }
+                return (
+                  <Fragment key={`${line.port}-${i}`}>
+                    {sep}
+                    <a
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={`${line.text} — ${url}`}
+                      // Card drag/click owns the mousedown; stop it so the link clicks.
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      className="group/port flex items-center gap-0.5 transition-colors hover:text-foreground"
+                    >
+                      <span className="group-hover/port:underline">{line.port}</span>
+                      <ExternalLink className="size-2.5 shrink-0 opacity-40 transition-opacity group-hover/port:opacity-100" aria-hidden />
+                    </a>
+                  </Fragment>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 

@@ -21,6 +21,7 @@ import {
 import type { LogViewerProps, ConnectionStatus, TimeRangeOption, LogFilters } from './types';
 import { useLogStream } from './use-log-stream';
 import { convertLogsToLazyLogFormat, getTimeRangeLabel } from './utils';
+import { readyResourceNames } from '@/pages/stacks/lib/resource-readiness';
 
 function connectionStatusInfo(status: ConnectionStatus): { variant: StatusVariant; label: string } {
   switch (status) {
@@ -28,16 +29,16 @@ function connectionStatusInfo(status: ConnectionStatus): { variant: StatusVarian
       return { variant: 'pending', label: 'Connecting' };
     case 'connected':
       return { variant: 'ready', label: 'Connected' };
+    case 'reconnecting':
+      return { variant: 'pending', label: 'Reconnecting' };
     case 'disconnected':
       return { variant: 'neutral', label: 'Disconnected' };
-    case 'error':
-      return { variant: 'error', label: 'Error' };
     default:
       return { variant: 'neutral', label: 'Unknown' };
   }
 }
 
-export function LogViewer({ stackId, organizationId, resources = [], initialSources, className = '' }: LogViewerProps) {
+export function LogViewer({ stackId, organizationId, resources = [], liveStatusResources, initialSources, className = '' }: LogViewerProps) {
   const [sourceSelectOpen, setSourceSelectOpen] = useState(false);
   // Fit the viewer to the space below whatever chrome sits above it — the
   // offset varies with the stack header, so it's measured, not hardcoded.
@@ -59,11 +60,26 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
     timeRange: 'live-4h',
   });
 
+  // Streams only open for Ready resources — the backend rejects the rest with
+  // a pre-stream HTTP error that EventSource can't distinguish from an outage.
+  const readySources = useMemo(
+    () => new Set(readyResourceNames(resources, liveStatusResources)),
+    [resources, liveStatusResources],
+  );
+
+  const streamSources = useMemo(
+    () => filters.sources.filter((s) => readySources.has(s)),
+    [filters.sources, readySources],
+  );
+  const canStream =
+    readySources.size > 0 && (filters.sources.length === 0 || streamSources.length > 0);
+
+  // No memo: the hook keys its effect on filter CONTENT, so object identity is free.
   const { logs, connectionStatus, error, retry } = useLogStream({
     stackId,
     organizationId,
-    filters,
-    enabled: true,
+    filters: { ...filters, sources: streamSources },
+    enabled: canStream,
   });
 
   const availableSources = useMemo(() => {
@@ -87,7 +103,9 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
     setFilters((prev: LogFilters) => ({ ...prev, timeRange }));
   };
 
-  const statusInfo = connectionStatusInfo(connectionStatus);
+  const statusInfo = canStream
+    ? connectionStatusInfo(connectionStatus)
+    : { variant: 'neutral' as StatusVariant, label: 'Waiting' };
 
   const logText = useMemo(() => {
     return convertLogsToLazyLogFormat(filteredLogs);
@@ -149,7 +167,10 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
                             filters.sources.includes(source) ? 'opacity-100' : 'opacity-0'
                           }`}
                         />
-                        {source}
+                        <span className="truncate">{source}</span>
+                        {!readySources.has(source) && (
+                          <span className="ml-auto pl-2 text-[10px] text-fg-muted">not ready</span>
+                        )}
                       </CommandItem>
                     ))}
                   </CommandGroup>
@@ -184,7 +205,17 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
       )}
 
       {/* Log Display — near-black terminal panel */}
-      {logText ? (
+      {!canStream ? (
+        <EmptyState
+          icon={<Clock className="h-6 w-6" />}
+          title="No ready resources yet"
+          description={
+            filters.sources.length > 0
+              ? 'The selected resources are still starting. Logs will stream once they are ready.'
+              : 'Logs will stream once at least one resource is ready.'
+          }
+        />
+      ) : logText ? (
         <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-[#070a0f]">
           <div className="h-full">
             <LazyLog
@@ -205,10 +236,10 @@ export function LogViewer({ stackId, organizationId, resources = [], initialSour
             />
           </div>
         </div>
-      ) : connectionStatus === 'connecting' ? (
+      ) : connectionStatus === 'connecting' || connectionStatus === 'reconnecting' ? (
         <EmptyState
           icon={<Loader2 className="h-6 w-6 animate-spin" />}
-          title="Connecting to log stream"
+          title={connectionStatus === 'connecting' ? 'Connecting to log stream' : 'Reconnecting to log stream'}
           description="Waiting for the first event to arrive."
         />
       ) : connectionStatus === 'connected' ? (

@@ -22,7 +22,6 @@ import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-edito
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
-import { resolveChangeCount } from "@/pages/stacks/components/editor/lib/resolve-change-count";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
@@ -34,7 +33,7 @@ import { emptyDraftSeed, buildDraftFormData, type DraftSeed } from "@/pages/stac
 import { createRelease, cancelRelease, rollbackRelease } from "@/api/releases";
 import { useReleases } from "@/pages/stacks/components/editor/tabs/deployments/use-releases";
 import { useReleaseDetail, ReleaseDetailProvider } from "@/pages/stacks/components/editor/tabs/deployments/use-release-detail";
-import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
+import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpinnedGitRevisions } from "@/pages/stacks/components/editor/tabs/deployments/derive";
 import { useDeployLifecycle } from "@/pages/stacks/components/editor/tabs/deployments/use-deploy-lifecycle";
 import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-release-anchors";
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
@@ -43,7 +42,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useOrgDomains } from "@/hooks/use-org-domains";
-import { pickBestIngress } from "@/pages/stacks/lib/public-endpoints";
+import { sortIngresses } from "@/pages/stacks/lib/public-endpoints";
 import { convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
@@ -170,6 +169,13 @@ export default function CanvasEditorPage() {
       releaseDetail,
     });
 
+  // Per-resource rollout states for the logs/metrics stream gating. When the
+  // stack never converged and the latest release is terminal (e.g. a failed
+  // first deploy), statusLiveStatus is undefined — fall back to the baseline
+  // release's live_status, which still records which resources came up.
+  const observabilityLiveResources =
+    statusLiveStatus?.resources ?? releaseDetail.peek(baselineReleaseId).data?.live_status?.resources;
+
   // Publicly exposed services → best live ingress URL, for the header's
   // PUBLIC row. Drafts have no live ingress, so the row stays empty. Each chip's
   // dot carries its OWN resource's rollout state (same status release as the
@@ -181,10 +187,10 @@ export default function CanvasEditorPage() {
     const statusResources = statusLiveStatus?.resources ?? {};
     return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
       const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
-      const best = pickBestIngress(ingress, orgDomains);
-      if (!best || !r.name) return [];
+      const urls = sortIngresses(ingress, orgDomains);
+      if (urls.length === 0 || !r.name) return [];
       const variant = statusVariant("rollout", statusResources[r.name]?.state);
-      return [{ service: r.name, url: best.url, port: best.target_port, variant }];
+      return [{ service: r.name, url: urls[0].url, port: urls[0].target_port, variant, urls }];
     });
   }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail, statusLiveStatus]);
 
@@ -515,25 +521,27 @@ export default function CanvasEditorPage() {
 
   // When a release settles into ANY terminal state, the stack's converged_release /
   // latest_release summaries are stale until refetched — the staged panel would
-  // keep diffing against the old snapshot otherwise. Refetch once per transition,
-  // keyed on the polled releases list (not on the stack's own pointer).
+  // keep diffing against the old snapshot otherwise. The backend updates those
+  // pointers asynchronously after convergence, so a single refetch can race them
+  // and capture the old summaries; poll until the fetched stack actually reflects
+  // the terminal release. `summariesStale` is a boolean, so the interval survives
+  // stale refetches (same-value dep) and tears down the moment it catches up.
   const refetchStack = useCallback(() => {
     if (!deployIds.stackId) return;
     void fetchFreshStack().catch(() => {
-      // Transient fetch failure; the next terminal transition retries.
+      // Transient fetch failure; the poll below retries.
     });
   }, [deployIds.stackId, fetchFreshStack]);
   const activeRelease = releasesResult.activeRelease;
-  const prevActiveReleaseRef = useRef<{ id?: string; state?: string } | undefined>(
-    activeRelease && { id: activeRelease.id, state: activeRelease.state },
-  );
+  const summariesStale = stackSummariesStale(activeRelease, savedStack ?? undefined);
   useEffect(() => {
-    const prev = prevActiveReleaseRef.current;
-    prevActiveReleaseRef.current = activeRelease && { id: activeRelease.id, state: activeRelease.state };
-    if (shouldRefetchStackSummaries(prev, activeRelease, savedStack?.latest_release)) {
-      refetchStack();
-    }
-  }, [activeRelease, savedStack?.latest_release, refetchStack]);
+    if (!summariesStale) return;
+    refetchStack();
+    const t = setInterval(() => {
+      if (document.visibilityState !== "hidden") refetchStack();
+    }, 2000);
+    return () => clearInterval(t);
+  }, [summariesStale, refetchStack]);
 
   // Live snapshot: already lazily fetched above (convergedReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
@@ -605,16 +613,18 @@ export default function CanvasEditorPage() {
 
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
-  const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string) => {
+  const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string): Promise<boolean> => {
     setDeployBusy(true);
     try {
       await fn();
       toast({ title: ok, variant: "success" });
       refetchReleases();
+      return true;
     } catch (e) {
       if (!applyValidationFailure(e)) {
         toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
       }
+      return false;
     } finally {
       setDeployBusy(false);
     }
@@ -631,7 +641,13 @@ export default function CanvasEditorPage() {
       });
       return;
     }
-    runDeploy(() => createRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId), "Deploy started");
+    const started = await runDeploy(
+      () => createRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId),
+      "Deploy started",
+    );
+    // Deploying is a "watch it roll out" moment — land the user on the
+    // timeline. Cancel/rollback start there already, so only deploy jumps.
+    if (started) setActiveTab(EDITOR_TABS.deployments);
   }, [draftSync, deployIds, runDeploy, toast]);
   const onCancelDeploy = useCallback(
     (releaseId: string) => runDeploy(() => cancelRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId, releaseId), "Release cancelled"),
@@ -891,6 +907,7 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources?.map(r => ({ name: r.name || '', id: r.id || '' })) || []}
+      liveStatusResources={observabilityLiveResources}
       initialSources={logsInitialSource ? [logsInitialSource] : undefined}
     />
   ) : (
@@ -902,15 +919,22 @@ export default function CanvasEditorPage() {
       stackId={effectiveStack.id}
       organizationId={effectiveStack.organisation_id || getCurrentOrganizationId() || ''}
       resources={effectiveStack.spec.stack_resources || []}
+      liveStatusResources={observabilityLiveResources}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const dirtyTotal =
-    session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size + session.dirty.addonLinkCount;
+  const dirtyTotal = session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size;
 
-  const changeCount = resolveChangeCount(lifecycle.stagedDiff, dirtyTotal, isNewStack ? SYNC_STATUS.idle : draftSync.status);
+  // The staged diff is the single change authority: its cur side is the
+  // in-memory draft snapshot, so autosave settledness can't lag it. Session
+  // dirt only fills the window where the diff isn't derivable yet (release
+  // detail still loading, or a new-stack draft outside the lifecycle).
+  const staged = lifecycle.stagedDiff;
+  const changeCount = staged
+    ? staged.resources.length + staged.volumes.length + staged.connections.length
+    : dirtyTotal;
 
   return (
     <ReleaseDetailProvider value={releaseDetail}>
@@ -942,7 +966,13 @@ export default function CanvasEditorPage() {
         onDraftDeploy={() => void performDraftDeploy()}
         draftDeploying={draftDeploying}
         onDeploy={onDeploy}
-        canDiscardDraft={lifecycle.phase === "staged" && !!liveSnapshot && canWriteStack}
+        canDiscardDraft={
+          // Keyed on "changes exist", not phase === "staged": every keystroke
+          // flips the phase to "editing" while autosave is pending, which
+          // unmounted and remounted the pill's ⋯ menu mid-typing. changeCount
+          // derives from the in-memory draft, so it holds steady while typing.
+          changeCount > 0 && !!liveSnapshot && canWriteStack
+        }
         onDiscardDraft={() => void requestRevert()}
         canDeleteStack={canWriteStack}
         onDelete={() => void performDelete()}
@@ -980,6 +1010,7 @@ export default function CanvasEditorPage() {
               persistedVolumeNames={persistedVolumeNames}
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
               liveStatusResources={statusLiveStatus?.resources}
+              publicEndpoints={publicEndpoints}
             />
           </>
         }
@@ -993,7 +1024,6 @@ export default function CanvasEditorPage() {
         diff={lifecycle.stagedDiff}
         count={changeCount}
         errored={draftSync.status === SYNC_STATUS.error}
-        dirty={dirtyTotal > 0}
         stackName={effectiveStack?.name ?? ""}
         onDiscardResource={discardResourceByName}
         onDiscardVolume={discardVolumeByName}

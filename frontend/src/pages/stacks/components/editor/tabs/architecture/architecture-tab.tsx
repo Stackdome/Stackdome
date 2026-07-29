@@ -18,6 +18,7 @@ import type {
 import type { EditSessionDraft, EditSessionTab, UseStackEditSession } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { useStackTopology } from "@/pages/stacks/hooks/use-stack-topology";
 import type { ReleaseLiveStatus } from "@/api/releases";
+import type { PublicEndpoint } from "@/pages/stacks/components/editor/public-endpoint-row";
 import { deriveGraph } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import { mergeTopology } from "@/pages/stacks/lib/canvas/merge-topology";
 import {
@@ -105,6 +106,9 @@ interface ArchitectureTabProps {
   /** Live per-resource status, keyed by resource name — from the status
    *  release's live_status.resources. Drives node dots + the resource drawer. */
   liveStatusResources?: ReleaseLiveStatus["resources"];
+  /** Service → best live URL (as shown in the header's PUBLIC row); feeds the
+   *  resource drawer's endpoint line. */
+  publicEndpoints?: PublicEndpoint[];
   /** Bumped by the parent to request opening a resource drawer (banner "jump to
    *  error") on the tab holding the field; the nonce distinguishes repeat jumps
    *  to the same resource. */
@@ -129,6 +133,7 @@ function StackCanvasFlow({
   persistedVolumeNames,
   releaseInFlight,
   liveStatusResources,
+  publicEndpoints,
   openResourceSignal,
 }: ArchitectureTabProps) {
   // Read from the live draft when the session is active, server state otherwise.
@@ -165,10 +170,29 @@ function StackCanvasFlow({
   }, [liveStatusResources]);
 
   // Local graph enhanced with server-derived edges + runtime status.
-  const mergedGraph = useMemo(
+  const mergedGraphBare = useMemo(
     () => mergeTopology(dataGraph, topology, releaseInFlight, liveStateByNodeId),
     [dataGraph, topology, releaseInFlight, liveStateByNodeId],
   );
+  // Overlay live per-port public URLs so a card's public port lines link out.
+  const mergedGraph = useMemo(() => {
+    if (!publicEndpoints?.length) return mergedGraphBare;
+    const byService = new Map(publicEndpoints.map((e) => [e.service, e.urls]));
+    return {
+      ...mergedGraphBare,
+      nodes: mergedGraphBare.nodes.map((n) => {
+        const urls = n.type === "resource" ? byService.get((n.data as { name: string }).name) : undefined;
+        if (!urls?.length) return n;
+        // urls is best-first; first URL per port wins when several ingresses
+        // share a target_port (e.g. custom domain + generated).
+        const portUrls: Record<number, string> = {};
+        for (const u of urls) {
+          if (u.target_port != null && portUrls[u.target_port] === undefined) portUrls[u.target_port] = u.url;
+        }
+        return { ...n, data: { ...n.data, portUrls } };
+      }),
+    };
+  }, [mergedGraphBare, publicEndpoints]);
   // Signature of the node/edge id-set — changes only when topology changes.
   const topologySignature = useMemo(
     () => `${mergedGraph.nodes.map((n) => n.id).join("|")}::${mergedGraph.edges.map((e) => e.id).join("|")}`,
@@ -662,6 +686,7 @@ function StackCanvasFlow({
         onViewLogs={onViewLogs}
         onOpenVolume={openVolume}
         liveStatusResources={liveStatusResources}
+        publicUrls={publicEndpoints?.find((e) => e.service === resources[frontEntry.index]?.name)?.urls}
       />
     ) : frontEntry ? (
       <VolumeDrawer

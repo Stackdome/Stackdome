@@ -36,8 +36,14 @@ export interface NodePresentation {
   brandSlug?: string;
   /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
-  /** One card line per declared port: `port N · public|internal`. */
-  details: string[];
+  /** One entry per declared port: `port N · public|internal`. */
+  details: PortLine[];
+}
+
+export interface PortLine {
+  text: string;
+  port: number;
+  public: boolean;
 }
 
 /** Internal kind keys → their display metadata. */
@@ -114,18 +120,17 @@ function buildSummary(image: string, hasBuild: boolean | undefined): string {
 }
 
 /** Card lines the fixed node box can hold beyond the summary (see NODE_HEIGHT). */
-const MAX_PORT_LINES = 3;
-
-/** One line per declared port, in declared order: `port N · public|internal`.
- *  Capped so the card never outgrows the box dagre reserves — overflow
- *  collapses into a `+N more ports` line. */
-function buildPortLines(ports: PresentationPort[] | undefined): string[] {
-  const lines = (ports ?? [])
-    .filter((p) => p.number != null)
-    .map((p) => `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`);
-  if (lines.length <= MAX_PORT_LINES) return lines;
-  const shown = lines.slice(0, MAX_PORT_LINES - 1);
-  return [...shown, `+${lines.length - shown.length} more ports`];
+/** One entry per declared port, in declared order. The card renders these as
+ *  a single compact `ports 80 · 89 · 23` line (numbers only; `text` survives
+ *  as the per-port tooltip), so no overflow fold is needed. */
+function buildPortLines(ports: PresentationPort[] | undefined): PortLine[] {
+  return (ports ?? [])
+    .filter((p): p is PresentationPort & { number: number } => p.number != null)
+    .map((p) => ({
+      text: `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`,
+      port: p.number,
+      public: !!p.exposedToPublic,
+    }));
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {

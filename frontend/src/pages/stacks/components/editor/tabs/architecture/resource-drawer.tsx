@@ -13,6 +13,7 @@ import { StackResourceDeploymentTab } from "@/pages/stacks/components/editor/tab
 import { StackResourceEnvironmentTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/environment-tab";
 import { useResourceTabProps } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/use-resource-tab-props";
 import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
+import { EndpointInlineList, type EndpointUrl } from "@/pages/stacks/components/editor/public-endpoint-row";
 import { deriveResourceOutputNames } from "@/pages/stacks/lib/derive-resource-outputs";
 import { NodeGlyph } from "./nodes/node-glyph";
 
@@ -46,6 +47,9 @@ interface ResourceDrawerProps {
   /** Live per-resource status, keyed by resource name — from the status
    *  release's live_status.resources. Absent for drafts/never-deployed stacks. */
   liveStatusResources?: ReleaseLiveStatus["resources"];
+  /** This resource's live public URLs, best-first (same order as the header's
+   *  PUBLIC row). Absent when the resource has no live public ingress. */
+  publicUrls?: EndpointUrl[];
 }
 
 /**
@@ -66,6 +70,7 @@ export function ResourceDrawer({
   onViewLogs,
   onOpenVolume,
   liveStatusResources,
+  publicUrls,
 }: ResourceDrawerProps) {
   const resource = session.draft.resources[resourceIndex] ?? {};
   const baselineResource = baselineResources[resourceIndex];
@@ -174,6 +179,9 @@ export function ResourceDrawer({
             {resource.name || `Resource ${resourceIndex + 1}`}
           </div>
           <div className="truncate font-mono text-[11px] text-fg-muted">{pres.summary}</div>
+          {publicUrls && publicUrls.length > 0 && (
+            <EndpointInlineList service={resource.name || "resource"} urls={publicUrls} />
+          )}
         </div>
         {isDirty ? (
           <span className="flex shrink-0 items-center gap-1 rounded-md border border-brand pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">

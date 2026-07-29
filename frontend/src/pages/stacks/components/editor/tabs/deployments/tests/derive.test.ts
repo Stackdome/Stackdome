@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
-import { deriveHeaderHealth, latestDeployFailed, shouldRefetchStackSummaries, stripUnpinnedGitRevisions } from "../derive";
+import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpinnedGitRevisions } from "../derive";
 import type { FailingResource, Stack, StackResource } from "../derive";
 import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
 
@@ -313,47 +313,46 @@ describe("latestDeployFailed", () => {
   });
 });
 
-describe("shouldRefetchStackSummaries", () => {
-  const latest = (partial: Partial<ReleaseSummary>): ReleaseSummary => partial as ReleaseSummary;
-
+describe("stackSummariesStale", () => {
   it("false with no active release or a non-terminal one", () => {
-    expect(shouldRefetchStackSummaries(undefined, undefined, undefined)).toBe(false);
-    expect(shouldRefetchStackSummaries(undefined, release({ state: "InProgress" }), undefined)).toBe(false);
-    expect(shouldRefetchStackSummaries({ id: "r1", state: "Pending" }, release({ state: "Pending" }), undefined)).toBe(false);
+    expect(stackSummariesStale(undefined, stackWithReleases(undefined, undefined))).toBe(false);
+    expect(stackSummariesStale(release({ state: "InProgress" }), stackWithReleases(undefined, undefined))).toBe(false);
   });
 
-  it("true on a transition into any terminal state with a stale summary", () => {
+  it("stays true while latest_release lags a terminal release, regardless of prior observations", () => {
+    // The backend updates release summaries asynchronously after convergence; a
+    // single "handled" refetch that raced the pointer must not end the retries.
     for (const state of ["Released", "Failed", "Cancelled", "Superseded"] as const) {
-      expect(shouldRefetchStackSummaries(
-        { id: "r2", state: "InProgress" },
+      expect(stackSummariesStale(
         release({ id: "r2", state }),
-        latest({ id: "r2", state: "InProgress" }),
+        stackWithReleases({ id: "r1" }, { id: "r2", state: "InProgress" }),
       )).toBe(true);
     }
   });
 
-  it("false when the same terminal transition was already handled", () => {
-    expect(shouldRefetchStackSummaries(
-      { id: "r2", state: "Failed" },
-      release({ id: "r2", state: "Failed" }),
-      latest({ id: "r1", state: "Released" }),
-    )).toBe(false);
-  });
-
-  it("false when the stack's latest_release summary is already fresh", () => {
-    expect(shouldRefetchStackSummaries(
-      undefined,
-      release({ id: "r2", state: "Failed" }),
-      latest({ id: "r2", state: "Failed" }),
-    )).toBe(false);
-  });
-
-  it("true on first observation of a terminal release the summary doesn't know", () => {
-    expect(shouldRefetchStackSummaries(
-      undefined,
+  it("true when latest_release caught up but converged_release still lags a Released release", () => {
+    expect(stackSummariesStale(
       release({ id: "r2", state: "Released" }),
-      latest({ id: "r1", state: "Released" }),
+      stackWithReleases({ id: "r1" }, { id: "r2", state: "Released" }),
     )).toBe(true);
+  });
+
+  it("false when fully caught up (converged matches for Released)", () => {
+    expect(stackSummariesStale(
+      release({ id: "r2", state: "Released" }),
+      stackWithReleases({ id: "r2" }, { id: "r2", state: "Released" }),
+    )).toBe(false);
+  });
+
+  it("false for a Failed release once latest_release matches — converged stays on the old live release", () => {
+    expect(stackSummariesStale(
+      release({ id: "r2", state: "Failed" }),
+      stackWithReleases({ id: "r1" }, { id: "r2", state: "Failed" }),
+    )).toBe(false);
+  });
+
+  it("false with no stack loaded yet", () => {
+    expect(stackSummariesStale(release({ id: "r2", state: "Released" }), undefined)).toBe(false);
   });
 });
 

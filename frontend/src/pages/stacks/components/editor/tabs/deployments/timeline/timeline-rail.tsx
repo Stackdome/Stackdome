@@ -4,7 +4,7 @@ import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { stateTone } from "../derive";
-import { isDeploying } from "../release-states";
+import { isDeploying, ReleaseState } from "../release-states";
 import { useReleaseDetailContext } from "../use-release-detail";
 import { RailNode, type RailDotShape } from "./rail-node";
 import { TimelineNode } from "./timeline-node";
@@ -97,7 +97,12 @@ export function TimelineRail(props: TimelineRailProps) {
                 onRollback={onRollback}
                 onCancel={onCancel}
                 onCopyId={onCopyId}
-                isActive={idx === 0}
+                // Live body only while the newest release is deploying or is the
+                // released/live one. A newest FAILED/CANCELLED release never
+                // converged — it has no live_status, so the live body would show
+                // an empty resource rail; its stored outcome lives in the
+                // post-mortem instead.
+                isActive={idx === 0 && (isDeploying(state) || state === ReleaseState.Released)}
                 isLive={!!liveReleaseId && r.id === liveReleaseId}
                 stack={stack}
                 logContext={logContext}

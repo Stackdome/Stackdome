@@ -1,12 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { LogEntry, ConnectionStatus, LogFilters } from './types';
 import { parseLogEntry, getLogStreamParams } from './utils';
-import { buildStackLogStreamUrl, buildStackResourceLogStreamUrl } from '@/api/observability';
+import {
+  buildStackLogStreamUrl,
+  buildStackResourceLogStreamUrl,
+  attachSseHandlers,
+  aggregateStreamStatus,
+  STACK_STREAM_KEY,
+  type SseStreamStatus,
+} from '@/api/observability';
 import { useResourceProjects } from '@/hooks/use-resource-projects';
 
 interface UseLogStreamProps {
   stackId: string;
   organizationId: string;
+  /** Sources must already be filtered to ready resources by the caller. */
   filters: LogFilters;
   enabled?: boolean;
 }
@@ -14,6 +22,8 @@ interface UseLogStreamProps {
 interface UseLogStreamReturn {
   logs: LogEntry[];
   connectionStatus: ConnectionStatus;
+  /** Set only from the backend's `event: error` SSE events — never from
+   *  connection drops, which surface through connectionStatus instead. */
   error: string | null;
   retry: () => void;
 }
@@ -33,12 +43,18 @@ export function useLogStream({
 
   const retry = useCallback(() => setRetryNonce((n) => n + 1), []);
 
+  // filters.sources identity changes on unrelated re-renders; key on content.
+  const sourcesKey = filters.sources.join(',');
+
   useEffect(() => {
     if (!enabled || !stackId || !organizationId || !defaultProjectName) {
+      setConnectionStatus('disconnected');
+      // Disabled is a deliberate state (e.g. no ready resources) — a terminal
+      // error from a previous stream must not linger over it.
+      setError(null);
       return;
     }
 
-    // Convert time range to backend parameters
     const streamParams = getLogStreamParams(filters.timeRange);
 
     // Clear previous logs when filters change
@@ -46,100 +62,46 @@ export function useLogStream({
     setConnectionStatus('connecting');
     setError(null);
 
-    // Close any existing connections
-    eventSourcesRef.current.forEach(source => source.close());
-    eventSourcesRef.current = [];
+    const sourceNames = sourcesKey ? sourcesKey.split(',') : [];
+    const streamKeys = sourceNames.length === 0 ? [STACK_STREAM_KEY] : sourceNames;
+    const statuses = new Map<string, SseStreamStatus>(streamKeys.map((key) => [key, 'connecting']));
 
-    try {
-      let activeConnections = 0;
-      let connectedSources = 0;
+    const applyStatus = (key: string, status: SseStreamStatus) => {
+      statuses.set(key, status);
+      setConnectionStatus(aggregateStreamStatus([...statuses.values()]));
+    };
 
-      const handleConnectionOpen = () => {
-        connectedSources++;
-        if (connectedSources === activeConnections) {
-          setConnectionStatus('connected');
-          setError(null);
-        }
-      };
+    eventSourcesRef.current = streamKeys.map((key) => {
+      const url =
+        key === STACK_STREAM_KEY
+          ? buildStackLogStreamUrl(organizationId, defaultProjectName, stackId, streamParams)
+          : buildStackResourceLogStreamUrl(organizationId, defaultProjectName, stackId, key, streamParams);
+      const eventSource = new EventSource(url);
 
-      const handleConnectionError = (sourceName?: string) => {
-        setConnectionStatus('error');
-        setError(`Connection lost${sourceName ? ` to ${sourceName}` : ''}. Please refresh to retry.`);
-      };
-
-      if (filters.sources.length === 0) {
-        // No specific sources selected, get logs from the entire stack
-        activeConnections = 1;
-        const url = buildStackLogStreamUrl(organizationId, defaultProjectName, stackId, streamParams);
-        const eventSource = new EventSource(url);
-        eventSourcesRef.current.push(eventSource);
-
-        eventSource.onopen = handleConnectionOpen;
-
-        eventSource.onmessage = (event) => {
-          console.log('SSE Event received (stack):', event.data);
-
-          if (event.data && event.data.trim()) {
-            const rawData = event.data.trim();
-            console.log('Processing SSE data (stack):', rawData);
-
-            const logEntry = parseLogEntry(rawData);
-            console.log('Created log entry (stack):', logEntry);
-
-            if (logEntry.message && logEntry.message.length > 0) {
-              setLogs(prevLogs => [...prevLogs, logEntry]);
-            } else {
-              console.warn('Skipping empty log entry (stack):', logEntry);
-            }
+      attachSseHandlers(eventSource, {
+        onData: (data) => {
+          if (!data || !data.trim()) return;
+          setError(null); // flowing data supersedes a stale stream error
+          const logEntry = parseLogEntry(data.trim());
+          if (key !== STACK_STREAM_KEY) {
+            logEntry.source = key;
           }
-        };
+          if (logEntry.message && logEntry.message.length > 0) {
+            setLogs((prevLogs) => [...prevLogs, logEntry]);
+          }
+        },
+        onStreamError: (message) => setError(message),
+        onStatusChange: (status) => applyStatus(key, status),
+      });
 
-        eventSource.onerror = () => handleConnectionError();
-      } else {
-        // Specific sources selected, get logs from individual resources
-        activeConnections = filters.sources.length;
-
-        filters.sources.forEach(resourceName => {
-          const url = buildStackResourceLogStreamUrl(organizationId, defaultProjectName, stackId, resourceName, streamParams);
-          const eventSource = new EventSource(url);
-          eventSourcesRef.current.push(eventSource);
-
-          eventSource.onopen = handleConnectionOpen;
-
-          eventSource.onmessage = (event) => {
-            console.log(`SSE Event received (${resourceName}):`, event.data);
-
-            if (event.data && event.data.trim()) {
-              const rawData = event.data.trim();
-              console.log(`Processing SSE data (${resourceName}):`, rawData);
-
-              // Parse the log entry and ensure it has the resource name as source
-              const logEntry = parseLogEntry(rawData);
-              logEntry.source = resourceName; // Ensure source is set to the resource name
-              console.log(`Created log entry (${resourceName}):`, logEntry);
-
-              if (logEntry.message && logEntry.message.length > 0) {
-                setLogs(prevLogs => [...prevLogs, logEntry]);
-              } else {
-                console.warn(`Skipping empty log entry (${resourceName}):`, logEntry);
-              }
-            }
-          };
-
-          eventSource.onerror = () => handleConnectionError(resourceName);
-        });
-      }
-
-    } catch (err) {
-      setConnectionStatus('error');
-      setError(err instanceof Error ? err.message : 'Failed to connect to log stream');
-    }
+      return eventSource;
+    });
 
     return () => {
-      eventSourcesRef.current.forEach(source => source.close());
+      eventSourcesRef.current.forEach((source) => source.close());
       eventSourcesRef.current = [];
     };
-  }, [stackId, organizationId, defaultProjectName, filters.timeRange, filters.sources, enabled, retryNonce]);
+  }, [stackId, organizationId, defaultProjectName, filters.timeRange, sourcesKey, enabled, retryNonce]);
 
   return {
     logs,

@@ -1,9 +1,10 @@
 import { format, isToday, isYesterday } from "date-fns";
 import type { components } from "@/api/types/openapi";
-import { ReleaseEventType, type ReleaseEvent, type StackRelease, type ReleaseLiveStatus, type ReleaseSummary } from "@/api/releases";
+import { ReleaseEventType, type ReleaseEvent, type StackRelease, type ReleaseLiveStatus } from "@/api/releases";
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState, isTerminal } from "./release-states";
+import { gitUnpinned } from "./release-snapshot-diff";
 
 export type Stack = components["schemas"]["Stack"];
 export type ReleaseHealth = components["schemas"]["ReleaseHealth"];
@@ -39,8 +40,7 @@ export function stripUnpinnedGitRevisions(
   const savedByName = new Map(savedResources.map((r) => [r.name, r]));
   return snapshotResources.map((r) => {
     const git = r.source?.git;
-    const savedGit = savedByName.get(r.name)?.source?.git;
-    if (!git || !savedGit || savedGit.branch || savedGit.commit || savedGit.tag) return r;
+    if (!git || !gitUnpinned(savedByName.get(r.name))) return r;
     const { branch: _b, commit: _c, tag: _t, ...unpinned } = git;
     return { ...r, source: { ...r.source, git: unpinned } };
   });
@@ -60,19 +60,23 @@ export function latestDeployFailed(stack: Stack): boolean {
 }
 
 /**
- * True when the polled releases list shows a release newly settled into a terminal
- * state that the stack's own latest_release summary doesn't reflect yet — the signal
- * to refetch the stack so its release summaries stay fresh.
+ * True while the stack's own release summaries lag a terminal release seen in the
+ * polled releases list — the signal to (re)fetch the stack until they catch up.
+ * The backend updates latest_release/converged_release asynchronously after a
+ * release terminates, so a single refetch can race the pointers and capture the
+ * old summaries; staleness must be judged from the CONTENT of the fetched stack,
+ * never from "we already refetched once". For a Released release the
+ * converged_release pointer must catch up too; failed/cancelled releases leave
+ * converged on the previous live release by design.
  */
-export function shouldRefetchStackSummaries(
-  prev: { id?: string; state?: string } | undefined,
+export function stackSummariesStale(
   active: StackRelease | undefined,
-  latest: ReleaseSummary | undefined,
+  stack: Pick<Stack, "latest_release" | "converged_release"> | undefined,
 ): boolean {
-  if (!active || !isTerminal(active.state)) return false;
-  if (prev && prev.id === active.id && prev.state === active.state) return false; // already handled
-  if (latest && latest.id === active.id && latest.state === active.state) return false; // already fresh
-  return true;
+  if (!active || !isTerminal(active.state) || !stack) return false;
+  const latest = stack.latest_release;
+  if (!latest || latest.id !== active.id || latest.state !== active.state) return true;
+  return active.state === ReleaseState.Released && stack.converged_release?.id !== active.id;
 }
 
 export interface ResourceSource {

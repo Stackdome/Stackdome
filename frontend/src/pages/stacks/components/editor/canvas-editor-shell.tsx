@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useCallback, useMemo, type ReactNode } from "react";
 import { Activity, ChevronDown, ChevronRight, History, LayoutGrid, MoreHorizontal, Pencil, ScrollText, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -101,7 +101,9 @@ export interface CanvasEditorShellProps {
  * identity only (name + single status pill); deploy actions now live in the
  * floating canvas deploy pill (see DeployPill) rather than the rail. The rail
  * keeps tabs on the left and, on the right, the autosave indicator, the stack
- * ⋮ actions menu, and the collapse chevron.
+ * ⋮ actions menu, and the collapse chevron (header-only). Zen mode (⌘. or the
+ * canvas control) also collapses the header through HeaderCollapseContext,
+ * folding the sidebar with it.
  *
  * Presentation only: it owns no stack state. The autosave indicator and
  * deploy pill are wired straight to the caller's session + deploy lifecycle.
@@ -179,33 +181,13 @@ export function CanvasEditorShell({
       /* storage unavailable — collapse stays session-local */
     }
   }, [collapseKey]);
-  const toggleCollapsed = useCallback(() => {
-    setCollapsed((c) => {
-      const next = !c;
-      try {
-        localStorage.setItem(collapseKey, next ? "1" : "0");
-      } catch {
-        /* storage unavailable — collapse stays session-local */
-      }
-      return next;
-    });
-  }, [collapseKey]);
   const collapseCtx = useMemo(
     () => ({ collapsed, setCollapsed: applyCollapsed }),
     [collapsed, applyCollapsed],
   );
-
-  useEffect(() => {
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.defaultPrevented) return; // consumed by a nested layer (dialog, drawer…)
-      if (e.key === "." && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        toggleCollapsed();
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [toggleCollapsed]);
+  // Header-only toggle (chevron). Zen (⌘. / canvas control) also folds the
+  // sidebar; this only trades the two header variants.
+  const toggleCollapsed = useCallback(() => applyCollapsed(!collapsed), [applyCollapsed, collapsed]);
 
   // The canvas (Configuration) stays mounted so its open drawer + node
   // selection survive tab switches; ops views render as an opaque overlay on
@@ -250,7 +232,7 @@ export function CanvasEditorShell({
       type="button"
       onClick={toggleCollapsed}
       aria-label={collapsed ? "Expand header" : "Collapse header"}
-      title={`${collapsed ? "Expand" : "Collapse"} header (⌘.)`}
+      title={`${collapsed ? "Expand" : "Collapse"} header`}
       className="flex size-6 flex-none items-center justify-center rounded text-fg-muted hover:bg-muted hover:text-foreground"
     >
       {collapsed ? <ChevronRight className="size-4" /> : <ChevronDown className="size-4" />}
@@ -316,6 +298,7 @@ export function CanvasEditorShell({
                 ))}
               </div>
               <div className="flex-1" />
+              <PublicEndpointRow endpoints={publicEndpoints ?? []} compact />
               {actionsMenu}
               {chevron}
             </div>
@@ -333,8 +316,6 @@ export function CanvasEditorShell({
               className="px-7 pt-6 transition-[margin] duration-[260ms]"
               style={{ marginRight: effectiveDrawerInset }}
             >
-              {/* Chevron sits at the row's right so the title stays flush-left with
-                the subtitle + endpoints below it (no collapse-toggle indent). */}
               <div className="flex items-center gap-3.5">
                 {nameEditable ? (
                 // Same type metrics as the post-create h1; the dashed underline +
@@ -380,7 +361,6 @@ export function CanvasEditorShell({
               {nameEditable && nameError && (
                 <p className="mt-1 text-[12px] text-danger">{nameError}</p>
               )}
-              <p className="mt-[7px] text-[13px] text-muted-foreground">{subtitle}</p>
               <PublicEndpointRow endpoints={publicEndpoints ?? []} />
               {notice}
             </div>
@@ -427,6 +407,12 @@ export function CanvasEditorShell({
         <div className="relative min-h-0 flex-1 overflow-hidden">
           <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: effectiveDrawerInset }}>
             <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
+            {/* Resource/volume tally lives on the canvas (bottom-right) rather
+                than the header, keeping the header a line shorter. Ops views
+                overlay it along with the rest of the canvas. */}
+            <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-[11px] text-fg-muted">
+              {subtitle}
+            </span>
             {activeTab === EDITOR_TABS.architecture && (
               <DeployPill
                 isDraft={isNewStack}

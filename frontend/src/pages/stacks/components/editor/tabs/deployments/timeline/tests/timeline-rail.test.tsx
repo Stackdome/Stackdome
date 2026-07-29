@@ -68,6 +68,38 @@ describe("TimelineRail", () => {
     expect(ring.length).toBe(2); // #3 and #1 are hollow rings
   });
 
+  it("renders the newest FAILED release as a post-mortem (stored outcome), not the live body", () => {
+    // A failed release never converged, so it has no live_status — the live
+    // body would show an empty 0/0 resource rail. The stored outcome has the
+    // per-resource results and only the post-mortem reads it.
+    const failed = { id: "rf", sequence: 2, state: "Failed", cause: { kind: "manual" } } as StackRelease;
+    const older = { id: "r1", sequence: 1, state: "Released", cause: { kind: "manual" } } as StackRelease;
+    const detail: ReleaseDetail = {
+      ensure: vi.fn(),
+      refresh: vi.fn(),
+      peek: (id) =>
+        id === "rf"
+          ? {
+            loading: false,
+            data: {
+              id: "rf",
+              sequence: 2,
+              state: "Failed",
+              outcome: { resources: { web: { phase: "Pending", message: "image pull failed", replicas: 1, ready_replicas: 0 } } },
+              snapshot: { resources: [] },
+            } as never,
+          }
+          : { loading: false },
+    };
+    render(
+      <ReleaseDetailProvider value={detail}>
+        <TimelineRail releases={[failed, older]} activeRelease={failed} {...base} />
+      </ReleaseDetailProvider>,
+    );
+    // Post-mortem rail lists the stored outcome's resource.
+    expect(screen.getByText("web")).toBeInTheDocument();
+  });
+
   it("windows earlier releases behind Show more", async () => {
     const r = rels(20);
     renderRail(<TimelineRail releases={r} activeRelease={r[0]} initialWindow={5} {...base} />);

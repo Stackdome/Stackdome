@@ -165,3 +165,111 @@ describe("diffSnapshots connections", () => {
     expect(out.connections).toEqual([]);
   });
 });
+
+describe("diffSnapshots catch-all", () => {
+  it("surfaces an unprojected resource field change as one generic row", () => {
+    // init_spec is real config but outside the projected scalar set — before
+    // the catch-all this diffed as "no changes" (the Bug-3 class).
+    const out = diffSnapshots(
+      snap([web({ init_spec: { command: ["migrate"] } })]),
+      snap([web({ init_spec: { command: ["migrate", "--seed"] } })]),
+    ).resources;
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ name: "web", change: "modified" });
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toEqual([{ key: "other configuration", kind: "changed" }]);
+  });
+
+  it("surfaces an unprojected volume field change as one generic row", () => {
+    const vol = (labels: unknown[]) => ({ name: "data", spec: { size: "1Gi" }, labels });
+    const out = diffSnapshots(
+      mk({ resources: [], volumes: [vol([{ key: "tier", value: "hot" }])] }),
+      mk({ resources: [], volumes: [vol([{ key: "tier", value: "cold" }])] }),
+    ).volumes;
+    expect(out).toEqual([
+      { name: "data", change: "modified", rows: [{ key: "other configuration", kind: "changed" }] },
+    ]);
+  });
+
+  it("ignores server-owned resource fields (id, stack_id, revision, outputs)", () => {
+    const out = diffSnapshots(
+      snap([web({ id: "a1", stack_id: "s1", revision: "3", outputs: [{ name: "url.port-87" }] })]),
+      snap([web({ id: "b2", stack_id: "s1", revision: "4", outputs: [{ name: "url.port-88" }] })]),
+    ).resources;
+    expect(out).toEqual([]);
+  });
+
+  it("ignores server-owned volume fields (id, project_id, status)", () => {
+    const vol = (over: Record<string, unknown>) => ({ name: "data", spec: { size: "1Gi" }, ...over });
+    const out = diffSnapshots(
+      mk({ resources: [], volumes: [vol({ id: "v1", project_id: "p1", status: { phase: "Bound" } })] }),
+      mk({ resources: [], volumes: [vol({ id: "v2", project_id: "p1", status: { phase: "Pending" } })] }),
+    ).volumes;
+    expect(out).toEqual([]);
+  });
+
+  it("does not emit a generic row for resolver-written revisions on an unpinned spec", () => {
+    const gitWeb = (git: Record<string, unknown>) => ({
+      name: "web",
+      source: { git: { repo_url: "https://github.com/acme/app", ...git } },
+    });
+    const out = diffSnapshots(
+      snap([gitWeb({ branch: "master", commit: "b1eff14" })]),
+      snap([gitWeb({})]),
+    ).resources;
+    expect(out).toEqual([]);
+  });
+
+  it("treats permuted env vars as unchanged", () => {
+    const w = (envs: { name: string; value: string }[]) =>
+      web({ execution_config: { command: ["node", "a.js"], environment_variables: envs } });
+    const out = diffSnapshots(
+      snap([w([{ name: "A", value: "1" }, { name: "B", value: "2" }])]),
+      snap([w([{ name: "B", value: "2" }, { name: "A", value: "1" }])]),
+    ).resources;
+    expect(out).toEqual([]);
+  });
+});
+
+describe("diffSnapshots git sources", () => {
+  const gitWeb = (git: Record<string, unknown>) => ({
+    name: "web",
+    source: { git: { repo_url: "https://github.com/acme/app", dockerfile_path: "Dockerfile", build_context: ".", ...git } },
+    ports: [{ number: 3000 }],
+  });
+
+  it("flags a branch change as a changed configuration row", () => {
+    // A saved branch edit was invisible in the staged diff (only image/ports/
+    // command/args were projected) — the pill said "1 change" from session
+    // dirt while the modal showed nothing.
+    const out = diffSnapshots(snap([gitWeb({ branch: "master" })]), snap([gitWeb({ branch: "masterd" })])).resources;
+    expect(out).toHaveLength(1);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toContainEqual({ key: "branch", from: "master", to: "masterd", kind: "changed" });
+  });
+
+  it("flags a repo change", () => {
+    const out = diffSnapshots(
+      snap([gitWeb({})]),
+      snap([{ ...gitWeb({}), source: { git: { repo_url: "https://github.com/acme/other", dockerfile_path: "Dockerfile", build_context: "." } } }]),
+    ).resources;
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toContainEqual({ key: "repo", from: "https://github.com/acme/app", to: "https://github.com/acme/other", kind: "changed" });
+  });
+
+  it("ignores resolver-written revisions when the spec side pins none", () => {
+    // Deploy resolves the revision and writes branch+commit into the snapshot.
+    // An unpinned spec differing only by those is NOT drift.
+    const deployed = gitWeb({ branch: "master", commit: "b1eff1415a6b30ff3d476c2e907862f61a98a70d" });
+    const unpinnedSpec = gitWeb({});
+    expect(diffSnapshots(snap([deployed]), snap([unpinnedSpec])).resources).toEqual([]);
+  });
+
+  it("still pairs a renamed unpinned git resource instead of add+remove", () => {
+    const deployed = gitWeb({ branch: "master", commit: "abc123" });
+    const renamed = { ...gitWeb({}), name: "web2" };
+    const out = diffSnapshots(snap([deployed]), snap([renamed])).resources;
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ name: "web2", change: "renamed", fromName: "web" });
+  });
+});
