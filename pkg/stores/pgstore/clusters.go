@@ -147,6 +147,15 @@ func (d dbClusterStore) UpdateCredentials(ctx context.Context, id, encToken, enc
 	return nil
 }
 
+func (d dbClusterStore) UpdateClusterInfo(ctx context.Context, id string, info *models.ClusterInfo) *errors.ServiceError {
+	grm := d.sessionFactory.New(ctx)
+	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Update("cluster_info", info).Error
+	if err != nil {
+		return errors.GeneralError("failed to update cluster info: %s", err.Error())
+	}
+	return nil
+}
+
 func (d dbClusterStore) Delete(ctx context.Context, id string) *errors.ServiceError {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Where("id = ?", id).Delete(&models.Cluster{}).Error

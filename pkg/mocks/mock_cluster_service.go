@@ -58,6 +58,21 @@ func (mr *MockClusterServiceMockRecorder) AddCluster(ctx, cluster any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCluster", reflect.TypeOf((*MockClusterService)(nil).AddCluster), ctx, cluster)
 }
 
+// DefaultStorageClass mocks base method.
+func (m *MockClusterService) DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultStorageClass", ctx, clusterID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// DefaultStorageClass indicates an expected call of DefaultStorageClass.
+func (mr *MockClusterServiceMockRecorder) DefaultStorageClass(ctx, clusterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultStorageClass", reflect.TypeOf((*MockClusterService)(nil).DefaultStorageClass), ctx, clusterID)
+}
+
 // Delete mocks base method.
 func (m *MockClusterService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	m.ctrl.T.Helper()
@@ -157,6 +172,20 @@ func (m *MockClusterService) InternalListAllClusters(ctx context.Context) ([]*mo
 func (mr *MockClusterServiceMockRecorder) InternalListAllClusters(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListAllClusters", reflect.TypeOf((*MockClusterService)(nil).InternalListAllClusters), ctx)
+}
+
+// InternalUpdateClusterInfo mocks base method.
+func (m *MockClusterService) InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalUpdateClusterInfo", ctx, clusterID, info)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// InternalUpdateClusterInfo indicates an expected call of InternalUpdateClusterInfo.
+func (mr *MockClusterServiceMockRecorder) InternalUpdateClusterInfo(ctx, clusterID, info any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateClusterInfo", reflect.TypeOf((*MockClusterService)(nil).InternalUpdateClusterInfo), ctx, clusterID, info)
 }
 
 // InternalUpsertPlatformCluster mocks base method.

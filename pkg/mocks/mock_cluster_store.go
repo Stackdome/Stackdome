@@ -175,6 +175,20 @@ func (mr *MockClusterStoreMockRecorder) PersistManagerState(ctx, ID, running any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PersistManagerState", reflect.TypeOf((*MockClusterStore)(nil).PersistManagerState), ctx, ID, running)
 }
 
+// UpdateClusterInfo mocks base method.
+func (m *MockClusterStore) UpdateClusterInfo(ctx context.Context, ID string, info *models.ClusterInfo) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateClusterInfo", ctx, ID, info)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// UpdateClusterInfo indicates an expected call of UpdateClusterInfo.
+func (mr *MockClusterStoreMockRecorder) UpdateClusterInfo(ctx, ID, info any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateClusterInfo", reflect.TypeOf((*MockClusterStore)(nil).UpdateClusterInfo), ctx, ID, info)
+}
+
 // UpdateCredentials mocks base method.
 func (m *MockClusterStore) UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError {
 	m.ctrl.T.Helper()
