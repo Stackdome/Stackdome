@@ -108,12 +108,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 		}
 	}
 
-	// expectPersistence wires the mocks for the portion of CreatePostgresAddon
-	// that runs after storage-class resolution succeeds: name-uniqueness check,
-	// the create transaction, the post-create reload, and the enqueue.
-	// wantStorageClass is asserted inside CreateWithTx's DoAndReturn, i.e. at
-	// the moment the transaction persists the addon - this pins the storage
-	// class to have been resolved by then, not just by the time Create returns.
+	// post-resolution persistence mocks
 	expectPersistence := func(wantStorageClass string) {
 		addonStore.EXPECT().GetByName(gomock.Any(), orgID, addonName).Return(nil, nil)
 		addonStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
