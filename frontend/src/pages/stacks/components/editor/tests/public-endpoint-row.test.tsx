@@ -77,7 +77,7 @@ describe("PublicEndpointRow multi-url overflow", () => {
     port: 80,
     urls: [
       { url: "https://web.acme.stackdome.app", target_port: 80 },
-      { url: "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app", target_port: 89, portName: "admin" },
+      { url: "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app", target_port: 89 },
     ],
   };
 

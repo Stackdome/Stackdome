@@ -190,21 +190,7 @@ export default function CanvasEditorPage() {
       const urls = sortIngresses(ingress, orgDomains);
       if (urls.length === 0 || !r.name) return [];
       const variant = statusVariant("rollout", statusResources[r.name]?.state);
-      const portNames = new Map(
-        (r.ports ?? []).flatMap((p) => (p.name && p.number != null ? [[p.number, p.name] as const] : [])),
-      );
-      return [
-        {
-          service: r.name,
-          url: urls[0].url,
-          port: urls[0].target_port,
-          variant,
-          urls: urls.map((u) => ({
-            ...u,
-            portName: u.target_port != null ? portNames.get(u.target_port) : undefined,
-          })),
-        },
-      ];
+      return [{ service: r.name, url: urls[0].url, port: urls[0].target_port, variant, urls }];
     });
   }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail, statusLiveStatus]);
 

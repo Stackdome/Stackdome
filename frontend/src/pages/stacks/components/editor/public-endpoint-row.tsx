@@ -19,8 +19,6 @@ const DOT_CLASS: Record<StatusVariant, string> = {
 export interface EndpointUrl {
   url: string;
   target_port?: number;
-  /** Spec port name, when the user named the port — labels the popover row. */
-  portName?: string;
 }
 
 export interface PublicEndpoint {
