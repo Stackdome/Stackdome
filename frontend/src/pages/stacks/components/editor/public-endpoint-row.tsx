@@ -129,9 +129,9 @@ interface ChipProps {
   onCopy: (url: string) => void;
 }
 
-/** "+N" tail on a chip → popover listing every public URL of the service,
- *  best-first (same order the chip's own link uses). No "primary" concept —
- *  the first row simply is the URL the compact surfaces show. */
+/** "+N" tail on a chip → popover listing the service's OTHER public URLs —
+ *  the best one already lives on the chip itself, so N is exactly the row
+ *  count. No "primary" concept — "best" is just sortIngresses order. */
 function EndpointOverflow({
   service,
   urls,
@@ -143,22 +143,23 @@ function EndpointOverflow({
   copiedUrl: string | null;
   onCopy: (url: string) => void;
 }) {
+  const rest = urls.slice(1);
   return (
     <Popover>
       <PopoverTrigger asChild>
         <button
           type="button"
-          aria-label={`${urls.length - 1} more endpoint${urls.length > 2 ? "s" : ""} for ${service}`}
+          aria-label={`${rest.length} more endpoint${rest.length > 1 ? "s" : ""} for ${service}`}
           className="flex h-5 items-center rounded border-l border-border/60 px-1.5 font-mono text-[10px] text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
         >
-          +{urls.length - 1}
+          +{rest.length}
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto max-w-[420px] p-1.5">
         <div className="px-1.5 pb-1 font-mono text-[9px] uppercase tracking-[0.14em] text-fg-muted">
-          {service} · public endpoints
+          {service} · more endpoints
         </div>
-        {urls.map((u) => (
+        {rest.map((u) => (
           <div key={u.url} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted/40">
             <span className="w-14 flex-none font-mono text-[10.5px] text-fg-muted">
               {u.portName ?? (u.target_port != null ? `:${u.target_port}` : "")}
