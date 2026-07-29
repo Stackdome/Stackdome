@@ -186,6 +186,7 @@ function EndpointOverflow({
               target="_blank"
               rel="noreferrer"
               aria-label={`Go to ${u.url}`}
+              title={u.url}
               className="min-w-0 flex-1 truncate font-mono text-[11px] text-fg-2 hover:text-foreground hover:underline"
             >
               {u.url}
