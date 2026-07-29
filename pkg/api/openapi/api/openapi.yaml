@@ -12470,11 +12470,11 @@ components:
           pattern: "^[0-9]+[KMGTP]i?$"
           type: string
         storage_class:
-          description: Kubernetes storage class name
+          description: Kubernetes storage class name. Omit to use the cluster's default
+            storage class.
           type: string
       required:
       - size
-      - storage_class
       type: object
     PostgresResources:
       example:

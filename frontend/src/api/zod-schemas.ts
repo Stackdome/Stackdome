@@ -1149,7 +1149,7 @@ const PostgresInstances = z
 const PostgresStorage = z
   .object({
     size: z.string().regex(/^[0-9]+[KMGTP]i?$/),
-    storage_class: z.string(),
+    storage_class: z.string().optional(),
   })
   .passthrough();
 const PostgresResources = z

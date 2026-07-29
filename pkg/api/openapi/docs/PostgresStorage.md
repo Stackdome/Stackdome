@@ -5,13 +5,13 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Size** | **string** | Storage size (e.g., 10Gi, 100Gi) | 
-**StorageClass** | **string** | Kubernetes storage class name | 
+**StorageClass** | Pointer to **string** | Kubernetes storage class name. Omit to use the cluster&#39;s default storage class. | [optional] 
 
 ## Methods
 
 ### NewPostgresStorage
 
-`func NewPostgresStorage(size string, storageClass string, ) *PostgresStorage`
+`func NewPostgresStorage(size string, ) *PostgresStorage`
 
 NewPostgresStorage instantiates a new PostgresStorage object
 This constructor will assign default values to properties that have it defined,
@@ -65,6 +65,11 @@ and a boolean to check if the value has been set.
 
 SetStorageClass sets StorageClass field to given value.
 
+### HasStorageClass
+
+`func (o *PostgresStorage) HasStorageClass() bool`
+
+HasStorageClass returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

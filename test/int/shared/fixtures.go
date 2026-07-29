@@ -101,7 +101,8 @@ func CreateMinimalPostgresAddon(name string) *openapi.PostgresAddon {
 
 	instances := openapi.NewPostgresInstances(2)
 
-	storage := openapi.NewPostgresStorage("5Gi", "standard")
+	storage := openapi.NewPostgresStorage("5Gi")
+	storage.SetStorageClass("standard")
 
 	spec := openapi.NewPostgresAddonSpec(*version, *instances, *storage)
 

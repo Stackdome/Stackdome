@@ -18,18 +18,17 @@ import (
 type PostgresStorage struct {
 	// Storage size (e.g., 10Gi, 100Gi)
 	Size string `json:"size"`
-	// Kubernetes storage class name
-	StorageClass string `json:"storage_class"`
+	// Kubernetes storage class name. Omit to use the cluster's default storage class.
+	StorageClass *string `json:"storage_class,omitempty"`
 }
 
 // NewPostgresStorage instantiates a new PostgresStorage object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewPostgresStorage(size string, storageClass string) *PostgresStorage {
+func NewPostgresStorage(size string) *PostgresStorage {
 	this := PostgresStorage{}
 	this.Size = size
-	this.StorageClass = storageClass
 	return &this
 }
 
@@ -65,28 +64,36 @@ func (o *PostgresStorage) SetSize(v string) {
 	o.Size = v
 }
 
-// GetStorageClass returns the StorageClass field value
+// GetStorageClass returns the StorageClass field value if set, zero value otherwise.
 func (o *PostgresStorage) GetStorageClass() string {
-	if o == nil {
+	if o == nil || o.StorageClass == nil {
 		var ret string
 		return ret
 	}
-
-	return o.StorageClass
+	return *o.StorageClass
 }
 
-// GetStorageClassOk returns a tuple with the StorageClass field value
+// GetStorageClassOk returns a tuple with the StorageClass field value if set, nil otherwise
 // and a boolean to check if the value has been set.
 func (o *PostgresStorage) GetStorageClassOk() (*string, bool) {
-	if o == nil {
+	if o == nil || o.StorageClass == nil {
 		return nil, false
 	}
-	return &o.StorageClass, true
+	return o.StorageClass, true
 }
 
-// SetStorageClass sets field value
+// HasStorageClass returns a boolean if a field has been set.
+func (o *PostgresStorage) HasStorageClass() bool {
+	if o != nil && o.StorageClass != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetStorageClass gets a reference to the given string and assigns it to the StorageClass field.
 func (o *PostgresStorage) SetStorageClass(v string) {
-	o.StorageClass = v
+	o.StorageClass = &v
 }
 
 func (o PostgresStorage) MarshalJSON() ([]byte, error) {
@@ -94,7 +101,7 @@ func (o PostgresStorage) MarshalJSON() ([]byte, error) {
 	if true {
 		toSerialize["size"] = o.Size
 	}
-	if true {
+	if o.StorageClass != nil {
 		toSerialize["storage_class"] = o.StorageClass
 	}
 	return json.Marshal(toSerialize)
