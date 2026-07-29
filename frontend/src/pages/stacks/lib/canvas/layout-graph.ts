@@ -33,7 +33,9 @@ function nodeLayoutSize(node: CanvasNode): { width: number; height: number } {
     return { width: ATTACHMENT_NODE_WIDTH, height: ATTACHMENT_NODE_HEIGHT };
   }
   const data = node.data as ResourceNodeData;
-  const extraPortLines = Math.max(0, (data.details?.length ?? 0) - 1);
+  // Ports render as ONE wrapped `ports 80 · 89 …` line; extra height only when
+  // it wraps. ponytail: ~6 numbers per 216px row, refine if cards misfit.
+  const extraPortLines = Math.max(0, Math.ceil((data.details?.length ?? 0) / 6) - 1);
   const volumeRows = data.volumes?.length ?? 0;
   return {
     width: NODE_WIDTH,

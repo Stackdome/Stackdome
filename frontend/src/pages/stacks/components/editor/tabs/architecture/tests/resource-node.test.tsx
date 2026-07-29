@@ -34,23 +34,27 @@ describe("ResourceNode port lines", () => {
     return p as never;
   }
 
-  it("links public port lines to their live URLs, leaves the rest plain", () => {
+  it("renders one compact line of port numbers; public+deployed link out", () => {
     render(
       <ReactFlowProvider>
         <ResourceNode {...withPorts({ 80: "https://web.acme.stackdome.app" })} />
       </ReactFlowProvider>,
     );
-    const link = screen.getByRole("link", { name: /port 80 · public/ });
+    expect(screen.getByText("ports")).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "80" });
     expect(link).toHaveAttribute("href", "https://web.acme.stackdome.app");
     expect(link).toHaveAttribute("target", "_blank");
     // port 89 has no live URL yet; internal ports never link.
-    expect(screen.queryByRole("link", { name: /port 89/ })).toBeNull();
-    expect(screen.queryByRole("link", { name: /9090/ })).toBeNull();
+    expect(screen.getByText("89")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "89" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "9090" })).toBeNull();
+    // full description survives as the tooltip
+    expect(screen.getByText("89")).toHaveAttribute("title", "port 89 · public");
   });
 
-  it("renders all lines as plain text without portUrls", () => {
+  it("renders plain numbers without portUrls", () => {
     render(<ReactFlowProvider><ResourceNode {...withPorts(undefined)} /></ReactFlowProvider>);
-    expect(screen.getByText("port 80 · public")).toBeInTheDocument();
+    expect(screen.getByText("80")).toBeInTheDocument();
     expect(screen.queryByRole("link")).toBeNull();
   });
 });

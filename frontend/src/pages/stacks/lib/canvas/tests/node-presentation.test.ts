@@ -101,7 +101,7 @@ describe("nodePresentation", () => {
     expect(p.details).toEqual([{ text: "port 4318 · internal", port: 4318, public: false }, { text: "port 3000 · public", port: 3000, public: true }]);
   });
 
-  it("caps port lines at three, folding overflow into '+N more ports'", () => {
+  it("returns every declared port — the card collapses them to one line itself", () => {
     const p = nodePresentation({
       isAddon: false,
       image: "acme/kitchen-sink",
@@ -113,11 +113,7 @@ describe("nodePresentation", () => {
         { number: 9092, exposedToPublic: false },
       ],
     });
-    expect(p.details).toEqual([
-      { text: "port 80 · public", port: 80, public: true },
-      { text: "port 443 · public", port: 443, public: true },
-      { text: "+3 more ports" },
-    ]);
+    expect(p.details.map((d) => d.port)).toEqual([80, 443, 9090, 9091, 9092]);
   });
 
   it("strips the registry but keeps the tag in the summary", () => {
