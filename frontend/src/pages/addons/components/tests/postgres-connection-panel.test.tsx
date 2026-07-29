@@ -23,7 +23,6 @@ vi.mock("@/api/client", async () => {
 });
 
 import { getPostgresCredentials } from "@/api/addons";
-import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
 import { PostgresConnectionPanel } from "../postgres-connection-panel";
 
 const mockedCredentials = vi.mocked(getPostgresCredentials);
@@ -73,17 +72,19 @@ describe("PostgresConnectionPanel", () => {
     render(<PostgresConnectionPanel addon={mkAddon()} projectName="default" />);
 
     expect(screen.getByText("pg-rw.addons.svc.cluster.local")).toBeInTheDocument();
-    expect(screen.getByText("5432")).toBeInTheDocument();
+    expect(screen.getByText(":5432")).toBeInTheDocument();
     expect(screen.getAllByText("app").length).toBeGreaterThan(0);
     expect(screen.getByText("addon-1-app")).toBeInTheDocument();
   });
 
-  it("lists every addon output that a stack env connection can map", () => {
+  it("copies the endpoint as host:port", async () => {
     render(<PostgresConnectionPanel addon={mkAddon()} projectName="default" />);
 
-    for (const field of ADDON_OUTPUT_FIELDS) {
-      expect(screen.getAllByText(field).length).toBeGreaterThan(0);
-    }
+    await userEvent.click(screen.getByRole("button", { name: /copy endpoint/i }));
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      "pg-rw.addons.svc.cluster.local:5432",
+    );
   });
 
   it("renders an empty state when the addon has no connection info", () => {

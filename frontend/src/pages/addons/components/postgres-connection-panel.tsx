@@ -9,12 +9,12 @@ import {
   type PostgresCredentials,
 } from "@/api/addons";
 import { getCurrentOrganizationId } from "@/helpers/common";
-import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
 const MASK = "••••••••••••";
+const DEFAULT_PORT = 5432;
 
 interface CredentialState {
   loading: boolean;
@@ -76,7 +76,7 @@ function ValueRow({
     <div className={cn("flex min-w-0 flex-col gap-1", className)}>
       <span className="text-[12px] text-muted-foreground">{label}</span>
       <div className="flex min-w-0 items-start gap-1">
-        <span className="min-w-0 flex-1 break-all pt-1 font-mono text-[13px] leading-5 text-foreground">
+        <span className="min-w-0 break-all pt-1 font-mono text-[13px] leading-5 text-foreground">
           {display}
         </span>
         {action}
@@ -308,15 +308,17 @@ export function PostgresConnectionPanel({
     />
   ) : (
     <div className="flex flex-col gap-6">
-      <div className="grid max-w-3xl grid-cols-1 gap-5 sm:grid-cols-2">
-        <ValueRow
-          label="Host"
-          display={info.host ?? "—"}
-          copyValue={info.host ?? ""}
-          copyLabel="Copy host"
-        />
-        <ValueRow label="Port" display={info.port ?? 5432} />
-      </div>
+      <ValueRow
+        label="Endpoint"
+        display={
+          <>
+            {info.host ?? "—"}
+            <span className="text-muted-foreground">:{info.port ?? DEFAULT_PORT}</span>
+          </>
+        }
+        copyValue={`${info.host ?? ""}:${info.port ?? DEFAULT_PORT}`}
+        copyLabel="Copy endpoint"
+      />
 
       <p className="max-w-2xl text-[12px] text-muted-foreground">
         Reachable from stacks running on this cluster. The database is not exposed to the
@@ -373,27 +375,6 @@ export function PostgresConnectionPanel({
             </div>
           );
         })}
-      </div>
-
-      <div className="flex flex-col gap-3 border-t border-border pt-5">
-        <h3 className="text-sm font-semibold text-foreground">Use from a stack</h3>
-        <p className="max-w-2xl text-[12px] leading-relaxed text-muted-foreground">
-          On a stack resource, add an env connection from this add-on, pick the database and
-          credential scope, then map any of these outputs to environment variable names. The
-          values are injected as secret references when the stack is released — nothing is
-          baked into the image, and rotating the add-on password reaches the app on its next
-          release.
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {ADDON_OUTPUT_FIELDS.map((field) => (
-            <span
-              key={field}
-              className="rounded-sm border border-border bg-muted/40 px-1.5 py-0.5 font-mono text-[11.5px] text-muted-foreground"
-            >
-              {field}
-            </span>
-          ))}
-        </div>
       </div>
     </div>
   );
