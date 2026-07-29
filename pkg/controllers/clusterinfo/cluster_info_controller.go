@@ -89,7 +89,7 @@ func (r *clusterInfoReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 
 func (r *clusterInfoReconciler) toClusterInfo(ctx context.Context, status corev1alpha1.ClusterInfoStatus) *models.ClusterInfo {
 	info := &models.ClusterInfo{
-		Phase:             models.ClusterInfoPhase(status.Phase),
+		Phase:             mapClusterInfoPhase(status.Phase),
 		KubernetesVersion: status.KubernetesVersion,
 		TotalNodes:        status.TotalNodes,
 		ReadyNodes:        status.ReadyNodes,
@@ -135,6 +135,17 @@ func (r *clusterInfoReconciler) toClusterInfo(ctx context.Context, status corev1
 		})
 	}
 	return info
+}
+
+func mapClusterInfoPhase(phase corev1alpha1.ClusterInfoPhase) models.ClusterInfoPhase {
+	switch phase {
+	case corev1alpha1.ClusterInfoPhaseReady:
+		return models.ClusterInfoPhaseReady
+	case corev1alpha1.ClusterInfoPhaseRefreshing:
+		return models.ClusterInfoPhaseRefreshing
+	default:
+		return models.ClusterInfoPhaseUnknown
+	}
 }
 
 func (r *clusterInfoReconciler) parseQuantity(ctx context.Context, node, value string) *resource.Quantity {

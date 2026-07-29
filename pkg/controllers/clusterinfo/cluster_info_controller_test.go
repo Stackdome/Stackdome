@@ -67,4 +67,15 @@ var _ = Describe("clusterInfoReconciler", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})
+
+})
+
+var _ = Describe("mapClusterInfoPhase", func() {
+	It("maps a recognised agent phase", func() {
+		Expect(mapClusterInfoPhase(corev1alpha1.ClusterInfoPhaseReady)).To(Equal(models.ClusterInfoPhaseReady))
+	})
+
+	It("maps an unrecognised agent phase to unknown", func() {
+		Expect(mapClusterInfoPhase(corev1alpha1.ClusterInfoPhase("SomethingNew"))).To(Equal(models.ClusterInfoPhaseUnknown))
+	})
 })
