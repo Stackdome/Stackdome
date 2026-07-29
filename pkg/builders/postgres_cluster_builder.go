@@ -70,6 +70,10 @@ func (b *postgresClusterBuilder) BuildImportPasswordSecret(addon *models.Postgre
 }
 
 func (b *postgresClusterBuilder) BuildPostgresClusterCR(addon *models.PostgresAddon, buildCtx PostgresClusterBuildContext) (*addonsv1alpha1.PostgresCluster, error) {
+	if addon.Storage.StorageClass == "" {
+		return nil, fmt.Errorf("storage class is required to build a PostgresCluster CR")
+	}
+
 	resourceReqs, err := buildPGResourceRequirements(addon.Resources)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build resource requirements: %w", err)
