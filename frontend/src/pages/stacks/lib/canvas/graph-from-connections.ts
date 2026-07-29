@@ -1,5 +1,5 @@
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import { nodePresentation, type GlyphKind } from "./node-presentation";
+import { nodePresentation, type GlyphKind, type PortLine } from "./node-presentation";
 import { splitEnvRows, type FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 import type { StackConnection } from "@/api/connections";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
@@ -70,7 +70,10 @@ export interface ResourceNodeData {
   dotVariant: StatusVariant;
   summary: string;
   /** One card line per declared port (`port N · public|internal`). */
-  details?: string[];
+  details?: PortLine[];
+  /** Live public URL per declared port number — makes the matching public
+   *  port line a link on the card. Absent for drafts/never-deployed stacks. */
+  portUrls?: Record<number, string>;
   volumes: VolumeChip[];
   dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */

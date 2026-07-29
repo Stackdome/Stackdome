@@ -42,7 +42,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useOrgDomains } from "@/hooks/use-org-domains";
-import { pickBestIngress } from "@/pages/stacks/lib/public-endpoints";
+import { sortIngresses } from "@/pages/stacks/lib/public-endpoints";
 import { convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
@@ -187,10 +187,24 @@ export default function CanvasEditorPage() {
     const statusResources = statusLiveStatus?.resources ?? {};
     return (effectiveStack?.spec.stack_resources ?? []).flatMap((r) => {
       const ingress = r.name ? liveResources[r.name]?.public_ingress ?? [] : [];
-      const best = pickBestIngress(ingress, orgDomains);
-      if (!best || !r.name) return [];
+      const urls = sortIngresses(ingress, orgDomains);
+      if (urls.length === 0 || !r.name) return [];
       const variant = statusVariant("rollout", statusResources[r.name]?.state);
-      return [{ service: r.name, url: best.url, port: best.target_port, variant }];
+      const portNames = new Map(
+        (r.ports ?? []).flatMap((p) => (p.name && p.number != null ? [[p.number, p.name] as const] : [])),
+      );
+      return [
+        {
+          service: r.name,
+          url: urls[0].url,
+          port: urls[0].target_port,
+          variant,
+          urls: urls.map((u) => ({
+            ...u,
+            portName: u.target_port != null ? portNames.get(u.target_port) : undefined,
+          })),
+        },
+      ];
     });
   }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail, statusLiveStatus]);
 

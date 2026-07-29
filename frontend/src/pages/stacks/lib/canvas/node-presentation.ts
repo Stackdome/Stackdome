@@ -36,8 +36,16 @@ export interface NodePresentation {
   brandSlug?: string;
   /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
-  /** One card line per declared port: `port N · public|internal`. */
-  details: string[];
+  /** One card line per declared port: `port N · public|internal`. Overflow
+   *  fold lines ("+N more ports") carry text only. */
+  details: PortLine[];
+}
+
+export interface PortLine {
+  text: string;
+  /** Declared port number — absent on the overflow fold line. */
+  port?: number;
+  public?: boolean;
 }
 
 /** Internal kind keys → their display metadata. */
@@ -119,13 +127,17 @@ const MAX_PORT_LINES = 3;
 /** One line per declared port, in declared order: `port N · public|internal`.
  *  Capped so the card never outgrows the box dagre reserves — overflow
  *  collapses into a `+N more ports` line. */
-function buildPortLines(ports: PresentationPort[] | undefined): string[] {
+function buildPortLines(ports: PresentationPort[] | undefined): PortLine[] {
   const lines = (ports ?? [])
     .filter((p) => p.number != null)
-    .map((p) => `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`);
+    .map((p) => ({
+      text: `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`,
+      port: p.number,
+      public: !!p.exposedToPublic,
+    }));
   if (lines.length <= MAX_PORT_LINES) return lines;
   const shown = lines.slice(0, MAX_PORT_LINES - 1);
-  return [...shown, `+${lines.length - shown.length} more ports`];
+  return [...shown, { text: `+${lines.length - shown.length} more ports` }];
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {

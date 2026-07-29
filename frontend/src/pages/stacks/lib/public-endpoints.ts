@@ -18,20 +18,33 @@ export function classifyIngressUrl(url: string, orgDomains: string[]): UrlClass 
 
 const CLASS_RANK: Record<UrlClass, number> = { custom: 0, prefix: 1, generated: 2 };
 
-/** Best URL for the header pill: custom domain > subdomain-prefix > generated hash. */
+export interface SortedIngress {
+  url: string;
+  target_port?: number;
+}
+
+/** All public URLs, best-first: custom domain > subdomain-prefix > generated
+ *  hash, lowest target_port breaking ties — deterministic so the "shown" URL
+ *  never depends on server array order. Url-less entries are dropped. */
+export function sortIngresses(
+  ingresses: { url?: string; target_port?: number }[],
+  orgDomains: string[],
+): SortedIngress[] {
+  return ingresses
+    .filter((i): i is SortedIngress => !!i.url)
+    .map((i) => ({ ing: { url: i.url, target_port: i.target_port }, rank: CLASS_RANK[classifyIngressUrl(i.url, orgDomains)] }))
+    .sort(
+      (a, b) =>
+        a.rank - b.rank ||
+        (a.ing.target_port ?? Number.POSITIVE_INFINITY) - (b.ing.target_port ?? Number.POSITIVE_INFINITY),
+    )
+    .map((e) => e.ing);
+}
+
+/** Best URL for the header pill — first entry of sortIngresses. */
 export function pickBestIngress(
   ingresses: { url?: string; target_port?: number }[],
   orgDomains: string[],
-): { url: string; target_port?: number } | null {
-  let best: { url: string; target_port?: number } | null = null;
-  let bestRank = Number.POSITIVE_INFINITY;
-  for (const ing of ingresses) {
-    if (!ing.url) continue;
-    const rank = CLASS_RANK[classifyIngressUrl(ing.url, orgDomains)];
-    if (rank < bestRank) {
-      best = { url: ing.url, target_port: ing.target_port };
-      bestRank = rank;
-    }
-  }
-  return best;
+): SortedIngress | null {
+  return sortIngresses(ingresses, orgDomains)[0] ?? null;
 }

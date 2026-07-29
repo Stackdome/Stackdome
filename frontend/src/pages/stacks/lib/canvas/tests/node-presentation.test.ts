@@ -38,7 +38,7 @@ describe("nodePresentation", () => {
     expect(p.kindLabel).toBe("Redis");
     expect(p.glyph).toBe("redis");
     expect(p.summary).toBe("redis:6.2");
-    expect(p.details).toEqual(["port 6379 · internal"]);
+    expect(p.details).toEqual([{ text: "port 6379 · internal", port: 6379, public: false }]);
   });
 
   it("detects postgres from a service image", () => {
@@ -68,7 +68,7 @@ describe("nodePresentation", () => {
     expect(p.kindLabel).toBe("Web");
     expect(p.glyph).toBe("web");
     expect(p.summary).toBe("web-api:1.2.3");
-    expect(p.details).toEqual(["port 8080 · public"]);
+    expect(p.details).toEqual([{ text: "port 8080 · public", port: 8080, public: true }]);
   });
 
   it("treats a generic image with only an internal port as a Service", () => {
@@ -80,7 +80,7 @@ describe("nodePresentation", () => {
     expect(p.kindLabel).toBe("Service");
     expect(p.glyph).toBe("service");
     expect(p.summary).toBe("mailhog");
-    expect(p.details).toEqual(["port 1025 · internal"]);
+    expect(p.details).toEqual([{ text: "port 1025 · internal", port: 1025, public: false }]);
   });
 
   it("falls back to git build when there is no image", () => {
@@ -98,7 +98,7 @@ describe("nodePresentation", () => {
         { number: 3000, exposedToPublic: true },
       ],
     });
-    expect(p.details).toEqual(["port 4318 · internal", "port 3000 · public"]);
+    expect(p.details).toEqual([{ text: "port 4318 · internal", port: 4318, public: false }, { text: "port 3000 · public", port: 3000, public: true }]);
   });
 
   it("caps port lines at three, folding overflow into '+N more ports'", () => {
@@ -114,9 +114,9 @@ describe("nodePresentation", () => {
       ],
     });
     expect(p.details).toEqual([
-      "port 80 · public",
-      "port 443 · public",
-      "+3 more ports",
+      { text: "port 80 · public", port: 80, public: true },
+      { text: "port 443 · public", port: 443, public: true },
+      { text: "+3 more ports" },
     ]);
   });
 
@@ -127,6 +127,6 @@ describe("nodePresentation", () => {
       ports: [{ number: 3000, exposedToPublic: true }],
     });
     expect(p.summary).toBe("frontend:v2");
-    expect(p.details).toEqual(["port 3000 · public"]);
+    expect(p.details).toEqual([{ text: "port 3000 · public", port: 3000, public: true }]);
   });
 });

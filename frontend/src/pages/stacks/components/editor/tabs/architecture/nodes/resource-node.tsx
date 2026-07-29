@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { HardDrive } from "lucide-react";
+import { ExternalLink, HardDrive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResourceNodeData } from "@/pages/stacks/lib/canvas/graph-from-connections";
 import type { StatusVariant } from "@/components/branded/status-variant";
@@ -59,9 +59,25 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
         </div>
         <div className="mt-1.5 pl-[18px] font-mono text-[11px] text-muted-foreground">
           <div className="truncate">{data.summary}</div>
-          {(data.details ?? []).map((line) => (
-            <div key={line} className="mt-0.5 truncate">{line}</div>
-          ))}
+          {(data.details ?? []).map((line) => {
+            const url = line.port != null ? data.portUrls?.[line.port] : undefined;
+            if (!url) return <div key={line.text} className="mt-0.5 truncate">{line.text}</div>;
+            return (
+              <a
+                key={line.text}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                // Card drag/click owns the mousedown; stop it so the link clicks.
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => e.stopPropagation()}
+                className="group/port mt-0.5 flex items-center gap-1 truncate transition-colors hover:text-foreground"
+              >
+                <span className="truncate group-hover/port:underline">{line.text}</span>
+                <ExternalLink className="size-2.5 shrink-0 opacity-0 transition-opacity group-hover/port:opacity-100" aria-hidden />
+              </a>
+            );
+          })}
         </div>
       </div>
 

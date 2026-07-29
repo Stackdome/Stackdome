@@ -170,10 +170,26 @@ function StackCanvasFlow({
   }, [liveStatusResources]);
 
   // Local graph enhanced with server-derived edges + runtime status.
-  const mergedGraph = useMemo(
+  const mergedGraphBare = useMemo(
     () => mergeTopology(dataGraph, topology, releaseInFlight, liveStateByNodeId),
     [dataGraph, topology, releaseInFlight, liveStateByNodeId],
   );
+  // Overlay live per-port public URLs so a card's public port lines link out.
+  const mergedGraph = useMemo(() => {
+    if (!publicEndpoints?.length) return mergedGraphBare;
+    const byService = new Map(publicEndpoints.map((e) => [e.service, e.urls]));
+    return {
+      ...mergedGraphBare,
+      nodes: mergedGraphBare.nodes.map((n) => {
+        const urls = n.type === "resource" ? byService.get((n.data as { name: string }).name) : undefined;
+        if (!urls?.length) return n;
+        const portUrls = Object.fromEntries(
+          urls.filter((u) => u.target_port != null).map((u) => [u.target_port!, u.url]),
+        );
+        return { ...n, data: { ...n.data, portUrls } };
+      }),
+    };
+  }, [mergedGraphBare, publicEndpoints]);
   // Signature of the node/edge id-set — changes only when topology changes.
   const topologySignature = useMemo(
     () => `${mergedGraph.nodes.map((n) => n.id).join("|")}::${mergedGraph.edges.map((e) => e.id).join("|")}`,
@@ -667,7 +683,7 @@ function StackCanvasFlow({
         onViewLogs={onViewLogs}
         onOpenVolume={openVolume}
         liveStatusResources={liveStatusResources}
-        publicUrl={publicEndpoints?.find((e) => e.service === resources[frontEntry.index]?.name)?.url}
+        publicUrls={publicEndpoints?.find((e) => e.service === resources[frontEntry.index]?.name)?.urls}
       />
     ) : frontEntry ? (
       <VolumeDrawer

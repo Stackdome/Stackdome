@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
-import { PublicEndpointRow } from "../public-endpoint-row";
+import { EndpointInlineList, PublicEndpointRow } from "../public-endpoint-row";
 
 afterEach(cleanup);
 
@@ -67,6 +67,71 @@ describe("PublicEndpointRow", () => {
   it("falls back to the neutral dot when an endpoint has no variant", () => {
     const { container } = render(<PublicEndpointRow endpoints={[endpoints[0]]} />);
     expect(container.querySelectorAll(".bg-fg-muted")).toHaveLength(1);
+  });
+});
+
+describe("PublicEndpointRow multi-url overflow", () => {
+  const multi = {
+    service: "web",
+    url: "https://web.acme.stackdome.app",
+    port: 80,
+    urls: [
+      { url: "https://web.acme.stackdome.app", target_port: 80 },
+      { url: "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app", target_port: 89, portName: "admin" },
+    ],
+  };
+
+  it("shows a +N tail only when an endpoint has more than one url", () => {
+    render(<PublicEndpointRow endpoints={[multi, endpoints[1]]} />);
+    expect(screen.getByRole("button", { name: "1 more endpoint for web" })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /more endpoint/ })).toHaveLength(1);
+  });
+
+  it("opens a popover listing every endpoint with port label, open and copy", async () => {
+    render(<PublicEndpointRow endpoints={[multi]} />);
+    fireEvent.click(screen.getByRole("button", { name: "1 more endpoint for web" }));
+    // Both rows listed; named port shows its name, unnamed shows :port.
+    expect(await screen.findByText(":80")).toBeInTheDocument();
+    expect(screen.getByText("admin")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Go to https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app" }))
+      .toHaveAttribute("target", "_blank");
+    expect(
+      screen.getByRole("button", { name: "Copy https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app" }),
+    ).toBeInTheDocument();
+  });
+
+  it("single-url endpoints render exactly as before (no tail)", () => {
+    render(<PublicEndpointRow endpoints={[endpoints[0]]} />);
+    expect(screen.queryByRole("button", { name: /more endpoint/ })).toBeNull();
+  });
+});
+
+describe("EndpointInlineList (drawer header)", () => {
+  const urls = [
+    { url: "https://web.acme.stackdome.app", target_port: 80 },
+    { url: "https://mqrkc2xw4t7b4dnz.web.acme.stackdome.app", target_port: 89 },
+  ];
+
+  it("renders only the first url plus a collapsed '+1 more' toggle", () => {
+    render(<EndpointInlineList urls={urls} />);
+    expect(screen.getByText("web.acme.stackdome.app")).toBeInTheDocument();
+    expect(screen.queryByText("mqrkc2xw4t7b4dnz.web.acme.stackdome.app")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show 1 more endpoint" })).toBeInTheDocument();
+  });
+
+  it("expands remaining urls in place and flips to 'show less'", () => {
+    render(<EndpointInlineList urls={urls} />);
+    fireEvent.click(screen.getByRole("button", { name: "Show 1 more endpoint" }));
+    expect(screen.getByText("mqrkc2xw4t7b4dnz.web.acme.stackdome.app")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show less" }));
+    expect(screen.queryByText("mqrkc2xw4t7b4dnz.web.acme.stackdome.app")).toBeNull();
+  });
+
+  it("single url renders inline with no toggle; empty renders nothing", () => {
+    render(<EndpointInlineList urls={[urls[0]]} />);
+    expect(screen.queryByRole("button", { name: /Show/ })).toBeNull();
+    const { container } = render(<EndpointInlineList urls={[]} />);
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

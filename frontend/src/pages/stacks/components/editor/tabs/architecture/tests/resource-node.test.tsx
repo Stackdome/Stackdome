@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ResourceNode } from "../nodes/resource-node";
 import type { StatusVariant } from "@/components/branded/status-variant";
@@ -20,6 +20,40 @@ function nodeProps(dotVariant: StatusVariant) {
 }
 
 const dotOf = (container: HTMLElement) => container.querySelector("span[aria-hidden]");
+
+describe("ResourceNode port lines", () => {
+  const details = [
+    { text: "port 80 · public", port: 80, public: true },
+    { text: "port 89 · public", port: 89, public: true },
+    { text: "port 9090 · internal", port: 9090, public: false },
+  ];
+
+  function withPorts(portUrls?: Record<number, string>) {
+    const p = nodeProps("ready") as { data: Record<string, unknown> };
+    p.data = { ...p.data, details, portUrls };
+    return p as never;
+  }
+
+  it("links public port lines to their live URLs, leaves the rest plain", () => {
+    render(
+      <ReactFlowProvider>
+        <ResourceNode {...withPorts({ 80: "https://web.acme.stackdome.app" })} />
+      </ReactFlowProvider>,
+    );
+    const link = screen.getByRole("link", { name: /port 80 · public/ });
+    expect(link).toHaveAttribute("href", "https://web.acme.stackdome.app");
+    expect(link).toHaveAttribute("target", "_blank");
+    // port 89 has no live URL yet; internal ports never link.
+    expect(screen.queryByRole("link", { name: /port 89/ })).toBeNull();
+    expect(screen.queryByRole("link", { name: /9090/ })).toBeNull();
+  });
+
+  it("renders all lines as plain text without portUrls", () => {
+    render(<ReactFlowProvider><ResourceNode {...withPorts(undefined)} /></ReactFlowProvider>);
+    expect(screen.getByText("port 80 · public")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+});
 
 describe("ResourceNode status dot", () => {
   it("ready dot breathes", () => {

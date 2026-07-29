@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink, Copy, Check } from "lucide-react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { StatusVariant } from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
@@ -15,13 +16,23 @@ const DOT_CLASS: Record<StatusVariant, string> = {
   neutral: "bg-fg-muted",
 };
 
+export interface EndpointUrl {
+  url: string;
+  target_port?: number;
+  /** Spec port name, when the user named the port — labels the popover row. */
+  portName?: string;
+}
+
 export interface PublicEndpoint {
   service: string;
+  /** Best URL (sortIngresses order) — what compact surfaces show. */
   url: string;
   port?: number;
   /** The owning resource's live rollout status — each chip's dot reflects its
    *  own service, not the stack-level rollup. */
   variant?: StatusVariant;
+  /** Every public URL, best-first. Absent or length ≤ 1 → no overflow tail. */
+  urls?: EndpointUrl[];
 }
 
 function hostOf(url: string): string {
@@ -94,6 +105,39 @@ export function EndpointInline({ url }: { url: string }) {
   );
 }
 
+/** Drawer-header endpoint block: first (best) URL always visible, the rest
+ *  behind a "+N more" toggle that expands in place — no popover in a drawer. */
+export function EndpointInlineList({ urls }: { urls: EndpointUrl[] }) {
+  const [expanded, setExpanded] = useState(false);
+  if (urls.length === 0) return null;
+  const rest = urls.slice(1);
+  return (
+    <div className="flex flex-col items-start gap-px">
+      <EndpointInline url={urls[0].url} />
+      {expanded &&
+        rest.map((u) => (
+          <span key={u.url} className="flex min-w-0 items-center gap-1">
+            <EndpointInline url={u.url} />
+            {u.target_port != null && (
+              <span className="font-mono text-[10px] text-fg-muted">{u.portName ?? `:${u.target_port}`}</span>
+            )}
+          </span>
+        ))}
+      {rest.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Show less" : `Show ${rest.length} more endpoint${rest.length > 1 ? "s" : ""}`}
+          className="font-mono text-[10px] text-fg-muted transition-colors hover:text-foreground"
+        >
+          {expanded ? "show less" : `+${rest.length} more`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 interface ChipProps {
   endpoint: PublicEndpoint;
   /** "inline": hostname expands inside the chip on hover (expanded header).
@@ -103,7 +147,65 @@ interface ChipProps {
   onCopy: (url: string) => void;
 }
 
-function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copiedUrl, onCopy }: ChipProps) {
+/** "+N" tail on a chip → popover listing every public URL of the service,
+ *  best-first (same order the chip's own link uses). No "primary" concept —
+ *  the first row simply is the URL the compact surfaces show. */
+function EndpointOverflow({
+  service,
+  urls,
+  copiedUrl,
+  onCopy,
+}: {
+  service: string;
+  urls: EndpointUrl[];
+  copiedUrl: string | null;
+  onCopy: (url: string) => void;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`${urls.length - 1} more endpoint${urls.length > 2 ? "s" : ""} for ${service}`}
+          className="flex h-5 items-center rounded border-l border-border/60 px-1.5 font-mono text-[10px] text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+        >
+          +{urls.length - 1}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto max-w-[420px] p-1.5">
+        <div className="px-1.5 pb-1 font-mono text-[9px] uppercase tracking-[0.14em] text-fg-muted">
+          {service} · public endpoints
+        </div>
+        {urls.map((u) => (
+          <div key={u.url} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted/40">
+            <span className="w-14 flex-none font-mono text-[10.5px] text-fg-muted">
+              {u.portName ?? (u.target_port != null ? `:${u.target_port}` : "")}
+            </span>
+            <a
+              href={u.url}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Go to ${u.url}`}
+              className="min-w-0 flex-1 truncate font-mono text-[11px] text-fg-2 hover:text-foreground hover:underline"
+            >
+              {u.url}
+            </a>
+            <button
+              type="button"
+              onClick={() => onCopy(u.url)}
+              aria-label={copiedUrl === u.url ? "Copied" : `Copy ${u.url}`}
+              className="flex size-5 flex-none items-center justify-center rounded text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+            >
+              {copiedUrl === u.url ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
+            </button>
+          </div>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function EndpointChip({ endpoint: { service, url, port, variant, urls }, reveal, copiedUrl, onCopy }: ChipProps) {
   const serviceLabel = (
     <span className="flex items-center gap-1.5 text-fg-muted">
       <span aria-hidden className={cn("size-[5px] rounded-full", DOT_CLASS[variant ?? "neutral"])} />
@@ -165,6 +267,9 @@ function EndpointChip({ endpoint: { service, url, port, variant }, reveal, copie
             <span className="pr-1 hover:underline">{hostOf(url)}</span>
           </span>
         </a>
+      )}
+      {urls && urls.length > 1 && (
+        <EndpointOverflow service={service} urls={urls} copiedUrl={copiedUrl} onCopy={onCopy} />
       )}
     </span>
   );
