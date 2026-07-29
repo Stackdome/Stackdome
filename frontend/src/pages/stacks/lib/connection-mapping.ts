@@ -239,3 +239,13 @@ export function connectionsToMounts(resourceName: string, connections: StackConn
   }
   return rows;
 }
+
+/** Distinct postgres-addon ids appearing as connection sources — the addons a
+ *  stack (or a release snapshot) is linked to. */
+export function addonIdsFromConnections(connections: StackConnection[] | undefined): Set<string> {
+  return new Set(
+    (connections ?? [])
+      .filter((c) => c.from?.type === "addon/postgres" && c.from?.id)
+      .map((c) => c.from!.id as string),
+  );
+}
