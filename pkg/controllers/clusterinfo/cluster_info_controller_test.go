@@ -68,6 +68,24 @@ var _ = Describe("clusterInfoReconciler", func() {
 		Expect(err).ToNot(HaveOccurred())
 	})
 
+
+	It("returns an empty result without error when the CR is not found", func() {
+		scheme := runtime.NewScheme()
+		Expect(corev1alpha1.AddToScheme(scheme)).To(Succeed())
+
+		r := &clusterInfoReconciler{
+			Client:         fake.NewClientBuilder().WithScheme(scheme).Build(),
+			ClusterID:      "cluster-1",
+			ClusterService: mocks.NewMockClusterService(gomock.NewController(GinkgoT())),
+			Log:            logger.NewLoggerWithPrefix(context.Background(), "clusterinfo-test"),
+		}
+
+		result, err := r.Reconcile(context.Background(), ctrl.Request{
+			NamespacedName: types.NamespacedName{Name: corev1alpha1.ClusterInfoSingletonName},
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result).To(Equal(ctrl.Result{}))
+	})
 })
 
 var _ = Describe("mapClusterInfoPhase", func() {
@@ -77,5 +95,23 @@ var _ = Describe("mapClusterInfoPhase", func() {
 
 	It("maps an unrecognised agent phase to unknown", func() {
 		Expect(mapClusterInfoPhase(corev1alpha1.ClusterInfoPhase("SomethingNew"))).To(Equal(models.ClusterInfoPhaseUnknown))
+	})
+})
+
+var _ = Describe("clusterInfoReconciler.parseQuantity", func() {
+	var r *clusterInfoReconciler
+
+	BeforeEach(func() {
+		r = &clusterInfoReconciler{
+			Log: logger.NewLoggerWithPrefix(context.Background(), "clusterinfo-test"),
+		}
+	})
+
+	It("returns nil for an empty value", func() {
+		Expect(r.parseQuantity(context.Background(), "node-1", "")).To(BeNil())
+	})
+
+	It("returns nil for an unparseable value without failing", func() {
+		Expect(r.parseQuantity(context.Background(), "node-1", "not-a-quantity")).To(BeNil())
 	})
 })
