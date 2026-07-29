@@ -321,8 +321,7 @@ export function PostgresConnectionPanel({
       />
 
       <p className="max-w-2xl text-[12px] text-muted-foreground">
-        Reachable from stacks running on this cluster. The database is not exposed to the
-        internet — connect from a stack, or port-forward for a local session.
+        Reachable from your stacks. The database is not exposed to the internet.
       </p>
 
       <div className="flex flex-col gap-3 border-t border-border pt-5">
