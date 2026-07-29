@@ -150,9 +150,9 @@ function EndpointOverflow({
         <button
           type="button"
           aria-label={`${rest.length} more endpoint${rest.length > 1 ? "s" : ""} for ${service}`}
-          className="flex h-5 items-center rounded border-l border-border/60 px-1.5 font-mono text-[10px] text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
+          className="flex h-5 items-center whitespace-nowrap rounded border-l border-border/60 px-1.5 font-mono text-[10px] text-fg-muted transition-colors hover:bg-muted hover:text-foreground"
         >
-          +{rest.length}
+          more endpoints
         </button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto max-w-[420px] p-1.5">
