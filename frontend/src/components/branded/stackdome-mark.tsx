@@ -100,10 +100,10 @@ export function StackdomeMark({ size = 24, className, tone = "default" }: Stackd
 }
 
 /**
- * Horizontal lockup: cube + "Stackdome" wordmark. `size` is the wordmark
- * text height in px (the lockup viewBox carries glow padding — glyphs span
- * ~30 of its 77 units — so the svg itself renders taller than `size`).
+ * Horizontal lockup: cube + "Stackdome" wordmark. `size` roughly tracks the
+ * old text-lockup's scale — the svg renders 2x `size` tall because the
+ * lockup viewBox carries glow padding around the glyphs.
  */
 export function StackdomeWordmark({ size = 22, className }: { size?: number; className?: string }) {
-  return <LockupSvg variant="full" height={(size * 77) / 30} className={cn("text-foreground", className)} />;
+  return <LockupSvg variant="full" height={size * 2} className={cn("text-foreground", className)} />;
 }
