@@ -101,6 +101,20 @@ func (mr *MockClusterManagerMockRecorder) IsRunning() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsRunning", reflect.TypeOf((*MockClusterManager)(nil).IsRunning))
 }
 
+// ReRegisterCluster mocks base method.
+func (m *MockClusterManager) ReRegisterCluster(cluster *models.Cluster) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ReRegisterCluster", cluster)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ReRegisterCluster indicates an expected call of ReRegisterCluster.
+func (mr *MockClusterManagerMockRecorder) ReRegisterCluster(cluster any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ReRegisterCluster", reflect.TypeOf((*MockClusterManager)(nil).ReRegisterCluster), cluster)
+}
+
 // RegisterCluster mocks base method.
 func (m *MockClusterManager) RegisterCluster(cluster *models.Cluster) error {
 	m.ctrl.T.Helper()
