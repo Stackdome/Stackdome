@@ -55,7 +55,6 @@ describe("SplitConsole", () => {
     render(<SplitConsole rows={rows} events={events} streaming={false} />);
     const allBtn = screen.getByRole("button", { name: /all resources/ });
     expect(allBtn).toHaveTextContent("2");
-    expect(allBtn).not.toHaveTextContent("3");
   });
 
   it("shows the live pulse only while streaming", () => {

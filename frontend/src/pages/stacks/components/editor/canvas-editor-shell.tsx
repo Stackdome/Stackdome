@@ -407,29 +407,29 @@ export function CanvasEditorShell({
         <div className="relative min-h-0 flex-1 overflow-hidden">
           <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: effectiveDrawerInset }}>
             <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
-            {/* Resource/volume tally lives on the canvas (bottom-right) rather
-                than the header, keeping the header a line shorter. */}
             {activeTab === EDITOR_TABS.architecture && (
-              <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-[11px] text-fg-muted">
-                {subtitle}
-              </span>
-            )}
-            {activeTab === EDITOR_TABS.architecture && (
-              <DeployPill
-                isDraft={isNewStack}
-                hasResources={hasResources}
-                dirtyTotal={dirtyTotal}
-                isStaged={isStaged}
-                isActive={isActive}
-                deployBusy={deployBusy}
-                draftDeploying={draftDeploying}
-                canWrite={canWrite}
-                onDeploy={onDeploy}
-                onDraftDeploy={onDraftDeploy}
-                onViewChanges={onViewChanges}
-                canDiscardDraft={canDiscardDraft}
-                onDiscardDraft={onDiscardDraft}
-              />
+              <>
+                {/* Resource/volume tally lives on the canvas (bottom-right) rather
+                    than the header, keeping the header a line shorter. */}
+                <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-[11px] text-fg-muted">
+                  {subtitle}
+                </span>
+                <DeployPill
+                  isDraft={isNewStack}
+                  hasResources={hasResources}
+                  dirtyTotal={dirtyTotal}
+                  isStaged={isStaged}
+                  isActive={isActive}
+                  deployBusy={deployBusy}
+                  draftDeploying={draftDeploying}
+                  canWrite={canWrite}
+                  onDeploy={onDeploy}
+                  onDraftDeploy={onDraftDeploy}
+                  onViewChanges={onViewChanges}
+                  canDiscardDraft={canDiscardDraft}
+                  onDiscardDraft={onDiscardDraft}
+                />
+              </>
             )}
           </div>
           {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}

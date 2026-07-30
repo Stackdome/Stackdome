@@ -63,7 +63,6 @@ export default function CanvasEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  const initialTab = (location.state as { initialTab?: EditorTabId } | null)?.initialTab;
   const [draftName, setDraftName] = useState(seed.name);
   // Draft labels are seeded into the create payload; there is no in-canvas label
   // editor, so the setter is intentionally dropped.
@@ -75,7 +74,7 @@ export default function CanvasEditorPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const [activeTab, setActiveTab] = useState<EditorTabId>(initialTab ?? EDITOR_TABS.architecture);
+  const [activeTab, setActiveTab] = useState<EditorTabId>(EDITOR_TABS.architecture);
   // Resource pre-selected in the Logs tab filter when arriving via a drawer's
   // "View logs". Cleared on direct tab navigation so the filter doesn't stick.
   const [logsInitialSource, setLogsInitialSource] = useState<string | undefined>();
@@ -751,10 +750,9 @@ export default function CanvasEditorPage() {
         });
       }
       // Both /stacks/new and /stacks/:id render this component, so the instance
-      // survives this navigate and setActiveTab sticks; the nav state only
-      // covers a fresh mount (reload of the entry).
+      // survives this navigate and setActiveTab sticks.
       setActiveTab(EDITOR_TABS.deployments);
-      navigate(`/stacks/${created.id}`, { replace: true, state: { initialTab: EDITOR_TABS.deployments } });
+      navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
       if (!applyValidationFailure(err)) {

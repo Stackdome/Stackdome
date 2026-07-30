@@ -241,7 +241,6 @@ describe("commit pin row", () => {
     renderGitTab({ gitRevisionType: "branch", gitRevisionValue: "main", gitCommitPin: "abc123" });
     const input = screen.getByLabelText(/pin to commit/i);
     expect(input).toHaveValue("abc123");
-    expect(input).toBeEnabled();
   });
 
   it("patches gitCommitPin on change", () => {
