@@ -74,8 +74,6 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
           >
             <span className="h-[7px] w-[7px] flex-none rounded-full border-[1.5px] border-fg-muted" />
             <span className="whitespace-nowrap font-mono text-[12px] text-fg-2">all resources</span>
-            {/* Resource count, to match the "n/m ready" header — the event count
-                here read as a (wrong) resource total. */}
             <span className="ml-auto font-mono text-[10.5px] text-fg-muted">{rows.length}</span>
           </button>
           {rows.map((vm) => {

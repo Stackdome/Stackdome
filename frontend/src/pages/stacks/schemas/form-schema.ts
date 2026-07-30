@@ -125,8 +125,8 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper, not part of API spec for StackResource
   sourceType: z.enum(["image", "git"]).optional().default("image"),
   // UI helper fields for git revision, not part of API spec StackResource.
-  // The commit pin is held separately — the API requires commit to ride
-  // alongside a branch or tag, never replace it.
+  // The commit pin is separate: the API wants commit alongside a branch or
+  // tag, never instead of one.
   gitRevisionType: FormGitRevisionTypeSchema.optional(),
   gitRevisionValue: z.string().optional(),
   gitCommitPin: z.string().optional(),
@@ -448,9 +448,8 @@ function convertApiResourceToFormResource(
       gitRevisionType = "tag";
       gitRevisionValue = git.tag;
     }
-    // Independent of branch/tag. A commit-only spec (invalid per the API's
-    // commit-requires-ref rule) loads with type undefined so superRefine
-    // surfaces it instead of silently dropping the pin.
+    // Independent of branch/tag — never gate this on gitRevisionType, or an
+    // invalid commit-only spec silently drops the pin.
     gitCommitPin = git.commit;
   }
 
@@ -511,8 +510,8 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
 
   if (resource.sourceType === 'git') {
     const existingGit = resource.source?.git;
-    // Flatten the UI revision helpers into one of branch/tag, with the commit
-    // pin riding alongside (the API rejects a commit without a branch or tag).
+    // Flatten the UI revision helpers into one of branch/tag; the commit pin
+    // rides alongside.
     // push is optional (omit => internal cluster registry). integration_id
     // carries the clone-auth credential reference (e.g. seeded by the "From
     // git provider" wizard for private repos) and must pass through as-is.

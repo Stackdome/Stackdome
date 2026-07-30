@@ -63,9 +63,6 @@ export default function CanvasEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
-  // Draft deploy remounts the page at the new stack URL, so it can't call
-  // setActiveTab like the in-place deploy path does — the target tab rides
-  // the navigation state instead.
   const initialTab = (location.state as { initialTab?: EditorTabId } | null)?.initialTab;
   const [draftName, setDraftName] = useState(seed.name);
   // Draft labels are seeded into the create payload; there is no in-canvas label
@@ -753,10 +750,9 @@ export default function CanvasEditorPage() {
           variant: "destructive",
         });
       }
-      // Same "watch it roll out" landing as the in-place deploy path (onDeploy).
-      // /stacks/new and /stacks/:id both render this component, so React keeps
-      // the instance alive across this navigation and setActiveTab sticks; the
-      // navigation state covers the remount case (e.g. a reload of the entry).
+      // Both /stacks/new and /stacks/:id render this component, so the instance
+      // survives this navigate and setActiveTab sticks; the nav state only
+      // covers a fresh mount (reload of the entry).
       setActiveTab(EDITOR_TABS.deployments);
       navigate(`/stacks/${created.id}`, { replace: true, state: { initialTab: EDITOR_TABS.deployments } });
     } catch (err) {
