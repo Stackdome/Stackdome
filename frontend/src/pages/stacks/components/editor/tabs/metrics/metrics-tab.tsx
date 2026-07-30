@@ -35,7 +35,7 @@ function toNumber(v: string | number | undefined): number {
 const HISTORY = 16;
 
 /** A tiny end-aligned bar sparkline. Heights scale to the window max. */
-function Sparkline({ data, className }: { data: number[]; className?: string }) {
+export function Sparkline({ data, className }: { data: number[]; className?: string }) {
   const max = Math.max(1, ...data);
   const bars = [...Array(HISTORY)].map((_, i) => data[data.length - HISTORY + i] ?? null);
   return (
@@ -52,7 +52,7 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
 }
 
 /** A labelled usage bar (fill width is relative to the peer max for that metric). */
-function MetricBar({ label, value, pct, fill }: { label: string; value: string; pct: number; fill: string }) {
+export function MetricBar({ label, value, pct, fill }: { label: string; value: string; pct: number; fill: string }) {
   return (
     <div>
       <div className="flex items-center justify-between">
