@@ -17,7 +17,7 @@ function DefaultSignup() {
     <AuthShell
       title="Own your stack."
       sub="Create an account to start deploying."
-      below={<SwapLink lead="Already have one?" to="/sign-in" label="Sign in" />}
+      below={<SwapLink lead="Already have an account?" to="/sign-in" label="Log in" />}
     >
       <SignupForm />
     </AuthShell>

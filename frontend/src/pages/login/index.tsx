@@ -17,7 +17,7 @@ export default function Login() {
     <AuthShell
       title="Welcome back."
       sub="Sign in to manage your stacks."
-      below={<SwapLink lead="No account yet?" to="/sign-up" label="Start here" />}
+      below={<SwapLink lead="New to Stackdome?" to="/sign-up" label="Create an account" />}
     >
       <LoginForm />
     </AuthShell>
