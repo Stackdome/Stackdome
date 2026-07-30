@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { StatusPill } from './status-pill'
 
 const meta = {
+  title: 'Branded/StatusPill',
   component: StatusPill,
   tags: ['ai-generated'],
 } satisfies Meta<typeof StatusPill>

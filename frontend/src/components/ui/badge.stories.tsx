@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Badge } from './badge'
 
 const meta = {
+  title: 'Primitives/Badge',
   component: Badge,
   tags: ['ai-generated'],
   args: { children: 'v1.4.2' },

@@ -1,0 +1,48 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+import { StatusPill } from '../../components/branded/status-pill'
+
+<Meta title="Foundations/Status" />
+
+# Status system
+
+Every domain state (stack, resource, release, health, addon, …) maps to one of
+five `StatusVariant`s via `statusVariant(domain, state)` in
+`src/components/branded/status-variant.ts`. Each variant is backed by a
+semantic token triplet (`--*`, `--*-bg`, `--*-border`). Never map states to
+colors ad hoc — add the mapping there.
+
+<div className="flex flex-col gap-3 my-6">
+  <div className="flex items-center gap-4">
+    <StatusPill variant="ready">Ready</StatusPill>
+    <span className="text-xs text-muted-foreground">`ready` — success tokens, pulsing dot (live state)</span>
+  </div>
+  <div className="flex items-center gap-4">
+    <StatusPill variant="pending">Provisioning</StatusPill>
+    <span className="text-xs text-muted-foreground">`pending` — warn tokens, pulsing dot (transitioning)</span>
+  </div>
+  <div className="flex items-center gap-4">
+    <StatusPill variant="error">Failed</StatusPill>
+    <span className="text-xs text-muted-foreground">`error` — danger tokens, static dot (terminal)</span>
+  </div>
+  <div className="flex items-center gap-4">
+    <StatusPill variant="info">Deploying</StatusPill>
+    <span className="text-xs text-muted-foreground">`info` — info tokens, pulsing dot</span>
+  </div>
+  <div className="flex items-center gap-4">
+    <StatusPill variant="neutral">Idle</StatusPill>
+    <span className="text-xs text-muted-foreground">`neutral` — muted ink, static dot (inert)</span>
+  </div>
+</div>
+
+## Example domain mappings
+
+| Domain | State | Variant |
+| --- | --- | --- |
+| release | `Pending`, `InProgress` | pending |
+| release | `Released` | ready |
+| release | `Failed` | error |
+| stack | `Ready` | ready |
+| stack | `Progressing`, `Deleting` | pending |
+| stack | `Failed`, `Degraded`, `Error` | error |
+| generic | anything unrecognized | info |
+| any | empty state | neutral |

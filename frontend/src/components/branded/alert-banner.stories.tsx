@@ -3,6 +3,7 @@ import { expect, fn } from 'storybook/test'
 import { AlertBanner } from './alert-banner'
 
 const meta = {
+  title: 'Branded/AlertBanner',
   component: AlertBanner,
   tags: ['ai-generated'],
   args: { children: 'Deployment failed: image pull backoff on web-1.' },

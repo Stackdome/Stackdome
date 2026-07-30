@@ -4,6 +4,7 @@ import { PageHeader } from './page-header'
 import { StatusPill } from './status-pill'
 
 const meta = {
+  title: 'Branded/PageHeader',
   component: PageHeader,
   tags: ['ai-generated'],
   args: { title: 'Stacks' },

@@ -4,6 +4,7 @@ import { Plus } from 'lucide-react'
 import { Button } from './button'
 
 const meta = {
+  title: 'Primitives/Button',
   component: Button,
   tags: ['ai-generated'],
   args: { children: 'Deploy stack' },

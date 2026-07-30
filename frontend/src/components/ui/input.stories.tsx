@@ -3,6 +3,7 @@ import { expect } from 'storybook/test'
 import { Input } from './input'
 
 const meta = {
+  title: 'Primitives/Input',
   component: Input,
   tags: ['ai-generated'],
   args: { placeholder: 'my-stack-name' },

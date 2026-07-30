@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { EmptyState } from './empty-state'
 
 const meta = {
+  title: 'Branded/EmptyState',
   component: EmptyState,
   tags: ['ai-generated'],
   args: { title: 'No stacks yet' },
