@@ -34,12 +34,16 @@ function configScalars(r: SnapResource): Record<string, string | undefined> {
 
 /** Revision keys the deploy-time pin resolver writes into snapshots. */
 const REVISION_KEYS = ["branch", "tag", "commit"] as const;
+type RevisionKey = (typeof REVISION_KEYS)[number];
 
-/** True when the resource's git source pins no revision — the resolver picks
- *  one at deploy time and records it in the snapshot. */
-export function gitUnpinned(r: SnapResource | undefined): boolean {
+/** Revision keys the resource's git source leaves unpinned. The resolver fills
+ *  each unpinned key into the snapshot at deploy time, so a value present only
+ *  on the baseline for such a key is a resolver fact, not drift — a spec
+ *  tracking a branch must not read as dirty from the resolved commit. */
+export function unpinnedRevisionKeys(r: SnapResource | undefined): RevisionKey[] {
   const git = r?.source?.git;
-  return !!git && !git.branch && !git.tag && !git.commit;
+  if (!git) return [];
+  return REVISION_KEYS.filter((k) => !git[k]);
 }
 
 /** Server-written fields — never user intent, excluded from the catch-all. */
@@ -48,12 +52,12 @@ const VOLUME_SERVER_FIELDS = ["id", "project_id", "status"] as const;
 
 const GENERIC_ROW: DiffRow = { key: "other configuration", kind: "changed" };
 
-function canonicalResource(r: SnapResource, dropRevisions: boolean): unknown {
+function canonicalResource(r: SnapResource, dropRevisions: RevisionKey[]): unknown {
   const out = { ...r } as Record<string, unknown>;
   for (const k of RESOURCE_SERVER_FIELDS) delete out[k];
-  if (dropRevisions && r.source?.git) {
+  if (dropRevisions.length && r.source?.git) {
     const git = { ...r.source.git } as Record<string, unknown>;
-    for (const k of REVISION_KEYS) delete git[k];
+    for (const k of dropRevisions) delete git[k];
     out.source = { ...r.source, git };
   }
   const env = r.execution_config?.environment_variables;
@@ -68,9 +72,9 @@ function canonicalResource(r: SnapResource, dropRevisions: boolean): unknown {
 
 /** Real config drift outside the projected scalar set. Both sides are
  *  canonicalized the same way, so resolver-written revisions on the baseline
- *  of an unpinned spec never count. */
+ *  of keys the spec leaves unpinned never count. */
 function resourceResidual(prev: SnapResource, cur: SnapResource): boolean {
-  const drop = gitUnpinned(cur);
+  const drop = unpinnedRevisionKeys(cur);
   return !deepEqual(canonicalResource(prev, drop), canonicalResource(cur, drop));
 }
 
@@ -94,11 +98,9 @@ function envMap(r: SnapResource): Record<string, string> {
 function configRows(prev: SnapResource | undefined, cur: SnapResource | undefined): DiffRow[] {
   const p = prev ? configScalars(prev) : {};
   const c = cur ? configScalars(cur) : {};
-  // `cur` is the user's spec side. When it pins no revision, the baseline's
-  // branch/commit are deploy-time resolver facts, not drift — drop them.
-  if (gitUnpinned(cur)) {
-    for (const k of REVISION_KEYS) delete p[k];
-  }
+  // `cur` is the user's spec side. Each revision key it leaves unpinned is a
+  // deploy-time resolver fact on the baseline, not drift — drop it.
+  for (const k of unpinnedRevisionKeys(cur)) delete p[k];
   const rows: DiffRow[] = [];
   for (const key of new Set([...Object.keys(p), ...Object.keys(c)])) {
     const from = p[key];
