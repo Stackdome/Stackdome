@@ -56,7 +56,8 @@ interface ViewInput {
 /**
  * A native EventSource failure (stream 404 after the job's TTL pruned it) never
  * moves `phase` — only `connectionStatus` drops. On an already-terminal build
- * that is expiry, not a connectivity blip. A build that died before its job was
+ * that is expiry; on a live one it is a real drop, which Retry can recover.
+ * A build that died before its job was
  * ever created leaves `phase` at "waiting" forever, so a terminal state there
  * ends the wait too.
  */
@@ -70,10 +71,9 @@ export function deriveBuildLogsView({
 
   const streamDead =
     phase === "error" || (phase === "streaming" && connectionStatus === "disconnected");
-  if (streamDead && buildDone) return "expired";
+  if (streamDead) return buildDone ? "expired" : "interrupted";
 
   if (phase === "waiting") return buildDone ? "endedWithoutLogs" : "waiting";
-  if (phase === "error") return "interrupted";
   if (hasLines) return "log";
   if (phase === "ended") return "noOutput";
   return "connecting";

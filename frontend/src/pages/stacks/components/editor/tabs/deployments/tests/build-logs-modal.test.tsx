@@ -100,6 +100,31 @@ describe("BuildLogsModal", () => {
     expect(screen.queryByRole("button", { name: /retry/i })).not.toBeInTheDocument();
   });
 
+  it("offers a retry when the stream dies while the build is still running", () => {
+    mockStream({
+      phase: "streaming",
+      connectionStatus: "disconnected",
+      build: buildWith(BuildPhase.Pending),
+    });
+    render(<BuildLogsModal {...props} />);
+    expect(screen.getByText(/Log stream interrupted/)).toBeInTheDocument();
+    expect(screen.queryByText(/Connecting to the build pod/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /retry/i }));
+    expect(retry).toHaveBeenCalled();
+  });
+
+  it("offers a retry when a running build's stream dies after emitting lines", () => {
+    mockStream({
+      phase: "streaming",
+      connectionStatus: "disconnected",
+      lines: ["l1"],
+      build: buildWith(BuildPhase.Pending),
+    });
+    render(<BuildLogsModal {...props} />);
+    expect(screen.getByText(/Log stream interrupted/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
   it("ends the wait when the build reached a terminal state before its job existed", () => {
     mockStream({ phase: "waiting", build: buildWith(BuildPhase.Failed) });
     render(<BuildLogsModal {...props} />);
@@ -134,6 +159,13 @@ describe("deriveBuildLogsView", () => {
   it("prefers expiry over a retry prompt once the build is terminal", () => {
     expect(deriveBuildLogsView({ ...input, phase: "error", buildDone: true })).toBe("expired");
     expect(deriveBuildLogsView({ ...input, phase: "error", buildDone: false })).toBe("interrupted");
+  });
+
+  it("treats a dropped connection on a live build as interrupted, never as connecting", () => {
+    const dropped = { ...input, connectionStatus: "disconnected" as const };
+    expect(deriveBuildLogsView(dropped)).toBe("interrupted");
+    expect(deriveBuildLogsView({ ...dropped, hasLines: true })).toBe("interrupted");
+    expect(deriveBuildLogsView({ ...dropped, buildDone: true })).toBe("expired");
   });
 
   it("keeps waiting only while the build is still live", () => {
