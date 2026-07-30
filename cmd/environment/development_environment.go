@@ -8,9 +8,11 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/controllers/clusterimageregistry"
+	clusterinfocontroller "github.com/Stackdome/stackdome/pkg/controllers/clusterinfo"
 	imagebuildcontroller "github.com/Stackdome/stackdome/pkg/controllers/imagebuild"
 	postgresaddoncontroller "github.com/Stackdome/stackdome/pkg/controllers/postgres_addon"
 	postgresbackupcontroller "github.com/Stackdome/stackdome/pkg/controllers/postgres_backup"
@@ -76,6 +78,7 @@ func (d *developmentEnvironment) Init(ctx context.Context) error {
 		d.injectClusterResourceServices,
 		d.initializeBaseResourceAccessPolicies,
 		d.startManagers,
+		d.bootstrapPlatformDefaults,
 	}
 
 	for _, step := range initializerSteps {
@@ -183,17 +186,26 @@ func (d *developmentEnvironment) initializeWorkerManager(ctx context.Context) er
 	})
 	d.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
+	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	previewConfigStore := pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	previewCommentService := services.NewPreviewCommentService(services.PreviewCommentServiceSpec{
+		ConfigStore:     previewConfigStore,
+		GitIntegrations: d.Services.GitIntegrationService,
+		Commenter:       githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
+		Logger:          d.Logger,
+	})
 	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
 		PreviewStackService: d.Services.PreviewStackService,
-		PreviewStackStore: pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
-			SessionFactory: d.DBSession,
-		}),
-		ConfigStore: pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
-			SessionFactory: d.DBSession,
-		}),
-		ReleaseService: d.Services.StackReleaseService,
-		StackService:   d.Services.StackService,
-		Env:            d.Name,
+		PreviewStackStore:   previewStackStore,
+		ConfigStore:         previewConfigStore,
+		ReleaseService:      d.Services.StackReleaseService,
+		StackService:        d.Services.StackService,
+		CommentService:      previewCommentService,
+		Env:                 d.Name,
 	})
 	d.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
@@ -208,6 +220,10 @@ func (d *developmentEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 
 	if err := d.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
+	}
+
+	if err := config.ValidatePlatformProvisioning(d.Config.PlatformCluster, d.BootstrapConfig.BaseDomain, d.BootstrapConfig.Email); err != nil {
+		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
 }
@@ -289,11 +305,13 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "image-build-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:             clusterID,
 					DBImageBuildService:   d.Services.ImageBuildService,
 					DBResourceService:     d.Services.StackResourceService,
 					GitIntegrationService: d.Services.GitIntegrationService,
 					ReleaseChecker:        d.Services.StackReleaseService,
 					EventRecorder:         d.Services.ReleaseEventRecorder,
+					StackService:          d.Services.StackService,
 				})
 			},
 			func(clusterID string) clustermanager.Controller {
@@ -313,6 +331,13 @@ func (d *developmentEnvironment) initializeClusterManager(ctx context.Context) e
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "postgres-backup-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresBackupService: d.Services.PostgresBackupService,
+				})
+			},
+			func(clusterID string) clustermanager.Controller {
+				return clusterinfocontroller.NewClusterInfoReconciler(clusterinfocontroller.ClusterInfoReconcilerSpec{
+					Log:            applogger.NewLoggerWithPrefix(ctx, "cluster-info-controller").SetLevel(d.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:      clusterID,
+					ClusterService: d.Services.ClusterService,
 				})
 			},
 		},
@@ -377,8 +402,16 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:         d.Logger,
 	})
 
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
+		SessionFactory: d.DBSession,
+		Logger:         d.Logger,
+		Permissions:    d.PermissionService,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		OrgRegistryDefaults:       d.BootstrapConfig.OrgRegistry,
 		StackQueryService:         d.Services.StackService,
 		SessionFactory:            d.DBSession,
 		ProjectService:            projectService,
@@ -414,13 +447,15 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Logger:            d.Logger,
 	})
 
+	gitIntegrationStore := pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
+		SessionFactory: d.DBSession,
+	})
+	gitInstallationStore := pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
+		SessionFactory: d.DBSession,
+	})
 	gitIntegrationService := services.NewGitIntegrationService(services.GitIntegrationServiceSpec{
-		Store: pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
-			SessionFactory: d.DBSession,
-		}),
-		InstallationStore: pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
-			SessionFactory: d.DBSession,
-		}),
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
 		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 			SessionFactory: d.DBSession,
 		}),
@@ -456,12 +491,6 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		Permissions:                 d.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           d.RefreshTokenStore,
-	})
-
-	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
-		SessionFactory: d.DBSession,
-		Logger:         d.Logger,
-		Permissions:    d.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -679,6 +708,22 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		SecretService:      secretService,
 		CredentialResolver: credentialResolver,
 		Permissions:        d.PermissionService,
+		Logger:             d.Logger,
+	})
+
+	previewWebhookService := services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
+		ConfigStore:       stackPreviewConfigStore,
+		PreviewStackStore: previewStackStore,
+		PreviewService:    previewStackService,
+		Logger:            d.Logger,
+	})
+
+	githubWebhookService := services.NewGitHubWebhookService(services.GitHubWebhookServiceSpec{
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
+		EncryptionService: encryptionService,
+		PreviewWebhook:    previewWebhookService,
+		Logger:            d.Logger,
 	})
 
 	d.Services = Services{
@@ -702,6 +747,7 @@ func (d *developmentEnvironment) loadServices(ctx context.Context) error {
 		CredentialResolver:          credentialResolver,
 		RegistryCredentialService:   registryCredentialService,
 		GitIntegrationService:       gitIntegrationService,
+		GitHubWebhookService:        githubWebhookService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
@@ -812,6 +858,21 @@ func (d *developmentEnvironment) startManagers(ctx context.Context) error {
 
 	d.Logger.Debugf("Starting worker manager")
 	return d.WorkerManager.Start(ctx)
+}
+
+func (d *developmentEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
+	svc := bootstrap.NewService(bootstrap.Spec{
+		OrganisationService:       d.Services.OrganisationService,
+		ClusterService:            d.Services.ClusterService,
+		OrganisationDomainService: d.Services.OrganisationDomainService,
+		BootstrapConfig:           d.BootstrapConfig,
+		ClusterConfig:             d.Config.PlatformCluster,
+		Logger:                    d.Logger,
+	})
+	if err := svc.Run(ctx); err != nil {
+		return fmt.Errorf("platform bootstrap failed: %w", err)
+	}
+	return nil
 }
 
 func (d *developmentEnvironment) Shutdown(ctx context.Context) error {

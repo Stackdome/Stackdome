@@ -200,4 +200,66 @@ describe("deriveGraph (connection projection)", () => {
     expect(dot("cache")).toBe("pending");
     expect(dot("ghost")).toBe("neutral"); // no state known
   });
+
+  it("collapses the derived depends_on edge when an authored connection covers the pair", () => {
+    // web has an env connection FROM api AND depends_on api — one relationship,
+    // so only the authored env edge renders.
+    const g = deriveGraph({
+      ...base,
+      resources: [
+        web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }], { depends_on: ["api"] }),
+        { name: "api" } as Partial<FormStackResourceData>,
+      ],
+    });
+    const pair = g.edges.filter((e) => e.source === "resource:api" && e.target === "resource:web");
+    expect(pair).toHaveLength(1);
+    expect(pair[0].data.kind).toBe(EDGE_KIND.env);
+    expect(pair[0].data.parallelCount).toBeUndefined();
+  });
+
+  it("annotates authored same-pair edges with index/count", () => {
+    // Mutually referencing env connections: web ← api and api ← web are both
+    // authored, so both survive and get parallel offsets.
+    const g = deriveGraph({
+      ...base,
+      resources: [
+        web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }]),
+        {
+          name: "api",
+          execution_config: {
+            environment_variables: [{ from: "resource", name: "WEB_URL", resourceName: "web", output: "url" }],
+          },
+        } as Partial<FormStackResourceData>,
+      ],
+    });
+    const pair = g.edges.filter((e) => [e.source, e.target].sort().join() === "resource:api,resource:web");
+    expect(pair).toHaveLength(2);
+    expect(pair.map((e) => e.data.parallelCount)).toEqual([2, 2]);
+    expect(pair.map((e) => e.data.parallelIndex).sort()).toEqual([0, 1]);
+  });
+
+  it("keeps an opposite-direction derived edge alongside an authored one", () => {
+    // Authored env edge api→web, derived depends_on web→api (opposite way).
+    // Different relationships — both survive and get parallel offsets.
+    const g = deriveGraph({
+      ...base,
+      resources: [
+        web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }]),
+        { name: "api", depends_on: ["web"] } as Partial<FormStackResourceData>,
+      ],
+    });
+    const pair = g.edges.filter((e) => [e.source, e.target].sort().join() === "resource:api,resource:web");
+    expect(pair).toHaveLength(2);
+    expect(pair.map((e) => e.data.parallelCount)).toEqual([2, 2]);
+  });
+
+  it("leaves singleton edges unannotated", () => {
+    const g = deriveGraph({
+      ...base,
+      resources: [web([{ from: "resource", name: "API_URL", resourceName: "api", output: "url" }]), { name: "api" } as Partial<FormStackResourceData>],
+    });
+    expect(g.edges).toHaveLength(1);
+    expect(g.edges[0].data.parallelCount).toBeUndefined();
+    expect(g.edges[0].data.parallelIndex).toBeUndefined();
+  });
 });

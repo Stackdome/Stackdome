@@ -31,7 +31,19 @@ export interface PresentationInput {
 export interface NodePresentation {
   kindLabel: string;
   glyph: GlyphKind;
+  /** Brand-icon registry key when the image maps to known software (see
+   *  `components/branded/brand-icons`); absent → generic Lucide glyph. */
+  brandSlug?: string;
+  /** First card line: `image[:tag]` (registry/org stripped), or "git build"/"service". */
   summary: string;
+  /** One entry per declared port: `port N · public|internal`. */
+  details: PortLine[];
+}
+
+export interface PortLine {
+  text: string;
+  port: number;
+  public: boolean;
 }
 
 /** Internal kind keys → their display metadata. */
@@ -47,14 +59,42 @@ const KIND_META: Record<KindKey, { label: string; glyph: GlyphKind }> = {
   service: { label: "Service", glyph: "service" },
 };
 
-/** Image-substring → kind. First match wins; order matters little (disjoint). */
+/** Image-substring → kind. First match wins; order matters little (disjoint).
+ *  `postgres(?!t)` keeps PostgREST (and friends) from reading as a database. */
 const IMAGE_KINDS: { match: RegExp; kind: KindKey }[] = [
   { match: /redis/, kind: "redis" },
-  { match: /postgres/, kind: "postgres" },
+  { match: /postgres(?!t)/, kind: "postgres" },
   { match: /mariadb|mysql/, kind: "mysql" },
   { match: /mongo/, kind: "mongo" },
   { match: /minio/, kind: "object" },
 ];
+
+/** Image-substring → brand-icon slug. First match wins — keep more specific
+ *  patterns first (otel images come from grafana/, so otel precedes grafana).
+ *  Expand alongside `BRAND_ICONS` as the icon set grows. */
+const BRAND_MATCHERS: { match: RegExp; slug: string }[] = [
+  { match: /otel|opentelemetry/, slug: "opentelemetry" },
+  { match: /tooljet/, slug: "tooljet" },
+  { match: /grafana/, slug: "grafana" },
+  { match: /redis/, slug: "redis" },
+  { match: /postgrest/, slug: "postgrest" },
+  { match: /postgres(?!t)/, slug: "postgres" },
+  { match: /mariadb/, slug: "mariadb" },
+  { match: /mysql/, slug: "mysql" },
+  { match: /mongo/, slug: "mongo" },
+  { match: /minio/, slug: "minio" },
+  { match: /clickhouse/, slug: "clickhouse" },
+  { match: /elasticsearch/, slug: "elasticsearch" },
+  { match: /couchdb/, slug: "couchdb" },
+  { match: /influxdb/, slug: "influxdb" },
+  { match: /mssql/, slug: "mssql" },
+];
+
+function detectBrandSlug(image: string): string | undefined {
+  const s = image.toLowerCase();
+  for (const { match, slug } of BRAND_MATCHERS) if (match.test(s)) return slug;
+  return undefined;
+}
 
 /** Split "registry/org/name:tag" into its base name and tag. */
 function imageParts(image: string): { base: string; tag?: string } {
@@ -65,12 +105,6 @@ function imageParts(image: string): { base: string; tag?: string } {
   return { base: afterSlash };
 }
 
-/** The port to surface: a public one wins, else the first declared. */
-function primaryPort(ports?: PresentationPort[]): PresentationPort | undefined {
-  if (!ports?.length) return undefined;
-  return ports.find((p) => p.exposedToPublic) ?? ports[0];
-}
-
 function detectKind(image: string, isPublic: boolean): KindKey {
   const s = image.toLowerCase();
   for (const { match, kind } of IMAGE_KINDS) if (match.test(s)) return kind;
@@ -79,38 +113,39 @@ function detectKind(image: string, isPublic: boolean): KindKey {
   return isPublic ? "web" : "service";
 }
 
-function buildSummary(
-  kind: KindKey,
-  image: string,
-  hasBuild: boolean | undefined,
-  port: PresentationPort | undefined,
-): string {
-  if (kind === "redis") return `${image || "redis"} · in-memory`;
-  if (kind === "object") return `${image || "minio"} · S3-compatible`;
-  if (kind === "web") {
-    const base = imageParts(image).base || (hasBuild ? "git build" : "service");
-    const num = port?.number;
-    const access = port?.exposedToPublic ? "public" : "internal";
-    return num ? `${base} · :${num} · ${access}` : base;
-  }
-  // postgres / mysql / mongo / generic service
-  if (image) return image;
-  if (hasBuild) return "git build";
-  return "service";
+/** First card line: `image[:tag]` (registry/org stripped); no image → "git build"/"service". */
+function buildSummary(image: string, hasBuild: boolean | undefined): string {
+  const { base, tag } = imageParts(image);
+  return base ? (tag ? `${base}:${tag}` : base) : hasBuild ? "git build" : "service";
+}
+
+/** Card lines the fixed node box can hold beyond the summary (see NODE_HEIGHT). */
+/** One entry per declared port, in declared order. The card renders these as
+ *  a single compact `ports 80 · 89 · 23` line (numbers only; `text` survives
+ *  as the per-port tooltip), so no overflow fold is needed. */
+function buildPortLines(ports: PresentationPort[] | undefined): PortLine[] {
+  return (ports ?? [])
+    .filter((p): p is PresentationPort & { number: number } => p.number != null)
+    .map((p) => ({
+      text: `port ${p.number} · ${p.exposedToPublic ? "public" : "internal"}`,
+      port: p.number,
+      public: !!p.exposedToPublic,
+    }));
 }
 
 export function nodePresentation(input: PresentationInput): NodePresentation {
   if (input.isAddon) {
-    return { kindLabel: "Postgres", glyph: "postgres", summary: "managed postgres" };
+    return { kindLabel: "Postgres", glyph: "postgres", brandSlug: "postgres", summary: "managed postgres", details: [] };
   }
   const image = (input.image ?? "").trim();
-  const port = primaryPort(input.ports);
   const isPublic = !!input.ports?.some((p) => p.exposedToPublic);
   const kind = detectKind(image, isPublic);
   const meta = KIND_META[kind];
   return {
     kindLabel: meta.label,
     glyph: meta.glyph,
-    summary: buildSummary(kind, image, input.hasBuild, port),
+    brandSlug: detectBrandSlug(image),
+    summary: buildSummary(image, input.hasBuild),
+    details: buildPortLines(input.ports),
   };
 }

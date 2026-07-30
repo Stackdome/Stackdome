@@ -54,4 +54,12 @@ describe("layoutGraph", () => {
   it("handles an empty graph", () => {
     expect(layoutGraph({ nodes: [], edges: [] })).toEqual({ nodes: [], edges: [] });
   });
+
+  it("ranks consumers above providers by default (BT)", () => {
+    // Edge source=provider (web) → target=consumer. Under BT the TARGET
+    // ends up at a smaller y (higher on screen) than the source.
+    const out = layoutGraph(graph);
+    const yOf = (id: string) => out.nodes.find((n) => n.id === id)!.position.y;
+    expect(yOf("addon:a1")).toBeLessThan(yOf("resource:web"));
+  });
 });

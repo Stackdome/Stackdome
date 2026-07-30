@@ -34,7 +34,7 @@ func TestPresentStackIncludesConnections(t *testing.T) {
 							Name: "REDIS_URL",
 						},
 						Value: models.ValueRef{
-							Output: "url.http",
+							Output: models.OutputNameURL,
 						},
 					},
 				},
@@ -57,8 +57,8 @@ func TestPresentStackIncludesConnections(t *testing.T) {
 	if out.Spec.Connections[0].From.GetId() != "pg-1" {
 		t.Fatalf("expected from pg-1, got %q", out.Spec.Connections[0].From.GetId())
 	}
-	if out.Spec.Connections[0].Mappings[0].Value.GetOutput() != "url.http" {
-		t.Fatalf("expected mapping output url.http, got %q", out.Spec.Connections[0].Mappings[0].Value.GetOutput())
+	if out.Spec.Connections[0].Mappings[0].Value.GetOutput() != models.OutputNameURL {
+		t.Fatalf("expected mapping output %s, got %q", models.OutputNameURL, out.Spec.Connections[0].Mappings[0].Value.GetOutput())
 	}
 	config := out.Spec.Connections[0].GetConfig()
 	if config.PostgresEnvConfig == nil {
@@ -84,7 +84,7 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 		*openapi.NewValueRef(),
 	)
 	mapping.Target.SetName("REDIS_URL")
-	mapping.Value.SetOutput("url.http")
+	mapping.Value.SetOutput(models.OutputNameURL)
 	conn.SetMappings([]openapi.ConnectionMapping{*mapping})
 	db := "app"
 	scope := "owner"
@@ -110,8 +110,8 @@ func TestConvertStackIncludesConnections(t *testing.T) {
 	if out.Connections[0].From.Name != "redis" {
 		t.Fatalf("expected from redis, got %q", out.Connections[0].From.Name)
 	}
-	if out.Connections[0].Mappings[0].Value.Output != "url.http" {
-		t.Fatalf("expected mapping output url.http, got %q", out.Connections[0].Mappings[0].Value.Output)
+	if out.Connections[0].Mappings[0].Value.Output != models.OutputNameURL {
+		t.Fatalf("expected mapping output %s, got %q", models.OutputNameURL, out.Connections[0].Mappings[0].Value.Output)
 	}
 	if out.Connections[0].Config["database"] != "app" {
 		t.Fatalf("expected connection config database app, got %#v", out.Connections[0].Config["database"])
@@ -160,7 +160,7 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 				Ports:       models.Ports{{Name: "http", Number: 8080, Protocol: "http", ExposedToPublic: true}},
 				ExecutionConfig: &models.ExecutionConfig{
 					Env: []models.EnvVar{
-						{Name: "PUBLIC_URL", SelfOutput: "public.http.url"},
+						{Name: "PUBLIC_URL", SelfOutput: models.OutputNamePublicURL},
 					},
 				},
 			},
@@ -172,7 +172,7 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 		t.Fatalf("expected one presented env var")
 	}
 	presentedEnv := presented.Spec.StackResources[0].GetExecutionConfig().EnvironmentVariables[0]
-	if presentedEnv.GetSelfOutput() != "public.http.url" {
+	if presentedEnv.GetSelfOutput() != models.OutputNamePublicURL {
 		t.Fatalf("expected presented self_output, got %q", presentedEnv.GetSelfOutput())
 	}
 
@@ -188,14 +188,14 @@ func TestPresentAndConvertStackPreservesEnvVarSelfOutput(t *testing.T) {
 				EnvironmentVariables: []openapi.EnvVar{
 					{
 						Name:       "PUBLIC_URL",
-						SelfOutput: openapi.PtrString("public.http.url"),
+						SelfOutput: openapi.PtrString(models.OutputNamePublicURL),
 					},
 				},
 			},
 		},
 	})
 	converted := presenters.ConvertStack(openapi.NewStack("demo", *spec))
-	if converted.StackResources[0].ExecutionConfig.Env[0].SelfOutput != "public.http.url" {
+	if converted.StackResources[0].ExecutionConfig.Env[0].SelfOutput != models.OutputNamePublicURL {
 		t.Fatalf("expected converted self_output, got %q", converted.StackResources[0].ExecutionConfig.Env[0].SelfOutput)
 	}
 }

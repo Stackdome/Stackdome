@@ -48,6 +48,7 @@ describe("ConfigurePhase", () => {
         git_repository: { repo_url: "https://github.com/acme/webapp.git", base_branch: "main" },
         stackfile_path: "stackfile.yaml",
         max_active_previews: 10,
+        env: [],
       });
       expect(onCreated).toHaveBeenCalledWith("c1");
     });
@@ -93,6 +94,46 @@ describe("ConfigurePhase", () => {
 
     await userEvent.type(nameInput, "webapp");
     expect(screen.queryByText(/name is required/i)).not.toBeInTheDocument();
+  });
+
+  it("includes env vars in the payload, stripping empty-named rows", async () => {
+    (createPreviewConfig as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "c1" });
+    render(<ConfigurePhase repo={repo} onCreated={vi.fn()} onBack={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+
+    const names = screen.getAllByLabelText(/^variable name$/i);
+    const values = screen.getAllByLabelText(/^variable value$/i);
+    await userEvent.type(names[0], "FOO");
+    await userEvent.type(values[0], "bar");
+    // Second row is left blank and should be stripped from the payload.
+
+    await userEvent.click(screen.getByRole("button", { name: /enable previews/i }));
+
+    await waitFor(() => {
+      expect(createPreviewConfig).toHaveBeenCalledWith(
+        "org1",
+        "default",
+        expect.objectContaining({ env: [{ name: "FOO", value: "bar" }] }),
+      );
+    });
+  });
+
+  it("shows a validation error and blocks submit on a duplicate variable name", async () => {
+    render(<ConfigurePhase repo={repo} onCreated={vi.fn()} onBack={() => {}} />);
+
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+    await userEvent.click(screen.getByRole("button", { name: /add variable/i }));
+
+    const names = screen.getAllByLabelText(/^variable name$/i);
+    await userEvent.type(names[0], "FOO");
+    await userEvent.type(names[1], "FOO");
+
+    await userEvent.click(screen.getByRole("button", { name: /enable previews/i }));
+
+    expect(await screen.findByText(/duplicate variable name/i)).toBeInTheDocument();
+    expect(createPreviewConfig).not.toHaveBeenCalled();
   });
 
   it("shows an inline error on 409", async () => {

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   listGitIntegrations,
-  searchRepositories,
+  listRepositories,
   getRepository,
   type GitIntegration,
   type GitRepository,
@@ -85,32 +85,29 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
     void loadIntegrations();
   }, [loadIntegrations]);
 
-  // Debounced repo search — only meaningful for GitHub App integrations.
+  // Repos load once per integration; the query filters them client-side.
   useEffect(() => {
     if (tab !== "provider" || selected?.type !== GIT_INTEGRATION_TYPE_GITHUB_APP) return;
     const orgId = getCurrentOrganizationId();
     if (!orgId || !selected.id) return;
     let cancelled = false;
     setSearching(true);
-    const t = setTimeout(() => {
-      searchRepositories(orgId, selected.id!, { query: query || undefined })
-        .then((page) => {
-          if (cancelled) return;
-          setRepos(page.items ?? []);
-          setError(null);
-        })
-        .catch((e) => {
-          if (!cancelled) setError(getErrorMessage(e));
-        })
-        .finally(() => {
-          if (!cancelled) setSearching(false);
-        });
-    }, 300);
+    listRepositories(orgId, selected.id!)
+      .then((page) => {
+        if (cancelled) return;
+        setRepos(page.items ?? []);
+        setError(null);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(getErrorMessage(e));
+      })
+      .finally(() => {
+        if (!cancelled) setSearching(false);
+      });
     return () => {
       cancelled = true;
-      clearTimeout(t);
     };
-  }, [tab, selected?.id, selected?.type, query]);
+  }, [tab, selected?.id, selected?.type]);
 
   const pickRepo = async (repo: GitRepository) => {
     const orgId = getCurrentOrganizationId();
@@ -183,6 +180,11 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
     hostUrl.trim() !== "" &&
     hostOf(hostUrl.trim()) !== (selected.host ?? "").toLowerCase();
 
+  const needle = query.trim().toLowerCase();
+  const filteredRepos = needle
+    ? repos.filter((r) => r.full_name?.toLowerCase().includes(needle))
+    : repos;
+
   return (
     <div className="space-y-4">
       <div role="tablist" className="flex gap-6 border-b border-border">
@@ -249,7 +251,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
             <>
               {searching && <p className="text-sm text-muted-foreground">Searching…</p>}
               <ul className="divide-y rounded-md border">
-                {repos.map((r) => (
+                {filteredRepos.map((r) => (
                   <li key={r.full_name}>
                     <button
                       type="button"
@@ -269,7 +271,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
                     </button>
                   </li>
                 ))}
-                {!searching && repos.length === 0 && (
+                {!searching && filteredRepos.length === 0 && (
                   <li className="space-y-2 px-3 py-6 text-center text-sm text-muted-foreground">
                     <p>No repositories found.</p>
                     {configureUrl && (

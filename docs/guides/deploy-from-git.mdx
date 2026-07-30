@@ -1,0 +1,221 @@
+---
+title: "Deploy from git"
+description: "Connect a git provider and build your repository into a running resource."
+---
+
+A **resource** gets its container image one of two ways: you point it at an image someone else already published, or you point it at a repository and let Stackdome build one. This page is about the second path — connecting a git provider once, then telling a resource which repository and which revision to build.
+
+Two things have to be true before a git build can work. Stackdome needs credentials that can clone your repository, and the **cluster** the **stack** runs on needs somewhere to put the image it produces. The first half of this page sets up the credentials; the second half wires them into a resource's **source**.
+
+## Prerequisites
+
+- **You are an organization admin.** Creating a git provider requires create permission on git integrations. Members can select repositories that are already connected, but cannot connect a new provider.
+- **A GitHub account that can install an app** on the organization or user that owns the repository. GitHub asks for this at install time, not at app-creation time — you can create the app and still be unable to install it where the code lives.
+- **`SERVER_EXTERNAL_URL` is set on the hub.** GitHub has to reach your install with a browser redirect and with webhook deliveries, so the GitHub App flow refuses to start without it: `SERVER_EXTERNAL_URL is not configured; the GitHub App flow requires an externally reachable hub URL`. See [Configuration](/self-host/configuration).
+- **The cluster has an image registry.** A build has to push what it produces. See [The build](#the-build) below and [Add a cluster](/self-host/add-a-cluster).
+
+## Connect a provider
+
+The sidebar lists this under **INTEGRATIONS → Git Providers**. The page itself is headed **Git providers**, and the panel of what you have already connected is **CONNECTED PROVIDERS**.
+
+![The Git providers page in the Stackdome dashboard, showing the page heading and the Connected providers panel with two GitHub entries for github.com — one badged Access token and reading Token-scoped access to github.com, and one badged GitHub App and reading 2 installations](/images/git-integrations-list.png)
+
+Each row tells you three things: how it authenticates (**GitHub App** or **Access token**), what it can reach (`N installations` with `all repositories` or `selected repositories`, or `Token-scoped access to <host>`), and whether it works.
+
+| Status | What it means |
+| --- | --- |
+| **Connected** | Credentials are stored and the provider is usable as a source. |
+| **Needs setup** | A GitHub App exists but is not installed on any account, so Stackdome cannot see repositories yet. The row offers **Finish install →**. |
+| **Needs attention** | No credentials are stored for this provider, so clones will fail. The row offers **Update credentials →**. |
+
+Choose **Connect provider** to start. The dialog runs a three-step stepper — **PROVIDER**, **CONNECT**, **DONE**.
+
+<Steps>
+  <Step title="Pick where your code lives">
+    The first step asks *"Where does your code live?"* and offers five tiles: **GitHub** (*"App install or access token"*), **GitLab**, **Bitbucket**, **Gitea**, and **Other** — the last four all *"Access token"*.
+
+    ![The Connect provider dialog on its first step, asking Where does your code live and offering GitHub, GitLab, Bitbucket, Gitea and Other tiles](/images/git-wizard-step1.png)
+  </Step>
+  <Step title="Choose how to authenticate">
+    Only GitHub gets a choice here. Choosing GitHub opens **Connect GitHub** with two options: **Install GitHub App** (marked **RECOMMENDED**) and **Use an access token**. Every other provider goes straight to the token form.
+
+    ![The Connect GitHub step offering Install GitHub App, marked Recommended but greyed out with the note Already connected, and Use an access token](/images/git-wizard-connect-github.png)
+
+    The screenshot above is from an install that already has an app, which is why the recommended option is greyed out — see the note at the end of this section.
+  </Step>
+  <Step title="Finish and close">
+    The last step confirms **GitHub App installed** or *"&lt;Provider&gt; connected"*. Choose **Done**.
+  </Step>
+</Steps>
+
+### The GitHub App path
+
+Prefer this one. It gives per-repository access you manage on GitHub, it delivers webhooks, and there is no token to rotate.
+
+Choosing **Install GitHub App** opens a popup and posts an app *manifest* to GitHub's app-creation page. You are not filling that page in — Stackdome has already described the app it wants, and GitHub is showing it to you for approval. This is what it asks for:
+
+| Manifest field | Value |
+| --- | --- |
+| Name | `stackdome-<your-org-slug>`, editable on GitHub. App names are globally unique, so the slug is truncated to fit GitHub's limit. |
+| Homepage URL | Your hub's `SERVER_EXTERNAL_URL`. |
+| Webhook URL | `<hub>/api/v1/webhooks/github` |
+| Redirect URL | `<hub>/api/v1/git-integrations/github/manifest/callback` |
+| Permissions | Contents **read**, Metadata **read**, Pull requests **write**. |
+| Subscribed events | `push` and `pull_request`. |
+
+Contents and Metadata read are what cloning needs. Pull requests write is what lets Stackdome comment on a pull request about its [preview environment](/guides/preview-environments) — it never writes to your code.
+
+When you confirm creation, GitHub redirects back to the callback and Stackdome exchanges a one-time code for the app's credentials — its app ID, private key, webhook secret and client credentials — and stores them encrypted. The one-time state that ties the redirect to your session is valid for **15 minutes**; take longer and you start over.
+
+<Warning>
+Creating the app is not the same as installing it. Until you install the app on an account, Stackdome holds credentials for an app that can see nothing, and the provider row reads **Needs setup**: *"The app is created but not installed on any account yet, so Stackdome can't see your repositories."* Follow **Finish install →** to GitHub and choose which repositories to grant.
+</Warning>
+
+While it waits, the wizard shows a checklist — *"Opening GitHub authorization…"*, *"Authorizing the installation…"*, *"Fetching accessible repositories…"* — with a **Check again** button. It polls every five seconds for up to about three and a half minutes, then gives up with *"Timed out waiting for the GitHub App installation."* **Check again** re-lists installations directly from GitHub, which is the escape hatch when a webhook delivery went missing. If the popup never opened you get *"Popup blocked — allow popups for this site and try again."*, and any other failure shows **Couldn't connect to GitHub** with a **Retry**.
+
+<Note>
+**One GitHub App per organization.** A second attempt is rejected with `409 a GitHub App is already installed for this organisation`, and the wizard greys the option out with *"Already connected. Manage installations from the integration card."* To reach more repositories, add another **installation** of the existing app from the row's **Manage on GitHub** rather than creating a second app.
+</Note>
+
+### The access-token path
+
+Use this for GitLab, Bitbucket, Gitea, anything self-hosted, or GitHub when you would rather not install an app. The form is the same for every provider, and the dialog is explicit about what happens to what you paste: *"Stackdome stores the credentials encrypted and uses them only for clones."*
+
+| Field | Notes |
+| --- | --- |
+| **Host** | Required. Prefilled for the known providers — `github.com`, `gitlab.com`, `bitbucket.org`. For self-hosted, the bare hostname, for example `gitea.example.com`. Empty is rejected with `Host is required.` The host cannot be changed later. |
+| **Username** | Optional. *"Required for providers using basic auth (e.g. Bitbucket app passwords)."* Leave it blank and the token is sent as a bearer token; fill it in and the pair is sent as basic auth. |
+| **Access token** | Required, and masked as you type. Empty is rejected with `Access token is required.` |
+
+What kind of token each provider wants:
+
+| Provider | Token |
+| --- | --- |
+| GitHub | A fine-grained personal access token with repository read access. |
+| GitLab | A project or personal access token with `read_repository` scope. |
+| Bitbucket | An app password with repository read permission — and fill in **Username**, because Bitbucket app passwords require basic auth. |
+| Gitea | An access token with `read:repository` scope. |
+| Other | Any git host reachable over HTTPS, with token or basic auth. |
+
+Choose **Connect**. If the credentials are refused you stay on the form with **Couldn't verify the token** and the reason underneath.
+
+<Warning>
+Never paste a token anywhere it will be captured — a screenshot, a ticket, a chat message. Stackdome encrypts it at rest and never displays it again; the only way to change it is to replace it wholesale through **Update credentials**.
+</Warning>
+
+## Verify and maintain a provider
+
+Each row's **⋯** menu holds the actions available for that kind of provider.
+
+| Action | Available on |
+| --- | --- |
+| **Verify repository access** | Access-token providers only. |
+| **Update credentials** | Access-token providers only. Rotates the token; the host stays fixed. |
+| **Manage on GitHub** | GitHub App providers only. Opens the app's installation page on GitHub. |
+| **Remove integration** | Both. Confirms with *"Remove this integration?"* — *"Repositories using this integration lose access for clones."* |
+
+**Verify repository access** is the cheapest way to find out whether a token actually works, before a build depends on it. It opens a dialog — *"Confirms the &lt;host&gt; integration can access a repository."* — with one field, **Repository URL**, showing `https://github.com/acme/webapp` as a hint. Stackdome then tries a real access check against that repository.
+
+- Success is a **Repository access verified** toast.
+- Failure is a **Couldn't verify repository access** toast carrying the reason, most often `verification failed for '<url>': <what the provider said>`.
+- A URL on the wrong host is rejected before anything is attempted: `repository host 'gitlab.com' does not match integration host 'github.com'`.
+- Anything that is not an `http(s)` URL is caught in the form: *"Enter a valid http(s) URL (e.g. https://github.com/acme/webapp)."*
+
+There is no verify action for a GitHub App, and the API rejects one with `only git_credentials integrations can be verified directly`. That is deliberate rather than missing: an app's access runs through short-lived per-installation tokens instead of stored credentials, so there is nothing static to test. Its equivalent check is the repository picker in the next section — if your repository appears in that list, the app can reach it.
+
+## Point a resource at a repository
+
+Open the stack, go to the **Architecture** tab, and click the resource's node on **the canvas** to open **the drawer**. Everything below lives in the drawer's **SOURCE** section.
+
+![The resource drawer's Source section, showing the Build from toggle set to Git repository, a Repository field holding a selected repository, and the Revision select open with its four choices — Default branch, Branch, Commit and Tag — above a required Branch name field](/images/git-revision-selector.png)
+
+<Steps>
+  <Step title="Set Build from to Git repository">
+    **Build from** is a two-way toggle: **Container image** or **Git repository**. A source can only be one of them, so switching hides the other's fields — but the values you had are kept, and switching back restores them.
+  </Step>
+  <Step title="Choose the repository">
+    **Repository** is required. It is a combobox, not a plain text box: it reads *"Select repository or enter URL"* until something is chosen, and opening it gives you a searchable list of repositories fetched from your connected providers (*"Search repositories or paste a URL…"*). When more than one usable provider is connected, an **Integration** select appears so you can say which one to list from.
+
+    Picking from the list is the better move. It records **which provider the repository came from**, so the build gets the right credentials without guessing. If the list comes up empty (*"No repositories found."*) you can still fall back to a literal URL with the **Use "…" as repository URL** item — but a URL entered by hand carries no provider with it.
+  </Step>
+  <Step title="Choose the revision">
+    **Revision** is a select with exactly four choices: **Default branch**, **Branch**, **Commit**, and **Tag**. Choosing anything other than **Default branch** adds a second required field beneath it — **Branch name**, **Commit hash**, or **Tag name**. Leave that blank and validation stops you: *"Enter a value for the selected revision, or clear the revision type."*
+  </Step>
+  <Step title="Apply the change">
+    Editing the drawer builds **a draft** — the drawer header counts your pending edits and the footer reads **Apply 1 change**. Nothing is built until the draft is applied and the stack is deployed.
+  </Step>
+</Steps>
+
+Which revision kind to use:
+
+| Revision | Use it when |
+| --- | --- |
+| **Default branch** | You do not want to think about it. Each deploy takes whatever the repository's default branch points at. |
+| **Branch** | You deploy a line of development — `main`, `develop`, a release branch. Each deploy resolves the branch to its current tip; the deploy after that may resolve to something newer. |
+| **Tag** | You deploy released versions and want the deployed thing named. A tag can be moved on the remote, so it is a convention rather than a guarantee. |
+| **Commit** | You want the image to be reproducible, full stop. A commit hash cannot drift. Pin here for anything you need to redeploy identically later, and for rollbacks. |
+
+The trade-off is only about drift. **Branch** and **Default branch** let a redeploy pick up code you did not intend to ship; **Commit** cannot, but you have to change the value to ship anything new.
+
+### Build options
+
+The drawer's **Advanced** disclosure — labelled *"build & push"* — holds the three fields most repositories never need to touch.
+
+| Field | Default | Notes |
+| --- | --- | --- |
+| **Dockerfile path** | `Dockerfile` | *"Relative to the build context."* Clearing it returns it to `Dockerfile`. |
+| **Build context** | `.` | *"Directory passed to the image build."* Set this for a monorepo, so the build sees only the subdirectory it needs. |
+| **Push registry** | blank | *"Blank uses the internal cluster registry."* Set it only to push somewhere else you have credentials for. |
+
+## The build
+
+When you deploy, Stackdome does not build anything itself. It writes the build request onto the resource's custom resource on the target cluster, and the `stackdome-agent` there clones the repository, builds the image, and pushes it. The resource's node on the canvas is badged `git build` while this is how it gets its image.
+
+The push destination is the point that catches people out. By default it is the **cluster's own image registry**, under a path derived from the organization, the stack, and the resource. That is why a cluster needs a registry, and why a cluster registered without one can only run resources that reference an image you host somewhere else. If you left **Enable Image Registry** off, see [Add a cluster](/self-host/add-a-cluster).
+
+You can watch it on the stack's **Deployments** tab. Each release in the deploy timeline shows **Build**, **Deploy** and **Ready** as separate phases, and records the revision it actually resolved — a release built from a branch names the commit it landed on, so you always know what is running even when the source said `main`.
+
+## Pushing to git does not deploy
+
+**There is no auto-deploy on push, and no setting to turn one on.** Deploying a stack is something you ask for: the timeline labels a release you started **Manual deploy**, and a rollback **Rollback to #2**. The one release Stackdome starts without being asked is a preview environment's — see the end of this section.
+
+The GitHub App does subscribe to `push` — the manifest asks for it — so deliveries do arrive at `/api/v1/webhooks/github`. The handler then drops them. Only two event kinds are acted on:
+
+| Event | What Stackdome does |
+| --- | --- |
+| `installation` | Tracks the install: `created` and `unsuspend` record the installation, `deleted` and `suspend` remove it. A suspended installation is never used to mint a token. |
+| `pull_request` | Drives [preview environments](/guides/preview-environments). Pull requests from forks are dropped. |
+| `push` | Nothing. It is accepted, logged, and ignored. |
+
+So a commit to the branch a resource tracks changes nothing on its own. The next deploy you trigger will pick it up, because a branch is resolved at deploy time — but the deploy is yours to start.
+
+**One case does rebuild by itself.** Pushing to the branch of an *open pull request* reaches Stackdome as a `pull_request` `synchronize` event, not as a `push`, so it is handled: the pull request's preview is rebuilt at the new head commit. Two conditions gate that, and failing either drops the delivery silently — the repository must have [preview environments](/guides/preview-environments) enabled, and the pull request's **base branch** must be the one that preview configuration targets. A pull request opened against any other base branch is ignored no matter how often you push to it. Your stack is untouched either way — an ordinary branch push, on a branch with no open pull request, still does nothing.
+
+Every webhook delivery is HMAC-verified against that provider's webhook secret before anything happens, and a bad signature is refused.
+
+## Troubleshooting
+
+**Build progress and failures are release events.** Open the stack's **Deployments** tab and read the activity stream for the release. The wording is predictable:
+
+| Event | Means |
+| --- | --- |
+| `Building <resource>` | The build started. |
+| `Build succeeded for <resource>` | An image was pushed. |
+| `Build attempt failed for <resource> (will retry): <detail>` | One attempt failed and the build is still retrying. Not terminal — wait. |
+| `Build failed for <resource>: <detail>` | The build gave up. This is the one to act on. |
+
+The detail on a failure carries the reason and message from the builder, plus its exit code and how many times it restarted. The build itself runs on the cluster, so its complete output lives there; the dashboard surfaces the failure reason rather than the whole log.
+
+Common causes, in the order worth checking:
+
+- **The repository was entered as a URL instead of picked.** A hand-typed URL carries no provider, so the build has no credentials for a private repository. Reopen the drawer and select it from the list.
+- **The provider lost access.** Check the row on **Git Providers**. **Needs attention** means no stored credentials. **Needs setup** means an app that was never installed. For a GitHub App, an installation that was removed or suspended on GitHub shows up as a token-minting failure on the build rather than on the row — **Check again** or **Manage on GitHub** will tell you which installations are actually live.
+- **The revision does not exist.** A **Branch name**, **Tag name** or **Commit hash** that was renamed, deleted or force-pushed away fails at clone time.
+- **No `Dockerfile` where the build looked.** **Dockerfile path** is relative to **Build context**, not to the repository root. In a monorepo, get the context right first.
+- **The cluster has no registry.** The build has nowhere to push. See [Add a cluster](/self-host/add-a-cluster).
+
+<Warning>
+**Builds are not capped.** Stackdome does not limit how many builds run at once — every resource that needs one gets one, immediately. Image builds are CPU-hungry, so on a single-node cluster a handful of simultaneous builds can saturate the node and push every one of them toward its timeout, including builds for stacks you were not touching. Stagger large deploys.
+
+Do not confuse this with the limit that does exist. [Preview environments](/guides/preview-environments) cap how many previews may be **active at one time**, and a pull request that would exceed it is skipped rather than queued. That bounds how many previews you accumulate; it does not bound how many builds run concurrently, and nothing bounds the builds your own deploys start.
+</Warning>

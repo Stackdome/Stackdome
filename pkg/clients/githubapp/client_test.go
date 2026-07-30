@@ -175,7 +175,7 @@ func TestMintInstallationToken(t *testing.T) {
 	}
 }
 
-func TestListInstallationReposFiltersByQuery(t *testing.T) {
+func TestListInstallationReposReturnsPage(t *testing.T) {
 	creds, _ := testAppCredentials(t)
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -204,12 +204,15 @@ func TestListInstallationReposFiltersByQuery(t *testing.T) {
 	defer srv.Close()
 
 	client := NewClient(ClientSpec{BaseURL: srv.URL})
-	page, err := client.ListInstallationRepos(context.Background(), creds, 77, "api", 1)
+	page, err := client.ListInstallationRepos(context.Background(), creds, 77, 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(page.Repos) != 1 || page.Repos[0].FullName != "acme/api" || !page.Repos[0].Private {
+	if len(page.Repos) != 2 || page.Repos[0].FullName != "acme/api" || !page.Repos[0].Private {
 		t.Fatalf("unexpected repos %+v", page.Repos)
+	}
+	if page.Repos[1].FullName != "acme/web" {
+		t.Fatalf("unexpected second repo %+v", page.Repos)
 	}
 	if page.TotalCount != 2 || page.HasNext {
 		t.Fatalf("unexpected paging %+v", page)

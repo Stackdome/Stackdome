@@ -20,6 +20,8 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//go:generate mockgen -destination=../mocks/mock_user_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services UserService
+
 type UserService interface {
 	Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError)
 	GetUserFromContext(ctx context.Context) (*models.User, []*models.ProjectMembership, *errors.ServiceError)

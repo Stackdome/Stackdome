@@ -17,6 +17,14 @@ export type FormEnvRow =
       credField?: AddonOutputField;
     }
   | { from: "resource"; name: string; resourceName: string; output: string }
+  | {
+      from: "resourceTemplate";
+      name: string;
+      resourceName: string;
+      template: string;
+      /** Template key → output name on the source resource. */
+      values: Record<string, string>;
+    }
   | { from: "self"; name: string; selfOutput: string };
 
 const envMapping = (name: string, output: string): ConnectionMapping => ({
@@ -90,6 +98,25 @@ export function splitEnvRows(
         g.mappings.push(envMapping(row.name, row.output));
         break;
       }
+      case "resourceTemplate": {
+        if (!row.resourceName || !row.template) break; // skip in-progress rows
+        const key = `resource::${row.resourceName}`;
+        const g = ensureGroup(key, () => ({
+          kind: "env",
+          from: { type: "stack_resource", name: row.resourceName },
+          to: { type: "stack_resource", name: resourceName },
+        }));
+        g.mappings.push({
+          target: { type: "env", name: row.name },
+          value: {
+            template: row.template,
+            values: Object.fromEntries(
+              Object.entries(row.values).map(([key, output]) => [key, { output }]),
+            ),
+          },
+        });
+        break;
+      }
     }
   }
 
@@ -129,7 +156,19 @@ export function connectionsToEnvRows(
           credField: output as AddonOutputField,
         });
       } else if (c.from?.type === "stack_resource" && c.from?.name) {
-        rows.push({ from: "resource", name: envName, resourceName: c.from.name, output });
+        if (m.value?.template) {
+          rows.push({
+            from: "resourceTemplate",
+            name: envName,
+            resourceName: c.from.name,
+            template: m.value.template,
+            values: Object.fromEntries(
+              Object.entries(m.value.values ?? {}).map(([key, ref]) => [key, ref.output ?? ""]),
+            ),
+          });
+        } else {
+          rows.push({ from: "resource", name: envName, resourceName: c.from.name, output });
+        }
       }
     }
   }

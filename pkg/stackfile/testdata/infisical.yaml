@@ -13,7 +13,7 @@ resources:
       NODE_ENV: production
       ENCRYPTION_KEY: "6c1fe4e407b8911c104518103505b218"
       AUTH_SECRET: "5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE="
-      SITE_URL: "{{ self.public.http.url }}"
+      SITE_URL: "{{ self.public_url }}"
       POSTGRES_USER: infisical
       POSTGRES_PASSWORD: infisical
       POSTGRES_DB: infisical

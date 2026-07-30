@@ -19,9 +19,9 @@ describe("splitEnvRows", () => {
   });
 
   it("emits self rows as env vars with self_output", () => {
-    const rows: FormEnvRow[] = [{ from: "self", name: "TOOLJET_HOST", selfOutput: "public.http.url" }];
+    const rows: FormEnvRow[] = [{ from: "self", name: "TOOLJET_HOST", selfOutput: "public_url.http" }];
     const { envVars, connections } = splitEnvRows("web", rows);
-    expect(envVars).toEqual([{ name: "TOOLJET_HOST", self_output: "public.http.url" }]);
+    expect(envVars).toEqual([{ name: "TOOLJET_HOST", self_output: "public_url.http" }]);
     expect(connections).toEqual([]);
   });
 
@@ -346,3 +346,60 @@ describe("connectionsToMounts", () => {
   });
 });
 
+
+describe("resourceTemplate rows", () => {
+  const templateRow: FormEnvRow = {
+    from: "resourceTemplate",
+    name: "OTEL_EXPORTER_OTLP_TRACES",
+    resourceName: "otel-stack",
+    template: "http://{{host}}:4318/v1/traces",
+    values: { host: "host" },
+  };
+
+  it("persists as a template mapping on the source resource's env connection", () => {
+    const { envVars, connections } = splitEnvRows("tooljet", [templateRow]);
+    expect(envVars).toEqual([]);
+    expect(connections).toEqual([
+      {
+        kind: "env",
+        from: { type: "stack_resource", name: "otel-stack" },
+        to: { type: "stack_resource", name: "tooljet" },
+        mappings: [
+          {
+            target: { type: "env", name: "OTEL_EXPORTER_OTLP_TRACES" },
+            value: {
+              template: "http://{{host}}:4318/v1/traces",
+              values: { host: { output: "host" } },
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("shares one connection with plain output rows from the same source", () => {
+    const rows: FormEnvRow[] = [
+      { from: "resource", name: "OTEL_HOST", resourceName: "otel-stack", output: "host" },
+      templateRow,
+    ];
+    const { connections } = splitEnvRows("tooljet", rows);
+    expect(connections).toHaveLength(1);
+    expect(connections[0].mappings).toHaveLength(2);
+  });
+
+  it("round-trips through connectionsToEnvRows", () => {
+    const { connections } = splitEnvRows("tooljet", [templateRow]);
+    const rows = connectionsToEnvRows("tooljet", connections);
+    expect(rows).toEqual([templateRow]);
+  });
+
+  it("skips in-progress rows missing resource or template", () => {
+    const rows: FormEnvRow[] = [
+      { from: "resourceTemplate", name: "X", resourceName: "", template: "{{host}}", values: { host: "host" } },
+      { from: "resourceTemplate", name: "Y", resourceName: "otel-stack", template: "", values: {} },
+    ];
+    const { envVars, connections } = splitEnvRows("tooljet", rows);
+    expect(envVars).toEqual([]);
+    expect(connections).toEqual([]);
+  });
+});

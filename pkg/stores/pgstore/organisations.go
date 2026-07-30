@@ -58,15 +58,15 @@ func (d dbOrganisationStore) Get(ctx context.Context, id string) (*models.Organi
 	return &org, nil
 }
 
-func (d dbOrganisationStore) GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
+func (d dbOrganisationStore) GetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var org models.Organisation
-	err := grm.Model(&models.Organisation{}).Preload(clause.Associations).Where("\"default\" = ?", true).First(&org).Error
+	err := grm.Model(&models.Organisation{}).Preload(clause.Associations).Where("platform = ?", true).First(&org).Error
 	if err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NotFound("default organisation not found")
+			return nil, errors.NotFound("platform organisation not found")
 		}
-		return nil, errors.GeneralError("failed to fetch default organisation: %s", err.Error())
+		return nil, errors.GeneralError("failed to fetch platform organisation: %s", err.Error())
 	}
 	return &org, nil
 }

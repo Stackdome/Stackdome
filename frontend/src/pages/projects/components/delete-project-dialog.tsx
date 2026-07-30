@@ -36,19 +36,13 @@ export function DeleteProjectDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-danger">Delete project</DialogTitle>
+          <DialogTitle>Delete project?</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            This action is <span className="font-semibold text-foreground">irreversible</span>.
-            The project <span className="font-semibold text-foreground">&ldquo;{projectName}&rdquo;</span> will
-            be permanently deleted.
+            The project &ldquo;{projectName}&rdquo; will be permanently deleted. This cannot be undone.
           </p>
-
-          <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
-            Deleting this project cannot be undone.
-          </div>
 
           <FieldShell
             label="Type the project name to confirm"
@@ -68,13 +62,13 @@ export function DeleteProjectDialog({
             Cancel
           </Button>
           <Button
+            variant="destructive"
             disabled={!canConfirm}
             onClick={() => {
               if (canConfirm) onConfirm();
             }}
-            className="bg-danger text-white hover:bg-danger/90"
           >
-            Delete project
+            Delete
           </Button>
         </DialogFooter>
       </DialogContent>

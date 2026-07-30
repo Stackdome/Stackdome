@@ -36,24 +36,14 @@ describe("PreviewEnvCard", () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  it("replaces endpoint pills with a failed-reason strip and stackfile hint", () => {
+  it("keeps failure details off the card — the FAILED status word is the only signal", () => {
     const env: PreviewStack = {
       ...base,
       status: { phase: "Failed", reason: "StackfileNotFound", message: "no stackfile at path" },
     };
     renderCard({ env });
-    expect(screen.getByText(/no stackfile at path/i)).toBeInTheDocument();
-    expect(screen.getByText(/check the stackfile path in settings/i)).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /web/i })).not.toBeInTheDocument();
-  });
-
-  it("does not show the stackfile hint for unrelated failures", () => {
-    const env: PreviewStack = {
-      ...base,
-      status: { phase: "Failed", reason: "BuildFailed", message: "image build failed" },
-    };
-    renderCard({ env });
-    expect(screen.getByText(/image build failed/i)).toBeInTheDocument();
+    expect(screen.getByText("failed")).toBeInTheDocument();
+    expect(screen.queryByText(/no stackfile at path/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/check the stackfile path/i)).not.toBeInTheDocument();
   });
 

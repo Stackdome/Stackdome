@@ -58,6 +58,21 @@ func (mr *MockClusterServiceMockRecorder) AddCluster(ctx, cluster any) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddCluster", reflect.TypeOf((*MockClusterService)(nil).AddCluster), ctx, cluster)
 }
 
+// DefaultStorageClass mocks base method.
+func (m *MockClusterService) DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DefaultStorageClass", ctx, clusterID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// DefaultStorageClass indicates an expected call of DefaultStorageClass.
+func (mr *MockClusterServiceMockRecorder) DefaultStorageClass(ctx, clusterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DefaultStorageClass", reflect.TypeOf((*MockClusterService)(nil).DefaultStorageClass), ctx, clusterID)
+}
+
 // Delete mocks base method.
 func (m *MockClusterService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	m.ctrl.T.Helper()
@@ -102,19 +117,19 @@ func (mr *MockClusterServiceMockRecorder) GetClusterForOrg(ctx, orgID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetClusterForOrg), ctx, orgID)
 }
 
-// GetDefaultCluster mocks base method.
-func (m *MockClusterService) GetDefaultCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+// GetOwnedClusterForOrg mocks base method.
+func (m *MockClusterService) GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetDefaultCluster", ctx)
+	ret := m.ctrl.Call(m, "GetOwnedClusterForOrg", ctx, orgID)
 	ret0, _ := ret[0].(*models.Cluster)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// GetDefaultCluster indicates an expected call of GetDefaultCluster.
-func (mr *MockClusterServiceMockRecorder) GetDefaultCluster(ctx any) *gomock.Call {
+// GetOwnedClusterForOrg indicates an expected call of GetOwnedClusterForOrg.
+func (mr *MockClusterServiceMockRecorder) GetOwnedClusterForOrg(ctx, orgID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDefaultCluster", reflect.TypeOf((*MockClusterService)(nil).GetDefaultCluster), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnedClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetOwnedClusterForOrg), ctx, orgID)
 }
 
 // InjectClusterManager mocks base method.
@@ -157,4 +172,33 @@ func (m *MockClusterService) InternalListAllClusters(ctx context.Context) ([]*mo
 func (mr *MockClusterServiceMockRecorder) InternalListAllClusters(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListAllClusters", reflect.TypeOf((*MockClusterService)(nil).InternalListAllClusters), ctx)
+}
+
+// InternalUpdateClusterInfo mocks base method.
+func (m *MockClusterService) InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalUpdateClusterInfo", ctx, clusterID, info)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// InternalUpdateClusterInfo indicates an expected call of InternalUpdateClusterInfo.
+func (mr *MockClusterServiceMockRecorder) InternalUpdateClusterInfo(ctx, clusterID, info any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateClusterInfo", reflect.TypeOf((*MockClusterService)(nil).InternalUpdateClusterInfo), ctx, clusterID, info)
+}
+
+// InternalUpsertPlatformCluster mocks base method.
+func (m *MockClusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalUpsertPlatformCluster", ctx, spec)
+	ret0, _ := ret[0].(*models.Cluster)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalUpsertPlatformCluster indicates an expected call of InternalUpsertPlatformCluster.
+func (mr *MockClusterServiceMockRecorder) InternalUpsertPlatformCluster(ctx, spec any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertPlatformCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertPlatformCluster), ctx, spec)
 }

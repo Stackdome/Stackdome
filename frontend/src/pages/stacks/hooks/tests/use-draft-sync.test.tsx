@@ -43,7 +43,7 @@ const webForm = (image: string) => ({
   source: { image: { ref: image } },
 });
 
-function setup(stack: Stack) {
+function setup(stack: Stack, extra?: { refetchStack?: () => Promise<Stack> }) {
   const onStackRefreshed = vi.fn();
   const hook = renderHook(() => {
     const session = useStackEditSession();
@@ -53,6 +53,7 @@ function setup(stack: Stack) {
       session,
       ids: { orgId: "o", projectName: "t", stackId: "st-1" },
       onStackRefreshed,
+      refetchStack: extra?.refetchStack,
     });
     return { session, sync };
   });
@@ -163,6 +164,57 @@ describe("useDraftSync", () => {
       ok = await hook.result.current.sync.flush();
     });
     expect(ok).toBe(false);
+  });
+
+  it("pending is true while the debounce is armed and false after the cycle settles", async () => {
+    const { hook } = setup(serverStack("nginx:1"));
+    expect(hook.result.current.sync.pending).toBe(false);
+    act(() => hook.result.current.session.updateResources(() => [webForm("nginx:2")]));
+    // Debounce armed, PUT not fired yet: pending must already be true while
+    // status still reads settled — this is the window the lifecycle used to
+    // mis-derive as "clean".
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS - 100));
+    expect(updateStackResource).not.toHaveBeenCalled();
+    expect(hook.result.current.sync.pending).toBe(true);
+    await act(() => vi.advanceTimersByTimeAsync(200));
+    await act(() => Promise.resolve());
+    expect(hook.result.current.sync.status).toBe(SYNC_STATUS.saved);
+    expect(hook.result.current.sync.pending).toBe(false);
+  });
+
+  it("uses the injected refetchStack and does not call onStackRefreshed when provided", async () => {
+    const refetchStack = vi.fn().mockResolvedValue(serverStack("nginx:2"));
+    const { hook, onStackRefreshed } = setup(serverStack("nginx:1"), { refetchStack });
+    act(() => hook.result.current.session.updateResources(() => [webForm("nginx:2")]));
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
+    await act(() => Promise.resolve());
+    expect(updateStackResource).toHaveBeenCalledOnce();
+    expect(refetchStack).toHaveBeenCalledOnce();
+    expect(getStackById).not.toHaveBeenCalled();
+    expect(onStackRefreshed).not.toHaveBeenCalled();
+    expect(hook.result.current.sync.status).toBe(SYNC_STATUS.saved);
+  });
+
+  it("keeps pending true when an edit lands during an in-flight cycle", async () => {
+    const { hook } = setup(serverStack("nginx:1"));
+    let resolveUpdate!: () => void;
+    vi.mocked(updateStackResource).mockImplementationOnce(
+      () => new Promise((resolve) => { resolveUpdate = () => resolve({} as never); }),
+    );
+    act(() => hook.result.current.session.updateResources(() => [webForm("nginx:2")]));
+    // Cycle starts and blocks on the held PUT.
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
+    // Edit lands mid-cycle: re-arms the debounce but doesn't queue a cycle.
+    act(() => hook.result.current.session.updateResources(() => [webForm("nginx:3")]));
+    resolveUpdate();
+    await act(() => vi.advanceTimersByTimeAsync(1));
+    // The first cycle settled, but the mid-cycle edit hasn't been sent yet —
+    // pending must survive until its own cycle runs.
+    expect(hook.result.current.sync.pending).toBe(true);
+    await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
+    await act(() => Promise.resolve());
+    expect(hook.result.current.sync.pending).toBe(false);
+    expect(updateStackResource).toHaveBeenCalledTimes(2);
   });
 
   it("does nothing when disabled", async () => {

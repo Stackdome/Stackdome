@@ -320,7 +320,7 @@ func TestValidateForCreateAllowsStackResourceEnvConnectionUsingDeclaredOutput(t 
 					Name: "SELF_URL",
 				},
 				Value: models.ValueRef{
-					Output: "url.http",
+					Output: models.OutputNameURL,
 				},
 			},
 		},
@@ -1210,7 +1210,7 @@ func TestValidateConnectionsRejectsUnknownTargetResource(t *testing.T) {
 		Mappings: []models.ConnectionMapping{
 			{
 				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "WEB_URL"},
-				Value:  models.ValueRef{Output: "url.http"},
+				Value:  models.ValueRef{Output: models.OutputNameURL},
 			},
 		},
 	})
@@ -1242,7 +1242,7 @@ func TestValidateConnectionsAcceptsValidConnection(t *testing.T) {
 		Mappings: []models.ConnectionMapping{
 			{
 				Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "SELF_URL"},
-				Value:  models.ValueRef{Output: "url.http"},
+				Value:  models.ValueRef{Output: models.OutputNameURL},
 			},
 		},
 	})
@@ -1294,7 +1294,7 @@ func TestValidateConnectionsIgnoresUnrelatedResourceInvalidity(t *testing.T) {
 			Mappings: []models.ConnectionMapping{
 				{
 					Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "WEB_URL"},
-					Value:  models.ValueRef{Output: "url.http"},
+					Value:  models.ValueRef{Output: models.OutputNameURL},
 				},
 			},
 		},

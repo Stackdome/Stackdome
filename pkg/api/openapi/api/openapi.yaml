@@ -895,14 +895,6 @@ paths:
         schema:
           type: string
         style: simple
-      - description: Substring filter on the repository full name
-        explode: true
-        in: query
-        name: query
-        required: false
-        schema:
-          type: string
-        style: form
       - explode: true
         in: query
         name: page
@@ -910,13 +902,14 @@ paths:
         schema:
           type: integer
         style: form
-      - explode: true
+      - description: "Our GitInstallation id (UUID). When omitted, repositories are\
+          \ aggregated across every installation of the integration."
+        explode: true
         in: query
         name: installation_id
         required: false
         schema:
-          format: int64
-          type: integer
+          type: string
         style: form
       responses:
         "200":
@@ -1455,6 +1448,33 @@ paths:
       security:
       - Bearer: []
       summary: Get a specific cluster
+  /api/v1/organizations/{org_id}/image_registries:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterImageRegistryList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all image registries for an organisation
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     get:
       parameters:
@@ -6275,6 +6295,7 @@ components:
     Organisation:
       example:
         updated_at: 2000-01-23T04:56:07.000+00:00
+        is_platform: true
         name: name
         domains:
         - fqdn: fqdn
@@ -6283,7 +6304,6 @@ components:
           id: id
         created_at: 2000-01-23T04:56:07.000+00:00
         id: id
-        is_default: true
       properties:
         id:
           type: string
@@ -6293,7 +6313,8 @@ components:
           items:
             $ref: '#/components/schemas/DomainName'
           type: array
-        is_default:
+        is_platform:
+          readOnly: true
           type: boolean
         created_at:
           format: date-time
@@ -6474,6 +6495,7 @@ components:
         name: name
         organisation:
           updated_at: 2000-01-23T04:56:07.000+00:00
+          is_platform: true
           name: name
           domains:
           - fqdn: fqdn
@@ -6482,7 +6504,6 @@ components:
             id: id
           created_at: 2000-01-23T04:56:07.000+00:00
           id: id
-          is_default: true
         invite_token: invite_token
         email: email
       properties:
@@ -6985,7 +7006,6 @@ components:
           cluster_ca_data: cluster_ca_data
           organisation_id: organisation_id
           cluster_sa_token: cluster_sa_token
-          default: true
           name: name
           cluster_image_registry:
             organisation_id: organisation_id
@@ -7013,11 +7033,11 @@ components:
                 observed_generation: 1
                 status: status
           id: id
+          platform: true
         - cluster_url: cluster_url
           cluster_ca_data: cluster_ca_data
           organisation_id: organisation_id
           cluster_sa_token: cluster_sa_token
-          default: true
           name: name
           cluster_image_registry:
             organisation_id: organisation_id
@@ -7045,6 +7065,7 @@ components:
                 observed_generation: 1
                 status: status
           id: id
+          platform: true
       properties:
         items:
           items:
@@ -7059,7 +7080,6 @@ components:
         cluster_ca_data: cluster_ca_data
         organisation_id: organisation_id
         cluster_sa_token: cluster_sa_token
-        default: true
         name: name
         cluster_image_registry:
           organisation_id: organisation_id
@@ -7087,6 +7107,7 @@ components:
               observed_generation: 1
               status: status
         id: id
+        platform: true
       properties:
         id:
           type: string
@@ -7094,7 +7115,8 @@ components:
           type: string
         organisation_id:
           type: string
-        default:
+        platform:
+          readOnly: true
           type: boolean
         cluster_url:
           type: string
@@ -9573,7 +9595,7 @@ components:
         type: string
       properties:
         name:
-          description: "Stable output accessor name, for example `host` or `public.http.url`."
+          description: "Stable output accessor name, for example `host` or `public_url`."
           type: string
         type:
           description: Scalar value type exposed by this output.
@@ -10009,7 +10031,7 @@ components:
       properties:
         output:
           description: "Output accessor on the connection's `from` node, such as `url`\
-            \ or `public.http.url`."
+            \ or `public_url`."
           type: string
         template:
           description: Template used when one target value must be composed from multiple
@@ -11439,7 +11461,7 @@ components:
           type: string
         self_output:
           description: "Read this environment variable from one of the resource's\
-            \ own declared outputs, for example public.http.url."
+            \ own declared outputs, for example public_url."
           type: string
       required:
       - name
@@ -12527,11 +12549,11 @@ components:
           pattern: "^[0-9]+[KMGTP]i?$"
           type: string
         storage_class:
-          description: Kubernetes storage class name
+          description: Kubernetes storage class name. Omit to use the cluster's default
+            storage class.
           type: string
       required:
       - size
-      - storage_class
       type: object
     PostgresResources:
       example:
@@ -14143,6 +14165,13 @@ components:
           repo_url: repo_url
           base_branch: base_branch
           integration_id: integration_id
+        env:
+        - name: name
+          self_output: self_output
+          value: value
+        - name: name
+          self_output: self_output
+          value: value
         labels:
         - value: value
           key: key
@@ -14179,6 +14208,12 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          description: Env var overrides applied to every preview environment; may
+            use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
+          type: array
         labels:
           items:
             $ref: '#/components/schemas/Label'
@@ -14210,6 +14245,13 @@ components:
           base_branch: base_branch
           integration_id: integration_id
         stackfile_path: stackfile_path
+        env:
+        - name: name
+          self_output: self_output
+          value: value
+        - name: name
+          self_output: self_output
+          value: value
         max_active_previews: 0
         labels:
         - value: value
@@ -14227,6 +14269,12 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          description: Env var overrides applied to every preview environment; may
+            use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
+          type: array
         labels:
           items:
             $ref: '#/components/schemas/Label'
@@ -14252,6 +14300,13 @@ components:
           base_branch: base_branch
           integration_id: integration_id
         stackfile_path: stackfile_path
+        env:
+        - name: name
+          self_output: self_output
+          value: value
+        - name: name
+          self_output: self_output
+          value: value
         max_active_previews: 0
         labels:
         - value: value
@@ -14267,6 +14322,12 @@ components:
           type: integer
         git_repository:
           $ref: '#/components/schemas/PreviewGitRepository'
+        env:
+          description: Env var overrides applied to every preview environment; may
+            use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
+          type: array
         labels:
           items:
             $ref: '#/components/schemas/Label'
@@ -14293,6 +14354,13 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
+          env:
+          - name: name
+            self_output: self_output
+            value: value
+          - name: name
+            self_output: self_output
+            value: value
           labels:
           - value: value
             key: key
@@ -14317,6 +14385,13 @@ components:
             repo_url: repo_url
             base_branch: base_branch
             integration_id: integration_id
+          env:
+          - name: name
+            self_output: self_output
+            value: value
+          - name: name
+            self_output: self_output
+            value: value
           labels:
           - value: value
             key: key

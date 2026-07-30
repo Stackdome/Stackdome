@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { alignBaselineToDraft, cloneJson, diffStack, dirtyTabsForResource, getAddonLinkCount, isPathDirty, isResourceDirty, pairByFingerprint, renameFingerprint, revertResource } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, diffStack, dirtyTabsForResource, isPathDirty, isResourceDirty, pairByFingerprint, renameFingerprint, revertResource } from "../stack-diff";
 import type { ResourceArr } from "../stack-diff";
 
 describe("cloneJson", () => {
@@ -103,51 +103,6 @@ describe("isPathDirty — structurally-empty equivalence", () => {
   });
 });
 
-describe("getAddonLinkCount", () => {
-  // Env vars no longer carry addon-backed sources, so addon links come solely
-  // from the explicit "addons in stack" panel. This helper just counts the
-  // distinct panel-linked ids; resources never contribute.
-
-  it("returns 0 with no linked addons and no resources", () => {
-    expect(getAddonLinkCount(new Set(), [])).toBe(0);
-  });
-
-  it("counts addons explicitly linked via the panel", () => {
-    expect(getAddonLinkCount(new Set(["pg-1", "pg-2"]), [])).toBe(2);
-  });
-
-  it("does not derive addon links from resource env vars", () => {
-    const resources: ResourceArr = [
-      {
-        execution_config: {
-          environment_variables: [
-            { from: "stack", name: "FOO", value: "bar" },
-          ],
-        } as never,
-      },
-    ];
-    expect(getAddonLinkCount(new Set(), resources)).toBe(0);
-  });
-
-  it("counts only panel-linked ids regardless of resources", () => {
-    const resources: ResourceArr = [
-      {
-        execution_config: {
-          environment_variables: [
-            { from: "stack", name: "DATABASE_URL", value: "x" },
-          ],
-        } as never,
-      },
-    ];
-    expect(getAddonLinkCount(new Set(["pg-1", "pg-2"]), resources)).toBe(2);
-  });
-
-  it("handles resources with no execution_config", () => {
-    const resources: ResourceArr = [{ name: "svc-1" }, { name: "svc-2" }];
-    expect(getAddonLinkCount(new Set(["pg-1"]), resources)).toBe(1);
-  });
-});
-
 describe("alignBaselineToDraft", () => {
   it("reorders the baseline to the draft's name order", () => {
     const baseline = [{ name: "redis" }, { name: "web" }, { name: "mail" }];
@@ -241,6 +196,24 @@ describe("status is server telemetry, never dirt", () => {
 
   it("isResourceDirty ignores status drift", () => {
     expect(isResourceDirty(live as never, deployed as never)).toBe(false);
+  });
+
+  it("isResourceDirty ignores server-computed outputs drift", () => {
+    // After a port edit deploys, the draft still holds outputs derived from the
+    // OLD port while the rebased baseline has the new ones — the server owns
+    // outputs, so they must never read as user dirt (the pre-fix behavior left
+    // a phantom "1 change" after every deploy until a page refresh).
+    const draftRes = {
+      name: "web",
+      ports: [{ number: 88 }],
+      outputs: [{ name: "port.port-87", sensitive: false, type: "integer" }],
+    };
+    const baseRes = {
+      name: "web",
+      ports: [{ number: 88 }],
+      outputs: [{ name: "port.port-88", sensitive: false, type: "integer" }],
+    };
+    expect(isResourceDirty(draftRes as never, baseRes as never)).toBe(false);
   });
 
   it("dirtyTabsForResource does not light any tab for status drift", () => {

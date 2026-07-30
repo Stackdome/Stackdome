@@ -115,7 +115,8 @@ Press `Ctrl+C` to tear down all resources.
 
 ### Manual Setup
 
-See [docs/QUICK_START.md](docs/QUICK_START.md) for a 5-minute setup, or [docs/BOOTSTRAP_GUIDE.md](docs/BOOTSTRAP_GUIDE.md) for a comprehensive walkthrough.
+The **TL;DR** below covers a manual dev-machine setup. For installing Stackdome on a server, see
+the product documentation in `docs/` (Quickstart and Self-hosting).
 
 **TL;DR:**
 
@@ -134,9 +135,6 @@ DB_PORT=5432
 DB_NAME=stackdome
 DB_USERNAME=postgres
 DB_PASSWORD=mypassword
-DEFAULT_USER_EMAIL=admin@stackdome.local
-DEFAULT_USER_NAME=admin
-DEFAULT_USER_PASS=admin123
 EOF
 
 # 3. Build, migrate, and run
@@ -266,9 +264,6 @@ The integration test suite uses real Kind clusters with the full operator stack 
 | `DB_PASSWORD` | Database password | (required) |
 | `DB_DEBUG_MODE` | Enable SQL query logging | false |
 | `LOG_LEVEL` | Log level (debug, info, warn, error) | info |
-| `DEFAULT_USER_EMAIL` | Initial admin user email | (required) |
-| `DEFAULT_USER_NAME` | Initial admin user name | (required) |
-| `DEFAULT_USER_PASS` | Initial admin user password | (required) |
 
 ## API
 
@@ -318,10 +313,12 @@ The cluster agent reconciles these CRDs (defined in the [cluster-agent](https://
 
 ## Documentation
 
-- [Quick Start](docs/QUICK_START.md) -- 5-minute setup guide
-- [Bootstrap Guide](docs/BOOTSTRAP_GUIDE.md) -- Complete walkthrough with troubleshooting
-- [Casbin RBAC](docs/casbin-explained.md) -- How authorization policies work
-- [Env Interpolation](docs/env-interpolation.md) -- Cross-service environment variable templates
+Product documentation lives in `docs/` as a Mintlify site — installing Stackdome, deploying an
+application, managed Postgres, domains, preview environments, and self-hosting reference. Preview it
+locally with `cd docs && npx mint dev`.
+
+Internal engineering notes (specs, plans, RBAC explainers, gap analyses) live in `dev-docs/`, which
+is git-ignored and therefore local to each machine — not available in a fresh clone.
 
 ## Sample Configurations
 

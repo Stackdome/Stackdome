@@ -47,10 +47,9 @@ type GitIntegrationService interface {
 	CreateGitHubAppManifest(ctx context.Context, organisationID string) (*models.GitHubAppManifestFlow, *errors.ServiceError)
 	HandleGitHubManifestCallback(ctx context.Context, code, state string) (string, *errors.ServiceError)
 	ListInstallations(ctx context.Context, integrationID string, refresh bool) ([]*models.GitInstallation, *errors.ServiceError)
-	ListRepositories(ctx context.Context, integrationID, query string, page int, installationID int64) (*githubapp.RepoPage, *errors.ServiceError)
+	ListRepositories(ctx context.Context, integrationID string, page int, installationUUID string) (*githubapp.RepoPage, *errors.ServiceError)
 	GetRepository(ctx context.Context, integrationID, owner, repo string) (*githubapp.Repo, *errors.ServiceError)
 	ListRepositoryBranches(ctx context.Context, integrationID, owner, repo string) ([]string, *errors.ServiceError)
-	ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError
 
 	// InternalMintForRepo mints an installation token for the org's installed
 	// GitHub App when it covers the repository owner (404 to fall through).
@@ -301,7 +300,11 @@ func (s *gitIntegrationService) sealIntegration(integration *models.GitIntegrati
 // unsealIntegration decrypts the stored auth blob onto the transient Auth
 // field, verifying integrity against the data hash.
 func (s *gitIntegrationService) unsealIntegration(integration *models.GitIntegration) *errors.ServiceError {
-	decrypted, err := s.encryptionService.DecryptData(integration.EncryptedAuth)
+	return unsealGitIntegration(s.encryptionService, integration)
+}
+
+func unsealGitIntegration(enc EncryptionService, integration *models.GitIntegration) *errors.ServiceError {
+	decrypted, err := enc.DecryptData(integration.EncryptedAuth)
 	if err != nil {
 		return errors.GeneralError("failed to decrypt git integration auth: %s", err.Error())
 	}

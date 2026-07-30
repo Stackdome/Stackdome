@@ -158,7 +158,7 @@ describe("buildCreateInput", () => {
     expect(input.spec.instances.count).toBe(1);
   });
 
-  it("form values win on conflict with advanced JSON; JSON storage_class wins over default", () => {
+  it("form values win on conflict with advanced JSON; JSON storage_class wins", () => {
     const advancedJson = JSON.stringify({
       storage: { size: "999Gi", storage_class: "io2" },
       instances: { count: 99 },
@@ -169,19 +169,19 @@ describe("buildCreateInput", () => {
     // Form wins for size and count
     expect(input.spec.storage.size).toBe("25Gi");
     expect(input.spec.instances.count).toBe(2);
-    // storage_class is special-cased: JSON wins over the form's default
+    // storage_class isn't form-driven, so the JSON value passes through
     expect(input.spec.storage.storage_class).toBe("io2");
   });
 
-  it('storage_class defaults to "standard" when not set in JSON', () => {
+  it("omits storage_class when not set in JSON", () => {
     const input = buildCreateInput(baseValues({ advancedJson: "" }));
-    expect(input.spec.storage.storage_class).toBe("standard");
+    expect(input.spec.storage.storage_class).toBeUndefined();
   });
 
-  it('blank storage_class in JSON falls back to form default "standard"', () => {
+  it("omits storage_class when the JSON value is blank", () => {
     const advancedJson = JSON.stringify({ storage: { storage_class: "" } });
     const input = buildCreateInput(baseValues({ advancedJson }));
-    expect(input.spec.storage.storage_class).toBe("standard");
+    expect(input.spec.storage.storage_class).toBeUndefined();
   });
 
   it("labels and annotations from advanced JSON appear at top level", () => {
@@ -327,18 +327,18 @@ describe("addonToFormValues", () => {
     expect(parsed.instances.placement.policy).toBe("preferred");
     expect(parsed.configuration.parameters.max_connections).toBe("200");
     expect(parsed.labels).toEqual([{ key: "env", value: "prod" }]);
-    // Default storage_class "standard" is intentionally omitted so the
-    // hydrated JSON only reflects user-set overrides.
-    expect(parsed.storage).toBeUndefined();
+    // Stored storage_class is server-resolved and truthful, so it surfaces too.
+    expect(parsed.storage.storage_class).toBe("standard");
   });
 
   it("hydrates as empty when addon has no meaningful overrides", () => {
-    // Minimal addon, default storage_class, no placement/parameters/labels.
-    const v = addonToFormValues(minimalAddon());
+    const v = addonToFormValues(minimalAddon({
+      spec: { ...minimalAddon().spec, storage: { size: "10Gi" } },
+    }));
     expect(v.advancedJson).toBe("");
   });
 
-  it("hydrates non-default storage_class into JSON", () => {
+  it("hydrates storage_class into JSON when set", () => {
     const v = addonToFormValues(minimalAddon({
       spec: {
         ...minimalAddon().spec,

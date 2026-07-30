@@ -106,6 +106,16 @@ var _ = Describe("validateInputRules", func() {
 				r.Ports[0].Name = "Bad_Name_Way_Too_Long"
 			},
 			errors.VErrPortNameInvalid, "ports[0].name"),
+		Entry("pure-numeric port name (k8s requires a letter)",
+			func(r *models.StackResource) {
+				r.Ports[0].Name = "3306"
+			},
+			errors.VErrPortNameInvalid, "ports[0].name"),
+		Entry("port name with consecutive hyphens",
+			func(r *models.StackResource) {
+				r.Ports[0].Name = "web--svc"
+			},
+			errors.VErrPortNameInvalid, "ports[0].name"),
 		Entry("port number out of range",
 			func(r *models.StackResource) {
 				r.Ports[0].Number = 70000
@@ -243,11 +253,11 @@ var _ = Describe("validateInputRules", func() {
 
 	It("accepts env self_output referencing a declared output", func() {
 		r := validImageResource()
-		// "host" and "port.http"/"url.http" (from the declared http port) are
-		// this resource's declared outputs.
+		// "host" and "port"/"url" (from the resource's single declared port)
+		// are this resource's declared outputs.
 		r.ExecutionConfig = &models.ExecutionConfig{Env: []models.EnvVar{
-			{Name: "SELF_HOST", SelfOutput: "host"},
-			{Name: "SELF_URL", SelfOutput: "url.http"},
+			{Name: "SELF_HOST", SelfOutput: models.OutputNameHost},
+			{Name: "SELF_URL", SelfOutput: models.OutputNameURL},
 		}}
 		Expect(validateInputRules(r)).To(BeEmpty())
 	})

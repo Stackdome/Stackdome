@@ -24,15 +24,15 @@ and schemas.
 | EditSessionDraft | The pending, unsaved edits held in an EditSession. | `frontend/src/pages/stacks/hooks/use-stack-edit-session.ts` |
 | PerResourceDirty / PerVolumeDirty | Field-level dirty-tracking for each StackResource / Volume in an EditSession, enabling per-field discard. | `frontend/src/pages/stacks/lib/stack-diff.ts` |
 | discardResourceField | Field-level discard of a pending edit, reverting one resource field back to its persisted value; siblings: `discardResource`, `discardVolume`, `discardEnvRow`. | `frontend/src/pages/stacks/hooks/use-stack-edit-session.ts` |
-| StickyActionBar | The persistent save/discard action bar (primary/secondary/segment parts) shown while editing a Stack. | `frontend/src/pages/stacks/components/shared/sticky-action-bar.tsx` |
+| StickyActionBar | The persistent save/discard action bar (primary/secondary/segment parts) shown while editing a Stack. | `frontend/src/components/sticky-action-bar.tsx` |
 
 ## Environment & addon binding
 
 | term | definition | source |
 |---|---|---|
-| EnvAddonBinding | A link in a stack's environment that injects a PostgresAddon's connection info into a resource's env vars. | `frontend/src/pages/stacks/components/shared/env-addon-group.tsx` |
-| EnvAddonGroupState | The UI state of an env-addon group: `idle`, `editing-binding`, or `detaching`. | `frontend/src/pages/stacks/components/shared/env-addon-group.tsx` |
-| AddonBindingPatch | A pending change to an EnvAddonBinding awaiting save. | `frontend/src/pages/stacks/components/shared/env-row.tsx` |
+| EnvAddonBinding | A link in a stack's environment that injects a PostgresAddon's connection info into a resource's env vars. | `frontend/src/pages/stacks/components/editor/tabs/architecture/drawer-tabs/environment-tab.tsx` |
+| EnvAddonGroupState | The UI state of an env-addon group: `idle`, `editing-binding`, or `detaching`. | `frontend/src/pages/stacks/components/editor/tabs/architecture/drawer-tabs/environment-tab.tsx` |
+| AddonBindingPatch | A pending change to an EnvAddonBinding awaiting save. | `frontend/src/pages/stacks/components/editor/tabs/architecture/drawer-tabs/env-row.tsx` |
 | CredField | A PostgreSQL connection credential field name; some are cluster-wide (`CLUSTER_WIDE_FIELDS`). | `frontend/src/pages/stacks/lib/addon-presets.ts` |
 
 ## Docker Compose import

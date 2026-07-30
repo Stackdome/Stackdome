@@ -223,18 +223,18 @@ func (mr *MockGitIntegrationServiceMockRecorder) ListInstallations(ctx, integrat
 }
 
 // ListRepositories mocks base method.
-func (m *MockGitIntegrationService) ListRepositories(ctx context.Context, integrationID, query string, page int, installationID int64) (*githubapp.RepoPage, *errors.ServiceError) {
+func (m *MockGitIntegrationService) ListRepositories(ctx context.Context, integrationID string, page int, installationUUID string) (*githubapp.RepoPage, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListRepositories", ctx, integrationID, query, page, installationID)
+	ret := m.ctrl.Call(m, "ListRepositories", ctx, integrationID, page, installationUUID)
 	ret0, _ := ret[0].(*githubapp.RepoPage)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
 // ListRepositories indicates an expected call of ListRepositories.
-func (mr *MockGitIntegrationServiceMockRecorder) ListRepositories(ctx, integrationID, query, page, installationID any) *gomock.Call {
+func (mr *MockGitIntegrationServiceMockRecorder) ListRepositories(ctx, integrationID, page, installationUUID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockGitIntegrationService)(nil).ListRepositories), ctx, integrationID, query, page, installationID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositories", reflect.TypeOf((*MockGitIntegrationService)(nil).ListRepositories), ctx, integrationID, page, installationUUID)
 }
 
 // ListRepositoryBranches mocks base method.
@@ -250,20 +250,6 @@ func (m *MockGitIntegrationService) ListRepositoryBranches(ctx context.Context, 
 func (mr *MockGitIntegrationServiceMockRecorder) ListRepositoryBranches(ctx, integrationID, owner, repo any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListRepositoryBranches", reflect.TypeOf((*MockGitIntegrationService)(nil).ListRepositoryBranches), ctx, integrationID, owner, repo)
-}
-
-// ProcessGitHubWebhook mocks base method.
-func (m *MockGitIntegrationService) ProcessGitHubWebhook(ctx context.Context, event string, payload []byte, signature string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ProcessGitHubWebhook", ctx, event, payload, signature)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// ProcessGitHubWebhook indicates an expected call of ProcessGitHubWebhook.
-func (mr *MockGitIntegrationServiceMockRecorder) ProcessGitHubWebhook(ctx, event, payload, signature any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ProcessGitHubWebhook", reflect.TypeOf((*MockGitIntegrationService)(nil).ProcessGitHubWebhook), ctx, event, payload, signature)
 }
 
 // Update mocks base method.

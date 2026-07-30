@@ -8,9 +8,12 @@ import { createContext, useContext } from "react";
  */
 export interface DrawerInset {
   setInset: (px: number) => void;
+  /** True while an ops view (Deployments/Logs/Metrics) overlays the canvas —
+   *  the drawer stack stays mounted but hides itself and mutes its hotkeys. */
+  suppressed: boolean;
 }
 
-export const DrawerInsetContext = createContext<DrawerInset>({ setInset: () => {} });
+export const DrawerInsetContext = createContext<DrawerInset>({ setInset: () => {}, suppressed: false });
 
 export function useDrawerInset(): DrawerInset {
   return useContext(DrawerInsetContext);

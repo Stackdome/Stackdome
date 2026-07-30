@@ -728,19 +728,16 @@ paths:
         - $ref: '#/components/parameters/org_id'
         - $ref: '#/components/parameters/id'
         - in: query
-          name: query
-          schema:
-            type: string
-          description: Substring filter on the repository full name
-        - in: query
           name: page
           schema:
             type: integer
         - in: query
           name: installation_id
+          description: >-
+            Our GitInstallation id (UUID). When omitted, repositories are
+            aggregated across every installation of the integration.
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '200':
           description: Successful operation
@@ -1119,6 +1116,26 @@ paths:
           description: Internal server error
 
   # Cluster image registry routes
+  /api/v1/organizations/{org_id}/image_registries:
+    get:
+      summary: List all image registries for an organisation
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClusterImageRegistryList'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal server error
   /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries:
     post:
       summary: Create a new image registry
@@ -4171,8 +4188,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DomainName'
-        is_default:
+        is_platform:
           type: boolean
+          readOnly: true
         created_at:
           type: string
           format: date-time
@@ -4562,8 +4580,9 @@ components:
           type: string
         organisation_id:
           type: string
-        default:
+        platform:
           type: boolean
+          readOnly: true
         cluster_url:
           type: string
         cluster_ca_data:
@@ -4935,7 +4954,7 @@ components:
       properties:
         name:
           type: string
-          description: Stable output accessor name, for example `host` or `public.http.url`.
+          description: Stable output accessor name, for example `host` or `public_url`.
         type:
           type: string
           description: Scalar value type exposed by this output.
@@ -5179,7 +5198,7 @@ components:
       properties:
         output:
           type: string
-          description: Output accessor on the connection's `from` node, such as `url` or `public.http.url`.
+          description: Output accessor on the connection's `from` node, such as `url` or `public_url`.
         template:
           type: string
           description: Template used when one target value must be composed from multiple outputs.
@@ -5970,7 +5989,7 @@ components:
           description: Literal environment variable value.
         self_output:
           type: string
-          description: Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
+          description: Read this environment variable from one of the resource's own declared outputs, for example public_url.
 
 
     Condition:
@@ -6442,7 +6461,6 @@ components:
       type: object
       required:
         - size
-        - storage_class
       properties:
         size:
           type: string
@@ -6450,7 +6468,7 @@ components:
           description: Storage size (e.g., 10Gi, 100Gi)
         storage_class:
           type: string
-          description: Kubernetes storage class name
+          description: Kubernetes storage class name. Omit to use the cluster's default storage class.
 
     PostgresResources:
       type: object
@@ -7385,6 +7403,11 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          type: array
+          description: Env var overrides applied to every preview environment; may use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
         labels:
           type: array
           items:
@@ -7418,6 +7441,11 @@ components:
           type: string
         max_active_previews:
           type: integer
+        env:
+          type: array
+          description: Env var overrides applied to every preview environment; may use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
         labels:
           type: array
           items:
@@ -7438,6 +7466,11 @@ components:
           type: integer
         git_repository:
           $ref: '#/components/schemas/PreviewGitRepository'
+        env:
+          type: array
+          description: Env var overrides applied to every preview environment; may use secret references.
+          items:
+            $ref: '#/components/schemas/EnvVar'
         labels:
           type: array
           items:

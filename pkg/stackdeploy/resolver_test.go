@@ -24,7 +24,7 @@ func TestResolveDoesNotMutateInputStack(t *testing.T) {
 				Name:      "api",
 				Namespace: "ns-1",
 				ExecutionConfig: &models.ExecutionConfig{
-					Env: []models.EnvVar{{Name: "PUBLIC_URL", SelfOutput: "public.http.url"}},
+					Env: []models.EnvVar{{Name: "PUBLIC_URL", SelfOutput: models.OutputNamePublicURL}},
 				},
 				Ports: models.Ports{
 					{Name: "http", Number: 8080, Protocol: "http", ExposedToPublic: true, ExposedFqdn: "api.example.com"},
@@ -143,22 +143,22 @@ func TestResolveStackResourceEnvConnection(t *testing.T) {
 				Mappings: []models.ConnectionMapping{
 					{
 						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_HOST"},
-						Value:  models.ValueRef{Output: "host"},
+						Value:  models.ValueRef{Output: models.OutputNameHost},
 					},
 					{
 						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_URL"},
-						Value:  models.ValueRef{Output: "url.http"},
+						Value:  models.ValueRef{Output: models.OutputNameURL},
 					},
 					{
 						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_PUBLIC_URL"},
-						Value:  models.ValueRef{Output: "public.http.url"},
+						Value:  models.ValueRef{Output: models.OutputNamePublicURL},
 					},
 					{
 						Target: models.ConnectionTarget{Type: models.ConnectionTargetTypeEnv, Name: "API_TEMPLATE_URL"},
 						Value: models.ValueRef{
 							Template: "http://{{public_host}}:{{port}}",
 							Values: map[string]models.OutputValueRef{
-								"public_host": {Output: "public.http.host"}, "port": {Output: "port.http"},
+								"public_host": {Output: models.OutputNamePublicHost}, "port": {Output: models.OutputNamePort},
 							},
 						},
 					},

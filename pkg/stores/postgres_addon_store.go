@@ -20,7 +20,6 @@ type PostgresAddonStore interface {
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListByProjectID(ctx context.Context, projectID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListByProjectIDs(ctx context.Context, projectIDs []string) ([]*models.PostgresAddon, *errors.ServiceError)
-	ListByCluster(ctx context.Context, clusterID string) ([]*models.PostgresAddon, *errors.ServiceError)
 
 	// Validation
 	ValidateAddonExists(ctx context.Context, addonID string) (bool, *errors.ServiceError)

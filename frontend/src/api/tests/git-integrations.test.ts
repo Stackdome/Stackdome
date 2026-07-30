@@ -11,7 +11,7 @@ import {
   verifyGitIntegration,
   createGitHubAppManifest,
   listInstallations,
-  searchRepositories,
+  listRepositories,
   getRepository,
   listRepositoryBranches,
 } from "../git-integrations";
@@ -56,10 +56,10 @@ describe("git-integrations api", () => {
     expect(api.get).toHaveBeenCalledWith(`${BASE}/gi1/installations`, { params: { refresh: true } });
   });
 
-  it("searches repositories with query and page", async () => {
+  it("lists repositories by installation and page", async () => {
     (api.get as ReturnType<typeof vi.fn>).mockResolvedValue({ data: { items: [], page: 1, total_count: 0, has_next: false } });
-    await searchRepositories(ORG, "gi1", { query: "web", page: 2 });
-    expect(api.get).toHaveBeenCalledWith(`${BASE}/gi1/repositories`, { params: { query: "web", page: 2 } });
+    await listRepositories(ORG, "gi1", { installationId: "inst-uuid", page: 2 });
+    expect(api.get).toHaveBeenCalledWith(`${BASE}/gi1/repositories`, { params: { page: 2, installation_id: "inst-uuid" } });
   });
 
   it("gets a repository", async () => {

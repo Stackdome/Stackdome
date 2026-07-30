@@ -1,9 +1,11 @@
 package config
 
+import "github.com/Stackdome/stackdome/pkg/models"
+
 var (
-	ErrEmptyEmail    = &ConfigError{"empty email"}
-	ErrEmptyName     = &ConfigError{"empty name"}
-	ErrEmptyPassword = &ConfigError{"empty password"}
+	ErrIncompleteClusterConfig = &ConfigError{"PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
+	ErrClusterDomainMismatch   = &ConfigError{"PLATFORM_CLUSTER_* and PLATFORM_BASE_DOMAIN must be set together"}
+	ErrPlatformEmailRequired   = &ConfigError{"PLATFORM_EMAIL is required when a platform cluster is configured"}
 )
 
 type ConfigError struct {
@@ -15,48 +17,47 @@ func (e *ConfigError) Error() string {
 }
 
 type BootstrapConfig struct {
-	DefaultUser *DefaultPlatformAdminConfig
+	Email       string
+	BaseDomain  string
+	OrgRegistry models.OrgRegistryDefaults
 }
 
-func (b *BootstrapConfig) Validate() error {
-	return b.DefaultUser.Validate()
-}
-
-type DefaultPlatformAdminConfig struct {
-	Email    string `json:"email"`
-	Name     string `json:"name"`
-	Password string `json:"password"`
-}
-
-func (d *DefaultPlatformAdminConfig) Validate() error {
-	if d.Email == "" {
-		return ErrEmptyEmail
+func ValidatePlatformProvisioning(cluster *ClusterConfig, baseDomain, email string) error {
+	clusterSet := cluster.IsSet()
+	if !clusterSet && cluster.AnySet() {
+		return ErrIncompleteClusterConfig
 	}
-	if d.Name == "" {
-		return ErrEmptyName
+	domainSet := baseDomain != ""
+	if clusterSet != domainSet {
+		return ErrClusterDomainMismatch
 	}
-	if d.Password == "" {
-		return ErrEmptyPassword
+	if !clusterSet {
+		return nil
 	}
-	return nil
+	if email == "" {
+		return ErrPlatformEmailRequired
+	}
+	return cluster.Validate()
 }
 
 func NewBootstrapConfig() *BootstrapConfig {
-	return &BootstrapConfig{
-		DefaultUser: &DefaultPlatformAdminConfig{},
-	}
+	return &BootstrapConfig{}
 }
 
 func (b *BootstrapConfig) LoadEnvVariables() {
-	if val, ok := EnvDefaultUserEmail.Lookup(); ok {
-		b.DefaultUser.Email = val
+	if val, ok := EnvPlatformEmail.Lookup(); ok {
+		b.Email = val
 	}
 
-	if val, ok := EnvDefaultUserName.Lookup(); ok {
-		b.DefaultUser.Name = val
+	if val, ok := EnvPlatformBaseDomain.Lookup(); ok {
+		b.BaseDomain = val
 	}
 
-	if val, ok := EnvDefaultUserPassword.Lookup(); ok {
-		b.DefaultUser.Password = val
+	if val, ok := EnvPlatformOrgRegistryStorageSize.Lookup(); ok {
+		b.OrgRegistry.StorageSize = val
+	}
+
+	if val, ok := EnvPlatformOrgRegistryStorageClass.Lookup(); ok {
+		b.OrgRegistry.StorageClass = val
 	}
 }

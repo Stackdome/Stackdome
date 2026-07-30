@@ -1,0 +1,172 @@
+---
+title: "Deploy your first app"
+description: "Take a git repository from zero to a live URL on Stackdome."
+---
+
+You are going to create one stack with one resource, point it at a public git repository, and end up with an HTTPS URL you can open. Stackdome clones the repository, builds the image, runs it, and publishes a hostname for it. The walkthrough below is a real deploy: every label and every number on this page comes from running it, and it took **1 minute 24 seconds** from pressing **Deploy** to the release going live.
+
+## Prerequisites
+
+- **A Stackdome install you can sign in to.** If you do not have one yet, the [quickstart](/quickstart) takes a bare Linux server to a working dashboard.
+- **A repository with a Dockerfile.** Stackdome builds your image from a Dockerfile in the repository, so the repository needs one. This page uses a public sample:
+
+  ```text
+  https://github.com/dockersamples/linux_tweet_app.git
+  ```
+
+  It is a few kilobytes, its Dockerfile sits at the repository root, and it serves a static page on port 80:
+
+  ```dockerfile
+  FROM nginx:latest
+
+  COPY index.html /usr/share/nginx/html
+  COPY linux.png /usr/share/nginx/html
+
+  EXPOSE 80 443
+
+  CMD ["nginx", "-g", "daemon off;"]
+  ```
+
+  Use it verbatim to follow along, or substitute your own repository and adjust the port in step 4.
+- **A connected git provider — only for private repositories.** A public repository needs no credentials: you paste its URL and Stackdome clones it anonymously. To build from a private repository, connect a provider under **Git providers** first, then pick the repository from the list instead of pasting a URL. See [Deploy from git](/guides/deploy-from-git).
+
+<Note>
+You are never asked which cluster to deploy to. A stack runs on the cluster registered for your organization, so the create flow has no cluster picker — there is nothing to choose.
+</Note>
+
+<Steps>
+
+<Step title="Create a stack">
+
+From **Stacks**, press **New Stack**. Stackdome asks how you want to start:
+
+![The New Stack dialog asking How do you want to start, offering five choices: From git provider, Build from blocks, From template, Docker compose, and Blank slate](/images/first-app-1-start.png)
+
+Every option lands you in the same editor; they differ only in how much they fill in for you. Choose **Blank slate** so you can see each piece as you add it — once you know the shape, **From git provider** gets you to the same place in fewer clicks.
+
+You are now on an empty canvas on the **Architecture** tab, with the stack name as an editable field at the top. Type a name — lowercase, with hyphens if you want them:
+
+```text
+docs-scratch
+```
+
+![An empty new stack on the Architecture canvas, titled docs-scratch, with a NOT DEPLOYED badge, a 0 resources and 0 volumes summary, and the canvas placeholder reading No resources yet, use + Add resource to start building your stack](/images/first-app-1-name.png)
+
+The badge reads `NOT DEPLOYED` and the summary reads `0 resources · 0 volumes`. Nothing exists on the server yet — everything you do until you press **Deploy** is a draft held in your browser.
+
+</Step>
+
+<Step title="Add a resource">
+
+Press **+ Add resource**. The menu groups everything Stackdome can drop on the canvas: **SERVICES**, **STORAGE**, **DATABASES**, **CACHE, SEARCH & ANALYTICS**, and **MANAGED ADD-ONS**.
+
+![The Add resource menu open over the empty canvas, beneath the + Add resource button, with a search field placeholdered Search services, data stores, then grouped entries: under SERVICES, Web service summarised as your image, colon 80, public, and Custom summarised as empty container shape; under STORAGE, Volume summarised as persistent storage; and under DATABASES, Postgres with postgres:16 colon 5432, MySQL with mysql:8 colon 3306, MongoDB with mongo:7 colon 27017, MariaDB with mariadb:11.4 colon 3306, and the MS SQL Server and CouchDB rows cut off at the bottom edge of the frame](/images/first-app-2-add-resource.png)
+
+Choose **Web service**, described as `your image · :80 · public`. It is a template: it creates one resource named `web` with a single public port `80`, which is exactly the shape you want. The canvas now holds one node and the summary reads `1 resource · 0 volumes`.
+
+</Step>
+
+<Step title="Point the resource at your repository">
+
+Click the node to open its drawer on the right, on the **Configuration** tab. Under **Source**, **Build from** starts on **Container image** — press **Git repository** instead.
+
+The **Repository** field reads *Select repository or enter URL*. Click it, paste your repository URL into the search box, and choose the entry that appears: `Use "https://github.com/dockersamples/linux_tweet_app.git" as repository URL`. Leave **Revision** on **Default branch**.
+
+![The resource drawer, headed web with the subtitle git build and open on the Configuration tab, showing a GENERAL section with Name set to web and an empty Depends on, and a SOURCE section summarised as git repository, where Build from has Git repository selected, Repository holds the pasted linux_tweet_app URL, Revision reads Default branch, and a collapsed Advanced row is labelled build and push](/images/first-app-3-git-source.png)
+
+Two things confirm it took: the **Source** section is now summarised as `git repository`, and the node on the canvas reads `git build` where an image reference would otherwise sit — visible on the node in the next two steps.
+
+That is the whole source configuration. The **Advanced** row underneath holds the `build & push` settings — the Dockerfile path, the build context, and where to push the finished image — and their defaults are `Dockerfile`, `.`, and the image registry inside your cluster. You only open it if your Dockerfile is not at the repository root.
+
+</Step>
+
+<Step title="Check the port">
+
+Scroll down to **Ports** in the same drawer. The **Web service** template already filled it in.
+
+![The Ports section of the resource drawer, summarised as 1 exposed, with a single row labelled Port 1 holding the number 80, protocol HTTP, and a public toggle switched on, above an add port button](/images/first-app-4-port.png)
+
+Read it left to right: port number `80`, protocol `HTTP`, and **public** switched on. The section summary reads `1 exposed`.
+
+- **The number must be the port your app listens on inside the container.** The sample serves on `80`, so leave it. If your app listens on `3000`, type `3000`.
+- **`public` is what earns you a URL.** Leave it off and the port is reachable only by other resources in the same stack — the summary then reads `1 internal` instead.
+- **You never type a port name.** Stackdome derives one from the number.
+
+The port is plain HTTP. Stackdome terminates TLS at the edge, so your resource does not need a certificate — see [Domains and TLS](/guides/domains-and-tls).
+
+</Step>
+
+<Step title="Deploy">
+
+Press **Deploy** (or <kbd>⌘</kbd><kbd>↵</kbd>). On a draft, that one button does two things: it creates the stack — a single declarative apply that validates the whole document and creates the stack and its resources in one transaction, so a rejected deploy leaves nothing behind — and then it starts the first release.
+
+![The docs-scratch stack immediately after deploying, its badge now reading PROGRESSING, the summary reading 1 resource and 0 volumes with no PUBLIC row yet, the Architecture tab selected, and one node on the canvas labelled web with an amber status dot, the line git build, and the line port 80 public](/images/first-app-5-deploying.png)
+
+A **Deploy started** toast appears, the address changes from `/stacks/new` to `/stacks/{id}`, and the badge moves from `NOT DEPLOYED` to `PROGRESSING`. From here the stack exists whether or not the release succeeds, so you can close the tab and come back.
+
+</Step>
+
+<Step title="Watch the release">
+
+Open the **Deployments** tab. **Deploy timeline** shows release `#1`, `Manual deploy`, with three stages — **Build**, **Deploy**, **Ready** — that tick over as it goes, and an activity log of every event underneath.
+
+![A Deploy timeline entry for release number 1, labelled Manual deploy and marked LIVE, annotated with the commit hash 23747d9b1faf5562529e10e28369dc3a661db614 and took 1m 24s, above the three stages Build, Deploy and Ready each showing a green tick](/images/first-app-6-timeline.png)
+
+When it finishes, the release is marked `LIVE` and stamped with the exact commit it built. A release always records that commit, which is what makes a rollback meaningful — see [Releases](/concepts/releases).
+
+Underneath, a resources panel counts what is ready and the activity log accounts for every second of the deploy:
+
+![A resources panel reading 1 of 1 ready, listing the resource web with a READY badge, beside an activity log of timestamped events: Release created, Deploying release, Validating release, Release checks passed at 11:11:27 PM, Deploying — Image build is still in progress, Building web at 11:11:28 PM with a View build logs link, Build succeeded for web at 11:11:41 PM, and Ready at 11:12:52 PM](/images/first-app-6-activity.png)
+
+Read the timestamps and you can see where the time went: the image build took 13 seconds — it is a small Dockerfile — and the pods took another 71 to come up and report ready. One more line follows `Ready`, below the fold: `Release is live`. Your own numbers depend on how heavy your build is; a first build with no cache is the slow one.
+
+Every `Building` and `Build succeeded` entry carries a **View build logs** link, which is where you look first if a build fails.
+
+</Step>
+
+<Step title="Open the URL">
+
+The stack header has grown a **PUBLIC** row listing the resource and the hostname Stackdome generated for it. The header sits above the tabs, so it is there whichever tab you are on.
+
+![The header of the docs-scratch stack, with an OK badge beside the name, a summary reading 1 resource and 0 volumes, and a PUBLIC row holding one entry: the resource web next to its generated hostname jn6dwfjbfdxkvsa2.web.stackdome.io with an open-in-new-tab icon](/images/first-app-7-endpoint.png)
+
+The hostname is built from three parts:
+
+```text
+<token>.<resource-name>.<your-domain>
+```
+
+The token is a short, stable hash of the stack, the resource, and the port number, so the address does not change under you as long as those three stay the same. `<your-domain>` is the domain configured on your organization; if you would rather serve this on a name you own, that is [Domains and TLS](/guides/domains-and-tls).
+
+Click the hostname. Your app is live, over HTTPS:
+
+![The deployed sample app rendered in a browser, showing a blue page with the heading Linux Tweet App, a penguin logo, and the text You have successfully deployed the Linux tweet app](/images/first-app-8-app.png)
+
+</Step>
+
+</Steps>
+
+## What you have now
+
+One stack, holding one resource, built from a commit in your repository and published at a hostname. Everything else in Stackdome is added to that shape: another resource beside this one, a volume for the data it keeps, environment variables to configure it, an addon for a database you would rather not run yourself. Editing a live stack works the same way as building this one did — change something on the canvas, and the pending edits collect as a draft until you press **Deploy** again.
+
+<Tip>
+Done experimenting? Open the stack, press the **Stack actions** button (`···`, to the right of the tabs), and choose **Delete stack**. It asks you to confirm, then permanently removes the stack, its resources, volumes, and deployments.
+</Tip>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Environment variables" icon="sliders" href="/guides/environment-variables">
+    Configure a resource, and pass values between resources without hardcoding them.
+  </Card>
+  <Card title="Managed PostgreSQL" icon="database" href="/guides/postgres">
+    Give your app a database Stackdome runs and backs up for you.
+  </Card>
+  <Card title="Releases" icon="rocket" href="/concepts/releases">
+    What a deploy actually is, and how to roll one back.
+  </Card>
+  <Card title="Stacks and resources" icon="cubes" href="/concepts/stacks-and-resources">
+    The vocabulary behind everything you just clicked.
+  </Card>
+</CardGroup>

@@ -73,4 +73,11 @@ var MigrationList = []*gormigrate.Migration{
 	addStackProjectNameUniqueIndex(),
 	createReleaseEvents(),
 	addPostgresAddonDeletionTimestamp(),
+	addPreviewConfigEnvAndRepoNorm(),
+	addPreviewStackCommentID(),
+	addGitInstallationIDUniqueIndex(),
+	addPreviewCommentPending(),
+	renameDefaultToPlatform(),
+	deleteOrphanPlatformOrg(),
+	addClusterInfo(),
 }

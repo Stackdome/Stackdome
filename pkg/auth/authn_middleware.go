@@ -10,6 +10,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -source=authn_middleware.go -destination=authn_middleware_mock.go -package=auth
+
 type authnMiddleware struct {
 	authenticators []authenticator
 }

@@ -13,6 +13,7 @@ Name | Type | Description | Notes
 **GitRepository** | Pointer to [**PreviewGitRepository**](PreviewGitRepository.md) |  | [optional] 
 **StackfilePath** | Pointer to **string** |  | [optional] 
 **MaxActivePreviews** | Pointer to **int32** |  | [optional] 
+**Env** | Pointer to [**[]EnvVar**](EnvVar.md) | Env var overrides applied to every preview environment; may use secret references. | [optional] 
 **Labels** | Pointer to [**[]Label**](Label.md) |  | [optional] 
 **Annotations** | Pointer to [**[]Annotation**](Annotation.md) |  | [optional] 
 **CreatedAt** | Pointer to **time.Time** |  | [optional] [readonly] 
@@ -261,6 +262,31 @@ SetMaxActivePreviews sets MaxActivePreviews field to given value.
 `func (o *StackPreviewConfig) HasMaxActivePreviews() bool`
 
 HasMaxActivePreviews returns a boolean if a field has been set.
+
+### GetEnv
+
+`func (o *StackPreviewConfig) GetEnv() []EnvVar`
+
+GetEnv returns the Env field if non-nil, zero value otherwise.
+
+### GetEnvOk
+
+`func (o *StackPreviewConfig) GetEnvOk() (*[]EnvVar, bool)`
+
+GetEnvOk returns a tuple with the Env field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetEnv
+
+`func (o *StackPreviewConfig) SetEnv(v []EnvVar)`
+
+SetEnv sets Env field to given value.
+
+### HasEnv
+
+`func (o *StackPreviewConfig) HasEnv() bool`
+
+HasEnv returns a boolean if a field has been set.
 
 ### GetLabels
 

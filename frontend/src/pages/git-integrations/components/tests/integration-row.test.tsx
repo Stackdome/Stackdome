@@ -101,6 +101,15 @@ describe("IntegrationRow", () => {
     expect(onVerify).not.toHaveBeenCalled();
   });
 
+  it("hides the action_needed banner CTA on GitHub App rows (no PUT rotation path)", () => {
+    renderRow({
+      onUpdateCredentials: vi.fn(),
+      integration: integration({ credentials_configured: false }),
+    });
+    expect(screen.getByText(/no credentials are stored/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /update credentials/i })).not.toBeInTheDocument();
+  });
+
   it("renders the access summary derived from installations", async () => {
     vi.mocked(listInstallations).mockResolvedValue({
       items: [{ id: "i1", repository_selection: REPOSITORY_SELECTION_ALL }],
@@ -164,5 +173,55 @@ describe("IntegrationRow", () => {
     });
     expect(screen.getByText("gitlab.com")).toBeInTheDocument();
     await waitFor(() => expect(listInstallations).not.toHaveBeenCalled());
+  });
+
+  it("offers Update credentials in the menu for credentials rows and passes the integration", async () => {
+    const onUpdateCredentials = vi.fn();
+    const creds = integration({ type: GIT_INTEGRATION_TYPE_CREDENTIALS, host: "gitlab.com" });
+    const user = userEvent.setup();
+    renderRow({ integration: creds, onUpdateCredentials });
+
+    await user.click(screen.getByRole("button", { name: /open row menu/i }));
+    await user.click(await screen.findByRole("menuitem", { name: /update credentials/i }));
+
+    await waitFor(() => expect(onUpdateCredentials).toHaveBeenCalledWith(creds));
+    expect(screen.queryByRole("menuitem", { name: /manage on github/i })).not.toBeInTheDocument();
+  });
+
+  it("offers Manage on GitHub for app rows with an install_url, not Update credentials", async () => {
+    const user = userEvent.setup();
+    renderRow({
+      integration: integration({ install_url: "https://github.com/apps/x/installations/new" }),
+      onUpdateCredentials: vi.fn(),
+    });
+
+    await user.click(screen.getByRole("button", { name: /open row menu/i }));
+
+    const manage = await screen.findByRole("menuitem", { name: /manage on github/i });
+    expect(manage).toHaveAttribute("href", "https://github.com/apps/x/installations/new");
+    expect(manage).toHaveAttribute("target", "_blank");
+    expect(screen.queryByRole("menuitem", { name: /update credentials/i })).not.toBeInTheDocument();
+  });
+
+  it("hides Manage on GitHub when an app row has no install_url", async () => {
+    const user = userEvent.setup();
+    renderRow({ integration: integration({ install_url: undefined }) });
+
+    await user.click(screen.getByRole("button", { name: /open row menu/i }));
+    await screen.findByRole("menuitem", { name: /remove integration/i });
+    expect(screen.queryByRole("menuitem", { name: /manage on github/i })).not.toBeInTheDocument();
+  });
+
+  it("routes the action_needed banner CTA through onUpdateCredentials with the integration", async () => {
+    const onUpdateCredentials = vi.fn();
+    const creds = integration({
+      type: GIT_INTEGRATION_TYPE_CREDENTIALS,
+      credentials_configured: false,
+    });
+    const user = userEvent.setup();
+    renderRow({ integration: creds, onUpdateCredentials });
+
+    await user.click(screen.getByRole("button", { name: /update credentials/i }));
+    expect(onUpdateCredentials).toHaveBeenCalledWith(creds);
   });
 });

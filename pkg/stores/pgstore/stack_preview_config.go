@@ -28,6 +28,7 @@ func NewStackPreviewConfigStore(spec StackPreviewConfigStoreSpec) stores.StackPr
 }
 
 func (s *stackPreviewConfigStore) Create(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError) {
+	config.RepoURLNormalized = config.NormalizedRepoURL()
 	if err := s.sessionFactory.New(ctx).Create(config).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
 			return nil, errors.Conflict("preview config with name '%s' already exists in this project", config.Name)
@@ -59,7 +60,21 @@ func (s *stackPreviewConfigStore) GetByProjectAndName(ctx context.Context, proje
 	return &config, nil
 }
 
+func (s *stackPreviewConfigStore) GetByOrgAndRepo(ctx context.Context, organisationID, normalizedRepoURL string) (*models.StackPreviewConfig, *errors.ServiceError) {
+	var config models.StackPreviewConfig
+	if err := s.sessionFactory.New(ctx).
+		Where("organisation_id = ? AND repo_url_normalized = ?", organisationID, normalizedRepoURL).
+		First(&config).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("no preview config for repo in this organisation")
+		}
+		return nil, errors.GeneralError("failed to get preview config by repo: %s", err.Error())
+	}
+	return &config, nil
+}
+
 func (s *stackPreviewConfigStore) Update(ctx context.Context, config *models.StackPreviewConfig) (*models.StackPreviewConfig, *errors.ServiceError) {
+	config.RepoURLNormalized = config.NormalizedRepoURL()
 	if err := s.sessionFactory.New(ctx).Model(&models.StackPreviewConfig{}).Where("id = ?", config.ID).Select("*").Updates(config).Error; err != nil {
 		return nil, errors.GeneralError("failed to update preview config: %s", err.Error())
 	}

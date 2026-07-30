@@ -92,8 +92,8 @@ func (v *postgresAddonValidator) validateBasicFields(spec *models.PostgresAddon)
 		return errors.BadRequest("PostgreSQL addon name must be a valid DNS subdomain (lowercase letters, numbers, and hyphens)")
 	}
 
-	if len(spec.Name) > 63 {
-		return errors.BadRequest("PostgreSQL addon name cannot be longer than 63 characters")
+	if len(spec.Name) > models.MaxAddonNameLength {
+		return errors.BadRequest("PostgreSQL addon name cannot be longer than %d characters", models.MaxAddonNameLength)
 	}
 
 	return nil
@@ -227,10 +227,6 @@ func (v *postgresAddonValidator) validateStorage(spec *models.PostgresAddon) *er
 	sizeRegex := regexp.MustCompile(`^[0-9]+(\.[0-9]+)?[KMGT]i?$`)
 	if !sizeRegex.MatchString(spec.Storage.Size) {
 		return errors.BadRequest("Storage size must be in valid Kubernetes storage format (e.g., '10Gi', '100Mi', '1Ti')")
-	}
-
-	if spec.Storage.StorageClass == "" {
-		return errors.BadRequest("Storage class cannot be empty")
 	}
 
 	return nil

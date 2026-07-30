@@ -1628,10 +1628,9 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    /** @description Substring filter on the repository full name */
-                    query?: string;
                     page?: number;
-                    installation_id?: number;
+                    /** @description Our GitInstallation id (UUID). When omitted, repositories are aggregated across every installation of the integration. */
+                    installation_id?: string;
                 };
                 header?: never;
                 path: {
@@ -2567,6 +2566,66 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{org_id}/image_registries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all image registries for an organisation */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Successful operation */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ClusterImageRegistryList"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7447,7 +7506,7 @@ export interface components {
             id?: string;
             name?: string;
             domains?: components["schemas"]["DomainName"][];
-            is_default?: boolean;
+            readonly is_platform?: boolean;
             /** Format: date-time */
             created_at?: string;
             /** Format: date-time */
@@ -7651,7 +7710,7 @@ export interface components {
             id?: string;
             name: string;
             organisation_id?: string;
-            default?: boolean;
+            readonly platform?: boolean;
             cluster_url: string;
             cluster_ca_data: string;
             cluster_sa_token: string;
@@ -7801,7 +7860,7 @@ export interface components {
         };
         /** @description Declared output metadata for a topology node. Values are not returned here. */
         OutputDescriptor: {
-            /** @description Stable output accessor name, for example `host` or `public.http.url`. */
+            /** @description Stable output accessor name, for example `host` or `public_url`. */
             name: string;
             /**
              * @description Scalar value type exposed by this output.
@@ -7924,7 +7983,7 @@ export interface components {
         /** @description Describes how to read a value from the connection's `from` node. This is only used inside `StackConnection.mappings[]`.
          *      */
         ValueRef: {
-            /** @description Output accessor on the connection's `from` node, such as `url` or `public.http.url`. */
+            /** @description Output accessor on the connection's `from` node, such as `url` or `public_url`. */
             output?: string;
             /** @description Template used when one target value must be composed from multiple outputs. */
             template?: string;
@@ -8298,7 +8357,7 @@ export interface components {
             name: string;
             /** @description Literal environment variable value. */
             value?: string;
-            /** @description Read this environment variable from one of the resource's own declared outputs, for example public.http.url. */
+            /** @description Read this environment variable from one of the resource's own declared outputs, for example public_url. */
             self_output?: string;
         };
         Condition: {
@@ -8505,8 +8564,8 @@ export interface components {
         PostgresStorage: {
             /** @description Storage size (e.g., 10Gi, 100Gi) */
             size: string;
-            /** @description Kubernetes storage class name */
-            storage_class: string;
+            /** @description Kubernetes storage class name. Omit to use the cluster's default storage class. */
+            storage_class?: string;
         };
         PostgresResources: {
             cpu?: {
@@ -8985,6 +9044,8 @@ export interface components {
             git_repository?: components["schemas"]["PreviewGitRepository"];
             stackfile_path?: string;
             max_active_previews?: number;
+            /** @description Env var overrides applied to every preview environment; may use secret references. */
+            env?: components["schemas"]["EnvVar"][];
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
             /** Format: date-time */
@@ -8998,6 +9059,8 @@ export interface components {
             description?: string;
             stackfile_path?: string;
             max_active_previews?: number;
+            /** @description Env var overrides applied to every preview environment; may use secret references. */
+            env?: components["schemas"]["EnvVar"][];
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
         };
@@ -9006,6 +9069,8 @@ export interface components {
             stackfile_path?: string;
             max_active_previews?: number;
             git_repository?: components["schemas"]["PreviewGitRepository"];
+            /** @description Env var overrides applied to every preview environment; may use secret references. */
+            env?: components["schemas"]["EnvVar"][];
             labels?: components["schemas"]["Label"][];
             annotations?: components["schemas"]["Annotation"][];
         };

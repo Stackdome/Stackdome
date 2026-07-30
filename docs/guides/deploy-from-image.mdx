@@ -1,0 +1,213 @@
+---
+title: "Deploy from an image"
+description: "Run an existing container image, including images from private registries."
+---
+
+Not every **resource** needs building. A workflow automation tool, an open-source dashboard, a monitoring stack, something you build in your own CI — the image already exists somewhere, and all you want is for the **cluster** to pull it and run it. This is the shortest path Stackdome has: name the image, deploy, done. No repository, no build, no registry to push to.
+
+If what you need is Postgres, take the managed path instead — see [Postgres](/guides/postgres). An **addon** is provisioned and looked after for you, which running the `postgres:16` image as an ordinary resource is not.
+
+This page is about *pulling*. Setting an image **source** tells Stackdome where to fetch an image someone else published. It is not the same thing as the **Push registry** option on a git resource, which is about where a build *puts* the image it produces.
+
+## Prerequisites
+
+- **A stack with a resource to point at an image.** If you have not built one yet, start with [Deploy your first app](/deploy-first-app).
+- **The image reference you want to run**, including the tag or digest.
+- **For a private image, a login for its registry** — a username plus a token or password. Stackdome keeps it as a registry credential; see [Private registries](#private-registries) below.
+- **The registry has to be reachable twice.** Stackdome's hub probes the image before the deploy starts, and the cluster performs the real pull. A registry only one of them can reach will bite you in one place or the other.
+
+## Set an image source
+
+Open the stack, go to the **Architecture** tab, and click the resource's node on **the canvas** to open **the drawer**. Everything below is in the drawer's **SOURCE** section.
+
+![The resource drawer's Source section, showing the Build from toggle set to Container image, a Registry row reading Public / Docker Hub, and a required Image reference field holding postgrest/postgrest:v12.2.0](/images/image-source-field.png)
+
+<Steps>
+  <Step title="Set Build from to Container image">
+    **Build from** is a two-way toggle — **Container image** or **Git repository**. Switching hides the other side's fields but keeps their values, so flipping back and forth costs you nothing.
+  </Step>
+  <Step title="Choose the registry">
+    **Registry** is a picker, not a text box. It reads **Public / Docker Hub** until you choose otherwise, and it lists every registry credential your organization has added, by host. Typing into it offers **Use "…" as registry host** so you can point at a host you have no stored credential for.
+
+    Picking a credential here does two things: it rewrites the host segment of the reference, and it pins that credential to this resource. See [How a resource picks up a credential](#how-a-resource-picks-up-a-credential).
+  </Step>
+  <Step title="Enter the image reference">
+    **Image reference** is required. It shows `e.g., nginx:latest, redis:7` while no host is set, and `e.g., acme/api:1.4.2` once one is. When a host is in play it appears as a grey chip in front of the field, and the field itself holds only the repository and tag.
+  </Step>
+  <Step title="Apply and deploy">
+    Editing the drawer builds **a draft** — the footer counts your pending edits. Nothing is pulled until the draft is applied and the stack is deployed.
+  </Step>
+</Steps>
+
+### What the reference field accepts
+
+A reference is a registry host, a repository path, and a tag or digest. All of these are valid:
+
+```text
+nginx:latest                       # Docker Hub, official image
+acme/api:1.4.2                     # Docker Hub, account repository
+ghcr.io/acme/api:1.4.2             # explicit registry host
+quay.io/acme/api@sha256:<digest>   # pinned by digest (64 hex characters)
+localhost:5000/app:dev             # host recognised by its port
+registry:5000/app:dev              # same
+```
+
+The rule for deciding whether the first segment is a host is the one the Docker CLI uses: it is a host if it contains a dot, contains a colon, or is exactly `localhost`. Anything else is a Docker Hub repository — which is why `acme/api:1.4.2` is an account repository and not a host called `acme`. Paste a fully-qualified reference and the whole value is replaced, chip and all.
+
+Three host spellings mean the same registry: `docker.io`, `index.docker.io` and `registry-1.docker.io` are treated as one, and are stored normalized as `index.docker.io`.
+
+Prefer a digest when you care that a redeploy runs exactly the same bits. A tag is a pointer the publisher can move, so `:1.4.2` today and `:1.4.2` next month are not guaranteed to be the same image; `@sha256:…` cannot drift. A reference with no tag and no digest means `latest`, which is the least predictable choice of all.
+
+The reference is parsed when you save. An unparseable one is refused on `source.image.ref` with `image_ref_invalid` and a message naming what the parser objected to; an empty one with `image_ref_required`.
+
+<Note>
+**One source per resource.** A resource carries either a build source or an image source, never both — the API refuses the combination with `source_conflict`: *"a resource cannot have both a build source and an image source"*. Leaving out both is refused too: *"exactly one of a git/volume build source or an image source is required"*. The **Build from** toggle is what keeps you on the right side of this, which is why it stashes the values from the branch you switched away from instead of sending them.
+</Note>
+
+## Private registries
+
+Registry credentials live under **INTEGRATIONS → `Image Registries`** in the sidebar. The page is headed **Image registries** — *"Store registry credentials so builds can pull private images and push artifacts."*
+
+![The Image registries page with no credentials added, showing the heading Image registries, the subtitle about storing registry credentials, and an empty dashed panel reading NO IMAGE REGISTRIES YET above an Add registry button](/images/image-registries.png)
+
+This page lists only credentials your organization has added for registries elsewhere. A cluster's own image registry is not shown here and does not need a credential — an empty page does not mean your install has no registry.
+
+### Add a credential
+
+Choose **Add registry**. The dialog is two steps.
+
+The first asks *"Where do your images live?"* and offers five tiles:
+
+![The Add image registry dialog asking Where do your images live, with Docker Hub, GHCR, GitLab Registry, Quay and Other tiles](/images/image-registry-providers.png)
+
+| Tile | Host it prefills |
+| --- | --- |
+| **Docker Hub** | `docker.io` |
+| **GHCR** | `ghcr.io` |
+| **GitLab Registry** | `registry.gitlab.com` |
+| **Quay** | `quay.io` |
+| **Other** | nothing — you type the host |
+
+The second is the credential form, and it is explicit about what happens to what you type: *"Stackdome stores the credentials encrypted and uses them only for image pulls and pushes."*
+
+![The Connect GHCR step of the Add image registry dialog, with Host prefilled as ghcr.io, empty Username and Password fields, a hint about GitHub personal access tokens, and Purpose set to Pull and push](/images/image-registry-credential-form.png)
+
+| Field | Notes |
+| --- | --- |
+| **Host** | Required, prefilled for the known providers. Normalized on save — an `https://` prefix, a trailing slash and capitals are all stripped. Empty is refused with `Host is required.` The host is fixed once created (`host cannot be updated`); to move a credential to another host, add a new one. |
+| **Username** | Required. Empty is refused with `Username is required.` |
+| **Password** | Required, masked as you type, and never shown again. Empty is refused with `Password is required.` |
+| **Purpose** | **Pull & push** (the default), **Pull only**, or **Push only**. Pulling an image is what this page needs; push only matters for a git build that pushes somewhere other than the cluster registry. |
+
+The password field is where the token goes, and each provider wants a different kind:
+
+| Provider | What to paste |
+| --- | --- |
+| Docker Hub | An access token, not your account password. |
+| GHCR | A GitHub personal access token with `read:packages` — plus `write:packages` if the credential will also push. |
+| GitLab Registry | A deploy token or personal access token with `read_registry` / `write_registry`. |
+| Quay | A robot account token with access to the repository. |
+| Other | Anything an OCI registry reachable over HTTPS accepts as username/password or token auth. |
+
+<Warning>
+Never let a registry token land somewhere it will be kept — a screenshot, a ticket, a chat message. Stackdome encrypts it at rest and never displays it again; the only way to change it is to replace it wholesale through **Update credentials**.
+</Warning>
+
+Two rules constrain what you can store:
+
+- **One credential per host, per purpose.** A duplicate is refused with `409` and the form says *"Credentials for this registry and purpose already exist."* **Pull & push** collides with everything on that host, so a host holds either one **Pull & push** credential, or a **Pull only** and a **Push only** pair — never a mix of the two arrangements.
+- **Adding a credential does not test it.** Creation stores and encrypts it, and that is all. Nothing has talked to the registry yet.
+
+### Verify access
+
+Because creation proves nothing, verify before a deploy depends on it. Each row's **⋯** menu holds **Verify registry access**, **Update credentials** and **Remove registry**.
+
+**Verify registry access** opens a dialog — *"Confirms the &lt;host&gt; credentials can access a repository."* — with one field, **Repository**, hinted *"Repository path on this registry, e.g. acme/app."* Type the path alone and the dialog prefixes the credential's host for you; type a fully-qualified reference and it is used as-is.
+
+What it actually does depends on the credential's purpose, because it checks every half the purpose covers:
+
+| Purpose | Checks run |
+| --- | --- |
+| **Pull only** | Can this credential fetch that image. |
+| **Push only** | Can this credential push to that repository. |
+| **Pull & push** | Both. |
+
+That last row surprises people. Verifying a **Pull & push** credential against a repository you can only read from fails on the push half even though pulling is fine. The value is treated as an image reference, too, so a bare `acme/app` checks the `latest` tag — include a real tag if `latest` does not exist there.
+
+Success is a **Registry access verified** toast. Failure is **Couldn't verify registry access** carrying the reason:
+
+| Reason | Means |
+| --- | --- |
+| `pull verification failed for '<repo>': image not found or not pullable` | The reference resolved but the credential cannot fetch it. Wrong repository, wrong tag, or the account has no access. |
+| `pull verification failed for '<repo>': <what the registry said>` | The registry refused outright — usually bad or expired credentials. |
+| `push verification failed for '<repo>': …` | Pull may well be fine; the credential just cannot push there. |
+| `repository host 'quay.io' does not match credential host 'ghcr.io'` | You typed a fully-qualified reference for a different registry. |
+
+### How a resource picks up a credential
+
+There is no "attach credential to resource" step. Resolution runs at deploy time in a fixed order:
+
+<Steps>
+  <Step title="A credential pinned on the resource">
+    Choosing a credential in the drawer's **Registry** picker records its ID on the image source. That pin wins over everything else.
+  </Step>
+  <Step title="A credential matching the reference's host">
+    With nothing pinned, Stackdome looks for a credential in the organization whose normalized host equals the reference's registry host and whose purpose covers pulling. This is the common case, and it needs no drawer edit at all: add a `ghcr.io` credential and every resource in the organization pulling from `ghcr.io` starts using it on its next deploy.
+
+    Docker Hub is included. A bare `nginx:latest` normalizes to `index.docker.io`, so a Docker Hub credential covers references that name no host.
+  </Step>
+  <Step title="Anonymous">
+    No pin and no host match means the pull is attempted with no credentials.
+  </Step>
+</Steps>
+
+Consequences worth knowing:
+
+- Choosing **Public / Docker Hub** in the picker clears both the host and the pin. A Docker Hub credential still attaches by host — clearing the pin is not the same as forcing an anonymous pull.
+- The picker lists every credential regardless of purpose. Pin a **Push only** one for a pull and the deploy is refused: `registry credential '<id>' has purpose 'push' and cannot be used for 'pull'`.
+- Pin a credential and then delete it and validation catches the dangling reference: `registry credential '<id>' does not exist`.
+- Removing a credential confirms with *"Remove this registry?"* — *"Stacks referencing these credentials lose pull/push access."* Stackdome then names the stacks that were resolving against it: *"Stacks affected: … Their image pulls or pushes may fail until another credential covers &lt;host&gt;."*
+- **Update credentials** rotates the username and password in place. Running resources are untouched; the next deploy syncs the new pair to the cluster.
+
+Just before the stack is applied, the hub writes the resolved credential into the target cluster's namespace as a pull secret, so the cluster can pull without ever being handed your organization's credential store.
+
+## What happens when you deploy
+
+A release validates every image source against its registry before it renders anything, and the **Deployments** tab narrates it:
+
+| Event | Means |
+| --- | --- |
+| **Validating release** | The checks started. |
+| **Release checks passed** | Every check genuinely passed. |
+| `Check source.image.ref:<code> failed for <resource>: <message>` | One check failed. The release then fails with `release validation failed: N error(s)`. |
+
+Three failures are specific to pulling an image, and the distinction between the first two is the whole point:
+
+| Code | Message | Do this |
+| --- | --- | --- |
+| `registry_credentials_required` | `image 'ghcr.io/acme/api:1.4.2' requires credentials for registry 'ghcr.io', but none are configured` | No credential resolved and the registry refuses anonymous access. Add one for that host. |
+| `registry_auth_failed` | `registry 'ghcr.io' rejected the configured credentials for image 'ghcr.io/acme/api:1.4.2'` | A credential *was* found and refused. Verify it, then rotate it through **Update credentials**. |
+| `image_not_found` | `image 'ghcr.io/acme/api:1.4.2' does not exist or is not accessible` | Usually a typo in the repository or a tag that was never pushed. |
+
+Successful probes are remembered, so redeploying an unchanged reference with unchanged credentials does not re-probe the registry. Change either and it is checked again.
+
+One reference is deliberately skipped: an image whose host ends in `.svc.cluster.local` lives inside the cluster, where the hub cannot reach it. Those go straight through to the cluster's own pull.
+
+## Rate limits
+
+Unauthenticated pulls from Docker Hub are throttled. When the registry answers the hub's probe with a rate-limit signal instead of an answer, Stackdome does **not** fail the release — a limit can persist for hours, and the image would most likely have pulled fine. It logs a warning, skips that check, and lets the deploy continue.
+
+The observable symptom is an absence. The deploy runs normally, but **Release checks passed** never appears in that release's timeline. That line asserts every check genuinely passed, so a single skipped check withholds it for the whole release — the other resources in the stack may well have been verified, and you cannot tell from the timeline which were which. Two things follow:
+
+- **Early failure detection is gone for the image that was skipped.** A typo in that reference is no longer caught before the deploy; it surfaces later as the resource failing to start.
+- **The cluster still has to pull.** The hub's probe is not the pull. A cluster whose own unauthenticated pulls are being throttled will stall on the image no matter what the hub concluded, and the deploy runs to its timeout.
+
+The fix in both cases is to stop pulling anonymously: add a Docker Hub credential with a purpose that covers pulling. It attaches by host, so nothing in the drawer needs editing.
+
+## When to prefer git
+
+Reach for an image source when you did not write the thing you are running, or when your build already happens somewhere else and publishes to a registry. Reach for a git source when the code is yours and you want the deploy to start from a commit rather than from an image you have to remember to build and push — that path pins revisions per release, so a rollback is exact.
+
+<Card title="Deploy from git" icon="code-branch" href="/guides/deploy-from-git">
+  Connect a git provider and let the cluster build your repository into a running resource.
+</Card>

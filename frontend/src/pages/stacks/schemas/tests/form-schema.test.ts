@@ -64,16 +64,16 @@ describe("env round-trip", () => {
       sourceType: "image" as const,
       source: { image: { ref: "nginx" } },
       execution_config: {
-        environment_variables: [{ from: "self" as const, name: "URL", selfOutput: "public.http.url" }],
+        environment_variables: [{ from: "self" as const, name: "URL", selfOutput: "public_url.http" }],
       },
     };
     const api = convertFormResourceToApiResource(form as never);
     expect(api.execution_config?.environment_variables).toEqual([
-      { name: "URL", self_output: "public.http.url" },
+      { name: "URL", self_output: "public_url.http" },
     ]);
     const back = convertApiResourceToFormResource(api as never);
     expect(back.execution_config?.environment_variables).toEqual([
-      { from: "self", name: "URL", selfOutput: "public.http.url" },
+      { from: "self", name: "URL", selfOutput: "public_url.http" },
     ]);
   });
 
@@ -218,6 +218,155 @@ describe("convertFormStackToApiStack — git source credential passthrough", () 
   });
 });
 
+describe("convertFormStackToApiStack — image source credential passthrough", () => {
+  it("preserves source.image.registry_credentials_id through the API-prep transform", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "image" as const,
+            source: {
+              image: {
+                ref: "ghcr.io/acme/api:1",
+                registry_credentials_id: "cred-1",
+              },
+            },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0].source?.image?.registry_credentials_id).toBe("cred-1");
+  });
+});
+
+describe("stashed source fields — stripped before the API payload", () => {
+  it("strips stashedGitSource and stashedImageSource via convertFormResourceToApiResource", () => {
+    const form = {
+      name: "web",
+      sourceType: "image" as const,
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+      stashedGitSource: { repo_url: "https://github.com/acme/api.git", dockerfile_path: "Dockerfile", build_context: "." },
+      stashedImageSource: { ref: "old-ref" },
+    };
+    const api = convertFormResourceToApiResource(form as never);
+    expect(api).not.toHaveProperty("stashedGitSource");
+    expect(api).not.toHaveProperty("stashedImageSource");
+  });
+
+  it("strips stashedGitSource and stashedImageSource via convertFormStackToApiStack", () => {
+    const form = {
+      name: "tooljet",
+      labels: [],
+      spec: {
+        stack_resources: [
+          {
+            name: "web",
+            sourceType: "git" as const,
+            source: { git: { repo_url: "https://github.com/acme/api.git", dockerfile_path: "Dockerfile", build_context: "." } },
+            stashedGitSource: { repo_url: "https://github.com/acme/old.git", dockerfile_path: "Dockerfile", build_context: "." },
+            stashedImageSource: { ref: "ghcr.io/acme/api:1", registry_credentials_id: "cred-1" },
+          },
+        ],
+      },
+    };
+    const api = convertFormStackToApiStack(form as never);
+    expect(api.spec.stack_resources[0]).not.toHaveProperty("stashedGitSource");
+    expect(api.spec.stack_resources[0]).not.toHaveProperty("stashedImageSource");
+  });
+});
+
+describe("FormStackResourceSchema — image ref validation", () => {
+  it("rejects a ref with a host but an empty remainder", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/" } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+
+  it("accepts a fully-qualified ref with host, repo, and tag", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/acme/api:1" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a hostless ref", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "nginx:latest" } },
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a whitespace-only ref", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "  " } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+
+  it("rejects a host with a whitespace-only remainder", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "ghcr.io/  " } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.image.ref",
+      );
+      expect(issue?.message).toBe("Container image reference is required");
+    }
+  });
+});
+
+describe("FormStackResourceSchema — git repo_url validation", () => {
+  it("rejects a whitespace-only repo_url", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "git",
+      source: { git: { repo_url: "   ", dockerfile_path: "Dockerfile", build_context: "." } },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "source.git.repo_url",
+      );
+      expect(issue?.message).toBe("Git repository URL is required");
+    }
+  });
+});
+
 describe("FormEnvVarSchema (addon variant) — refines", () => {
   it("requires database when superuser is false", async () => {
     const { FormEnvVarSchema } = await import("../form-schema");
@@ -359,6 +508,117 @@ describe("FormStackSchema — depends_on cross-validation", () => {
           i.path[3] === "depends_on",
       );
       expect(dangling).toHaveLength(2);
+    }
+  });
+});
+
+describe("command/args text ↔ argv round-trip", () => {
+  it("loads argv arrays as terminal-style text", () => {
+    const api = baseResource({ command: ["npm", "run", "start:prod"] });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    expect(form.execution_config?.command).toBe("npm run start:prod");
+    expect(form.execution_config?.args).toBe("npm run start:prod");
+  });
+
+  it("quotes argv elements containing spaces on load, losslessly", () => {
+    const api = baseResource({
+      command: ["sh", "-c", "npm run migrate && npm start"],
+      args: [],
+    });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    expect(form.execution_config?.command).toBe("sh -c 'npm run migrate && npm start'");
+
+    const back = convertFormResourceToApiResource(form);
+    expect(back.execution_config?.command).toEqual(["sh", "-c", "npm run migrate && npm start"]);
+  });
+
+  it("saves quoted text as a single argv element", () => {
+    const api = baseResource({});
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = {
+      ...form,
+      init_spec: { command: 'node -e "console.log(1)"', args: "" },
+    };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.init_spec?.command).toEqual(["node", "-e", "console.log(1)"]);
+  });
+
+  it("serializes a cleared init_spec as explicit empty arrays (gorm skips absent fields)", () => {
+    const api = baseResource({});
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = { ...form, init_spec: { command: "  ", args: "" } };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.init_spec).toEqual({ command: [], args: [] });
+  });
+
+  it("serializes cleared exec command/args as explicit empty arrays", () => {
+    const api = baseResource({ command: ["npm", "start"] });
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    const edited = {
+      ...form,
+      execution_config: { ...form.execution_config, command: "", args: "" },
+    };
+    const back = convertFormResourceToApiResource(edited);
+    expect(back.execution_config?.command).toEqual([]);
+    expect(back.execution_config?.args).toEqual([]);
+  });
+
+  it("omits init_spec for a resource that never had one", () => {
+    const api = baseResource({});
+    const form = convertApiResourceToFormResource(api as unknown as ApiResourceArg);
+    expect(form.init_spec).toBeUndefined();
+    const back = convertFormResourceToApiResource(form);
+    expect(back.init_spec).toBeUndefined();
+  });
+});
+
+describe("FormStackResourceSchema — command text validation", () => {
+  const valid = {
+    name: "web",
+    sourceType: "image",
+    source: { image: { ref: "nginx:latest" } },
+  };
+
+  it("rejects unbalanced quotes in a command field", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      ...valid,
+      init_spec: { command: "sh -c 'npm start" },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "init_spec.command",
+      );
+      expect(issue?.message).toBe("Unclosed quote or trailing backslash");
+    }
+  });
+
+  it("accepts balanced quoted command text", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      ...valid,
+      execution_config: { command: "sh -c 'npm run migrate && npm start'" },
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("FormStackResourceSchema — port number validation", () => {
+  it("rejects a port with no number (cleared field)", async () => {
+    const { FormStackResourceSchema } = await import("../form-schema");
+    const result = FormStackResourceSchema.safeParse({
+      name: "web",
+      sourceType: "image",
+      source: { image: { ref: "nginx:latest" } },
+      ports: [{ protocol: "tcp", exposed_to_public: false }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const issue = result.error.issues.find(
+        (i) => i.path.join(".") === "ports.0.number",
+      );
+      expect(issue?.message).toBe("Port number is required");
     }
   });
 });

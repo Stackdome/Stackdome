@@ -126,7 +126,7 @@ describe('convertDockerComposeToStackData', () => {
     expect(resource.source?.git).toBeDefined();
     expect(resource.source!.git!.build_context).toBe('./api');
     expect(resource.source!.git!.dockerfile_path).toBe('Dockerfile.prod');
-    expect(resource.execution_config.command).toEqual(['npm', 'start']);
+    expect(resource.execution_config.command).toBe('npm start');
     expect(resource.execution_config.environment_variables).toHaveLength(2);
 
     // Should have warnings about build args and placeholders
@@ -337,7 +337,7 @@ describe('convertServiceToStackResource', () => {
     expect(result.data!.sourceType).toBe('git');
     expect(result.data!.source?.git).toBeDefined();
     expect(result.data!.source!.git!.build_context).toBe('./backend');
-    expect(result.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
+    expect(result.data!.execution_config.command).toBe('npm run start:prod');
   });
 
   it('should fail when neither image nor build is specified', () => {
@@ -493,10 +493,10 @@ describe('convertServiceToStackResource', () => {
     const resultArray = convertServiceToStackResource('app2', serviceArray);
 
     expect(resultString.success).toBe(true);
-    expect(resultString.data!.execution_config.command).toEqual(['npm', 'start']);
+    expect(resultString.data!.execution_config.command).toBe('npm start');
 
     expect(resultArray.success).toBe(true);
-    expect(resultArray.data!.execution_config.command).toEqual(['npm', 'run', 'start:prod']);
+    expect(resultArray.data!.execution_config.command).toBe('npm run start:prod');
   });
 
   it('should map internal ports as exposed when external mapping exists', () => {
@@ -554,9 +554,11 @@ describe('convertServiceToStackResource', () => {
     const result = convertServiceToStackResource('cache', service);
 
     expect(result.success).toBe(true);
-    // Since expose doesn't provide external mapping, no ports should be created
-    // or if ports are created, they should not be exposed to public
-    expect(result.data!.ports).toHaveLength(0);
+    // Exposed ports become service ports that are reachable inside the stack
+    // but are never published on a public ingress.
+    expect(result.data!.ports).toEqual([
+      { name: 'tcp-6379', number: 6379, protocol: 'tcp', exposed_to_public: false },
+    ]);
   });
 
   it('should use internal port when external mapping differs', () => {
@@ -973,5 +975,185 @@ services:
     expect(conversionResult.success).toBe(true); // Partial success
     expect(conversionResult.data!.spec.stack_resources).toHaveLength(1); // Only valid service converted
     expect(conversionResult.errors).toHaveLength(1); // One service failed
+  });
+});
+
+describe('referential environment variables', () => {
+  const composeWithRefs = (): DockerComposeFile => ({
+    services: {
+      app: {
+        image: 'app:1',
+        ports: ['80:80'],
+        environment: {
+          SELF_URL: '${self.public_url}',
+          OWN_NAME_URL: '${app.public_url}',
+          DB_HOST: '${db.host}',
+          UNKNOWN_REF: '${ghost.host}',
+          LITERAL: 'plain-value',
+          PARTIAL: 'prefix-${db.host}',
+        },
+      },
+      db: { image: 'postgres:16' },
+    },
+  } as unknown as DockerComposeFile);
+
+  it('converts ${self.output} and own-service references to self rows', () => {
+    const result = convertDockerComposeToStackData(composeWithRefs());
+    expect(result.success).toBe(true);
+
+    const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
+    const env = Object.fromEntries(
+      (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
+    );
+    expect(env.SELF_URL).toEqual({ from: 'self', name: 'SELF_URL', selfOutput: 'public_url' });
+    expect(env.OWN_NAME_URL).toEqual({ from: 'self', name: 'OWN_NAME_URL', selfOutput: 'public_url' });
+  });
+
+  it('converts ${service.output} to resource rows for known services', () => {
+    const result = convertDockerComposeToStackData(composeWithRefs());
+    const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
+    const env = Object.fromEntries(
+      (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
+    );
+    expect(env.DB_HOST).toEqual({ from: 'resource', name: 'DB_HOST', resourceName: 'db', output: 'host' });
+  });
+
+  it('keeps unknown-service references literal and upgrades partial interpolations to templates', () => {
+    const result = convertDockerComposeToStackData(composeWithRefs());
+    const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
+    const env = Object.fromEntries(
+      (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
+    );
+    expect(env.UNKNOWN_REF).toEqual({ from: 'stack', name: 'UNKNOWN_REF', value: '${ghost.host}' });
+    expect(env.PARTIAL).toEqual({
+      from: 'resourceTemplate',
+      name: 'PARTIAL',
+      resourceName: 'db',
+      template: 'prefix-{{host}}',
+      values: { host: 'host' },
+    });
+    expect(env.LITERAL).toEqual({ from: 'stack', name: 'LITERAL', value: 'plain-value' });
+
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message: expect.stringContaining("references unknown service 'ghost'"),
+        }),
+      ]),
+    );
+  });
+
+  it('supports dotted output keys for multi-port targets', () => {
+    const compose = {
+      services: {
+        app: {
+          image: 'app:1',
+          environment: { OTLP_HOST: '${otel.host}', OTEL_PORT: '${otel.port.tcp-4318}' },
+        },
+        otel: { image: 'otel:1', ports: ['3000:3000'], expose: ['4318'] },
+      },
+    } as unknown as DockerComposeFile;
+
+    const result = convertDockerComposeToStackData(compose);
+    const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
+    const env = Object.fromEntries(
+      (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
+    );
+    expect(env.OTEL_PORT).toEqual({ from: 'resource', name: 'OTEL_PORT', resourceName: 'otel', output: 'port.tcp-4318' });
+  });
+});
+
+describe('expose (internal-only ports)', () => {
+  it('maps expose entries to non-public tcp ports alongside published ports', () => {
+    const service: DockerComposeService = {
+      image: 'grafana/otel-lgtm:0.29.1',
+      ports: ['3000:3000'],
+      expose: ['4318', 4317],
+    } as unknown as DockerComposeService;
+
+    const result = convertServiceToStackResource('lgtm', service, ['lgtm']);
+    expect(result.success).toBe(true);
+
+    const ports = (result.data!.ports ?? [])
+      .map((p) => ({ number: p.number, protocol: p.protocol, public: p.exposed_to_public }))
+      .sort((a, b) => (a.number ?? 0) - (b.number ?? 0));
+    expect(ports).toEqual([
+      { number: 3000, protocol: 'http', public: true },
+      { number: 4317, protocol: 'tcp', public: false },
+      { number: 4318, protocol: 'tcp', public: false },
+    ]);
+  });
+
+  it('warns on unparseable expose entries and keeps the rest', () => {
+    const service = {
+      image: 'app:1',
+      expose: ['not-a-port', '9000/tcp'],
+    } as unknown as DockerComposeService;
+
+    const result = convertServiceToStackResource('app', service, ['app']);
+    expect(result.success).toBe(true);
+    expect(result.data!.ports).toEqual([
+      { name: 'tcp-9000', number: 9000, protocol: 'tcp', exposed_to_public: false },
+    ]);
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ dockerComposeField: 'expose' }),
+      ]),
+    );
+  });
+});
+
+describe('composite env values with embedded references', () => {
+  const convert = (environment: Record<string, string>) => {
+    const compose = {
+      services: {
+        app: { image: 'app:1', environment },
+        db: { image: 'postgres:16' },
+        otel: { image: 'otel:1', ports: ['3000:3000'], expose: ['4318'] },
+      },
+    } as unknown as DockerComposeFile;
+    const result = convertDockerComposeToStackData(compose);
+    const app = result.data!.spec.stack_resources.find((r) => r.name === 'app')!;
+    const env = Object.fromEntries(
+      (app.execution_config?.environment_variables ?? []).map((e) => [e.name, e]),
+    );
+    return { env, warnings: result.warnings ?? [] };
+  };
+
+  it('converts a single-service composite into a template row', () => {
+    const { env } = convert({ OTLP: 'http://${otel.host}:4318/v1/traces' });
+    expect(env.OTLP).toEqual({
+      from: 'resourceTemplate',
+      name: 'OTLP',
+      resourceName: 'otel',
+      template: 'http://{{host}}:4318/v1/traces',
+      values: { host: 'host' },
+    });
+  });
+
+  it('supports multiple references to the same service and sanitizes dotted keys', () => {
+    const { env } = convert({ URI: '${db.host}:${db.port.tcp-5432}/app' });
+    expect(env.URI).toEqual({
+      from: 'resourceTemplate',
+      name: 'URI',
+      resourceName: 'db',
+      template: '{{host}}:{{port_tcp_5432}}/app',
+      values: { host: 'host', port_tcp_5432: 'port.tcp-5432' },
+    });
+  });
+
+  it('keeps mixed-service and embedded-self composites literal with a warning', () => {
+    const { env, warnings } = convert({
+      MIXED: '${db.host}-${otel.host}',
+      SELFISH: 'prefix-${app.public_url}',
+    });
+    expect(env.MIXED).toEqual({ from: 'stack', name: 'MIXED', value: '${db.host}-${otel.host}' });
+    expect(env.SELFISH).toEqual({ from: 'stack', name: 'SELFISH', value: 'prefix-${app.public_url}' });
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining('multiple services') }),
+        expect.objectContaining({ message: expect.stringContaining('self reference') }),
+      ]),
+    );
   });
 });

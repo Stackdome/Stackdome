@@ -2,7 +2,10 @@ import { Layers, PlusCircle, Loader2, AlertTriangle, Search, ChevronDown } from 
 import { Button } from "@/components/ui/button";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import { getStacksByOrg } from "@/api/stacks";
+import { getStacksByOrg, deleteStack } from "@/api/stacks";
+import { useToast } from "@/components/ui/use-toast";
+import { useConfirm } from "@/components/branded/confirm";
+import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
@@ -13,8 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PageHeader, EmptyState, type StatusVariant } from "@/components/branded";
-import { statusVariantLabel } from "@/components/branded/status-variant";
+import { PageHeader, EmptyState } from "@/components/branded";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/pages/stacks/types";
 import { DeployStackCard, headerStatus } from "./stack-card";
@@ -22,15 +24,7 @@ import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
-type StatusFilter = "all" | "ready" | "pending" | "error";
 type SortKey = "updated" | "created" | "name";
-
-const STATUS_FILTERS: { key: StatusFilter; label: string; variant: StatusVariant | "neutral" }[] = [
-  { key: "all", label: "All", variant: "neutral" },
-  { key: "ready", label: statusVariantLabel.ready, variant: "ready" },
-  { key: "pending", label: statusVariantLabel.pending, variant: "pending" },
-  { key: "error", label: statusVariantLabel.error, variant: "error" },
-];
 
 const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "updated", label: "Recently updated" },
@@ -38,23 +32,29 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "name", label: "Name (A–Z)" },
 ];
 
-function bucketStatus(stack: Stack): StatusFilter {
-  const { variant } = headerStatus(stack);
-  if (variant === "ready") return "ready";
-  if (variant === "pending") return "pending";
-  if (variant === "error") return "error";
-  return "all";
+const ALL_STATUSES = "all";
+
+/** Display order for the status filter — the exact labels headerStatus renders
+ *  on cards, healthiest first. Unknown labels sort last, alphabetically. */
+const STATUS_LABEL_ORDER = ["ok", "progressing", "degraded", "unavailable", "failed", "Not deployed", "Deleting"];
+
+function statusLabelRank(label: string): number {
+  const i = STATUS_LABEL_ORDER.indexOf(label);
+  return i === -1 ? STATUS_LABEL_ORDER.length : i;
 }
 
 export default function StacksPage() {
   const { stacks, setStacks } = useStacks();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUSES);
   const [query, setQuery] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("updated");
   const [wizardOpen, setWizardOpen] = useState(false);
-  const { canWriteAnyProject } = useCurrentUser();
+  const { canWriteAnyProject, canWrite } = useCurrentUser();
+  const { projectNameById } = useResourceProjects();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const [searchParams] = useSearchParams();
 
   const { envs, loading: envsLoading } = usePreviewEnvs();
@@ -95,20 +95,25 @@ export default function StacksPage() {
     [stacks, previewStackIds],
   );
 
-  // Aggregate counts by status bucket — used for the subtitle and filter pill counts
-  const counts = useMemo(() => {
-    const c = { all: deployedStacks.length, ready: 0, pending: 0, error: 0 } as Record<StatusFilter, number>;
+  // Every card status label with its count (0 when absent), healthiest first —
+  // drives the STATUS filter dropdown. Unknown labels from the data still
+  // surface, appended after the known set.
+  const statusOptions = useMemo(() => {
+    const counts = new Map<string, number>();
     for (const s of deployedStacks) {
-      const b = bucketStatus(s);
-      if (b !== "all") c[b]++;
+      const label = headerStatus(s).label;
+      counts.set(label, (counts.get(label) ?? 0) + 1);
     }
-    return c;
+    const labels = [...new Set([...STATUS_LABEL_ORDER, ...counts.keys()])];
+    return labels
+      .map((label) => ({ label, count: counts.get(label) ?? 0 }))
+      .sort((a, b) => statusLabelRank(a.label) - statusLabelRank(b.label) || a.label.localeCompare(b.label));
   }, [deployedStacks]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let out = deployedStacks.filter((s) => {
-      if (statusFilter !== "all" && bucketStatus(s) !== statusFilter) return false;
+      if (statusFilter !== ALL_STATUSES && headerStatus(s).label !== statusFilter) return false;
       if (q && !(s.name?.toLowerCase().includes(q))) return false;
       return true;
     });
@@ -126,6 +131,33 @@ export default function StacksPage() {
 
     return out;
   }, [deployedStacks, statusFilter, query, sortKey]);
+
+  const requestDelete = async (stack: Stack) => {
+    const ok = await confirm({
+      title: "Delete stack?",
+      description: `This permanently deletes “${stack.name}” and all of its deployed resources. This action cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) {
+      toast({ title: "Delete failed", description: "No organization selected.", variant: "destructive" });
+      return;
+    }
+    const projectName = projectNameById(stack.project_id);
+    if (!projectName || !stack.id) {
+      toast({ title: "Delete failed", description: "The stack's project could not be resolved.", variant: "destructive" });
+      return;
+    }
+    try {
+      await deleteStack(orgId, projectName, stack.id);
+      setStacks((prev) => prev.filter((s) => s.id !== stack.id));
+      toast({ title: "Stack deleted", description: `"${stack.name}" was deleted.`, variant: "success" });
+    } catch (err) {
+      toast({ title: "Delete failed", description: getErrorMessage(err), variant: "destructive" });
+    }
+  };
 
   // Old previews-tab links redirect to the dedicated /previews page.
   if (searchParams.get("view") === "previews") {
@@ -188,9 +220,11 @@ export default function StacksPage() {
         />
       ) : (
         <>
-          {/* Filter / sort toolbar */}
+          {/* Filter / sort toolbar: capped search left, hug-content controls
+              right — triggers size to their value like standard list-filter
+              buttons, no reserved dead space. */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative w-full min-w-[220px] max-w-[340px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Filter stacks…"
@@ -199,57 +233,77 @@ export default function StacksPage() {
                 className="pl-9 h-9"
               />
             </div>
-            <div className="flex items-center gap-1.5">
-              {STATUS_FILTERS.map((f) => {
-                const active = statusFilter === f.key;
-                const count = counts[f.key];
-                return (
+            <div className="ml-auto flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <button
-                    key={f.key}
                     type="button"
-                    onClick={() => setStatusFilter(f.key)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-md border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
-                      active
-                        ? "border-brand-border bg-brand-bg text-brand"
-                        : "border-border text-muted-foreground hover:bg-muted/50"
-                    )}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
                   >
-                    <span>{f.label}</span>
-                    <span className="tabular-nums opacity-80">{count}</span>
+                    Status: <span className="text-foreground">{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
+                    <ChevronDown className="h-3 w-3 flex-none" />
                   </button>
-                );
-              })}
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[200px]"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
                 >
-                    Sort: <span className="text-foreground">{sortLabel}</span>
-                  <ChevronDown className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="end"
-                className="min-w-[200px]"
-                onCloseAutoFocus={(e) => e.preventDefault()}
-              >
-                {SORT_OPTIONS.map((o) => (
                   <DropdownMenuItem
-                    key={o.key}
-                    onClick={() => setSortKey(o.key)}
+                    onSelect={() => setStatusFilter(ALL_STATUSES)}
                     className={cn(
-                      "font-mono text-[11px] uppercase tracking-[1.5px]",
-                      sortKey === o.key && "text-brand"
+                      "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
+                      statusFilter === ALL_STATUSES && "text-brand"
                     )}
                   >
-                    {o.label}
+                    <span>All</span>
+                    <span className="tabular-nums opacity-80">{deployedStacks.length}</span>
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {statusOptions.map((o) => (
+                    <DropdownMenuItem
+                      key={o.label}
+                      onSelect={() => setStatusFilter(o.label)}
+                      className={cn(
+                        "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
+                        statusFilter === o.label && "text-brand"
+                      )}
+                    >
+                      <span>{o.label}</span>
+                      <span className="tabular-nums opacity-80">{o.count}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
+                  >
+                    Sort: <span className="text-foreground">{sortLabel}</span>
+                    <ChevronDown className="h-3 w-3 flex-none" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="min-w-[200px]"
+                  onCloseAutoFocus={(e) => e.preventDefault()}
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <DropdownMenuItem
+                      key={o.key}
+                      onSelect={() => setSortKey(o.key)}
+                      className={cn(
+                        "font-mono text-[11px] uppercase tracking-[1.5px]",
+                        sortKey === o.key && "text-brand"
+                      )}
+                    >
+                      {o.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           {filtered.length === 0 ? (
@@ -259,9 +313,18 @@ export default function StacksPage() {
               description="Try a different search or status filter."
             />
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
+            <div
+              // auto-fill sizes off the container (not viewport breakpoints), and
+              // the 300px cap keeps cards from stretching on in-between widths.
+              className="grid gap-4"
+              style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 300px))" }}
+            >
               {filtered.map((stack) => (
-                <DeployStackCard key={stack.id || stack.name} stack={stack} />
+                <DeployStackCard
+                  key={stack.id || stack.name}
+                  stack={stack}
+                  onDelete={canWrite(stack.project_id ?? "") ? (s) => void requestDelete(s) : undefined}
+                />
               ))}
             </div>
           )}

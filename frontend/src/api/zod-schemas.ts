@@ -10,7 +10,7 @@ const Organisation = z
     id: z.string(),
     name: z.string(),
     domains: z.array(DomainName),
-    is_default: z.boolean(),
+    is_platform: z.boolean(),
     created_at: z.string().datetime({ offset: true }),
     updated_at: z.string().datetime({ offset: true }),
   })
@@ -695,7 +695,7 @@ const Cluster = z
     id: z.string().optional(),
     name: z.string(),
     organisation_id: z.string().optional(),
-    default: z.boolean().optional(),
+    platform: z.boolean().optional(),
     cluster_url: z.string(),
     cluster_ca_data: z.string(),
     cluster_sa_token: z.string(),
@@ -1149,7 +1149,7 @@ const PostgresInstances = z
 const PostgresStorage = z
   .object({
     size: z.string().regex(/^[0-9]+[KMGTP]i?$/),
-    storage_class: z.string(),
+    storage_class: z.string().optional(),
   })
   .passthrough();
 const PostgresResources = z
@@ -1443,6 +1443,7 @@ const StackPreviewConfigCreate = z
     description: z.string().optional(),
     stackfile_path: z.string().optional(),
     max_active_previews: z.number().int().optional(),
+    env: z.array(EnvVar).optional(),
     labels: z.array(Label).optional(),
     annotations: z.array(Annotation).optional(),
   })
@@ -1458,6 +1459,7 @@ const StackPreviewConfig = z
     git_repository: PreviewGitRepository,
     stackfile_path: z.string(),
     max_active_previews: z.number().int(),
+    env: z.array(EnvVar),
     labels: z.array(Label),
     annotations: z.array(Annotation),
     created_at: z.string().datetime({ offset: true }),
@@ -1481,6 +1483,7 @@ const StackPreviewConfigUpdate = z
     stackfile_path: z.string(),
     max_active_previews: z.number().int(),
     git_repository: PreviewGitRepository,
+    env: z.array(EnvVar),
     labels: z.array(Label),
     annotations: z.array(Annotation),
   })
@@ -2901,11 +2904,6 @@ const endpoints = makeApi([
         schema: z.string(),
       },
       {
-        name: "query",
-        type: "Query",
-        schema: z.string().optional(),
-      },
-      {
         name: "page",
         type: "Query",
         schema: z.number().int().optional(),
@@ -2913,7 +2911,7 @@ const endpoints = makeApi([
       {
         name: "installation_id",
         type: "Query",
-        schema: z.number().int().optional(),
+        schema: z.string().optional(),
       },
     ],
     response: GitRepositoryPage,
@@ -3126,6 +3124,37 @@ const endpoints = makeApi([
       {
         status: 409,
         description: `A GitHub App is already installed`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
+    path: "/api/v1/organizations/:org_id/image_registries",
+    alias: "getApiv1organizationsOrg_idimage_registries",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: ClusterImageRegistryList,
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
         schema: z.void(),
       },
       {

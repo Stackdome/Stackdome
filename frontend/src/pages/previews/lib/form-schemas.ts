@@ -26,12 +26,40 @@ export const overridesTextSchema = z.string().refine(isValidOverridesText, {
   message: "Each line must be resource=image (e.g. web=registry/web:tag).",
 });
 
+/** One row of the env-vars editor. Callers filter out blank-named rows
+ *  before validating, so by the time this schema sees a row its name is
+ *  expected to be non-empty; the check here just guards that invariant. */
+const envVarRowSchema = z.object({
+  name: z.string().trim().min(1, "Name is required."),
+  value: z.string().refine((v) => !/^\{\{\s*secret\.\s*\}\}$/.test(v), {
+    message: "Pick a secret for the Secret-sourced variable.",
+  }),
+});
+export type EnvVarFormRow = z.infer<typeof envVarRowSchema>;
+
+function duplicateEnvName(rows: EnvVarFormRow[]): string | undefined {
+  const seen = new Set<string>();
+  for (const row of rows) {
+    if (seen.has(row.name)) return row.name;
+    seen.add(row.name);
+  }
+  return undefined;
+}
+
+/** Env-var overrides shared by the configure phase and the settings modal:
+ *  every row needs a name, and names must be unique. */
+export const envVarsSchema = z.array(envVarRowSchema).refine(
+  (rows) => duplicateEnvName(rows) === undefined,
+  (rows) => ({ message: `Duplicate variable name: ${duplicateEnvName(rows)}.` }),
+);
+
 /** Configure phase of the enable-previews wizard. */
 export const configurePhaseSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
   baseBranch: z.string().trim().min(1, "Base branch is required."),
   stackfilePath: z.string().trim().optional(),
   maxActive: z.coerce.number().int("Must be a whole number.").min(1, "Must be at least 1."),
+  env: envVarsSchema.optional(),
 });
 export type ConfigurePhaseValues = z.infer<typeof configurePhaseSchema>;
 
@@ -42,6 +70,7 @@ export const configSettingsSchema = z.object({
   baseBranch: z.string().trim().min(1, "Base branch is required."),
   stackfilePath: z.string().trim().min(1, "Stackfile path is required."),
   maxActive: z.coerce.number().int("Must be a whole number.").min(1, "Must be at least 1."),
+  env: envVarsSchema.optional(),
 });
 export type ConfigSettingsValues = z.infer<typeof configSettingsSchema>;
 

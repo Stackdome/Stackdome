@@ -5,6 +5,7 @@ import cronstrue from "cronstrue";
 import { Button } from "@/components/ui/button";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Panel, EmptyState, FieldShell } from "@/components/branded";
+import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
@@ -21,8 +22,8 @@ import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
 import { detectPlan } from "./lib/payload";
 import { PLAN_PRESETS } from "./lib/plan-presets";
 import { PostgresDetailHeader } from "./components/postgres-detail-header";
+import { PostgresConnectionPanel } from "./components/postgres-connection-panel";
 import { BackupsList } from "./components/backups-list";
-import { DeleteAddonDialog } from "./components/delete-addon-dialog";
 import { usePostgresBackups } from "./hooks/use-postgres-backups";
 
 // Read-only mirror of the edit form's FieldShell row, so the view page shares
@@ -45,6 +46,7 @@ export default function PostgresDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { canWrite } = useCurrentUser();
   const { projectNameById, defaultProjectName } = useResourceProjects();
   const [addon, setAddon] = useState<PostgresAddon | null>(null);
@@ -64,9 +66,6 @@ export default function PostgresDetailPage() {
     error: backupsError,
     refetch: refetchBackups,
   } = usePostgresBackups(id);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [triggering, setTriggering] = useState(false);
 
   const refetch = useCallback(async () => {
@@ -175,13 +174,22 @@ export default function PostgresDetailPage() {
   async function handleDelete() {
     const orgId = getCurrentOrganizationId();
     if (!orgId || !addon?.id) return;
+    const ok = await confirm({
+      title: "Delete addon?",
+      description: `The underlying database and storage for “${addon.name}” are removed. This cannot be undone.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
     const projectName = projectNameById(addon.project_id);
     if (!projectName) {
-      setDeleteError("Could not resolve the project for this addon.");
+      toast({
+        title: "Delete failed",
+        description: "Could not resolve the project for this addon.",
+        variant: "destructive",
+      });
       return;
     }
-    setDeleting(true);
-    setDeleteError(null);
     try {
       await deletePostgresAddon(orgId, projectName, addon.id);
       toast({
@@ -191,13 +199,13 @@ export default function PostgresDetailPage() {
       });
       navigate("/addons", { replace: true });
     } catch (e) {
-      setDeleteError(
-        isErrorStatus(e, 409)
-          ? `${getErrorMessage(e)}\n\nRemove the stack references first, then try again.`
+      toast({
+        title: "Delete failed",
+        description: isErrorStatus(e, 409)
+          ? `${getErrorMessage(e)} Remove the stack references first, then try again.`
           : getErrorMessage(e),
-      );
-    } finally {
-      setDeleting(false);
+        variant: "destructive",
+      });
     }
   }
 
@@ -207,8 +215,10 @@ export default function PostgresDetailPage() {
         <PostgresDetailHeader
           addon={addon}
           canWrite={canWrite(addon.project_id ?? "")}
-          onDelete={() => setDeleteOpen(true)}
+          onDelete={() => void handleDelete()}
         />
+
+        <PostgresConnectionPanel addon={addon} projectName={defaultProjectName ?? ""} />
 
         <Panel title="Configuration">
           <div className="flex flex-col gap-6">
@@ -343,20 +353,6 @@ export default function PostgresDetailPage() {
             </div>
           </div>
         </Panel>
-
-        <DeleteAddonDialog
-          open={deleteOpen}
-          addonName={addon.name}
-          loading={deleting}
-          error={deleteError}
-          onConfirm={handleDelete}
-          onCancel={() => {
-            if (!deleting) {
-              setDeleteOpen(false);
-              setDeleteError(null);
-            }
-          }}
-        />
       </div>
     </TooltipProvider>
   );

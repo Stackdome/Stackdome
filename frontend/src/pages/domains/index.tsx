@@ -5,7 +5,7 @@ import { getCurrentOrganizationId } from "@/helpers/common";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useToast } from "@/components/ui/use-toast";
-import { PageHeader, Panel, EmptyState } from "@/components/branded";
+import { PageHeader, Panel, EmptyState, LimitedAction } from "@/components/branded";
 import * as organizationApi from "@/api/organizations";
 import type { Organization } from "@/api/organizations";
 import { getErrorMessage } from "@/api/client";
@@ -69,7 +69,7 @@ export default function DomainsPage() {
       const updatedOrg = await organizationApi.updateOrganization(orgId, {
         id: organization.id,
         name: organization.name,
-        is_default: organization.is_default,
+        is_platform: organization.is_platform,
         domains: validatedDomains,
       });
 
@@ -150,10 +150,15 @@ export default function DomainsPage() {
           title="Domains"
           subtitle="Configure custom domains for your organization"
           actions={
-            <Button onClick={() => setShowAddDialog(true)}>
-              <PlusCircle className="h-4 w-4" />
-              Add Domain
-            </Button>
+            <LimitedAction
+              limitReached={domains.length >= 1}
+              limitMessage="Currently only one domain is supported."
+            >
+              <Button onClick={() => setShowAddDialog(true)}>
+                <PlusCircle className="h-4 w-4" />
+                Add Domain
+              </Button>
+            </LimitedAction>
           }
         />
 

@@ -22,17 +22,20 @@ const (
 
 type GitIntegrationHandlerSpec struct {
 	GitIntegrationService services.GitIntegrationService
+	GitHubWebhookService  services.GitHubWebhookService
 	Logger                logger.Logger
 }
 
 type gitIntegrationHandler struct {
 	gitIntegrationService services.GitIntegrationService
+	githubWebhookService  services.GitHubWebhookService
 	logger                logger.Logger
 }
 
 func NewGitIntegrationHandler(spec GitIntegrationHandlerSpec) *gitIntegrationHandler {
 	return &gitIntegrationHandler{
 		gitIntegrationService: spec.GitIntegrationService,
+		githubWebhookService:  spec.GitHubWebhookService,
 		logger:                spec.Logger,
 	}
 }
@@ -173,7 +176,7 @@ func (h *gitIntegrationHandler) GitHubWebhook(w http.ResponseWriter, r *http.Req
 	event := r.Header.Get(githubEventHeader)
 	signature := r.Header.Get(githubSignatureHeader)
 
-	if serr := h.gitIntegrationService.ProcessGitHubWebhook(r.Context(), event, payload, signature); serr != nil {
+	if serr := h.githubWebhookService.ProcessGitHubWebhook(r.Context(), event, payload, signature); serr != nil {
 		handleError(r.Context(), w, serr)
 		return
 	}
@@ -202,11 +205,10 @@ func (h *gitIntegrationHandler) ListRepositories(w http.ResponseWriter, r *http.
 	cfg := &handlerConfig{
 		Action: func() (interface{}, *errors.ServiceError) {
 			id := mux.Vars(r)["id"]
-			query := r.URL.Query().Get("query")
 			page, _ := strconv.Atoi(r.URL.Query().Get("page"))
-			installationID, _ := strconv.ParseInt(r.URL.Query().Get("installation_id"), 10, 64)
+			installationID := r.URL.Query().Get("installation_id")
 
-			repoPage, serr := h.gitIntegrationService.ListRepositories(r.Context(), id, query, page, installationID)
+			repoPage, serr := h.gitIntegrationService.ListRepositories(r.Context(), id, page, installationID)
 			if serr != nil {
 				return nil, serr
 			}

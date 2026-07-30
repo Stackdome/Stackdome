@@ -11,6 +11,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 )
 
+//go:generate mockgen -destination=../mocks/mock_postgres_addon_database_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services PostgresAddonDatabaseService
 type PostgresAddonDatabaseService interface {
 	Create(ctx context.Context, database *models.PostgresAddonDatabase) (*models.PostgresAddonDatabase, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, database *models.PostgresAddonDatabase) (*models.PostgresAddonDatabase, *errors.ServiceError)

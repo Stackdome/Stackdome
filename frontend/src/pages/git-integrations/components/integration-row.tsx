@@ -54,12 +54,24 @@ function Banner({
             {banner.ctaLabel}
           </Button>
         )
+      ) : statusKey === "action_needed" ? (
+        // github_app rows can't be PUT-updated: message without a CTA.
+        onUpdateCredentials && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
+            onClick={onUpdateCredentials}
+          >
+            {banner.ctaLabel}
+          </Button>
+        )
       ) : (
         <Button
           variant="outline"
           size="sm"
           className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-          onClick={statusKey === "action_needed" ? onUpdateCredentials : onVerify}
+          onClick={onVerify}
         >
           {banner.ctaLabel}
         </Button>
@@ -77,8 +89,8 @@ export function IntegrationRow({
   integration: GitIntegration;
   onVerify: (integration: GitIntegration) => void;
   onRemove: (integration: GitIntegration) => void;
-  /** Opens the connect-provider wizard so missing credentials can be re-added. */
-  onUpdateCredentials?: () => void;
+  /** Opens the update-credentials dialog for this row (credentials-type only). */
+  onUpdateCredentials?: (integration: GitIntegration) => void;
 }) {
   const [installations, setInstallations] = useState<GitInstallation[]>([]);
   const requestSeq = useRef(0);
@@ -153,6 +165,10 @@ export function IntegrationRow({
 
         <RowMenu
           onVerify={isGithubApp ? undefined : () => onVerify(integration)}
+          onUpdateCredentials={
+            isGithubApp || !onUpdateCredentials ? undefined : () => onUpdateCredentials(integration)
+          }
+          manageUrl={isGithubApp ? integration.install_url : undefined}
           onRemove={() => onRemove(integration)}
         />
       </div>
@@ -162,7 +178,9 @@ export function IntegrationRow({
           banner={row.banner}
           statusKey={row.statusKey}
           onVerify={() => onVerify(integration)}
-          onUpdateCredentials={onUpdateCredentials}
+          onUpdateCredentials={
+            isGithubApp || !onUpdateCredentials ? undefined : () => onUpdateCredentials(integration)
+          }
         />
       )}
     </div>

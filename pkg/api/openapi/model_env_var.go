@@ -19,7 +19,7 @@ type EnvVar struct {
 	Name string `json:"name"`
 	// Literal environment variable value.
 	Value *string `json:"value,omitempty"`
-	// Read this environment variable from one of the resource's own declared outputs, for example public.http.url.
+	// Read this environment variable from one of the resource's own declared outputs, for example public_url.
 	SelfOutput *string `json:"self_output,omitempty"`
 }
 

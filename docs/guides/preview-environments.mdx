@@ -1,0 +1,170 @@
+---
+title: "Preview environments"
+description: "Create a temporary environment for every pull request."
+---
+
+A **preview environment** is a complete, throwaway copy of a stack, deployed from a pull request branch, reachable at its own URL, and torn down when the pull request closes. Stackdome calls the feature **Previews**, in the sidebar under **Platform**.
+
+You do not point Previews at an existing stack. You point it at a **repository**, and the stack comes from a **stackfile** committed in that repository. Every pull request against that repository's base branch then gets its own stack, built from the stackfile at that pull request's head commit.
+
+## Prerequisites
+
+- **A connected git provider.** Previews are driven by GitHub webhook deliveries, so the repository must be reachable through a GitHub App installation you connected under **Git Providers**. See [Deploy from git](/guides/deploy-from-git). The repository picker also accepts a plain public URL, but a public URL only supports environments you create by hand — pull request automation needs a connected provider.
+- **A stackfile in the repository.** This is the template for the environment: it defines the whole stack — every **resource**, its **source**, its **ports**, its environment. See [Write the stackfile](#write-the-stackfile) below.
+- **A cluster with room to run it.** Each open pull request runs a full copy of the stack. Read [Capacity](#capacity) before you enable a busy repository.
+
+## Write the stackfile
+
+The stackfile is the one thing you have to author yourself. Commit it at the path you give the configuration — by default `stackfile.yaml` at the repository root — and keep it on the branches you want previewed, because Stackdome reads it at the pull request's head commit, not from your base branch.
+
+The smallest stackfile that works names the stack, declares one resource, gives that resource a source, and exposes one port:
+
+```yaml
+name: albumshots
+
+resources:
+  web:
+    build:
+      repo: https://github.com/acme/albumshots
+      branch: main
+    ports:
+      - name: http
+        port: 3000
+        public: true
+```
+
+That is enough to get an environment. The rules those five keys follow:
+
+- `name` and at least one entry under `resources` are required.
+- Each resource needs exactly one source — `build`, to build from git, or `image`, to run a prebuilt one. Never both.
+- A `build` needs `repo`, plus at most one of `branch`, `tag` or `commit`. Setting none of the three is fine — the repository's default branch is used.
+- Each port needs a `name` and a valid port number. `public: true` is what earns it a URL; a port without it stays internal to the stack.
+
+One thing to expect: on a preview, Stackdome rewrites the branch of any resource whose `build.repo` matches the configuration's repository, pinning it to the pull request's head commit. So `branch: main` above does not mean previews build `main` — it is only what that resource does outside a preview.
+
+<Note>
+This is a minimal example, not a reference. The format has more to it — `image`, `env`, `volumes`, `depends_on`, `secrets`, `addons`, `command` and `args`, `replicas` — and public ports can set `subdomain` to choose their hostname prefix, which a preview then prefixes again with `pr-<number>-`.
+</Note>
+
+## Enable a repository
+
+**Previews** lists the repositories you have configured, each with its base branch and how many environments are currently live.
+
+![The Configured repositories panel on the Stackdome Previews page, listing two entries — stackdome for the repository Stackdome/stackdome, and test-private-repo with its repository path redacted](/images/previews-list.png)
+
+<Steps>
+<Step title="Open the wizard">
+Click **Enable repository**.
+</Step>
+
+<Step title="Pick the repository">
+The first step is a repository picker with two tabs, **Connected provider** and **Public URL**. Choose the repository from your connected provider, then click **Continue**.
+</Step>
+
+<Step title="Fill in the configuration">
+| Field | Required | Notes |
+| --- | --- | --- |
+| **Name** | Yes | Prefilled from the repository name. Cannot be changed later. |
+| **Base branch** | Yes | The branch pull requests target. Only pull requests against this branch get an environment. |
+| **Stackfile path** | No | Defaults to `stackfile.yaml`. Fetched from the repository on every deploy — a wrong path shows up as a **Failed** environment. |
+| **Max active previews** | No | Defaults to `10`; must be between 1 and 50. |
+| **Environment variables** | No | Applied to every environment this configuration creates. Reference a saved secret rather than pasting a raw value. |
+
+![The Enable repository dialog in Stackdome, on its configuration step for Stackdome/test-repo, with a Name field reading test-repo and the hint Cannot be changed later, a Base branch dropdown set to main, a Stackfile path field reading stackfile.yaml, the label Max active previews at the fold with the rest of the form scrolled out of view, and Back and Enable previews buttons](/images/previews-enable-repository.png)
+</Step>
+
+<Step title="Save">
+Click **Enable previews**. The repository now appears in the **Previews** list, and the next pull request event on it will create an environment.
+</Step>
+</Steps>
+
+Everything except the name stays editable afterwards, from **Settings** on the configuration's page.
+
+### Environment variables
+
+Two layers of environment variables land on top of what the stackfile itself declares, in this order:
+
+1. **`.env.preview`** — an optional dotenv file at the repository root, read at the pull request's head commit. A missing or unreadable file is simply skipped.
+2. **The configuration's Environment variables** — the ones you entered in the wizard. These win over `.env.preview`.
+
+Both layers apply to every resource in the stackfile. For how values and secret references work, see [Environment variables](/guides/environment-variables).
+
+## What happens on a pull request
+
+Stackdome processes exactly two GitHub event types: `installation` and `pull_request`. `push` deliveries are accepted and dropped. Within `pull_request`, these are the actions that do something:
+
+| Action | What Stackdome does |
+| --- | --- |
+| `opened` | Creates an environment for the pull request. If one somehow already exists, syncs it to the head commit instead. |
+| `reopened` | Same as `opened`. |
+| `synchronize` (a new commit pushed to the pull request) | Syncs the existing environment to the new head commit. If no environment exists yet, creates one. |
+| `closed` (merged or not) | Starts tearing the environment down. |
+
+Any other `pull_request` action — labelled, assigned, edited, review requested — is ignored.
+
+A delivery is also dropped, deliberately and without error, when:
+
+- **The head branch lives in a fork.** Fork pull requests carry untrusted code and are never built.
+- **The pull request's base branch is not the configuration's base branch.**
+- **No preview configuration matches the repository.**
+- **The action is `closed` but there is no environment to remove.**
+
+<Note>
+Every delivery is logged with its outcome, including the drops, so a preview that never appears is diagnosable from the API server log.
+</Note>
+
+## Where the preview URL appears
+
+### In the dashboard
+
+Open the configuration from **Previews**. Each environment is a card showing the pull request number, the branch, the short commit, a status word — **Ready**, **Pending**, or **Failed** — and, once it is live, a chip per publicly exposed resource that links straight to its URL. A resource with no publicly exposed port gets no chip, so a card can be **Ready** with nothing to click. Search filters by pull request number, branch, or commit; the **Status** and **Sort** controls narrow and reorder the grid.
+
+![The detail page for the stackdome preview configuration, headed with the repository URL, a search field for PR number, branch or commit, and four environment cards for pull requests 186, 185, 183 and 182 — all marked READY, with 186, 183 and 182 showing their branch and short commit, and 185 showing a clickable api-server resource chip](/images/previews-config-detail.png)
+
+Each publicly exposed **port** gets a `pr-<number>-` prefix on its subdomain, so pull request 185's URL is distinct from pull request 186's and from your production stack's. See [Domains and TLS](/guides/domains-and-tls) for how the rest of the hostname is put together.
+
+### In the pull request
+
+Stackdome also posts the environment's state back to the pull request as a single **sticky comment**, created the first time the environment reports in and edited in place after that. It carries:
+
+- A heading for the current state — live, deploy failed, or deleted.
+- The failure message, when the deploy failed.
+- The deployed commit.
+- A table of resources and their URLs.
+
+If someone deletes the comment, the next update recreates it. Nothing to switch on: this happens whenever the repository is a GitHub repository with an App installation Stackdome can mint a token for. For a repository added by public URL, or one whose App installation is gone, the comment is skipped and the dashboard remains the place to look.
+
+## Lifecycle and cleanup
+
+An environment moves through **Provisioning** → **Deploying** → **Ready**, or lands in **Failed**. A teardown puts it in **Deleting**.
+
+Three things end an environment:
+
+- **The pull request closes** — merged or not. The `closed` event starts the teardown.
+- **You delete it** — the **···** menu on the card, then **Delete**.
+- **You delete the whole configuration** — but only after its environments are gone. Stackdome refuses otherwise and tells you to delete the environments first.
+
+Teardown deletes the environment's stack and everything under it, waits for the cluster to finish removing it, then removes the environment record and marks the sticky comment as deleted. Nothing expires on a timer, so an environment attached to a long-lived pull request keeps running — and keeps consuming cluster capacity — until that pull request closes.
+
+## Creating one by hand
+
+You can also create an environment without a pull request event, which is the way to test a configuration before wiring anything up. On the configuration's page, click **New preview environment**:
+
+| Field | Required | Notes |
+| --- | --- | --- |
+| **PR number** | Yes | Used for the name and the `pr-<number>-` subdomain prefix. |
+| **Branch** | Yes | Deploys this branch's latest commit. |
+| **Stackfile content** | No | Under **Advanced**. Paste a stackfile to use instead of the one in the repository. |
+| **Image overrides** | No | Under **Advanced**. One `resource=image` per line, to pin a resource to a prebuilt image instead of building it. |
+
+Then click **Create environment**. A manual environment does not follow new commits on its own — use **Sync** from the card's **···** menu to move it to the branch's latest commit.
+
+## Capacity
+
+<Warning>
+Every open pull request builds and runs a **full copy of the stack** — every resource, and every **volume** with its **mount**, that the stackfile declares. Ten open pull requests against a repository with a five-resource stack means fifty running resources on top of production.
+
+**There is no build-concurrency limit in Stackdome.** Nothing queues or throttles simultaneous builds: if ten pull requests are opened at once, ten sets of builds start at once and compete for the same node CPU. On a single-node cluster that is enough to saturate the node and push builds into deploy timeouts.
+
+The only limit is **Max active previews**, per configuration, defaulting to `10`. It caps how many environments can exist at once — not how many build at once. When a configuration is at its cap, a new pull request creates nothing: the delivery is logged as skipped and no comment is posted, so the pull request looks like previews are simply not enabled. Set the cap to what your cluster can actually hold.
+</Warning>

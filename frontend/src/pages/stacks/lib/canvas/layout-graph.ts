@@ -1,17 +1,46 @@
 import dagre from "dagre";
-import type { CanvasGraph } from "./graph-from-connections";
+import type { CanvasGraph, CanvasNode, ResourceNodeData } from "./graph-from-connections";
 
-/** Card dimensions dagre reserves per node (matches ResourceNode's box). */
+/** Card dimensions dagre reserves per node (matches ResourceNode's box —
+ *  header + summary + optional port detail line). */
 export const NODE_WIDTH = 216;
-export const NODE_HEIGHT = 88;
+export const NODE_HEIGHT = 104;
 
-/** Horizontal pitch between consecutive freshly-added nodes so they don't stack. */
-export const NEW_NODE_GAP_X = NODE_WIDTH + NODE_HEIGHT;
-/** Vertical drop below the preserved layout where new nodes are parked. */
-export const NEW_NODE_OFFSET_Y = NODE_HEIGHT * 2;
+/** Attachment (volume/secret/object-store) card box — w-[180px], two compact
+ *  rows. Used as the collision-box fallback for unmeasured attachment nodes. */
+export const ATTACHMENT_NODE_WIDTH = 180;
+export const ATTACHMENT_NODE_HEIGHT = 56;
 
 export interface LayoutOptions {
-  direction?: "LR" | "TB";
+  direction?: "LR" | "TB" | "BT";
+}
+
+/** Vertical gap between ranks (tiers) — room for bezier fans to separate. */
+export const RANK_SEP = 140;
+/** Horizontal gap between siblings within a rank. */
+export const NODE_SEP = 64;
+
+/** Card growth per extra port detail line beyond the first. */
+const PORT_LINE_HEIGHT = 18;
+/** Card growth per docked volume chip row. */
+const VOLUME_ROW_HEIGHT = 30;
+
+/** Box dagre reserves per node — matches what the card actually renders
+ *  (extra port lines and docked volume rows grow resource cards; attachment
+ *  nodes are the smaller fixed card). */
+function nodeLayoutSize(node: CanvasNode): { width: number; height: number } {
+  if (node.type === "attachment") {
+    return { width: ATTACHMENT_NODE_WIDTH, height: ATTACHMENT_NODE_HEIGHT };
+  }
+  const data = node.data as ResourceNodeData;
+  // Ports render as ONE wrapped `ports 80 · 89 …` line; extra height only when
+  // it wraps. ponytail: ~6 numbers per 216px row, refine if cards misfit.
+  const extraPortLines = Math.max(0, Math.ceil((data.details?.length ?? 0) / 6) - 1);
+  const volumeRows = data.volumes?.length ?? 0;
+  return {
+    width: NODE_WIDTH,
+    height: NODE_HEIGHT + extraPortLines * PORT_LINE_HEIGHT + volumeRows * VOLUME_ROW_HEIGHT,
+  };
 }
 
 /**
@@ -26,11 +55,11 @@ export function layoutGraph(graph: CanvasGraph, options: LayoutOptions = {}): Ca
   if (graph.nodes.length === 0) return { nodes: [], edges: graph.edges };
 
   const g = new dagre.graphlib.Graph();
-  g.setGraph({ rankdir: options.direction ?? "LR", nodesep: 48, ranksep: 96, marginx: 24, marginy: 24 });
+  g.setGraph({ rankdir: options.direction ?? "BT", nodesep: NODE_SEP, ranksep: RANK_SEP, marginx: 24, marginy: 24 });
   g.setDefaultEdgeLabel(() => ({}));
 
   for (const node of graph.nodes) {
-    g.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+    g.setNode(node.id, nodeLayoutSize(node));
   }
   for (const edge of graph.edges) {
     g.setEdge(edge.source, edge.target);
@@ -40,7 +69,8 @@ export function layoutGraph(graph: CanvasGraph, options: LayoutOptions = {}): Ca
 
   const nodes = graph.nodes.map((node) => {
     const { x, y } = g.node(node.id);
-    return { ...node, position: { x: x - NODE_WIDTH / 2, y: y - NODE_HEIGHT / 2 } };
+    const { width, height } = nodeLayoutSize(node);
+    return { ...node, position: { x: x - width / 2, y: y - height / 2 } };
   });
 
   return { nodes, edges: graph.edges };

@@ -1,5 +1,7 @@
 package config
 
+import "github.com/Stackdome/stackdome/pkg/models"
+
 var (
 	// Application
 	EnvJWTSecret     = StringVar("JWT_SECRET", "JWT token signing secret", nil, true)
@@ -29,16 +31,16 @@ var (
 	EnvDBRootCertFile   = StringVar("DB_ROOT_CERT_FILE", "Root CA cert path for SSL", nil, false)
 	EnvDBDebugMode      = BoolVar("DB_DEBUG_MODE", "Enable DB query debug logging", ptr(false), false)
 
-	// Default Cluster
-	EnvDefaultClusterName   = StringVar("DEFAULT_CLUSTER_NAME", "Default cluster name", nil, false)
-	EnvDefaultClusterAPIURL = StringVar("DEFAULT_CLUSTER_API_URL", "Default cluster API URL", nil, false)
-	EnvDefaultClusterCAData = StringVar("DEFAULT_CLUSTER_CA_DATA", "Default cluster CA cert (base64)", nil, false)
-	EnvDefaultClusterToken  = StringVar("DEFAULT_CLUSTER_TOKEN", "Default cluster auth token", nil, false)
+	// Platform Cluster
+	EnvPlatformClusterAPIURL = StringVar("PLATFORM_CLUSTER_API_URL", "Platform cluster API URL", nil, false)
+	EnvPlatformClusterCAData = StringVar("PLATFORM_CLUSTER_CA_DATA", "Platform cluster CA cert (base64)", nil, false)
+	EnvPlatformClusterToken  = StringVar("PLATFORM_CLUSTER_TOKEN", "Platform cluster auth token", nil, false)
 
-	// Bootstrap User
-	EnvDefaultUserEmail    = StringVar("DEFAULT_USER_EMAIL", "Default platform admin email", nil, false)
-	EnvDefaultUserName     = StringVar("DEFAULT_USER_NAME", "Default platform admin name", ptr("Platform Admin"), false)
-	EnvDefaultUserPassword = StringVar("DEFAULT_USER_PASSWORD", "Default platform admin password", ptr("welcome@123"), false)
+	// Platform Provisioning
+	EnvPlatformEmail                   = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform cluster issuer", nil, false)
+	EnvPlatformBaseDomain              = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
+	EnvPlatformOrgRegistryStorageSize  = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_SIZE", "Default storage size for each org's registry seeded at signup", ptr(models.DefaultPlatformOrgRegistryStorageSize), false)
+	EnvPlatformOrgRegistryStorageClass = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_CLASS", "Default storage class for each org's registry seeded at signup", nil, false)
 
 	// Environment
 	EnvStackdomeEnv = StringVar("STACKDOME_ENV", "Runtime environment (DEVELOPMENT, PRODUCTION, TESTING)", ptr("DEVELOPMENT"), false)

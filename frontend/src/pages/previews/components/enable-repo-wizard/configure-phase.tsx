@@ -10,6 +10,7 @@ import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   configurePhaseSchema, DEFAULT_STACKFILE_PATH, type ConfigurePhaseValues,
 } from "@/pages/previews/lib/form-schemas";
+import { EnvVarsEditor, type EnvVarFormRow } from "@/pages/previews/components/env-vars-editor";
 import type { PickedRepo } from "./enable-repo-wizard";
 
 interface ConfigurePhaseProps {
@@ -24,12 +25,14 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
   const [baseBranch, setBaseBranch] = useState(repo.defaultBranch);
   const [stackfilePath, setStackfilePath] = useState(DEFAULT_STACKFILE_PATH);
   const [maxActive, setMaxActive] = useState(10);
+  const [env, setEnv] = useState<EnvVarFormRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ConfigurePhaseValues, string>>>({});
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    const parsed = configurePhaseSchema.safeParse({ name, baseBranch, stackfilePath, maxActive });
+    const envRows = env.filter((row) => row.name.trim() !== "");
+    const parsed = configurePhaseSchema.safeParse({ name, baseBranch, stackfilePath, maxActive, env: envRows });
     if (!parsed.success) {
       const flat = parsed.error.flatten().fieldErrors;
       setFieldErrors({
@@ -37,6 +40,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
         baseBranch: flat.baseBranch?.[0],
         stackfilePath: flat.stackfilePath?.[0],
         maxActive: flat.maxActive?.[0],
+        env: flat.env?.[0],
       });
       return;
     }
@@ -54,6 +58,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
         git_repository: { repo_url: repo.cloneUrl, base_branch: parsed.data.baseBranch },
         stackfile_path: parsed.data.stackfilePath || DEFAULT_STACKFILE_PATH,
         max_active_previews: parsed.data.maxActive,
+        env: parsed.data.env,
       });
       onCreated(created.id ?? "");
     } catch (e) {
@@ -143,7 +148,21 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
               setMaxActive(Number.isNaN(n) ? 1 : Math.max(1, Math.floor(n)));
               setFieldErrors((prev) => ({ ...prev, maxActive: undefined }));
             }}
-            className="w-28"
+            className="w-28 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          />
+        </FieldShell>
+
+        <FieldShell
+          label="Environment variables (optional)"
+          hint="Applied to every preview. Reference saved secrets with the Secret source instead of pasting raw values."
+          error={fieldErrors.env}
+        >
+          <EnvVarsEditor
+            value={env}
+            onChange={(rows) => {
+              setEnv(rows);
+              setFieldErrors((prev) => ({ ...prev, env: undefined }));
+            }}
           />
         </FieldShell>
 

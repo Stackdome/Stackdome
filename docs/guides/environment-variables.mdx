@@ -1,0 +1,237 @@
+---
+title: "Environment variables and secrets"
+description: "Set configuration on a resource, reference secrets and addons, and wire one resource's address into another."
+---
+
+Every **resource** carries its own list of environment variables. You set them in the **drawer**, on its **Environment** tab. Some of them you type; the interesting ones you *point* at something else — an organization secret, a Postgres **addon**, or another resource in the same **stack** — and Stackdome fills in the value when it deploys.
+
+That difference matters more than it looks. A typed value is stored on the resource. A pointed-at value is stored as a **connection** between two things, and connections behave differently: they show up on **the canvas**, they stop you deleting what they point at, and they are resolved fresh on every deploy. This page covers both.
+
+## Prerequisites
+
+- **A stack with at least one resource.** If you do not have one, work through [Deploy your first app](/deploy-first-app) first.
+- **An organization secret**, only for the [Secret](#from-a-secret) section. You create it on the way.
+- **A Postgres addon**, only for the [Addon](#from-an-addon) section. See [Postgres](/guides/postgres).
+
+## The Environment tab
+
+Open the stack, and on the **Architecture** tab click the resource's node on the canvas. The drawer opens with three tabs — **Configuration**, **Deployment**, **Environment**. Choose **Environment**.
+
+![The resource drawer for a resource named n8n, Environment tab selected, headed Environment · 9 variables with clear all, paste .env and import file buttons. Nine rows each show a KEY box, a value box and a source dropdown reading Plain text, except the last row SECRET whose value area is two dropdowns reading test and AAA with the source set to Secret. One password value is covered by a grey redaction bar.](/images/env-rows.png)
+
+Every row has the same three columns:
+
+| Column | What it is |
+| --- | --- |
+| **Key** | The variable name the container sees. Monospace, placeholder `KEY`. |
+| Value | Changes shape depending on the source. A text box for a typed value; one or more dropdowns for everything else. |
+| Source | A dropdown that decides where the value comes from. |
+
+Above the rows sit three shortcuts — **clear all**, **paste .env**, **import file** — and below them **Add variable**, which appends a blank row set to **Plain text**.
+
+Edits here autosave into **a draft**. The header reads *Saving…* then *All changes saved*, and a pill appears over the canvas reading **Apply N changes** with **Details** and **Deploy**. Saved is not deployed — nothing reaches the **cluster** until you deploy. See [Releases](/concepts/releases).
+
+## The five sources
+
+Open the source dropdown on any row and you get exactly five choices:
+
+![The same Environment tab with the source dropdown of the first row open, listing five options top to bottom: Plain text (ticked), Secret, Addon, Resource, Self.](/images/env-from-picker.png)
+
+| Source | You supply | Value comes from |
+| --- | --- | --- |
+| **Plain text** | the value itself | you |
+| **Secret** | a secret, then one of its keys | an organization secret |
+| **Addon** | an addon, a database, then a field | a Postgres addon's credentials |
+| **Resource** | another resource, then one of its outputs | that resource's address |
+| **Self** | one of this resource's own outputs | this resource's address |
+
+A sixth kind, **Template**, exists but is not in this list. It appears only on rows that already are one — see [Template rows](#template-rows).
+
+### They are not stored the same way
+
+**Plain text** and **Self** rows are stored as environment variables on the resource itself. **Secret**, **Addon**, **Resource** and **Template** rows are stored as *stack connections* — one connection per source, carrying a mapping per variable.
+
+You do not have to manage that split, but it leaks into what you can do:
+
+| | Plain text / Self | Secret / Addon / Resource / Template |
+| --- | --- | --- |
+| Shows as an edge on the canvas | no | yes |
+| Blocks deleting the thing it points at | — | yes, with a `409` |
+| Grouped with other rows from the same source | no | yes, one connection per source |
+| Re-resolved on every deploy | Self only | yes |
+
+The `409` is the part worth remembering. Deleting an organization secret that any stack references fails with `secret 'X' is in use by ... and cannot be deleted`, and a referenced addon fails the same way. Both the current draft and every past release count as a reference. Retyping a **Plain text** value, by contrast, is unconstrained — nothing tracks it.
+
+## Plain text
+
+Choose **Add variable**, type a name in the key box and a value beside it. That is the whole flow.
+
+A plain text value is stored and delivered byte for byte. Nothing is substituted into it.
+
+<Warning>
+**Braces in a plain text value are literal.** If you type `{{` and `}}` into the value box, the container receives those characters. Templating only happens inside a connection mapping, and the drawer cannot author one — see [Template rows](#template-rows). To reach another resource, use a **Resource** row instead of typing its address.
+</Warning>
+
+To move a lot of variables at once, use **paste .env** — a textarea that takes `KEY=VALUE`, one per line, with `#` lines ignored — or **import file**, which accepts a `.env` upload. Both append **Plain text** rows. **clear all** removes every row on the resource, including the pointed-at ones, and does not ask for confirmation.
+
+Two rows on the same resource cannot share a name. A repeat is flagged inline as `Duplicate name "..."`.
+
+## From a Secret
+
+Values you would rather not have sitting in a stack's spec go in an organization secret first, then get referenced.
+
+### Create the secret
+
+Open **Secrets** under **PLATFORM** in the sidebar, at `/secrets`. The page is headed **Secrets** — *"Manage sensitive data like API keys, passwords, and certificates"* — with **Create Secret** top right, a **Filter secrets…** box, a **TYPE** filter defaulting to **ALL**, and a **SORT** control defaulting to **RECENTLY CREATED**. Existing secrets sit in an **ORGANIZATION SECRETS** panel, one row each: name, description, type badge, creation date, and a `⋯` menu.
+
+![The Secrets page content column, headed PLATFORM Secrets with the subtitle Manage sensitive data like API keys, passwords, and certificates and a Create Secret button top right. Below it a Filter secrets field, a TYPE ALL dropdown and a SORT RECENTLY CREATED dropdown, then an ORGANIZATION SECRETS · 1 panel holding a single row: a key icon, the name test, No description, a Generic badge, the date 7/18/2026 and a three-dot menu.](/images/env-secrets-page.png)
+
+Choose **Create Secret**. The dialog is short:
+
+![The Create New Secret dialog, subtitled Securely store API keys, passwords, or certificates for your stacks, with a required Name field placeholdered Enter secret name, an optional Description textarea, a required Type dropdown showing Generic, and a required Secret Data section with an Add Key-Value Pair button over one empty Key and Value pair, the Value field having an eye toggle and a delete icon. Cancel and Create Secret buttons at the bottom.](/images/env-secret-create.png)
+
+| Field | Notes |
+| --- | --- |
+| **Name** | Required. |
+| **Description** | Optional. Shown next to the name in the picker. |
+| **Type** | Required. **Generic**, **Docker Registry** or **Git Credentials**. |
+| **Secret Data** | Required. One or more key/value pairs. The value box is masked, with an eye icon to reveal it while you type. **Add Key-Value Pair** adds another. |
+
+One secret holds many keys, and you reference them one key at a time.
+
+<Note>
+**Only Generic secrets can back an environment variable.** **Docker Registry** and **Git Credentials** secrets exist for pulling images and cloning repositories, and the environment picker filters them out. With no Generic secret in the organization, the picker reads `No generic secrets available`.
+</Note>
+
+### Reference a key
+
+Back on the resource's **Environment** tab: add a variable, name it whatever the container expects, and set the source to **Secret**. The value column becomes two dropdowns — the secret, then the key. `SECRET` in the first screenshot on this page is exactly that: the secret `test`, its key `AAA`.
+
+The value itself never comes back to you. Stackdome's API returns `******` in place of every secret value, so the dashboard has nothing to show and no screen anywhere reveals a stored secret. You can overwrite a value, not read it.
+
+### Changed secrets need a deploy
+
+Editing a secret does not touch anything already running. During a deploy, Stackdome writes the secret's current values into the target namespace and points the resource's container at that key; the container reads it when it starts. So:
+
+- Edit the secret. Nothing restarts.
+- Deploy the stack. The new value is written and the resource picks it up.
+
+Every stack referencing the secret needs its own deploy. Until then each one keeps serving the value it started with.
+
+## From an Addon
+
+Set a row's source to **Addon** and it joins an **addon** group — a bordered block on the tab labelled **Addon**, with a dropdown for the addon and, when the addon has more than one database, a dropdown for the database. Rows inside the group share that choice, and **Add binding** adds another row to it.
+
+Each row then picks one field:
+
+| Field | Notes |
+| --- | --- |
+| `host` | Tagged **cluster** — identical for every database in the addon. |
+| `port` | Tagged **cluster**. |
+| `database` | |
+| `username` | |
+| `password` | |
+| `sslmode` | Tagged **cluster**. |
+| `ca_certificate` | Tagged **cluster**. |
+| `url` | A ready-made connection string. |
+
+Like a secret reference, these arrive as a reference to credentials held in the cluster rather than as a value copied into the stack, and they are refreshed on each deploy.
+
+An addon has to be linked to the stack before it shows up here; with none linked the picker reads `No addons linked. Add one from the bottom panel.`
+
+<Card title="Postgres" icon="database" href="/guides/postgres">
+Create a managed Postgres addon, add databases to it, and link it to a stack.
+</Card>
+
+## From another Resource, or from Self
+
+This is how one resource finds another without you hardcoding a hostname. Set the source to **Resource**, pick the resource, then pick which of its outputs you want. **Self** is the same thing pointed at the resource you are editing — pick an output, no resource dropdown.
+
+![The Environment tab for the resource tooljet, scrolled to show four Resource rows — PG_HOST and TOOLJET_DB_HOST both pointing at postgresql, PGRST_HOST at postgrest, REDIS_HOST at redis — each with a second dropdown reading Host, resolved at deploy, host. Below them two Template rows whose value boxes show a monospace string starting http:// that is cut off by an ellipsis, each labelled otel-stack · resolved at deploy.](/images/env-connection-rows.png)
+
+The outputs a resource offers are derived from its **ports**:
+
+| Output | Resolves to | Exists when |
+| --- | --- | --- |
+| `host` | the resource's in-cluster address, `name.namespace.svc` | always |
+| `port` | the port number | the resource has a port |
+| `url` | `http://host:port` for an HTTP port, `host:port` otherwise | the resource has a port |
+| `public_host` | the generated public hostname for that port | the port is public **and** a hostname has been generated for it |
+| `public_url` | `http://public_host` | the port is public **and** a hostname has been generated for it |
+
+The picker groups them under **🔒 Internal** and **🌐 Public**, labels them **Host**, **Port**, **URL**, **Public Host**, **Public URL**, and prints the raw key beside each along with the words *resolved at deploy*:
+
+![The same tab with the output dropdown open on the PG_HOST row, showing a group headed 🔒 Internal with three entries — Host (ticked), Port and URL — each annotated resolved at deploy and the raw key host, port and url. No Public group is present.](/images/env-output-picker.png)
+
+A resource with no public port has no **🌐 Public** group at all, which is why the picker above shows only three entries — `postgresql` exposes 5432 internally and nothing publicly.
+
+<Warning>
+**The two lists are not built from the same condition.** The picker offers **Public Host** and **Public URL** for any port marked public. The values themselves only exist once Stackdome has generated a public hostname for that port, which needs an organization domain — see [Domains and TLS](/guides/domains-and-tls). Point a row at `public_url` on a public port that has no hostname yet and the picker accepts it, then the deploy fails with `unknown output 'public_url'`. Fix the domain, not the row.
+</Warning>
+
+<Note>
+**More than one port renames the outputs.** With a single port the keys are plain: `port`, `url`. With two or more, each per-port key gains the port's name as a suffix — `port.http`, `url.http`, `public_url.http` — so there is no ambiguity about which port you meant. `host` is per-resource and never suffixed.
+</Note>
+
+A worked pair, both on the same resource:
+
+- `PG_HOST` is a **Resource** row pointing at the `postgresql` resource's `host` — visible in both screenshots above. The resource gets the database's in-cluster address without anyone typing a DNS name.
+- `TOOLJET_HOST` is a **Self** row pointing at `public_url`. It sits higher up the same tab, above the rows those screenshots are scrolled to:
+
+![Five environment rows from the tooljet resource. SERVE_CLIENT is true, PORT is 80, NODE_ENV is production and DISABLE_TOOLJET_TELEMETRY is true, all four with the source dropdown reading Plain text. Between them the row TOOLJET_HOST has no text box — its value area reads Public URL, then resolved at deploy in italics, then the key public_url in a monospace chip — and its source dropdown reads Self.](/images/env-self-row.png)
+
+  Note the shape of that row: no text box, just the chosen output. The resource learns its own public address at deploy time, and it keeps working when that address changes.
+
+## Template rows
+
+A **Resource** row substitutes one output as the entire value. When a variable needs an output *inside* a larger string, the underlying connection can carry a Go template instead — a string plus a map from template key to output name:
+
+```text
+http://{{ host }}:4318/v1/traces
+```
+
+`OTEL_EXPORTER_OTLP_TRACES` in the screenshot above is exactly this, resolved against the `otel-stack` resource. Template keys must be valid identifiers — letters, digits and underscores, not starting with a digit.
+
+<Warning>
+**You cannot author a template row in the drawer.** The source dropdown offers five options; **Template** appears only on a row that already is one, and then it is greyed out. The row renders read-only, showing the template text and the resource it resolves against. Template rows come from importing a Docker Compose file or a stack template, where a value like `${db.host}` in a longer string is converted for you.
+
+To edit one, delete it and rebuild the value another way.
+</Warning>
+
+## What happens at deploy
+
+Deploying takes a snapshot of the stack and resolves it — that snapshot is what runs, so later edits do not leak into a release in flight. Resolution walks every row:
+
+- **Plain text** — copied through unchanged.
+- **Self** — the output is looked up on the resource itself and becomes a literal value.
+- **Resource** / **Template** — outputs are looked up on the source resource; a template is executed against them.
+- **Secret** / **Addon** — the values are written into the stack's namespace and the variable is pointed at them by name, not copied into the manifest.
+
+If resolution cannot finish, the release fails and the reason is on its timeline. The messages you are most likely to meet:
+
+| Situation | What you see |
+| --- | --- |
+| Two connections into the same resource map different sources onto one variable name | `duplicate env var name 'X': check connections that target this resource for overlapping mappings` |
+| A row points at an output the source no longer has — a port was removed or made private | `unknown output 'X'` |
+| A **Self** row points at an output this resource no longer has | `unknown self output 'X'` |
+| A template's braces do not parse | `invalid template: ...` |
+| An addon or the database inside it is gone | `postgres addon 'X' or database 'Y' not found` |
+
+An addon whose credentials are not ready yet is not a failure — the release waits and retries.
+
+<Note>
+The messages in this table are read from Stackdome's resolver, not reproduced by breaking a live stack. Wording may differ slightly by version; the situations are what matter.
+</Note>
+
+The drawer catches the cheaper mistakes before you ever deploy, inline on the row: `Required` for a missing name, `Duplicate name "..."`, and `Pick a secret`, `Pick a key`, `Pick an addon`, `Pick a database`, `Pick a field`, `Pick a resource`, `Pick an output` for a half-finished reference.
+
+## Next
+
+<CardGroup cols={2}>
+  <Card title="Releases" icon="rocket" href="/concepts/releases">
+    Why a saved change is not a deployed change, and how to read a release.
+  </Card>
+  <Card title="Postgres" icon="database" href="/guides/postgres">
+    The addon whose credentials the **Addon** source reads.
+  </Card>
+</CardGroup>

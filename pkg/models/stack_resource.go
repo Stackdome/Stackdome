@@ -216,6 +216,23 @@ type EnvVar struct {
 	SecretKeyRef *EnvSecretRef `json:"secret_key_ref,omitempty"`
 }
 
+// EnvVars is a top-level jsonb column of EnvVar entries (as opposed to
+// ExecutionConfig.Env, which is serialized as part of its parent struct).
+type EnvVars []EnvVar
+
+func (e *EnvVars) Scan(value interface{}) error {
+	bytes, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed")
+	}
+
+	return json.Unmarshal(bytes, &e)
+}
+
+func (e EnvVars) Value() (driver.Value, error) {
+	return json.Marshal(e)
+}
+
 type EnvSecretRef struct {
 	SecretName string `json:"secret_name"`
 	Key        string `json:"key"`

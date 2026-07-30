@@ -11,9 +11,9 @@ export const tooljet: Template = {
   shortDescription:
     "Low-code platform for building internal tools and dashboards.",
   longDescription:
-    "Build enterprise apps, AI agents, and workflows in minutes, not months. Just describe what you need in natural language.",
+    "Build enterprise apps, AI agents, and workflows in minutes, not months. Ships with workflow workers, the built-in ToolJet Database, and an observability stack (Grafana, Tempo, Prometheus) with a ready-made monitoring dashboard.",
   website: "https://tooljet.com/",
   docs: "https://docs.tooljet.com/",
-  version: "ee-lts-latest",
+  version: "v3.20.189-lts",
   stackYaml,
 };

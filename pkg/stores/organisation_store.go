@@ -9,7 +9,7 @@ import (
 
 //go:generate mockgen -source=organisation_store.go -destination=../mocks/mock_organisation_store.go -package=mocks
 type OrganisationStore interface {
-	GetDefaultOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError)
+	GetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError)
 	OrganisationNameExists(ctx context.Context, name string) (bool, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { credentialsFormSchema, verifyIntegrationFormSchema } from "../form-schemas";
+import { credentialsFormSchema, verifyIntegrationFormSchema, updateCredentialsFormSchema } from "../form-schemas";
 
 describe("credentialsFormSchema", () => {
   it("accepts a host and token with no username", () => {
@@ -64,5 +64,33 @@ describe("verifyIntegrationFormSchema", () => {
   it("rejects a non-http(s) scheme", () => {
     const result = verifyIntegrationFormSchema.safeParse({ repoUrl: "ftp://example.com/acme/webapp" });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("updateCredentialsFormSchema", () => {
+  it("requires a token", () => {
+    const res = updateCredentialsFormSchema.safeParse({ username: "", token: "" });
+    expect(res.success).toBe(false);
+    if (!res.success) {
+      expect(res.error.flatten().fieldErrors.token?.[0]).toMatch(/access token is required/i);
+    }
+  });
+
+  it("accepts token-only input", () => {
+    const res = updateCredentialsFormSchema.safeParse({ username: "", token: "ghp_abc" });
+    expect(res.success).toBe(true);
+  });
+
+  it("trims username and token", () => {
+    const res = updateCredentialsFormSchema.safeParse({ username: "  bob  ", token: "  tok  " });
+    expect(res.success).toBe(true);
+    if (res.success) {
+      expect(res.data.username).toBe("bob");
+      expect(res.data.token).toBe("tok");
+    }
+  });
+
+  it("has no host field", () => {
+    expect("host" in updateCredentialsFormSchema.shape).toBe(false);
   });
 });

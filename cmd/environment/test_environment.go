@@ -8,10 +8,12 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/controllers/clusterimageregistry"
+	clusterinfocontroller "github.com/Stackdome/stackdome/pkg/controllers/clusterinfo"
 	imagebuildcontroller "github.com/Stackdome/stackdome/pkg/controllers/imagebuild"
 	postgresaddoncontroller "github.com/Stackdome/stackdome/pkg/controllers/postgres_addon"
 	postgresbackupcontroller "github.com/Stackdome/stackdome/pkg/controllers/postgres_backup"
@@ -106,6 +108,7 @@ func (te *testEnvironment) Init(ctx context.Context) error {
 		te.injectClusterResourceServices,
 		te.initializeBaseResourceAccessPolicies,
 		te.startManagers,
+		te.bootstrapPlatformDefaults,
 	}
 
 	for _, step := range initializerSteps {
@@ -131,8 +134,8 @@ func (te *testEnvironment) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := te.BootstrapConfig.Validate(); err != nil {
-		return fmt.Errorf("invalid bootstrap config: %w", err)
+	if err := config.ValidatePlatformProvisioning(te.Config.PlatformCluster, te.BootstrapConfig.BaseDomain, te.BootstrapConfig.Email); err != nil {
+		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
 }
@@ -144,6 +147,13 @@ func (te *testEnvironment) loadSaneDefaults() {
 	// Load standard environment variables
 	// te.Config.LoadEnvVariables()
 	// te.BootstrapConfig.LoadEnvVariables()
+
+	// Platform-provisioning config is opt-in: the PLATFORM_CLUSTER_* / PLATFORM_* vars
+	// are unset in unit runs (no-op), and set by the integration bootstrap to exercise
+	// the boot-time platform seeding against a real cluster.
+	te.Config.PlatformCluster.LoadEnvVariables()
+	te.BootstrapConfig.LoadEnvVariables()
+
 	if te.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
 			te.Config.JwtSecret = val
@@ -168,15 +178,6 @@ func (te *testEnvironment) loadSaneDefaults() {
 		}
 	}
 
-	if te.BootstrapConfig.DefaultUser.Email == "" {
-		te.BootstrapConfig.DefaultUser.Email = "test-admin@stackdome.io"
-	}
-	if te.BootstrapConfig.DefaultUser.Name == "" {
-		te.BootstrapConfig.DefaultUser.Name = "Test Platform Admin"
-	}
-	if te.BootstrapConfig.DefaultUser.Password == "" {
-		te.BootstrapConfig.DefaultUser.Password = "test-welcome@123"
-	}
 }
 
 func (te *testEnvironment) setupLogger(ctx context.Context) error {
@@ -253,8 +254,16 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:         te.Logger,
 	})
 
+	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
+		SessionFactory: te.DBSession,
+		Logger:         te.Logger,
+		Permissions:    te.PermissionService,
+	})
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
+		ImageRegistryService:      imageRegistryService,
+		OrgRegistryDefaults:       te.BootstrapConfig.OrgRegistry,
 		StackQueryService:         te.Services.StackService,
 		SessionFactory:            te.DBSession,
 		ProjectService:            projectService,
@@ -290,13 +299,15 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Logger:            te.Logger,
 	})
 
+	gitIntegrationStore := pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	gitInstallationStore := pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
+		SessionFactory: te.DBSession,
+	})
 	gitIntegrationService := services.NewGitIntegrationService(services.GitIntegrationServiceSpec{
-		Store: pgstore.NewGitIntegrationStore(pgstore.GitIntegrationStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		InstallationStore: pgstore.NewGitInstallationStore(pgstore.GitInstallationStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
 		OAuthStateStore: pgstore.NewOAuthStateStore(pgstore.OAuthStateStoreSpec{
 			SessionFactory: te.DBSession,
 		}),
@@ -332,12 +343,6 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		Permissions:                 te.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           te.RefreshTokenStore,
-	})
-
-	imageRegistryService := services.NewClusterImageRegistryService(services.ImageRegistryServiceSpec{
-		SessionFactory: te.DBSession,
-		Logger:         te.Logger,
-		Permissions:    te.PermissionService,
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -540,6 +545,22 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		SecretService:      secretService,
 		CredentialResolver: credentialResolver,
 		Permissions:        te.PermissionService,
+		Logger:             te.Logger,
+	})
+
+	previewWebhookService := services.NewPreviewWebhookService(services.PreviewWebhookServiceSpec{
+		ConfigStore:       stackPreviewConfigStore,
+		PreviewStackStore: previewStackStore,
+		PreviewService:    previewStackService,
+		Logger:            te.Logger,
+	})
+
+	githubWebhookService := services.NewGitHubWebhookService(services.GitHubWebhookServiceSpec{
+		Store:             gitIntegrationStore,
+		InstallationStore: gitInstallationStore,
+		EncryptionService: encryptionService,
+		PreviewWebhook:    previewWebhookService,
+		Logger:            te.Logger,
 	})
 
 	te.Services = Services{
@@ -563,6 +584,7 @@ func (te *testEnvironment) loadServices(ctx context.Context) error {
 		CredentialResolver:          credentialResolver,
 		RegistryCredentialService:   registryCredentialService,
 		GitIntegrationService:       gitIntegrationService,
+		GitHubWebhookService:        githubWebhookService,
 		ObjectStoreService:          objectStoreService,
 		PostgresAddonService:        postgresAddonService,
 		PostgresBackupService:       postgresBackupService,
@@ -637,11 +659,13 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 			func(clusterID string) clustermanager.Controller {
 				return imagebuildcontroller.NewImageBuildReconciler(imagebuildcontroller.ImageBuildReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-image-build-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:             clusterID,
 					DBImageBuildService:   te.Services.ImageBuildService,
 					DBResourceService:     te.Services.StackResourceService,
 					GitIntegrationService: te.Services.GitIntegrationService,
 					ReleaseChecker:        te.Services.StackReleaseService,
 					EventRecorder:         te.Services.ReleaseEventRecorder,
+					StackService:          te.Services.StackService,
 				})
 			},
 			func(clusterID string) clustermanager.Controller {
@@ -661,6 +685,13 @@ func (te *testEnvironment) initializeClusterManager(ctx context.Context) error {
 				return postgresbackupcontroller.NewPostgresBackupReconciler(postgresbackupcontroller.PostgresBackupReconcilerSpec{
 					Log:                   applogger.NewLoggerWithPrefix(ctx, "test-postgres-backup-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
 					PostgresBackupService: te.Services.PostgresBackupService,
+				})
+			},
+			func(clusterID string) clustermanager.Controller {
+				return clusterinfocontroller.NewClusterInfoReconciler(clusterinfocontroller.ClusterInfoReconcilerSpec{
+					Log:            applogger.NewLoggerWithPrefix(ctx, "test-cluster-info-controller").SetLevel(te.Logger.GetLevel()).WithField(applogger.FieldClusterID, clusterID),
+					ClusterID:      clusterID,
+					ClusterService: te.Services.ClusterService,
 				})
 			},
 		},
@@ -759,17 +790,26 @@ func (te *testEnvironment) initializeWorkerManager(ctx context.Context) error {
 	})
 	te.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
 
+	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewConfigStore := pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
+		SessionFactory: te.DBSession,
+	})
+	previewCommentService := services.NewPreviewCommentService(services.PreviewCommentServiceSpec{
+		ConfigStore:     previewConfigStore,
+		GitIntegrations: te.Services.GitIntegrationService,
+		Commenter:       githubapp.NewPullRequestCommenter(githubapp.PullRequestCommenterSpec{}),
+		Logger:          te.Logger,
+	})
 	previewWorker := previewworker.NewPreviewWorker(previewworker.PreviewWorkerSpec{
 		PreviewStackService: te.Services.PreviewStackService,
-		PreviewStackStore: pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		ConfigStore: pgstore.NewStackPreviewConfigStore(pgstore.StackPreviewConfigStoreSpec{
-			SessionFactory: te.DBSession,
-		}),
-		ReleaseService: te.Services.StackReleaseService,
-		StackService:   te.Services.StackService,
-		Env:            te.Name,
+		PreviewStackStore:   previewStackStore,
+		ConfigStore:         previewConfigStore,
+		ReleaseService:      te.Services.StackReleaseService,
+		StackService:        te.Services.StackService,
+		CommentService:      previewCommentService,
+		Env:                 te.Name,
 	})
 	te.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
 
@@ -869,6 +909,21 @@ func (te *testEnvironment) startManagers(ctx context.Context) error {
 
 	te.Logger.Debugf("Starting worker manager for test environment")
 	return te.WorkerManager.Start(ctx)
+}
+
+func (te *testEnvironment) bootstrapPlatformDefaults(ctx context.Context) error {
+	svc := bootstrap.NewService(bootstrap.Spec{
+		OrganisationService:       te.Services.OrganisationService,
+		ClusterService:            te.Services.ClusterService,
+		OrganisationDomainService: te.Services.OrganisationDomainService,
+		BootstrapConfig:           te.BootstrapConfig,
+		ClusterConfig:             te.Config.PlatformCluster,
+		Logger:                    te.Logger,
+	})
+	if err := svc.Run(ctx); err != nil {
+		return fmt.Errorf("platform bootstrap failed: %w", err)
+	}
+	return nil
 }
 
 func (te *testEnvironment) Shutdown(ctx context.Context) error {

@@ -1,5 +1,5 @@
 import type { FormStackResourceData, FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
-import { nodePresentation, type GlyphKind } from "./node-presentation";
+import { nodePresentation, type GlyphKind, type PortLine } from "./node-presentation";
 import { splitEnvRows, type FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 import type { StackConnection } from "@/api/connections";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
@@ -64,9 +64,16 @@ export interface ResourceNodeData {
   kindLabel: string;
   /** Glyph identifier for the node icon. */
   glyph: GlyphKind;
+  /** Brand-icon slug when the image maps to known software; falls back to glyph. */
+  brandSlug?: string;
   /** Live status-dot colour bucket, from the resource/addon's runtime state. */
   dotVariant: StatusVariant;
   summary: string;
+  /** One card line per declared port (`port N · public|internal`). */
+  details?: PortLine[];
+  /** Live public URL per declared port number — makes the matching public
+   *  port line a link on the card. Absent for drafts/never-deployed stacks. */
+  portUrls?: Record<number, string>;
   volumes: VolumeChip[];
   dirtyState?: DirtyState;
   /** Index into the edit session's resource array; absent for addon nodes. */
@@ -80,6 +87,9 @@ export interface AttachmentNodeData {
   kind: AttachmentKind;
   name: string;
   kindLabel: string; // "SECRET" | "VOLUME" | "OBJECT STORE"
+  /** Index into the draft's volumeNames array — the stable identity a volume
+   *  keeps while being renamed (its node id embeds the name). Volume kind only. */
+  volumeIdx?: number;
   [key: string]: unknown;
 }
 
@@ -93,6 +103,9 @@ export interface CanvasNode {
 export interface ConnectionEdgeData {
   kind: EdgeKind;
   sourceOfTruth: EdgeSourceOfTruth;
+  /** Set only when ≥2 edges share a node pair: this edge's slot and the pair's edge total. */
+  parallelIndex?: number;
+  parallelCount?: number;
   [key: string]: unknown;
 }
 
@@ -237,11 +250,13 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
+        brandSlug: pres.brandSlug,
         // Form-data resources carry no status field; the graph-build dot
         // always starts neutral here — mergeTopology overlays the real
         // per-resource state from live status / topology once available.
         dotVariant: statusVariant("resource", undefined),
         summary: pres.summary,
+        details: pres.details,
         volumes: volumeChips(resource, knownVolumes),
         dirtyState: serviceDirtyState(idx, input.dirty),
         resourceIdx: idx,
@@ -260,6 +275,7 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
         name: input.addonNameById.get(addonId) ?? addonId,
         kindLabel: pres.kindLabel,
         glyph: pres.glyph,
+        brandSlug: pres.brandSlug,
         dotVariant: statusVariant("addon", input.addonStateById?.get(addonId)),
         summary: pres.summary,
         volumes: [],
@@ -272,13 +288,13 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
   const edges: CanvasEdge[] = [];
   const seen = new Set<string>();
 
-  const ensureAttachment = (id: string, kind: AttachmentKind, name: string) => {
+  const ensureAttachment = (id: string, kind: AttachmentKind, name: string, volumeIdx?: number) => {
     if (nodeById.has(id)) return;
     const node: CanvasNode = {
       id,
       type: "attachment",
       position: { x: 0, y: 0 },
-      data: { kind, name, kindLabel: ATTACHMENT_LABEL[kind] },
+      data: { kind, name, kindLabel: ATTACHMENT_LABEL[kind], volumeIdx },
     };
     nodeById.set(id, node);
     nodes.push(node);
@@ -317,10 +333,10 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
       if (m.source_volume_name) mountedVolumes.add(m.source_volume_name as string);
     }
   }
-  for (const volumeName of input.volumeNames ?? []) {
-    if (!volumeName || mountedVolumes.has(volumeName)) continue;
-    ensureAttachment(NODE_ID_PREFIX.volume + volumeName, NODE_KIND.volume, volumeName);
-  }
+  (input.volumeNames ?? []).forEach((volumeName, volumeIdx) => {
+    if (!volumeName || mountedVolumes.has(volumeName)) return;
+    ensureAttachment(NODE_ID_PREFIX.volume + volumeName, NODE_KIND.volume, volumeName, volumeIdx);
+  });
 
   for (const resource of input.resources) {
     for (const dep of resource.depends_on ?? []) {
@@ -333,5 +349,35 @@ export function deriveGraph(input: DeriveGraphInput): CanvasGraph {
     }
   }
 
-  return { nodes, edges };
+  // One relationship = one line: a derived depends_on edge duplicating an
+  // authored connection in the SAME direction is redundant — drop it. An
+  // opposite-direction edge is a different relationship and stays. Whatever
+  // remains sharing a node pair (either direction) is annotated so the
+  // floating edge offsets the lines instead of overlapping them.
+  const authoredDirections = new Set(
+    edges
+      .filter((e) => e.data.sourceOfTruth === EDGE_SOURCE_OF_TRUTH.connection)
+      .map((e) => `${e.source}|${e.target}`),
+  );
+  const kept = edges.filter(
+    (e) =>
+      e.data.sourceOfTruth !== EDGE_SOURCE_OF_TRUTH.derived ||
+      !authoredDirections.has(`${e.source}|${e.target}`),
+  );
+  const byPair = new Map<string, CanvasEdge[]>();
+  for (const edge of kept) {
+    const key = [edge.source, edge.target].sort().join("|");
+    const group = byPair.get(key);
+    if (group) group.push(edge);
+    else byPair.set(key, [edge]);
+  }
+  for (const group of byPair.values()) {
+    if (group.length < 2) continue;
+    group.forEach((edge, i) => {
+      edge.data.parallelIndex = i;
+      edge.data.parallelCount = group.length;
+    });
+  }
+
+  return { nodes, edges: kept };
 }
