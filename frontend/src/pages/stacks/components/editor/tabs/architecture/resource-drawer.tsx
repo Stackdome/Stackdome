@@ -205,7 +205,7 @@ export function ResourceDrawer({
           )}
         </div>
         {readOnly && (
-          <span className="shrink-0 rounded-md border border-success-border bg-success-bg px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-success">
+          <span className="shrink-0 rounded-md border border-border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-fg-muted">
             Live · read-only
           </span>
         )}

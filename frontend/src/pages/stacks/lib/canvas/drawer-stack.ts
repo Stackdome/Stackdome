@@ -24,3 +24,21 @@ export function truncateTo(stack: DrawerEntry[], depth: number): DrawerEntry[] {
 export function popEntry(stack: DrawerEntry[]): DrawerEntry[] {
   return stack.slice(0, -1);
 }
+
+/**
+ * Rebind open drawers onto another resource/volume list by name (names are
+ * unique in a stack), remapping resource indexes — the two lists don't line
+ * up. Entries with no same-named counterpart drop out.
+ */
+export function remapStackByName(
+  stack: DrawerEntry[],
+  from: { resources: { name?: string }[] },
+  to: { resources: { name?: string }[]; volumeNames: ReadonlySet<string> },
+): DrawerEntry[] {
+  return stack.flatMap((e): DrawerEntry[] => {
+    if (e.kind === "volume") return to.volumeNames.has(e.name) ? [e] : [];
+    const name = from.resources[e.index]?.name;
+    const index = name ? to.resources.findIndex((r) => r.name === name) : -1;
+    return index >= 0 ? [{ kind: "resource", index }] : [];
+  });
+}

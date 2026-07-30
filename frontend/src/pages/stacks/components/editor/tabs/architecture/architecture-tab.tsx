@@ -63,6 +63,7 @@ import {
   truncateTo,
   popEntry,
   entryKey,
+  remapStackByName,
   type DrawerEntry,
 } from "@/pages/stacks/lib/canvas/drawer-stack";
 import { computeDrawerInset } from "@/pages/stacks/lib/canvas/drawer-inset";
@@ -391,12 +392,52 @@ function StackCanvasFlow({
     requestAnimationFrame(() => fitView(FIT_OPTIONS));
   }, [mergedGraph, setNodes, fitView]);
 
-  // Switching views closes any open drawers — resource indexes are not stable
-  // across the draft and live lists, so re-binding an open panel would be a lie.
-  const onViewModeChange = useCallback((mode: CanvasViewMode) => {
-    setViewMode(mode);
-    setDrawerStack([]);
-  }, []);
+  // Switching views keeps drawers open on the same-named resource/volume in
+  // the target view; entries with no counterpart there (undeployed additions,
+  // since-removed resources) close.
+  const onViewModeChange = useCallback(
+    (mode: CanvasViewMode) => {
+      const target =
+        mode === "live" && liveView
+          ? { resources: liveView.resources, volumes: liveView.volumes }
+          : session.isActive
+            ? session.draft
+            : { resources: draftResources, volumes: draftVolumes };
+      const remapped = remapStackByName(drawerStack, { resources }, {
+        resources: target.resources,
+        volumeNames: new Set(target.volumes.map((v) => v.name).filter((n): n is string => !!n)),
+      });
+      // Draft drawers edit through a session — make sure one exists before a
+      // surviving drawer lands on the draft side.
+      if (mode === "draft" && remapped.length > 0 && !session.isActive) {
+        const front = [...remapped]
+          .reverse()
+          .find((e): e is Extract<DrawerEntry, { kind: "resource" }> => e.kind === "resource");
+        session.start(
+          { resources: baselineResources, volumes: baselineVolumes },
+          {
+            linkedAddonIds: new Set(connectionAddonIds),
+            openResourceIdx: front?.index,
+            openTab: "configuration",
+            draft: { resources: draftResources, volumes: draftVolumes },
+          },
+        );
+      }
+      setDrawerStack(remapped);
+      setViewMode(mode);
+    },
+    [
+      drawerStack,
+      resources,
+      liveView,
+      session,
+      draftResources,
+      draftVolumes,
+      baselineResources,
+      baselineVolumes,
+      connectionAddonIds,
+    ],
+  );
 
   const openResourceDrawer = useCallback(
     (idx: number, tab: EditSessionTab = "configuration") => {

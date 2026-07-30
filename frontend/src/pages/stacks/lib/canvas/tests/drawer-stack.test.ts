@@ -5,6 +5,7 @@ import {
   pushEntry,
   truncateTo,
   popEntry,
+  remapStackByName,
   type DrawerEntry,
 } from "../drawer-stack";
 
@@ -41,5 +42,17 @@ describe("drawer-stack", () => {
   it("popEntry removes the front entry; empty stays empty", () => {
     expect(popEntry([r(0), v("data")])).toEqual([r(0)]);
     expect(popEntry([])).toEqual([]);
+  });
+
+  it("remapStackByName rebinds indexes by name and drops entries without a counterpart", () => {
+    const from = { resources: [{ name: "web" }, { name: "api" }] };
+    const to = { resources: [{ name: "api" }], volumeNames: new Set(["data"]) };
+    expect(remapStackByName([r(0), r(1), v("data"), v("gone")], from, to)).toEqual([r(0), v("data")]);
+  });
+
+  it("remapStackByName drops resources with no name", () => {
+    const from = { resources: [{}] };
+    const to = { resources: [{}], volumeNames: new Set<string>() };
+    expect(remapStackByName([r(0)], from, to)).toEqual([]);
   });
 });

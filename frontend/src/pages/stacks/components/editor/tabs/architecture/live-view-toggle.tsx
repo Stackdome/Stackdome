@@ -15,8 +15,8 @@ const SEGMENT_BASE =
 
 /**
  * Draft/Live segmented control overlaid on the canvas. "Live" switches the
- * canvas to a read-only view of the converged release; the caption spells the
- * read-only contract out so the disabled drawer downstream isn't a surprise.
+ * canvas to a read-only view of the converged release; the canvas footer
+ * caption spells the read-only contract out.
  */
 export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggleProps) {
   const segment = (value: CanvasViewMode, label: React.ReactNode) => (
@@ -33,37 +33,30 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
   );
 
   return (
-    <div className="flex items-center gap-2">
-      <div
-        role="group"
-        aria-label="Canvas view"
-        className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 shadow-sm"
-      >
-        {segment(
-          "draft",
-          <>
-            Draft
-            {draftDirty && (
-              <span
-                aria-hidden
-                data-testid="draft-dirty-dot"
-                className="inline-block size-1.5 rounded-full bg-brand"
-              />
-            )}
-          </>,
-        )}
-        {segment(
-          "live",
-          <>
-            <Eye className="size-3.5" aria-hidden />
-            Live
-          </>,
-        )}
-      </div>
-      {mode === "live" && (
-        <span className="rounded-md border border-success-border bg-success-bg px-2 py-0.5 text-[11px] font-medium text-success">
-          read-only · what&rsquo;s currently deployed
-        </span>
+    <div
+      role="group"
+      aria-label="Canvas view"
+      className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 shadow-sm"
+    >
+      {segment(
+        "draft",
+        <>
+          Draft
+          {draftDirty && (
+            <span
+              aria-hidden
+              data-testid="draft-dirty-dot"
+              className="inline-block size-1.5 rounded-full bg-brand"
+            />
+          )}
+        </>,
+      )}
+      {segment(
+        "live",
+        <>
+          <Eye className="size-3.5" aria-hidden />
+          Live
+        </>,
       )}
     </div>
   );

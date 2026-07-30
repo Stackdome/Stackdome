@@ -56,19 +56,28 @@ const LIVE_VIEW = {
   volumes: NO_VOLUMES,
   linkedAddonIds: NO_ADDON_IDS,
 };
+// "both" lives in the draft (at index 1) and the live snapshot (at index 0) —
+// the drawer surviving a view switch proves the name-based index remap.
+const BOTH_DRAFT_RESOURCES = [DRAFT_RESOURCE, { name: "both" }];
+const BOTH_LIVE_VIEW = {
+  resources: [{ name: "both" }],
+  volumes: NO_VOLUMES,
+  linkedAddonIds: NO_ADDON_IDS,
+};
 
-function Harness(props: { liveView?: typeof LIVE_VIEW }) {
+function Harness(props: { liveView?: typeof LIVE_VIEW; draftResources?: { name: string }[] }) {
+  const draftResources = props.draftResources ?? DRAFT_RESOURCES;
   const session = useStackEditSession();
   if (!session.isActive) {
-    session.start({ resources: DRAFT_RESOURCES, volumes: NO_VOLUMES }, { openTab: "configuration" });
+    session.start({ resources: draftResources, volumes: NO_VOLUMES }, { openTab: "configuration" });
   }
   return (
     <ConfirmProvider>
       <ArchitectureTab
         session={session}
-        baselineResources={DRAFT_RESOURCES}
+        baselineResources={draftResources}
         baselineVolumes={NO_VOLUMES}
-        draftResources={DRAFT_RESOURCES}
+        draftResources={draftResources}
         draftVolumes={NO_VOLUMES}
         connectionAddonIds={NO_ADDON_IDS}
         addonNameById={NO_ADDON_NAMES}
@@ -99,7 +108,6 @@ describe("ArchitectureTab live view", () => {
     expect(screen.getByTestId("canvas-readonly")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "api-live" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "web-draft" })).not.toBeInTheDocument();
-    expect(screen.getByText(/read-only/)).toBeInTheDocument();
   });
 
   it("opens a disabled, mutation-free drawer for a live node", () => {
@@ -116,7 +124,7 @@ describe("ArchitectureTab live view", () => {
     expect(nameInput).toBeDisabled();
   });
 
-  it("closes the drawer when switching back to Draft (indexes are not stable across views)", () => {
+  it("closes the drawer on switch when the resource has no counterpart in the target view", () => {
     render(<Harness liveView={LIVE_VIEW} />);
     fireEvent.click(screen.getByRole("button", { name: "Live" }));
     fireEvent.click(screen.getByRole("button", { name: "api-live" }));
@@ -125,5 +133,22 @@ describe("ArchitectureTab live view", () => {
     fireEvent.click(screen.getByRole("button", { name: "Draft" }));
     expect(screen.queryByTestId("resource-drawer")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "web-draft" })).toBeInTheDocument();
+  });
+
+  it("keeps the drawer open across view switches when the resource exists in both", () => {
+    render(<Harness draftResources={BOTH_DRAFT_RESOURCES} liveView={BOTH_LIVE_VIEW} />);
+    fireEvent.click(screen.getByRole("button", { name: "both" }));
+    expect(screen.getByTestId("resource-drawer")).toBeInTheDocument();
+
+    // Draft → Live: same resource, remapped from draft index 1 to live index 0.
+    fireEvent.click(screen.getByRole("button", { name: "Live" }));
+    const liveDrawer = screen.getByTestId("resource-drawer");
+    expect(liveDrawer).toHaveTextContent("Live · read-only");
+    expect(screen.getByLabelText(/name/i)).toBeDisabled();
+
+    // Live → Draft: drawer survives the trip back and is editable again.
+    fireEvent.click(screen.getByRole("button", { name: "Draft" }));
+    expect(screen.getByTestId("resource-drawer")).toBeInTheDocument();
+    expect(screen.getByLabelText(/name/i)).not.toBeDisabled();
   });
 });

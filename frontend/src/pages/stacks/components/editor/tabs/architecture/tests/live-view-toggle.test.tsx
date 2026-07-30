@@ -18,14 +18,6 @@ describe("LiveViewToggle", () => {
     expect(onModeChange).toHaveBeenCalledWith("live");
   });
 
-  it("shows the read-only caption only in live mode", () => {
-    const { rerender } = render(<LiveViewToggle mode="draft" onModeChange={vi.fn()} draftDirty={false} />);
-    expect(screen.queryByText(/read-only/)).not.toBeInTheDocument();
-
-    rerender(<LiveViewToggle mode="live" onModeChange={vi.fn()} draftDirty={false} />);
-    expect(screen.getByText(/read-only/)).toBeInTheDocument();
-  });
-
   it("dots the Draft segment when undeployed edits exist", () => {
     const { rerender } = render(<LiveViewToggle mode="live" onModeChange={vi.fn()} draftDirty />);
     expect(screen.getByTestId("draft-dirty-dot")).toBeInTheDocument();
