@@ -90,7 +90,6 @@ describe("useBuildLogStream", () => {
 
     const { result } = renderHook(() => useBuildLogStream(props));
 
-    // waitFor cannot be used under vitest fake timers — drive the clock instead.
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(getImageBuild).toHaveBeenCalledTimes(1);
     expect(result.current.phase).toBe("waiting");
@@ -147,6 +146,52 @@ describe("useBuildLogStream", () => {
 
     expect(getImageBuild).not.toHaveBeenCalled();
     expect(FakeEventSource.instances).toHaveLength(0);
+  });
+
+  it("stops polling after unmount", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getImageBuild).mockResolvedValue({ status: {} } as unknown as ImageBuild);
+
+    const { unmount } = renderHook(() => useBuildLogStream(props));
+
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(getImageBuild).toHaveBeenCalledTimes(1);
+
+    unmount();
+    await act(() => vi.advanceTimersByTimeAsync(9000));
+
+    expect(getImageBuild).toHaveBeenCalledTimes(1);
+    expect(FakeEventSource.instances).toHaveLength(0);
+  });
+
+  it("closes the stream when enabled flips to false", async () => {
+    vi.mocked(getImageBuild).mockResolvedValue(startedBuild);
+
+    const { result, rerender } = renderHook((p: typeof props) => useBuildLogStream(p), {
+      initialProps: props,
+    });
+
+    await waitFor(() => expect(result.current.phase).toBe("streaming"));
+    expect(FakeEventSource.instances[0].closed).toBe(false);
+
+    rerender({ ...props, enabled: false });
+
+    expect(FakeEventSource.instances[0].closed).toBe(true);
+    expect(FakeEventSource.instances).toHaveLength(1);
+  });
+
+  it("surfaces a failed final-verdict refetch instead of rejecting unhandled", async () => {
+    vi.mocked(getImageBuild)
+      .mockResolvedValueOnce(startedBuild)
+      .mockRejectedValueOnce(new Error("build record gone"));
+
+    const { result } = renderHook(() => useBuildLogStream(props));
+
+    await waitFor(() => expect(result.current.phase).toBe("streaming"));
+    act(() => FakeEventSource.instances[0].emit("end"));
+
+    await waitFor(() => expect(result.current.error).toBe("build record gone"));
+    expect(result.current.phase).toBe("ended");
   });
 
   it("retry restarts the preflight", async () => {

@@ -88,9 +88,13 @@ export function useBuildLogStream({
         es.close();
         setConnectionStatus("disconnected");
         setPhase("ended");
-        void getImageBuild(orgId, projectName, stackId, buildId).then((b) => {
-          if (alive) setBuild(b);
-        });
+        void getImageBuild(orgId, projectName, stackId, buildId)
+          .then((b) => {
+            if (alive) setBuild(b);
+          })
+          .catch((e: unknown) => {
+            if (alive) setError(e instanceof Error ? e.message : String(e));
+          });
       });
     };
 
