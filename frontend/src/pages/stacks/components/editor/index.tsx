@@ -63,6 +63,10 @@ export default function CanvasEditorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+  // Draft deploy remounts the page at the new stack URL, so it can't call
+  // setActiveTab like the in-place deploy path does — the target tab rides
+  // the navigation state instead.
+  const initialTab = (location.state as { initialTab?: EditorTabId } | null)?.initialTab;
   const [draftName, setDraftName] = useState(seed.name);
   // Draft labels are seeded into the create payload; there is no in-canvas label
   // editor, so the setter is intentionally dropped.
@@ -74,7 +78,7 @@ export default function CanvasEditorPage() {
   const [error, setError] = useState<string | null>(null);
 
   const session = useStackEditSession();
-  const [activeTab, setActiveTab] = useState<EditorTabId>(EDITOR_TABS.architecture);
+  const [activeTab, setActiveTab] = useState<EditorTabId>(initialTab ?? EDITOR_TABS.architecture);
   // Resource pre-selected in the Logs tab filter when arriving via a drawer's
   // "View logs". Cleared on direct tab navigation so the filter doesn't stick.
   const [logsInitialSource, setLogsInitialSource] = useState<string | undefined>();
@@ -749,7 +753,12 @@ export default function CanvasEditorPage() {
           variant: "destructive",
         });
       }
-      navigate(`/stacks/${created.id}`, { replace: true, state: null });
+      // Same "watch it roll out" landing as the in-place deploy path (onDeploy).
+      // /stacks/new and /stacks/:id both render this component, so React keeps
+      // the instance alive across this navigation and setActiveTab sticks; the
+      // navigation state covers the remount case (e.g. a reload of the entry).
+      setActiveTab(EDITOR_TABS.deployments);
+      navigate(`/stacks/${created.id}`, { replace: true, state: { initialTab: EDITOR_TABS.deployments } });
     } catch (err) {
       console.error('Failed to create stack:', err);
       if (!applyValidationFailure(err)) {
