@@ -5403,7 +5403,7 @@ func main() {
     id := "id_example" // string | The id of record
     buildId := "buildId_example" // string | The ID of the build
     follow := true // bool |  (optional) (default to false)
-    tail := int32(56) // int32 |  (optional) (default to 100)
+    tail := int32(56) // int32 |  (optional) (default to 200)
     since := "since_example" // string |  (optional)
 
     configuration := openapiclient.NewConfiguration()
@@ -5441,7 +5441,7 @@ Name | Type | Description  | Notes
 
 
  **follow** | **bool** |  | [default to false]
- **tail** | **int32** |  | [default to 100]
+ **tail** | **int32** |  | [default to 200]
  **since** | **string** |  | 
 
 ### Return type

@@ -3357,7 +3357,7 @@ paths:
         name: tail
         required: false
         schema:
-          default: 100
+          default: 200
           type: integer
         style: form
       - explode: true
@@ -3374,11 +3374,21 @@ paths:
               schema:
                 format: binary
                 type: string
-          description: Stream of build log lines via Server-Sent Events (SSE)
+          description: "Stream of build log lines via Server-Sent Events (SSE). Log\
+            \ lines arrive as unnamed \"data:\" events; terminal stream errors as\
+            \ \"event: error\"; normal completion is signalled by a final \"event:\
+            \ end\" frame."
         "401":
           description: Unauthorized
         "404":
           description: Build not found
+        "409":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: "Build job not created yet, or build pod not started — retry\
+            \ later"
         "500":
           content:
             application/json:
