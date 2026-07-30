@@ -86,7 +86,7 @@ export function BuildLogsModal({ open, onClose, ...rest }: BuildLogsModalProps) 
         if (!next) onClose();
       }}
     >
-      <DialogContent className="flex h-[85vh] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
+      <DialogContent className="flex h-[min(640px,85vh)] max-w-4xl flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
         <BuildLogsBody key={rest.buildId} open={open} {...rest} />
       </DialogContent>
     </Dialog>
