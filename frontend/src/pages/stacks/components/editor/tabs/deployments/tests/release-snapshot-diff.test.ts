@@ -265,6 +265,16 @@ describe("diffSnapshots git sources", () => {
     expect(diffSnapshots(snap([deployed]), snap([unpinnedSpec])).resources).toEqual([]);
   });
 
+  it("flags a commit pin change beside an unchanged branch as a single commit row", () => {
+    const out = diffSnapshots(
+      snap([gitWeb({ branch: "main", commit: "aaa111" })]),
+      snap([gitWeb({ branch: "main", commit: "bbb222" })]),
+    ).resources;
+    expect(out).toHaveLength(1);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toEqual([{ key: "commit", from: "aaa111", to: "bbb222", kind: "changed" }]);
+  });
+
   it("still pairs a renamed unpinned git resource instead of add+remove", () => {
     const deployed = gitWeb({ branch: "master", commit: "abc123" });
     const renamed = { ...gitWeb({}), name: "web2" };

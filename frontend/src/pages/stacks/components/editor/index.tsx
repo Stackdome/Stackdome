@@ -749,6 +749,9 @@ export default function CanvasEditorPage() {
           variant: "destructive",
         });
       }
+      // Both /stacks/new and /stacks/:id render this component, so the instance
+      // survives this navigate and setActiveTab sticks.
+      setActiveTab(EDITOR_TABS.deployments);
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);

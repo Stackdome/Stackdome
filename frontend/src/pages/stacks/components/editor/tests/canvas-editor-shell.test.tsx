@@ -23,6 +23,18 @@ const base = {
   architecture: <div />, deployments: <div />, logs: <div />, metrics: <div />,
 };
 
+describe("CanvasEditorShell resource tally", () => {
+  it("shows the canvas tally on the architecture tab", () => {
+    render(<CanvasEditorShell {...base} stackName="api" nameEditable={false} />);
+    expect(screen.getByText("0 services · 0 volumes")).toBeInTheDocument();
+  });
+
+  it("hides the canvas tally when an ops view overlays the canvas", () => {
+    render(<CanvasEditorShell {...base} stackName="api" nameEditable={false} activeTab={EDITOR_TABS.deployments} />);
+    expect(screen.queryByText("0 services · 0 volumes")).toBeNull();
+  });
+});
+
 describe("CanvasEditorShell header", () => {
   it("renders an editable name input in draft and reports changes", () => {
     const onNameChange = vi.fn();

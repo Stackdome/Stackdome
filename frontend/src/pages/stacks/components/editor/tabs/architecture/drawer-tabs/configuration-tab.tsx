@@ -64,6 +64,7 @@ export interface ConfigurationDraft {
   source?: Resource["source"];
   gitRevisionType?: Resource["gitRevisionType"];
   gitRevisionValue?: Resource["gitRevisionValue"];
+  gitCommitPin?: Resource["gitCommitPin"];
   // Abandoned-branch stash for the "Build from" toggle — see the handler below.
   stashedGitSource?: Resource["stashedGitSource"];
   stashedImageSource?: Resource["stashedImageSource"];
@@ -80,6 +81,7 @@ export function pickConfigurationDraft(resource: Resource): ConfigurationDraft {
     source: resource.source,
     gitRevisionType: resource.gitRevisionType,
     gitRevisionValue: resource.gitRevisionValue,
+    gitCommitPin: resource.gitCommitPin,
     stashedGitSource: resource.stashedGitSource,
     stashedImageSource: resource.stashedImageSource,
     volume_mounts: resource.volume_mounts,
@@ -458,8 +460,8 @@ function StackResourceConfigurationTabImpl({
                   value={draft.gitRevisionType ?? "default"}
                   onValueChange={(val) =>
                     val === "default"
-                      ? update({ gitRevisionType: undefined, gitRevisionValue: undefined })
-                      : update({ gitRevisionType: val as "branch" | "commit" | "tag" })
+                      ? update({ gitRevisionType: undefined, gitRevisionValue: undefined, gitCommitPin: undefined })
+                      : update({ gitRevisionType: val as "branch" | "tag" })
                   }
                 >
                   <SelectTrigger
@@ -471,7 +473,6 @@ function StackResourceConfigurationTabImpl({
                   <SelectContent>
                     <SelectItem value="default">Default branch</SelectItem>
                     <SelectItem value="branch">Branch</SelectItem>
-                    <SelectItem value="commit">Commit</SelectItem>
                     <SelectItem value="tag">Tag</SelectItem>
                   </SelectContent>
                 </Select>
@@ -480,13 +481,7 @@ function StackResourceConfigurationTabImpl({
 
             {draft.gitRevisionType && (
               <LedgerRow
-                label={
-                  draft.gitRevisionType === "branch"
-                    ? "Branch name"
-                    : draft.gitRevisionType === "commit"
-                      ? "Commit hash"
-                      : "Tag name"
-                }
+                label={draft.gitRevisionType === "branch" ? "Branch name" : "Tag name"}
                 htmlFor={`git-revision-value-${index}`}
                 required
                 alignTop
@@ -503,13 +498,7 @@ function StackResourceConfigurationTabImpl({
                     id={`git-revision-value-${index}`}
                     value={draft.gitRevisionValue || ""}
                     onChange={(e) => update({ gitRevisionValue: e.target.value })}
-                    placeholder={
-                      draft.gitRevisionType === "branch"
-                        ? "e.g., main, develop"
-                        : draft.gitRevisionType === "commit"
-                          ? "e.g., a1b2c3d4e5..."
-                          : "e.g., v1.0.0"
-                    }
+                    placeholder={draft.gitRevisionType === "branch" ? "e.g., main, develop" : "e.g., v1.0.0"}
                     className={`h-9 font-mono text-[12.5px] ${getError(errors, "gitRevisionValue") ? "border-danger" : ""}`}
                     required={!!draft.gitRevisionType}
                     aria-invalid={!!getError(errors, "gitRevisionValue")}
@@ -522,6 +511,32 @@ function StackResourceConfigurationTabImpl({
                 </DirtyField>
               </LedgerRow>
             )}
+
+            <LedgerRow
+              label="Pin to commit"
+              htmlFor={`git-commit-pin-${index}`}
+              hint="Optional commit SHA. Builds stay on this commit until unpinned."
+              alignTop
+              error={getError(errors, "gitCommitPin")}
+            >
+              <DirtyField
+                draft={draft}
+                baseline={baseline}
+                path="gitCommitPin"
+                compact
+                onReset={onDiscardField ? () => onDiscardField("gitCommitPin") : undefined}
+              >
+                <Input
+                  id={`git-commit-pin-${index}`}
+                  value={draft.gitCommitPin || ""}
+                  onChange={(e) => update({ gitCommitPin: e.target.value || undefined })}
+                  placeholder="e.g., a1b2c3d4e5..."
+                  disabled={!draft.gitRevisionType && !draft.gitCommitPin}
+                  className={`h-9 font-mono text-[12.5px] ${getError(errors, "gitCommitPin") ? "border-danger" : ""}`}
+                  aria-invalid={!!getError(errors, "gitCommitPin")}
+                />
+              </DirtyField>
+            </LedgerRow>
 
             <LedgerDisclosure label="Advanced" meta="build & push">
               <LedgerRow
