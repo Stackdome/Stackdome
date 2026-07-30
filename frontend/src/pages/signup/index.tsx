@@ -38,10 +38,7 @@ function inviteSub(info: OrgInviteInfo) {
       <span className="text-foreground">{info.inviter_name}</span> invited you to the{" "}
       <span className="text-foreground">{info.project_name}</span> project
       {expires && (
-        <>
-          {" · "}
-          <span className="text-muted-foreground/60">Expires {expires}</span>
-        </>
+        <span className="block whitespace-nowrap text-muted-foreground/60">Expires {expires}</span>
       )}
     </>
   );
