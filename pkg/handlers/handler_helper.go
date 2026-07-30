@@ -17,7 +17,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const queryValueTrue = "true"
+const (
+	queryValueTrue = "true"
+	sseEventEnd    = "end"
+)
 
 type handlerConfig struct {
 	MarshalInto  interface{}
@@ -180,7 +183,10 @@ func internalStreamHandler(w http.ResponseWriter, r *http.Request, streamable in
 			return
 		case streamObject, ok := <-streamer:
 			if !ok {
-				// Stream ended
+				// Source finished (e.g. the build container exited) — tell the
+				// client this is completion, not a dropped connection.
+				_, _ = fmt.Fprintf(w, "event: %s\ndata: {}\n\n", sseEventEnd)
+				flusher.Flush()
 				return
 			}
 			if err := streamObject.Error(); err != nil {
