@@ -24,10 +24,22 @@ export const ReleaseEventScope = {
  * backend enum in pkg/models/release_event.go.
  */
 export const ReleaseEventType = {
+  BuildStarted: "build_started",
   ResourceWaiting: "resource_waiting",
   ResourceDeploying: "resource_deploying",
   ResourceReady: "resource_ready",
   ResourceFailed: "resource_failed",
+} as const;
+
+/** Mirrors ReleaseEventLinkKind* in pkg/models/release_event.go. */
+export const ReleaseEventLinkKind = {
+  BuildLogs: "build_logs",
+} as const;
+
+/** Keys of `ReleaseEventLink.target` for a build_logs link. */
+export const BuildLogsLinkTarget = {
+  BuildID: "build_id",
+  ResourceName: "resource_name",
 } as const;
 
 function releasesPath(orgId: string, projectName: string, stackId: string): string {
