@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { attachSseHandlers, aggregateStreamStatus, type SseStreamStatus } from "@/api/observability";
+import {
+  attachSseHandlers,
+  aggregateStreamStatus,
+  fetchLogSnapshot,
+  type SseStreamStatus,
+} from "@/api/observability";
 
 class FakeEventSource {
   static readonly CONNECTING = 0;
@@ -93,5 +98,43 @@ describe("aggregateStreamStatus", () => {
   it("is disconnected with no streams or all-dead streams", () => {
     expect(agg()).toBe("disconnected");
     expect(agg("disconnected", "disconnected")).toBe("disconnected");
+  });
+});
+
+describe("fetchLogSnapshot", () => {
+  const mockBody = (text: string, ok = true) =>
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok, text: () => Promise.resolve(text) }));
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns only the data payloads and drops the end frame", async () => {
+    mockBody("data: line one\n\ndata: line two\n\nevent: end\ndata: {}\n\n");
+
+    await expect(fetchLogSnapshot("o", "p", "s", "web")).resolves.toEqual(["line one", "line two"]);
+  });
+
+  it("drops a named error frame's payload too", async () => {
+    mockBody("data: line one\n\nevent: error\ndata: [web]: pod unreachable\n\n");
+
+    await expect(fetchLogSnapshot("o", "p", "s", "web")).resolves.toEqual(["line one"]);
+  });
+
+  it("keeps data lines that themselves look like SSE fields", async () => {
+    mockBody("data: event: build started\n\ndata: data: nested\n\nevent: end\ndata: {}\n\n");
+
+    await expect(fetchLogSnapshot("o", "p", "s", "web")).resolves.toEqual([
+      "event: build started",
+      "data: nested",
+    ]);
+  });
+
+  it("returns [] on a failed response and on a thrown fetch", async () => {
+    mockBody("data: line one\n\n", false);
+    await expect(fetchLogSnapshot("o", "p", "s", "web")).resolves.toEqual([]);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    await expect(fetchLogSnapshot("o", "p", "s", "web")).resolves.toEqual([]);
   });
 });
