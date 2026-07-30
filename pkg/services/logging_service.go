@@ -145,18 +145,22 @@ func (s *loggingService) StreamLogsForBuild(ctx context.Context, orgID string, b
 		return nil, err
 	}
 
-	if build.Status == nil || build.Status.BuildSourceRevision == "" {
-		return nil, errors.Conflict("build %s has not started yet", buildID)
+	if !build.Status.IsConditionTrue(string(buildsv1alpha1.BuildJobCreated)) || build.Status.BuildSourceRevision == "" {
+		return nil, errors.Conflict("build job for %s has not been created yet", buildID)
 	}
 
 	jobName := buildsv1alpha1.BuildJobName(build.StackResourceName, build.Status.BuildSourceRevision)
 
 	streamer, cerr := s.ClusterLoggingService.GetLogsForBuildPod(ctx, orgID, build.Namespace, jobName, options)
 	if cerr != nil {
-		if stderrors.Is(cerr, clusterresource.ErrBuildPodNotFound) {
+		switch {
+		case stderrors.Is(cerr, clusterresource.ErrBuildPodNotFound):
 			return nil, errors.NotFound("no logs available for build %s: %s", buildID, cerr.Error())
+		case stderrors.Is(cerr, clusterresource.ErrBuildPodNotReady):
+			return nil, errors.Conflict("build pod for %s is starting; logs are not available yet", buildID)
+		default:
+			return nil, errors.GeneralError("failed to get logs for build %s: %s", buildID, cerr.Error())
 		}
-		return nil, errors.GeneralError("failed to get logs for build %s: %s", buildID, cerr.Error())
 	}
 	return streamer, nil
 }

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ImageBuild struct {
@@ -127,6 +129,20 @@ type ImageBuildStatus struct {
 	BuildSourceRevision    string              `json:"build_source_revision"`
 	LastObservedStatusHash string              `json:"last_observed_status_hash,omitempty"`
 	LastBuildFailureDetail *BuildFailureDetail `json:"last_build_failure_detail,omitempty"`
+}
+
+// IsConditionTrue reports whether the status carries the given condition type
+// with status True, per the cluster-agent's condition vocabulary.
+func (s *ImageBuildStatus) IsConditionTrue(condType string) bool {
+	if s == nil {
+		return false
+	}
+	for _, c := range s.Conditions {
+		if c.Type == condType && c.Status == string(metav1.ConditionTrue) {
+			return true
+		}
+	}
+	return false
 }
 
 type BuildFailureDetail struct {

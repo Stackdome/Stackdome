@@ -77,8 +77,21 @@ var _ = Describe("ClusterLoggingService.GetLogsForBuildPod", func() {
 		Expect(stderrors.Is(err, boom)).To(BeTrue())
 	})
 
+	It("returns ErrBuildPodNotReady when the pod is still pending", func() {
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: jobName + "-xyz", Namespace: ns},
+			Status:     corev1.PodStatus{Phase: corev1.PodPending},
+		}
+		mockK8s.EXPECT().BuildPodForJob(ctx, ns, jobName).Return(pod, nil)
+		_, err := svc.GetLogsForBuildPod(ctx, orgID, ns, jobName, opts)
+		Expect(stderrors.Is(err, ErrBuildPodNotReady)).To(BeTrue())
+	})
+
 	It("returns a streamer for the resolved build pod", func() {
-		pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: jobName + "-xyz", Namespace: ns}}
+		pod := &corev1.Pod{
+			ObjectMeta: metav1.ObjectMeta{Name: jobName + "-xyz", Namespace: ns},
+			Status:     corev1.PodStatus{Phase: corev1.PodRunning},
+		}
 		mockK8s.EXPECT().BuildPodForJob(ctx, ns, jobName).Return(pod, nil)
 		streamer, err := svc.GetLogsForBuildPod(ctx, orgID, ns, jobName, opts)
 		Expect(err).NotTo(HaveOccurred())

@@ -22,6 +22,10 @@ import (
 // build Job — the build has not started yet or its pod has been pruned.
 var ErrBuildPodNotFound = stderrors.New("no build pod found")
 
+// ErrBuildPodNotReady is returned by GetLogsForBuildPod when the build pod
+// exists but has not started yet — logs are not available until it runs.
+var ErrBuildPodNotReady = stderrors.New("build pod not ready")
+
 // KubernetesClientFactory constructs a Kubernetes client from a spec. Tests
 // inject a factory returning a mock; production uses clients.NewKubernetesClient.
 type KubernetesClientFactory func(clients.KubernetesClientSpec) (clients.KubernetesClient, error)
@@ -181,6 +185,9 @@ func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, n
 	}
 	if pod == nil {
 		return nil, fmt.Errorf("%w for job %s: the build has not started yet or its logs have been pruned", ErrBuildPodNotFound, jobName)
+	}
+	if pod.Status.Phase == corev1.PodPending {
+		return nil, fmt.Errorf("%w: pod %s for job %s is still pending", ErrBuildPodNotReady, pod.Name, jobName)
 	}
 
 	return &LogStreamer{
