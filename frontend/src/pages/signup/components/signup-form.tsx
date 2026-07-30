@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -10,7 +10,7 @@ import type { SignupFormData } from "../types";
 import { signupSchema } from "../types";
 import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
-import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
+import { FieldLabel } from "@/pages/auth/components/auth-shell";
 import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
 
 export function SignupForm() {
@@ -78,21 +78,7 @@ export function SignupForm() {
 
   return (
     <div>
-      <FormHead
-        step="create account"
-        title="Own your stack."
-        trailing={
-          <>
-            Already have one?{" "}
-            <Link to="/sign-in" className="text-foreground">
-              <span className="underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand">
-                Sign in
-              </span>
-              <span className="text-brand">.</span>
-            </Link>
-          </>
-        }
-      />
+      <GitHubSignInButton />
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {serverError && (
@@ -102,7 +88,7 @@ export function SignupForm() {
         )}
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="name">full name</FieldLabel>
+          <FieldLabel htmlFor="name">Full name</FieldLabel>
           <Input
             id="name"
             name="name"
@@ -116,7 +102,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="organisationName">organization</FieldLabel>
+          <FieldLabel htmlFor="organisationName">Organization</FieldLabel>
           <Input
             id="organisationName"
             name="organisationName"
@@ -132,7 +118,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="email">email</FieldLabel>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input
             id="email"
             name="email"
@@ -150,7 +136,7 @@ export function SignupForm() {
 
         <div className="space-y-2">
           <FieldLabel htmlFor="password" hint="min. 8 characters">
-            password
+            Password
           </FieldLabel>
           <PasswordInput
             id="password"
@@ -167,7 +153,7 @@ export function SignupForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="confirmPassword">confirm</FieldLabel>
+          <FieldLabel htmlFor="confirmPassword">Confirm password</FieldLabel>
           <PasswordInput
             id="confirmPassword"
             name="confirmPassword"
@@ -182,7 +168,7 @@ export function SignupForm() {
           )}
         </div>
 
-        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
+        <Button type="submit" variant="outline" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />
@@ -194,8 +180,6 @@ export function SignupForm() {
             </>
           )}
         </Button>
-
-        <GitHubSignInButton />
       </form>
     </div>
   );

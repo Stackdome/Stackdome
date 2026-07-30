@@ -5,13 +5,19 @@ import { MemoryRouter } from "react-router-dom";
 
 const signup = vi.fn();
 vi.mock("../../hooks/use-signup", () => ({ useSignup: () => ({ signup, loading: false, error: null }) }));
-vi.mock("@/helpers/common", () => ({ isUserLoggedIn: vi.fn(() => false), setAuthSession: vi.fn() }));
+vi.mock("../../hooks/use-invite-info", () => ({ useInviteInfo: () => ({ state: "new-user", info }) }));
+vi.mock("@/helpers/common", () => ({
+  isUserLoggedIn: vi.fn(() => false),
+  setAuthSession: vi.fn(),
+  logoutAndRedirect: vi.fn(),
+}));
 vi.mock("@/api/client", async () => {
   const actual = await vi.importActual<typeof import("@/api/client")>("@/api/client");
   return { ...actual, isErrorStatus: vi.fn((_e: unknown, s: number) => s === 409) };
 });
 
 import { InviteAcceptForm } from "../invite-accept-form";
+import Signup from "../../index";
 
 const info = { org_name: "Acme", project_name: "engineering", inviter_name: "Jane", expires_at: "2026-05-19T00:00:00Z" };
 
@@ -27,8 +33,12 @@ function renderForm() {
 }
 
 describe("InviteAcceptForm", () => {
-  it("shows who invited and which org/project", () => {
-    renderForm();
+  it("shows who invited and which org/project on the invite page", () => {
+    render(
+      <MemoryRouter initialEntries={["/sign-up?invite_token=tok_1"]}>
+        <Signup />
+      </MemoryRouter>,
+    );
     expect(screen.getByText(/Acme/)).toBeTruthy();
     expect(screen.getByText(/engineering/)).toBeTruthy();
     expect(screen.getByText(/Jane/)).toBeTruthy();

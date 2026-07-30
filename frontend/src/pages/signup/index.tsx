@@ -1,26 +1,13 @@
-import { Heart, Loader2, Unlock, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
+import { format, parseISO } from "date-fns";
 import { SignupForm } from "@/pages/signup/components/signup-form";
 import { InviteAcceptForm } from "@/pages/signup/components/invite-accept-form";
-import { AuthShell, FormHead } from "@/pages/auth/components/auth-shell";
+import { AuthShell, SwapLink } from "@/pages/auth/components/auth-shell";
 import { useInviteInfo } from "@/pages/signup/hooks/use-invite-info";
+import type { OrgInviteInfo } from "@/api/invites";
 import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common";
 import { Button } from "@/components/ui/button";
-
-const CHECKLIST = [
-  {
-    icon: <Zap fill="currentColor" />,
-    text: <>Powered by <span className="text-foreground">Kubernetes</span></>,
-  },
-  {
-    icon: <Unlock />,
-    text: <>No vendor <span className="text-foreground">lock-in</span></>,
-  },
-  {
-    icon: <Heart fill="currentColor" />,
-    text: <>Built with <span className="text-foreground">open source</span></>,
-  },
-];
 
 // ------------------------------------------------------------------
 // No-invite mode: existing org-creation flow
@@ -28,12 +15,35 @@ const CHECKLIST = [
 function DefaultSignup() {
   return (
     <AuthShell
-      headlineSolid="Kickstart your"
-      headlineStroke="deployment journey."
-      checklist={CHECKLIST}
+      title="Own your stack."
+      sub="Create an account to start deploying."
+      below={<SwapLink lead="Already have one?" to="/sign-in" label="Sign in" />}
     >
       <SignupForm />
     </AuthShell>
+  );
+}
+
+function inviteSub(info: OrgInviteInfo) {
+  const expires = (() => {
+    if (!info.expires_at) return "";
+    try {
+      return format(parseISO(info.expires_at), "MMM d, yyyy");
+    } catch {
+      return info.expires_at;
+    }
+  })();
+  return (
+    <>
+      <span className="text-foreground">{info.inviter_name}</span> invited you to the{" "}
+      <span className="text-foreground">{info.project_name}</span> project
+      {expires && (
+        <>
+          {" · "}
+          <span className="text-muted-foreground/60">Expires {expires}</span>
+        </>
+      )}
+    </>
   );
 }
 
@@ -45,11 +55,7 @@ function InviteSignup({ token }: { token: string }) {
 
   if (state === "loading") {
     return (
-      <AuthShell
-        headlineSolid="You've been"
-        headlineStroke="invited."
-        checklist={CHECKLIST}
-      >
+      <AuthShell title="You've been invited.">
         <div className="flex items-center justify-center py-16">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -59,11 +65,7 @@ function InviteSignup({ token }: { token: string }) {
 
   if (state === "new-user" && info) {
     return (
-      <AuthShell
-        headlineSolid={`Join ${info.org_name}`}
-        headlineStroke="on Stackdome."
-        checklist={CHECKLIST}
-      >
+      <AuthShell title={`Join ${info.org_name}.`} sub={inviteSub(info)}>
         <InviteAcceptForm token={token} info={info} />
       </AuthShell>
     );
@@ -92,14 +94,8 @@ function InviteSignup({ token }: { token: string }) {
   const copy = errorCopy[state] ?? errorCopy["not-found"];
 
   return (
-    <AuthShell
-      headlineSolid="You've been"
-      headlineStroke="invited."
-      checklist={CHECKLIST}
-    >
-      <div className="space-y-4 py-6">
-        <FormHead step="invite" title={copy.title} />
-        <p className="text-sm text-muted-foreground">{copy.body}</p>
+    <AuthShell title={copy.title} sub={copy.body}>
+      <div className="py-2 text-center">
         <Link
           to="/sign-in"
           className="inline-block text-sm text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80"
@@ -118,24 +114,16 @@ function WrongAccountCard() {
   const currentUrl = typeof window !== "undefined" ? window.location.href : "/";
   return (
     <AuthShell
-      headlineSolid="You've been"
-      headlineStroke="invited."
-      checklist={CHECKLIST}
+      title="Already signed in."
+      sub="Sign out to accept this invite as the invited user."
     >
-      <div className="space-y-4 py-6">
-        <FormHead
-          step="invite"
-          title="Already signed in"
-          trailing="Sign out to accept this invite as the invited user."
-        />
-        <Button
-          variant="inverse"
-          className="w-full"
-          onClick={() => logoutAndRedirect(currentUrl)}
-        >
-          Sign out and accept invite
-        </Button>
-      </div>
+      <Button
+        variant="inverse"
+        className="w-full"
+        onClick={() => logoutAndRedirect(currentUrl)}
+      >
+        Sign out and accept invite
+      </Button>
     </AuthShell>
   );
 }
