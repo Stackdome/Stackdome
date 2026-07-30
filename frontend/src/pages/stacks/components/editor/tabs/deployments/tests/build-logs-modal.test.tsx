@@ -68,7 +68,7 @@ describe("BuildLogsModal", () => {
   it("shows a connecting state while streaming before the first line", () => {
     mockStream({ phase: "streaming", connectionStatus: "connecting" });
     render(<BuildLogsModal {...props} />);
-    expect(screen.getByText(/Connecting to the build pod/)).toBeInTheDocument();
+    expect(screen.getByText(/Connecting to the build/)).toBeInTheDocument();
   });
 
   it("shows the success banner after the stream ends", () => {
@@ -87,6 +87,29 @@ describe("BuildLogsModal", () => {
     mockStream({ phase: "unavailable", error: "not found" });
     render(<BuildLogsModal {...props} />);
     expect(screen.getByText(/no longer available/)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Logs for completed builds are kept only for a short time. The build's outcome and failure details remain on this build.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps infrastructure vocabulary out of the copy the user sees", () => {
+    const infraTerms = /\b(job|jobs|pod|pods|ttl|kubernetes|k8s|namespace|container|cluster)\b/i;
+    for (const stream of [
+      { phase: "unavailable" as const },
+      { phase: "waiting" as const },
+      { phase: "waiting" as const, build: buildWith(BuildPhase.Failed) },
+      { phase: "streaming" as const, connectionStatus: "connecting" as const },
+      { phase: "ended" as const, build: buildWith(BuildPhase.Success) },
+      { phase: "error" as const, build: buildWith(BuildPhase.Pending) },
+    ]) {
+      mockStream(stream);
+      render(<BuildLogsModal {...props} />);
+      // Radix portals the dialog outside the render container.
+      expect(document.body.textContent ?? "").not.toMatch(infraTerms);
+      cleanup();
+    }
   });
 
   it("treats a dead stream on a terminal build as expired logs, not a connection fault", () => {
@@ -108,7 +131,7 @@ describe("BuildLogsModal", () => {
     });
     render(<BuildLogsModal {...props} />);
     expect(screen.getByText(/Log stream interrupted/)).toBeInTheDocument();
-    expect(screen.queryByText(/Connecting to the build pod/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Connecting to the build/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /retry/i }));
     expect(retry).toHaveBeenCalled();
   });

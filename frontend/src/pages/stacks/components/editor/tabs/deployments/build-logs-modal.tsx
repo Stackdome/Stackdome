@@ -179,7 +179,7 @@ interface CenterStateProps {
 }
 
 const EXPIRED_BODY =
-  "They expired with the build job. The build's outcome and failure details remain on the build record.";
+  "Logs for completed builds are kept only for a short time. The build's outcome and failure details remain on this build.";
 
 function centerStateFor(
   view: Exclude<BuildLogsView, "log">,
@@ -197,13 +197,13 @@ function centerStateFor(
       return {
         icon: <Hourglass className="h-6 w-6 text-fg-muted" />,
         title: "The build ended before it produced logs",
-        body: "No build job ran, so there is nothing to stream. The failure details remain on the build record.",
+        body: "The build never produced any output. Its outcome and failure details remain on this build.",
       };
     case "waiting":
       return {
         icon: <Loader2 className="h-6 w-6 animate-spin text-info" />,
         title: "Waiting for the build to start…",
-        body: "The build job hasn't been created yet. Checking again every few seconds.",
+        body: "The build hasn't started yet. Checking again every few seconds.",
       };
     case "interrupted":
       return {
@@ -226,7 +226,7 @@ function centerStateFor(
     case "connecting":
       return {
         icon: <Loader2 className="h-6 w-6 animate-spin text-info" />,
-        title: "Connecting to the build pod…",
+        title: "Connecting to the build…",
         body: "Log lines will appear as soon as the build produces output.",
       };
   }
