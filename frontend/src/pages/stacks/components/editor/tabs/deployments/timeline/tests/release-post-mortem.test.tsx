@@ -8,7 +8,18 @@ vi.mock("@/api/releases", () => ({
   listReleaseEvents: vi.fn().mockResolvedValue({ items: [] }),
   buildReleaseEventStreamUrl: vi.fn(() => ""),
   ReleaseEventScope: { Release: "release", Resource: "resource" },
-  ReleaseEventType: { ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
+  ReleaseEventType: { BuildStarted: "build_started", ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
+  ReleaseEventLinkKind: { BuildLogs: "build_logs" },
+  BuildLogsLinkTarget: { BuildID: "build_id", ResourceName: "resource_name" },
+}));
+vi.mock("@/api/observability", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/api/observability")>()),
+  fetchLogSnapshot: vi.fn().mockResolvedValue([]),
+}));
+vi.mock("../../build-logs-modal", () => ({
+  BuildLogsModal: ({ buildId, resourceName }: { buildId: string; resourceName: string }) => (
+    <div data-testid="build-logs-modal">{buildId}:{resourceName}</div>
+  ),
 }));
 import { getRelease, listReleaseEvents } from "@/api/releases";
 import { useReleaseDetail } from "../../use-release-detail";
@@ -107,5 +118,24 @@ describe("ReleasePostMortem", () => {
     expect(await screen.findByText("Build succeeded")).toBeInTheDocument();
     expect(screen.queryByText("live")).not.toBeInTheDocument();
     expect(listReleaseEvents).toHaveBeenCalledWith("o", "t", "s", "r-cur", undefined);
+  });
+
+  it("passes the log context through, so a build_logs link opens the modal", async () => {
+    (getRelease as ReturnType<typeof vi.fn>).mockResolvedValue({ id: "r-cur", sequence: 9, outcome: { resources: {} }, snapshot: { resources: [] } });
+    (listReleaseEvents as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      items: [{
+        id: "e1",
+        sequence: 1,
+        type: "build_started",
+        level: "info",
+        message: "Building web",
+        resource_name: "web",
+        links: [{ kind: "build_logs", label: "View build logs", target: { build_id: "b-1", resource_name: "web" } }],
+      }],
+    });
+    render(<Wrap release={{ id: "r-cur", sequence: 9, state: "Released" } as StackRelease} />);
+
+    await userEvent.click(await screen.findByRole("button", { name: /View build logs/ }));
+    expect(screen.getByTestId("build-logs-modal")).toHaveTextContent("b-1:web");
   });
 });
