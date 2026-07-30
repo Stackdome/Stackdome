@@ -385,11 +385,12 @@ function StackCanvasFlow({
 
   const toggleConnections = useCallback(() => setShowConnections((v) => !v), []);
 
-  // Re-run auto-layout: reset every node to its fresh dagre position and re-fit.
+  // Re-run auto-layout: reset every node to its fresh dagre position and
+  // glide the viewport onto the result — an instant re-fit reads as a flicker.
   const autoLayout = useCallback(() => {
     const laid = layoutGraph(mergedGraph);
     setNodes(laid.nodes as CanvasFlowNode[]);
-    requestAnimationFrame(() => fitView(FIT_OPTIONS));
+    requestAnimationFrame(() => fitView({ ...FIT_OPTIONS, duration: 300 }));
   }, [mergedGraph, setNodes, fitView]);
 
   // Switching views keeps drawers open on the same-named resource/volume in
