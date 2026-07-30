@@ -4,9 +4,8 @@ import { cn } from "@/lib/utils";
 /**
  * Stackdome brand mark — the cube: three stacked rounded faces inside a soft
  * hexagonal glow. Geometry is shared with the marketing site's BrandLockup
- * (sd_logo_light/dark.svg): the light/dark logo files differ only in ink, so
- * one component with `currentColor` fills tracks the theme with no asset swap
- * and no flash on theme toggle.
+ * (sd_logo_light/dark.svg); ink is `currentColor` so the mark tracks the
+ * theme.
  */
 
 const VIEW = {
@@ -100,9 +99,8 @@ export function StackdomeMark({ size = 24, className, tone = "default" }: Stackd
 }
 
 /**
- * Horizontal lockup: cube + "Stackdome" wordmark. `size` roughly tracks the
- * old text-lockup's scale — the svg renders 2x `size` tall because the
- * lockup viewBox carries glow padding around the glyphs.
+ * Horizontal lockup: cube + "Stackdome" wordmark. The svg renders 2x `size`
+ * tall — the lockup viewBox carries glow padding around the glyphs.
  */
 export function StackdomeWordmark({ size = 22, className }: { size?: number; className?: string }) {
   return <LockupSvg variant="full" height={size * 2} className={cn("text-foreground", className)} />;
