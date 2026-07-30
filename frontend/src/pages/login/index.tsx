@@ -1,10 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Heart, Unlock, Zap } from "lucide-react";
 import { isUserLoggedIn } from "@/helpers/common";
 
 import { LoginForm } from "@/pages/login/components/login-form";
-import { AuthShell } from "@/pages/auth/components/auth-shell";
+import { AuthShell, SwapLink } from "@/pages/auth/components/auth-shell";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -16,22 +15,9 @@ export default function Login() {
 
   return (
     <AuthShell
-      headlineSolid="Deploy. Own."
-      headlineStroke="Scale."
-      checklist={[
-        {
-          icon: <Zap fill="currentColor" />,
-          text: <>Powered by <span className="text-foreground">Kubernetes</span></>,
-        },
-        {
-          icon: <Unlock />,
-          text: <>No vendor <span className="text-foreground">lock-in</span></>,
-        },
-        {
-          icon: <Heart fill="currentColor" />,
-          text: <>Built with <span className="text-foreground">open source</span></>,
-        },
-      ]}
+      title="Welcome back."
+      sub="Sign in to manage your stacks."
+      below={<SwapLink lead="New to Stackdome?" to="/sign-up" label="Create an account" />}
     >
       <LoginForm />
     </AuthShell>

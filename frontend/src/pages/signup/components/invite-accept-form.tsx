@@ -9,9 +9,8 @@ import type { InviteAcceptFormData } from "../types";
 import type { OrgInviteInfo } from "@/api/invites";
 import { setAuthSession } from "@/helpers/common";
 import { isErrorStatus, getErrorMessage } from "@/api/client";
-import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
+import { FieldLabel } from "@/pages/auth/components/auth-shell";
 import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
-import { format, parseISO } from "date-fns";
 
 type Phase = "form" | "accepting" | "accepted" | "existing-user";
 
@@ -20,7 +19,7 @@ interface InviteAcceptFormProps {
   info: OrgInviteInfo;
 }
 
-export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
+export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
   const [formData, setFormData] = useState<InviteAcceptFormData>({
     name: "",
     email: "",
@@ -34,15 +33,6 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
   const navTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => () => { if (navTimerRef.current) clearTimeout(navTimerRef.current); }, []);
-
-  const expiresFormatted = (() => {
-    if (!info.expires_at) return "";
-    try {
-      return format(parseISO(info.expires_at), "MMM d, yyyy");
-    } catch {
-      return info.expires_at;
-    }
-  })();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -120,28 +110,17 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
 
   return (
     <div>
-      <FormHead
-        step="join project"
-        title={`Join ${info.org_name}`}
-        trailing={
-          <>
-            <span className="text-foreground">{info.inviter_name}</span> invited you to the{" "}
-            <span className="text-foreground">{info.project_name}</span> project
-            {" · "}
-            <span className="text-muted-foreground/60">Expires {expiresFormatted}</span>
-          </>
-        }
-      />
+      <GitHubSignInButton inviteToken={token} />
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {serverError && (
-          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-2xl border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="invite-name">full name</FieldLabel>
+          <FieldLabel htmlFor="invite-name">Full name</FieldLabel>
           <Input
             id="invite-name"
             name="name"
@@ -155,7 +134,7 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="invite-email">email</FieldLabel>
+          <FieldLabel htmlFor="invite-email">Email</FieldLabel>
           <Input
             id="invite-email"
             name="email"
@@ -173,7 +152,7 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
 
         <div className="space-y-2">
           <FieldLabel htmlFor="invite-password" hint="min. 8 characters">
-            password
+            Password
           </FieldLabel>
           <Input
             id="invite-password"
@@ -190,7 +169,7 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
 
         <Button
           type="submit"
-          variant="inverse"
+          variant="outline"
           className="w-full"
           disabled={phase === "accepting"}
         >
@@ -203,8 +182,6 @@ export function InviteAcceptForm({ token, info }: InviteAcceptFormProps) {
             "Create account and join"
           )}
         </Button>
-
-        <GitHubSignInButton inviteToken={token} />
       </form>
     </div>
   );

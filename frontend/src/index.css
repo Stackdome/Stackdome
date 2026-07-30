@@ -314,6 +314,48 @@ body {
   @media (prefers-reduced-motion: reduce) {
     .animate-rail-sweep { animation: none; }
   }
+
+  /* ── auth "room" sky — drifting cloud cutouts on the horizon ── */
+  @keyframes cloud-drift {
+    from { translate: -28px 0; }
+    to { translate: 28px 0; }
+  }
+  .auth-sky {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .auth-cloud {
+    position: absolute;
+    height: auto;
+    animation: cloud-drift 20s ease-in-out infinite alternate;
+  }
+  /* desaturate-and-lift pulls the golden-hour art back to neutral cloud */
+  .auth-cloud.ac-1 {
+    left: -12%;
+    bottom: -4%;
+    width: min(620px, 68vw);
+    opacity: 0.46;
+    filter: blur(1.5px) saturate(0.5) brightness(1.07);
+  }
+  .auth-cloud.ac-2 {
+    right: -8%;
+    bottom: 4%;
+    width: min(420px, 50vw);
+    opacity: 0.34;
+    filter: blur(2px) saturate(0.5) brightness(1.07);
+    animation-duration: 26s;
+    animation-delay: -10s;
+  }
+  .dark .auth-sky {
+    opacity: 0.42;
+    filter: brightness(0.6) saturate(0.8);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .auth-cloud { animation: none; }
+  }
 }
 
 @layer base {

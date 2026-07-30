@@ -1,181 +1,69 @@
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { EyebrowLabel } from "@/components/branded/eyebrow-label";
-import { StackdomeMark, StackdomeWordmark } from "@/components/branded/stackdome-mark";
-import { cn } from "@/lib/utils";
-
-interface MetaCell {
-  label: string;
-  value: React.ReactNode;
-  tone?: "default" | "brand" | "success";
-}
+import { StackdomeWordmark } from "@/components/branded/stackdome-mark";
 
 interface AuthShellProps {
-  headlineSolid: string;
-  headlineStroke?: string;
-  tagline?: React.ReactNode;
-  sub?: string;
-  stageStatus?: string;
-  meta?: MetaCell[];
-  checklist?: { icon: React.ReactNode; text: React.ReactNode }[];
-  hideTopBrand?: boolean;
+  title: string;
+  sub?: React.ReactNode;
+  below?: React.ReactNode;
   children: React.ReactNode;
 }
 
-export function AuthShell({
-  headlineSolid,
-  headlineStroke,
-  tagline,
-  sub,
-  stageStatus,
-  meta,
-  checklist,
-  hideTopBrand = false,
-  children,
-}: AuthShellProps) {
+// "The room and the plate": the page around the form is the brand room — a
+// warm brand-tinted sky falling to the page ground — and the form sits in an
+// inset plate. The header is absolute chrome so the column centers on the
+// viewport, not on the leftover space under a flow header.
+export function AuthShell({ title, sub, below, children }: AuthShellProps) {
   return (
-    <div className="relative min-h-svh text-foreground overflow-hidden bg-background">
-      {/* Page-wide grid backdrop, masked to fade at edges (matches reference .grid-bg) */}
+    <div className="relative flex min-h-svh flex-col overflow-hidden bg-background text-foreground">
       <div
         aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 opacity-[0.10] text-foreground [background-image:linear-gradient(to_right,currentColor_1px,transparent_1px),linear-gradient(to_bottom,currentColor_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)] [-webkit-mask-image:radial-gradient(ellipse_at_center,black_30%,transparent_80%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[52svh] bg-gradient-to-b from-brand-bg to-transparent"
       />
 
-      <div className="absolute right-4 top-4 z-30 md:right-6 md:top-6">
+      {/* Clouds sit on the horizon; day/night cuts are separate art, swapped by CSS. */}
+      <div className="auth-sky" aria-hidden="true">
+        <img className="auth-cloud ac-1 dark:hidden" src="/clouds/cloud-big-day.webp" alt="" draggable={false} />
+        <img className="auth-cloud ac-2 dark:hidden" src="/clouds/cloud-streak-day.webp" alt="" draggable={false} />
+        <img className="auth-cloud ac-1 hidden dark:block" src="/clouds/cloud-big-night.webp" alt="" draggable={false} />
+        <img className="auth-cloud ac-2 hidden dark:block" src="/clouds/cloud-streak-night.webp" alt="" draggable={false} />
+      </div>
+
+      {/* Same 1280px track as the marketing nav, so brand and toggle don't drift apart on wide screens. */}
+      <header className="absolute inset-x-0 top-0 z-10 mx-auto flex h-16 w-full max-w-[1280px] items-center justify-between px-6 md:px-8">
+        <Link to="/" aria-label="Stackdome — home" className="transition-opacity hover:opacity-70">
+          <StackdomeWordmark size={20} />
+        </Link>
         <ThemeToggle />
-      </div>
+      </header>
 
-      {/* Centered wrap — equal negative space on left + right past the cap */}
-      <div className="relative z-10 mx-auto grid min-h-svh max-w-[1600px] lg:grid-cols-[1fr_440px]">
-        {/* Brand panel — content left-aligned with comfy padding */}
-        <aside className="relative hidden flex-col p-10 lg:flex xl:p-14">
-          {!hideTopBrand && (
-            <div className="relative z-10">
-              <StackdomeWordmark size={20} />
-            </div>
-          )}
+      <main className="relative z-[1] mx-auto flex w-full max-w-[428px] flex-1 flex-col px-6 py-20">
+        <div className="mt-auto text-center">
+          <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
+          {sub && <p className="mx-auto mt-2.5 text-sm leading-relaxed text-muted-foreground">{sub}</p>}
+        </div>
 
-          {/* Top spacer — pushes headline below visual center */}
-          <div className="grow-[1.6]" aria-hidden="true" />
+        {/* Pill controls inside a stadium plate — the plate is rounded like its contents. */}
+        <div className="mt-8 rounded-[36px] border border-border bg-card p-6 [&_button]:rounded-full [&_input]:rounded-full [&_input]:pl-4">
+          {children}
+        </div>
 
-          <div className={cn("relative z-10 flex flex-col gap-6", hideTopBrand ? "mt-32 xl:mt-40" : "")}>
-            <h1 className="max-w-xl font-semibold text-4xl leading-[1.05] tracking-tight xl:text-5xl">
-              {headlineSolid}
-              {headlineStroke && (
-                <>
-                  <br />
-                  <span
-                    className="text-brand"
-                    style={{
-                      WebkitTextStroke: "1.5px currentColor",
-                      WebkitTextFillColor: "transparent",
-                    }}
-                  >
-                    {headlineStroke}
-                  </span>
-                </>
-              )}
-            </h1>
-
-
-            {tagline && (
-              <p className="max-w-md text-lg font-medium leading-snug tracking-tight text-muted-foreground xl:text-xl">
-                {tagline}
-              </p>
-            )}
-
-            {sub && (
-              <p className="max-w-md text-sm leading-relaxed text-muted-foreground">{sub}</p>
-            )}
-
-            {stageStatus && (
-              <div className="relative max-w-md rounded-md border border-border bg-background/50 p-6">
-                <div className="absolute left-4 top-3 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">
-                  stack.render()
-                </div>
-                <div className="absolute right-4 top-3 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[1.5px] text-brand">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
-                  {stageStatus}
-                </div>
-                <div className="flex items-center justify-center py-6">
-                  <StackdomeMark size={96} />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom spacer */}
-          <div className="grow" aria-hidden="true" />
-
-          <div className="relative z-10 pt-16">
-            {meta && (
-              <div className="grid grid-cols-3 gap-px overflow-hidden rounded-md border border-border bg-border">
-                {meta.map((m) => (
-                  <div key={m.label} className="bg-card px-3 py-3">
-                    <div className="font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">
-                      {m.label}
-                    </div>
-                    <div
-                      className={cn(
-                        "mt-1 font-mono text-[13px]",
-                        m.tone === "brand" && "text-brand",
-                        m.tone === "success" && "text-success",
-                      )}
-                    >
-                      {m.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {checklist && (
-              <ul className="space-y-2">
-                {checklist.map((item, idx) => (
-                  <li
-                    key={idx}
-                    className="flex items-center gap-2 font-mono text-[12px] text-muted-foreground"
-                  >
-                    <span className="flex h-5 w-5 items-center justify-center rounded-sm bg-brand-bg text-brand [&>svg]:h-3.5 [&>svg]:w-3.5">
-                      {item.icon}
-                    </span>
-                    {item.text}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </aside>
-
-        {/* Form band — light mode: a touch darker than pure bg; dark mode: lighter navy than bg */}
-        <main className="relative flex items-center justify-center bg-card dark:bg-secondary px-6 py-10 sm:px-10 lg:border-x lg:border-border">
-          <div className="w-full max-w-[360px]">
-            {/* Mobile-only brand mark */}
-            <div className="mb-8 lg:hidden">
-              <StackdomeWordmark size={20} />
-            </div>
-            {children}
-          </div>
-        </main>
-      </div>
+        {below && <div className="mt-6 text-center text-sm text-muted-foreground">{below}</div>}
+        <div className="mb-auto" aria-hidden="true" />
+      </main>
     </div>
   );
 }
 
-export function FormHead({
-  step,
-  title,
-  trailing,
-}: {
-  step: string;
-  title: string;
-  trailing?: React.ReactNode;
-}) {
+export function SwapLink({ lead, to, label }: { lead: string; to: string; label: string }) {
   return (
-    <div className="mb-6 space-y-1.5">
-      <EyebrowLabel tone="brand" className="font-bold">{step}</EyebrowLabel>
-      <h2 className="text-[28px] font-semibold leading-tight tracking-tight">{title}</h2>
-      {trailing && <p className="text-sm text-muted-foreground">{trailing}</p>}
-    </div>
+    <p>
+      {lead}{" "}
+      <Link to={to} className="font-medium text-foreground transition-opacity hover:opacity-70">
+        {label}
+      </Link>
+    </p>
   );
 }
 
@@ -191,28 +79,10 @@ export function FieldLabel({
   return (
     <label
       htmlFor={htmlFor}
-      className="flex items-center justify-between font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground"
+      className="flex items-center justify-between text-[13px] font-medium text-muted-foreground"
     >
-      <span className="flex items-center gap-1.5">
-        <span className="text-brand">→</span>
-        {children}
-      </span>
-      {hint && <span className="text-muted-foreground/70 normal-case tracking-normal">{hint}</span>}
+      <span>{children}</span>
+      {hint && <span className="text-xs text-muted-foreground/70">{hint}</span>}
     </label>
-  );
-}
-
-export function FootRow({
-  left,
-  right,
-}: {
-  left?: React.ReactNode;
-  right?: React.ReactNode;
-}) {
-  return (
-    <div className="mt-6 flex items-center justify-between font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground">
-      <span>{left}</span>
-      <span>{right}</span>
-    </div>
   );
 }

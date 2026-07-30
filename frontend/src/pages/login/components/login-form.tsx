@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -10,7 +10,7 @@ import { loginSchema } from "../types";
 import { setAuthSession } from "@/helpers/common";
 import { getErrorMessage } from "@/api/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { FormHead, FieldLabel } from "@/pages/auth/components/auth-shell";
+import { FieldLabel } from "@/pages/auth/components/auth-shell";
 import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
 
 export function LoginForm() {
@@ -70,31 +70,17 @@ export function LoginForm() {
 
   return (
     <div>
-      <FormHead
-        step="sign in"
-        title="Welcome back."
-        trailing={
-          <>
-            No account yet?{" "}
-            <Link to="/sign-up" className="text-foreground">
-              <span className="underline underline-offset-4 decoration-[1.5px] decoration-brand/80 hover:decoration-brand">
-                Start here
-              </span>
-              <span className="text-brand">.</span>
-            </Link>
-          </>
-        }
-      />
+      <GitHubSignInButton />
 
       <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
         {serverError && (
-          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-2xl border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="email">email</FieldLabel>
+          <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input
             id="email"
             name="email"
@@ -112,7 +98,7 @@ export function LoginForm() {
         </div>
 
         <div className="space-y-2">
-          <FieldLabel htmlFor="password">password</FieldLabel>
+          <FieldLabel htmlFor="password">Password</FieldLabel>
           <PasswordInput
             id="password"
             name="password"
@@ -128,7 +114,7 @@ export function LoginForm() {
           )}
         </div>
 
-        <Button type="submit" variant="inverse" className="w-full" disabled={isLoading}>
+        <Button type="submit" variant="outline" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />
@@ -140,8 +126,6 @@ export function LoginForm() {
             </>
           )}
         </Button>
-
-        <GitHubSignInButton />
       </form>
     </div>
   );
