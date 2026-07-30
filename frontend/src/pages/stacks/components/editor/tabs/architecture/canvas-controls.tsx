@@ -34,7 +34,12 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
     const next = !zenActive;
     setHeaderCollapsed(next);
     setSidebarOpen(!next);
-  }, [zenActive, setHeaderCollapsed, setSidebarOpen]);
+    // Entering zen reclaims the header + sidebar space — re-layout once the
+    // collapse has settled so the fit measures the final pane size.
+    // ponytail: 250ms outlasts the sidebar's 200ms transition; switch to a
+    // transitionend listener if the timing ever drifts.
+    if (next) window.setTimeout(onAutoLayout, 250);
+  }, [zenActive, setHeaderCollapsed, setSidebarOpen, onAutoLayout]);
 
   // ⌘. toggles zen. Lives here (not the shell) because zen also needs the
   // sidebar; the canvas stays mounted across tabs, so the shortcut is global.

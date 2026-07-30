@@ -37,6 +37,7 @@ import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpin
 import { useDeployLifecycle } from "@/pages/stacks/components/editor/tabs/deployments/use-deploy-lifecycle";
 import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-release-anchors";
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
+import { addonIdsFromConnections } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { getCurrentOrganizationId } from "@/helpers/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
@@ -301,12 +302,7 @@ export default function CanvasEditorPage() {
   );
 
   const connectionAddonIds = useMemo<Set<string>>(
-    () =>
-      new Set(
-        (savedStack?.spec?.connections ?? [])
-          .filter((c) => c.from?.type === "addon/postgres" && c.from?.id)
-          .map((c) => c.from!.id as string),
-      ),
+    () => addonIdsFromConnections(savedStack?.spec?.connections),
     [savedStack],
   );
 
@@ -546,6 +542,19 @@ export default function CanvasEditorPage() {
   // Live snapshot: already lazily fetched above (convergedReleaseId ensure); peek
   // here to gate canDiscardDraft and pass to the revert hook.
   const liveSnapshot = convergedReleaseDetail?.snapshot;
+
+  // The converged release as form data — feeds the canvas's read-only Live
+  // view. Undefined until a converged release exists and its detail has
+  // loaded; the Draft/Live toggle simply doesn't render before then.
+  const liveView = useMemo(() => {
+    if (!liveSnapshot) return undefined;
+    const connections = liveSnapshot.connections as StackConnection[] | undefined;
+    return {
+      resources: formResourcesFromSpec((liveSnapshot.resources ?? []) as StackResource[], connections),
+      volumes: ((liveSnapshot.volumes ?? []) as Volume[]).map(mapVolumeToFormData),
+      linkedAddonIds: addonIdsFromConnections(connections),
+    };
+  }, [liveSnapshot]);
 
   const [viewChangesOpen, setViewChangesOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -1014,6 +1023,7 @@ export default function CanvasEditorPage() {
               releaseInFlight={deployBusy || lifecycle.phase === "deploying"}
               liveStatusResources={statusLiveStatus?.resources}
               publicEndpoints={publicEndpoints}
+              liveView={liveView}
             />
           </>
         }

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X, ScrollText, Trash2 } from "lucide-react";
@@ -7,7 +7,7 @@ import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import type { UseStackEditSession, EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
-import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
+import type { FormStackResourceData, FormVolumeExtendedData } from "@/pages/stacks/schemas/form-schema";
 import { StackResourceConfigurationTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/configuration-tab";
 import { StackResourceDeploymentTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/deployment-tab";
 import { StackResourceEnvironmentTab } from "@/pages/stacks/components/editor/tabs/architecture/drawer-tabs/environment-tab";
@@ -50,6 +50,10 @@ interface ResourceDrawerProps {
   /** This resource's live public URLs, best-first (same order as the header's
    *  PUBLIC row). Absent when the resource has no live public ingress. */
   publicUrls?: EndpointUrl[];
+  /** Read-only live view: the drawer renders this data (the converged release's
+   *  snapshot) instead of the edit session's draft, and every field is disabled.
+   *  `resourceIndex` then indexes into `live.resources`. */
+  live?: { resources: Partial<FormStackResourceData>[]; volumes: Partial<FormVolumeExtendedData>[] };
 }
 
 /**
@@ -71,9 +75,15 @@ export function ResourceDrawer({
   onOpenVolume,
   liveStatusResources,
   publicUrls,
+  live,
 }: ResourceDrawerProps) {
-  const resource = session.draft.resources[resourceIndex] ?? {};
-  const baselineResource = baselineResources[resourceIndex];
+  const readOnly = !!live;
+  const shownResources = live?.resources ?? session.draft.resources;
+  const shownVolumes = live?.volumes ?? session.draft.volumes;
+  const resource = shownResources[resourceIndex] ?? {};
+  // Read-only view: baseline == shown resource, so every dirty computation
+  // (tab dots, "N changes" chip, per-field discards) reads as clean.
+  const baselineResource = readOnly ? resource : baselineResources[resourceIndex];
   const liveStatus = resource.name ? liveStatusResources?.[resource.name] : undefined;
 
   const secrets = useSecrets();
@@ -99,22 +109,24 @@ export function ResourceDrawer({
   // resource added on the canvas has none in its draft copy until saved.
   const allResources = useMemo(
     () =>
-      session.draft.resources.map((r, i) => ({
+      shownResources.map((r, i) => ({
         name: r.name || `Resource ${i + 1}`,
         index: i,
         outputs:
           serverOutputsByName?.get(r.name ?? "") ??
           deriveResourceOutputNames(r),
       })),
-    [session.draft.resources, serverOutputsByName],
+    [shownResources, serverOutputsByName],
   );
 
-  // Replace just this resource in the draft.
+  // Replace just this resource in the draft. The read-only guard is a belt on
+  // top of the disabled fieldset — no edit may ever reach the session.
   const onChange = useCallback(
     (index: number, updated: Partial<FormStackResourceData>) => {
+      if (readOnly) return;
       session.updateResources((prev) => prev.map((r, i) => (i === index ? updated : r)));
     },
-    [session],
+    [session, readOnly],
   );
 
   const { dirtyTabs, isDirty, statusDotColor, configurationProps, deploymentProps, environmentProps } =
@@ -128,8 +140,9 @@ export function ResourceDrawer({
         errors,
         // Draft volumes, not baseline: an inline-added volume must be pickable
         // (and resolvable by existing mount rows) before the next autosave
-        // cycle advances the baseline.
-        volumes: session.draft.volumes,
+        // cycle advances the baseline. In the read-only live view these are
+        // the snapshot's volumes instead, so mount rows resolve consistently.
+        volumes: shownVolumes,
         allResources,
         serverOutputsByName,
         secrets,
@@ -144,7 +157,15 @@ export function ResourceDrawer({
 
   // Controlled tab: driven by session.openTab so a banner "jump to error" can
   // switch to the tab holding the offending field even while the drawer is open.
-  const activeTab = session.openTab ? TAB_VALUE[session.openTab] : TAB_VALUE.configuration;
+  // The read-only view keeps its own tab state — session.setOpenTab no-ops when
+  // no session is active (read-only viewers), and the live drawer must not
+  // steer the draft drawer's tab anyway.
+  const [localTab, setLocalTab] = useState<string>(TAB_VALUE.configuration);
+  const activeTab = readOnly
+    ? localTab
+    : session.openTab
+      ? TAB_VALUE[session.openTab]
+      : TAB_VALUE.configuration;
 
   // Kind glyph + summary sub-line, derived the same way the node card is.
   const pres = useMemo(
@@ -186,6 +207,11 @@ export function ResourceDrawer({
             <EndpointInlineList service={resource.name || "resource"} urls={publicUrls} />
           )}
         </div>
+        {readOnly && (
+          <span className="shrink-0 rounded-md border border-border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-fg-muted">
+            Live · read-only
+          </span>
+        )}
         {isDirty ? (
           <span className="flex shrink-0 items-center gap-1 rounded-md border border-brand pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
             {changeCount === 1 ? "1 change" : `${changeCount} changes`}
@@ -217,7 +243,7 @@ export function ResourceDrawer({
       {/* Tabs */}
       <Tabs
         value={activeTab}
-        onValueChange={(v) => session.setOpenTab(TAB_FROM_VALUE[v] ?? "configuration")}
+        onValueChange={(v) => (readOnly ? setLocalTab(v) : session.setOpenTab(TAB_FROM_VALUE[v] ?? "configuration"))}
         className="flex min-h-0 flex-1 flex-col"
       >
         <TabsList className="h-auto w-full flex-none justify-start gap-1 rounded-none border-b border-border bg-transparent p-0 px-1">
@@ -235,11 +261,14 @@ export function ResourceDrawer({
           </TabsTrigger>
         </TabsList>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        {/* One disabled fieldset covers every native input and Radix
+            button-based control across all three tabs — read-only without
+            threading a flag through each field. */}
+        <fieldset disabled={readOnly} className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-4">
           <StackResourceConfigurationTab {...configurationProps} />
           <StackResourceDeploymentTab {...deploymentProps} />
           <StackResourceEnvironmentTab {...environmentProps} />
-        </div>
+        </fieldset>
       </Tabs>
 
       {/* Footer */}
@@ -255,16 +284,18 @@ export function ResourceDrawer({
           <ScrollText className="size-3.5" />
           View logs
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 gap-1.5 px-2 text-[12.5px] text-danger hover:bg-danger-bg hover:text-danger"
-          onClick={() => onRemove(resourceIndex)}
-        >
-          <Trash2 className="size-3.5" />
-          Remove resource
-        </Button>
+        {!readOnly && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1.5 px-2 text-[12.5px] text-danger hover:bg-danger-bg hover:text-danger"
+            onClick={() => onRemove(resourceIndex)}
+          >
+            <Trash2 className="size-3.5" />
+            Remove resource
+          </Button>
+        )}
       </div>
     </div>
   );

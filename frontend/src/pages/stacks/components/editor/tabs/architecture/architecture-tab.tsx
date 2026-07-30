@@ -42,6 +42,7 @@ function attachmentAwareFallbackSize(node: CollidableNode): { width: number; hei
 import { addBlockToStack } from "@/pages/stacks/lib/block-to-form";
 import { blockCatalog, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { CanvasEditor } from "./canvas-editor";
+import { LiveViewToggle, type CanvasViewMode } from "./live-view-toggle";
 import { ResourceDrawer } from "./resource-drawer";
 import { VolumeDrawer } from "./volume-drawer";
 import { AddVolumeDialog } from "./add-volume-dialog";
@@ -62,6 +63,7 @@ import {
   truncateTo,
   popEntry,
   entryKey,
+  remapStackByName,
   type DrawerEntry,
 } from "@/pages/stacks/lib/canvas/drawer-stack";
 import { computeDrawerInset } from "@/pages/stacks/lib/canvas/drawer-inset";
@@ -113,7 +115,18 @@ interface ArchitectureTabProps {
    *  error") on the tab holding the field; the nonce distinguishes repeat jumps
    *  to the same resource. */
   openResourceSignal?: { index: number; tab: EditSessionTab; nonce: number } | null;
+  /** The converged (live) release's snapshot as form data. Present once a
+   *  converged release exists and its detail has loaded — enables the
+   *  Draft/Live canvas toggle; the Live view is read-only. */
+  liveView?: {
+    resources: Partial<FormStackResourceData>[];
+    volumes: Partial<VolumeFormData>[];
+    linkedAddonIds: ReadonlySet<string>;
+  };
 }
+
+/** Live view is read-only, so nothing is ever "edited" — an empty dirty set. */
+const NO_DIRTY_IDX: ReadonlySet<number> = new Set();
 
 function StackCanvasFlow({
   session,
@@ -135,23 +148,38 @@ function StackCanvasFlow({
   liveStatusResources,
   publicEndpoints,
   openResourceSignal,
+  liveView,
 }: ArchitectureTabProps) {
-  // Read from the live draft when the session is active, server state otherwise.
-  const resources = session.isActive ? session.draft.resources : draftResources;
-  const linkedAddonIds = session.isActive ? session.linkedAddonIds : connectionAddonIds;
-  const volumes = session.isActive ? session.draft.volumes : draftVolumes;
+  const [viewMode, setViewMode] = useState<CanvasViewMode>("draft");
+  // Live mode needs the snapshot data — never trust a stale "live" viewMode
+  // if the converged detail hasn't loaded (or went away).
+  const liveMode = viewMode === "live" && !!liveView;
+
+  // Read from the live snapshot in live mode; otherwise the draft when the
+  // session is active, server state when not.
+  const resources = liveMode ? liveView!.resources : session.isActive ? session.draft.resources : draftResources;
+  const linkedAddonIds = liveMode ? liveView!.linkedAddonIds : session.isActive ? session.linkedAddonIds : connectionAddonIds;
+  const volumes = liveMode ? liveView!.volumes : session.isActive ? session.draft.volumes : draftVolumes;
   const volumeNames = useMemo(
     () => volumes.map((v) => v.name).filter((n): n is string => !!n),
     [volumes],
   );
 
   const dirty = useMemo(
-    () => ({
-      dirtyResourceIdx: session.dirty.dirtyResourceIdx,
-      baselineResourceCount: baselineResources.length,
-      baselineAddonIds: connectionAddonIds,
-    }),
-    [session.dirty, baselineResources.length, connectionAddonIds],
+    () =>
+      liveMode
+        ? {
+          // What's deployed can't be "edited"/"new" relative to itself.
+          dirtyResourceIdx: NO_DIRTY_IDX,
+          baselineResourceCount: resources.length,
+          baselineAddonIds: linkedAddonIds,
+        }
+        : {
+          dirtyResourceIdx: session.dirty.dirtyResourceIdx,
+          baselineResourceCount: baselineResources.length,
+          baselineAddonIds: connectionAddonIds,
+        },
+    [liveMode, resources.length, linkedAddonIds, session.dirty, baselineResources.length, connectionAddonIds],
   );
 
   const { topology } = useStackTopology({ ids: topologyIds, refreshKey: topologyRefreshKey });
@@ -306,6 +334,7 @@ function StackCanvasFlow({
 
   const onNodeContextMenu = useCallback<NodeMouseHandler<CanvasFlowNode>>(
     (event, node) => {
+      if (liveMode) return; // read-only: no mutation menu
       event.preventDefault();
       const { clientX: x, clientY: y } = event;
       const chipEl = (event.target as HTMLElement).closest("[data-volume-chip]");
@@ -323,7 +352,7 @@ function StackCanvasFlow({
         if (idx != null) setMenuTarget({ kind: "resource", resourceIdx: idx, resourceName: data.name, x, y });
       }
     },
-    [],
+    [liveMode],
   );
 
   // Re-layout ONLY when topology changes; preserve in-session drag positions by id.
@@ -356,15 +385,65 @@ function StackCanvasFlow({
 
   const toggleConnections = useCallback(() => setShowConnections((v) => !v), []);
 
-  // Re-run auto-layout: reset every node to its fresh dagre position and re-fit.
+  // Re-run auto-layout: reset every node to its fresh dagre position and
+  // glide the viewport onto the result — an instant re-fit reads as a flicker.
   const autoLayout = useCallback(() => {
     const laid = layoutGraph(mergedGraph);
     setNodes(laid.nodes as CanvasFlowNode[]);
-    requestAnimationFrame(() => fitView(FIT_OPTIONS));
+    requestAnimationFrame(() => fitView({ ...FIT_OPTIONS, duration: 300 }));
   }, [mergedGraph, setNodes, fitView]);
+
+  // Switching views keeps drawers open on the same-named resource/volume in
+  // the target view; entries with no counterpart there (undeployed additions,
+  // since-removed resources) close.
+  const onViewModeChange = useCallback(
+    (mode: CanvasViewMode) => {
+      const target =
+        mode === "live" && liveView
+          ? { resources: liveView.resources, volumes: liveView.volumes }
+          : session.isActive
+            ? session.draft
+            : { resources: draftResources, volumes: draftVolumes };
+      const remapped = remapStackByName(drawerStack, { resources }, {
+        resources: target.resources,
+        volumeNames: new Set(target.volumes.map((v) => v.name).filter((n): n is string => !!n)),
+      });
+      // Draft drawers edit through a session — make sure one exists before a
+      // surviving drawer lands on the draft side.
+      if (mode === "draft" && remapped.length > 0 && !session.isActive) {
+        const front = [...remapped]
+          .reverse()
+          .find((e): e is Extract<DrawerEntry, { kind: "resource" }> => e.kind === "resource");
+        session.start(
+          { resources: baselineResources, volumes: baselineVolumes },
+          {
+            linkedAddonIds: new Set(connectionAddonIds),
+            openResourceIdx: front?.index,
+            draft: { resources: draftResources, volumes: draftVolumes },
+          },
+        );
+      }
+      setDrawerStack(remapped);
+      setViewMode(mode);
+    },
+    [
+      drawerStack,
+      resources,
+      liveView,
+      session,
+      draftResources,
+      draftVolumes,
+      baselineResources,
+      baselineVolumes,
+      connectionAddonIds,
+    ],
+  );
 
   const openResourceDrawer = useCallback(
     (idx: number, tab: EditSessionTab = "configuration") => {
+      // Draft-indexed entry point (banner jump, context menu): indexes only
+      // make sense against the draft list, so leave live view first.
+      setViewMode("draft");
       // Activate an edit session lazily so drawer edits land in a draft.
       if (!session.isActive) {
         session.start(
@@ -410,6 +489,13 @@ function StackCanvasFlow({
 
   const onNodeClick = useCallback<NodeMouseHandler<CanvasFlowNode>>(
     (event, node) => {
+      if (liveMode) {
+        // Read-only inspection: resource cards open the disabled drawer, no
+        // session is started. Volume/attachment nodes stay display-only.
+        const idx = node.type === "resource" ? (node.data as ResourceNodeData).resourceIdx : null;
+        if (idx != null) setDrawerStack(replaceStack({ kind: "resource", index: idx }));
+        return;
+      }
       if (node.type === "attachment") {
         const data = node.data as AttachmentNodeData;
         if (data.kind === NODE_KIND.volume) openVolumeFromCanvas(data.name);
@@ -425,7 +511,7 @@ function StackCanvasFlow({
       if (idx == null) return; // addon node — managed via the Environment tab, no drawer in v1
       openResourceDrawer(idx);
     },
-    [openResourceDrawer, openVolumeFromCanvas],
+    [liveMode, openResourceDrawer, openVolumeFromCanvas],
   );
 
   // Block ids already present in the stack (drives the picker's "added" badge).
@@ -631,18 +717,17 @@ function StackCanvasFlow({
     [session],
   );
 
-  // Drop panels whose target no longer exists in the draft (deleted resource/volume).
+  // Drop panels whose target no longer exists in the shown list (deleted
+  // resource/volume — or a view switch shrinking the list).
   useEffect(() => {
     setDrawerStack((s) => {
       const next = s.filter((e) =>
-        e.kind === "resource"
-          ? e.index < resources.length
-          : (session.isActive ? session.draft.volumes : draftVolumes).some((v) => v.name === e.name),
+        e.kind === "resource" ? e.index < resources.length : volumes.some((v) => v.name === e.name),
       );
       // Same-ref bailout: skip the state update (and re-render) when nothing was dropped.
       return next.length === s.length ? s : next;
     });
-  }, [resources.length, session.isActive, session.draft.volumes, draftVolumes]);
+  }, [resources.length, volumes]);
 
   const panels: DrawerPanelDescriptor[] = useMemo(
     () =>
@@ -680,13 +765,14 @@ function StackCanvasFlow({
         baselineResources={baselineResources}
         serverOutputsByName={serverOutputsByName}
         connectionAddonIds={connectionAddonIds}
-        errors={errors[frontEntry.index] ?? {}}
+        errors={liveMode ? {} : errors[frontEntry.index] ?? {}}
         onClose={popDrawer}
         onRemove={removeResource}
         onViewLogs={onViewLogs}
-        onOpenVolume={openVolume}
+        onOpenVolume={liveMode ? undefined : openVolume}
         liveStatusResources={liveStatusResources}
         publicUrls={publicEndpoints?.find((e) => e.service === resources[frontEntry.index]?.name)?.urls}
+        live={liveMode ? liveView : undefined}
       />
     ) : frontEntry ? (
       <VolumeDrawer
@@ -702,6 +788,15 @@ function StackCanvasFlow({
   return (
     <div className="flex h-full w-full">
       <div className="relative min-w-0 flex-1">
+        {liveView && (
+          <div className="absolute left-3 top-3 z-10">
+            <LiveViewToggle
+              mode={liveMode ? "live" : "draft"}
+              onModeChange={onViewModeChange}
+              draftDirty={session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size > 0}
+            />
+          </div>
+        )}
         <CanvasEditor
           nodes={nodes}
           edges={showConnections ? edges : []}
@@ -722,6 +817,7 @@ function StackCanvasFlow({
           onLinkAddon={onLinkAddon}
           canAddVolume={resources.length > 0}
           onAddVolume={() => setAddVolumeOpen(true)}
+          readOnly={liveMode}
         />
       </div>
       <DrawerStack

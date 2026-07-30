@@ -11,7 +11,7 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useCallback, useState } from "react";
-import { Move } from "lucide-react";
+import { Lock, Move } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ResourceNode, type ResourceFlowNode } from "./nodes/resource-node";
@@ -54,6 +54,9 @@ interface CanvasEditorProps {
   onLinkAddon: (addonId: string) => void;
   canAddVolume: boolean;
   onAddVolume: () => void;
+  /** Live view: nodes are locked in place and every mutation affordance
+   *  (add-resource panel, pane context menu) is hidden. */
+  readOnly?: boolean;
 }
 
 /**
@@ -80,6 +83,7 @@ export function CanvasEditor({
   onLinkAddon,
   canAddVolume,
   onAddVolume,
+  readOnly = false,
 }: CanvasEditorProps) {
   // Right-clicking empty canvas opens the same add-resource picker at the
   // cursor (anchored via an invisible fixed-position point).
@@ -105,7 +109,8 @@ export function CanvasEditor({
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
-        onPaneContextMenu={onPaneContextMenu}
+        onPaneContextMenu={readOnly ? undefined : onPaneContextMenu}
+        nodesDraggable={!readOnly}
         fitView
         fitViewOptions={FIT_OPTIONS}
         // Follow the app's theme toggle, not the OS preference — "system"
@@ -125,22 +130,33 @@ export function CanvasEditor({
           onToggleConnections={onToggleConnections}
           onAutoLayout={onAutoLayout}
         />
-        <Panel position="top-right">
-          <AddResourcePopover
-            addedIds={addedBlockIds}
-            onAdd={onAddBlock}
-            addons={addons}
-            linkedAddonIds={linkedAddonIds}
-            onLinkAddon={onLinkAddon}
-            canAddVolume={canAddVolume}
-            onAddVolume={onAddVolume}
-          />
-        </Panel>
+        {!readOnly && (
+          <Panel position="top-right">
+            <AddResourcePopover
+              addedIds={addedBlockIds}
+              onAdd={onAddBlock}
+              addons={addons}
+              linkedAddonIds={linkedAddonIds}
+              onLinkAddon={onLinkAddon}
+              canAddVolume={canAddVolume}
+              onAddVolume={onAddVolume}
+            />
+          </Panel>
+        )}
         {nodes.length > 0 && (
           <Panel position="bottom-center" className="pointer-events-none !mb-[18px]">
             <div className="flex items-center gap-2 text-[11.5px] text-fg-muted">
-              <Move className="size-[13px]" aria-hidden />
-              drag to rearrange · click a node to configure · edges show stack connections
+              {readOnly ? (
+                <>
+                  <Lock className="size-[13px]" aria-hidden />
+                  viewing the live deployment · read-only · click a node to inspect
+                </>
+              ) : (
+                <>
+                  <Move className="size-[13px]" aria-hidden />
+                  drag to rearrange · click a node to configure · edges show stack connections
+                </>
+              )}
             </div>
           </Panel>
         )}
