@@ -368,9 +368,16 @@ describe("stripUnpinnedGitRevisions", () => {
     expect(out.source?.git).toEqual({ repo_url: "https://x/y", dockerfile_path: "Dockerfile" });
   });
 
-  it("passes a snapshot resource through unchanged (same object reference) when the saved spec pins a branch", () => {
-    const pinned = gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123" });
+  it("strips only the resolver-written commit when the saved spec pins a branch, keeping the branch", () => {
+    const snapshot = [gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123" })];
     const saved = [gitResource("api", { repo_url: "https://x/y", branch: "main" })];
+    const [out] = stripUnpinnedGitRevisions(snapshot, saved);
+    expect(out.source?.git).toEqual({ repo_url: "https://x/y", branch: "main" });
+  });
+
+  it("passes a snapshot resource through unchanged (same object reference) when the saved spec pins every revision key present", () => {
+    const pinned = gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123" });
+    const saved = [gitResource("api", { repo_url: "https://x/y", branch: "main", commit: "abc123" })];
     const [out] = stripUnpinnedGitRevisions([pinned], saved);
     expect(out).toBe(pinned);
   });

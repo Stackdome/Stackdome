@@ -265,6 +265,24 @@ describe("diffSnapshots git sources", () => {
     expect(diffSnapshots(snap([deployed]), snap([unpinnedSpec])).resources).toEqual([]);
   });
 
+  it("ignores the resolver-written commit when the spec tracks a branch", () => {
+    // Branch-tracking spec: branch set, no commit. Deploy resolves the branch
+    // and writes the commit into the snapshot — comparing that against the
+    // spec's empty commit read as MODIFIED forever after every deploy.
+    const deployed = gitWeb({ branch: "main", commit: "0f5c32589c37115508af0f48fe6d566925493700" });
+    const branchTrackingSpec = gitWeb({ branch: "main" });
+    expect(diffSnapshots(snap([deployed]), snap([branchTrackingSpec])).resources).toEqual([]);
+  });
+
+  it("flags only the branch change on a branch-tracking spec, without a phantom commit row", () => {
+    const deployed = gitWeb({ branch: "master", commit: "abc123" });
+    const branchTrackingSpec = gitWeb({ branch: "dev" });
+    const out = diffSnapshots(snap([deployed]), snap([branchTrackingSpec])).resources;
+    expect(out).toHaveLength(1);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toEqual([{ key: "branch", from: "master", to: "dev", kind: "changed" }]);
+  });
+
   it("flags a commit pin change beside an unchanged branch as a single commit row", () => {
     const out = diffSnapshots(
       snap([gitWeb({ branch: "main", commit: "aaa111" })]),
