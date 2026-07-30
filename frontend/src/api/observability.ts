@@ -137,6 +137,31 @@ export function buildStackResourceMetricsStreamUrl(
   return `${baseUrl}/organizations/${organizationId}/projects/${projectName}/stacks/${stackId}/resources/${resourceName}/metrics?stream=true`;
 }
 
+/** Pulls the payloads of the default (unnamed) SSE events out of a raw stream
+ *  body. Named frames — `event: end` / `event: error` and their sentinel
+ *  payloads — carry stream control, not log content, so they are dropped. */
+export function parseSseDataLines(body: string): string[] {
+  const lines: string[] = [];
+  let named = false;
+
+  for (const raw of body.split("\n")) {
+    const line = raw.replace(/\r$/, "");
+    if (line === "") {
+      named = false;
+      continue;
+    }
+    if (line.startsWith("event:")) {
+      named = true;
+      continue;
+    }
+    if (!line.startsWith("data:") || named) continue;
+    const value = line.slice("data:".length).replace(/^ /, "").trim();
+    if (value.length > 0) lines.push(value);
+  }
+
+  return lines;
+}
+
 /** One-shot read of a resource log endpoint with follow=false — returns plain lines.
  *  Best-effort: returns [] on any error (pod may be unreachable, issue #98). */
 export async function fetchLogSnapshot(
@@ -150,7 +175,6 @@ export async function fetchLogSnapshot(
   try {
     const res = await fetch(url, { credentials: "include" });
     if (!res.ok) return [];
-    const text = await res.text();
-    return text.split("\n").map((l) => l.replace(/^data:\s?/, "").trim()).filter((l) => l.length > 0);
+    return parseSseDataLines(await res.text());
   } catch { return []; }
 }

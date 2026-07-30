@@ -129,6 +129,15 @@ type ImageBuildStatus struct {
 	LastBuildFailureDetail *BuildFailureDetail `json:"last_build_failure_detail,omitempty"`
 }
 
+// IsConditionTrue reports whether the status carries the given condition type
+// with status True, per the cluster-agent's condition vocabulary.
+func (s *ImageBuildStatus) IsConditionTrue(condType string) bool {
+	if s == nil {
+		return false
+	}
+	return IsConditionTrue(s.Conditions, condType)
+}
+
 type BuildFailureDetail struct {
 	FailureType  string `json:"failure_type"`
 	Reason       string `json:"reason,omitempty"`

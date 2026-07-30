@@ -87,7 +87,7 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
         />
       )}
       <ReleaseBodyTabs diff={diffs} hasPrev={!!prevReleaseId} prevSeq={prevSeq} loading={!!prevReleaseId && !prev.data}>
-        <SplitConsole rows={rows} events={events} streaming={false} />
+        <SplitConsole rows={rows} events={events} streaming={false} logContext={logContext} />
       </ReleaseBodyTabs>
     </div>
   );

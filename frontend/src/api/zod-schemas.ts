@@ -5566,6 +5566,73 @@ accepts a full stack document.
   },
   {
     method: "get",
+    path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/builds/:build_id/logs",
+    alias:
+      "getApiv1organizationsOrg_idprojectsProject_namestacksIdbuildsBuild_idlogs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "org_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "project_name",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "build_id",
+        type: "Path",
+        schema: z.string(),
+      },
+      {
+        name: "follow",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
+      {
+        name: "tail",
+        type: "Query",
+        schema: z.number().int().optional().default(200),
+      },
+      {
+        name: "since",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 401,
+        description: `Unauthorized`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `Build not found`,
+        schema: z.void(),
+      },
+      {
+        status: 409,
+        description: `Build job not created yet, or build pod not started — retry later`,
+        schema: Error,
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: Error,
+      },
+    ],
+  },
+  {
+    method: "get",
     path: "/api/v1/organizations/:org_id/projects/:project_name/stacks/:id/connections",
     alias: "getApiv1organizationsOrg_idprojectsProject_namestacksIdconnections",
     requestFormat: "json",

@@ -4,8 +4,13 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 vi.mock("@/api/observability", () => ({ fetchLogSnapshot: vi.fn().mockResolvedValue([]) }));
+vi.mock("../../build-logs-modal", () => ({
+  BuildLogsModal: ({ buildId, resourceName }: { buildId: string; resourceName: string }) => (
+    <div data-testid="build-logs-modal">{buildId}:{resourceName}</div>
+  ),
+}));
 import { SplitConsole, type ResourceRowVM } from "../split-console";
-import { ReleaseEventType, type ReleaseEvent } from "@/api/releases";
+import { BuildLogsLinkTarget, ReleaseEventLinkKind, ReleaseEventType, type ReleaseEvent } from "@/api/releases";
 import { ResourceFailureType, compactEventMessage } from "../../derive";
 
 afterEach(cleanup);
@@ -34,6 +39,23 @@ const events: ReleaseEvent[] = [
   ev({ sequence: 2, type: ReleaseEventType.ResourceReady, resource_name: "redis", message: "redis is ready", level: "success" }),
   ev({ sequence: 3, type: ReleaseEventType.ResourceFailed, resource_name: "worker", message: "worker failed to start: image pull failed", level: "error" }),
 ];
+
+const logContext = { orgId: "o-1", projectName: "proj", stackId: "s-1" };
+
+const buildLogsLink = (target: Record<string, string>) => ({
+  kind: ReleaseEventLinkKind.BuildLogs,
+  label: "View build logs",
+  target,
+});
+
+const buildLogsEvent = (over: Partial<ReleaseEvent> = {}): ReleaseEvent => ev({
+  sequence: 10,
+  type: ReleaseEventType.BuildStarted,
+  resource_name: "api",
+  message: "Building api",
+  links: [buildLogsLink({ [BuildLogsLinkTarget.BuildID]: "b-1", [BuildLogsLinkTarget.ResourceName]: "api" })],
+  ...over,
+});
 
 describe("SplitConsole", () => {
   it("renders nothing with no rows, no events, not streaming", () => {
@@ -91,6 +113,33 @@ describe("SplitConsole", () => {
     render(<SplitConsole rows={rows} events={[ev({ sequence: 1, message: "Release created" })]} streaming />);
     await userEvent.click(screen.getByRole("button", { name: /redis/ }));
     expect(screen.getByText("No activity yet")).toBeInTheDocument();
+  });
+
+  it("opens the build logs modal from a build_logs link", async () => {
+    render(<SplitConsole rows={[]} events={[buildLogsEvent()]} streaming logContext={logContext} />);
+    expect(screen.queryByTestId("build-logs-modal")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /View build logs/ }));
+    expect(screen.getByTestId("build-logs-modal")).toHaveTextContent("b-1:api");
+  });
+
+  it("falls back to the event's resource for the modal when the link target omits it", async () => {
+    const event = buildLogsEvent({ links: [buildLogsLink({ [BuildLogsLinkTarget.BuildID]: "b-1" })] });
+    render(<SplitConsole rows={[]} events={[event]} streaming logContext={logContext} />);
+    await userEvent.click(screen.getByRole("button", { name: /View build logs/ }));
+    expect(screen.getByTestId("build-logs-modal")).toHaveTextContent("b-1:api");
+  });
+
+  it("keeps build_logs links inert without a log context", () => {
+    render(<SplitConsole rows={[]} events={[buildLogsEvent()]} streaming />);
+    expect(screen.queryByRole("button", { name: /View build logs/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/View build logs/)).toBeInTheDocument();
+  });
+
+  it("renders links of other kinds as labels", () => {
+    const event = buildLogsEvent({ links: [{ kind: "some_future_kind", label: "Other link" }] });
+    render(<SplitConsole rows={[]} events={[event]} streaming logContext={logContext} />);
+    expect(screen.queryByRole("button", { name: /Other link/ })).not.toBeInTheDocument();
+    expect(screen.getByText(/Other link/)).toBeInTheDocument();
   });
 });
 

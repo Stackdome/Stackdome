@@ -4652,6 +4652,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}/logs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get logs for an image build */
+        get: {
+            parameters: {
+                query?: {
+                    follow?: boolean;
+                    tail?: number;
+                    since?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The ID of the organization */
+                    org_id: components["parameters"]["org_id"];
+                    /** @description The name of the project */
+                    project_name: components["parameters"]["project_name"];
+                    /** @description The id of record */
+                    id: components["parameters"]["id"];
+                    /** @description The ID of the build */
+                    build_id: components["parameters"]["build_id"];
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Stream of build log lines via Server-Sent Events (SSE). Log lines arrive as unnamed "data:" events; terminal stream errors as "event: error"; normal completion is signalled by a final "event: end" frame. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Build not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Build job not created yet, or build pod not started — retry later */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology": {
         parameters: {
             query?: never;

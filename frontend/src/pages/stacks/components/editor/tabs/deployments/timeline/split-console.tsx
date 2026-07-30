@@ -2,9 +2,10 @@ import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { LogSnapshot } from "@/components/branded";
 import { fetchLogSnapshot } from "@/api/observability";
-import type { ReleaseEvent } from "@/api/releases";
+import { BuildLogsLinkTarget, ReleaseEventLinkKind, type ReleaseEvent } from "@/api/releases";
 import type { FailingResource, ResourceSource } from "../derive";
 import { phaseTone, toneTextClass, toneDotClass, tonePillClass, ResourceFailureType, compactEventMessage } from "../derive";
+import { BuildLogsModal } from "../build-logs-modal";
 
 export interface LogContext { orgId: string; projectName: string; stackId: string; }
 export interface ResourceRowVM { name: string; phase: string; replicas?: string; msg?: string; tag?: string; failure?: FailingResource; source?: ResourceSource; }
@@ -45,6 +46,7 @@ export interface SplitConsoleProps {
  */
 export function SplitConsole({ rows, events, streaming, logContext }: SplitConsoleProps) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [buildLogs, setBuildLogs] = useState<{ buildId: string; resourceName: string } | null>(null);
   if (rows.length === 0 && events.length === 0 && !streaming) return null;
 
   const selectedRow = rows.find((r) => r.name === selected);
@@ -147,11 +149,24 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                   <span className="w-[90px] flex-none truncate pt-0.5 font-mono text-[10.5px] text-fg-muted">{e.resource_name || "release"}</span>
                   <span className="min-w-0 flex-1 break-words text-[12.5px] leading-[1.45] text-fg-2">
                     {compactEventMessage(e)}
-                    {(e.links ?? []).map((l, i) => (
-                      // target is a structured key/value map (e.g. build_id), not a URL —
-                      // no navigable href exists yet, so the link renders as a label, not an anchor.
-                      <span key={`${l.kind ?? "link"}-${i}`} className="block text-xs font-medium text-info">{l.label} &rarr;</span>
-                    ))}
+                    {(e.links ?? []).map((l, i) => {
+                      const buildId = l.target?.[BuildLogsLinkTarget.BuildID];
+                      return l.kind === ReleaseEventLinkKind.BuildLogs && buildId && logContext ? (
+                        <button
+                          key={`${l.kind}-${i}`}
+                          type="button"
+                          className="block text-xs font-medium text-info hover:underline"
+                          onClick={() => setBuildLogs({
+                            buildId,
+                            resourceName: l.target?.[BuildLogsLinkTarget.ResourceName] ?? e.resource_name ?? "",
+                          })}
+                        >
+                          {l.label} &rarr;
+                        </button>
+                      ) : (
+                        <span key={`${l.kind ?? "link"}-${i}`} className="block text-xs font-medium text-info">{l.label} &rarr;</span>
+                      );
+                    })}
                   </span>
                 </div>
               );
@@ -159,6 +174,17 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
           </div>
         </div>
       </div>
+      {buildLogs && logContext && (
+        <BuildLogsModal
+          open
+          onClose={() => setBuildLogs(null)}
+          orgId={logContext.orgId}
+          projectName={logContext.projectName}
+          stackId={logContext.stackId}
+          buildId={buildLogs.buildId}
+          resourceName={buildLogs.resourceName}
+        />
+      )}
     </div>
   );
 }

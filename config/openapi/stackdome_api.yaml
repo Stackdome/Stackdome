@@ -2275,6 +2275,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}/logs:
+    get:
+      summary: Get logs for an image build
+      security:
+        - Bearer: []
+      parameters:
+        - $ref: '#/components/parameters/org_id'
+        - $ref: '#/components/parameters/project_name'
+        - $ref: '#/components/parameters/id'
+        - $ref: '#/components/parameters/build_id'
+        - in: query
+          name: follow
+          required: false
+          schema:
+            type: boolean
+            default: false
+        - in: query
+          name: tail
+          required: false
+          schema:
+            type: integer
+            default: 200
+        - in: query
+          name: since
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 'Stream of build log lines via Server-Sent Events (SSE). Log lines arrive as unnamed "data:" events; terminal stream errors as "event: error"; normal completion is signalled by a final "event: end" frame.'
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+        '404':
+          description: Build not found
+        '409':
+          description: Build job not created yet, or build pod not started — retry later
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology:
     get:
       summary: Get stack topology
