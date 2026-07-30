@@ -51,6 +51,13 @@ describe("SplitConsole", () => {
     expect(screen.getByText("Failed to start — image pull failed")).toBeInTheDocument();
   });
 
+  it("badges the all-resources row with the resource count, not the event count", () => {
+    render(<SplitConsole rows={rows} events={events} streaming={false} />);
+    const allBtn = screen.getByRole("button", { name: /all resources/ });
+    expect(allBtn).toHaveTextContent("2");
+    expect(allBtn).not.toHaveTextContent("3");
+  });
+
   it("shows the live pulse only while streaming", () => {
     render(<SplitConsole rows={rows} events={events} streaming />);
     expect(screen.getByText("live")).toBeInTheDocument();
