@@ -78,9 +78,12 @@ export function ResourceDrawer({
 
   const secrets = useSecrets();
   const { addons: allAddons } = usePostgresAddons();
+  // An addon linked during this session is only in the session's set until the
+  // stack is saved — the canvas reads the same way, so the picker matches it.
+  const linkedAddonIds = session.isActive ? session.linkedAddonIds : connectionAddonIds;
   const addons = useMemo(
-    () => allAddons.filter((a: PostgresAddon) => a.id && connectionAddonIds.has(a.id)),
-    [allAddons, connectionAddonIds],
+    () => allAddons.filter((a: PostgresAddon) => a.id && linkedAddonIds.has(a.id)),
+    [allAddons, linkedAddonIds],
   );
   const addonNameById = useMemo(
     () =>

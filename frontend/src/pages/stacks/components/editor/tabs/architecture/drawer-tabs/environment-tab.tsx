@@ -537,7 +537,7 @@ function StackResourceEnvironmentTabImpl({
                         <SelectContent>
                           {addons.length === 0 ? (
                             <div className="px-3 py-2 text-xs text-muted-foreground">
-                          No addons linked. Add one from the bottom panel.
+                              No add-ons on this stack. Add one from the canvas with Add resource.
                             </div>
                           ) : (
                             addons.map((a) => (

@@ -22,6 +22,7 @@ import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
 import { detectPlan } from "./lib/payload";
 import { PLAN_PRESETS } from "./lib/plan-presets";
 import { PostgresDetailHeader } from "./components/postgres-detail-header";
+import { PostgresConnectionPanel } from "./components/postgres-connection-panel";
 import { BackupsList } from "./components/backups-list";
 import { usePostgresBackups } from "./hooks/use-postgres-backups";
 
@@ -216,6 +217,8 @@ export default function PostgresDetailPage() {
           canWrite={canWrite(addon.project_id ?? "")}
           onDelete={() => void handleDelete()}
         />
+
+        <PostgresConnectionPanel addon={addon} projectName={defaultProjectName ?? ""} />
 
         <Panel title="Configuration">
           <div className="flex flex-col gap-6">
