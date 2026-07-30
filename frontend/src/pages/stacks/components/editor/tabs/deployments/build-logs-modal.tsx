@@ -11,21 +11,10 @@ import { Loader2, Hourglass, WifiOff, RefreshCw } from "lucide-react";
 import { StatusPill } from "@/components/branded";
 import { statusVariant } from "@/components/branded/status-variant";
 import type { SseStreamStatus } from "@/api/observability";
+import { BuildPhase, isBuildTerminal } from "@/api/image-builds";
 import { useBuildLogStream, type BuildLogPhase } from "./use-build-log-stream";
 
-/** cluster-agent api/builds/v1alpha1/imagebuild_types.go:41 — flows through as a raw string. */
-export const BuildPhase = {
-  Pending: "Pending",
-  Success: "Success",
-  Failed: "Failed",
-  Cancelled: "Cancelled",
-} as const;
-
-const TERMINAL_BUILD_STATES: ReadonlySet<string> = new Set<string>([
-  BuildPhase.Success,
-  BuildPhase.Failed,
-  BuildPhase.Cancelled,
-]);
+export { BuildPhase };
 
 const REVISION_LENGTH = 7;
 
@@ -123,7 +112,7 @@ function BuildLogsBody({
   });
 
   const state = build?.status?.state ?? "";
-  const buildDone = TERMINAL_BUILD_STATES.has(state);
+  const buildDone = isBuildTerminal(build);
   const view = deriveBuildLogsView({
     phase,
     connectionStatus,

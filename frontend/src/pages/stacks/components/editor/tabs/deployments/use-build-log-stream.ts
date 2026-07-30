@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import {
   getImageBuild,
   isBuildJobCreated,
+  isBuildTerminal,
   buildImageBuildLogStreamUrl,
   type ImageBuild,
 } from "@/api/image-builds";
@@ -9,6 +10,7 @@ import { attachSseHandlers, type SseStreamStatus } from "@/api/observability";
 
 const PREFLIGHT_POLL_MS = 3000;
 const BUILD_LOG_TAIL = 200;
+const MAX_STREAM_RETRIES = 10;
 
 export type BuildLogPhase = "waiting" | "streaming" | "ended" | "unavailable" | "error";
 
@@ -52,13 +54,34 @@ export function useBuildLogStream({
 
     let alive = true;
     let pollTimer: ReturnType<typeof setTimeout> | null = null;
+    let latestBuild: ImageBuild | null = null;
+    let streamAttempts = 0;
 
     setLines([]);
     setPhase("waiting");
     setConnectionStatus("disconnected");
     setError(null);
 
+    // BuildJobCreated goes True before the job's pod is running, so the stream
+    // request can still 409 and the browser gives the connection up for dead.
+    // That is the normal first seconds of a build, not an interruption: drop
+    // back into the poll loop instead of showing the interrupted view.
+    const resumeWaiting = (es: EventSource) => {
+      es.close();
+      if (esRef.current === es) esRef.current = null;
+      if (isBuildTerminal(latestBuild)) return;
+      if (streamAttempts >= MAX_STREAM_RETRIES) {
+        setPhase("error");
+        return;
+      }
+      setPhase("waiting");
+      pollTimer = setTimeout(() => void preflight(), PREFLIGHT_POLL_MS);
+    };
+
     const openStream = () => {
+      streamAttempts += 1;
+      let sawLine = false;
+      let settled = false;
       const url = buildImageBuildLogStreamUrl(orgId, projectName, stackId, buildId, {
         follow: true,
         tail: BUILD_LOG_TAIL,
@@ -71,26 +94,35 @@ export function useBuildLogStream({
       attachSseHandlers(es, {
         onData: (data) => {
           if (!alive) return;
+          sawLine = true;
           setLines((prev) => [...prev, data]);
         },
         onStreamError: (message) => {
           if (!alive) return;
+          settled = true;
           setError(message);
           setPhase("error");
         },
         onStatusChange: (status) => {
-          if (alive) setConnectionStatus(status);
+          if (!alive) return;
+          setConnectionStatus(status);
+          if (status !== "disconnected" || settled || sawLine) return;
+          resumeWaiting(es);
         },
       });
 
       es.addEventListener("end", () => {
         if (!alive) return;
+        settled = true;
         es.close();
         setConnectionStatus("disconnected");
         setPhase("ended");
         void getImageBuild(orgId, projectName, stackId, buildId)
           .then((b) => {
-            if (alive) setBuild(b);
+            if (alive) {
+              latestBuild = b;
+              setBuild(b);
+            }
           })
           .catch((e: unknown) => {
             if (alive) setError(e instanceof Error ? e.message : String(e));
@@ -109,6 +141,7 @@ export function useBuildLogStream({
         return;
       }
       if (!alive) return;
+      latestBuild = b;
       setBuild(b);
       if (isBuildJobCreated(b)) {
         openStream();

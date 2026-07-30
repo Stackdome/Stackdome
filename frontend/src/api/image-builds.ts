@@ -27,6 +27,24 @@ export function isBuildJobCreated(build: ImageBuild): boolean {
   );
 }
 
+/** cluster-agent api/builds/v1alpha1/imagebuild_types.go:41 — flows through as a raw string. */
+export const BuildPhase = {
+  Pending: "Pending",
+  Success: "Success",
+  Failed: "Failed",
+  Cancelled: "Cancelled",
+} as const;
+
+const TERMINAL_BUILD_STATES: ReadonlySet<string> = new Set<string>([
+  BuildPhase.Success,
+  BuildPhase.Failed,
+  BuildPhase.Cancelled,
+]);
+
+export function isBuildTerminal(build: ImageBuild | null | undefined): boolean {
+  return TERMINAL_BUILD_STATES.has(build?.status?.state ?? "");
+}
+
 interface BuildLogStreamParams {
   follow?: boolean;
   tail?: number;

@@ -11,12 +11,15 @@ import { getImageBuild, type ImageBuild } from "@/api/image-builds";
 import { useBuildLogStream } from "../use-build-log-stream";
 
 class FakeEventSource {
+  static readonly CONNECTING = 0;
+  static readonly OPEN = 1;
+  static readonly CLOSED = 2;
   static instances: FakeEventSource[] = [];
   url: string;
-  listeners = new Map<string, ((e: MessageEvent) => void)[]>();
+  listeners = new Map<string, ((e: Event) => void)[]>();
   onopen: (() => void) | null = null;
   onmessage: ((e: MessageEvent) => void) | null = null;
-  readyState = 0;
+  readyState: number = FakeEventSource.CONNECTING;
   closed = false;
 
   constructor(url: string) {
@@ -24,23 +27,35 @@ class FakeEventSource {
     FakeEventSource.instances.push(this);
   }
 
-  addEventListener(type: string, cb: (e: MessageEvent) => void) {
+  addEventListener(type: string, cb: (e: Event) => void) {
     this.listeners.set(type, [...(this.listeners.get(type) ?? []), cb]);
   }
 
   close() {
     this.closed = true;
+    this.readyState = FakeEventSource.CLOSED;
   }
 
   emit(type: string, data?: string) {
     if (type === "message") this.onmessage?.(new MessageEvent("message", { data }));
     else this.listeners.get(type)?.forEach((cb) => cb(new MessageEvent(type, { data })));
   }
+
+  /** Browser-side connection failure: a plain Event, no payload. */
+  emitNativeError(readyState: number = FakeEventSource.CLOSED) {
+    this.readyState = readyState;
+    this.listeners.get("error")?.forEach((cb) => cb(new Event("error")));
+  }
 }
 
 const startedBuild = {
   id: "b1",
   status: { state: "Building", conditions: [{ type: "BuildJobCreated", status: "True" }] },
+} as unknown as ImageBuild;
+
+const terminalBuild = {
+  ...startedBuild,
+  status: { ...startedBuild.status, state: "Failed" },
 } as unknown as ImageBuild;
 
 const props = { orgId: "o", projectName: "p", stackId: "s", buildId: "b1", enabled: true };
@@ -192,6 +207,118 @@ describe("useBuildLogStream", () => {
 
     await waitFor(() => expect(result.current.error).toBe("build record gone"));
     expect(result.current.phase).toBe("ended");
+  });
+
+  it("falls back to waiting when the stream dies before the first line", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getImageBuild).mockResolvedValue(startedBuild);
+
+    const { result } = renderHook(() => useBuildLogStream(props));
+
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(result.current.phase).toBe("streaming");
+
+    // The build job exists but its pod is still Pending: the stream request 409s.
+    await act(() => {
+      FakeEventSource.instances[0].emitNativeError();
+      return Promise.resolve();
+    });
+
+    expect(result.current.phase).toBe("waiting");
+    expect(FakeEventSource.instances[0].closed).toBe(true);
+    expect(getImageBuild).toHaveBeenCalledTimes(1);
+
+    await act(() => vi.advanceTimersByTimeAsync(3000));
+
+    expect(getImageBuild).toHaveBeenCalledTimes(2);
+    expect(result.current.phase).toBe("streaming");
+    expect(FakeEventSource.instances).toHaveLength(2);
+  });
+
+  it("gives up with an error once the reopen budget is spent", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getImageBuild).mockResolvedValue(startedBuild);
+
+    const { result } = renderHook(() => useBuildLogStream(props));
+
+    await act(() => vi.advanceTimersByTimeAsync(0));
+
+    for (let i = 0; i < 10; i++) {
+      const es = FakeEventSource.instances[FakeEventSource.instances.length - 1];
+      await act(() => {
+        es.emitNativeError();
+        return Promise.resolve();
+      });
+      if (result.current.phase === "waiting") await act(() => vi.advanceTimersByTimeAsync(3000));
+    }
+
+    expect(FakeEventSource.instances).toHaveLength(10);
+    expect(result.current.phase).toBe("error");
+
+    // Retry hands back a fresh budget.
+    await act(() => {
+      result.current.retry();
+      return vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.phase).toBe("streaming");
+    expect(FakeEventSource.instances).toHaveLength(11);
+  });
+
+  it("keeps the interrupted view when the stream dies after delivering lines", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getImageBuild).mockResolvedValue(startedBuild);
+
+    const { result } = renderHook(() => useBuildLogStream(props));
+
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    act(() => FakeEventSource.instances[0].emit("message", "INFO step 1"));
+
+    await act(() => {
+      FakeEventSource.instances[0].emitNativeError();
+      return Promise.resolve();
+    });
+
+    expect(result.current.phase).toBe("streaming");
+    expect(result.current.connectionStatus).toBe("disconnected");
+    expect(result.current.lines).toEqual(["INFO step 1"]);
+
+    await act(() => vi.advanceTimersByTimeAsync(9000));
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(getImageBuild).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a terminal build interrupted instead of re-polling", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getImageBuild).mockResolvedValue(terminalBuild);
+
+    const { result } = renderHook(() => useBuildLogStream(props));
+
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(() => {
+      FakeEventSource.instances[0].emitNativeError();
+      return Promise.resolve();
+    });
+
+    expect(result.current.phase).toBe("streaming");
+    await act(() => vi.advanceTimersByTimeAsync(9000));
+    expect(FakeEventSource.instances).toHaveLength(1);
+  });
+
+  it("keeps reconnecting statuses out of the fallback path", async () => {
+    vi.useFakeTimers();
+    vi.mocked(getImageBuild).mockResolvedValue(startedBuild);
+
+    const { result } = renderHook(() => useBuildLogStream(props));
+
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    await act(() => {
+      FakeEventSource.instances[0].emitNativeError(0);
+      return Promise.resolve();
+    });
+
+    expect(result.current.connectionStatus).toBe("reconnecting");
+    expect(result.current.phase).toBe("streaming");
+    expect(FakeEventSource.instances[0].closed).toBe(false);
   });
 
   it("retry restarts the preflight", async () => {
