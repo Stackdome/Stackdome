@@ -419,7 +419,6 @@ function StackCanvasFlow({
           {
             linkedAddonIds: new Set(connectionAddonIds),
             openResourceIdx: front?.index,
-            openTab: "configuration",
             draft: { resources: draftResources, volumes: draftVolumes },
           },
         );
@@ -773,7 +772,7 @@ function StackCanvasFlow({
         onOpenVolume={liveMode ? undefined : openVolume}
         liveStatusResources={liveStatusResources}
         publicUrls={publicEndpoints?.find((e) => e.service === resources[frontEntry.index]?.name)?.urls}
-        live={liveMode ? { resources: liveView!.resources, volumes: liveView!.volumes } : undefined}
+        live={liveMode ? liveView : undefined}
       />
     ) : frontEntry ? (
       <VolumeDrawer
