@@ -74,7 +74,7 @@ export function LoginForm() {
 
       <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
         {serverError && (
-          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-2xl border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}

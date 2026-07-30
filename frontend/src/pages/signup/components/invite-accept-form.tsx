@@ -114,7 +114,7 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
 
       <form onSubmit={handleSubmit} className="space-y-3">
         {serverError && (
-          <div className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-2xl border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger">
             {serverError}
           </div>
         )}
