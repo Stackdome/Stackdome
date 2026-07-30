@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"time"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type ImageBuild struct {
@@ -137,12 +135,7 @@ func (s *ImageBuildStatus) IsConditionTrue(condType string) bool {
 	if s == nil {
 		return false
 	}
-	for _, c := range s.Conditions {
-		if c.Type == condType && c.Status == string(metav1.ConditionTrue) {
-			return true
-		}
-	}
-	return false
+	return IsConditionTrue(s.Conditions, condType)
 }
 
 type BuildFailureDetail struct {
