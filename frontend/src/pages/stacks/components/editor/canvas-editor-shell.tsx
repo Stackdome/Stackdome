@@ -408,11 +408,14 @@ export function CanvasEditorShell({
           <div className="absolute inset-y-0 left-0 transition-[right] duration-[260ms]" style={{ right: effectiveDrawerInset }}>
             <DrawerInsetContext.Provider value={drawerInsetCtx}>{architecture}</DrawerInsetContext.Provider>
             {/* Resource/volume tally lives on the canvas (bottom-right) rather
-                than the header, keeping the header a line shorter. Ops views
-                overlay it along with the rest of the canvas. */}
-            <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-[11px] text-fg-muted">
-              {subtitle}
-            </span>
+                than the header, keeping the header a line shorter. Rendered only
+                on the architecture tab — its z-10 (needed above the canvas)
+                would otherwise punch through the ops-view overlay. */}
+            {activeTab === EDITOR_TABS.architecture && (
+              <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-[11px] text-fg-muted">
+                {subtitle}
+              </span>
+            )}
             {activeTab === EDITOR_TABS.architecture && (
               <DeployPill
                 isDraft={isNewStack}
