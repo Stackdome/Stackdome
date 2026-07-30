@@ -15,7 +15,9 @@
     "generate:openapi-zod": "openapi-zod-client ../config/openapi/stackdome_api.yaml -o src/api/zod-schemas.ts --export-schemas",
     "generate:compose-types": "tsx scripts/generate-compose-types.ts",
     "update:compose-schema": "curl -o schemas/compose-spec.json https://raw.githubusercontent.com/compose-spec/compose-spec/master/schema/compose-spec.json",
-    "check:compose-conversion": "tsx scripts/check-compose-conversion.ts"
+    "check:compose-conversion": "tsx scripts/check-compose-conversion.ts",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.10",
@@ -83,7 +85,13 @@
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.30.1",
     "vite": "^6.3.5",
-    "vitest": "^2.1.8"
+    "vitest": "^2.1.8",
+    "storybook": "^10.5.5",
+    "@storybook/react-vite": "^10.5.5",
+    "@storybook/addon-a11y": "^10.5.5",
+    "@storybook/addon-docs": "^10.5.5",
+    "@storybook/addon-mcp": "^0.7.0",
+    "eslint-plugin-storybook": "^10.5.5"
   },
   "packageManager": "pnpm@10.33.2+sha512.a90faf6feeab71ad6c6e57f94e0fe1a12f5dcc22cd754db40ae9593eb6a3e0b6b12e3540218bb37ae083404b1f2ce6db2a4121e979829b4aff94b99f49da1cf8",
   "engines": {
