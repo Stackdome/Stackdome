@@ -23,7 +23,7 @@ import { splitImageRef } from "@/pages/stacks/lib/image-ref";
 /**
  * Form-specific UI schema additions
  */
-const FormGitRevisionTypeSchema = z.enum(["commit", "branch", "tag"]);
+const FormGitRevisionTypeSchema = z.enum(["branch", "tag"]);
 
 /**
  * Command/args are argv arrays in the API (K8s exec form). The form holds them
@@ -124,9 +124,12 @@ void _envRowsMatch;
 const FormStackResourceSchema = ApiStackResourceSchema.extend({
   // UI helper, not part of API spec for StackResource
   sourceType: z.enum(["image", "git"]).optional().default("image"),
-  // UI helper fields for git revision, not part of API spec StackResource
+  // UI helper fields for git revision, not part of API spec StackResource.
+  // The commit pin is held separately — the API requires commit to ride
+  // alongside a branch or tag, never replace it.
   gitRevisionType: FormGitRevisionTypeSchema.optional(),
   gitRevisionValue: z.string().optional(),
+  gitCommitPin: z.string().optional(),
   // UI-only stash for the "Build from" toggle: the API rejects a source with
   // both `git` and `image` set (source_conflict), so we cannot keep both
   // subtrees live in `source`. Toggling away from a branch stashes it here so
@@ -189,6 +192,13 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
         code: z.ZodIssueCode.custom,
         message: "Enter a value for the selected revision, or clear the revision type",
         path: ["gitRevisionValue"],
+      });
+    }
+    if (data.gitCommitPin && !data.gitRevisionType) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Pin requires a branch or tag",
+        path: ["gitCommitPin"],
       });
     }
   } else if (data.source?.image) {
@@ -316,6 +326,7 @@ function convertFormResourceToApiResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
+    gitCommitPin,
     stashedGitSource,
     stashedImageSource,
     outputs,
@@ -425,20 +436,22 @@ function convertApiResourceToFormResource(
 ): FormStackResourceData {
   const git = resource.source?.git;
   const sourceType: "image" | "git" = git ? "git" : "image";
-  let gitRevisionType: "commit" | "branch" | "tag" | undefined = undefined;
+  let gitRevisionType: "branch" | "tag" | undefined = undefined;
   let gitRevisionValue: string | undefined = undefined;
+  let gitCommitPin: string | undefined = undefined;
 
   if (git) {
-    if (git.commit) {
-      gitRevisionType = "commit";
-      gitRevisionValue = git.commit;
-    } else if (git.branch) {
+    if (git.branch) {
       gitRevisionType = "branch";
       gitRevisionValue = git.branch;
     } else if (git.tag) {
       gitRevisionType = "tag";
       gitRevisionValue = git.tag;
     }
+    // Independent of branch/tag. A commit-only spec (invalid per the API's
+    // commit-requires-ref rule) loads with type undefined so superRefine
+    // surfaces it instead of silently dropping the pin.
+    gitCommitPin = git.commit;
   }
 
   // Env vars deserialize into literal + self rows. Secret/addon/resource rows
@@ -458,6 +471,7 @@ function convertApiResourceToFormResource(
     sourceType,
     gitRevisionType,
     gitRevisionValue,
+    gitCommitPin,
     init_spec: resource.init_spec ? {
       command: argvToText(resource.init_spec.command),
       args: argvToText(resource.init_spec.args),
@@ -497,7 +511,8 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
 
   if (resource.sourceType === 'git') {
     const existingGit = resource.source?.git;
-    // Flatten the UI revision helpers into exactly one of branch/tag/commit.
+    // Flatten the UI revision helpers into one of branch/tag, with the commit
+    // pin riding alongside (the API rejects a commit without a branch or tag).
     // push is optional (omit => internal cluster registry). integration_id
     // carries the clone-auth credential reference (e.g. seeded by the "From
     // git provider" wizard for private repos) and must pass through as-is.
@@ -508,7 +523,7 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
         build_context: existingGit?.build_context ?? '.',
         branch: resource.gitRevisionType === 'branch' ? resource.gitRevisionValue : undefined,
         tag: resource.gitRevisionType === 'tag' ? resource.gitRevisionValue : undefined,
-        commit: resource.gitRevisionType === 'commit' ? resource.gitRevisionValue : undefined,
+        commit: resource.gitCommitPin || undefined,
         push: existingGit?.push?.repository ? { repository: existingGit.push.repository } : undefined,
         integration_id: existingGit?.integration_id,
       },

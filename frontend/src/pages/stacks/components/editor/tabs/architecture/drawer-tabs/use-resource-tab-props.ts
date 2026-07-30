@@ -137,6 +137,7 @@ export function useResourceTabProps(args: {
       resource.source,
       resource.gitRevisionType,
       resource.gitRevisionValue,
+      resource.gitCommitPin,
       resource.volume_mounts,
       resource.ports,
     ],

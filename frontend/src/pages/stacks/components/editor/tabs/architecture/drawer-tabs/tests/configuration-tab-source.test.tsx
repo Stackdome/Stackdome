@@ -236,6 +236,43 @@ describe("git repository row", () => {
   });
 });
 
+describe("commit pin row", () => {
+  it("renders the pin populated alongside a branch revision", () => {
+    renderGitTab({ gitRevisionType: "branch", gitRevisionValue: "main", gitCommitPin: "abc123" });
+    const input = screen.getByLabelText(/pin to commit/i);
+    expect(input).toHaveValue("abc123");
+    expect(input).toBeEnabled();
+  });
+
+  it("patches gitCommitPin on change", () => {
+    const { onPatchResource } = renderGitTab({ gitRevisionType: "branch", gitRevisionValue: "main" });
+    fireEvent.change(screen.getByLabelText(/pin to commit/i), { target: { value: "b1eff14" } });
+    expect(onPatchResource).toHaveBeenCalledWith({ gitCommitPin: "b1eff14" });
+  });
+
+  it("is disabled when no revision type is chosen and no pin is set", () => {
+    renderGitTab();
+    expect(screen.getByLabelText(/pin to commit/i)).toBeDisabled();
+  });
+
+  it("stays enabled for a legacy pin without a revision so it can be cleared", () => {
+    renderGitTab({ gitCommitPin: "legacy1" });
+    expect(screen.getByLabelText(/pin to commit/i)).toBeEnabled();
+  });
+
+  it("offers only default/branch/tag revision choices and clears the pin on default", () => {
+    const { onPatchResource } = renderGitTab({ gitRevisionType: "branch", gitRevisionValue: "main", gitCommitPin: "abc123" });
+    fireEvent.click(screen.getByLabelText(/revision/i));
+    expect(screen.queryByRole("option", { name: "Commit" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: "Default branch" }));
+    expect(onPatchResource).toHaveBeenCalledWith({
+      gitRevisionType: undefined,
+      gitRevisionValue: undefined,
+      gitCommitPin: undefined,
+    });
+  });
+});
+
 describe("advanced build fields", () => {
   it("patches dockerfile_path", () => {
     const { onPatchResource } = renderGitTab();

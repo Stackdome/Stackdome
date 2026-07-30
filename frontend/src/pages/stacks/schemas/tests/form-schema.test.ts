@@ -3,6 +3,8 @@ import {
   convertApiResourceToFormResource,
   convertFormResourceToApiResource,
   convertFormStackToApiStack,
+  prepareFormResourceForApi,
+  FormStackResourceSchema,
 } from "../form-schema";
 
 type ApiResourceArg = Parameters<typeof convertApiResourceToFormResource>[0];
@@ -619,6 +621,58 @@ describe("FormStackResourceSchema — port number validation", () => {
         (i) => i.path.join(".") === "ports.0.number",
       );
       expect(issue?.message).toBe("Port number is required");
+    }
+  });
+});
+
+describe("git commit pin round-trip", () => {
+  const gitResource = (git: Record<string, unknown>) => ({
+    id: "r-1",
+    stack_id: "s-1",
+    name: "web",
+    source: { git: { repo_url: "https://github.com/acme/app", dockerfile_path: "Dockerfile", build_context: ".", ...git } },
+  });
+
+  it("keeps branch alongside a commit pin through load and save", () => {
+    const form = convertApiResourceToFormResource(
+      gitResource({ branch: "main", commit: "abc123" }) as unknown as ApiResourceArg,
+    );
+    expect(form.gitRevisionType).toBe("branch");
+    expect(form.gitRevisionValue).toBe("main");
+    expect(form.gitCommitPin).toBe("abc123");
+
+    const payload = prepareFormResourceForApi(form);
+    expect(payload.source?.git?.branch).toBe("main");
+    expect(payload.source?.git?.commit).toBe("abc123");
+    expect(payload.source?.git?.tag).toBeUndefined();
+  });
+
+  it("keeps tag alongside a commit pin through load and save", () => {
+    const form = convertApiResourceToFormResource(
+      gitResource({ tag: "v1.2.0", commit: "abc123" }) as unknown as ApiResourceArg,
+    );
+    expect(form.gitRevisionType).toBe("tag");
+    expect(form.gitRevisionValue).toBe("v1.2.0");
+    expect(form.gitCommitPin).toBe("abc123");
+
+    const payload = prepareFormResourceForApi(form);
+    expect(payload.source?.git?.tag).toBe("v1.2.0");
+    expect(payload.source?.git?.commit).toBe("abc123");
+    expect(payload.source?.git?.branch).toBeUndefined();
+  });
+
+  it("loads a legacy commit-only spec as a pin without a revision and flags it invalid", () => {
+    const form = convertApiResourceToFormResource(
+      gitResource({ commit: "abc123" }) as unknown as ApiResourceArg,
+    );
+    expect(form.gitRevisionType).toBeUndefined();
+    expect(form.gitCommitPin).toBe("abc123");
+
+    const parsed = FormStackResourceSchema.safeParse(form);
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      const issue = parsed.error.issues.find((i) => i.path.join(".") === "gitCommitPin");
+      expect(issue?.message).toBe("Pin requires a branch or tag");
     }
   });
 });
