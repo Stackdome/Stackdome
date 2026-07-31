@@ -38,6 +38,11 @@ export default defineConfig({
           // project and a 178-file jsdom suite oversubscribe the cores and
           // starve each other into timeouts.
           sequence: { groupOrder: 1 },
+          // A story renders in well under a second; this ceiling is only ever
+          // reached when a loaded machine starves the browser. Genuine
+          // breakage fails on the assertion instead, so the headroom hides
+          // nothing.
+          testTimeout: 30000,
         },
       },
     ],
