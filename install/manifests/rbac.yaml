@@ -21,6 +21,10 @@ rules:
   - apiGroups: ["core.stackdome.io"]
     resources: ["stacks", "stackresources"]
     verbs: ["get", "list", "watch", "create", "update", "delete"]
+  # Agent-owned cluster inventory: hub only observes.
+  - apiGroups: ["core.stackdome.io"]
+    resources: ["clusterinfoes"]
+    verbs: ["get", "list", "watch"]
   - apiGroups: ["storage.stackdome.io"]
     resources: ["volumes"]
     verbs: ["get", "list", "watch", "create", "update", "delete"]

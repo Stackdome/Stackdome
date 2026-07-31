@@ -177,6 +177,11 @@ func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCl
 				Verbs:     verbsFull,
 			},
 			{
+				APIGroups: []string{"core.stackdome.io"},
+				Resources: []string{"clusterinfoes"},
+				Verbs:     verbsReadOnly,
+			},
+			{
 				APIGroups: []string{"storage.stackdome.io"},
 				Resources: []string{"volumes"},
 				Verbs:     verbsFull,
