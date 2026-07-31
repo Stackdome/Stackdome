@@ -123,14 +123,13 @@ func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgN
 	platformCluster, err := s.clusterStore.GetPlatformCluster(ctx)
 	if err != nil {
 		if err.Code == errors.ErrorNotFound {
-			// FIXME(hack): self-hosted installs (no platform cluster) get their
-			// first domain inferred from the signup request's URL so the first
-			// deploy can expose a public port out of the box. Replace with an
-			// explicit domain-setup onboarding step; see signup_host.go.
-			if base := signupHostBase(ctx); base != "" {
+			// Self-hosted installs (no platform cluster) seed the org's first
+			// domain from APP_BASE_URL so the first deploy can expose a public
+			// port out of the box. Non-fatal: signup must not fail over it.
+			if base := defaultDomainBase(); base != "" {
 				ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
 				if sErr := s.seedOrgDomain(ctx, orgID, slug.FromOrgName(orgName), base); sErr != nil {
-					s.logger.Error(ctx, "failed to seed inferred org domain: %s", sErr.Error())
+					s.logger.Error(ctx, "failed to seed default org domain: %s", sErr.Error())
 				}
 			}
 			return nil
