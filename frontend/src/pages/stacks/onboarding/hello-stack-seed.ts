@@ -3,8 +3,8 @@ import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 /** The public demo repo the cluster clones and builds at deploy time. */
 export const HELLO_STACK_REPO_URL = "https://github.com/Stackdome/stackdome-demo";
-export const HELLO_STACK_NAME = "hello-stack";
-export const HELLO_STACK_BRANCH = "main";
+const HELLO_STACK_NAME = "hello-stack";
+const HELLO_STACK_BRANCH = "main";
 
 const REDIS_VOLUME = "redis-data";
 const REDIS_URL = "redis://redis:6379";

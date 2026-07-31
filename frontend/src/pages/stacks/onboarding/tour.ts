@@ -6,7 +6,7 @@ const DONE_KEY = "stackdome.onboarding-tour.done";
 
 /** Where the tour is across route changes. Module state is enough — a full
     page reload abandons the tour, which is the intended quiet failure mode. */
-type Stage = "idle" | "canvas" | "deploying" | "live" | "done";
+type Stage = "idle" | "canvas" | "deploying" | "done";
 let stage: Stage = "idle";
 let active: Driver | null = null;
 
@@ -21,12 +21,6 @@ export function markTourDone(): void {
 
 export function tourStage(): Stage {
   return stage;
-}
-
-export function endTour(): void {
-  active?.destroy();
-  active = null;
-  if (stage !== "done") markTourDone();
 }
 
 function run(steps: DriveStep[], opts?: { onDestroyed?: () => void }): Driver {
@@ -181,7 +175,7 @@ function visibleEndpointRow(): Element {
 
 /** Beat 8 — the public URL chip once the release has converged. */
 export function runLiveStep(): void {
-  stage = "live";
+  stage = "done";
   run(
     [
       {
