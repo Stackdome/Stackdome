@@ -176,6 +176,8 @@ var _ = Describe("Platform provisioning", func() {
 			clusterURL = strings.Replace(clusterURL, "127.0.0.1", "localhost", 1)
 		case strings.Contains(clusterURL, "localhost"):
 			clusterURL = strings.Replace(clusterURL, "localhost", "127.0.0.1", 1)
+		case strings.Contains(clusterURL, "0.0.0.0"):
+			clusterURL = strings.Replace(clusterURL, "0.0.0.0", "127.0.0.1", 1)
 		default:
 			Fail(fmt.Sprintf("cannot derive an alias for cluster URL %q", clusterURL))
 		}
