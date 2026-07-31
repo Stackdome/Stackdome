@@ -28,7 +28,7 @@ export function releaseHandlers(
 // through its refresh flow and, on failure, hard-redirects the story iframe
 // to /sign-in (src/api/client.ts).
 export const baselineHandlers = [
-  http.get('/api/v1/users/me', () => HttpResponse.json(makeUser())),
+  http.get('/api/v1/users/current', () => HttpResponse.json(makeUser())),
   http.post('/api/v1/auth/refresh', () =>
     HttpResponse.json({ token: 'sb-token', refreshToken: 'sb-refresh' }),
   ),
