@@ -8,31 +8,40 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Stackdome/stackdome/install"
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/testutil"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 const (
 	controlPlaneNamespace   = "stackdome-control-plane"
 	apiServerServiceAccount = "stackdome-api-server-account"
-
-	verbGet    = "get"
-	verbList   = "list"
-	verbWatch  = "watch"
-	verbCreate = "create"
-	verbUpdate = "update"
-	verbDelete = "delete"
+	rbacManifestName        = "rbac.yaml"
 )
 
-var (
-	verbsFull      = []string{verbGet, verbList, verbWatch, verbCreate, verbUpdate, verbDelete}
-	verbsReadOnly  = []string{verbGet, verbList, verbWatch}
-	verbsGetCreate = []string{verbGet, verbCreate}
-)
+// hubClusterRoleRules reads the hub's least-privilege rules straight out of the
+// install manifest so the integration environment cannot drift from production.
+func hubClusterRoleRules() ([]rbacv1.PolicyRule, error) {
+	raw, err := install.ReadManifest(rbacManifestName)
+	if err != nil {
+		return nil, err
+	}
+	for _, doc := range strings.Split(string(raw), "\n---") {
+		role := &rbacv1.ClusterRole{}
+		if err := yaml.Unmarshal([]byte(doc), role); err != nil {
+			continue
+		}
+		if role.Kind == "ClusterRole" {
+			return role.Rules, nil
+		}
+	}
+	return nil, fmt.Errorf("no ClusterRole found in install manifest %s", rbacManifestName)
+}
 
 type ClientManager struct {
 	client       *openapi.APIClient
@@ -165,103 +174,17 @@ func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCl
 		return fmt.Errorf("failed to create service account: %w", err)
 	}
 
-	// Create cluster role — rules mirror install/manifests/rbac.yaml (keep in sync)
+	// Cluster role rules come from install/manifests/rbac.yaml — the same manifest
+	// the installer and mage dev:setup apply.
+	rules, err := hubClusterRoleRules()
+	if err != nil {
+		return err
+	}
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "stackdome-api-server-role",
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"core.stackdome.io"},
-				Resources: []string{"stacks", "stackresources"},
-				Verbs:     verbsFull,
-			},
-			{
-				APIGroups: []string{"core.stackdome.io"},
-				Resources: []string{"clusterinfoes"},
-				Verbs:     verbsReadOnly,
-			},
-			{
-				APIGroups: []string{"storage.stackdome.io"},
-				Resources: []string{"volumes"},
-				Verbs:     verbsFull,
-			},
-			{
-				APIGroups: []string{"users.stackdome.io"},
-				Resources: []string{"users"},
-				Verbs:     verbsFull,
-			},
-			{
-				APIGroups: []string{"registry.stackdome.io"},
-				Resources: []string{"clusterregistries"},
-				Verbs:     []string{verbGet, verbList, verbWatch, verbCreate, verbDelete},
-			},
-			{
-				APIGroups: []string{"addons.stackdome.io"},
-				Resources: []string{"postgresclusters"},
-				Verbs:     verbsFull,
-			},
-			{
-				APIGroups: []string{"builds.stackdome.io"},
-				Resources: []string{"imagebuilds"},
-				Verbs:     verbsReadOnly,
-			},
-			{
-				APIGroups: []string{"cert-manager.io"},
-				Resources: []string{"clusterissuers"},
-				Verbs:     verbsGetCreate,
-			},
-			{
-				APIGroups: []string{"postgresql.cnpg.io"},
-				Resources: []string{"imagecatalogs"},
-				Verbs:     verbsGetCreate,
-			},
-			{
-				APIGroups: []string{"postgresql.cnpg.io"},
-				Resources: []string{"backups"},
-				Verbs:     verbsReadOnly,
-			},
-			{
-				APIGroups: []string{"barmancloud.cnpg.io"},
-				Resources: []string{"objectstores"},
-				Verbs:     []string{verbGet, verbCreate, verbUpdate, verbDelete},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"namespaces"},
-				Verbs:     []string{verbGet, verbCreate, verbDelete},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"secrets"},
-				Verbs:     []string{verbGet, verbCreate, verbUpdate, verbDelete},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods"},
-				Verbs:     []string{verbGet, verbList},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"pods/log"},
-				Verbs:     []string{verbGet},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"services"},
-				Verbs:     []string{verbGet},
-			},
-			{
-				APIGroups: []string{""},
-				Resources: []string{"nodes"},
-				Verbs:     []string{verbList},
-			},
-			{
-				APIGroups: []string{"metrics.k8s.io"},
-				Resources: []string{"pods"},
-				Verbs:     []string{verbGet, verbList},
-			},
-		},
+		Rules: rules,
 	}
 	_, err = kubeClient.RbacV1().ClusterRoles().Create(ctx, clusterRole, metav1.CreateOptions{})
 	if err != nil {
