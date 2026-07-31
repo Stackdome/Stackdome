@@ -14,6 +14,7 @@ import (
 	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
 	suture "github.com/thejerf/suture/v4"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -111,6 +112,13 @@ func (cc *ClusterControl) createManager() (ctrl.Manager, error) {
 		LeaderElection: false,
 		Controller: config.Controller{
 			SkipNameValidation: ptr.To(true),
+		},
+		Client: client.Options{
+			// Secrets are read by name only. Caching them would open a
+			// cluster-wide list/watch on every managed cluster's secrets.
+			Cache: &client.CacheOptions{
+				DisableFor: []client.Object{&corev1.Secret{}},
+			},
 		},
 	})
 	if err != nil {
