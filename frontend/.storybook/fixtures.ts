@@ -1,5 +1,6 @@
 import type { components } from '../src/api/types/openapi'
 import { ReleaseEventScope, ReleaseEventType } from '../src/api/releases'
+import { BuildPhase, BUILD_JOB_CREATED_CONDITION } from '../src/api/image-builds'
 import { ReleaseState } from '../src/pages/stacks/components/editor/tabs/deployments/release-states'
 
 type Schemas = components['schemas']
@@ -12,6 +13,7 @@ export type ReleaseEvent = Schemas['ReleaseEvent']
 export type PostgresAddon = Schemas['PostgresAddon']
 export type PostgresBackup = Schemas['PostgresBackup']
 export type Cluster = Schemas['Cluster']
+export type ImageBuild = Schemas['ImageBuild']
 
 export const ORG_ID = 'org-1'
 export const DEFAULT_PROJECT = 'default'
@@ -160,6 +162,25 @@ export function makeReleaseEvent(overrides: Partial<ReleaseEvent> = {}): Release
     message: 'web: rolling out revision 4',
     ...overrides,
   }
+}
+
+// isBuildJobCreated gates the log stream on the BuildJobCreated condition, so
+// `status` is merged rather than replaced: a story overriding only `state`
+// would otherwise drop the condition and strand the modal on "waiting".
+export function makeImageBuild(overrides: Partial<ImageBuild> = {}): ImageBuild {
+  const { status, ...rest } = overrides
+  return {
+    id: 'build-1',
+    stack_id: STACK_ID,
+    resource_name: 'web',
+    ...rest,
+    status: {
+      state: BuildPhase.Success,
+      build_source_revision: 'a1b2c3d4e5f6a7b8',
+      conditions: [{ type: BUILD_JOB_CREATED_CONDITION, status: 'True' }],
+      ...status,
+    },
+  } as ImageBuild
 }
 
 export function makeCluster(overrides: Partial<Cluster> = {}): Cluster {
