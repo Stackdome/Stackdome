@@ -23,6 +23,15 @@ describe("buildHelloStackSeed", () => {
     });
   });
 
+  it("gives web its own public URL, resolved at deploy", () => {
+    expect(byName.web.execution_config?.environment_variables).toContainEqual({
+      from: "resource",
+      name: "PUBLIC_URL",
+      resourceName: "web",
+      output: "public_url",
+    });
+  });
+
   it("exposes only web to the public", () => {
     expect(byName.web.ports?.[0]).toMatchObject({ number: 3000, exposed_to_public: true });
     expect(byName.worker.ports ?? []).toHaveLength(0);

@@ -50,6 +50,9 @@ export function buildHelloStackSeed(): DraftSeed {
             { from: "stack", name: "HAT", value: "party" },
             { from: "stack", name: "HEADLINE", value: "Your stack is now live." },
             { from: "stack", name: "REDIS_URL", value: REDIS_URL },
+            // Self-reference resolved at deploy: the page shows its real
+            // public address without inferring it client-side.
+            { from: "resource", name: "PUBLIC_URL", resourceName: "web", output: "public_url" },
           ],
         },
       }),
