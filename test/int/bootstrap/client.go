@@ -8,18 +8,40 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Stackdome/stackdome/install"
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/testutil"
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/yaml"
 )
 
 const (
 	controlPlaneNamespace   = "stackdome-control-plane"
 	apiServerServiceAccount = "stackdome-api-server-account"
+	rbacManifestName        = "rbac.yaml"
 )
+
+// hubClusterRoleRules reads the hub's least-privilege rules straight out of the
+// install manifest so the integration environment cannot drift from production.
+func hubClusterRoleRules() ([]rbacv1.PolicyRule, error) {
+	raw, err := install.ReadManifest(rbacManifestName)
+	if err != nil {
+		return nil, err
+	}
+	for _, doc := range strings.Split(string(raw), "\n---") {
+		role := &rbacv1.ClusterRole{}
+		if err := yaml.Unmarshal([]byte(doc), role); err != nil {
+			continue
+		}
+		if role.Kind == "ClusterRole" {
+			return role.Rules, nil
+		}
+	}
+	return nil, fmt.Errorf("no ClusterRole found in install manifest %s", rbacManifestName)
+}
 
 type ClientManager struct {
 	client       *openapi.APIClient
@@ -152,22 +174,26 @@ func deployAPIServerServiceAccount(ctx context.Context, cluster *testutil.TestCl
 		return fmt.Errorf("failed to create service account: %w", err)
 	}
 
-	// Create cluster role
+	// Cluster role rules come from install/manifests/rbac.yaml — the same manifest
+	// the installer and mage dev:setup apply.
+	rules, err := hubClusterRoleRules()
+	if err != nil {
+		return err
+	}
 	clusterRole := &rbacv1.ClusterRole{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "stackdome-api-server-role",
 		},
-		Rules: []rbacv1.PolicyRule{
-			{
-				APIGroups: []string{"*"},
-				Resources: []string{"*"},
-				Verbs:     []string{"*"},
-			},
-		},
+		Rules: rules,
 	}
 	_, err = kubeClient.RbacV1().ClusterRoles().Create(ctx, clusterRole, metav1.CreateOptions{})
-	if err != nil && !strings.Contains(err.Error(), "already exists") {
-		return fmt.Errorf("failed to create cluster role: %w", err)
+	if err != nil {
+		if !strings.Contains(err.Error(), "already exists") {
+			return fmt.Errorf("failed to create cluster role: %w", err)
+		}
+		if _, err := kubeClient.RbacV1().ClusterRoles().Update(ctx, clusterRole, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("failed to update cluster role: %w", err)
+		}
 	}
 
 	// Create cluster role binding

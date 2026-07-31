@@ -17,9 +17,67 @@ metadata:
     app.kubernetes.io/managed-by: stackdome-installer
     stackdome.io/bootstrap: "true"
 rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs: ["*"]
+  # Stackdome CRs: hub writes desired state, watches status (informers need list+watch).
+  - apiGroups: ["core.stackdome.io"]
+    resources: ["stacks", "stackresources"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  # Agent-owned cluster inventory: hub only observes.
+  - apiGroups: ["core.stackdome.io"]
+    resources: ["clusterinfoes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["storage.stackdome.io"]
+    resources: ["volumes"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: ["users.stackdome.io"]
+    resources: ["users"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  - apiGroups: ["registry.stackdome.io"]
+    resources: ["clusterregistries"]
+    verbs: ["get", "list", "watch", "create", "delete"]
+  - apiGroups: ["addons.stackdome.io"]
+    resources: ["postgresclusters"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+  # Agent-created build CRs: hub only observes.
+  - apiGroups: ["builds.stackdome.io"]
+    resources: ["imagebuilds"]
+    verbs: ["get", "list", "watch"]
+  # TLS issuer provisioned once per cluster at registration.
+  - apiGroups: ["cert-manager.io"]
+    resources: ["clusterissuers"]
+    verbs: ["get", "create"]
+  # Postgres addon dependencies.
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["imagecatalogs"]
+    verbs: ["get", "create"]
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["backups"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["barmancloud.cnpg.io"]
+    resources: ["objectstores"]
+    verbs: ["get", "create", "update", "delete"]
+  # Workload namespaces and app/registry/backup secrets.
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "create", "delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "create", "update", "delete"]
+  # Log streaming and metrics.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list"]
+  - apiGroups: [""]
+    resources: ["pods/log"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list"]
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods"]
+    verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

@@ -1251,57 +1251,14 @@ metadata:
 		return fmt.Errorf("failed to ensure namespace: %w", err)
 	}
 
-	// Create ServiceAccount
-	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: %s
-  namespace: %s`, DevSAName, DevSANamespace)); err != nil {
-		return fmt.Errorf("failed to create service account: %w", err)
-	}
-
-	// Create ClusterRole with full permissions for API server
-	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: %s
-rules:
-  - apiGroups: ["*"]
-    resources: ["*"]
-    verbs: ["*"]`, DevRoleName)); err != nil {
-		return fmt.Errorf("failed to create cluster role: %w", err)
-	}
-
-	// Create ClusterRoleBinding
-	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: %s-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: %s
-subjects:
-  - kind: ServiceAccount
-    name: %s
-    namespace: %s`, DevRoleName, DevRoleName, DevSAName, DevSANamespace)); err != nil {
-		return fmt.Errorf("failed to create cluster role binding: %w", err)
-	}
-
-	// Create Secret for ServiceAccount token
-	if err := runKubectlApply(ctx, kubeconfig, fmt.Sprintf(`
-apiVersion: v1
-kind: Secret
-metadata:
-  name: %s
-  namespace: %s
-  annotations:
-    kubernetes.io/service-account.name: %s
-type: kubernetes.io/service-account-token`, DevSecretName, DevSANamespace, DevSAName)); err != nil {
-		return fmt.Errorf("failed to create secret: %w", err)
+	// SA, ClusterRole, binding and token secret come from the install manifest
+	// (single source of truth for the hub's least-privilege rules).
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig,
+		"apply", "-f", "install/manifests/rbac.yaml")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("failed to apply install/manifests/rbac.yaml: %w", err)
 	}
 
 	// Wait for token to be populated
