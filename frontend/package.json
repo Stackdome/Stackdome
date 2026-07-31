@@ -45,6 +45,7 @@
     "cronstrue": "^3.14.0",
     "dagre": "^0.8.5",
     "date-fns": "^4.1.0",
+    "driver.js": "^1.8.0",
     "js-yaml": "^4.1.0",
     "lucide-react": "^0.507.0",
     "react": "^19.1.0",

@@ -1,0 +1,62 @@
+/* Brand skin for the driver.js popover — tokens only, no raw color values. */
+.driver-popover.stackdome-tour {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 0.625rem);
+  box-shadow: 0 8px 30px oklch(0 0 0 / 0.12);
+  font-family: inherit;
+  max-width: 320px;
+}
+
+.driver-popover.stackdome-tour .driver-popover-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.driver-popover.stackdome-tour .driver-popover-description {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fg-2);
+}
+
+.driver-popover.stackdome-tour .driver-popover-progress-text {
+  font-size: 0.6875rem;
+  color: var(--fg-muted);
+}
+
+.driver-popover.stackdome-tour button.driver-popover-next-btn,
+.driver-popover.stackdome-tour button.driver-popover-prev-btn {
+  background-color: var(--brand);
+  color: var(--primary-foreground);
+  border: none;
+  border-radius: 9999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-shadow: none;
+}
+
+.driver-popover.stackdome-tour button.driver-popover-prev-btn {
+  background-color: transparent;
+  color: var(--fg-2);
+  border: 1px solid var(--border);
+}
+
+.driver-popover.stackdome-tour button.driver-popover-next-btn:hover {
+  background-color: var(--brand-hover);
+}
+
+.driver-popover.stackdome-tour .driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: var(--popover);
+}
+.driver-popover.stackdome-tour .driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: var(--popover);
+}
+.driver-popover.stackdome-tour .driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--popover);
+}
+.driver-popover.stackdome-tour .driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: var(--popover);
+}

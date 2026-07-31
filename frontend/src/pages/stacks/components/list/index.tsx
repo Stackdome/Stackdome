@@ -1,8 +1,11 @@
 import { Layers, PlusCircle, Loader2, AlertTriangle, Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Navigate, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
+import { getClusters } from "@/api/clusters";
+import { buildHelloStackSeed } from "@/pages/stacks/onboarding/hello-stack-seed";
+import { startWelcome, isTourDone } from "@/pages/stacks/onboarding/tour";
 import { useToast } from "@/components/ui/use-toast";
 import { useConfirm } from "@/components/branded/confirm";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
@@ -82,6 +85,29 @@ export default function StacksPage() {
       setIsLoading(false);
     }
   }, [setStacks]);
+
+  // First-run onboarding: fresh org (no stacks) with a cluster ready → offer
+  // the guided demo-stack tour. Fires at most once per page mount; the tour
+  // module owns the never-show-again flag.
+  const navigate = useNavigate();
+  const tourOffered = useRef(false);
+  useEffect(() => {
+    if (isLoading || error || stacks.length > 0 || tourOffered.current) return;
+    if (!canWriteAnyProject || isTourDone()) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) return;
+    tourOffered.current = true;
+    getClusters(orgId)
+      .then((clusters) => {
+        if ((clusters.items ?? []).length === 0) return;
+        startWelcome(() =>
+          navigate("/stacks/new", { state: { seed: buildHelloStackSeed() } }),
+        );
+      })
+      .catch(() => {
+        // No tour on a failed lookup — the normal empty state still shows.
+      });
+  }, [isLoading, error, stacks, canWriteAnyProject, navigate]);
 
   // Stacks created by preview environments are shown on the Previews page only.
   const previewStackIds = useMemo(() => {
