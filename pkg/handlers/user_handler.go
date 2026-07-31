@@ -93,7 +93,9 @@ func (a usersHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		&req,
 		validation.ValidateUserCreate(&req),
 		func() (_ interface{}, returnErr *errors.ServiceError) {
-			ctx := r.Context()
+			// FIXME(hack): carries the request host so self-hosted signups can
+			// seed an inferred first domain — see services/signup_host.go.
+			ctx := services.WithSignupHost(r.Context(), r.Host)
 			convertedUser := presenters.ConvertUser(&req)
 
 			inviteToken := ""

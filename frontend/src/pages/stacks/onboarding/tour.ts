@@ -74,50 +74,84 @@ export function startWelcome(onAccept: () => void): void {
   );
 }
 
-/** Beats 2–5 on the draft canvas. The last step leaves the Deploy pill
-    interactive — clicking it deploys and the editor tab switch advances us. */
+/** Beats 2–5 on the draft canvas. The web-card step waits for the user to
+    click the card; the opened drawer gets its own beat before moving on. The
+    last step leaves the Deploy pill interactive — clicking it deploys and the
+    editor tab switch advances us. */
 export function runCanvasTour(): void {
   if (stage !== "canvas") return;
-  run([
-    {
-      element: '[data-testid="stack-canvas"]',
-      popover: {
-        title: "This is your stack",
-        description:
-          "Each card is a container. Lines show who talks to whom: web pushes jobs to redis, the worker picks them up.",
-        side: "top",
+  let drawerWatch: MutationObserver | null = null;
+  const d = run(
+    [
+      {
+        element: '[data-testid="stack-canvas"]',
+        popover: {
+          title: "This is your stack",
+          description:
+            "Each card is a container. Lines show who talks to whom: web pushes jobs to redis, the worker picks them up.",
+          side: "top",
+        },
       },
-    },
-    {
-      element: '.react-flow__node[data-id="resource:web"]',
-      popover: {
-        title: "The web service",
-        description:
-          "Built straight from a Git repo — no image to push. Click any card later to see its configuration. Everything here is already set up.",
-        side: "right",
+      {
+        element: '.react-flow__node[data-id="resource:web"]',
+        popover: {
+          title: "The web service",
+          description:
+            "Built straight from a Git repo — no image to push. Click the card to peek inside.",
+          side: "right",
+          showButtons: ["close"],
+        },
+        disableActiveInteraction: false,
+        onHighlighted: () => {
+          drawerWatch?.disconnect();
+          drawerWatch = new MutationObserver(() => {
+            if (document.querySelector('[data-testid="resource-drawer"]')) {
+              drawerWatch?.disconnect();
+              drawerWatch = null;
+              setTimeout(() => d.moveNext(), 350);
+            }
+          });
+          drawerWatch.observe(document.body, { childList: true, subtree: true });
+        },
       },
-    },
-    {
-      element: '.react-flow__node[data-id="resource:worker"]',
-      popover: {
-        title: "The worker has no URL",
-        description:
-          "No port, no ingress — on purpose. Only web is reachable from outside; the worker just watches the queue.",
-        side: "right",
+      {
+        element: '[data-testid="resource-drawer"]',
+        popover: {
+          title: "Everything is prefilled",
+          description:
+            "Configuration, environment variables, deployment settings — all seeded from the demo repo. This is where you'd tune a real service.",
+          side: "left",
+          onNextClick: () => {
+            document
+              .querySelector<HTMLButtonElement>('[data-testid="resource-drawer"] [aria-label="Close"]')
+              ?.click();
+            setTimeout(() => d.moveNext(), 300);
+          },
+        },
       },
-    },
-    {
-      element: '[data-testid="deploy-pill"]',
-      popover: {
-        title: "Ship it",
-        description:
-          "Click Deploy. Your cluster will clone the repo, build both images, and roll everything out.",
-        side: "top",
-        showButtons: ["close"],
+      {
+        element: '.react-flow__node[data-id="resource:worker"]',
+        popover: {
+          title: "The worker has no URL",
+          description:
+            "No port, no ingress — on purpose. Only web is reachable from outside; the worker just watches the queue.",
+          side: "right",
+        },
       },
-      disableActiveInteraction: false,
-    },
-  ]);
+      {
+        element: '[data-testid="deploy-pill"]',
+        popover: {
+          title: "Ship it",
+          description:
+            "Click Deploy. Your cluster will clone the repo, build both images, and roll everything out.",
+          side: "top",
+          showButtons: ["close"],
+        },
+        disableActiveInteraction: false,
+      },
+    ],
+    { onDestroyed: () => drawerWatch?.disconnect() },
+  );
 }
 
 /** Beat 6 — the activity timeline right after Deploy. Dismissing hands off to
