@@ -123,7 +123,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "Deployment",
           description:
-            "This controls how the container starts. Leave it empty to use the image's own default, or set a command and an init step to run first.",
+            "This controls how the container starts. The demo sets its start command here. Leave it empty and the image's own default is used.",
           side: "left",
           align: "center",
           onNextClick: () => {

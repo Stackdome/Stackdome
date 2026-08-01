@@ -53,6 +53,9 @@ export function buildHelloStackSeed(): DraftSeed {
         source: { image: { ref: HELLO_STACK_WEB_IMAGE } },
         ports: [{ name: "http-3000", number: 3000, protocol: "http", exposed_to_public: true }],
         execution_config: {
+          // Same as the image's own default — spelled out so the deployment
+          // tab has something real to show.
+          command: "node server.js",
           environment_variables: [
             { from: "stack", name: "CELEBRATION", value: "confetti" },
             { from: "stack", name: "HAT", value: "party" },
