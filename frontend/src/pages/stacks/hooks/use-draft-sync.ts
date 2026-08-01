@@ -13,8 +13,10 @@ import {
   SYNC_STATUS,
   type SyncStatus,
 } from "@/pages/stacks/lib/draft-sync/constants";
-import { serverStateFromStack, type ServerStackState } from "@/pages/stacks/lib/draft-sync/server-state";
-import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
+import { serverConnectionIndex, type ServerConnectionIndex } from "@/pages/stacks/lib/draft-sync/server-state";
+import { canonicalFromStack } from "@/pages/stacks/lib/stack-model/from-api";
+import { canonicalFromDraft } from "@/pages/stacks/lib/stack-model/from-form";
+import type { CanonicalStack } from "@/pages/stacks/lib/stack-model/canonical";
 import { computeSyncOps, type SyncOp } from "@/pages/stacks/lib/draft-sync/ops";
 import { isBadRequestError } from "@/api/client";
 import { parseApiError, type ParsedFieldError } from "@/api/errors";
@@ -119,7 +121,9 @@ export function useDraftSync({
   const refetchStackRef = useRef(refetchStack);
   refetchStackRef.current = refetchStack;
 
-  const mirrorRef = useRef<ServerStackState | null>(null);
+  /** What the server holds, in the shape every comparison speaks, plus the
+   *  connection ids the write path needs. */
+  const mirrorRef = useRef<{ stack: CanonicalStack; connections: ServerConnectionIndex } | null>(null);
   const runningRef = useRef<Promise<boolean> | null>(null);
   const queuedRef = useRef(false);
   const failuresRef = useRef(0);
@@ -131,7 +135,7 @@ export function useDraftSync({
   // refetches (and notifyExternalUpdate) keep it truthful.
   useEffect(() => {
     if (enabled && stack && !mirrorRef.current) {
-      mirrorRef.current = serverStateFromStack(stack);
+      mirrorRef.current = { stack: canonicalFromStack(stack), connections: serverConnectionIndex(stack) };
     }
   }, [enabled, stack]);
 
@@ -161,8 +165,7 @@ export function useDraftSync({
         resources: cloneJson(s.draft.resources),
         volumes: cloneJson(s.draft.volumes),
       };
-      const desired = buildDesiredState(snapshot);
-      const ops = computeSyncOps(mirror, desired);
+      const ops = computeSyncOps(mirror.stack, canonicalFromDraft(snapshot), mirror.connections);
       if (ops.length === 0) {
         failuresRef.current = 0;
         setFailureCount(0);
@@ -188,7 +191,7 @@ export function useDraftSync({
         const fresh = fetchFresh
           ? await fetchFresh()
           : await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
-        mirrorRef.current = serverStateFromStack(fresh);
+        mirrorRef.current = { stack: canonicalFromStack(fresh), connections: serverConnectionIndex(fresh) };
         if (!fetchFresh) onRefreshedRef.current(fresh);
         // Deliberately NOT rebasing the session here: the diff baseline stays
         // pinned to the deployed release so autosaved edits remain visibly
@@ -216,7 +219,7 @@ export function useDraftSync({
           const fresh = fetchFresh
             ? await fetchFresh()
             : await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
-          mirrorRef.current = serverStateFromStack(fresh);
+          mirrorRef.current = { stack: canonicalFromStack(fresh), connections: serverConnectionIndex(fresh) };
           if (!fetchFresh) onRefreshedRef.current(fresh);
         } catch {
           /* keep the stale mirror; the next attempt refetches again */
@@ -306,7 +309,7 @@ export function useDraftSync({
   flushRef.current = flush;
 
   const notifyExternalUpdate = useCallback((fresh: Stack) => {
-    mirrorRef.current = serverStateFromStack(fresh);
+    mirrorRef.current = { stack: canonicalFromStack(fresh), connections: serverConnectionIndex(fresh) };
   }, []);
 
   // Best-effort persistence when the tab hides or the page unmounts.

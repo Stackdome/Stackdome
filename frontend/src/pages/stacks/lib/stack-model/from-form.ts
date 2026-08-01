@@ -86,7 +86,12 @@ export function canonicalResourceFromForm(
     source: normalizeSource(api.source as never),
     env,
     mounts,
-    execution_config: { command: execution.command ?? [], args: execution.args ?? [] },
+    execution_config: {
+      ...execution,
+      environment_variables: undefined,
+      command: execution.command ?? [],
+      args: execution.args ?? [],
+    },
   } as CanonicalResource;
 }
 

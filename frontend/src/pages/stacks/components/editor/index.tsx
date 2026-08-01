@@ -51,7 +51,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
 import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { useVolumeDelete } from "@/pages/stacks/hooks/use-volume-delete";
-import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
+import { canonicalFromDraft } from "@/pages/stacks/lib/stack-model/from-form";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 import { useConfirm } from "@/components/branded/confirm";
 
@@ -464,11 +464,11 @@ export default function CanvasEditorPage() {
   // Live drawer validation: compute desired state from draft and expose zod issues
   // per resource index. Issue paths are relative to the resource root (no
   // ["spec","stack_resources",idx] prefix — drop that prefix at this boundary).
-  const desiredState = useMemo(() => buildDesiredState(session.draft), [session.draft]);
+  const canonicalDraft = useMemo(() => canonicalFromDraft(session.draft), [session.draft]);
 
   const validationErrors = useMemo(() => {
     const resources: { [index: number]: { [field: string]: string | undefined } } = {};
-    desiredState.resourceIssues.forEach((issues, idx) => {
+    canonicalDraft.issues.forEach((issues, idx) => {
       resources[idx] = {};
       for (const issue of issues) {
         const fieldKey = issue.path.join(".");
@@ -476,7 +476,7 @@ export default function CanvasEditorPage() {
       }
     });
     return { resources, volumes: {} };
-  }, [desiredState.resourceIssues]);
+  }, [canonicalDraft.issues]);
 
   // Merge live zod validation (index-keyed) with backend field errors (name-keyed).
   // Resolve each server error's resource NAME to its CURRENT index here so the

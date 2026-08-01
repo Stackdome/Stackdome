@@ -1,6 +1,7 @@
-import type { Stack, StackUpdateRequest, StackResource, StackResourceUpdateRequest, Volume } from "@/api/stacks";
+import type { Stack, StackUpdateRequest, StackResourceUpdateRequest, Volume } from "@/api/stacks";
 import type { StackReleaseSnapshot } from "@/api/releases";
-import { cleanServerResource } from "./server-state";
+import { canonicalFromSnapshot, canonicalFromStack } from "@/pages/stacks/lib/stack-model/from-api";
+import { resourceToApi } from "@/pages/stacks/lib/stack-model/to-api";
 
 function cleanVolume(v: Volume) {
   // Strip every readOnly Volume field (id, project_id, status) — the whole-stack
@@ -56,8 +57,8 @@ export function snapshotToUpdateRequest(
     name: current.name,
     labels: current.labels,
     spec: {
-      stack_resources: (snap.resources ?? []).map((r) =>
-        withExplicitEmptyCollections(cleanServerResource(r as StackResource)),
+      stack_resources: canonicalFromSnapshot(snap).resources.map((r) =>
+        withExplicitEmptyCollections(resourceToApi(r)),
       ),
       volumes: (snap.volumes ?? []).length > 0 ? (snap.volumes ?? []).map((v) => cleanVolume(v as Volume)) : undefined,
       ...(connections.length > 0 ? { connections } : {}),
@@ -76,8 +77,8 @@ export function stackToUpdateRequest(stack: Stack, labels: Stack["labels"]): Sta
     name: stack.name,
     labels,
     spec: {
-      stack_resources: (stack.spec?.stack_resources ?? []).map((r) =>
-        withExplicitEmptyCollections(cleanServerResource(r as StackResource)),
+      stack_resources: canonicalFromStack(stack).resources.map((r) =>
+        withExplicitEmptyCollections(resourceToApi(r)),
       ),
       volumes:
         (stack.spec?.volumes ?? []).length > 0

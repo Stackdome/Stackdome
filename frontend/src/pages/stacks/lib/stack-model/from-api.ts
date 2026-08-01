@@ -42,6 +42,9 @@ export function canonicalResourceFromApi(
     env: sortEnv([...envRowsFromApi(r), ...connectionsToEnvRows(name, connections)]),
     mounts: sortMounts(connectionsToMounts(name, connections)),
     execution_config: {
+      // Spread first so a key the API grows later rides along untouched.
+      ...r.execution_config,
+      environment_variables: undefined,
       command: r.execution_config?.command ?? [],
       args: r.execution_config?.args ?? [],
     },
