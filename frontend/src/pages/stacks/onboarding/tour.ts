@@ -202,11 +202,16 @@ export function runTimelineStep(): void {
   );
 }
 
-/** Both header variants (collapsed/expanded) render an endpoint row; only one
-    is visible. Spotlight the visible one. */
+/** Both header variants render an endpoint row: a compact chip and a wide row
+    that spells out the address. Spotlight whichever shows the address, i.e.
+    the widest one currently on screen. */
 function visibleEndpointRow(): Element {
-  const rows = [...document.querySelectorAll('[data-tour="public-endpoints"]')];
-  return rows.find((el) => (el as HTMLElement).offsetParent !== null) ?? rows[0];
+  const rows = [...document.querySelectorAll('[data-tour="public-endpoints"]')].filter(
+    (el) => (el as HTMLElement).offsetParent !== null,
+  );
+  return rows.reduce((widest, el) =>
+    el.getBoundingClientRect().width > widest.getBoundingClientRect().width ? el : widest,
+  );
 }
 
 /** Beat 8 — the public URL chip once the release has converged. */
