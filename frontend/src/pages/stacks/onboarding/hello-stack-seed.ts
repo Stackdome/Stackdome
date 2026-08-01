@@ -3,6 +3,8 @@ import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 /** The public demo repo the cluster clones and builds at deploy time. */
 export const HELLO_STACK_REPO_URL = "https://github.com/Stackdome/stackdome-demo";
+/** Published image for web, so the demo shows both ways to source a resource. */
+export const HELLO_STACK_WEB_IMAGE = "quay.io/stackdome/hello-stack-web";
 const HELLO_STACK_NAME = "hello-stack";
 const HELLO_STACK_BRANCH = "main";
 
@@ -42,10 +44,15 @@ export function buildHelloStackSeed(): DraftSeed {
     name: HELLO_STACK_NAME,
     labels: [],
     resources: [
-      gitService("web", "hello-stack/web", {
+      {
+        name: "web",
+        workload_type: "Service",
+        sourceType: "image",
+        labels: [],
+        depends_on: ["redis"],
+        source: { image: { ref: HELLO_STACK_WEB_IMAGE } },
         ports: [{ name: "http-3000", number: 3000, protocol: "http", exposed_to_public: true }],
         execution_config: {
-          command: "node server.js",
           environment_variables: [
             { from: "stack", name: "CELEBRATION", value: "confetti" },
             { from: "stack", name: "HAT", value: "party" },
@@ -56,11 +63,10 @@ export function buildHelloStackSeed(): DraftSeed {
             { from: "resource", name: "PUBLIC_URL", resourceName: "web", output: "public_url" },
           ],
         },
-      }),
+      } as FormStackResourceData,
       // No ports on the worker — it is reachable by nobody, on purpose.
       gitService("worker", "hello-stack/worker", {
         execution_config: {
-          command: "node index.js",
           environment_variables: [{ from: "stack", name: "REDIS_URL", value: REDIS_URL }],
         },
       }),

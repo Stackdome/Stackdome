@@ -79,7 +79,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "This is the Stack Canvas",
           description:
-            "Your whole app lives here as one stack. Each card is a resource: one container with its own settings. The lines show who talks to whom: web sends jobs to redis, and the worker picks them up.",
+            "Your whole app lives here as one stack. Each card is a resource. The lines show who talks to whom.",
         },
       },
       {
@@ -87,7 +87,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "The web resource",
           description:
-            "This is the part people visit. It builds straight from a Git repo, so there is no image to upload. Click the card to look inside.",
+            "This one runs a ready-made container image. Click the card to look inside.",
           side: "bottom",
           showButtons: ["close"],
         },
@@ -109,7 +109,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "Configuration",
           description:
-            "The basics live here: the name, the Git repo it builds from, and the port it listens on. All filled in for the demo.",
+            "The basics live here: the name, where the image comes from, and the port it listens on. All filled in for the demo.",
           side: "left",
           align: "center",
           onNextClick: () => {
@@ -123,7 +123,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "Deployment",
           description:
-            "This controls how the container starts. Our web app starts with node server.js. You can also run an init command before it.",
+            "This controls how the container starts. Leave it empty to use the image's own default, or set a command and an init step to run first.",
           side: "left",
           align: "center",
           onNextClick: () => {
@@ -153,7 +153,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "The worker stays private",
           description:
-            "It has no port and no URL on purpose. Only web faces the internet. The worker sits in the back and does the jobs.",
+            "This one is built from a Git repo instead of an image. It has no port, so nothing outside can reach it.",
           side: "right",
         },
       },
