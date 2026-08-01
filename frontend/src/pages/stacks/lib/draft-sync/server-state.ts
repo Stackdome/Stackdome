@@ -1,5 +1,6 @@
 import type { Stack, StackResource, StackResourceUpdateRequest, Volume, VolumeUpdateRequest } from "@/api/stacks";
 import type { StackConnection } from "@/api/connections";
+import { withGitBuildDefaults } from "@/pages/stacks/lib/git-build-defaults";
 
 /**
  * The engine's mirror of what the server currently holds for a stack, indexed
@@ -45,11 +46,15 @@ export function cleanServerResource(r: StackResource): StackResourceUpdateReques
   // while the desired state strips them too — both sides must be undefined so
   // deepEqual sees no phantom diff on every autosave cycle.
   // workload_type is zod-defaulted to "Service" on the form side; mirror that
-  // default here so a server resource without it doesn't read as dirty.
+  // default here so a server resource without it doesn't read as dirty. Git
+  // build paths carry API defaults the form spells out — same treatment.
   return {
     ...rest,
     volume_mounts: undefined,
     workload_type: rest.workload_type ?? "Service",
+    ...(rest.source?.git
+      ? { source: { ...rest.source, git: withGitBuildDefaults(rest.source.git) } }
+      : {}),
   } as StackResourceUpdateRequest;
 }
 

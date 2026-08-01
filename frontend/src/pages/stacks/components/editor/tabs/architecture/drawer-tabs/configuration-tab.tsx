@@ -27,6 +27,7 @@ import { ImageRegistrySelect } from "./image-registry-select";
 import { splitImageRef, joinImageRef } from "@/pages/stacks/lib/image-ref";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
+import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/git-build-defaults";
 
 type Resource = Partial<FormStackResourceData>;
 type VolumeMount = NonNullable<FormStackResourceData["volume_mounts"]>[number];
@@ -124,8 +125,8 @@ function StackResourceConfigurationTabImpl({
       source: {
         git: {
           repo_url: current?.repo_url ?? '',
-          dockerfile_path: current?.dockerfile_path ?? 'Dockerfile',
-          build_context: current?.build_context ?? '.',
+          dockerfile_path: current?.dockerfile_path ?? DEFAULT_DOCKERFILE_PATH,
+          build_context: current?.build_context ?? DEFAULT_BUILD_CONTEXT,
           branch: current?.branch,
           tag: current?.tag,
           commit: current?.commit,
@@ -328,7 +329,7 @@ function StackResourceConfigurationTabImpl({
                 if (sourceType === "git") {
                   update({
                     sourceType,
-                    source: { git: draft.stashedGitSource ?? { repo_url: "", dockerfile_path: "Dockerfile", build_context: "." } },
+                    source: { git: draft.stashedGitSource ?? { repo_url: "", dockerfile_path: DEFAULT_DOCKERFILE_PATH, build_context: DEFAULT_BUILD_CONTEXT } },
                     stashedImageSource: draft.source?.image ?? draft.stashedImageSource,
                   });
                 } else {
@@ -557,7 +558,7 @@ function StackResourceConfigurationTabImpl({
                     value={draft.source?.git?.dockerfile_path ?? ""}
                     onChange={(e) => updateGitSource({ dockerfile_path: e.target.value })}
                     onBlur={(e) => {
-                      if (!e.target.value.trim()) updateGitSource({ dockerfile_path: "Dockerfile" });
+                      if (!e.target.value.trim()) updateGitSource({ dockerfile_path: DEFAULT_DOCKERFILE_PATH });
                     }}
                     placeholder="Dockerfile"
                     className="h-9 font-mono text-[12.5px]"
@@ -583,7 +584,7 @@ function StackResourceConfigurationTabImpl({
                     value={draft.source?.git?.build_context ?? ""}
                     onChange={(e) => updateGitSource({ build_context: e.target.value })}
                     onBlur={(e) => {
-                      if (!e.target.value.trim()) updateGitSource({ build_context: "." });
+                      if (!e.target.value.trim()) updateGitSource({ build_context: DEFAULT_BUILD_CONTEXT });
                     }}
                     placeholder="."
                     className="h-9 font-mono text-[12.5px]"

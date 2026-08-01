@@ -1,5 +1,6 @@
 import type { components } from "@/api/types/openapi";
 import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-diff";
+import { withGitBuildDefaults } from "@/pages/stacks/lib/git-build-defaults";
 
 export type Snap = components["schemas"]["StackReleaseSnapshot"];
 type SnapResource = components["schemas"]["StackResource"];
@@ -17,7 +18,7 @@ function resourcesOf(snap: unknown): SnapResource[] {
 }
 
 function configScalars(r: SnapResource): Record<string, string | undefined> {
-  const git = r.source?.git;
+  const git = r.source?.git && withGitBuildDefaults(r.source.git);
   return {
     "image": r.source?.image?.ref,
     "repo": git?.repo_url,
@@ -55,8 +56,8 @@ const GENERIC_ROW: DiffRow = { key: "other configuration", kind: "changed" };
 function canonicalResource(r: SnapResource, dropRevisions: RevisionKey[]): unknown {
   const out = { ...r } as Record<string, unknown>;
   for (const k of RESOURCE_SERVER_FIELDS) delete out[k];
-  if (dropRevisions.length && r.source?.git) {
-    const git = { ...r.source.git } as Record<string, unknown>;
+  if (r.source?.git) {
+    const git = withGitBuildDefaults(r.source.git) as Record<string, unknown>;
     for (const k of dropRevisions) delete git[k];
     out.source = { ...r.source, git };
   }
