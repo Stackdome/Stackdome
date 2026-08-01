@@ -28,7 +28,12 @@ function run(steps: DriveStep[], opts?: { onDestroyed?: () => void }): Driver {
   const d = driver({
     popoverClass: "stackdome-tour",
     showProgress: steps.length > 1,
+    showButtons: ["next", "close"],
     allowClose: true,
+    // A guided tour: stray clicks on the dimmed page do nothing, and the
+    // spotlit element is inert unless a step opts back in (click-me beats).
+    overlayClickBehavior: () => {},
+    disableActiveInteraction: true,
     overlayOpacity: 0.55,
     stagePadding: 6,
     stageRadius: 10,
@@ -43,35 +48,26 @@ function run(steps: DriveStep[], opts?: { onDestroyed?: () => void }): Driver {
   return d;
 }
 
-/** Beat 1 — element-less welcome popover on the stacks list. Accepting seeds
-    the demo draft; closing marks the tour done and never shows it again. */
-export function startWelcome(onAccept: () => void): void {
-  let accepted = false;
-  run(
-    [
-      {
-        popover: {
-          title: "Deploy your first stack",
-          description:
-            "We prepared a small demo app — a web service, a queue, and a background worker. Take a two-minute tour and watch it go live.",
-          nextBtnText: "Show me",
-          onNextClick: () => {
-            accepted = true;
-            stage = "canvas";
-            active?.destroy();
-            onAccept();
-          },
-        },
-      },
-    ],
-    { onDestroyed: () => { if (!accepted) markTourDone(); } },
-  );
+/** Beat 1 lives in WelcomeDialog (a real dialog, not a driver popover); on
+    accept it calls this before seeding the draft so beat 2 can pick up. */
+export function startCanvasStage(): void {
+  stage = "canvas";
 }
 
-/** Beats 2–5 on the draft canvas. The web-card step waits for the user to
-    click the card; the opened drawer gets its own beat before moving on. The
-    last step leaves the Deploy pill interactive — clicking it deploys and the
-    editor tab switch advances us. */
+/** Clicks the drawer's nth tab (0 configuration, 1 deployment, 2 environment).
+    Radix tabs activate on mousedown, so a bare click() does nothing. */
+function clickDrawerTab(index: number): void {
+  const tab = document.querySelectorAll<HTMLButtonElement>(
+    '[data-testid="resource-drawer"] [role="tab"]',
+  )[index];
+  tab?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+  tab?.click();
+}
+
+/** Beats 2–8 on the draft canvas. The web-card step waits for the user to
+    click the card; the opened drawer gets one beat per tab so each concept is
+    explained where it lives. The last step leaves the Deploy pill interactive —
+    clicking it deploys and the editor tab switch advances us. */
 export function runCanvasTour(): void {
   if (stage !== "canvas") return;
   let drawerWatch: MutationObserver | null = null;
@@ -80,19 +76,20 @@ export function runCanvasTour(): void {
       {
         element: '[data-testid="stack-canvas"]',
         popover: {
-          title: "This is your stack",
+          title: "This is the stack canvas",
           description:
-            "Each card is a container. Lines show who talks to whom: web pushes jobs to redis, the worker picks them up.",
-          side: "top",
+            "Your whole app lives here as one stack. Each card is a resource: one container with its own settings. The lines show who talks to whom: web sends jobs to redis, and the worker picks them up.",
+          side: "bottom",
+          align: "center",
         },
       },
       {
         element: '.react-flow__node[data-id="resource:web"]',
         popover: {
-          title: "The web service",
+          title: "The web resource",
           description:
-            "Built straight from a Git repo — no image to push. Click the card to peek inside.",
-          side: "right",
+            "This is the part people visit. It builds straight from a Git repo, so there is no image to upload. Click the card to look inside.",
+          side: "bottom",
           showButtons: ["close"],
         },
         disableActiveInteraction: false,
@@ -111,10 +108,39 @@ export function runCanvasTour(): void {
       {
         element: '[data-testid="resource-drawer"]',
         popover: {
-          title: "Everything is prefilled",
+          title: "Configuration",
           description:
-            "Configuration, environment variables, deployment settings — all seeded from the demo repo. This is where you'd tune a real service.",
+            "The basics live here: the name, the Git repo it builds from, and the port it listens on. All filled in for the demo.",
           side: "left",
+          align: "center",
+          onNextClick: () => {
+            clickDrawerTab(1);
+            setTimeout(() => d.moveNext(), 250);
+          },
+        },
+      },
+      {
+        element: '[data-testid="resource-drawer"]',
+        popover: {
+          title: "Deployment",
+          description:
+            "This controls how the container starts. Our web app starts with node server.js. You can also run an init command before it.",
+          side: "left",
+          align: "center",
+          onNextClick: () => {
+            clickDrawerTab(2);
+            setTimeout(() => d.moveNext(), 250);
+          },
+        },
+      },
+      {
+        element: '[data-testid="resource-drawer"]',
+        popover: {
+          title: "Environment",
+          description:
+            "The variables the app reads at runtime. PUBLIC_URL is special: it fills in with the app's own address at deploy time.",
+          side: "left",
+          align: "center",
           onNextClick: () => {
             document
               .querySelector<HTMLButtonElement>('[data-testid="resource-drawer"] [aria-label="Close"]')
@@ -126,18 +152,18 @@ export function runCanvasTour(): void {
       {
         element: '.react-flow__node[data-id="resource:worker"]',
         popover: {
-          title: "The worker has no URL",
+          title: "The worker stays private",
           description:
-            "No port, no ingress — on purpose. Only web is reachable from outside; the worker just watches the queue.",
+            "It has no port and no URL on purpose. Only web faces the internet. The worker sits in the back and does the jobs.",
           side: "right",
         },
       },
       {
         element: '[data-testid="deploy-pill"]',
         popover: {
-          title: "Ship it",
+          title: "Time to deploy",
           description:
-            "Click Deploy. Your cluster will clone the repo, build both images, and roll everything out.",
+            "Click Deploy. Your cluster will fetch the code, build it, and start everything up.",
           side: "top",
           showButtons: ["close"],
         },
@@ -149,21 +175,31 @@ export function runCanvasTour(): void {
 }
 
 /** Beat 6 — the activity timeline right after Deploy. Dismissing hands off to
-    the build; we come back when the release converges. */
+    the build; we come back when the release converges. The feed grows as
+    events stream in, so the spotlight follows the element's size. */
 export function runTimelineStep(): void {
   stage = "deploying";
-  run([
-    {
-      element: '[data-tour="deploy-timeline"]',
-      popover: {
-        title: "Watch it build",
-        description:
-          "This feed is live: cloning, image builds, rollout. Builds take a few minutes — when the stack is live we'll show you where to click.",
-        side: "left",
-        doneBtnText: "I'll watch",
+  let grow: ResizeObserver | null = null;
+  const d = run(
+    [
+      {
+        element: '[data-tour="deploy-timeline"]',
+        popover: {
+          title: "Watch it get deployed",
+          description:
+            "Every step shows up here as it happens. The build takes a few minutes. When the app is live, we will point you to it.",
+          side: "left",
+          doneBtnText: "Got it",
+        },
+        onHighlighted: (el) => {
+          if (!el) return;
+          grow = new ResizeObserver(() => d.refresh());
+          grow.observe(el);
+        },
       },
-    },
-  ]);
+    ],
+    { onDestroyed: () => grow?.disconnect() },
+  );
 }
 
 /** Both header variants (collapsed/expanded) render an endpoint row; only one
@@ -182,7 +218,7 @@ export function runLiveStep(): void {
         element: visibleEndpointRow,
         popover: {
           title: "Your app is live",
-          description: "This is its public URL. Open it — it has been waiting to celebrate with you.",
+          description: "Here is its public address. Open it and say hello.",
           side: "bottom",
           doneBtnText: "Finish",
         },

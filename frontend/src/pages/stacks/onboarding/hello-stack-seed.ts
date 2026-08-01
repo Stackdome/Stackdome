@@ -45,6 +45,7 @@ export function buildHelloStackSeed(): DraftSeed {
       gitService("web", "hello-stack/web", {
         ports: [{ name: "http-3000", number: 3000, protocol: "http", exposed_to_public: true }],
         execution_config: {
+          command: "node server.js",
           environment_variables: [
             { from: "stack", name: "CELEBRATION", value: "confetti" },
             { from: "stack", name: "HAT", value: "party" },
@@ -59,10 +60,8 @@ export function buildHelloStackSeed(): DraftSeed {
       // No ports on the worker — it is reachable by nobody, on purpose.
       gitService("worker", "hello-stack/worker", {
         execution_config: {
-          environment_variables: [
-            { from: "stack", name: "CELEBRATION", value: "confetti" },
-            { from: "stack", name: "REDIS_URL", value: REDIS_URL },
-          ],
+          command: "node index.js",
+          environment_variables: [{ from: "stack", name: "REDIS_URL", value: REDIS_URL }],
         },
       }),
       {

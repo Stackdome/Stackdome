@@ -149,12 +149,12 @@ export function CanvasEditor({
               {readOnly ? (
                 <>
                   <Lock className="size-[13px]" aria-hidden />
-                  viewing the live deployment · read-only · click a node to inspect
+                  viewing the live deployment · read-only · click a card to inspect
                 </>
               ) : (
                 <>
                   <Move className="size-[13px]" aria-hidden />
-                  drag to rearrange · click a node to configure · edges show stack connections
+                  drag to rearrange · click a card to configure · lines show stack connections
                 </>
               )}
             </div>
