@@ -30,49 +30,9 @@ export interface StackDiff {
   perVolumeDirty: Map<number, PerVolumeDirty>;
 }
 
-/** Recursive structural equality that treats `undefined` like a missing key. */
-/** True when `v` carries no semantic content — undefined/null, empty string,
- *  empty array, or an object whose values are all themselves structurally empty.
- *  Used by deepEqual so that `{cmd: []}` vs `undefined` (a common form/baseline
- *  mismatch produced by clearing a comma-separated field) reads as equal. */
-function isStructurallyEmpty(v: unknown): boolean {
-  if (v === null || v === undefined) return true;
-  if (typeof v === "string") return v === "";
-  if (Array.isArray(v)) return v.every(isStructurallyEmpty);
-  if (typeof v === "object") {
-    return Object.values(v as Record<string, unknown>).every(isStructurallyEmpty);
-  }
-  return false;
-}
+import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-model/equal";
 
-export function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (isStructurallyEmpty(a) && isStructurallyEmpty(b)) return true;
-  if (a === null || b === null) return a === b;
-  if (typeof a !== typeof b) return false;
-  if (typeof a !== "object") return false;
-
-  if (Array.isArray(a) || Array.isArray(b)) {
-    if (!Array.isArray(a) || !Array.isArray(b)) return false;
-    if (a.length !== b.length) return false;
-    for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false;
-    }
-    return true;
-  }
-
-  const ao = a as Record<string, unknown>;
-  const bo = b as Record<string, unknown>;
-  // Exclude structurally-empty values (undefined, [], {}) so that server fields
-  // like `depends_on: []` compare equal to missing form fields.
-  const aKeys = Object.keys(ao).filter((k) => !isStructurallyEmpty(ao[k]));
-  const bKeys = Object.keys(bo).filter((k) => !isStructurallyEmpty(bo[k]));
-  if (aKeys.length !== bKeys.length) return false;
-  for (const k of aKeys) {
-    if (!deepEqual(ao[k], bo[k])) return false;
-  }
-  return true;
-}
+export { deepEqual, pairByFingerprint };
 
 /** Count top-level field changes between two objects (shallow on keys, deep on values). */
 function countChangedFields(
@@ -335,30 +295,6 @@ export function alignBaselineToDraft<T extends { name?: string }>(
     if (!b?.name || !used.has(b.name)) aligned.push(b);
   }
   return aligned;
-}
-
-/**
- * Greedily pair entries from two lists whose fingerprints match; each entry is
- * used at most once. Rename detection: a removed entry and an added entry with
- * the same content fingerprint are one renamed entity, not two changes.
- */
-export function pairByFingerprint<A, B>(
-  as: A[],
-  bs: B[],
-  fpA: (a: A) => string,
-  fpB: (b: B) => string,
-): Array<[A, B]> {
-  const pairs: Array<[A, B]> = [];
-  const usedB = new Set<number>();
-  for (const a of as) {
-    const fp = fpA(a);
-    const idx = bs.findIndex((b, i) => !usedB.has(i) && fpB(b) === fp);
-    if (idx >= 0) {
-      usedB.add(idx);
-      pairs.push([a, bs[idx]]);
-    }
-  }
-  return pairs;
 }
 
 /**
