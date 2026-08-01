@@ -20,6 +20,7 @@ import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deploymen
 import { ArchitectureTab } from "@/pages/stacks/components/editor/tabs/architecture/architecture-tab";
 import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-editor-shell";
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
+import { useEditorTour } from "@/pages/stacks/onboarding/use-editor-tour";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
@@ -194,6 +195,8 @@ export default function CanvasEditorPage() {
       return [{ service: r.name, url: urls[0].url, port: urls[0].target_port, variant, urls }];
     });
   }, [isNewStack, effectiveStack, orgDomains, convergedReleaseDetail, statusLiveStatus]);
+
+  useEditorTour({ isNewStack, activeTab, hasEndpoints: publicEndpoints.length > 0 });
 
   // Current server state as form data — what the canvas displays and the edit
   // session's working draft seeds from.

@@ -276,7 +276,7 @@ export function PublicEndpointRow({
 
   if (compact) {
     return (
-      <div className="flex flex-none items-center gap-1.5">
+      <div className="flex flex-none items-center gap-1.5" data-tour="public-endpoints">
         {endpoints.map((e) => (
           <EndpointChip key={`${e.service}-${e.url}`} endpoint={e} reveal="tooltip" copiedUrl={copiedUrl} onCopy={onCopy} />
         ))}
@@ -285,7 +285,7 @@ export function PublicEndpointRow({
   }
 
   return (
-    <div className="mt-3.5 flex flex-wrap items-center gap-2">
+    <div className="mt-3.5 flex flex-wrap items-center gap-2" data-tour="public-endpoints">
       <span className="font-mono text-[9.5px] font-medium uppercase tracking-[0.16em] text-fg-muted">
         PUBLIC
       </span>

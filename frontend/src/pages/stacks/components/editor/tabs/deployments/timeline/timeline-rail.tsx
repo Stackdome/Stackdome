@@ -71,7 +71,7 @@ export function TimelineRail(props: TimelineRailProps) {
   const prevSeqFor = (idx: number) => releases[idx + 1]?.sequence;
 
   return (
-    <div className="space-y-0">
+    <div className="space-y-0" data-tour="deploy-timeline">
       {banner && <div className="mb-5">{banner}</div>}
 
       {draftNode}

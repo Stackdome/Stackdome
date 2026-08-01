@@ -1,8 +1,12 @@
 import { Layers, PlusCircle, Loader2, AlertTriangle, Search, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Navigate, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
+import { getOrganization } from "@/api/organizations";
+import { buildHelloStackSeed } from "@/pages/stacks/onboarding/hello-stack-seed";
+import { startCanvasStage, isTourDone, markTourDone } from "@/pages/stacks/onboarding/tour";
+import { WelcomeDialog } from "@/pages/stacks/onboarding/welcome-dialog";
 import { useToast } from "@/components/ui/use-toast";
 import { useConfirm } from "@/components/branded/confirm";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
@@ -82,6 +86,40 @@ export default function StacksPage() {
       setIsLoading(false);
     }
   }, [setStacks]);
+
+  // The demo exposes a public port, so an org without a domain cannot finish
+  // the tour.
+  const navigate = useNavigate();
+  const tourOffered = useRef(false);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  useEffect(() => {
+    if (isLoading || error || stacks.length > 0 || tourOffered.current) return;
+    if (!canWriteAnyProject || isTourDone()) return;
+    const orgId = getCurrentOrganizationId();
+    if (!orgId) return;
+    tourOffered.current = true;
+    getOrganization(orgId)
+      .then((org) => {
+        if ((org.domains ?? []).length === 0) return;
+        setWelcomeOpen(true);
+      })
+      .catch(() => {
+        // No tour on a failed lookup — the normal empty state still shows.
+      });
+  }, [isLoading, error, stacks, canWriteAnyProject]);
+
+  const acceptTour = () => {
+    setWelcomeOpen(false);
+    startCanvasStage();
+    navigate("/stacks/new", { state: { seed: buildHelloStackSeed() } });
+  };
+
+  const closeTour = () => setWelcomeOpen(false);
+
+  const optOutTour = () => {
+    markTourDone();
+    setWelcomeOpen(false);
+  };
 
   // Stacks created by preview environments are shown on the Previews page only.
   const previewStackIds = useMemo(() => {
@@ -332,6 +370,12 @@ export default function StacksPage() {
       )}
 
       <StackCreateWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+      <WelcomeDialog
+        open={welcomeOpen}
+        onTakeTour={acceptTour}
+        onClose={closeTour}
+        onOptOut={optOutTour}
+      />
     </div>
   );
 }

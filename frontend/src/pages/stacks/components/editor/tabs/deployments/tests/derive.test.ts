@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime, ResourceFailureType } from "../derive";
-import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant } from "../derive";
+import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant, BUILD_READY_CONDITION, CONDITION_TRUE } from "../derive";
 import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpinnedGitRevisions } from "../derive";
 import type { FailingResource, Stack, StackResource } from "../derive";
 import type { StackRelease, ReleaseLiveStatus, ReleaseSummary } from "@/api/releases";
@@ -15,8 +15,12 @@ function liveStatusWith(resources: Record<string, Record<string, unknown>>): Rel
 
 function readinessLiveStatus(state: string): ReleaseLiveStatus {
   return liveStatusWith({
-    web: { state, last_failure: {
-      type: ResourceFailureType.Readiness, container: { failure_type: "port_not_listening", reason: "PortNotListening" } } },
+    web: {
+      state,
+      conditions: [{ type: BUILD_READY_CONDITION, status: CONDITION_TRUE }],
+      last_failure: {
+        type: ResourceFailureType.Readiness, container: { failure_type: "port_not_listening", reason: "PortNotListening" } },
+    },
   });
 }
 
@@ -185,6 +189,33 @@ describe("deriveStages", () => {
   it("live status presence does NOT mark an in-flight release converged (overlay is present for active releases too)", () => {
     const liveStatus = { resources: {} } as ReleaseLiveStatus;
     expect(deriveStages(release({ id: "r1", state: "InProgress", pins: imagePins }), [], liveStatus))
+      .toEqual({ build: "active", deploy: "todo", ready: "todo" });
+  });
+
+  it("build stays active while a resource is still waiting on its image build", () => {
+    const liveStatus = {
+      resources: {
+        redis: { conditions: [{ type: "Available", status: CONDITION_TRUE }] },
+        worker: { conditions: [{ type: BUILD_READY_CONDITION, status: "False" }] },
+      },
+    } as unknown as ReleaseLiveStatus;
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), [], liveStatus))
+      .toEqual({ build: "active", deploy: "todo", ready: "todo" });
+  });
+
+  it("build stays active until the agent publishes a build condition at all", () => {
+    const liveStatus = {
+      resources: { redis: { conditions: [{ type: "Available", status: CONDITION_TRUE }] } },
+    } as unknown as ReleaseLiveStatus;
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), [], liveStatus))
+      .toEqual({ build: "active", deploy: "todo", ready: "todo" });
+  });
+
+  it("build moves on once every build reports ready", () => {
+    const liveStatus = {
+      resources: { worker: { conditions: [{ type: BUILD_READY_CONDITION, status: CONDITION_TRUE }] } },
+    } as unknown as ReleaseLiveStatus;
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), [], liveStatus))
       .toEqual({ build: "done", deploy: "active", ready: "todo" });
   });
 
@@ -207,14 +238,16 @@ describe("deriveStages", () => {
 
   it("deploy failed when a condemned readiness failure occurs", () => {
     const rel = release({ state: "InProgress", pins: imagePins });
-    const failing = deriveFailingResources(rel, readinessLiveStatus("Failed"));
-    expect(deriveStages(rel, failing)).toEqual({ build: "done", deploy: "failed", ready: "todo" });
+    const live = readinessLiveStatus("Failed");
+    const failing = deriveFailingResources(rel, live);
+    expect(deriveStages(rel, failing, live)).toEqual({ build: "done", deploy: "failed", ready: "todo" });
   });
 
   it("deploy still active for a provisional readiness failure mid-rollout", () => {
     const rel = release({ state: "InProgress", pins: imagePins });
-    const failing = deriveFailingResources(rel, readinessLiveStatus("Pending"));
-    expect(deriveStages(rel, failing)).toEqual({ build: "done", deploy: "active", ready: "todo" });
+    const live = readinessLiveStatus("Pending");
+    const failing = deriveFailingResources(rel, live);
+    expect(deriveStages(rel, failing, live)).toEqual({ build: "done", deploy: "active", ready: "todo" });
   });
 
   it("terminal Failed runtime crash maps to Deploy done / Ready ✕", () => {

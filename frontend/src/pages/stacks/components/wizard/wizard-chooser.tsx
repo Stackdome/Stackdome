@@ -57,7 +57,7 @@ export function WizardChooser({
     {
       icon: Grid3x3,
       label: "Build from blocks",
-      desc: "Assemble your stack from pre-configured building blocks of resources.",
+      desc: "Assemble your stack from ready-made resources.",
       onClick: onPickBlocks,
     },
     {
