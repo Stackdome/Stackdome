@@ -4,6 +4,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
 import { getClusters } from "@/api/clusters";
+import { getOrganization } from "@/api/organizations";
 import { buildHelloStackSeed } from "@/pages/stacks/onboarding/hello-stack-seed";
 import { startCanvasStage, isTourDone, markTourDone } from "@/pages/stacks/onboarding/tour";
 import { WelcomeDialog } from "@/pages/stacks/onboarding/welcome-dialog";
@@ -87,9 +88,10 @@ export default function StacksPage() {
     }
   }, [setStacks]);
 
-  // First-run onboarding: fresh org (no stacks) with a cluster ready → offer
-  // the guided demo-stack tour. Fires at most once per page mount; the tour
-  // module owns the never-show-again flag.
+  // First-run onboarding: fresh org (no stacks) that can actually finish the
+  // flow — it needs a cluster to deploy on and a domain to expose the demo's
+  // public port. Fires at most once per page mount; the tour module owns the
+  // never-show-again flag.
   const navigate = useNavigate();
   const tourOffered = useRef(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
@@ -99,9 +101,10 @@ export default function StacksPage() {
     const orgId = getCurrentOrganizationId();
     if (!orgId) return;
     tourOffered.current = true;
-    getClusters(orgId)
-      .then((clusters) => {
+    Promise.all([getClusters(orgId), getOrganization(orgId)])
+      .then(([clusters, org]) => {
         if ((clusters.items ?? []).length === 0) return;
+        if ((org.domains ?? []).length === 0) return;
         setWelcomeOpen(true);
       })
       .catch(() => {
