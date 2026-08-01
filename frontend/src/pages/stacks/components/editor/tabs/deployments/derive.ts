@@ -4,7 +4,7 @@ import { ReleaseEventType, type ReleaseEvent, type StackRelease, type ReleaseLiv
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState, isTerminal } from "./release-states";
-import { unpinnedRevisionKeys } from "./release-snapshot-diff";
+import { REVISION_KEYS, type RevisionKey } from "@/pages/stacks/lib/stack-model/policy";
 
 export type Stack = components["schemas"]["Stack"];
 export type ReleaseHealth = components["schemas"]["ReleaseHealth"];
@@ -38,10 +38,14 @@ export function stripUnpinnedGitRevisions(
   savedResources: StackResource[],
 ): StackResource[] {
   const savedByName = new Map(savedResources.map((r) => [r.name, r]));
+  const unpinned = (saved: StackResource | undefined): RevisionKey[] => {
+    const savedGit = saved?.source?.git;
+    return savedGit ? REVISION_KEYS.filter((k) => !savedGit[k]) : [];
+  };
   return snapshotResources.map((r) => {
     const git = r.source?.git;
     if (!git) return r;
-    const drop = unpinnedRevisionKeys(savedByName.get(r.name)).filter((k) => git[k]);
+    const drop = unpinned(savedByName.get(r.name)).filter((k) => git[k]);
     if (!drop.length) return r;
     const stripped = { ...git };
     for (const k of drop) delete stripped[k];

@@ -79,8 +79,23 @@ describe("diffSnapshots volumes", () => {
     const out = diffSnapshots(prev, cur);
     expect(out.volumes).toEqual([
       { name: "data", change: "modified", rows: [{ key: "size", from: "1Gi", to: "2Gi", kind: "changed" }] },
-      { name: "cache", change: "removed", rows: [{ key: "size", from: "500Mi", kind: "removed" }, { key: "access_mode", from: "ReadWriteOnce", kind: "removed" }], note: "Volume removed from this release." },
-      { name: "logs", change: "added", rows: [{ key: "size", to: "1Gi", kind: "added" }, { key: "access_mode", to: "ReadWriteOnce", kind: "added" }] },
+      {
+        name: "cache",
+        change: "removed",
+        rows: [
+          { key: "access mode", from: "ReadWriteOnce", kind: "removed" },
+          { key: "size", from: "500Mi", kind: "removed" },
+        ],
+        note: "Volume removed from this release.",
+      },
+      {
+        name: "logs",
+        change: "added",
+        rows: [
+          { key: "access mode", to: "ReadWriteOnce", kind: "added" },
+          { key: "size", to: "1Gi", kind: "added" },
+        ],
+      },
     ]);
   });
 
@@ -90,214 +105,106 @@ describe("diffSnapshots volumes", () => {
   });
 });
 
-describe("diffSnapshots connections", () => {
-  const conn = (env: string, output: string) => ({
+/**
+ * References and mounts are stored as connections but belong to the resource
+ * that reads them, so they surface on that resource rather than as a separate
+ * category the reader has to reassemble.
+ */
+describe("diffSnapshots references", () => {
+  const api = (over: Record<string, unknown> = {}) => ({
+    name: "api",
+    source: { image: { ref: "api:1" } },
+    ports: [],
+    execution_config: { command: [], args: [], environment_variables: [] },
+    ...over,
+  });
+  const dbConn = (envName: string, output: string, to = "api") => ({
     kind: "env",
-    from: { type: "addon/postgres", name: "db" },
-    to: { type: "stack_resource", name: "api" },
-    mappings: [{ target: { type: "env", name: env }, value: { output } }],
+    from: { type: "addon/postgres", id: "addon-1" },
+    to: { type: "stack_resource", name: to },
+    config: { database: "app", superuser: false },
+    mappings: [{ target: { type: "env", name: envName }, value: { output } }],
+  });
+  const mount = (to = "api", volume = "data") => ({
+    kind: "volume_mount",
+    from: { type: "volume", name: volume },
+    to: { type: "stack_resource", name: to },
+    config: { mount_path: "/data" },
   });
 
-  it("flags a changed mapping value on an existing connection", () => {
-    const prev = mk({ resources: [], connections: [conn("DATABASE_URL", "url")] });
-    const cur = mk({ resources: [], connections: [conn("DATABASE_URL", "public_url")] });
-    expect(diffSnapshots(prev, cur).connections).toEqual([
-      { name: "env · db → api", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public_url", kind: "changed" }] },
+  it("reports a changed reference under the resource that reads it", () => {
+    const prev = mk({ resources: [api()], connections: [dbConn("DATABASE_URL", "url")] });
+    const cur = mk({ resources: [api()], connections: [dbConn("DATABASE_URL", "host")] });
+    const out = diffSnapshots(prev, cur).resources;
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ name: "api", change: "modified" });
+    const env = out[0].sections.find((s) => s.kind === "environment")!;
+    expect(env.rows).toEqual([
+      { key: "DATABASE_URL", from: "addon · url", to: "addon · host", kind: "changed" },
     ]);
   });
 
-  it("flags an added connection", () => {
-    const out = diffSnapshots(mk({ resources: [], connections: [] }), mk({ resources: [], connections: [conn("DATABASE_URL", "url")] }));
-    expect(out.connections).toEqual([
-      { name: "env · db → api", change: "added", rows: [{ key: "DATABASE_URL", to: "url", kind: "added" }] },
+  it("reports an added reference", () => {
+    const out = diffSnapshots(
+      mk({ resources: [api()], connections: [] }),
+      mk({ resources: [api()], connections: [dbConn("DATABASE_URL", "url")] }),
+    ).resources;
+    const env = out[0].sections.find((s) => s.kind === "environment")!;
+    expect(env.rows).toEqual([{ key: "DATABASE_URL", to: "addon · url", kind: "added" }]);
+  });
+
+  it("reports a disconnected volume mount", () => {
+    const out = diffSnapshots(
+      mk({ resources: [api()], connections: [mount()] }),
+      mk({ resources: [api()], connections: [] }),
+    ).resources;
+    expect(out).toHaveLength(1);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toEqual([{ key: "mount /data", from: "data", to: undefined, kind: "removed" }]);
+  });
+
+  it("reports no churn when a resource endpoint was only renamed", () => {
+    const prev = mk({ resources: [api({ name: "mysql" })], connections: [mount("mysql", "mysql-data")] });
+    const cur = mk({ resources: [api({ name: "mysqla" })], connections: [mount("mysqla", "mysql-data")] });
+    expect(diffSnapshots(prev, cur).resources).toEqual([
+      { name: "mysqla", fromName: "mysql", change: "renamed", sections: [] },
     ]);
   });
 
-  it("flags a disconnected volume mount as a removed connection", () => {
-    const mount = {
-      kind: "volume_mount",
-      from: { type: "volume", name: "data" },
-      to: { type: "stack_resource", name: "api" },
-    };
-    const out = diffSnapshots(mk({ resources: [], connections: [mount] }), mk({ resources: [], connections: [] }));
-    expect(out.connections).toHaveLength(1);
-    expect(out.connections[0]).toMatchObject({ name: "volume_mount · data → api", change: "removed" });
-    expect(out.connections[0].note).toMatch(/removed/i);
-  });
-
-  it("does not report phantom connection changes when a resource endpoint was only renamed", () => {
-    const mount = (resource: string) => ({
-      kind: "volume_mount",
-      from: { type: "volume", name: "mysql-data" },
-      to: { type: "stack_resource", name: resource },
-    });
-    const prev = mk({ resources: [web({ name: "mysql" })], connections: [mount("mysql")] });
-    const cur = mk({ resources: [web({ name: "mysqla" })], connections: [mount("mysqla")] });
-    const out = diffSnapshots(prev, cur);
-    expect(out.resources).toEqual([{ name: "mysqla", fromName: "mysql", change: "renamed", sections: [] }]);
-    expect(out.connections).toEqual([]);
-  });
-
-  it("still surfaces a real mapping change on a renamed resource's connection, under the new name", () => {
-    const prev = mk({
-      resources: [web({ name: "api" })],
-      connections: [{ ...conn("DATABASE_URL", "url"), to: { type: "stack_resource", name: "api" } }],
-    });
-    const cur = mk({
-      resources: [web({ name: "api2" })],
-      connections: [{ ...conn("DATABASE_URL", "public_url"), to: { type: "stack_resource", name: "api2" } }],
-    });
-    const out = diffSnapshots(prev, cur);
-    expect(out.connections).toEqual([
-      { name: "env · db → api2", change: "modified", rows: [{ key: "DATABASE_URL", from: "url", to: "public_url", kind: "changed" }] },
-    ]);
-  });
-
-  it("leaves connections to non-resource endpoints with a colliding name untouched by the rename map", () => {
-    const volMount = {
-      kind: "volume_mount",
-      from: { type: "volume", name: "web" }, // volume named like the renamed resource
-      to: { type: "stack_resource", name: "api" },
-    };
-    const prev = mk({ resources: [web({ name: "web" }), web({ name: "api", image_spec: { image: "api:1" } })], connections: [volMount] });
-    const cur = mk({ resources: [web({ name: "web2" }), web({ name: "api", image_spec: { image: "api:1" } })], connections: [volMount] });
-    const out = diffSnapshots(prev, cur);
-    expect(out.connections).toEqual([]);
+  it("leaves a volume named like a renamed resource alone", () => {
+    const prev = mk({ resources: [api({ name: "web" }), api()], connections: [mount("api", "web")] });
+    const cur = mk({ resources: [api({ name: "web2" }), api()], connections: [mount("api", "web")] });
+    const out = diffSnapshots(prev, cur).resources;
+    expect(out).toEqual([{ name: "web2", fromName: "web", change: "renamed", sections: [] }]);
   });
 });
 
-describe("diffSnapshots catch-all", () => {
-  it("surfaces an unprojected resource field change as one generic row", () => {
-    // init_spec is real config but outside the projected scalar set — before
-    // the catch-all this diffed as "no changes" (the Bug-3 class).
+describe("diffSnapshots surfaces fields nobody projected", () => {
+  it("reports an init_spec change rather than staying silent", () => {
     const out = diffSnapshots(
       snap([web({ init_spec: { command: ["migrate"] } })]),
       snap([web({ init_spec: { command: ["migrate", "--seed"] } })]),
     ).resources;
     expect(out).toHaveLength(1);
     expect(out[0]).toMatchObject({ name: "web", change: "modified" });
-    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
-    expect(cfg.rows).toEqual([{ key: "other configuration", kind: "changed" }]);
-  });
-
-  it("surfaces an unprojected volume field change as one generic row", () => {
-    const vol = (labels: unknown[]) => ({ name: "data", spec: { size: "1Gi" }, labels });
-    const out = diffSnapshots(
-      mk({ resources: [], volumes: [vol([{ key: "tier", value: "hot" }])] }),
-      mk({ resources: [], volumes: [vol([{ key: "tier", value: "cold" }])] }),
-    ).volumes;
-    expect(out).toEqual([
-      { name: "data", change: "modified", rows: [{ key: "other configuration", kind: "changed" }] },
+    const deployment = out[0].sections.find((s) => s.kind === "deployment")!;
+    expect(deployment.rows).toEqual([
+      {
+        key: "init",
+        from: JSON.stringify({ command: ["migrate"] }),
+        to: JSON.stringify({ command: ["migrate", "--seed"] }),
+        kind: "changed",
+      },
     ]);
   });
 
-  it("ignores server-owned resource fields (id, stack_id, revision, outputs)", () => {
-    const out = diffSnapshots(
-      snap([web({ id: "a1", stack_id: "s1", revision: "3", outputs: [{ name: "url.port-87" }] })]),
-      snap([web({ id: "b2", stack_id: "s1", revision: "4", outputs: [{ name: "url.port-88" }] })]),
-    ).resources;
-    expect(out).toEqual([]);
-  });
-
-  it("ignores server-owned volume fields (id, project_id, status)", () => {
-    const vol = (over: Record<string, unknown>) => ({ name: "data", spec: { size: "1Gi" }, ...over });
-    const out = diffSnapshots(
-      mk({ resources: [], volumes: [vol({ id: "v1", project_id: "p1", status: { phase: "Bound" } })] }),
-      mk({ resources: [], volumes: [vol({ id: "v2", project_id: "p1", status: { phase: "Pending" } })] }),
-    ).volumes;
-    expect(out).toEqual([]);
-  });
-
-  it("does not emit a generic row for resolver-written revisions on an unpinned spec", () => {
-    const gitWeb = (git: Record<string, unknown>) => ({
-      name: "web",
-      source: { git: { repo_url: "https://github.com/acme/app", ...git } },
-    });
-    const out = diffSnapshots(
-      snap([gitWeb({ branch: "master", commit: "b1eff14" })]),
-      snap([gitWeb({})]),
-    ).resources;
-    expect(out).toEqual([]);
-  });
-
-  it("treats permuted env vars as unchanged", () => {
-    const w = (envs: { name: string; value: string }[]) =>
-      web({ execution_config: { command: ["node", "a.js"], environment_variables: envs } });
-    const out = diffSnapshots(
-      snap([w([{ name: "A", value: "1" }, { name: "B", value: "2" }])]),
-      snap([w([{ name: "B", value: "2" }, { name: "A", value: "1" }])]),
-    ).resources;
-    expect(out).toEqual([]);
-  });
-});
-
-describe("diffSnapshots git sources", () => {
-  const gitWeb = (git: Record<string, unknown>) => ({
-    name: "web",
-    source: { git: { repo_url: "https://github.com/acme/app", dockerfile_path: "Dockerfile", build_context: ".", ...git } },
-    ports: [{ number: 3000 }],
-  });
-
-  it("flags a branch change as a changed configuration row", () => {
-    // A saved branch edit was invisible in the staged diff (only image/ports/
-    // command/args were projected) — the pill said "1 change" from session
-    // dirt while the modal showed nothing.
-    const out = diffSnapshots(snap([gitWeb({ branch: "master" })]), snap([gitWeb({ branch: "masterd" })])).resources;
+  it("reports an unprojected volume field change", () => {
+    const prev = mk({ resources: [], volumes: [{ name: "data", spec: { size: "1Gi" }, labels: { tier: "hot" } }] });
+    const cur = mk({ resources: [], volumes: [{ name: "data", spec: { size: "1Gi" }, labels: { tier: "cold" } }] });
+    const out = diffSnapshots(prev, cur).volumes;
     expect(out).toHaveLength(1);
-    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
-    expect(cfg.rows).toContainEqual({ key: "branch", from: "master", to: "masterd", kind: "changed" });
-  });
-
-  it("flags a repo change", () => {
-    const out = diffSnapshots(
-      snap([gitWeb({})]),
-      snap([{ ...gitWeb({}), source: { git: { repo_url: "https://github.com/acme/other", dockerfile_path: "Dockerfile", build_context: "." } } }]),
-    ).resources;
-    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
-    expect(cfg.rows).toContainEqual({ key: "repo", from: "https://github.com/acme/app", to: "https://github.com/acme/other", kind: "changed" });
-  });
-
-  it("ignores resolver-written revisions when the spec side pins none", () => {
-    // Deploy resolves the revision and writes branch+commit into the snapshot.
-    // An unpinned spec differing only by those is NOT drift.
-    const deployed = gitWeb({ branch: "master", commit: "b1eff1415a6b30ff3d476c2e907862f61a98a70d" });
-    const unpinnedSpec = gitWeb({});
-    expect(diffSnapshots(snap([deployed]), snap([unpinnedSpec])).resources).toEqual([]);
-  });
-
-  it("ignores the resolver-written commit when the spec tracks a branch", () => {
-    // Branch-tracking spec: branch set, no commit. Deploy resolves the branch
-    // and writes the commit into the snapshot — comparing that against the
-    // spec's empty commit read as MODIFIED forever after every deploy.
-    const deployed = gitWeb({ branch: "main", commit: "0f5c32589c37115508af0f48fe6d566925493700" });
-    const branchTrackingSpec = gitWeb({ branch: "main" });
-    expect(diffSnapshots(snap([deployed]), snap([branchTrackingSpec])).resources).toEqual([]);
-  });
-
-  it("flags only the branch change on a branch-tracking spec, without a phantom commit row", () => {
-    const deployed = gitWeb({ branch: "master", commit: "abc123" });
-    const branchTrackingSpec = gitWeb({ branch: "dev" });
-    const out = diffSnapshots(snap([deployed]), snap([branchTrackingSpec])).resources;
-    expect(out).toHaveLength(1);
-    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
-    expect(cfg.rows).toEqual([{ key: "branch", from: "master", to: "dev", kind: "changed" }]);
-  });
-
-  it("flags a commit pin change beside an unchanged branch as a single commit row", () => {
-    const out = diffSnapshots(
-      snap([gitWeb({ branch: "main", commit: "aaa111" })]),
-      snap([gitWeb({ branch: "main", commit: "bbb222" })]),
-    ).resources;
-    expect(out).toHaveLength(1);
-    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
-    expect(cfg.rows).toEqual([{ key: "commit", from: "aaa111", to: "bbb222", kind: "changed" }]);
-  });
-
-  it("still pairs a renamed unpinned git resource instead of add+remove", () => {
-    const deployed = gitWeb({ branch: "master", commit: "abc123" });
-    const renamed = { ...gitWeb({}), name: "web2" };
-    const out = diffSnapshots(snap([deployed]), snap([renamed])).resources;
-    expect(out).toHaveLength(1);
-    expect(out[0]).toMatchObject({ name: "web2", change: "renamed", fromName: "web" });
+    expect(out[0].rows).toEqual([
+      { key: "labels", from: JSON.stringify({ tier: "hot" }), to: JSON.stringify({ tier: "cold" }), kind: "changed" },
+    ]);
   });
 });

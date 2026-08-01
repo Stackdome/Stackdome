@@ -76,10 +76,18 @@ export const FIELD_LABELS: Record<string, string> = {
   replicas: "replicas",
   schedule: "schedule",
   mounts: "volume mounts",
+  init_spec: "init",
+  lifecycle_config: "lifecycle",
+  "spec.size": "size",
+  "spec.access_mode": "access mode",
+  "spec.storage_class": "storage class",
+  "spec.source": "source",
 };
 
 export function labelForField(path: string): string {
   if (FIELD_LABELS[path]) return FIELD_LABELS[path];
+  // Per-row paths name the row: the env var, or the container path mounted.
   if (path.startsWith("env.")) return path.slice("env.".length);
+  if (path.startsWith("mounts.")) return `mount ${path.slice("mounts.".length)}`;
   return path;
 }

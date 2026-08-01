@@ -968,9 +968,7 @@ export default function CanvasEditorPage() {
   // dirt only fills the window where the diff isn't derivable yet (release
   // detail still loading, or a new-stack draft outside the lifecycle).
   const staged = lifecycle.stagedDiff;
-  const changeCount = staged
-    ? staged.resources.length + staged.volumes.length + staged.connections.length
-    : dirtyTotal;
+  const changeCount = staged ? staged.resources.length + staged.volumes.length : dirtyTotal;
 
   return (
     <ReleaseDetailProvider value={releaseDetail}>
