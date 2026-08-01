@@ -21,13 +21,20 @@ describe("buildHelloStackSeed", () => {
     });
   });
 
-  it("gives web its own public URL, resolved at deploy", () => {
+  it("wires the addresses as references, not typed-in strings", () => {
     expect(byName.web.execution_config?.environment_variables).toContainEqual({
-      from: "resource",
+      from: "self",
       name: "PUBLIC_URL",
-      resourceName: "web",
-      output: "public_url",
+      selfOutput: "public_url",
     });
+    for (const name of ["web", "worker"]) {
+      expect(byName[name].execution_config?.environment_variables).toContainEqual({
+        from: "resource",
+        name: "REDIS_URL",
+        resourceName: "redis",
+        output: "url",
+      });
+    }
   });
 
   it("exposes only web to the public", () => {

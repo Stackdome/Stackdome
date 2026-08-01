@@ -9,7 +9,6 @@ const HELLO_STACK_NAME = "hello-stack";
 const HELLO_STACK_BRANCH = "main";
 
 const REDIS_VOLUME = "redis-data";
-const REDIS_URL = "redis://redis:6379";
 
 function gitService(
   name: string,
@@ -60,17 +59,19 @@ export function buildHelloStackSeed(): DraftSeed {
             { from: "stack", name: "CELEBRATION", value: "confetti" },
             { from: "stack", name: "HAT", value: "party" },
             { from: "stack", name: "HEADLINE", value: "Your stack is now live." },
-            { from: "stack", name: "REDIS_URL", value: REDIS_URL },
-            // Self-reference resolved at deploy: the page shows its real
-            // public address without inferring it client-side.
-            { from: "resource", name: "PUBLIC_URL", resourceName: "web", output: "public_url" },
+            // Both resolved at deploy: redis's own address, and this
+            // resource's public address.
+            { from: "resource", name: "REDIS_URL", resourceName: "redis", output: "url" },
+            { from: "self", name: "PUBLIC_URL", selfOutput: "public_url" },
           ],
         },
       } as FormStackResourceData,
       // No ports on the worker — it is reachable by nobody, on purpose.
       gitService("worker", "hello-stack/worker", {
         execution_config: {
-          environment_variables: [{ from: "stack", name: "REDIS_URL", value: REDIS_URL }],
+          environment_variables: [
+            { from: "resource", name: "REDIS_URL", resourceName: "redis", output: "url" },
+          ],
         },
       }),
       {
