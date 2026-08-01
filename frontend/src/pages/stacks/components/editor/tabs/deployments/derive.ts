@@ -243,6 +243,18 @@ function hasBuildResources(release: StackRelease): boolean {
   return releaseGitSha(release) !== undefined;
 }
 
+/** Condition the agent raises once a resource's image build has finished.
+    Mirrors StackResourceBuildReady in the cluster-agent CRD. Image-sourced
+    resources never carry it. */
+const BUILD_READY_CONDITION = "BuildReady";
+
+/** True while any resource is still waiting on its image build. */
+function buildInFlight(liveStatus?: ReleaseLiveStatus): boolean {
+  return Object.values(liveStatus?.resources ?? {}).some((r) =>
+    (r.conditions ?? []).some((c) => c.type === BUILD_READY_CONDITION && c.status !== "True"),
+  );
+}
+
 /**
  * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
  * deriveFailingResources(release, liveStatus) — recovered resources excluded, so any
@@ -250,7 +262,7 @@ function hasBuildResources(release: StackRelease): boolean {
  * is present for ACTIVE releases too (overlay presence rule), so its mere presence
  * says nothing about being converged.
  */
-export function deriveStages(release: StackRelease, failing: FailingResource[], _liveStatus?: ReleaseLiveStatus): Stages {
+export function deriveStages(release: StackRelease, failing: FailingResource[], liveStatus?: ReleaseLiveStatus): Stages {
   const buildFailed = failing.some((f) => f.type === ResourceFailureType.Build);
   const runtimeFailed = failing.some((f) => f.type === ResourceFailureType.Runtime);
   const hasBuild = hasBuildResources(release);
@@ -268,6 +280,11 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
       : { build: "skipped", deploy: "active", ready: "todo" };
   }
   if (state === ReleaseState.InProgress) {
+    // Builds run inside the convergence loop, so InProgress does not mean every
+    // image is ready — a resource still building holds the Build stage open.
+    if (hasBuild && buildInFlight(liveStatus)) {
+      return { build: "active", deploy: "todo", ready: "todo" };
+    }
     return {
       build: hasBuild ? "done" : "skipped",
       deploy: runtimeFailed ? "failed" : "active",

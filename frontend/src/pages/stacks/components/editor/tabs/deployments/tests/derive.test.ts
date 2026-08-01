@@ -158,6 +158,25 @@ describe("deriveStages", () => {
       .toEqual({ build: "done", deploy: "active", ready: "todo" });
   });
 
+  it("build stays active while a resource is still waiting on its image build", () => {
+    const liveStatus = {
+      resources: {
+        redis: { conditions: [{ type: "Available", status: "True" }] },
+        worker: { conditions: [{ type: "BuildReady", status: "False" }] },
+      },
+    } as unknown as ReleaseLiveStatus;
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), [], liveStatus))
+      .toEqual({ build: "active", deploy: "todo", ready: "todo" });
+  });
+
+  it("build moves on once every build reports ready", () => {
+    const liveStatus = {
+      resources: { worker: { conditions: [{ type: "BuildReady", status: "True" }] } },
+    } as unknown as ReleaseLiveStatus;
+    expect(deriveStages(release({ state: "InProgress", pins: imagePins }), [], liveStatus))
+      .toEqual({ build: "done", deploy: "active", ready: "todo" });
+  });
+
   it("build active while Pending with build pins", () => {
     expect(deriveStages(release({ state: "Pending", pins: imagePins }), []))
       .toEqual({ build: "active", deploy: "todo", ready: "todo" });
