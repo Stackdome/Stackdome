@@ -19,11 +19,8 @@ import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
 import { buildDesiredConnections, mountsToConnections } from "@/pages/stacks/lib/connection-mapping";
 import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-mapping";
 import { splitImageRef } from "@/pages/stacks/lib/image-ref";
-import {
-  DEFAULT_BUILD_CONTEXT,
-  DEFAULT_DOCKERFILE_PATH,
-  withGitBuildDefaults,
-} from "@/pages/stacks/lib/git-build-defaults";
+import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/stack-model/policy";
+import { withGitDefaults } from "@/pages/stacks/lib/stack-model/normalize";
 
 /**
  * Form-specific UI schema additions
@@ -475,7 +472,7 @@ function convertApiResourceToFormResource(
     sourceType,
     // The form spells the git build defaults out in its fields, so the read
     // path must too — otherwise every unset one reads as a user edit.
-    ...(git ? { source: { ...resource.source, git: withGitBuildDefaults(git) } } : {}),
+    ...(git ? { source: { ...resource.source, git: withGitDefaults(git) } } : {}),
     gitRevisionType,
     gitRevisionValue,
     gitCommitPin,

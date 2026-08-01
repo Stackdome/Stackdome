@@ -82,6 +82,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "spec.access_mode": "access mode",
   "spec.storage_class": "storage class",
   "spec.source": "source",
+  "spec.needs_sync_before_use": "sync before use",
 };
 
 export function labelForField(path: string): string {

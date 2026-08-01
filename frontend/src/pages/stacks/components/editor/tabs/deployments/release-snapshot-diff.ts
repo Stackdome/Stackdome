@@ -3,6 +3,7 @@ import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-map
 import { canonicalFromSnapshot } from "@/pages/stacks/lib/stack-model/from-api";
 import { diffStacks, type EntityDiff, type FieldChange } from "@/pages/stacks/lib/stack-model/diff";
 import { labelForField, type FieldSection } from "@/pages/stacks/lib/stack-model/policy";
+import { isStructurallyEmpty } from "@/pages/stacks/lib/stack-model/equal";
 
 export type Snap = components["schemas"]["StackReleaseSnapshot"];
 
@@ -34,7 +35,8 @@ function mountLabel(m: FormMountRow): string {
 }
 
 function formatValue(path: string, value: unknown): string | undefined {
-  if (value === undefined || value === null) return undefined;
+  // An absent value has many spellings; none of them is worth a row.
+  if (isStructurallyEmpty(value)) return undefined;
   if (path.startsWith("env.")) return envRowLabel(value as FormEnvRow);
   if (path.startsWith("mounts.")) return mountLabel(value as FormMountRow);
   if (path === "ports") {

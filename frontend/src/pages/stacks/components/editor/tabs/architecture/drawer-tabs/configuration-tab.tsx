@@ -27,7 +27,7 @@ import { ImageRegistrySelect } from "./image-registry-select";
 import { splitImageRef, joinImageRef } from "@/pages/stacks/lib/image-ref";
 
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData } from "@/pages/stacks/schemas/form-schema";
-import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/git-build-defaults";
+import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/stack-model/policy";
 
 type Resource = Partial<FormStackResourceData>;
 type VolumeMount = NonNullable<FormStackResourceData["volume_mounts"]>[number];

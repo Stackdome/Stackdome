@@ -1,6 +1,6 @@
 import { sanitizeKubernetesName } from "@/lib/docker-compose-converter";
 import type { PickedRepo } from "@/components/git-source-picker/types";
-import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/git-build-defaults";
+import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/stack-model/policy";
 
 export interface GitServiceForm {
   serviceName: string;
