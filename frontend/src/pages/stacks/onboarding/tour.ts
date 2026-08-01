@@ -74,13 +74,12 @@ export function runCanvasTour(): void {
   const d = run(
     [
       {
-        element: '[data-testid="stack-canvas"]',
+        // No element: the canvas fills the viewport, so anchoring pushes the
+        // popover off the top. Centred reads as the opening card it is.
         popover: {
-          title: "This is the stack canvas",
+          title: "This is the Stack Canvas",
           description:
             "Your whole app lives here as one stack. Each card is a resource: one container with its own settings. The lines show who talks to whom: web sends jobs to redis, and the worker picks them up.",
-          side: "bottom",
-          align: "center",
         },
       },
       {
