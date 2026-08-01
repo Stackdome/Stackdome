@@ -155,7 +155,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                         <button
                           key={`${l.kind}-${i}`}
                           type="button"
-                          className="block text-xs font-medium text-info hover:underline"
+                          className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-fg-muted transition-colors hover:text-brand"
                           onClick={() => setBuildLogs({
                             buildId,
                             resourceName: l.target?.[BuildLogsLinkTarget.ResourceName] ?? e.resource_name ?? "",
@@ -164,7 +164,12 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                           {l.label} &rarr;
                         </button>
                       ) : (
-                        <span key={`${l.kind ?? "link"}-${i}`} className="block text-xs font-medium text-info">{l.label} &rarr;</span>
+                        <span
+                          key={`${l.kind ?? "link"}-${i}`}
+                          className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-fg-muted"
+                        >
+                          {l.label} &rarr;
+                        </span>
                       );
                     })}
                   </span>

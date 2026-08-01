@@ -61,7 +61,7 @@ function StackResourceDeploymentTabImpl({
           label="Init command"
           htmlFor={`init-command-${index}`}
           alignTop
-          hint="Type as in a terminal; quotes group arguments. Not run in a shell — $VARS won't expand."
+          hint="Type as in a terminal; quotes group arguments. Not run in a shell, so variables like $PORT are not replaced."
         >
           <DirtyField
             draft={draft}

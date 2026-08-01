@@ -243,6 +243,21 @@ function hasBuildResources(release: StackRelease): boolean {
   return releaseGitSha(release) !== undefined;
 }
 
+/** Mirrors StackResourceBuildReady in the cluster-agent CRD. Image-sourced
+    resources never carry it. */
+export const BUILD_READY_CONDITION = "BuildReady";
+export const CONDITION_TRUE = "True";
+
+/** A build that has finished reports BuildReady=True. Until the agent publishes
+    that, the condition is missing rather than false, so an absent condition
+    means "not finished yet", not "no build". */
+function buildsFinished(liveStatus?: ReleaseLiveStatus): boolean {
+  const buildReady = Object.values(liveStatus?.resources ?? {}).flatMap((r) =>
+    (r.conditions ?? []).filter((c) => c.type === BUILD_READY_CONDITION),
+  );
+  return buildReady.length > 0 && buildReady.every((c) => c.status === CONDITION_TRUE);
+}
+
 /**
  * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
  * deriveFailingResources(release, liveStatus) — recovered resources excluded, so any
@@ -250,7 +265,7 @@ function hasBuildResources(release: StackRelease): boolean {
  * is present for ACTIVE releases too (overlay presence rule), so its mere presence
  * says nothing about being converged.
  */
-export function deriveStages(release: StackRelease, failing: FailingResource[], _liveStatus?: ReleaseLiveStatus): Stages {
+export function deriveStages(release: StackRelease, failing: FailingResource[], liveStatus?: ReleaseLiveStatus): Stages {
   const buildFailed = failing.some((f) => f.type === ResourceFailureType.Build);
   const runtimeFailed = failing.some((f) => f.type === ResourceFailureType.Runtime);
   const hasBuild = hasBuildResources(release);
@@ -268,6 +283,11 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
       : { build: "skipped", deploy: "active", ready: "todo" };
   }
   if (state === ReleaseState.InProgress) {
+    // Builds run inside the convergence loop, so InProgress does not mean every
+    // image is ready. A crashed container is proof its build finished.
+    if (hasBuild && !runtimeFailed && !buildsFinished(liveStatus)) {
+      return { build: "active", deploy: "todo", ready: "todo" };
+    }
     return {
       build: hasBuild ? "done" : "skipped",
       deploy: runtimeFailed ? "failed" : "active",
