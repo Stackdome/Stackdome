@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
-import { getClusters } from "@/api/clusters";
 import { getOrganization } from "@/api/organizations";
 import { buildHelloStackSeed } from "@/pages/stacks/onboarding/hello-stack-seed";
 import { startCanvasStage, isTourDone, markTourDone } from "@/pages/stacks/onboarding/tour";
@@ -88,8 +87,8 @@ export default function StacksPage() {
     }
   }, [setStacks]);
 
-  // Only offer the tour where it can finish: deploying the demo needs a cluster,
-  // and its public port needs a domain.
+  // The demo exposes a public port, so an org without a domain cannot finish
+  // the tour.
   const navigate = useNavigate();
   const tourOffered = useRef(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
@@ -99,9 +98,8 @@ export default function StacksPage() {
     const orgId = getCurrentOrganizationId();
     if (!orgId) return;
     tourOffered.current = true;
-    Promise.all([getClusters(orgId), getOrganization(orgId)])
-      .then(([clusters, org]) => {
-        if ((clusters.items ?? []).length === 0) return;
+    getOrganization(orgId)
+      .then((org) => {
         if ((org.domains ?? []).length === 0) return;
         setWelcomeOpen(true);
       })
