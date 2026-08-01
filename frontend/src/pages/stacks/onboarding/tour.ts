@@ -138,7 +138,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "The worker stays private",
           description:
-            "This one is built from a Git repo instead of an image. It has no port, so nothing outside can reach it.",
+            "It has no port, so nothing outside can reach it. Only web can, over the private network.",
           side: "right",
         },
       },
@@ -147,7 +147,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "Time to deploy",
           description:
-            "Click Deploy. Your cluster will fetch the code, build it, and start everything up.",
+            "Click Deploy. Your cluster will pull the images and start everything up.",
           side: "top",
           showButtons: ["close"],
         },
@@ -170,7 +170,7 @@ export function runTimelineStep(): void {
         popover: {
           title: "Watch it get deployed",
           description:
-            "Every step shows up here as it happens. The build takes a few minutes. When the app is live, we will point you to it.",
+            "Every step shows up here as it happens. This takes a minute or two. When the app is live, we will point you to it.",
           side: "left",
           doneBtnText: "Got it",
         },

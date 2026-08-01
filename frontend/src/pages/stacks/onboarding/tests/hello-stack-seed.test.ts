@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildHelloStackSeed,
-  HELLO_STACK_REPO_URL,
   HELLO_STACK_WEB_IMAGE,
+  HELLO_STACK_WORKER_IMAGE,
 } from "../hello-stack-seed";
 
 describe("buildHelloStackSeed", () => {
@@ -13,12 +13,9 @@ describe("buildHelloStackSeed", () => {
     expect(Object.keys(byName).sort()).toEqual(["redis", "web", "worker"]);
   });
 
-  it("shows both ways to source a resource: an image for web, a repo for worker", () => {
+  it("runs web and worker from published images", () => {
     expect(byName.web.source?.image?.ref).toBe(HELLO_STACK_WEB_IMAGE);
-    expect(byName.worker.source?.git).toMatchObject({
-      repo_url: HELLO_STACK_REPO_URL,
-      build_context: "hello-stack/worker",
-    });
+    expect(byName.worker.source?.image?.ref).toBe(HELLO_STACK_WORKER_IMAGE);
   });
 
   it("wires the addresses as references, not typed-in strings", () => {

@@ -1,11 +1,9 @@
 import type { DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
-export const HELLO_STACK_REPO_URL = "https://github.com/Stackdome/stackdome-demo";
-/** Published image for web, so the demo shows both ways to source a resource. */
 export const HELLO_STACK_WEB_IMAGE = "quay.io/stackdome/hello-stack-web";
+export const HELLO_STACK_WORKER_IMAGE = "quay.io/stackdome/hello-stack-worker";
 const HELLO_STACK_NAME = "hello-stack";
-const HELLO_STACK_BRANCH = "main";
 
 const REDIS_VOLUME = "redis-data";
 const REDIS_ADDRESS = {
@@ -45,20 +43,12 @@ export function buildHelloStackSeed(): DraftSeed {
       {
         name: "worker",
         workload_type: "Service",
-        sourceType: "git",
+        sourceType: "image",
         labels: [],
         depends_on: ["redis"],
         // No ports on purpose — the tour teaches private resources.
         ports: [],
-        gitRevisionType: "branch",
-        gitRevisionValue: HELLO_STACK_BRANCH,
-        source: {
-          git: {
-            repo_url: HELLO_STACK_REPO_URL,
-            dockerfile_path: "Dockerfile",
-            build_context: "hello-stack/worker",
-          },
-        },
+        source: { image: { ref: HELLO_STACK_WORKER_IMAGE } },
         execution_config: { environment_variables: [REDIS_ADDRESS] },
       } as FormStackResourceData,
       {
