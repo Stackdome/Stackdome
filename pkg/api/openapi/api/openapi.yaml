@@ -11111,6 +11111,7 @@ components:
           - image_pull_failed
           - create_container_error
           - exit_error
+          - port_not_listening
           type: string
         reason:
           type: string
@@ -11138,6 +11139,7 @@ components:
           - image_pull_failed
           - create_container_error
           - exit_error
+          - port_not_listening
           type: string
         reason:
           type: string
@@ -11176,6 +11178,7 @@ components:
           enum:
           - runtime_crash
           - build_failure
+          - readiness_failure
           type: string
         container:
           $ref: '#/components/schemas/ContainerFailureDetail'

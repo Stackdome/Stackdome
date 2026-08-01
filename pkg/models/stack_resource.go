@@ -144,8 +144,9 @@ type Ingress struct {
 type StackResourceFailureType string
 
 const (
-	FailureTypeRuntimeCrash StackResourceFailureType = "runtime_crash"
-	FailureTypeBuildFailure StackResourceFailureType = "build_failure"
+	FailureTypeRuntimeCrash     StackResourceFailureType = "runtime_crash"
+	FailureTypeBuildFailure     StackResourceFailureType = "build_failure"
+	FailureTypeReadinessFailure StackResourceFailureType = "readiness_failure"
 )
 
 type ContainerFailureDetail struct {

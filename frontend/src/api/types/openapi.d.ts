@@ -8316,7 +8316,7 @@ export interface components {
         };
         ContainerFailureDetail: {
             /** @enum {string} */
-            failure_type?: "crash_loop" | "out_of_memory" | "image_pull_failed" | "create_container_error" | "exit_error";
+            failure_type?: "crash_loop" | "out_of_memory" | "image_pull_failed" | "create_container_error" | "exit_error" | "port_not_listening";
             reason?: string;
             message?: string;
             /** Format: int32 */
@@ -8326,7 +8326,7 @@ export interface components {
         };
         BuildFailureDetail: {
             /** @enum {string} */
-            failure_type?: "crash_loop" | "out_of_memory" | "image_pull_failed" | "create_container_error" | "exit_error";
+            failure_type?: "crash_loop" | "out_of_memory" | "image_pull_failed" | "create_container_error" | "exit_error" | "port_not_listening";
             reason?: string;
             message?: string;
             /** Format: int32 */
@@ -8336,7 +8336,7 @@ export interface components {
         };
         StackResourceFailure: {
             /** @enum {string} */
-            type?: "runtime_crash" | "build_failure";
+            type?: "runtime_crash" | "build_failure" | "readiness_failure";
             container?: components["schemas"]["ContainerFailureDetail"];
             init_container?: components["schemas"]["ContainerFailureDetail"];
             build?: components["schemas"]["BuildFailureDetail"];

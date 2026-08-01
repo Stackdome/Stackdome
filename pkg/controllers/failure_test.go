@@ -5,6 +5,8 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/controllers"
 	"github.com/Stackdome/stackdome/pkg/models"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
@@ -14,14 +16,15 @@ func TestMapFailureType(t *testing.T) {
 		reason   string
 		expected string
 	}{
-		{"CrashLoopBackOff", "crash_loop"},
-		{"OOMKilled", "out_of_memory"},
-		{"ImagePullBackOff", "image_pull_failed"},
-		{"ErrImagePull", "image_pull_failed"},
-		{"CreateContainerError", "create_container_error"},
-		{"Error", "exit_error"},
-		{"", "exit_error"},
-		{"SomethingUnknown", "exit_error"},
+		{controllers.ReasonCrashLoopBackOff, controllers.FailureTypeCrashLoop},
+		{controllers.ReasonOOMKilled, controllers.FailureTypeOutOfMemory},
+		{controllers.ReasonImagePullBackOff, controllers.FailureTypeImagePullFailed},
+		{controllers.ReasonErrImagePull, controllers.FailureTypeImagePullFailed},
+		{controllers.ReasonCreateContainerError, controllers.FailureTypeCreateContainerError},
+		{controllers.ReasonPortNotListening, controllers.FailureTypePortNotListening},
+		{"Error", controllers.FailureTypeExitError},
+		{"", controllers.FailureTypeExitError},
+		{"SomethingUnknown", controllers.FailureTypeExitError},
 	}
 	for _, tc := range cases {
 		t.Run(tc.reason, func(t *testing.T) {
@@ -45,7 +48,7 @@ func TestMapLastFailureDetails_mainContainer(t *testing.T) {
 		{
 			ContainerName:           "web",
 			RestartCount:            3,
-			LastTerminationReason:   "CrashLoopBackOff",
+			LastTerminationReason:   controllers.ReasonCrashLoopBackOff,
 			LastTerminationMessage:  "back-off restarting",
 			LastTerminationExitCode: ptr.To(int32(1)),
 		},
@@ -60,8 +63,8 @@ func TestMapLastFailureDetails_mainContainer(t *testing.T) {
 	if got.Container == nil {
 		t.Fatal("expected Container to be set")
 	}
-	if got.Container.FailureType != "crash_loop" {
-		t.Errorf("Container.FailureType = %q, want crash_loop", got.Container.FailureType)
+	if got.Container.FailureType != controllers.FailureTypeCrashLoop {
+		t.Errorf("Container.FailureType = %q, want %q", got.Container.FailureType, controllers.FailureTypeCrashLoop)
 	}
 	if got.Container.RestartCount != 3 {
 		t.Errorf("Container.RestartCount = %d, want 3", got.Container.RestartCount)
@@ -87,8 +90,8 @@ func TestMapLastFailureDetails_initContainer(t *testing.T) {
 	if got.InitContainer == nil {
 		t.Fatal("expected InitContainer to be set")
 	}
-	if got.InitContainer.FailureType != "exit_error" {
-		t.Errorf("InitContainer.FailureType = %q, want exit_error", got.InitContainer.FailureType)
+	if got.InitContainer.FailureType != controllers.FailureTypeExitError {
+		t.Errorf("InitContainer.FailureType = %q, want %q", got.InitContainer.FailureType, controllers.FailureTypeExitError)
 	}
 	if got.Container != nil {
 		t.Errorf("expected Container to be nil")
@@ -114,8 +117,8 @@ func TestMapBuildFailureDetail(t *testing.T) {
 	if got == nil {
 		t.Fatal("expected non-nil result")
 	}
-	if got.FailureType != "exit_error" {
-		t.Errorf("FailureType = %q, want exit_error", got.FailureType)
+	if got.FailureType != controllers.FailureTypeExitError {
+		t.Errorf("FailureType = %q, want %q", got.FailureType, controllers.FailureTypeExitError)
 	}
 	if got.Message != "COPY failed: file not found" {
 		t.Errorf("Message = %q", got.Message)
@@ -124,3 +127,44 @@ func TestMapBuildFailureDetail(t *testing.T) {
 		t.Errorf("ExitCode = %v, want 1", got.ExitCode)
 	}
 }
+
+var _ = Describe("MapLastFailureDetails", func() {
+	const resourceName = "web"
+
+	It("types a readiness failure from the agent's detail type", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, []corev1alpha1.LastFailureDetail{{
+			Type:                   corev1alpha1.FailureTypeReadinessFailure,
+			ContainerName:          resourceName,
+			LastTerminationReason:  controllers.ReasonPortNotListening,
+			LastTerminationMessage: "readiness check failed: nothing listening on port 8080",
+		}})
+
+		Expect(failure.Type).To(Equal(models.FailureTypeReadinessFailure))
+		Expect(failure.Container).NotTo(BeNil())
+		Expect(failure.Container.FailureType).To(Equal(controllers.FailureTypePortNotListening))
+		Expect(failure.Container.Reason).To(Equal(controllers.ReasonPortNotListening))
+		Expect(failure.Container.Message).To(ContainSubstring("nothing listening on port 8080"))
+		Expect(failure.Container.ExitCode).To(BeNil())
+		Expect(failure.Container.RestartCount).To(BeZero())
+	})
+
+	It("treats an empty detail type as a runtime crash, for older agents", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, []corev1alpha1.LastFailureDetail{{
+			ContainerName:         resourceName,
+			LastTerminationReason: controllers.ReasonCrashLoopBackOff,
+			RestartCount:          5,
+		}})
+
+		Expect(failure.Type).To(Equal(models.FailureTypeRuntimeCrash))
+		Expect(failure.Container.FailureType).To(Equal(controllers.FailureTypeCrashLoop))
+	})
+
+	It("types a mixed slice as a readiness failure", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, []corev1alpha1.LastFailureDetail{
+			{Type: corev1alpha1.FailureTypeRuntimeCrash, ContainerName: resourceName + "-init"},
+			{Type: corev1alpha1.FailureTypeReadinessFailure, ContainerName: resourceName},
+		})
+
+		Expect(failure.Type).To(Equal(models.FailureTypeReadinessFailure))
+	})
+})

@@ -795,6 +795,7 @@ const BuildFailureDetail = z
       "image_pull_failed",
       "create_container_error",
       "exit_error",
+      "port_not_listening",
     ]),
     reason: z.string(),
     message: z.string(),
@@ -979,6 +980,7 @@ const ContainerFailureDetail = z
       "image_pull_failed",
       "create_container_error",
       "exit_error",
+      "port_not_listening",
     ]),
     reason: z.string(),
     message: z.string(),
@@ -989,7 +991,7 @@ const ContainerFailureDetail = z
   .passthrough();
 const StackResourceFailure = z
   .object({
-    type: z.enum(["runtime_crash", "build_failure"]),
+    type: z.enum(["runtime_crash", "build_failure", "readiness_failure"]),
     container: ContainerFailureDetail,
     init_container: ContainerFailureDetail,
     build: BuildFailureDetail,
