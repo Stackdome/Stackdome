@@ -1,7 +1,6 @@
 import type { DraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
-/** The public demo repo the cluster clones and builds at deploy time. */
 export const HELLO_STACK_REPO_URL = "https://github.com/Stackdome/stackdome-demo";
 /** Published image for web, so the demo shows both ways to source a resource. */
 export const HELLO_STACK_WEB_IMAGE = "quay.io/stackdome/hello-stack-web";
@@ -9,35 +8,14 @@ const HELLO_STACK_NAME = "hello-stack";
 const HELLO_STACK_BRANCH = "main";
 
 const REDIS_VOLUME = "redis-data";
+const REDIS_ADDRESS = {
+  from: "resource",
+  name: "REDIS_URL",
+  resourceName: "redis",
+  output: "url",
+} as const;
 
-function gitService(
-  name: string,
-  buildContext: string,
-  overrides: Partial<FormStackResourceData>,
-): FormStackResourceData {
-  return {
-    name,
-    workload_type: "Service",
-    sourceType: "git",
-    labels: [],
-    depends_on: ["redis"],
-    ports: [],
-    execution_config: { environment_variables: [] },
-    gitRevisionType: "branch",
-    gitRevisionValue: HELLO_STACK_BRANCH,
-    source: {
-      git: {
-        repo_url: HELLO_STACK_REPO_URL,
-        dockerfile_path: "Dockerfile",
-        build_context: buildContext,
-      },
-    },
-    ...overrides,
-  } as FormStackResourceData;
-}
-
-/** Draft seed for the onboarding demo stack — same shape template and git
-    imports hand to /stacks/new via navigation state. Pure — no I/O. */
+/** Same shape the template and git imports hand to /stacks/new via navigation state. */
 export function buildHelloStackSeed(): DraftSeed {
   return {
     name: HELLO_STACK_NAME,
@@ -59,21 +37,30 @@ export function buildHelloStackSeed(): DraftSeed {
             { from: "stack", name: "CELEBRATION", value: "confetti" },
             { from: "stack", name: "HAT", value: "party" },
             { from: "stack", name: "HEADLINE", value: "Your stack is now live." },
-            // Both resolved at deploy: redis's own address, and this
-            // resource's public address.
-            { from: "resource", name: "REDIS_URL", resourceName: "redis", output: "url" },
+            REDIS_ADDRESS,
             { from: "self", name: "PUBLIC_URL", selfOutput: "public_url" },
           ],
         },
       } as FormStackResourceData,
-      // No ports on the worker — it is reachable by nobody, on purpose.
-      gitService("worker", "hello-stack/worker", {
-        execution_config: {
-          environment_variables: [
-            { from: "resource", name: "REDIS_URL", resourceName: "redis", output: "url" },
-          ],
+      {
+        name: "worker",
+        workload_type: "Service",
+        sourceType: "git",
+        labels: [],
+        depends_on: ["redis"],
+        // No ports on purpose — the tour teaches private resources.
+        ports: [],
+        gitRevisionType: "branch",
+        gitRevisionValue: HELLO_STACK_BRANCH,
+        source: {
+          git: {
+            repo_url: HELLO_STACK_REPO_URL,
+            dockerfile_path: "Dockerfile",
+            build_context: "hello-stack/worker",
+          },
         },
-      }),
+        execution_config: { environment_variables: [REDIS_ADDRESS] },
+      } as FormStackResourceData,
       {
         name: "redis",
         workload_type: "Service",

@@ -243,16 +243,19 @@ function hasBuildResources(release: StackRelease): boolean {
   return releaseGitSha(release) !== undefined;
 }
 
-/** Condition the agent raises once a resource's image build has finished.
-    Mirrors StackResourceBuildReady in the cluster-agent CRD. Image-sourced
+/** Mirrors StackResourceBuildReady in the cluster-agent CRD. Image-sourced
     resources never carry it. */
-const BUILD_READY_CONDITION = "BuildReady";
+export const BUILD_READY_CONDITION = "BuildReady";
+export const CONDITION_TRUE = "True";
 
-/** True while any resource is still waiting on its image build. */
-function buildInFlight(liveStatus?: ReleaseLiveStatus): boolean {
-  return Object.values(liveStatus?.resources ?? {}).some((r) =>
-    (r.conditions ?? []).some((c) => c.type === BUILD_READY_CONDITION && c.status !== "True"),
+/** A build that has finished reports BuildReady=True. Until the agent publishes
+    that, the condition is missing rather than false, so an absent condition
+    means "not finished yet", not "no build". */
+function buildsFinished(liveStatus?: ReleaseLiveStatus): boolean {
+  const buildReady = Object.values(liveStatus?.resources ?? {}).flatMap((r) =>
+    (r.conditions ?? []).filter((c) => c.type === BUILD_READY_CONDITION),
   );
+  return buildReady.length > 0 && buildReady.every((c) => c.status === CONDITION_TRUE);
 }
 
 /**
@@ -281,8 +284,8 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
   }
   if (state === ReleaseState.InProgress) {
     // Builds run inside the convergence loop, so InProgress does not mean every
-    // image is ready — a resource still building holds the Build stage open.
-    if (hasBuild && buildInFlight(liveStatus)) {
+    // image is ready. A crashed container is proof its build finished.
+    if (hasBuild && !runtimeFailed && !buildsFinished(liveStatus)) {
       return { build: "active", deploy: "todo", ready: "todo" };
     }
     return {

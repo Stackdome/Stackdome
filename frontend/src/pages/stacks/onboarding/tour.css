@@ -3,8 +3,8 @@
   background-color: var(--popover);
   color: var(--popover-foreground);
   border: 1px solid var(--border);
-  border-radius: var(--radius, 0.625rem);
-  box-shadow: 0 8px 30px oklch(0 0 0 / 0.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xl);
   font-family: inherit;
   max-width: 320px;
   padding: 1rem 1.125rem;

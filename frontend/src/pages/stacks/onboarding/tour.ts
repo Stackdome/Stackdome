@@ -4,8 +4,8 @@ import "./tour.css";
 
 const DONE_KEY = "stackdome.onboarding-tour.done";
 
-/** Where the tour is across route changes. Module state is enough — a full
-    page reload abandons the tour, which is the intended quiet failure mode. */
+/** Module state is enough — a full page reload abandons the tour, which is the
+    intended quiet failure mode. */
 type Stage = "idle" | "canvas" | "deploying" | "done";
 let stage: Stage = "idle";
 let active: Driver | null = null;
@@ -30,8 +30,6 @@ function run(steps: DriveStep[], opts?: { onDestroyed?: () => void }): Driver {
     showProgress: steps.length > 1,
     showButtons: ["next", "close"],
     allowClose: true,
-    // A guided tour: stray clicks on the dimmed page do nothing, and the
-    // spotlit element is inert unless a step opts back in (click-me beats).
     overlayClickBehavior: () => {},
     disableActiveInteraction: true,
     overlayOpacity: 0.55,
@@ -48,34 +46,30 @@ function run(steps: DriveStep[], opts?: { onDestroyed?: () => void }): Driver {
   return d;
 }
 
-/** Beat 1 lives in WelcomeDialog (a real dialog, not a driver popover); on
-    accept it calls this before seeding the draft so beat 2 can pick up. */
+/** Must run before the draft is seeded, so the canvas beats pick up on arrival. */
 export function startCanvasStage(): void {
   stage = "canvas";
 }
 
-/** Clicks the drawer's nth tab (0 configuration, 1 deployment, 2 environment).
-    Radix tabs activate on mousedown, so a bare click() does nothing. */
-function clickDrawerTab(index: number): void {
-  const tab = document.querySelectorAll<HTMLButtonElement>(
+/** Drawer tabs in render order; the tour drives them by position. */
+const DRAWER_TABS = ["configuration", "deployment", "environment"] as const;
+
+/** Radix tabs activate on mousedown, so a bare click() does nothing. */
+function showDrawerTab(tab: (typeof DRAWER_TABS)[number]): void {
+  const tabs = document.querySelectorAll<HTMLButtonElement>(
     '[data-testid="resource-drawer"] [role="tab"]',
-  )[index];
-  tab?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-  tab?.click();
+  );
+  tabs[DRAWER_TABS.indexOf(tab)]?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
 }
 
-/** Beats 2–8 on the draft canvas. The web-card step waits for the user to
-    click the card; the opened drawer gets one beat per tab so each concept is
-    explained where it lives. The last step leaves the Deploy pill interactive —
-    clicking it deploys and the editor tab switch advances us. */
+/** The Deploy step stays interactive: clicking it deploys, and the editor's own
+    switch to the deployments tab is what advances the tour. */
 export function runCanvasTour(): void {
   if (stage !== "canvas") return;
-  let drawerWatch: MutationObserver | null = null;
   const d = run(
     [
       {
-        // No element: the canvas fills the viewport, so anchoring pushes the
-        // popover off the top. Centred reads as the opening card it is.
+        // The canvas fills the viewport, so anchoring pushes the popover off the top.
         popover: {
           title: "This is the Stack Canvas",
           description:
@@ -92,20 +86,11 @@ export function runCanvasTour(): void {
           showButtons: ["close"],
         },
         disableActiveInteraction: false,
-        onHighlighted: () => {
-          drawerWatch?.disconnect();
-          drawerWatch = new MutationObserver(() => {
-            if (document.querySelector('[data-testid="resource-drawer"]')) {
-              drawerWatch?.disconnect();
-              drawerWatch = null;
-              setTimeout(() => d.moveNext(), 350);
-            }
-          });
-          drawerWatch.observe(document.body, { childList: true, subtree: true });
-        },
+        advanceOnClick: true,
       },
       {
         element: '[data-testid="resource-drawer"]',
+        waitForElement: 2000,
         popover: {
           title: "Configuration",
           description:
@@ -113,7 +98,7 @@ export function runCanvasTour(): void {
           side: "left",
           align: "center",
           onNextClick: () => {
-            clickDrawerTab(1);
+            showDrawerTab("deployment");
             setTimeout(() => d.moveNext(), 250);
           },
         },
@@ -127,7 +112,7 @@ export function runCanvasTour(): void {
           side: "left",
           align: "center",
           onNextClick: () => {
-            clickDrawerTab(2);
+            showDrawerTab("environment");
             setTimeout(() => d.moveNext(), 250);
           },
         },
@@ -169,13 +154,12 @@ export function runCanvasTour(): void {
         disableActiveInteraction: false,
       },
     ],
-    { onDestroyed: () => drawerWatch?.disconnect() },
+    // Advancing to the timeline moves the stage first; anything else here is
+    // the user closing the tour, which retires it.
+    { onDestroyed: () => { if (stage === "canvas") markTourDone(); } },
   );
 }
 
-/** Beat 6 — the activity timeline right after Deploy. Dismissing hands off to
-    the build; we come back when the release converges. The feed grows as
-    events stream in, so the spotlight follows the element's size. */
 export function runTimelineStep(): void {
   stage = "deploying";
   let grow: ResizeObserver | null = null;
@@ -190,10 +174,10 @@ export function runTimelineStep(): void {
           side: "left",
           doneBtnText: "Got it",
         },
+        // The feed grows as events stream in; the spotlight has to follow it.
         onHighlighted: (el) => {
-          if (!el) return;
           grow = new ResizeObserver(() => d.refresh());
-          grow.observe(el);
+          grow.observe(el!);
         },
       },
     ],
@@ -202,24 +186,19 @@ export function runTimelineStep(): void {
 }
 
 /** Both header variants render an endpoint row: a compact chip and a wide row
-    that spells out the address. Spotlight whichever shows the address, i.e.
-    the widest one currently on screen. */
-function visibleEndpointRow(): Element {
-  const rows = [...document.querySelectorAll('[data-tour="public-endpoints"]')].filter(
-    (el) => (el as HTMLElement).offsetParent !== null,
-  );
-  return rows.reduce((widest, el) =>
-    el.getBoundingClientRect().width > widest.getBoundingClientRect().width ? el : widest,
-  );
+    that spells out the address. */
+function widestEndpointRow(): Element | undefined {
+  return [...document.querySelectorAll('[data-tour="public-endpoints"]')]
+    .filter((el) => (el as HTMLElement).offsetParent !== null)
+    .sort((a, b) => b.getBoundingClientRect().width - a.getBoundingClientRect().width)[0];
 }
 
-/** Beat 8 — the public URL chip once the release has converged. */
 export function runLiveStep(): void {
   stage = "done";
   run(
     [
       {
-        element: visibleEndpointRow,
+        element: widestEndpointRow(),
         popover: {
           title: "Your app is live",
           description: "Here is its public address. Open it and say hello.",

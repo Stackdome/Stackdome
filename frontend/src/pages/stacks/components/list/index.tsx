@@ -88,10 +88,8 @@ export default function StacksPage() {
     }
   }, [setStacks]);
 
-  // First-run onboarding: fresh org (no stacks) that can actually finish the
-  // flow — it needs a cluster to deploy on and a domain to expose the demo's
-  // public port. Fires at most once per page mount; the tour module owns the
-  // never-show-again flag.
+  // Only offer the tour where it can finish: deploying the demo needs a cluster,
+  // and its public port needs a domain.
   const navigate = useNavigate();
   const tourOffered = useRef(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);

@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { Globe, Database, Wrench, ArrowRight } from "lucide-react";
 import {
   Dialog,
@@ -24,18 +23,9 @@ interface WelcomeDialogProps {
   onOptOut: () => void;
 }
 
-/** First-run welcome, styled after the New Stack wizard so the first thing a
-    new user sees speaks the product's own design language. */
 export function WelcomeDialog({ open, onTakeTour, onClose, onOptOut }: WelcomeDialogProps) {
-  const accepted = useRef(false);
-
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(o) => {
-        if (!o && !accepted.current) onClose();
-      }}
-    >
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <DialogContent className="block gap-0 overflow-hidden p-0 sm:max-w-[560px]">
         <DialogTitle className="sr-only">Deploy your first stack</DialogTitle>
         <DialogDescription className="sr-only">
@@ -70,12 +60,7 @@ export function WelcomeDialog({ open, onTakeTour, onClose, onOptOut }: WelcomeDi
           </div>
 
           <div className="flex flex-col items-center gap-2">
-            <Button
-              onClick={() => {
-                accepted.current = true;
-                onTakeTour();
-              }}
-            >
+            <Button onClick={onTakeTour}>
               Take the tour
               <ArrowRight className="h-4 w-4" />
             </Button>
