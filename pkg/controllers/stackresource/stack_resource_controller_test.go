@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/controllers"
 	apperrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -32,7 +33,7 @@ var _ = Describe("mapClusterStatusToServerStatus", func() {
 				{
 					ContainerName:           "web",
 					RestartCount:            5,
-					LastTerminationReason:   "CrashLoopBackOff",
+					LastTerminationReason:   controllers.ReasonCrashLoopBackOff,
 					LastTerminationMessage:  "back-off restarting",
 					LastTerminationExitCode: ptr.To(int32(1)),
 				},
@@ -44,7 +45,7 @@ var _ = Describe("mapClusterStatusToServerStatus", func() {
 		Expect(got.LastFailure).NotTo(BeNil())
 		Expect(got.LastFailure.Type).To(Equal(models.FailureTypeRuntimeCrash))
 		Expect(got.LastFailure.Container).NotTo(BeNil())
-		Expect(got.LastFailure.Container.FailureType).To(Equal("crash_loop"))
+		Expect(got.LastFailure.Container.FailureType).To(Equal(controllers.FailureTypeCrashLoop))
 		Expect(got.LastFailure.Container.RestartCount).To(Equal(int32(5)))
 		Expect(got.LastFailure.InitContainer).To(BeNil())
 	})
@@ -69,7 +70,7 @@ var _ = Describe("mapClusterStatusToServerStatus", func() {
 
 		Expect(got.LastFailure).NotTo(BeNil())
 		Expect(got.LastFailure.InitContainer).NotTo(BeNil())
-		Expect(got.LastFailure.InitContainer.FailureType).To(Equal("exit_error"))
+		Expect(got.LastFailure.InitContainer.FailureType).To(Equal(controllers.FailureTypeExitError))
 		Expect(got.LastFailure.Container).To(BeNil())
 	})
 
@@ -132,7 +133,7 @@ var _ = Describe("computeStatusRewrite", func() {
 				{
 					ContainerName:           "web",
 					RestartCount:            3,
-					LastTerminationReason:   "CrashLoopBackOff",
+					LastTerminationReason:   controllers.ReasonCrashLoopBackOff,
 					LastTerminationExitCode: ptr.To(int32(1)),
 				},
 			},
@@ -204,8 +205,16 @@ var _ = Describe("resourceEvent", func() {
 	runtimeCrash := &models.StackResourceFailure{
 		Type: models.FailureTypeRuntimeCrash,
 		Container: &models.ContainerFailureDetail{
-			Reason:  "CrashLoopBackOff",
+			Reason:  controllers.ReasonCrashLoopBackOff,
 			Message: "back-off restarting failed container",
+		},
+	}
+	portNotListening := &models.StackResourceFailure{
+		Type: models.FailureTypeReadinessFailure,
+		Container: &models.ContainerFailureDetail{
+			FailureType: controllers.FailureTypePortNotListening,
+			Reason:      controllers.ReasonPortNotListening,
+			Message:     "readiness check failed: nothing listening on port 8080",
 		},
 	}
 
@@ -266,7 +275,7 @@ var _ = Describe("resourceEvent", func() {
 			},
 			failure:     runtimeCrash,
 			wantType:    models.ReleaseEventTypeResourceFailed,
-			wantReason:  "CrashLoopBackOff",
+			wantReason:  controllers.ReasonCrashLoopBackOff,
 			wantMessage: "back-off restarting failed container",
 			wantEmit:    true,
 		}),
@@ -320,6 +329,49 @@ var _ = Describe("resourceEvent", func() {
 			wantType:    models.ReleaseEventTypeResourceDeploying,
 			wantReason:  "",
 			wantMessage: "previous revision still serving",
+			wantEmit:    true,
+		}),
+		Entry("a condemned port failure records failed with the agent's diagnosis", resourceEventCase{
+			conditions: []models.Condition{
+				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionTrue), "ServingButStalled", "workload serving; terminal failure: readiness check failed: nothing listening on port 8080"),
+				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
+				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
+			},
+			failure:     portNotListening,
+			wantType:    models.ReleaseEventTypeResourceFailed,
+			wantReason:  controllers.ReasonPortNotListening,
+			wantMessage: "readiness check failed: nothing listening on port 8080",
+			wantEmit:    true,
+		}),
+		Entry("a provisional port diagnosis mid-rollout records deploying, not a failure", resourceEventCase{
+			conditions: []models.Condition{
+				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
+				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
+			},
+			failure:     portNotListening,
+			wantType:    models.ReleaseEventTypeResourceDeploying,
+			wantReason:  controllers.ReasonPortNotListening,
+			wantMessage: "readiness check failed: nothing listening on port 8080",
+			wantEmit:    true,
+		}),
+		Entry("a crash outranks a stale port reason on the converged condition", resourceEventCase{
+			conditions: []models.Condition{
+				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
+			},
+			failure:     runtimeCrash,
+			wantType:    models.ReleaseEventTypeResourceFailed,
+			wantReason:  controllers.ReasonCrashLoopBackOff,
+			wantMessage: "back-off restarting failed container",
+			wantEmit:    true,
+		}),
+		Entry("a readiness failure without a container detail keeps the condition's text", resourceEventCase{
+			conditions: []models.Condition{
+				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
+			},
+			failure:     &models.StackResourceFailure{Type: models.FailureTypeReadinessFailure},
+			wantType:    models.ReleaseEventTypeResourceDeploying,
+			wantReason:  "StackResourceDeploymentNotReady",
+			wantMessage: "deployment is not yet available",
 			wantEmit:    true,
 		}),
 		Entry("no conditions emits nothing", resourceEventCase{
@@ -404,7 +456,7 @@ func failedStackResourceCR(hash string, conditions []metav1.Condition) *corev1al
 				{
 					ContainerName:           "web",
 					RestartCount:            3,
-					LastTerminationReason:   "CrashLoopBackOff",
+					LastTerminationReason:   controllers.ReasonCrashLoopBackOff,
 					LastTerminationMessage:  "back-off restarting failed container",
 					LastTerminationExitCode: ptr.To(int32(1)),
 				},
@@ -499,7 +551,7 @@ var _ = Describe("Reconcile", func() {
 		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
 		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
 		recorder.EXPECT().
-			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "CrashLoopBackOff", "back-off restarting failed container").
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, controllers.ReasonCrashLoopBackOff, "back-off restarting failed container").
 			Return(nil)
 
 		_, err := r.Reconcile(context.Background(), reconcileRequest())

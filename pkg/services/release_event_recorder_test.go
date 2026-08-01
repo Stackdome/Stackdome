@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/Stackdome/stackdome/pkg/controllers"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -192,6 +193,18 @@ var _ = Describe("ReleaseEventRecorder", func() {
 			})
 
 			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceReady, "", "")).To(BeNil())
+		})
+
+		It("gives each distinct reason its own dedupe key so a later diagnosis is not swallowed", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.DedupeKey).To(Equal("resource:api:resource_deploying:StackResourceDeploymentNotReady"))
+			})
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceDeploying, "StackResourceDeploymentNotReady", "deployment is not yet available")).To(BeNil())
+
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.DedupeKey).To(Equal("resource:api:resource_deploying:PortNotListening"))
+			})
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceDeploying, controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080")).To(BeNil())
 		})
 
 		It("rejects a non-resource event type", func() {

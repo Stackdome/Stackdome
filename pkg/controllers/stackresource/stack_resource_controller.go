@@ -202,7 +202,8 @@ func convergedForGeneration(cr *corev1alpha1.StackResource) bool {
 // when only the previous revision is still serving (Phase=Degraded). Ready
 // therefore additionally requires converged, and the not-converged path keeps
 // the Converged condition's detail so a stuck rollout is diagnosable from the
-// timeline.
+// timeline — or the agent's readiness diagnosis when it has one, since the
+// condition only ever says "not ready yet".
 func resourceEvent(conditions []models.Condition, failure *models.StackResourceFailure, converged bool) (eventType models.ReleaseEventType, reason, message string, emit bool) {
 	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) {
 		if cond.Reason == stalledReasonBuildFailed {
@@ -228,6 +229,9 @@ func resourceEvent(conditions []models.Condition, failure *models.StackResourceF
 	if convergedCond != nil && !converged {
 		if convergedCond.Status == string(models.ConditionFalse) {
 			reason, message = convergedCond.Reason, convergedCond.Message
+		}
+		if failure != nil && failure.Type == models.FailureTypeReadinessFailure && failure.Container != nil {
+			reason, message = failure.Container.Reason, failure.Container.Message
 		}
 		if availableTrue {
 			if message == "" {

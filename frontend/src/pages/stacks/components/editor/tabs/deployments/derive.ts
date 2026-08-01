@@ -110,6 +110,7 @@ export type ResourceFailureTypeValue = NonNullable<StackResourceFailure["type"]>
 export const ResourceFailureType = {
   Build: "build_failure",
   Runtime: "runtime_crash",
+  Readiness: "readiness_failure",
 } as const satisfies Record<string, ResourceFailureTypeValue>;
 
 export interface FailingResource {
@@ -121,6 +122,8 @@ export interface FailingResource {
   exitCode?: number;
   restartCount?: number;
   failureType?: string;
+  /** Resource state is terminal (Failed), not a mid-rollout diagnosis. */
+  terminal?: boolean;
 }
 
 export interface RecoveredResource {
@@ -135,6 +138,7 @@ const FAILURE_TYPE_LABELS: Record<string, string> = {
   image_pull_failed: "Image pull failed",
   create_container_error: "Container create error",
   exit_error: "Exit error",
+  port_not_listening: "Port not listening",
 };
 
 export function humanizeFailureType(failureType?: string): string {
@@ -142,11 +146,16 @@ export function humanizeFailureType(failureType?: string): string {
   return FAILURE_TYPE_LABELS[failureType] ?? failureType;
 }
 
-/** Pick the active detail block from a last_failure (build vs container vs init). */
+/** Pick the active detail block from a last_failure (build vs container vs init).
+ *  A readiness failure never crashed, so its restart count is dropped here. */
 function failureDetail(f: StackResourceFailure) {
   if (f.type === ResourceFailureType.Build) return { detail: f.build, stage: "build" as const };
-  if (f.init_container) return { detail: f.init_container, stage: "init" as const };
-  return { detail: f.container, stage: "runtime" as const };
+  const stage = f.init_container ? ("init" as const) : ("runtime" as const);
+  const detail = f.init_container ?? f.container;
+  if (detail && f.type === ResourceFailureType.Readiness) {
+    return { detail: { ...detail, restart_count: undefined }, stage };
+  }
+  return { detail, stage };
 }
 
 /** Live per-resource statuses come from the release's live_status (present only while the
@@ -157,9 +166,9 @@ export function deriveFailingResources(_release: StackRelease, liveStatus?: Rele
   const out: FailingResource[] = [];
   for (const [name, r] of Object.entries(resources)) {
     const f = r.last_failure;
-    const state = r.state ?? "";
+    const variant = statusVariant("resource", r.state ?? "");
     // Only surface as ACTIVE failure when the resource is not currently healthy.
-    if (!f || isHealthyState(state)) continue;
+    if (!f || variant === "ready") continue;
     const { detail, stage } = failureDetail(f);
     out.push({
       name,
@@ -170,6 +179,7 @@ export function deriveFailingResources(_release: StackRelease, liveStatus?: Rele
       exitCode: detail?.exit_code,
       restartCount: detail?.restart_count,
       failureType: detail?.failure_type,
+      terminal: variant === "error",
     });
   }
   return out;
@@ -243,6 +253,13 @@ function hasBuildResources(release: StackRelease): boolean {
   return releaseGitSha(release) !== undefined;
 }
 
+/** A crash always condemns the deploy; a port-readiness diagnosis only does once the
+ *  resource itself went terminal — mid-rollout it is the normal bind-in-progress state. */
+function isDeployFailure(f: FailingResource): boolean {
+  if (f.type === ResourceFailureType.Runtime) return true;
+  return f.type === ResourceFailureType.Readiness && !!f.terminal;
+}
+
 /**
  * Build→Deploy→Ready tracker state. `failing` MUST be the live unhealthy set from
  * deriveFailingResources(release, liveStatus) — recovered resources excluded, so any
@@ -252,7 +269,7 @@ function hasBuildResources(release: StackRelease): boolean {
  */
 export function deriveStages(release: StackRelease, failing: FailingResource[], _liveStatus?: ReleaseLiveStatus): Stages {
   const buildFailed = failing.some((f) => f.type === ResourceFailureType.Build);
-  const runtimeFailed = failing.some((f) => f.type === ResourceFailureType.Runtime);
+  const deployFailed = failing.some(isDeployFailure);
   const hasBuild = hasBuildResources(release);
   const state = release.state;
 
@@ -270,7 +287,7 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
   if (state === ReleaseState.InProgress) {
     return {
       build: hasBuild ? "done" : "skipped",
-      deploy: runtimeFailed ? "failed" : "active",
+      deploy: deployFailed ? "failed" : "active",
       ready: "todo",
     };
   }
@@ -279,7 +296,7 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
     // (render+apply succeeded, workload deployed). Pre-cluster failures store none.
     const reachedCluster = Object.keys(release.outcome?.resources ?? {}).length > 0;
     // Reached cluster but never Ready (timeout/runtime crash) → failure on Ready.
-    if (runtimeFailed || reachedCluster) {
+    if (deployFailed || reachedCluster) {
       return { build: hasBuild ? "done" : "skipped", deploy: "done", ready: "failed" };
     }
     // Pre-cluster failure (render/apply/secret): nothing deployed. Lands on Build if
@@ -296,10 +313,13 @@ export function deriveStages(release: StackRelease, failing: FailingResource[], 
 export function deriveReleaseTitle(release: StackRelease, failing: FailingResource[], stages: Stages): string {
   const state = release.state ?? "";
   const build = failing.find((f) => f.type === ResourceFailureType.Build);
-  const crash = failing.find((f) => f.type === ResourceFailureType.Runtime);
+  const crash = failing.find(isDeployFailure);
   if (build) return `Build failed: ${build.name}`;
   // A terminal Failed crash reads as "Deploy failed"; an in-flight one names the resource.
-  if (crash && state !== ReleaseState.Failed) return `Runtime crash: ${crash.name}`;
+  if (crash && state !== ReleaseState.Failed) {
+    const label = crash.type === ResourceFailureType.Runtime ? "Runtime crash" : humanizeFailureType(crash.failureType);
+    return `${label}: ${crash.name}`;
+  }
   switch (state) {
     case ReleaseState.Pending: return stages.build === "active" ? "Build queued" : "Deploying";
     case ReleaseState.InProgress: return "Deploying";

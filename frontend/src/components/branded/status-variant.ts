@@ -260,12 +260,14 @@ export function statusVariant(domain: StatusDomain, state?: string | null): Stat
         case "crashloopbackoff":
         case "unhealthy":
         case "runtime_crash":
+        case "readiness_failure":
         case "build_failure":
         case "crash_loop":
         case "out_of_memory":
         case "image_pull_failed":
         case "create_container_error":
         case "exit_error":
+        case "port_not_listening":
           return "error";
         case "superseded":
         case "cancelled":
