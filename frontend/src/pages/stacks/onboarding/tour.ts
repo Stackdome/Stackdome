@@ -137,7 +137,7 @@ export function runCanvasTour(): void {
         popover: {
           title: "Environment",
           description:
-            "The variables the app reads at runtime. PUBLIC_URL is special: it fills in with the app's own address at deploy time.",
+            "The variables the app reads at runtime. A value can be typed in, or point at another resource: REDIS_URL picks up redis's address, and PUBLIC_URL points back at this resource. Both fill in at deploy time, so no addresses are hardcoded.",
           side: "left",
           align: "center",
           onNextClick: () => {
