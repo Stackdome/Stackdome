@@ -47,10 +47,14 @@ function persistedEnvAndMounts(
   name: string,
   rows: FormEnvRow[],
   mounts: FormMountRow[],
-  liveVolumeNames: Set<string>,
+  liveVolumeNames: Set<string> | undefined,
 ): { env: FormEnvRow[]; mounts: FormMountRow[] } {
   const { envVars, connections } = splitEnvRows(name, rows);
-  const liveMounts = mounts.filter((m) => liveVolumeNames.has(m.source_volume_name ?? ""));
+  // No volume set means "not filtering" — the caller is asking about one
+  // resource in isolation and has no stack to check mounts against.
+  const liveMounts = liveVolumeNames
+    ? mounts.filter((m) => liveVolumeNames.has(m.source_volume_name ?? ""))
+    : mounts;
   const mountConnections = mountsToConnections(name, liveMounts);
   const literalRows: FormEnvRow[] = envVars.map((v) =>
     v.self_output
@@ -65,7 +69,7 @@ function persistedEnvAndMounts(
 
 export function canonicalResourceFromForm(
   data: FormStackResourceData,
-  liveVolumeNames: Set<string>,
+  liveVolumeNames?: Set<string>,
 ): CanonicalResource {
   const name = data.name!.trim();
   const api = prepareFormResourceForApi(data) as Record<string, unknown>;

@@ -27,6 +27,7 @@ import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, F
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
+import { dirtyTotal as sessionDirtTotal } from "@/pages/stacks/lib/stack-model/session-dirt";
 import { applyStackByName, getStackById, deleteStack, getStacksByOrg } from "@/api/stacks";
 import { stackNameConflictError } from "@/pages/stacks/lib/stack-name-conflict";
 import { createStackFetchGate } from "@/pages/stacks/lib/canvas/stack-fetch-gate";
@@ -961,7 +962,7 @@ export default function CanvasEditorPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const dirtyTotal = session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size;
+  const dirtyTotal = sessionDirtTotal(session.dirty);
 
   // The staged diff is the single change authority: its cur side is the
   // in-memory draft snapshot, so autosave settledness can't lag it. Session

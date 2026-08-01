@@ -1,15 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   cloneJson,
-  diffStack,
   revertResource,
   revertVolume,
   revertEnvRow,
   revertResourceField,
-  type StackDiff,
   type ResourceArr,
   type VolumeArr,
 } from "@/pages/stacks/lib/stack-diff";
+import { sessionDirt, type SessionDirt } from "@/pages/stacks/lib/stack-model/session-dirt";
 
 export type EditSessionTab = "configuration" | "deployment" | "environment";
 
@@ -58,7 +57,7 @@ export interface UseStackEditSession {
   openResourceIdx: number | null;
   openVolumeIdx: number | null;
   openTab: EditSessionTab | null;
-  dirty: StackDiff;
+  dirty: SessionDirt;
   linkedAddonIds: Set<string>;
   start: (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => void;
   discard: () => void;
@@ -197,8 +196,8 @@ export function useStackEditSession(): UseStackEditSession {
     });
   }, []);
 
-  const dirty = useMemo<StackDiff>(
-    () => diffStack(state.draft, state.baseline),
+  const dirty = useMemo<SessionDirt>(
+    () => sessionDirt(state.draft, state.baseline),
     [state.draft, state.baseline],
   );
 
