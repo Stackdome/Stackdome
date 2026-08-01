@@ -155,6 +155,10 @@ export function useStackEditSession(): UseStackEditSession {
         if (!prev.isActive) return prev;
         const nextResources =
           typeof updater === "function" ? updater(prev.draft.resources) : updater;
+        // An updater that changed nothing must not churn state: downstream
+        // effects key on draft identity, and a new object for the same content
+        // reads as an edit.
+        if (nextResources === prev.draft.resources) return prev;
         return { ...prev, draft: { ...prev.draft, resources: nextResources } };
       });
     },
@@ -167,6 +171,7 @@ export function useStackEditSession(): UseStackEditSession {
         if (!prev.isActive) return prev;
         const nextVolumes =
           typeof updater === "function" ? updater(prev.draft.volumes) : updater;
+        if (nextVolumes === prev.draft.volumes) return prev;
         return { ...prev, draft: { ...prev.draft, volumes: nextVolumes } };
       });
     },
