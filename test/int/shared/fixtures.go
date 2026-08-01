@@ -2,6 +2,7 @@ package shared
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -9,6 +10,22 @@ import (
 
 // Shared test image used across all stack fixtures
 const TestImage = "nginx:1.25-alpine"
+
+// ServeDeclaredPorts makes TestImage listen on every port the resource declares.
+// The cluster-agent synthesizes a TCP readiness probe on the primary declared
+// port, so a resource declaring a port stock nginx does not serve never becomes
+// Ready and its stack never converges.
+func ServeDeclaredPorts(r *openapi.StackResource) {
+	var b strings.Builder
+	for _, p := range r.GetPorts() {
+		fmt.Fprintf(&b, "echo 'server{listen %d;}' > /etc/nginx/conf.d/listen-%d.conf; ", p.GetNumber(), p.GetNumber())
+	}
+	b.WriteString("exec nginx -g 'daemon off;'")
+
+	exec := r.GetExecutionConfig()
+	exec.SetCommand([]string{"sh", "-c", b.String()})
+	r.SetExecutionConfig(exec)
+}
 
 // InitContainer fixture values
 const (
@@ -376,6 +393,7 @@ func CreateMultiResourceStack(name string) *openapi.Stack {
 		}(),
 	})
 	backend.SetExecutionConfig(*backendExec)
+	ServeDeclaredPorts(backend)
 
 	frontend := openapi.NewStackResource(MultiResourceFrontendName)
 	frontendImageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
@@ -408,6 +426,7 @@ func CreateStackWithDependencies(name string) *openapi.Stack {
 	resourceA.SetPorts([]openapi.Port{
 		*openapi.NewPort("postgres", 5432, false),
 	})
+	ServeDeclaredPorts(resourceA)
 
 	resourceB := openapi.NewStackResource("app")
 	imageBSource := openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")}
@@ -416,6 +435,7 @@ func CreateStackWithDependencies(name string) *openapi.Stack {
 		*openapi.NewPort("http", 8080, false),
 	})
 	resourceB.SetDependsOn([]string{"database"})
+	ServeDeclaredPorts(resourceB)
 
 	spec := openapi.NewStackSpec()
 	spec.SetStackResources([]openapi.StackResource{*resourceA, *resourceB})
@@ -449,6 +469,7 @@ func CreateStackWithEnvAndPorts(name string) *openapi.Stack {
 		}(),
 	})
 	resource.SetExecutionConfig(*exec)
+	ServeDeclaredPorts(resource)
 
 	spec := openapi.NewStackSpec()
 	spec.SetStackResources([]openapi.StackResource{*resource})
@@ -479,6 +500,7 @@ func CreateStackWithPostgresAddon(name string, addonID string, database string) 
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 8080, false),
 	})
+	ServeDeclaredPorts(resource)
 
 	spec := openapi.NewStackSpec()
 	spec.SetStackResources([]openapi.StackResource{*resource})
@@ -495,6 +517,7 @@ func CreateStackWithPostgresAddonSuperuser(name string, addonID string) *openapi
 	resource.SetPorts([]openapi.Port{
 		*openapi.NewPort("http", 8080, false),
 	})
+	ServeDeclaredPorts(resource)
 
 	spec := openapi.NewStackSpec()
 	spec.SetStackResources([]openapi.StackResource{*resource})
@@ -549,6 +572,7 @@ func CreateFullStack(name string, addonID string, database string, secretID stri
 		*openapi.NewPort("http", int32(FullStackAPIPort), false),
 	})
 	api.SetDependsOn([]string{FullStackWorkerName})
+	ServeDeclaredPorts(api)
 
 	worker := openapi.NewStackResource(FullStackWorkerName)
 	workerImageSource := openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)}
@@ -743,6 +767,7 @@ func ResourceWithPort(name string, port int32) openapi.StackResource {
 	r := openapi.NewStackResource(name)
 	r.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource(TestImage)})
 	r.SetPorts([]openapi.Port{*openapi.NewPort("http", port, false)})
+	ServeDeclaredPorts(r)
 	return *r
 }
 
