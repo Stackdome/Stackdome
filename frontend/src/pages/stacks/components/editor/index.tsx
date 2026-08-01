@@ -27,7 +27,6 @@ import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, F
 import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
-import { dirtyTotal as sessionDirtTotal } from "@/pages/stacks/lib/stack-model/session-dirt";
 import { applyStackByName, getStackById, deleteStack, getStacksByOrg } from "@/api/stacks";
 import { stackNameConflictError } from "@/pages/stacks/lib/stack-name-conflict";
 import { createStackFetchGate } from "@/pages/stacks/lib/canvas/stack-fetch-gate";
@@ -962,14 +961,12 @@ export default function CanvasEditorPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const dirtyTotal = sessionDirtTotal(session.dirty);
-
-  // The staged diff is the single change authority: its cur side is the
-  // in-memory draft snapshot, so autosave settledness can't lag it. Session
-  // dirt only fills the window where the diff isn't derivable yet (release
-  // detail still loading, or a new-stack draft outside the lifecycle).
+  // The staged diff answers both "how many changes" and "which ones", so a
+  // count can never appear that the changes modal is unable to itemize. Until
+  // its baseline — the deployed release's snapshot — has loaded there is no
+  // honest answer, and nothing claims one.
   const staged = lifecycle.stagedDiff;
-  const changeCount = staged ? staged.resources.length + staged.volumes.length : dirtyTotal;
+  const changeCount = staged ? staged.resources.length + staged.volumes.length : 0;
 
   return (
     <ReleaseDetailProvider value={releaseDetail}>
