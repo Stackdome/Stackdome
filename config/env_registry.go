@@ -43,7 +43,7 @@ var (
 	EnvPlatformOrgRegistryStorageClass = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_CLASS", "Default storage class for each org's registry seeded at signup", nil, false)
 
 	// Environment
-	EnvStackdomeEnv = StringVar("STACKDOME_ENV", "Runtime environment (DEVELOPMENT, PRODUCTION, TESTING)", ptr("DEVELOPMENT"), false)
+	EnvStackdomeEnv = StringVar("STACKDOME_ENV", "Runtime environment (DEVELOPMENT, PRODUCTION)", ptr("DEVELOPMENT"), false)
 
 	// Test Overrides
 	EnvTestJWTSecret     = StringVar("TEST_JWT_SECRET", "Override JWT secret in tests", nil, false)

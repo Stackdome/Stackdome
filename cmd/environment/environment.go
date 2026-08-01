@@ -47,10 +47,6 @@ type Clients struct {
 	DefaultClusterClient client.Client
 }
 
-type Database struct {
-	SessionFactory db.SessionFactory
-}
-
 type Services struct {
 	UserService                 services.UserService
 	WorkspaceUserService        services.WorkspaceUserService

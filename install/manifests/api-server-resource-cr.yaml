@@ -30,6 +30,8 @@ spec:
       fqdn: "{{.Domain}}"
       tls: {{.TLSEnabled}}
   environmentVariables:
+    - name: STACKDOME_ENV
+      value: PRODUCTION
     - name: DB_HOST
       value: db.stackdome-control-plane.svc.cluster.local
     - name: DB_PORT
