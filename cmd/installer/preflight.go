@@ -15,15 +15,22 @@ type preflightResult struct {
 	Domain   string
 }
 
+func requireRoot() error {
+	u, err := user.Current()
+	if err != nil {
+		return fmt.Errorf("cannot determine current user: %w", err)
+	}
+	if u.Uid != "0" {
+		return fmt.Errorf("root access required — re-run with sudo")
+	}
+	return nil
+}
+
 func runPreflight(email, domain string) (*preflightResult, error) {
 	phaseLog(1, "Running preflight checks...")
 
-	u, err := user.Current()
-	if err != nil {
-		return nil, fmt.Errorf("cannot determine current user: %w", err)
-	}
-	if u.Uid != "0" {
-		return nil, fmt.Errorf("root access required — run with: sudo ./stackdome-install --email %s", email)
+	if err := requireRoot(); err != nil {
+		return nil, err
 	}
 	stepLog("Running as root")
 

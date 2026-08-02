@@ -139,7 +139,7 @@ jobs:
         run: docker buildx imagetools inspect "${{ steps.meta.outputs.image }}"
 
   deploy:
-    name: patch box & wait for convergence
+    name: upgrade box & wait for convergence
     needs: build
     if: ${{ !cancelled() && (inputs.image_tag != '' || needs.build.result == 'success') }}
     runs-on: ubuntu-latest
@@ -147,46 +147,60 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Write kubeconfig
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Configure private module access
+        run: git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
+
+      # Carries the compiled-in agent chart version, so the box lands on the
+      # chart this commit expects. Built here rather than reused from the build
+      # job because rollback dispatches skip that job entirely.
+      - name: Build installer
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bin/stackdome-install ./cmd/installer
+        env:
+          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
+
+      - name: Configure SSH
         run: |
           umask 077
-          mkdir -p "$RUNNER_TEMP/kube"
-          echo "$BOX_KUBE_CA" | base64 -d > "$RUNNER_TEMP/kube/ca.crt"
-          kubectl config set-cluster box \
-            --server="$BOX_KUBE_SERVER" \
-            --certificate-authority="$RUNNER_TEMP/kube/ca.crt" \
-            --embed-certs=true
-          kubectl config set-credentials ci-deployer --token="$BOX_KUBE_TOKEN"
-          kubectl config set-context box --cluster=box --user=ci-deployer --namespace=stackdome-control-plane
-          kubectl config use-context box
+          mkdir -p ~/.ssh
+          printf '%s\n' "$BOX_SSH_KEY" > ~/.ssh/id_deploy
+          printf '%s\n' "$BOX_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
         env:
-          KUBECONFIG: ${{ runner.temp }}/kube/config
-          BOX_KUBE_SERVER: ${{ secrets.BOX_KUBE_SERVER }}
-          BOX_KUBE_CA: ${{ secrets.BOX_KUBE_CA }}
-          BOX_KUBE_TOKEN: ${{ secrets.BOX_KUBE_TOKEN }}
+          BOX_SSH_KEY: ${{ secrets.BOX_SSH_KEY }}
+          BOX_SSH_KNOWN_HOSTS: ${{ secrets.BOX_SSH_KNOWN_HOSTS }}
 
-      - name: Patch StackResource image
-        id: patch
+      - name: Upload installer
         run: |
+          SSH_OPTS="-i $HOME/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes"
+          scp $SSH_OPTS bin/stackdome-install hack/wait-for-stackresource.sh \
+            "$BOX_SSH_USER@$BOX_SSH_HOST:/usr/local/bin/"
+        env:
+          BOX_SSH_HOST: ${{ secrets.BOX_SSH_HOST }}
+          BOX_SSH_USER: ${{ vars.BOX_SSH_USER || 'root' }}
+
+      - name: Upgrade box & wait for convergence
+        run: |
+          SSH_OPTS="-i $HOME/.ssh/id_deploy -o BatchMode=yes -o StrictHostKeyChecking=yes"
           if [ -n "${INPUT_TAG:-}" ]; then
             IMAGE="${IMAGE_REPO}:${INPUT_TAG}"
           else
             IMAGE="$BUILT_IMAGE"
           fi
           echo "deploying $IMAGE"
-          GEN=$(kubectl patch stackresource api-server -n stackdome-control-plane --type=merge \
-            -p "{\"spec\":{\"imageSpec\":{\"image\":\"$IMAGE\"}}}" \
-            -o jsonpath='{.metadata.generation}')
-          echo "generation=$GEN" >> "$GITHUB_OUTPUT"
-          echo "patched to generation $GEN"
+          ssh $SSH_OPTS "$BOX_SSH_USER@$BOX_SSH_HOST" bash -s <<EOF
+          set -euo pipefail
+          export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+          chmod +x /usr/local/bin/stackdome-install /usr/local/bin/wait-for-stackresource.sh
+          stackdome-install upgrade --image "$IMAGE"
+          GEN=\$(kubectl get stackresource api-server -n stackdome-control-plane -o jsonpath='{.metadata.generation}')
+          wait-for-stackresource.sh api-server stackdome-control-plane "\$GEN" 600
+          EOF
         env:
-          KUBECONFIG: ${{ runner.temp }}/kube/config
+          BOX_SSH_HOST: ${{ secrets.BOX_SSH_HOST }}
+          BOX_SSH_USER: ${{ vars.BOX_SSH_USER || 'root' }}
           BUILT_IMAGE: ${{ needs.build.outputs.image }}
           INPUT_TAG: ${{ inputs.image_tag }}
           IMAGE_REPO: ${{ vars.IMAGE_REPO || 'quay.io/stackdome/stackdome' }}
-
-      - name: Wait for convergence
-        run: hack/wait-for-stackresource.sh api-server stackdome-control-plane "$GEN" 600
-        env:
-          KUBECONFIG: ${{ runner.temp }}/kube/config
-          GEN: ${{ steps.patch.outputs.generation }}

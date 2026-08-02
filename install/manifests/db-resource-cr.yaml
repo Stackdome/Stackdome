@@ -8,8 +8,13 @@ metadata:
     app.kubernetes.io/managed-by: stackdome-installer
     stackdome.io/bootstrap: "true"
     stackdome.io/stack-name: stackdome-platform
+  ownerReferences:
+    - apiVersion: core.stackdome.io/v1alpha1
+      kind: Stack
+      name: stackdome-platform
+      uid: "{{.StackUID}}"
 spec:
-  workloadType: Service
+  workloadType: {{.DBWorkloadType}}
   imageSpec:
     image: postgres:16-alpine
   ports:

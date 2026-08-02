@@ -4,77 +4,112 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Stackdome/stackdome/install"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 const defaultAPIServerImage = "quay.io/stackdome/stackdome:latest"
 
 func main() {
-	email := flag.String("email", "", "Admin user email (required)")
-	domain := flag.String("domain", "", "Dashboard domain (default: stackdome.<PUBLIC_IP>.nip.io)")
-	image := flag.String("image", defaultAPIServerImage, "API server container image")
-	flag.Parse()
+	args := os.Args[1:]
+	command := "install"
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
+		command, args = args[0], args[1:]
+	}
+
+	switch command {
+	case "install":
+		runInstall(args)
+	case "upgrade":
+		runUpgrade(args)
+	default:
+		usage()
+		os.Exit(1)
+	}
+}
+
+func usage() {
+	fmt.Println("Usage:")
+	fmt.Println("  stackdome-install install --email you@company.com [--domain stackdome.example.com]")
+	fmt.Println("                            [--image IMAGE] [--chart-version VERSION]")
+	fmt.Println("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION]")
+	fmt.Println()
+	fmt.Println("upgrade reuses the email, domain and secrets of the existing install,")
+	fmt.Println("and keeps the deployed image unless --image is given.")
+}
+
+func runInstall(args []string) {
+	fs := flag.NewFlagSet("install", flag.ExitOnError)
+	email := fs.String("email", "", "Admin user email (required)")
+	domain := fs.String("domain", "", "Dashboard domain (default: stackdome.<PUBLIC_IP>.nip.io)")
+	image := fs.String("image", defaultAPIServerImage, "API server container image")
+	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
+	_ = fs.Parse(args)
 
 	if *email == "" {
-		fmt.Println("Usage: stackdome-install --email you@company.com [--domain stackdome.example.com]")
+		usage()
 		fmt.Println()
 		fmt.Println("Error: --email is required")
 		os.Exit(1)
 	}
 
-	fmt.Println()
-	fmt.Println("================================================================")
-	fmt.Println("  StackDome VPS Installer")
-	fmt.Println("================================================================")
-	fmt.Println()
+	banner("StackDome VPS Installer")
 
 	preflight, err := runPreflight(*email, *domain)
 	if err != nil {
-		errLog(fmt.Sprintf("Preflight failed: %v", err))
-		os.Exit(1)
+		exitErr("Preflight failed", err)
 	}
 
 	if err := installK3s(); err != nil {
-		errLog(fmt.Sprintf("k3s installation failed: %v", err))
-		os.Exit(1)
+		exitErr("k3s installation failed", err)
 	}
 
-	if err := installStackdomeAgent(); err != nil {
-		errLog(fmt.Sprintf("stackdome-agent installation failed: %v", err))
-		os.Exit(1)
+	if err := installStackdomeAgent(*chartVersion); err != nil {
+		exitErr("stackdome-agent installation failed", err)
 	}
 
 	vals := install.TemplateValues{
 		AdminEmail:     *email,
 		Domain:         preflight.Domain,
 		APIServerImage: *image,
+		DBWorkloadType: string(models.WorkloadTypeStatefulService),
 		TLSEnabled:     isTLSDomain(preflight.Domain),
 	}
 
 	secrets, err := loadOrCreateSecrets(&vals)
 	if err != nil {
-		errLog(fmt.Sprintf("Secret generation failed: %v", err))
-		os.Exit(1)
+		exitErr("Secret generation failed", err)
 	}
 
 	if err := configureTLS(vals); err != nil {
-		errLog(fmt.Sprintf("TLS configuration failed: %v", err))
-		os.Exit(1)
+		exitErr("TLS configuration failed", err)
 	}
 
 	if err := applyCRs(vals, preflight.Domain); err != nil {
-		errLog(fmt.Sprintf("CR application failed: %v", err))
-		os.Exit(1)
+		exitErr("CR application failed", err)
 	}
 
 	result, err := runAPIBootstrap(vals, secrets)
 	if err != nil {
-		errLog(fmt.Sprintf("API bootstrap failed: %v", err))
-		os.Exit(1)
+		exitErr("API bootstrap failed", err)
 	}
 
 	printSummary(preflight.Domain, *email, secrets.AdminPassword, externallyReachable, result)
+}
+
+func banner(title string) {
+	fmt.Println()
+	fmt.Println("================================================================")
+	fmt.Printf("  %s\n", title)
+	fmt.Println("================================================================")
+	fmt.Println()
+}
+
+func exitErr(msg string, err error) {
+	errLog(fmt.Sprintf("%s: %v", msg, err))
+	os.Exit(1)
 }
 
 func printSummary(domain, email, password string, externallyReachable bool, result *bootstrapResult) {
