@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { releaseStaleBodyLock } from "@/lib/radix-body-lock";
 
 export interface ConfirmOptions {
   title: string;
@@ -38,10 +39,13 @@ const ConfirmContext = createContext<ConfirmFn | null>(null);
  * (radix-ui/primitives#1836; commits 6b560665, 0bbfd378):
  *
  * - opening is deferred one tick, so a dropdown/menu closing in the same
- *   event settles first, and
+ *   event settles first,
  * - the promise resolves one tick after the dialog's close flushes, so caller
  *   follow-up (closing a parent modal, navigating) never shares a tick with
- *   this dialog's teardown.
+ *   this dialog's teardown, and
+ * - the lock is re-checked once the layers settle, because a parent modal
+ *   still animating out when this dialog opens outlives that one-tick defer
+ *   and gets its `pointer-events: none` handed back on close.
  */
 export function useConfirm(): ConfirmFn {
   return useContext(ConfirmContext) as ConfirmFn;
@@ -80,6 +84,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
     pendingRef.current = null;
     setOpen(false);
     setTimeout(() => p.resolve(ok), 0);
+    releaseStaleBodyLock();
   }, []);
 
   return (
