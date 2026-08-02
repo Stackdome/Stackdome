@@ -235,4 +235,68 @@ describe("useDraftSync", () => {
     await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_MAX_WAIT_MS * 2));
     expect(updateStackResource).not.toHaveBeenCalled();
   });
+
+  describe("adopting the server's answer", () => {
+    const normalizedStack = (): Stack =>
+      ({
+        id: "st-1",
+        name: "demo",
+        spec: {
+          stack_resources: [
+            {
+              id: "r-1",
+              name: "web",
+              // The server filled these in on write; the draft has never seen them.
+              source: { git: { repo_url: "https://example.com/a.git", dockerfile_path: "Dockerfile", build_context: "." } },
+            },
+          ],
+          volumes: [],
+          connections: [],
+        },
+      }) as unknown as Stack;
+
+    it("refreshes a resource the user was not editing", async () => {
+      vi.mocked(getStackById).mockResolvedValue(normalizedStack());
+      const { hook } = setup(serverStack("nginx:1"));
+      act(() =>
+        hook.result.current.session.updateResources(() => [
+          { name: "web", sourceType: "git" as const, source: { git: { repo_url: "https://example.com/a.git" } } },
+        ]),
+      );
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 200));
+      await act(() => Promise.resolve());
+
+      const web = hook.result.current.session.draft.resources[0];
+      expect(web.source?.git).toMatchObject({ dockerfile_path: "Dockerfile", build_context: "." });
+    });
+
+    it("never overwrites a resource typed into while the save was in flight", async () => {
+      let resolveUpdate!: () => void;
+      vi.mocked(updateStackResource).mockImplementation(
+        () => new Promise<never>((res) => { resolveUpdate = res as unknown as () => void; }),
+      );
+      vi.mocked(getStackById).mockResolvedValue(normalizedStack());
+      const { hook } = setup(serverStack("nginx:1"));
+
+      act(() =>
+        hook.result.current.session.updateResources(() => [
+          { name: "web", sourceType: "git" as const, source: { git: { repo_url: "https://example.com/a.git" } } },
+        ]),
+      );
+      await act(() => vi.advanceTimersByTimeAsync(DEBOUNCE_IDLE_MS + 100));
+
+      // The user keeps typing while the request is open.
+      act(() =>
+        hook.result.current.session.updateResources(() => [
+          { name: "web", sourceType: "git" as const, source: { git: { repo_url: "https://example.com/typed-later.git" } } },
+        ]),
+      );
+      resolveUpdate();
+      await act(() => vi.advanceTimersByTimeAsync(1));
+      await act(() => Promise.resolve());
+
+      const web = hook.result.current.session.draft.resources[0];
+      expect(web.source?.git?.repo_url).toBe("https://example.com/typed-later.git");
+    });
+  });
 });

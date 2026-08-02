@@ -19,7 +19,7 @@ vi.mock("@/api/registry-credentials", async (importOriginal) => ({
   createRegistryCredential: vi.fn(),
   verifyRegistryCredential: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
 }));

@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSecrets } from "@/pages/secrets/hooks/use-secrets";
+import { useSecrets } from "@/hooks/use-secrets";
 
 export interface EnvVarFormRow {
   name: string;

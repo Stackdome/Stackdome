@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getSecrets, type Secret } from '../../../api/secrets';
-import { getCurrentOrganizationId } from '@/helpers/common';
+import { getCurrentOrganizationId } from '@/lib/common';
 import { useToast } from '@/components/ui/use-toast';
 
 export interface UseSecretsReturn {

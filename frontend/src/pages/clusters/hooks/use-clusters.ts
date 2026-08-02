@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { z } from "zod";
 import type { Cluster } from "../types";
 import { getErrorMessage, isNotFoundError } from "@/api/client";

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { alignBaselineToDraft, cloneJson, diffStack, dirtyTabsForResource, isPathDirty, isResourceDirty, pairByFingerprint, renameFingerprint, revertResource } from "../stack-diff";
-import type { ResourceArr } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, resourceRenameFingerprint, revertResource } from "../stack-diff";
+import { pairByFingerprint } from "../stack-model/equal";
 
 describe("cloneJson", () => {
   it("passes undefined through (JSON.parse(JSON.stringify(undefined)) would throw)", () => {
@@ -32,74 +32,6 @@ describe("cloneJson", () => {
     expect(cloneJson("hi")).toBe("hi");
     expect(cloneJson(null)).toBe(null);
     expect(cloneJson(false)).toBe(false);
-  });
-});
-
-describe("isPathDirty — structurally-empty equivalence", () => {
-  // Regression: clearing a comma-separated input (e.g., Init Command) leaves
-  // the form with `{ init_spec: { command: [] } }` while baseline has
-  // `init_spec: undefined`. These should diff as equal so the field stops
-  // reading as dirty after the user reverts.
-
-  it("treats empty array vs undefined as not-dirty", () => {
-    expect(isPathDirty(
-      { init_spec: { command: [] } },
-      { init_spec: undefined },
-      "init_spec.command",
-    )).toBe(false);
-  });
-
-  it("treats empty object vs undefined as not-dirty", () => {
-    expect(isPathDirty(
-      { init_spec: {} },
-      { init_spec: undefined },
-      "init_spec",
-    )).toBe(false);
-  });
-
-  it("treats empty string vs undefined as not-dirty", () => {
-    expect(isPathDirty(
-      { name: "" },
-      { name: undefined },
-      "name",
-    )).toBe(false);
-  });
-
-  it("treats deeply-nested all-empty as not-dirty against undefined", () => {
-    expect(isPathDirty(
-      { init_spec: { command: [], args: [], image_spec: { image: "" } } },
-      { init_spec: undefined },
-      "init_spec",
-    )).toBe(false);
-  });
-
-  it("flags as dirty when one side has actual content", () => {
-    expect(isPathDirty(
-      { init_spec: { command: ["sh"] } },
-      { init_spec: undefined },
-      "init_spec.command",
-    )).toBe(true);
-  });
-
-  it("flags as dirty when value differs from a non-empty baseline", () => {
-    expect(isPathDirty(
-      { name: "" },
-      { name: "redis" },
-      "name",
-    )).toBe(true);
-    expect(isPathDirty(
-      { ports: [] },
-      { ports: [80] },
-      "ports",
-    )).toBe(true);
-  });
-
-  it("returns false when values are deep-equal", () => {
-    expect(isPathDirty(
-      { ports: [{ number: 80 }] },
-      { ports: [{ number: 80 }] },
-      "ports",
-    )).toBe(false);
   });
 });
 
@@ -135,7 +67,7 @@ describe("alignBaselineToDraft", () => {
       { name: "mysqla", image_spec: { image: "mysql:8" }, status: { state: "Pending" } },
       { name: "postgres", image_spec: { image: "postgres:16" } },
     ];
-    const aligned = alignBaselineToDraft(baseline, draft, renameFingerprint);
+    const aligned = alignBaselineToDraft(baseline, draft, resourceRenameFingerprint);
     // The renamed baseline slots into the draft's position instead of leaving a
     // hole + an appended deletion — so positional diffing reads ONE change.
     expect(aligned.map((r) => r?.name)).toEqual(["mysql", "postgres"]);
@@ -145,7 +77,7 @@ describe("alignBaselineToDraft", () => {
   it("does not pair when content also changed (stays add + remove)", () => {
     const baseline = [{ name: "mysql", image_spec: { image: "mysql:8" } }];
     const draft = [{ name: "mysqla", image_spec: { image: "mysql:9" } }];
-    const aligned = alignBaselineToDraft(baseline, draft, renameFingerprint);
+    const aligned = alignBaselineToDraft(baseline, draft, resourceRenameFingerprint);
     expect(aligned[0]).toBeUndefined();
     expect(aligned[1]?.name).toBe("mysql");
   });
@@ -156,25 +88,6 @@ describe("alignBaselineToDraft", () => {
     const aligned = alignBaselineToDraft(baseline, draft);
     expect(aligned[0]).toBeUndefined();
     expect(aligned[1]?.name).toBe("mysql");
-  });
-});
-
-describe("diffStack counts a rename as one dirty resource when aligned with a fingerprint", () => {
-  it("rename-only session shows a single dirty index at the renamed position", () => {
-    const server = [
-      { name: "mysql", image_spec: { image: "mysql:8" } },
-      { name: "postgres", image_spec: { image: "postgres:16" } },
-    ];
-    const draft = [
-      { name: "mysqla", image_spec: { image: "mysql:8" } },
-      { name: "postgres", image_spec: { image: "postgres:16" } },
-    ];
-    const baseline = alignBaselineToDraft(server, draft, renameFingerprint);
-    const diff = diffStack(
-      { resources: draft as ResourceArr, volumes: [] },
-      { resources: baseline as ResourceArr, volumes: [] },
-    );
-    expect([...diff.dirtyResourceIdx]).toEqual([0]);
   });
 });
 
@@ -190,36 +103,9 @@ describe("pairByFingerprint", () => {
   });
 });
 
-describe("status is server telemetry, never dirt", () => {
+describe("revert keeps live telemetry", () => {
   const deployed = { name: "web", source: { image: { ref: "nginx:1" } }, status: { state: "Pending" } };
   const live = { name: "web", source: { image: { ref: "nginx:1" } }, status: { state: "Ready", public_ingress: [{}] } };
-
-  it("isResourceDirty ignores status drift", () => {
-    expect(isResourceDirty(live as never, deployed as never)).toBe(false);
-  });
-
-  it("isResourceDirty ignores server-computed outputs drift", () => {
-    // After a port edit deploys, the draft still holds outputs derived from the
-    // OLD port while the rebased baseline has the new ones — the server owns
-    // outputs, so they must never read as user dirt (the pre-fix behavior left
-    // a phantom "1 change" after every deploy until a page refresh).
-    const draftRes = {
-      name: "web",
-      ports: [{ number: 88 }],
-      outputs: [{ name: "port.port-87", sensitive: false, type: "integer" }],
-    };
-    const baseRes = {
-      name: "web",
-      ports: [{ number: 88 }],
-      outputs: [{ name: "port.port-88", sensitive: false, type: "integer" }],
-    };
-    expect(isResourceDirty(draftRes as never, baseRes as never)).toBe(false);
-  });
-
-  it("dirtyTabsForResource does not light any tab for status drift", () => {
-    const tabs = dirtyTabsForResource(live as never, deployed as never);
-    expect(tabs).toEqual({ configuration: false, deployment: false, environment: false });
-  });
 
   it("revertResource keeps the draft's live status", () => {
     const draft = { resources: [{ ...live, source: { image: { ref: "nginx:2" } } }], volumes: [] };

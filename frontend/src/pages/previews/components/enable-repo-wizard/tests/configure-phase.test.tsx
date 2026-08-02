@@ -10,7 +10,7 @@ vi.mock("@/api/preview-configs", () => ({
 vi.mock("@/api/git-integrations", () => ({
   listRepositoryBranches: vi.fn().mockResolvedValue({ items: ["main", "develop"], total: 2 }),
 }));
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 vi.mock("@/hooks/use-resource-projects", () => ({

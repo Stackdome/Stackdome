@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-release-anchors";
 import { ReleaseState } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 
 const fakeDetail = () => ({
   ensure: vi.fn(),

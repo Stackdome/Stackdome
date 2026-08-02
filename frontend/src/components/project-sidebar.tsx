@@ -19,7 +19,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { NavUser } from "@/components/nav-user";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { getCurrentUser } from "@/helpers/common";
+import { getCurrentUser } from "@/lib/common";
 
 // SidebarSection type for navigation
 export interface SidebarSection {

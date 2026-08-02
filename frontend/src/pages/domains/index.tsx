@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Globe, PlusCircle, Loader2 } from "lucide-react";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useToast } from "@/components/ui/use-toast";

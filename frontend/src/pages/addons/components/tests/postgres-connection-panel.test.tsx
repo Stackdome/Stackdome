@@ -10,7 +10,7 @@ vi.mock("@/api/addons", async () => {
   return { ...actual, getPostgresCredentials: vi.fn() };
 });
 
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: vi.fn(() => "org-1"),
 }));
 

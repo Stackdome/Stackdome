@@ -29,7 +29,7 @@ vi.mock("@/api/clusters", () => ({
   deleteCluster: vi.fn(),
   createCluster: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
 const toastMock = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({

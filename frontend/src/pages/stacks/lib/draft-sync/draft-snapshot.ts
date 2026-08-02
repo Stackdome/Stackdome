@@ -1,6 +1,7 @@
 import type { StackReleaseSnapshot } from "@/api/releases";
 import type { EditSessionDraft } from "@/pages/stacks/hooks/use-stack-edit-session";
-import { buildDesiredState } from "./desired-state";
+import { canonicalFromDraft } from "@/pages/stacks/lib/stack-model/from-form";
+import { connectionsOf, resourceToApi, volumeToApi } from "@/pages/stacks/lib/stack-model/to-api";
 
 /**
  * Adapt the live edit-session draft into release-snapshot shape so the staged
@@ -10,10 +11,10 @@ import { buildDesiredState } from "./desired-state";
  * resources excluded on both paths).
  */
 export function draftToSnapshot(draft: EditSessionDraft): StackReleaseSnapshot {
-  const desired = buildDesiredState(draft);
+  const canonical = canonicalFromDraft(draft);
   return {
-    resources: [...desired.resources.values()] as StackReleaseSnapshot["resources"],
-    volumes: [...desired.volumes.values()] as StackReleaseSnapshot["volumes"],
-    connections: [...desired.connections.values()],
+    resources: canonical.resources.map(resourceToApi) as StackReleaseSnapshot["resources"],
+    volumes: canonical.volumes.map(volumeToApi) as StackReleaseSnapshot["volumes"],
+    connections: connectionsOf(canonical),
   };
 }

@@ -11,7 +11,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState, LimitedAction } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { createCluster } from "@/api/clusters";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 

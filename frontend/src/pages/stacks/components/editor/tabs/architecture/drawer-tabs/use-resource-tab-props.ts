@@ -5,7 +5,7 @@ import {
   dirtyTabsForResource,
   isResourceDirty,
   type ResourceDirtyTabs,
-} from "@/pages/stacks/lib/stack-diff";
+} from "@/pages/stacks/lib/stack-model/field-dirt";
 import type {
   FormStackResourceData,
   FormEnvVarData,

@@ -8,8 +8,8 @@ import { FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { verifyGitIntegration, type GitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { verifyIntegrationFormSchema } from "@/pages/git-integrations/lib/form-schemas";
+import { getCurrentOrganizationId } from "@/lib/common";
+import { verifyIntegrationFormSchema } from "@/components/git-source-picker/credentials-form-schema";
 
 interface VerifyIntegrationDialogProps {
   integration: GitIntegration | null;

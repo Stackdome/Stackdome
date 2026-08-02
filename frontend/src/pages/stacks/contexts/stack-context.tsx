@@ -1,6 +1,6 @@
 import { createContext, useState, useContext } from 'react';
 import type { Dispatch, ReactNode, SetStateAction } from 'react';
-import type { Stack } from '@/pages/stacks/types';
+import type { Stack } from '@/api/stack-types';
 
 // Context type definition
 interface StackContextType {

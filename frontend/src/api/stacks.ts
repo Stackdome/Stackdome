@@ -1,6 +1,6 @@
 import api from "./client"; // Changed to default import
 import type { components } from "./types/openapi";
-import type { StackList } from "@/pages/stacks/types";
+import type { StackList } from "@/api/stack-types";
 
 export type Stack = components["schemas"]["Stack"];
 export type StackLifecycle = components["schemas"]["StackLifecycle"];

@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { isUserLoggedIn } from "@/helpers/common";
+import { isUserLoggedIn } from "@/lib/common";
 
 import { LoginForm } from "@/pages/login/components/login-form";
 import { AuthShell, SwapLink } from "@/pages/auth/components/auth-shell";

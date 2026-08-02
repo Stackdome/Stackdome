@@ -12,7 +12,7 @@ import { NavGitIntegrations } from "@/components/nav-git-integrations"
 import { NavImageRegistries } from "@/components/nav-image-registries"
 import { NavAddons } from "@/components/nav-addons"
 import { NavUser } from "@/components/nav-user"
-import { getCurrentUser } from "@/helpers/common"
+import { getCurrentUser } from "@/lib/common"
 import { useCurrentUser } from "@/hooks/use-current-user"
 import {
   Sidebar,

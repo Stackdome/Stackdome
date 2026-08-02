@@ -22,7 +22,7 @@ import {
   relativeAge,
   absoluteAge,
   type RailTone,
-} from "@/pages/stacks/components/list/stack-card";
+} from "@/components/branded/entity-card";
 import type { PreviewStack, PreviewPhase } from "@/api/preview-envs";
 
 interface PreviewEnvCardProps {

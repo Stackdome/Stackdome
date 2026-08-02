@@ -4,7 +4,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { listRepositoryBranches } from "@/api/git-integrations";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 
 interface BranchFieldProps {
   id: string;
