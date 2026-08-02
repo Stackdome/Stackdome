@@ -12,12 +12,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+// Focus is an outline, never a box-shadow ring (rubric #10); it never turns
+// brand orange on interaction (rubric #3).
 export const TwoPills: Story = {
   args: {
     urls: [
       { resource: 'web', url: 'https://web.example.com' },
       { resource: 'api', url: 'https://api.example.com' },
     ],
+  },
+  play: async ({ canvas }) => {
+    const pill = canvas.getAllByRole('link')[0]
+    await expect(pill.className).toContain('focus-visible:outline-2')
+    await expect(pill.className).not.toContain('ring-')
   },
 }
 

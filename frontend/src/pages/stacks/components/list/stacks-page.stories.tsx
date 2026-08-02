@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, waitFor } from 'storybook/test'
+import { expect, waitFor, within } from 'storybook/test'
 import { http, HttpResponse } from 'msw'
 import { makeStack } from '../../../../../.storybook/fixtures'
 import { baselineHandlers } from '../../../../../.storybook/msw-handlers'
@@ -52,11 +52,25 @@ export const Populated: Story = {
       ...baselineHandlers,
     ],
   },
-  play: async ({ canvas }) => {
+  play: async ({ canvas, canvasElement, userEvent }) => {
     await waitFor(async () => {
       await expect(canvas.getByText('billing-worker')).toBeInTheDocument()
       await expect(canvas.getByText('docs-site')).toBeInTheDocument()
     }, { timeout: 5000 })
+
+    // Status filter is a functional control — Geist, not mono/uppercase
+    // chrome, and never brand orange for the selected state (rubric #3, #8).
+    await userEvent.click(canvas.getByRole('button', { name: /status/i }))
+    const menu = within(canvasElement.ownerDocument.body)
+    const okOption = await menu.findByRole('menuitem', { name: /^ok/i })
+    await expect(okOption.className).not.toContain('font-mono')
+    await expect(okOption.className).not.toContain('text-brand')
+    await userEvent.click(okOption)
+    await waitFor(async () => {
+      await expect(canvas.getByText('orders-api')).toBeInTheDocument()
+      await expect(canvas.queryByText('billing-worker')).toBeNull()
+      await expect(canvas.queryByText('docs-site')).toBeNull()
+    })
   },
 }
 

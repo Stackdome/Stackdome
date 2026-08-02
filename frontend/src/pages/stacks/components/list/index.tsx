@@ -208,7 +208,7 @@ export default function StacksPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="mt-2 text-muted-foreground">Loading stacks...</p>
+        <p className="mt-2 text-muted-foreground">Loading stacks…</p>
       </div>
     );
   }
@@ -268,19 +268,16 @@ export default function StacksPage() {
                 placeholder="Filter stacks…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="pl-9"
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                  >
-                    Status: <span className="text-foreground">{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
-                    <ChevronDown className="h-3 w-3 flex-none" />
-                  </button>
+                  <Button variant="outline" size="sm">
+                    <span className="text-fg-2">Status:</span> <span>{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
+                    <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -290,37 +287,34 @@ export default function StacksPage() {
                   <DropdownMenuItem
                     onSelect={() => setStatusFilter(ALL_STATUSES)}
                     className={cn(
-                      "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                      statusFilter === ALL_STATUSES && "text-brand"
+                      "justify-between text-[13px]",
+                      statusFilter === ALL_STATUSES && "font-semibold text-foreground"
                     )}
                   >
                     <span>All</span>
-                    <span className="tabular-nums opacity-80">{deployedStacks.length}</span>
+                    <span className="tabular-nums text-fg-2">{deployedStacks.length}</span>
                   </DropdownMenuItem>
                   {statusOptions.map((o) => (
                     <DropdownMenuItem
                       key={o.label}
                       onSelect={() => setStatusFilter(o.label)}
                       className={cn(
-                        "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                        statusFilter === o.label && "text-brand"
+                        "justify-between text-[13px]",
+                        statusFilter === o.label && "font-semibold text-foreground"
                       )}
                     >
                       <span>{o.label}</span>
-                      <span className="tabular-nums opacity-80">{o.count}</span>
+                      <span className="tabular-nums text-fg-2">{o.count}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                  >
-                    Sort: <span className="text-foreground">{sortLabel}</span>
-                    <ChevronDown className="h-3 w-3 flex-none" />
-                  </button>
+                  <Button variant="outline" size="sm">
+                    <span className="text-fg-2">Sort:</span> <span>{sortLabel}</span>
+                    <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -332,8 +326,8 @@ export default function StacksPage() {
                       key={o.key}
                       onSelect={() => setSortKey(o.key)}
                       className={cn(
-                        "font-mono text-[11px] uppercase tracking-[1.5px]",
-                        sortKey === o.key && "text-brand"
+                        "text-[13px]",
+                        sortKey === o.key && "font-semibold text-foreground"
                       )}
                     >
                       {o.label}
