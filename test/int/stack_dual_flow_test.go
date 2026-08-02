@@ -133,6 +133,7 @@ var _ = Describe("Stack dual-flow (thin vs fat)", func() {
 			func() openapi.EnvVar { v := openapi.NewEnvVar("EXTRA"); v.SetValue("value"); return *v }(),
 		})
 		updated.SetExecutionConfig(*exec)
+		shared.ServeDeclaredPorts(updated)
 		shared.UpdateStackResourceH(client, orgID, projectName, thin.GetId(), shared.MultiResourceBackendName, updated)
 
 		By("Verifying both resource nodes are still present")

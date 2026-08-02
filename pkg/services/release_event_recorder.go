@@ -271,7 +271,7 @@ func (r *releaseEventRecorder) RecordResourceEvent(
 		ResourceName: resourceName,
 		Type:         eventType,
 		Message:      text,
-		DedupeKey:    fmt.Sprintf("resource:%s:%s", resourceName, eventType),
+		DedupeKey:    fmt.Sprintf("resource:%s:%s:%s", resourceName, eventType, reason),
 		Metadata:     metadata,
 	})
 	return serr

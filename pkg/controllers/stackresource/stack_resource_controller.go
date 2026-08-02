@@ -222,15 +222,17 @@ func observedForGeneration(cr *corev1alpha1.StackResource) bool {
 // when only the previous revision is still serving (Phase=Degraded). Ready
 // therefore additionally requires converged, and the not-converged path keeps
 // the Converged condition's detail so a stuck rollout is diagnosable from the
-// timeline.
+// timeline — or the agent's readiness diagnosis when it has one, since the
+// condition only ever says "not ready yet".
 //
 // A failure carried over from a prior generation must not be attributed to the
-// new release, so both failure paths are gated the same way the Ready path is
+// new release, so every failure path is gated the same way the Ready path is
 // gated on convergedForGeneration: the Stalled condition only counts for its own
 // current generation (stalledCurrentGeneration), and the runtime crash detail
-// only counts when the status as a whole is for the current generation
-// (runtimeCurrentGeneration). A terminal build failure is suppressed regardless
-// of generation because those events are always the imagebuild controller's.
+// and the readiness diagnosis only count when the status as a whole is for the
+// current generation (runtimeCurrentGeneration). A terminal build failure is
+// suppressed regardless of generation because those events are always the
+// imagebuild controller's.
 func resourceEvent(conditions []models.Condition, failure *models.StackResourceFailure, converged, stalledCurrentGeneration, runtimeCurrentGeneration bool) (eventType models.ReleaseEventType, reason, message string, emit bool) {
 	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) {
 		if cond.Reason == stalledReasonBuildFailed {
@@ -258,6 +260,9 @@ func resourceEvent(conditions []models.Condition, failure *models.StackResourceF
 	if convergedCond != nil && !converged {
 		if convergedCond.Status == string(models.ConditionFalse) {
 			reason, message = convergedCond.Reason, convergedCond.Message
+		}
+		if runtimeCurrentGeneration && failure != nil && failure.Type == models.FailureTypeReadinessFailure && failure.Container != nil {
+			reason, message = failure.Container.Reason, failure.Container.Message
 		}
 		if availableTrue {
 			if message == "" {

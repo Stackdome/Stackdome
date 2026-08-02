@@ -5738,6 +5738,7 @@ components:
             - image_pull_failed
             - create_container_error
             - exit_error
+            - port_not_listening
         reason:
           type: string
         message:
@@ -5759,6 +5760,7 @@ components:
             - image_pull_failed
             - create_container_error
             - exit_error
+            - port_not_listening
         reason:
           type: string
         message:
@@ -5777,6 +5779,7 @@ components:
           enum:
             - runtime_crash
             - build_failure
+            - readiness_failure
         container:
           $ref: '#/components/schemas/ContainerFailureDetail'
         init_container:

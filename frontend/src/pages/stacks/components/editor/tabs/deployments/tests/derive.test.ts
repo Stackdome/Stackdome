@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime } from "../derive";
+import { deriveFailingResources, deriveRecovered, humanizeFailureType, causeLabel, formatDuration, formatReleaseTime, ResourceFailureType } from "../derive";
 import { deriveStages, deriveReleaseTitle, releaseGitSha, phaseTone, toneTextClass, toneDotClass, stateTone, toneFromVariant, BUILD_READY_CONDITION, CONDITION_TRUE } from "../derive";
 import { deriveHeaderHealth, latestDeployFailed, stackSummariesStale, stripUnpinnedGitRevisions } from "../derive";
 import type { FailingResource, Stack, StackResource } from "../derive";
@@ -11,6 +11,17 @@ function release(partial: Partial<StackRelease>): StackRelease {
 
 function liveStatusWith(resources: Record<string, Record<string, unknown>>): ReleaseLiveStatus {
   return { resources } as unknown as ReleaseLiveStatus;
+}
+
+function readinessLiveStatus(state: string): ReleaseLiveStatus {
+  return liveStatusWith({
+    web: {
+      state,
+      conditions: [{ type: BUILD_READY_CONDITION, status: CONDITION_TRUE }],
+      last_failure: {
+        type: ResourceFailureType.Readiness, container: { failure_type: "port_not_listening", reason: "PortNotListening" } },
+    },
+  });
 }
 
 function stackWithReleases(current?: Partial<ReleaseSummary>, latest?: Partial<ReleaseSummary>): Stack {
@@ -45,6 +56,18 @@ describe("deriveFailingResources", () => {
     expect(deriveFailingResources(release({}), liveStatus)[0]).toMatchObject({ name: "migrate", stage: "init", reason: "InitFailed", exitCode: 2 });
   });
 
+  it("maps a readiness failure without a restart count", () => {
+    const liveStatus = liveStatusWith({
+      web: { state: "Pending", last_failure: {
+        type: ResourceFailureType.Readiness, container: { failure_type: "port_not_listening", reason: "PortNotListening", message: "readiness check failed: nothing listening on port 8080", restart_count: 0 } } },
+    });
+    const out = deriveFailingResources(release({}), liveStatus);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ name: "web", type: ResourceFailureType.Readiness, reason: "PortNotListening", failureType: "port_not_listening" });
+    expect(out[0].restartCount).toBeUndefined();
+    expect(out[0].exitCode).toBeUndefined();
+  });
+
   it("returns nothing without a live status (not live or active)", () => {
     expect(deriveFailingResources(release({}))).toEqual([]);
   });
@@ -59,6 +82,14 @@ describe("deriveRecovered", () => {
     expect(deriveRecovered(release({}), liveStatus)).toEqual([{ name: "tooljet", reason: "CrashLoopBackOff", restartCount: 5 }]);
   });
 
+  it("drops the restart count for a recovered readiness failure", () => {
+    const liveStatus = liveStatusWith({
+      web: { state: "Ready", last_failure: {
+        type: ResourceFailureType.Readiness, container: { failure_type: "port_not_listening", reason: "PortNotListening", restart_count: 0 } } },
+    });
+    expect(deriveRecovered(release({}), liveStatus)).toEqual([{ name: "web", reason: "PortNotListening", restartCount: undefined }]);
+  });
+
   it("does not flag a failing resource as recovered", () => {
     const liveStatus = liveStatusWith({
       tooljet: { state: "CrashLoopBackOff", last_failure: { type: "runtime_crash", container: { reason: "x" } } },
@@ -71,6 +102,9 @@ describe("humanizeFailureType", () => {
   it("maps known types", () => {
     expect(humanizeFailureType("out_of_memory")).toBe("Out of memory");
     expect(humanizeFailureType("crash_loop")).toBe("Crash loop");
+  });
+  it("labels a port_not_listening detail", () => {
+    expect(humanizeFailureType("port_not_listening")).toBe("Port not listening");
   });
   it("falls back to the raw value", () => {
     expect(humanizeFailureType("weird_thing")).toBe("weird_thing");
@@ -202,6 +236,20 @@ describe("deriveStages", () => {
       .toEqual({ build: "done", deploy: "failed", ready: "todo" });
   });
 
+  it("deploy failed when a condemned readiness failure occurs", () => {
+    const rel = release({ state: "InProgress", pins: imagePins });
+    const live = readinessLiveStatus("Failed");
+    const failing = deriveFailingResources(rel, live);
+    expect(deriveStages(rel, failing, live)).toEqual({ build: "done", deploy: "failed", ready: "todo" });
+  });
+
+  it("deploy still active for a provisional readiness failure mid-rollout", () => {
+    const rel = release({ state: "InProgress", pins: imagePins });
+    const live = readinessLiveStatus("Pending");
+    const failing = deriveFailingResources(rel, live);
+    expect(deriveStages(rel, failing, live)).toEqual({ build: "done", deploy: "active", ready: "todo" });
+  });
+
   it("terminal Failed runtime crash maps to Deploy done / Ready ✕", () => {
     const failing = [{ name: "api", type: "runtime_crash" as const, stage: "runtime" as const, reason: "CrashLoopBackOff" }];
     expect(deriveStages(release({ state: "Failed", pins: imagePins }), failing))
@@ -250,6 +298,13 @@ describe("deriveReleaseTitle", () => {
   it("names the failing resource for build / runtime crashes", () => {
     expect(deriveReleaseTitle(release({ state: "InProgress" }), [buildFail], stages)).toBe("Build failed: api");
     expect(deriveReleaseTitle(release({ state: "InProgress" }), [crash], stages)).toBe("Runtime crash: tooljet");
+  });
+  it("names the port failure for a condemned readiness failure, but not a provisional one", () => {
+    const rel = release({ state: "InProgress" });
+    const condemned = deriveFailingResources(rel, readinessLiveStatus("Failed"));
+    const provisional = deriveFailingResources(rel, readinessLiveStatus("Pending"));
+    expect(deriveReleaseTitle(rel, condemned, stages)).toBe("Port not listening: web");
+    expect(deriveReleaseTitle(rel, provisional, stages)).toBe("Deploying");
   });
   it("a terminal crash reads as Deploy failed", () => {
     expect(deriveReleaseTitle(release({ state: "Failed" }), [crash], stages)).toBe("Deploy failed");
