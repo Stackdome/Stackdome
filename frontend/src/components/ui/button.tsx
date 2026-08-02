@@ -23,9 +23,11 @@ const buttonVariants = cva(
           "bg-transparent text-foreground hover:bg-foreground/5 active:shadow-[var(--press)]",
         link: "text-foreground underline-offset-4 hover:underline",
         // Inverse foreground CTA — used on auth pages to contrast with the cream/navy band.
-        // Default: foreground (white in dark / navy in light). Hover flips to brand amber.
+        // Foreground fill at rest; hover is a one-step opacity shift, same as
+        // `destructive` (rubric: black is the only action colour, orange is
+        // never a button fill).
         inverse:
-          "bg-foreground text-background shadow-[var(--edge)] hover:bg-brand hover:text-white dark:hover:text-primary-foreground active:shadow-[var(--press)]",
+          "bg-foreground text-background shadow-[var(--edge)] hover:opacity-90 active:shadow-[var(--press)]",
         // Quiet neutral text button (D15: buttons are never mono — this used
         // to be a monospace terminal CTA). Kept for API stability; call sites
         // should migrate to `ghost` during their page's graphite pass.
