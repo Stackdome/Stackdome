@@ -8,7 +8,10 @@ import (
 	"github.com/Stackdome/stackdome/install"
 )
 
-const apiServerResourceName = "api-server"
+const (
+	apiServerResourceName = "api-server"
+	dbResourceName        = "db"
+)
 
 var externallyReachable bool
 

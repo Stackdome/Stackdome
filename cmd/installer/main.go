@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Stackdome/stackdome/install"
+	"github.com/Stackdome/stackdome/pkg/models"
 )
 
 const defaultAPIServerImage = "quay.io/stackdome/stackdome:latest"
@@ -73,6 +74,7 @@ func runInstall(args []string) {
 		AdminEmail:     *email,
 		Domain:         preflight.Domain,
 		APIServerImage: *image,
+		DBWorkloadType: string(models.WorkloadTypeStatefulService),
 		TLSEnabled:     isTLSDomain(preflight.Domain),
 	}
 

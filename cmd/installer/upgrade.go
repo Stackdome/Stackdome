@@ -53,9 +53,18 @@ func runUpgrade(args []string) {
 	}
 	successLog("Secrets loaded")
 
+	// An existing db keeps the workload type it was installed with -- switching a
+	// live Postgres between Deployment and StatefulSet is not this command's job.
+	dbWorkloadType, err := existingDBWorkloadType()
+	if err != nil {
+		exitErr("Reading existing configuration failed", err)
+	}
+	stepLog(fmt.Sprintf("Database workload type: %s", dbWorkloadType))
+
 	vals := install.TemplateValues{
 		Domain:         domain,
 		APIServerImage: *image,
+		DBWorkloadType: dbWorkloadType,
 		TLSEnabled:     isTLSDomain(domain),
 		DBPassword:     secrets.DBPassword,
 		JWTSecret:      secrets.JWTSecret,
@@ -101,6 +110,19 @@ func requireExistingInstall() error {
 
 	successLog("Existing install detected")
 	return nil
+}
+
+func existingDBWorkloadType() (string, error) {
+	workloadType, err := output("kubectl", "get", "stackresource", dbResourceName,
+		"-n", chartNamespace,
+		"-o", "jsonpath={.spec.workloadType}")
+	if err != nil {
+		return "", fmt.Errorf("reading db StackResource: %w", err)
+	}
+	if workloadType == "" {
+		return "", fmt.Errorf("db StackResource has no workloadType")
+	}
+	return workloadType, nil
 }
 
 func existingImage() (string, error) {

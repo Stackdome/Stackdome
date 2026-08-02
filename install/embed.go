@@ -18,6 +18,7 @@ type TemplateValues struct {
 	AdminPassword  string
 	Domain         string
 	APIServerImage string
+	DBWorkloadType string
 	TLSEnabled     bool
 }
 
