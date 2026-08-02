@@ -119,7 +119,9 @@ const addonRefConnection = {
   from: { type: "addon/postgres", id: "addon-1" },
   to: { type: "stack_resource", name: "web" },
   config: { database: "app", superuser: false },
-  mappings: [{ target: { type: "env", name: "DATABASE_URL" }, value: { output: "connectionString" } }],
+  // `output` must name a real addon field (ADDON_OUTPUT_FIELDS) or the row is
+  // dropped on both sides and this fixture asserts nothing.
+  mappings: [{ target: { type: "env", name: "DATABASE_URL" }, value: { output: "url" } }],
 };
 
 function stackOf(resources: unknown[], volumes: unknown[] = [], connections: unknown[] = []): Stack {
