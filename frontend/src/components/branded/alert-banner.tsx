@@ -13,7 +13,7 @@ export function AlertBanner({ children, action, className }: AlertBannerProps) {
     <div
       role="alert"
       className={cn(
-        "flex items-center gap-3 rounded-lg border border-danger-border bg-danger-bg px-4 py-3",
+        "flex items-center gap-3 rounded-[14px] border border-danger-border bg-danger-bg px-4 py-3",
         className,
       )}
     >
@@ -27,7 +27,7 @@ export function AlertBanner({ children, action, className }: AlertBannerProps) {
           type="button"
           onClick={action.onClick}
           disabled={action.disabled}
-          className="flex-none whitespace-nowrap text-[13px] font-semibold text-danger hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger rounded disabled:opacity-50 disabled:pointer-events-none"
+          className="flex-none whitespace-nowrap text-[13px] font-semibold text-danger hover:underline focus-visible:outline-2 focus-visible:outline-danger focus-visible:outline-offset-2 rounded disabled:opacity-50 disabled:pointer-events-none"
         >
           {action.label}
         </button>

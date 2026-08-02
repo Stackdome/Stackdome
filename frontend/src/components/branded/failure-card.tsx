@@ -39,7 +39,7 @@ export function FailureCard({
   return (
     <div
       className={cn(
-        "rounded-lg border border-danger-border bg-danger-bg p-4",
+        "rounded-[14px] border border-danger-border bg-danger-bg p-4",
         className,
       )}
     >

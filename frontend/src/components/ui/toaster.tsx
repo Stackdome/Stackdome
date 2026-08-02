@@ -20,7 +20,7 @@ function variantChip(variant?: "default" | "destructive" | "success" | "warning"
     case "info":
       return { Icon: Info, color: "text-info" };
     default:
-      return { Icon: Info, color: "text-brand" };
+      return { Icon: Info, color: "text-fg-2" };
   }
 }
 

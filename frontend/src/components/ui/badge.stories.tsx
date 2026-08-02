@@ -15,3 +15,6 @@ export const Default: Story = {}
 export const Secondary: Story = { args: { variant: 'secondary' } }
 export const Destructive: Story = { args: { variant: 'destructive', children: 'Failed' } }
 export const Outline: Story = { args: { variant: 'outline' } }
+export const Success: Story = { args: { variant: 'success', children: 'Ready' } }
+export const Warning: Story = { args: { variant: 'warning', children: 'Degraded' } }
+export const Info: Story = { args: { variant: 'info', children: 'Provisioning' } }

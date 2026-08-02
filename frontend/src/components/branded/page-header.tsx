@@ -18,11 +18,11 @@ export function PageHeader({ eyebrow, title, status, subtitle, actions, actionsA
       <div className="min-w-0 flex-1">
         {eyebrow && <EyebrowLabel className="mb-2 block">{eyebrow}</EyebrowLabel>}
         <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-medium tracking-tight">{title}</h1>
+          <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
           {status}
         </div>
         {subtitle && (
-          <p className="mt-2 font-mono text-xs text-muted-foreground tracking-[0.5px]">{subtitle}</p>
+          <p className="mt-2 text-[13px] text-fg-2">{subtitle}</p>
         )}
       </div>
       {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}

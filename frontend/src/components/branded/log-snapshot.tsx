@@ -14,7 +14,7 @@ export function LogSnapshot({ lines, label, className }: LogSnapshotProps) {
         <span>{label ?? `log snapshot · last ${lines.length} lines`}</span>
         <span className="normal-case tracking-normal">(read-only)</span>
       </div>
-      <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-foreground/95 px-3.5 py-3 font-mono text-xs leading-relaxed text-background">
+      <pre className="overflow-x-auto whitespace-pre-wrap rounded-md bg-code-bg px-3.5 py-3 font-mono text-xs leading-relaxed text-code-fg">
         {lines.join("\n")}
       </pre>
     </div>

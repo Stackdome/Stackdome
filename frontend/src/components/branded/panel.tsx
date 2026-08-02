@@ -26,8 +26,8 @@ export function Panel({ title, count, action, className, bodyClassName, bare, to
   return (
     <section
       className={cn(
-        !bare && "rounded-lg border bg-card",
-        !bare && (invalid ? "border-danger-border" : "border-border"),
+        !bare && "rounded-[12px] border bg-secondary shadow-[var(--edge)]",
+        !bare && (invalid ? "border-danger-border" : "border-border-strong"),
         className,
       )}
     >

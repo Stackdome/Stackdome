@@ -7,7 +7,7 @@ const meta = {
   tags: ['ai-generated'],
   decorators: [
     (Story) => (
-      <div className="max-w-[640px] rounded-lg border border-border">
+      <div className="max-w-[640px] rounded-md border border-border">
         <Story />
       </div>
     ),
