@@ -42,9 +42,16 @@ export const WithIcon: Story = {
 
 // Proves the app's Tailwind theme actually loaded in the preview: the default
 // variant is bg-brand, which resolves to the --brand token from src/index.css.
+// Reads the token live (rather than a hardcoded color literal) so this keeps
+// passing as the palette evolves.
 export const CssCheck: Story = {
   play: async ({ canvas }) => {
     const button = canvas.getByRole('button', { name: /deploy stack/i })
-    await expect(getComputedStyle(button).backgroundColor).toBe('oklch(0.72 0.2 40)')
+    const probe = document.createElement('div')
+    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--brand').trim()
+    document.body.appendChild(probe)
+    const expected = getComputedStyle(probe).color
+    probe.remove()
+    await expect(getComputedStyle(button).backgroundColor).toBe(expected)
   },
 }
