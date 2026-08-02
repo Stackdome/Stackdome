@@ -132,9 +132,10 @@ export function useDraftSync({
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** Set while the engine itself rewrites the draft, so absorbing the server's
-   *  answer doesn't read as the user having unsaved edits. */
-  const adoptingRef = useRef(false);
+  /** The draft the engine itself wrote while absorbing the server's answer.
+   *  Identity, not a flag: a boolean would also swallow a keystroke that landed
+   *  in the same React commit, and that edit would never be scheduled. */
+  const adoptedDraftRef = useRef<unknown>(null);
 
   // Seed the mirror once from the fetched stack; afterwards the engine's own
   // refetches (and notifyExternalUpdate) keep it truthful.
@@ -189,7 +190,7 @@ export function useDraftSync({
         };
       });
       if (!changed) return current;
-      adoptingRef.current = true;
+      adoptedDraftRef.current = next;
       return next;
     });
   }, []);
@@ -325,9 +326,10 @@ export function useDraftSync({
       return;
     }
     // The engine rewrote the draft to match the server it just read. That is
-    // not an edit waiting to be saved, and there is nothing to send back.
-    if (adoptingRef.current) {
-      adoptingRef.current = false;
+    // not an edit waiting to be saved, and there is nothing to send back — but
+    // only for that exact draft; anything later is the user typing.
+    if (draft.resources === adoptedDraftRef.current) {
+      adoptedDraftRef.current = null;
       return;
     }
     if (firstArmRef.current) firstArmRef.current = false;

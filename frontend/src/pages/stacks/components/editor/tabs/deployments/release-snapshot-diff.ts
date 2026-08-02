@@ -78,6 +78,10 @@ function toSections(fields: FieldChange[]): DiffSection[] {
     .map((kind) => ({ kind, rows: bySection.get(kind)! }));
 }
 
+function hasSomethingToSay(d: ResourceDiff): boolean {
+  return d.change !== "modified" || d.sections.length > 0;
+}
+
 function toResourceDiff(entry: EntityDiff): ResourceDiff {
   return {
     name: entry.name,
@@ -106,9 +110,15 @@ function toItemDiff(entry: EntityDiff): ItemDiff {
 export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
   // No predecessor — the caller distinguishes "initial release" from "no change".
   if (prev == null) return { resources: [], volumes: [] };
-  const diff = diffStacks(canonicalFromSnapshot(prev), canonicalFromSnapshot(cur));
+  // Both sides are releases (or a draft measured against one), so revisions the
+  // current side leaves unpinned are the pin resolver's, not a user's.
+  const diff = diffStacks(canonicalFromSnapshot(prev), canonicalFromSnapshot(cur), {
+    baselineIsRelease: true,
+  });
   return {
-    resources: diff.resources.map(toResourceDiff),
-    volumes: diff.volumes.map(toItemDiff),
+    // A modified entry whose every row formatted away has nothing to show, and
+    // a card with nothing in it is a change the reader cannot account for.
+    resources: diff.resources.map(toResourceDiff).filter(hasSomethingToSay),
+    volumes: diff.volumes.map(toItemDiff).filter((v) => v.change !== "modified" || v.rows.length > 0),
   };
 }

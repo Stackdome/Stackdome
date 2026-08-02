@@ -1,7 +1,20 @@
-import type { Stack, StackUpdateRequest, StackResourceUpdateRequest, Volume } from "@/api/stacks";
+import type { Stack, StackResource, StackUpdateRequest, StackResourceUpdateRequest, Volume } from "@/api/stacks";
 import type { StackReleaseSnapshot } from "@/api/releases";
-import { canonicalFromSnapshot, canonicalFromStack } from "@/pages/stacks/lib/stack-model/from-api";
-import { resourceToApi } from "@/pages/stacks/lib/stack-model/to-api";
+
+/**
+ * Strip the fields the server owns and the PUT schema rejects. Deliberately NOT
+ * the canonical adapter: that one is built for comparing, so it drops nameless
+ * resources, sorts env vars and materializes defaults. This body is replace-all
+ * — anything it fails to carry is deleted from the stack.
+ */
+function cleanResource(r: StackResource): StackResourceUpdateRequest {
+  const { id, stack_id, revision, outputs, status, ...rest } = r as StackResource & {
+    outputs?: unknown;
+    status?: unknown;
+  };
+  void id; void stack_id; void revision; void outputs; void status;
+  return rest as StackResourceUpdateRequest;
+}
 
 function cleanVolume(v: Volume) {
   // Strip every readOnly Volume field (id, project_id, status) — the whole-stack
@@ -57,8 +70,8 @@ export function snapshotToUpdateRequest(
     name: current.name,
     labels: current.labels,
     spec: {
-      stack_resources: canonicalFromSnapshot(snap).resources.map((r) =>
-        withExplicitEmptyCollections(resourceToApi(r)),
+      stack_resources: (snap.resources ?? []).map((r) =>
+        withExplicitEmptyCollections(cleanResource(r as StackResource)),
       ),
       volumes: (snap.volumes ?? []).length > 0 ? (snap.volumes ?? []).map((v) => cleanVolume(v as Volume)) : undefined,
       ...(connections.length > 0 ? { connections } : {}),
@@ -77,8 +90,8 @@ export function stackToUpdateRequest(stack: Stack, labels: Stack["labels"]): Sta
     name: stack.name,
     labels,
     spec: {
-      stack_resources: canonicalFromStack(stack).resources.map((r) =>
-        withExplicitEmptyCollections(resourceToApi(r)),
+      stack_resources: (stack.spec?.stack_resources ?? []).map((r) =>
+        withExplicitEmptyCollections(cleanResource(r as StackResource)),
       ),
       volumes:
         (stack.spec?.volumes ?? []).length > 0

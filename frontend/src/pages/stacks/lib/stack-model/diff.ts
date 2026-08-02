@@ -26,14 +26,14 @@ export interface StackDiff {
   volumes: EntityDiff[];
 }
 
-export const EMPTY_STACK_DIFF: StackDiff = { resources: [], volumes: [] };
+export interface DiffOptions {
+  /** The baseline is a deployed release, so revisions the current spec leaves
+   *  unpinned were written there by the pin resolver rather than by a user. */
+  baselineIsRelease?: boolean;
+}
 
 export function isEmptyDiff(d: StackDiff): boolean {
   return d.resources.length === 0 && d.volumes.length === 0;
-}
-
-export function countChanges(d: StackDiff): number {
-  return d.resources.length + d.volumes.length;
 }
 
 /**
@@ -80,11 +80,14 @@ function flattenVolume(v: CanonicalVolume): Map<string, unknown> {
 }
 
 /**
- * The pin resolver writes the revision it resolved into the release snapshot.
- * For a key the current spec leaves unpinned, that value is a deploy-time fact
- * about the baseline, not drift — a branch-tracking resource must not read as
- * changed against whatever commit the branch pointed at. A key the spec does
- * pin still compares strictly.
+ * The pin resolver writes the revision it resolved into a release snapshot, so
+ * a key the current spec leaves unpinned carries a deploy-time fact there, not
+ * drift: a branch-tracking resource must not read as changed against whatever
+ * commit the branch happened to point at.
+ *
+ * ONLY sound when the baseline is a release snapshot. Against a baseline that
+ * holds user intent — the saved spec, the session baseline — the same rule
+ * erases the user's own act of clearing a pin, and the edit is never written.
  */
 function dropResolvedRevisions(prev: Map<string, unknown>, cur: Map<string, unknown>): void {
   for (const key of REVISION_KEYS) {
@@ -107,10 +110,14 @@ function fieldChanges(prev: Map<string, unknown>, cur: Map<string, unknown>): Fi
   return changes.sort((a, b) => a.path.localeCompare(b.path));
 }
 
-function resourceFields(prev: CanonicalResource, cur: CanonicalResource): FieldChange[] {
+function resourceFields(
+  prev: CanonicalResource,
+  cur: CanonicalResource,
+  opts: DiffOptions,
+): FieldChange[] {
   const p = flattenResource(prev);
   const c = flattenResource(cur);
-  dropResolvedRevisions(p, c);
+  if (opts.baselineIsRelease) dropResolvedRevisions(p, c);
   return fieldChanges(p, c);
 }
 
@@ -185,12 +192,16 @@ function presentFields(flat: Map<string, unknown>, side: "from" | "to"): FieldCh
  * is undeployed, the drawer asks it what to tint, and the timeline asks it what
  * one release changed about the last — all from the same answer.
  */
-export function diffStacks(prev: CanonicalStack, cur: CanonicalStack): StackDiff {
+export function diffStacks(
+  prev: CanonicalStack,
+  cur: CanonicalStack,
+  opts: DiffOptions = {},
+): StackDiff {
   return {
     resources: diffEntities(
       prev.resources,
       cur.resources,
-      resourceFields,
+      (a, b) => resourceFields(a, b, opts),
       (r) => presentFields(flattenResource(r), "to"),
       (r) => presentFields(flattenResource(r), "from"),
       resourceFingerprint,
@@ -210,7 +221,8 @@ export function diffStacks(prev: CanonicalStack, cur: CanonicalStack): StackDiff
 export function resourceFieldChanges(
   prev: CanonicalResource | undefined,
   cur: CanonicalResource | undefined,
+  opts: DiffOptions = {},
 ): FieldChange[] {
   if (!prev || !cur) return [];
-  return resourceFields(prev, cur);
+  return resourceFields(prev, cur, opts);
 }

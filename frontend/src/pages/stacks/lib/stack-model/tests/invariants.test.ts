@@ -190,7 +190,9 @@ describe("canonical model invariants", () => {
           volumes: stack.spec?.volumes,
           connections: stack.spec?.connections,
         } as unknown as StackReleaseSnapshot;
-        const diff = diffStacks(canonicalFromSnapshot(snapshot), canonicalFromDraft(draftOf(stack)));
+        const diff = diffStacks(canonicalFromSnapshot(snapshot), canonicalFromDraft(draftOf(stack)), {
+          baselineIsRelease: true,
+        });
         expect(isEmptyDiff(diff)).toBe(true);
       });
     }
@@ -210,7 +212,9 @@ describe("canonical model invariants", () => {
       volumes: [],
       connections: [],
     } as unknown as StackReleaseSnapshot;
-    const diff = diffStacks(canonicalFromSnapshot(deployed), canonicalFromDraft(draftOf(stack)));
+    const diff = diffStacks(canonicalFromSnapshot(deployed), canonicalFromDraft(draftOf(stack)), {
+      baselineIsRelease: true,
+    });
     expect(isEmptyDiff(diff)).toBe(true);
   });
 
@@ -224,7 +228,9 @@ describe("canonical model invariants", () => {
       volumes: [],
       connections: [],
     } as unknown as StackReleaseSnapshot;
-    const diff = diffStacks(canonicalFromSnapshot(deployed), canonicalFromDraft(draftOf(stackOf([pinned]))));
+    const diff = diffStacks(canonicalFromSnapshot(deployed), canonicalFromDraft(draftOf(stackOf([pinned]))), {
+      baselineIsRelease: true,
+    });
     expect(diff.resources).toHaveLength(1);
     expect(diff.resources[0].fields.map((f) => f.path)).toContain("source.git.commit");
   });

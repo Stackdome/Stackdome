@@ -18,19 +18,11 @@ export const SERVER_WRITTEN_RESOURCE_FIELDS = [
 
 export const SERVER_WRITTEN_VOLUME_FIELDS = ["id", "project_id", "stack_id", "status"] as const;
 
-/**
- * Values the API fills in on write. A spec that omits one and a spec that spells
- * it out are the same config, so both sides adopt the default before comparing.
- */
-export const FIELD_DEFAULTS = {
-  workload_type: "Service",
-  "source.git.dockerfile_path": "Dockerfile",
-  "source.git.build_context": ".",
-} as const;
-
-export const DEFAULT_DOCKERFILE_PATH = FIELD_DEFAULTS["source.git.dockerfile_path"];
-export const DEFAULT_BUILD_CONTEXT = FIELD_DEFAULTS["source.git.build_context"];
-export const DEFAULT_WORKLOAD_TYPE = FIELD_DEFAULTS.workload_type;
+/** Values the API fills in on write, so a spec that omits one and a spec that
+ *  spells it out are the same config and must compare equal. */
+export const DEFAULT_DOCKERFILE_PATH = "Dockerfile";
+export const DEFAULT_BUILD_CONTEXT = ".";
+export const DEFAULT_WORKLOAD_TYPE = "Service";
 
 /**
  * Git revision keys the deploy-time pin resolver writes into a release snapshot.

@@ -1,5 +1,5 @@
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
-import { getAtPath } from "@/pages/stacks/lib/stack-diff";
+import { getAtPath } from "./path";
 import { canonicalResourceFromForm } from "./from-form";
 import { resourceFieldChanges } from "./diff";
 import { deepEqual } from "./equal";

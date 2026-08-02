@@ -15,8 +15,9 @@ export type ResourceArr = Partial<FormStackResourceData>[];
 export type VolumeArr = Partial<FormVolumeExtendedData>[];
 
 import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-model/equal";
+import { getAtPath } from "@/pages/stacks/lib/stack-model/path";
 
-export { deepEqual, pairByFingerprint };
+export { deepEqual, pairByFingerprint, getAtPath };
 
 /** Deep clone via JSON round-trip. Form data is plain JSON so this is safe.
  *  Passes undefined through (JSON.parse(JSON.stringify(undefined)) throws). */
@@ -200,18 +201,6 @@ export function revertEnvRow(
 }
 
 // --- Generic dot-path helpers, used by per-field dirty/reset infra. ---
-
-/** Read a nested value via dot-path. Returns undefined for missing segments. */
-export function getAtPath(obj: unknown, path: string): unknown {
-  if (!path) return obj;
-  const parts = path.split(".");
-  let cur: unknown = obj;
-  for (const p of parts) {
-    if (cur == null || typeof cur !== "object") return undefined;
-    cur = (cur as Record<string, unknown>)[p];
-  }
-  return cur;
-}
 
 /** Immutably set a nested value via dot-path; returns a clone of `obj` with `path` set.
  * Preserves array-ness: `{...arr}` would coerce arrays into plain objects with
