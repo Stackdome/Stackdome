@@ -84,16 +84,20 @@ describe("a real edit survives to the server", () => {
   }
 
   /**
-   * KNOWN LIMITATION. Against a release baseline the diff sees only the draft,
-   * and "this spec never pinned a commit" is indistinguishable there from "the
-   * user just cleared the pin" — both arrive as an absent commit. So the
-   * undeployed-changes card omits that one row.
+   * KNOWN LIMITATION, and it outlives the save. Against a release baseline the
+   * diff sees only the draft, where "this spec never pinned a commit" and "the
+   * user just cleared the pin" both arrive as an absent commit.
    *
-   * It is cosmetic, not lost work: autosave compares against the saved spec and
-   * writes the change (asserted above), and the drawer tints the field, because
-   * its baseline is stripped against the saved spec by stripUnpinnedGitRevisions
-   * rather than against the draft. Closing it means threading the saved spec
-   * into diffSnapshots.
+   * The write still happens (asserted below), so no work is lost. But the
+   * drawer tint does not cover the gap either: its baseline is stripped against
+   * the SAVED spec, and once autosave lands, the saved spec no longer pins the
+   * commit — so the strip drops it there too and the tint disappears. In steady
+   * state neither surface reports the cleared pin, while the live release stays
+   * pinned to the old commit.
+   *
+   * Threading the saved spec into the diff would not fix it for the same
+   * reason. The rule needs to know what the spec pinned when the release was
+   * cut, which no snapshot records — a backend change, tracked separately.
    */
   it("hides a cleared pin from the release card, but still writes it", () => {
     const deployed = { resources: [pinned], volumes: [], connections: [] } as unknown as StackReleaseSnapshot;

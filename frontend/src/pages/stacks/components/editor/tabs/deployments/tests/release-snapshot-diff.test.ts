@@ -208,3 +208,41 @@ describe("diffSnapshots surfaces fields nobody projected", () => {
     ]);
   });
 });
+
+/**
+ * Restored from the pre-refactor suite. These assert the PRESENTATION of git
+ * revisions — which rows a card shows — which the model-level tests in
+ * one-edit-one-change.test.ts never reach.
+ */
+describe("diffSnapshots git revisions", () => {
+  const gitWeb = (git: Record<string, unknown>) => ({
+    name: "web",
+    source: { git: { repo_url: "https://github.com/acme/demo.git", dockerfile_path: "Dockerfile", build_context: ".", ...git } },
+    ports: [],
+    execution_config: { command: [], args: [], environment_variables: [] },
+  });
+
+  it("flags only the branch change, with no phantom commit row", () => {
+    const prev = snap([gitWeb({ branch: "main", commit: "resolved-by-the-pin-resolver" })]);
+    const cur = snap([gitWeb({ branch: "next" })]);
+    const out = diffSnapshots(prev, cur).resources;
+    expect(out).toHaveLength(1);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toEqual([{ key: "branch", from: "main", to: "next", kind: "changed" }]);
+  });
+
+  it("flags a commit pin change beside an unchanged branch as a single commit row", () => {
+    const prev = snap([gitWeb({ branch: "main", commit: "aaaaaaa" })]);
+    const cur = snap([gitWeb({ branch: "main", commit: "bbbbbbb" })]);
+    const out = diffSnapshots(prev, cur).resources;
+    expect(out).toHaveLength(1);
+    const cfg = out[0].sections.find((s) => s.kind === "configuration")!;
+    expect(cfg.rows).toEqual([{ key: "commit", from: "aaaaaaa", to: "bbbbbbb", kind: "changed" }]);
+  });
+
+  it("ignores the resolver-written commit when the spec tracks a branch", () => {
+    const prev = snap([gitWeb({ branch: "main", commit: "9f1c2b7" })]);
+    const cur = snap([gitWeb({ branch: "main" })]);
+    expect(diffSnapshots(prev, cur).resources).toEqual([]);
+  });
+});

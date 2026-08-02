@@ -174,25 +174,26 @@ export function useDraftSync({
     if (!session.isActive) return;
     const serverForms = formResourcesFromSpec(fresh.spec?.stack_resources, fresh.spec?.connections);
     const byName = new Map(serverForms.map((r) => [r.name, r]));
-    session.updateResources((current) => {
-      let changed = false;
-      const next = current.map((draftResource) => {
-        if (!untouched.has(draftResource as unknown as object)) return draftResource;
-        const server = draftResource.name ? byName.get(draftResource.name) : undefined;
-        if (!server || deepEqual(draftResource, server)) return draftResource;
-        changed = true;
-        // The source stash is UI-only — the server has never heard of it, and
-        // dropping it would empty the "Build from" toggle's memory mid-session.
-        return {
-          ...server,
-          ...(draftResource.stashedGitSource ? { stashedGitSource: draftResource.stashedGitSource } : {}),
-          ...(draftResource.stashedImageSource ? { stashedImageSource: draftResource.stashedImageSource } : {}),
-        };
-      });
-      if (!changed) return current;
-      adoptedDraftRef.current = next;
-      return next;
+    // Built out here, not inside the updater: React may replay a state updater,
+    // and a replay would leave the ref holding an array React discarded.
+    const current = session.draft.resources;
+    let changed = false;
+    const next = current.map((draftResource) => {
+      if (!untouched.has(draftResource as unknown as object)) return draftResource;
+      const server = draftResource.name ? byName.get(draftResource.name) : undefined;
+      if (!server || deepEqual(draftResource, server)) return draftResource;
+      changed = true;
+      // The source stash is UI-only — the server has never heard of it, and
+      // dropping it would empty the "Build from" toggle's memory mid-session.
+      return {
+        ...server,
+        ...(draftResource.stashedGitSource ? { stashedGitSource: draftResource.stashedGitSource } : {}),
+        ...(draftResource.stashedImageSource ? { stashedImageSource: draftResource.stashedImageSource } : {}),
+      };
     });
+    if (!changed) return;
+    adoptedDraftRef.current = next;
+    session.updateResources(next);
   }, []);
 
   const startCycle = useCallback((): Promise<boolean> => {
