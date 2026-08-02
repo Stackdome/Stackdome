@@ -2,10 +2,10 @@ import type { Stack } from "@/api/stacks";
 import type { StackConnection } from "@/api/connections";
 
 /**
- * Server ids, indexed for the sync engine — and nothing else. What the server
- * *holds* is answered by the canonical model (`canonicalFromStack`); this file
- * exists only because connections and volumes are addressed by id when written,
- * and form state stays id-free.
+ * Server ids, indexed for the sync engine — and nothing else. Connections and
+ * volumes are addressed by id when written while form state stays id-free, so
+ * the ids are looked up here. What the server *holds* belongs to the canonical
+ * model (`canonicalFromStack`), not to this file.
  */
 export interface ServerConnectionEntry {
   id?: string;

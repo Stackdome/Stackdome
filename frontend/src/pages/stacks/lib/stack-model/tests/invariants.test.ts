@@ -8,14 +8,6 @@ import { diffStacks, isEmptyDiff } from "../diff";
 import { draftToSnapshot } from "@/pages/stacks/lib/draft-sync/draft-snapshot";
 import { bumpImage, firstImageResourceName, templateDrafts } from "./template-drafts";
 
-/**
- * One fixture per phantom-change bug this codebase has shipped a fix for, plus
- * the ordinary shapes. Both invariants below must hold for every one of them.
- *
- * A regression here is the bug class returning: the user opens a stack, touches
- * nothing, and the editor claims something changed.
- */
-
 const imageResource = {
   id: "r-web",
   stack_id: "s1",
@@ -54,20 +46,20 @@ const gitResource = {
   execution_config: { command: [], args: [], environment_variables: [] },
 };
 
-/** Phantom: the form invented `dockerfile_path`/`build_context` the spec omits. */
+/** A git source without the `dockerfile_path`/`build_context` the form fills in. */
 const bareGitResource = {
   ...gitResource,
   source: { git: { repo_url: "https://github.com/acme/demo.git", branch: "main" } },
 };
 
-/** Phantom: `workload_type` is zod-defaulted on the form side only. */
+/** No `workload_type`; the form side zod-defaults it. */
 const untypedResource = (() => {
   const { workload_type, ...rest } = imageResource;
   void workload_type;
   return rest;
 })();
 
-/** Phantom: server telemetry read as user intent. */
+/** Carries the server-written fields: `revision`, `status`, `outputs`. */
 const resourceWithServerFields = {
   ...imageResource,
   revision: 7,
@@ -96,7 +88,7 @@ const volume = {
   spec: { size: "1Gi", access_mode: "ReadWriteOnce", needs_sync_before_use: false },
 };
 
-/** Phantom: mounts live in connections; the resource always reports `[]`. */
+/** Mounts live in connections; the resource itself always reports `[]`. */
 const mountConnection = {
   id: "c-mount",
   kind: "volume_mount",
@@ -286,10 +278,6 @@ describe("the diff still sees real edits", () => {
   });
 });
 
-/**
- * The same invariants over the shipped templates, whose drafts come out of the
- * compose converter rather than a fixture written alongside the rule.
- */
 describe("every shipped template", () => {
   const BUMPED = "example.test/bumped:v2";
 

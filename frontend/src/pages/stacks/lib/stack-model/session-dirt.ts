@@ -12,9 +12,6 @@ export interface SessionDirt {
 /**
  * Which entries of the draft the user has changed, by index — the shape the
  * editor's index-keyed UI needs.
- *
- * The comparison is the one autosave and the deploy surfaces run, so a resource
- * can no longer look edited here and untouched there.
  */
 export function sessionDirt(draft: EditSessionDraft, baseline: EditSessionDraft): SessionDirt {
   const draftCanonical = canonicalFromDraft(draft);
@@ -28,8 +25,7 @@ export function sessionDirt(draft: EditSessionDraft, baseline: EditSessionDraft)
   }
 
   // A resource that doesn't validate yet has no canonical form, so the diff
-  // cannot see it — but the user is still typing into it, and an edit they can
-  // see must be an edit the editor admits to. Compare those raw.
+  // cannot see it. Compare those raw.
   const baselineByName = new Map(
     baseline.resources.map((r, i) => [r?.name?.trim() || `#${i}`, r] as const),
   );

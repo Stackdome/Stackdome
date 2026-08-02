@@ -5,9 +5,8 @@ import type { StackRelease, StackReleaseSnapshot } from "@/api/releases";
 
 /**
  * The phase drives the deploy pill and `stagedDiff` fills the changes modal, so
- * the two must agree: a phase that promises pending work has to hand over rows
- * to show, and a phase with no baseline yet must promise nothing. Disagreement
- * is what produced "Undeployed changes (1)" above "Loading changes…".
+ * the two must agree: a phase that promises pending work hands over rows to
+ * show, and a phase with no baseline yet promises nothing.
  */
 
 const mkStack = (image: string, updatedAt?: string): Stack =>
@@ -84,7 +83,6 @@ describe("deriveDeployLifecycle", () => {
       liveSnapshot: snap("nginx:1.25"),
     });
     expect(r.phase).toBe("staged");
-    // Exactly what the modal can itemize — no count without rows behind it.
     expect(r.stagedDiff?.resources).toHaveLength(1);
     expect(r.stagedDiff?.resources[0]).toMatchObject({ name: "web", change: "modified" });
   });
@@ -154,7 +152,6 @@ describe("deriveDeployLifecycle", () => {
       liveSnapshot: undefined,
     });
     expect(r.phase).toBe("clean");
-    // No baseline loaded means no honest answer, so nothing claims one.
     expect(r.stagedDiff).toBeUndefined();
   });
 

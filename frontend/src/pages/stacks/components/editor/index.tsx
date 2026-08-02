@@ -961,10 +961,9 @@ export default function CanvasEditorPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  // The staged diff answers both "how many changes" and "which ones", so a
-  // count can never appear that the changes modal is unable to itemize. Until
-  // its baseline — the deployed release's snapshot — has loaded there is no
-  // honest answer, and nothing claims one.
+  // Count and modal contents must come from the same staged diff, so no count
+  // can appear that the modal cannot itemize. Zero until the diff's baseline
+  // (the deployed release's snapshot) has loaded.
   const staged = lifecycle.stagedDiff;
   const changeCount = staged ? staged.resources.length + staged.volumes.length : 0;
 

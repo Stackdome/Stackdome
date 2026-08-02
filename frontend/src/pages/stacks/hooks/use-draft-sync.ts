@@ -123,8 +123,6 @@ export function useDraftSync({
   const refetchStackRef = useRef(refetchStack);
   refetchStackRef.current = refetchStack;
 
-  /** What the server holds, in the shape every comparison speaks, plus the
-   *  connection ids the write path needs. */
   const mirrorRef = useRef<{ stack: CanonicalStack; connections: ServerConnectionIndex } | null>(null);
   const runningRef = useRef<Promise<boolean> | null>(null);
   const queuedRef = useRef(false);
@@ -132,9 +130,9 @@ export function useDraftSync({
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** The draft the engine itself wrote while absorbing the server's answer.
-   *  Identity, not a flag: a boolean would also swallow a keystroke that landed
-   *  in the same React commit, and that edit would never be scheduled. */
+  /** The exact resources array the engine wrote while adopting server state.
+   *  Must stay an identity, not a boolean: a flag would also swallow a user
+   *  edit landing in the same React commit. */
   const adoptedDraftRef = useRef<unknown>(null);
 
   // Seed the mirror once from the fetched stack; afterwards the engine's own
@@ -159,23 +157,22 @@ export function useDraftSync({
   /**
    * Take the server's version of the resources the user was not editing.
    *
-   * The draft is seeded once, when the session starts, and the server can
-   * legitimately answer a write with more than it was sent — a default it
-   * applied, a field it normalized. Left unreconciled that difference is
-   * permanent: the draft says one thing, the server another, and every surface
-   * downstream reports a change nobody made until the page is reloaded.
+   * The draft is seeded once per session, and a write may come back with more
+   * than it was sent — an applied default, a normalized field — so the draft
+   * has to absorb that or report a change nobody made for the rest of the
+   * session.
    *
-   * Only entries whose object identity survived the whole cycle are adopted.
-   * A resource typed into while the save was in flight keeps the user's version
-   * and heals on the next cycle — a keystroke must never lose to a response.
+   * Only entries whose object identity survived the whole cycle are adopted:
+   * a resource typed into while the save was in flight keeps the user's
+   * version and heals on the next cycle. A keystroke never loses to a response.
    */
   const adoptServerState = useCallback((fresh: Stack, untouched: Set<object>) => {
     const session = sessionRef.current;
     if (!session.isActive) return;
     const serverForms = formResourcesFromSpec(fresh.spec?.stack_resources, fresh.spec?.connections);
     const byName = new Map(serverForms.map((r) => [r.name, r]));
-    // Built out here, not inside the updater: React may replay a state updater,
-    // and a replay would leave the ref holding an array React discarded.
+    // State updaters must stay pure; `next` is built outside one so a replay
+    // cannot leave the ref holding an array React discarded.
     const current = session.draft.resources;
     let changed = false;
     const next = current.map((draftResource) => {
@@ -183,8 +180,8 @@ export function useDraftSync({
       const server = draftResource.name ? byName.get(draftResource.name) : undefined;
       if (!server || deepEqual(draftResource, server)) return draftResource;
       changed = true;
-      // The source stash is UI-only — the server has never heard of it, and
-      // dropping it would empty the "Build from" toggle's memory mid-session.
+      // The stashed sources are client-only; the server never returns them, so
+      // adoption must carry them across.
       return {
         ...server,
         ...(draftResource.stashedGitSource ? { stashedGitSource: draftResource.stashedGitSource } : {}),
@@ -211,9 +208,9 @@ export function useDraftSync({
         resources: cloneJson(s.draft.resources),
         volumes: cloneJson(s.draft.volumes),
       };
-      // Identity of every resource as the cycle starts. Anything still holding
-      // one of these references at the end was not typed into while the save
-      // was in flight, and is safe to refresh from the server's answer.
+      // Resource identities as the cycle starts. Anything still holding one of
+      // these references at the end was not edited while the save was in
+      // flight, and is safe to refresh from the server's answer.
       const untouched = new Set<object>(s.draft.resources as unknown as object[]);
       const ops = computeSyncOps(mirror.stack, canonicalFromDraft(snapshot), mirror.connections);
       if (ops.length === 0) {
@@ -326,9 +323,8 @@ export function useDraftSync({
       setPending(false);
       return;
     }
-    // The engine rewrote the draft to match the server it just read. That is
-    // not an edit waiting to be saved, and there is nothing to send back — but
-    // only for that exact draft; anything later is the user typing.
+    // An engine-adopted draft is not a user edit and must not arm a save — but
+    // only that exact array; anything after it is the user typing.
     if (draft.resources === adoptedDraftRef.current) {
       adoptedDraftRef.current = null;
       return;

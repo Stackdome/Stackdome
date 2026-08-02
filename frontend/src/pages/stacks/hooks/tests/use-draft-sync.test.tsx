@@ -236,12 +236,6 @@ describe("useDraftSync", () => {
     expect(updateStackResource).not.toHaveBeenCalled();
   });
 
-  /**
-   * The server can answer a write with more than it was sent — a default it
-   * applied, a field it normalized. The draft is seeded once, so without this
-   * the difference is permanent and every surface downstream reports a change
-   * nobody made until the page is reloaded.
-   */
   describe("adopting the server's answer", () => {
     const normalizedStack = (): Stack =>
       ({

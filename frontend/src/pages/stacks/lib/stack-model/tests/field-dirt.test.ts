@@ -23,8 +23,6 @@ const gitResource = (git: Record<string, unknown> = {}, rest: Record<string, unk
 
 describe("isFieldDirty on a named resource", () => {
   it("does not tint a build path the API defaulted and the form spelled out", () => {
-    // The bug that started this: the form fills these in, the server spec omits
-    // them, and the user touched neither.
     const fromServer = {
       name: "worker",
       sourceType: "git" as const,

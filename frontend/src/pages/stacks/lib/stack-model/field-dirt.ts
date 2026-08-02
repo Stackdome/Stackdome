@@ -7,9 +7,9 @@ import type { CanonicalResource } from "./canonical";
 import type { FieldSection } from "./policy";
 
 /**
- * Canonicalizing per field would be absurd — a drawer renders dozens. Draft
- * objects are reference-stable except for the resource being edited, so one
- * entry per object keeps this at one canonicalization per keystroke.
+ * Draft objects are reference-stable except for the resource being edited, so
+ * one entry per object holds this to one canonicalization per keystroke rather
+ * than one per field the drawer renders.
  */
 const cache = new WeakMap<object, CanonicalResource>();
 
@@ -56,14 +56,7 @@ function changedPaths(d: CanonicalResource, b: CanonicalResource, key: object): 
   return paths;
 }
 
-/**
- * Is one drawer field edited relative to the baseline?
- *
- * Asked of the same comparison the deploy surfaces run, so a value the API
- * defaults and the form spells out reads as untouched, and a revision the pin
- * resolver wrote into the deployed release doesn't tint a field the user never
- * filled in.
- */
+/** Is one drawer field edited relative to the baseline? */
 export function isFieldDirty(
   draft: Partial<FormStackResourceData> | undefined,
   baseline: Partial<FormStackResourceData> | undefined,

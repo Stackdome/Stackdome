@@ -9,15 +9,9 @@ import { serverConnectionIndex } from "@/pages/stacks/lib/draft-sync/server-stat
 import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/spec-to-form";
 
 /**
- * The other direction from `invariants.test.ts`.
- *
- * Those cases all assert that loading a stack changes nothing, which catches a
- * rule that suppresses too little — a phantom change. They are blind by
- * construction to a rule that suppresses too MUCH, and that blindness shipped:
- * `dropResolvedRevisions` ran against every baseline, so clearing a git pin
- * produced no diff, no write, and no tint. The edit was discarded on reload.
- *
- * So: one real edit per policy rule, and the change must survive to the server.
+ * One real edit per policy rule, each of which must survive to the server —
+ * the direction `invariants.test.ts` cannot see, since asserting that loading
+ * a stack changes nothing catches only a rule that suppresses too little.
  */
 
 const pinned = {
@@ -84,20 +78,12 @@ describe("a real edit survives to the server", () => {
   }
 
   /**
-   * KNOWN LIMITATION, and it outlives the save. Against a release baseline the
-   * diff sees only the draft, where "this spec never pinned a commit" and "the
-   * user just cleared the pin" both arrive as an absent commit.
-   *
-   * The write still happens (asserted below), so no work is lost. But the
-   * drawer tint does not cover the gap either: its baseline is stripped against
-   * the SAVED spec, and once autosave lands, the saved spec no longer pins the
-   * commit — so the strip drops it there too and the tint disappears. In steady
-   * state neither surface reports the cleared pin, while the live release stays
-   * pinned to the old commit.
-   *
-   * Threading the saved spec into the diff would not fix it for the same
-   * reason. The rule needs to know what the spec pinned when the release was
-   * cut, which no snapshot records — a backend change, tracked separately.
+   * KNOWN LIMITATION. Against a release baseline, "this spec never pinned a
+   * commit" and "the user just cleared the pin" both arrive as an absent
+   * commit, so neither the release card nor the drawer tint reports a cleared
+   * pin while the live release stays on the old commit. The write still
+   * happens, so no work is lost. Telling the two apart needs what the spec
+   * pinned when the release was cut, which no snapshot records.
    */
   it("hides a cleared pin from the release card, but still writes it", () => {
     const deployed = { resources: [pinned], volumes: [], connections: [] } as unknown as StackReleaseSnapshot;

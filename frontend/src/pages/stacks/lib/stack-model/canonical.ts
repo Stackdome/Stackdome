@@ -4,8 +4,8 @@ import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-map
 /**
  * The one shape every "what changed?" question is asked in.
  *
- * It is the API resource shape with three deliberate departures, each of which
- * exists because the API shape asks the same question twice:
+ * It is the API resource shape with three departures, each where the API asks
+ * the same question twice:
  *
  *  - `env` holds every environment row — literal values, self-references, and
  *    references to secrets/addons/resources alike. The API splits those across

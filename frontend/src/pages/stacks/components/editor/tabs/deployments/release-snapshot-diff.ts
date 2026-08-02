@@ -17,7 +17,6 @@ const REMOVED_RESOURCE_NOTE =
   "Resource removed from this release — workload and config deleted from the stack.";
 const REMOVED_VOLUME_NOTE = "Volume removed from this release.";
 
-/** Where an env row's value comes from, in the words the drawer uses. */
 function envRowLabel(row: FormEnvRow): string {
   switch (row.from) {
     case "stack": return row.value;
@@ -35,7 +34,6 @@ function mountLabel(m: FormMountRow): string {
 }
 
 function formatValue(path: string, value: unknown): string | undefined {
-  // An absent value has many spellings; none of them is worth a row.
   if (isStructurallyEmpty(value)) return undefined;
   if (path.startsWith("env.")) return envRowLabel(value as FormEnvRow);
   if (path.startsWith("mounts.")) return mountLabel(value as FormMountRow);
@@ -57,8 +55,6 @@ function toRow(change: FieldChange): DiffRow {
   };
 }
 
-/** A row whose value formats away to nothing on both sides says nothing to a
- *  reader — an empty array replacing an absent one, say. */
 function isLegible(row: DiffRow): boolean {
   return row.from !== undefined || row.to !== undefined;
 }
@@ -116,8 +112,8 @@ export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
     baselineIsRelease: true,
   });
   return {
-    // A modified entry whose every row formatted away has nothing to show, and
-    // a card with nothing in it is a change the reader cannot account for.
+    // The deploy pill counts these entries, so modified entries whose rows all
+    // formatted away must not survive.
     resources: diff.resources.map(toResourceDiff).filter(hasSomethingToSay),
     volumes: diff.volumes.map(toItemDiff).filter((v) => v.change !== "modified" || v.rows.length > 0),
   };

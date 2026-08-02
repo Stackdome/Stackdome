@@ -2,10 +2,11 @@ import type { Stack, StackResource, StackUpdateRequest, StackResourceUpdateReque
 import type { StackReleaseSnapshot } from "@/api/releases";
 
 /**
- * Strip the fields the server owns and the PUT schema rejects. Deliberately NOT
- * the canonical adapter: that one is built for comparing, so it drops nameless
- * resources, sorts env vars and materializes defaults. This body is replace-all
- * — anything it fails to carry is deleted from the stack.
+ * Strip the fields the server owns and the PUT schema rejects.
+ *
+ * The canonical adapter is not a substitute here: it is built for comparing, so
+ * it drops nameless resources, sorts env vars and materializes defaults. This
+ * body is replace-all — anything it fails to carry is deleted from the stack.
  */
 function cleanResource(r: StackResource): StackResourceUpdateRequest {
   const { id, stack_id, revision, outputs, status, ...rest } = r as StackResource & {

@@ -27,10 +27,10 @@ export type SyncOp =
   | { kind: "deleteResource"; name: string };
 
 /**
- * What the server must be told, derived from the one diff.
+ * The writes the server needs, derived from the stack diff.
  *
- * A rename is a single entry in a diff meant for humans, but the backend
- * reconciles by name, so it expands back into a create plus a delete here.
+ * The backend reconciles by name, so a rename — one entry in the diff — expands
+ * into a create plus a delete.
  */
 export function computeSyncOps(
   server: CanonicalStack,
@@ -56,10 +56,9 @@ export function computeSyncOps(
         if (desired) createResources.push({ kind: "createResource", resource: resourceToApi(desired) });
         break;
       case "modified": {
-        // The diff answers "did anything about this resource change", which
-        // includes its env references and mounts — and those are written as
-        // connections, not through the resource endpoint. Write the resource
-        // only when the payload it would carry actually differs.
+        // "modified" also covers env references and mounts, which are written
+        // as connections rather than through the resource endpoint — so the
+        // resource is only written when its own payload differs.
         const held = serverResources.get(entry.name);
         if (desired && !deepEqual(held && resourceToApi(held), resourceToApi(desired))) {
           updateResources.push({ kind: "updateResource", name: entry.name, resource: resourceToApi(desired) });
@@ -73,8 +72,8 @@ export function computeSyncOps(
         }
         break;
       case "removed":
-        // A half-typed resource reads as absent from the desired state; deleting
-        // its server counterpart would throw away work the user is mid-way through.
+        // A half-typed resource reads as absent from the draft, so held names
+        // are never deleted from the server.
         if (!draft.held.has(entry.name)) deleteResources.push({ kind: "deleteResource", name: entry.name });
         break;
     }

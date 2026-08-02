@@ -5,19 +5,16 @@ import { type StatusTone } from "@/components/branded/status-variant";
 import { cn } from "@/lib/utils";
 
 /**
- * The parts a resource card is built from — the deploy rail, the status word,
- * the endpoint pills, the meta grid and footer. Stacks and preview environments
- * are different things that read the same way, so the pieces live here rather
- * than in whichever page happened to need them first.
+ * Shared parts of the resource-card grammar — deploy rail, status word, endpoint
+ * pills, META grid, FOOTER row. Used by both stack and preview-environment cards.
  */
 
 export type RailTone = StatusTone;
 
 /**
- * 4px full-bleed rail across the card's top edge, shown only while a deploy
- * is in flight: a soft track with an animated amber segment (static partial
- * fill under prefers-reduced-motion). Settled states render no rail — the
- * colored status word carries the state.
+ * 4px full-bleed rail across the card's top edge, shown only while a deploy is
+ * in flight. The amber segment holds a static partial fill under
+ * prefers-reduced-motion.
  */
 export function StatusRail({ tone }: { tone: RailTone }) {
   if (tone !== "deploying") return null;
@@ -35,7 +32,6 @@ function toneTextClass(tone: RailTone | "neutral"): string {
   return "text-fg-muted";
 }
 
-/** Mono status word, colored to match the rail. */
 export function StatusWord({ tone, children }: { tone: RailTone | "neutral"; children: string }) {
   return (
     <span
@@ -76,7 +72,6 @@ function PillLink({ url }: { url: EndpointUrl }) {
   );
 }
 
-/** External-link pills for a card's public endpoints. */
 export function EndpointPills({ urls }: { urls: EndpointUrl[] }) {
   const valid = urls.filter((u) => u.url);
   if (valid.length === 0) return null;
@@ -119,7 +114,6 @@ export interface CardMetaRow {
   value: ReactNode;
 }
 
-/** Label/value mono grid — the card grammar's META slot. */
 export function CardMetaGrid({ rows }: { rows: Array<CardMetaRow | false | null | undefined> }) {
   const present = rows.filter((r): r is CardMetaRow => Boolean(r));
   if (present.length === 0) return null;
@@ -136,19 +130,14 @@ export function CardMetaGrid({ rows }: { rows: Array<CardMetaRow | false | null 
 }
 
 interface CardFooterMetaProps {
-  /** Status tone driving the dot + word color. */
   tone: RailTone | "neutral";
-  /** Status word at the left edge. */
   word: string;
-  /** Relative age, uppercase at the right edge. */
   age?: string | null;
-  /** Absolute timestamp revealed as a tooltip on the age. */
+  /** Rendered as the age element's tooltip, not as text. */
   ageTitle?: string | null;
-  /** Optional alert glyph rendered beside the status word. */
   alert?: ReactNode;
 }
 
-/** Footer row — the card grammar's FOOTER slot: ● STATUS left, AGE right. */
 export function CardFooterMeta({ tone, word, age, ageTitle, alert }: CardFooterMetaProps) {
   return (
     <div className="flex items-center justify-between gap-3 border-t border-border/60 pt-4 whitespace-nowrap">
@@ -183,14 +172,13 @@ export function relativeAge(timestamp?: string | null): string | null {
   if (!timestamp) return null;
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return null;
-  // Server clocks can run slightly ahead; a future timestamp reads as "just
-  // now" rather than a nonsense token from the "in 5 minutes" phrasing.
+  // Server clock skew can put a timestamp in the future; those collapse to
+  // "just now" — date-fns would otherwise phrase them as "in 5 minutes".
   if (date.getTime() - Date.now() > -60_000) return "just now";
   const [value, unit] = formatDistanceToNowStrict(date, { roundingMethod: "floor" }).split(" ");
   return `${value}${AGE_UNIT_ABBREV[unit.replace(/s$/, "")]} ago`;
 }
 
-/** Absolute timestamp for the age tooltip. */
 export function absoluteAge(timestamp?: string | null): string | null {
   if (!timestamp) return null;
   return new Date(timestamp).toLocaleString();

@@ -1,10 +1,8 @@
 /**
  * What does not count as a change, as data.
  *
- * Every rule here used to live as an `if` branch or a delete-list inside one of
- * the three diff engines, which is why a rule known to one engine was routinely
- * unknown to the others — the phantom-change bug class. A rule added here is
- * picked up by every comparison at once.
+ * Every comparison in this module reads these rules, so a rule added here
+ * applies to all of them at once.
  */
 
 /** Written by the server, never by a user. Dropped before any comparison. */

@@ -33,10 +33,9 @@ export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
  * a deploy-time fact, not config drift — strip it so the diff baseline compares
  * intent with intent instead of reading every branch-tracking resource as dirty.
  *
- * Load-bearing, and NOT superseded by the model's own dropResolvedRevisions: this
- * judges unpinned-ness against the SAVED SPEC, while the model judges it against
- * the draft. That difference is the whole reason the model's rule had to become
- * opt-in — applied against user intent it erases the user's act of clearing a pin.
+ * Not interchangeable with the model's dropResolvedRevisions: unpinned-ness is
+ * judged against the SAVED SPEC here, against the draft there. Judged against the
+ * draft, a user clearing a pin would be erased instead of shown.
  */
 export function stripUnpinnedGitRevisions(
   snapshotResources: StackResource[],

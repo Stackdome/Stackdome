@@ -5,11 +5,6 @@ import type { EditSessionDraft } from "@/pages/stacks/hooks/use-stack-edit-sessi
 /**
  * Every shipped template as an edit-session draft, built through the same
  * compose parse + convert the Templates Browser runs.
- *
- * The hand-written fixtures elsewhere encode one shape each, deliberately. This
- * corpus is the opposite: whatever the converter actually emits, at whatever
- * size, so a normalization rule that is a little too broad has real data to
- * trip on rather than a fixture written by the same person as the rule.
  */
 export function templateDrafts(): Array<[string, EditSessionDraft]> {
   return templates.map((t) => {

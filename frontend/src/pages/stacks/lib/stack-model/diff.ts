@@ -188,9 +188,8 @@ function presentFields(flat: Map<string, unknown>, side: "from" | "to"): FieldCh
 }
 
 /**
- * The one diff. Autosave asks it what to write, the deploy surfaces ask it what
- * is undeployed, the drawer asks it what to tint, and the timeline asks it what
- * one release changed about the last — all from the same answer.
+ * The one diff: autosave, the deploy surfaces, the drawer tints and the release
+ * timeline all read their answer from this.
  */
 export function diffStacks(
   prev: CanonicalStack,

@@ -39,9 +39,7 @@ export interface CanonicalDraft extends CanonicalStack {
  * Env and mount rows are round-tripped through the same persistence split the
  * save path uses, then read back the way `from-api` reads them. Rows that would
  * never survive a save (half-typed references, mounts of a deleted volume) are
- * dropped by that round trip rather than by a second set of rules here — which
- * is what makes "the draft and the server canonicalize identically" true by
- * construction instead of by vigilance.
+ * dropped by that round trip, not by a second set of rules here.
  */
 function persistedEnvAndMounts(
   name: string,
@@ -132,7 +130,7 @@ export function canonicalFromDraft(draft: EditSessionDraft): CanonicalDraft {
       return;
     }
     const data = parsed.data as FormStackResourceData;
-    if (!data.name?.trim()) return; // unnamed: nothing to sync
+    if (!data.name?.trim()) return;
     indexByName.set(data.name.trim(), idx);
     resources.push(canonicalResourceFromForm(data, liveVolumeNames));
   });

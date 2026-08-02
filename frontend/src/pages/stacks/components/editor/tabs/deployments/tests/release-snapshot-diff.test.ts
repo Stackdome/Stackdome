@@ -106,9 +106,8 @@ describe("diffSnapshots volumes", () => {
 });
 
 /**
- * References and mounts are stored as connections but belong to the resource
- * that reads them, so they surface on that resource rather than as a separate
- * category the reader has to reassemble.
+ * References and mounts are stored as connections but surface on the resource
+ * that reads them, never as a category of their own.
  */
 describe("diffSnapshots references", () => {
   const api = (over: Record<string, unknown> = {}) => ({
@@ -210,9 +209,8 @@ describe("diffSnapshots surfaces fields nobody projected", () => {
 });
 
 /**
- * Restored from the pre-refactor suite. These assert the PRESENTATION of git
- * revisions — which rows a card shows — which the model-level tests in
- * one-edit-one-change.test.ts never reach.
+ * Covers the PRESENTATION of git revisions — which rows a card shows. The
+ * model-level tests in one-edit-one-change.test.ts do not reach this.
  */
 describe("diffSnapshots git revisions", () => {
   const gitWeb = (git: Record<string, unknown>) => ({
@@ -249,9 +247,8 @@ describe("diffSnapshots git revisions", () => {
 
 /**
  * The deploy pill counts what this module returns and the changes modal renders
- * it, so an entry with no legible row is a number the reader cannot account for
- * — "Undeployed changes (1)" over an empty modal. Values format independently
- * of the rule that found them, so the guard belongs here, on the output.
+ * it, so no entry may survive without a legible row. Values format independently
+ * of the rule that found them, so the guard belongs on the output.
  */
 describe("diffSnapshots never reports a change it cannot show", () => {
   const cases: Array<[string, unknown[], unknown[]]> = [
@@ -269,8 +266,7 @@ describe("diffSnapshots never reports a change it cannot show", () => {
 
   /**
    * A port with no number is a real difference to the model and formats to
-   * nothing here, so this is the case that reaches the drop: without it the
-   * modal renders a titled card with no rows under it, and the pill counts it.
+   * nothing here, so this case reaches the drop.
    */
   it("drops an entry whose only change formats away on both sides", () => {
     const prev = snap([web({ ports: [{ protocol: "TCP" }] })]);
