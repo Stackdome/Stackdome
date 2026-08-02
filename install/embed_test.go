@@ -27,6 +27,16 @@ var _ = Describe("RenderManifest", func() {
 			Expect(string(out)).To(ContainSubstring("value: \"pw\""))
 		})
 
+		It("owns the resource by the platform Stack", func() {
+			out, err := install.RenderManifest("db-resource-cr.yaml", install.TemplateValues{
+				DBWorkloadType: string(models.WorkloadTypeStatefulService),
+				StackUID:       "5a3a3a1e-0000-4000-8000-000000000001",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(ContainSubstring("kind: Stack"))
+			Expect(string(out)).To(ContainSubstring("uid: \"5a3a3a1e-0000-4000-8000-000000000001\""))
+		})
+
 		It("preserves an existing workload type on upgrade", func() {
 			out, err := install.RenderManifest("db-resource-cr.yaml", install.TemplateValues{
 				DBWorkloadType: string(models.WorkloadTypeService),
@@ -42,9 +52,11 @@ var _ = Describe("RenderManifest", func() {
 			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
 				APIServerImage: "quay.io/stackdome/stackdome:main-abc1234",
 				Domain:         "stackdome.example.com",
+				StackUID:       "5a3a3a1e-0000-4000-8000-000000000001",
 				TLSEnabled:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(ContainSubstring("uid: \"5a3a3a1e-0000-4000-8000-000000000001\""))
 			Expect(string(out)).To(ContainSubstring("image: \"quay.io/stackdome/stackdome:main-abc1234\""))
 			Expect(string(out)).To(ContainSubstring("fqdn: \"stackdome.example.com\""))
 			Expect(string(out)).To(ContainSubstring("tls: true"))

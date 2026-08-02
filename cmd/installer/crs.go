@@ -11,6 +11,7 @@ import (
 const (
 	apiServerResourceName = "api-server"
 	dbResourceName        = "db"
+	platformStackName     = "stackdome-platform"
 )
 
 var externallyReachable bool
@@ -37,6 +38,16 @@ func applyCRs(vals install.TemplateValues, domain string) error {
 	if err := kubectlApply(stackManifest); err != nil {
 		return fmt.Errorf("applying stack CR: %w", err)
 	}
+
+	// The Stack controller finds its children by ownerReference, the same link
+	// pkg/worker/release/apply.go sets on every API-created stack.
+	stackUID, err := output("kubectl", "get", "stack", platformStackName,
+		"-n", chartNamespace,
+		"-o", "jsonpath={.metadata.uid}")
+	if err != nil {
+		return fmt.Errorf("reading stack UID: %w", err)
+	}
+	vals.StackUID = stackUID
 
 	stepLog("Applying db StackResource CR...")
 	dbManifest, err := install.RenderManifest("db-resource-cr.yaml", vals)
