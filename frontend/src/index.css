@@ -1,3 +1,5 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/jetbrains-mono";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -69,9 +71,9 @@
   --sidebar-border: oklch(0.920 0.018 85); /* border #e8e4d6 */
   --sidebar-ring: oklch(0.72 0.20 40);
 
-  --font-sans: Geist, sans-serif;
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
   --font-serif: Georgia, serif;
-  --font-mono: Geist Mono, monospace;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
   --radius: 0.5rem;
 
   --shadow-2xs: 0px 1px 2px 0px hsl(220 20% 4% / 0.08);
