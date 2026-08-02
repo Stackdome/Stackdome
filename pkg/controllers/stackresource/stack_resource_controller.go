@@ -149,7 +149,7 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 	if resource.Status == nil {
 		return
 	}
-	eventType, reason, message, emit := resourceEvent(resource.Status.Conditions, resource.Status.LastFailure, convergedForGeneration(cr))
+	eventType, reason, message, emit := resourceEvent(resource.Status.Conditions, resource.Status.LastFailure, convergedForGeneration(cr), stalledForGeneration(cr), observedForGeneration(cr))
 	if !emit {
 		return
 	}
@@ -191,6 +191,26 @@ func convergedForGeneration(cr *corev1alpha1.StackResource) bool {
 	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == cr.Generation
 }
 
+// stalledForGeneration reports whether the Stalled condition was written for the
+// CR's current generation. Like convergedForGeneration it reads the raw CR
+// because the server-side condition model drops ObservedGeneration. The agent
+// does not rewrite Stalled on a NotReady report, so a stale Stalled=True can
+// outlive its generation even after the top-level Status.ObservedGeneration
+// advances — the condition's own ObservedGeneration is the authoritative signal.
+func stalledForGeneration(cr *corev1alpha1.StackResource) bool {
+	cond := meta.FindStatusCondition(cr.Status.Conditions, string(corev1alpha1.StackResourceStalled))
+	return cond != nil && cond.ObservedGeneration == cr.Generation
+}
+
+// observedForGeneration reports whether the CR's status was written for its
+// current generation. The cluster agent stamps Status.ObservedGeneration on
+// every terminal report, so a status still carrying a prior generation's value
+// is a leftover from a superseded rollout. Used to gate the runtime-failure
+// path, whose LastFailureDetails carry no generation of their own.
+func observedForGeneration(cr *corev1alpha1.StackResource) bool {
+	return cr.Status.ObservedGeneration == cr.Generation
+}
+
 // resourceEvent maps the cluster-agent's status conditions (and any captured
 // runtime crash detail) to a release timeline event. Conditions are the
 // authoritative signal — Phase is a coarse rollup the agent writes alongside
@@ -204,12 +224,23 @@ func convergedForGeneration(cr *corev1alpha1.StackResource) bool {
 // the Converged condition's detail so a stuck rollout is diagnosable from the
 // timeline — or the agent's readiness diagnosis when it has one, since the
 // condition only ever says "not ready yet".
-func resourceEvent(conditions []models.Condition, failure *models.StackResourceFailure, converged bool) (eventType models.ReleaseEventType, reason, message string, emit bool) {
+//
+// A failure carried over from a prior generation must not be attributed to the
+// new release, so every failure path is gated the same way the Ready path is
+// gated on convergedForGeneration: the Stalled condition only counts for its own
+// current generation (stalledCurrentGeneration), and the runtime crash detail
+// and the readiness diagnosis only count when the status as a whole is for the
+// current generation (runtimeCurrentGeneration). A terminal build failure is
+// suppressed regardless of generation because those events are always the
+// imagebuild controller's.
+func resourceEvent(conditions []models.Condition, failure *models.StackResourceFailure, converged, stalledCurrentGeneration, runtimeCurrentGeneration bool) (eventType models.ReleaseEventType, reason, message string, emit bool) {
 	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) {
 		if cond.Reason == stalledReasonBuildFailed {
 			return "", "", "", false
 		}
-		return models.ReleaseEventTypeResourceFailed, cond.Reason, cond.Message, true
+		if stalledCurrentGeneration {
+			return models.ReleaseEventTypeResourceFailed, cond.Reason, cond.Message, true
+		}
 	}
 	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceDependenciesReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
 		return models.ReleaseEventTypeResourceWaiting, cond.Reason, cond.Message, true
@@ -217,7 +248,7 @@ func resourceEvent(conditions []models.Condition, failure *models.StackResourceF
 	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceBuildReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
 		return "", "", "", false
 	}
-	if r, m := runtimeFailureDetail(failure); r != "" || m != "" {
+	if r, m := runtimeFailureDetail(failure); (r != "" || m != "") && runtimeCurrentGeneration {
 		return models.ReleaseEventTypeResourceFailed, r, m, true
 	}
 	available := models.FindCondition(conditions, string(corev1alpha1.StackResourceStatusAvailable))
@@ -230,7 +261,7 @@ func resourceEvent(conditions []models.Condition, failure *models.StackResourceF
 		if convergedCond.Status == string(models.ConditionFalse) {
 			reason, message = convergedCond.Reason, convergedCond.Message
 		}
-		if failure != nil && failure.Type == models.FailureTypeReadinessFailure && failure.Container != nil {
+		if runtimeCurrentGeneration && failure != nil && failure.Type == models.FailureTypeReadinessFailure && failure.Container != nil {
 			reason, message = failure.Container.Reason, failure.Container.Message
 		}
 		if availableTrue {

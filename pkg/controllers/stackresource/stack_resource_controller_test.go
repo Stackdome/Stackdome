@@ -192,13 +192,15 @@ func cond(condType string, status string, reason, message string) models.Conditi
 }
 
 type resourceEventCase struct {
-	conditions  []models.Condition
-	failure     *models.StackResourceFailure
-	converged   bool
-	wantType    models.ReleaseEventType
-	wantReason  string
-	wantMessage string
-	wantEmit    bool
+	conditions               []models.Condition
+	failure                  *models.StackResourceFailure
+	converged                bool
+	stalledCurrentGeneration bool
+	runtimeCurrentGeneration bool
+	wantType                 models.ReleaseEventType
+	wantReason               string
+	wantMessage              string
+	wantEmit                 bool
 }
 
 var _ = Describe("resourceEvent", func() {
@@ -220,7 +222,7 @@ var _ = Describe("resourceEvent", func() {
 
 	DescribeTable("mapping conditions and failures to release events",
 		func(tc resourceEventCase) {
-			gotType, gotReason, gotMessage, gotEmit := resourceEvent(tc.conditions, tc.failure, tc.converged)
+			gotType, gotReason, gotMessage, gotEmit := resourceEvent(tc.conditions, tc.failure, tc.converged, tc.stalledCurrentGeneration, tc.runtimeCurrentGeneration)
 			Expect(gotEmit).To(Equal(tc.wantEmit))
 			if !tc.wantEmit {
 				return
@@ -254,30 +256,45 @@ var _ = Describe("resourceEvent", func() {
 			wantMessage: "waiting for redis",
 			wantEmit:    true,
 		}),
-		Entry("stalled records failed with the condition reason and message", resourceEventCase{
+		Entry("stalled for the current generation records failed with the condition reason and message", resourceEventCase{
 			conditions: []models.Condition{
 				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), "JobFailed", "job has reached the specified backoff limit"),
 			},
-			wantType:    models.ReleaseEventTypeResourceFailed,
-			wantReason:  "JobFailed",
-			wantMessage: "job has reached the specified backoff limit",
-			wantEmit:    true,
+			stalledCurrentGeneration: true,
+			wantType:                 models.ReleaseEventTypeResourceFailed,
+			wantReason:               "JobFailed",
+			wantMessage:              "job has reached the specified backoff limit",
+			wantEmit:                 true,
+		}),
+		Entry("stalled carried over from a previous generation does not record failed", resourceEventCase{
+			conditions: []models.Condition{
+				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), "JobFailed", "job has reached the specified backoff limit"),
+			},
+			stalledCurrentGeneration: false,
+			wantEmit:                 false,
 		}),
 		Entry("stalled by a terminal build failure is the imagebuild controller's event", resourceEventCase{
 			conditions: []models.Condition{
 				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), stalledReasonBuildFailed, "application build failed terminally"),
 			},
-			wantEmit: false,
+			stalledCurrentGeneration: true,
+			wantEmit:                 false,
 		}),
-		Entry("runtime crash records failed with both reason and message", resourceEventCase{
+		Entry("runtime crash for the current generation records failed with both reason and message", resourceEventCase{
 			conditions: []models.Condition{
 				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "NotConverged", "rollout not converged"),
 			},
-			failure:     runtimeCrash,
-			wantType:    models.ReleaseEventTypeResourceFailed,
-			wantReason:  controllers.ReasonCrashLoopBackOff,
-			wantMessage: "back-off restarting failed container",
-			wantEmit:    true,
+			failure:                  runtimeCrash,
+			runtimeCurrentGeneration: true,
+			wantType:                 models.ReleaseEventTypeResourceFailed,
+			wantReason:               controllers.ReasonCrashLoopBackOff,
+			wantMessage:              "back-off restarting failed container",
+			wantEmit:                 true,
+		}),
+		Entry("runtime crash carried over from a previous generation does not record failed", resourceEventCase{
+			failure:                  runtimeCrash,
+			runtimeCurrentGeneration: false,
+			wantEmit:                 false,
 		}),
 		Entry("carried-over build failure does not masquerade as a runtime failure", resourceEventCase{
 			conditions: []models.Condition{
@@ -337,42 +354,58 @@ var _ = Describe("resourceEvent", func() {
 				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
 				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
 			},
-			failure:     portNotListening,
-			wantType:    models.ReleaseEventTypeResourceFailed,
-			wantReason:  controllers.ReasonPortNotListening,
-			wantMessage: "readiness check failed: nothing listening on port 8080",
-			wantEmit:    true,
+			failure:                  portNotListening,
+			stalledCurrentGeneration: true,
+			runtimeCurrentGeneration: true,
+			wantType:                 models.ReleaseEventTypeResourceFailed,
+			wantReason:               controllers.ReasonPortNotListening,
+			wantMessage:              "readiness check failed: nothing listening on port 8080",
+			wantEmit:                 true,
 		}),
 		Entry("a provisional port diagnosis mid-rollout records deploying, not a failure", resourceEventCase{
 			conditions: []models.Condition{
 				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
 				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
 			},
-			failure:     portNotListening,
-			wantType:    models.ReleaseEventTypeResourceDeploying,
-			wantReason:  controllers.ReasonPortNotListening,
-			wantMessage: "readiness check failed: nothing listening on port 8080",
-			wantEmit:    true,
+			failure:                  portNotListening,
+			runtimeCurrentGeneration: true,
+			wantType:                 models.ReleaseEventTypeResourceDeploying,
+			wantReason:               controllers.ReasonPortNotListening,
+			wantMessage:              "readiness check failed: nothing listening on port 8080",
+			wantEmit:                 true,
+		}),
+		Entry("a port diagnosis carried over from a previous generation keeps the condition's text", resourceEventCase{
+			conditions: []models.Condition{
+				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
+			},
+			failure:                  portNotListening,
+			runtimeCurrentGeneration: false,
+			wantType:                 models.ReleaseEventTypeResourceDeploying,
+			wantReason:               "StackResourceDeploymentNotReady",
+			wantMessage:              "deployment is not yet available",
+			wantEmit:                 true,
 		}),
 		Entry("a crash outranks a stale port reason on the converged condition", resourceEventCase{
 			conditions: []models.Condition{
 				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
 			},
-			failure:     runtimeCrash,
-			wantType:    models.ReleaseEventTypeResourceFailed,
-			wantReason:  controllers.ReasonCrashLoopBackOff,
-			wantMessage: "back-off restarting failed container",
-			wantEmit:    true,
+			failure:                  runtimeCrash,
+			runtimeCurrentGeneration: true,
+			wantType:                 models.ReleaseEventTypeResourceFailed,
+			wantReason:               controllers.ReasonCrashLoopBackOff,
+			wantMessage:              "back-off restarting failed container",
+			wantEmit:                 true,
 		}),
 		Entry("a readiness failure without a container detail keeps the condition's text", resourceEventCase{
 			conditions: []models.Condition{
 				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
 			},
-			failure:     &models.StackResourceFailure{Type: models.FailureTypeReadinessFailure},
-			wantType:    models.ReleaseEventTypeResourceDeploying,
-			wantReason:  "StackResourceDeploymentNotReady",
-			wantMessage: "deployment is not yet available",
-			wantEmit:    true,
+			failure:                  &models.StackResourceFailure{Type: models.FailureTypeReadinessFailure},
+			runtimeCurrentGeneration: true,
+			wantType:                 models.ReleaseEventTypeResourceDeploying,
+			wantReason:               "StackResourceDeploymentNotReady",
+			wantMessage:              "deployment is not yet available",
+			wantEmit:                 true,
 		}),
 		Entry("no conditions emits nothing", resourceEventCase{
 			wantEmit: false,
@@ -462,6 +495,49 @@ func failedStackResourceCR(hash string, conditions []metav1.Condition) *corev1al
 				},
 			},
 		},
+	}
+}
+
+// generationCR builds a CR pinned to an explicit generation and observed
+// generation, optionally carrying a runtime-crash LastFailure, so a superseded
+// rollout's failure (observedGeneration < generation, or a Stalled condition
+// whose ObservedGeneration lags) can be reproduced.
+func generationCR(generation, observedGeneration int64, conditions []metav1.Condition, withRuntimeFailure bool) *corev1alpha1.StackResource {
+	cr := &corev1alpha1.StackResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:       "web",
+			Namespace:  "ns-1",
+			Generation: generation,
+			Labels:     map[string]string{corev1alpha1.LabelStackID: "stack-1"},
+		},
+		Status: corev1alpha1.StackResourceStatus{
+			Phase:              corev1alpha1.StackResourcePhaseFailed,
+			StatusHash:         "gen-hash",
+			ObservedGeneration: observedGeneration,
+			Conditions:         conditions,
+		},
+	}
+	if withRuntimeFailure {
+		cr.Status.LastFailureDetails = []corev1alpha1.LastFailureDetail{
+			{
+				ContainerName:           "web",
+				RestartCount:            3,
+				LastTerminationReason:   "CrashLoopBackOff",
+				LastTerminationMessage:  "back-off restarting failed container",
+				LastTerminationExitCode: ptr.To(int32(1)),
+			},
+		}
+	}
+	return cr
+}
+
+func stalledCondition(observedGeneration int64) metav1.Condition {
+	return metav1.Condition{
+		Type:               string(corev1alpha1.StackResourceStalled),
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: observedGeneration,
+		Reason:             "InvalidSpec",
+		Message:            "invalid workload spec",
 	}
 }
 
@@ -577,6 +653,75 @@ var _ = Describe("Reconcile", func() {
 		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
 		recorder.EXPECT().
 			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "InvalidSpec", "invalid workload spec").
+			Return(nil)
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// Bug: a Stalled failure left over from a superseded release (its condition
+	// ObservedGeneration lags the CR generation) must NOT be re-emitted as
+	// resource_failed against the newly active release. The status update still
+	// persists, but no active-release lookup or event record happens.
+	It("does not record a stalled failure carried over from a previous generation", func() {
+		cr := generationCR(2, 2, []metav1.Condition{stalledCondition(1)}, false)
+		r, svc, _, _ := newReconcilerForTest(cr)
+
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		// checker + recorder must not be called.
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// Bug: a runtime crash captured under a superseded release (top-level
+	// ObservedGeneration lags the CR generation) must NOT be re-emitted as
+	// resource_failed against the newly active release.
+	It("does not record a runtime failure carried over from a previous generation", func() {
+		cr := generationCR(2, 1, nil, true)
+		r, svc, _, _ := newReconcilerForTest(cr)
+
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		// checker + recorder must not be called.
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// A stalled failure for the current generation still records resource_failed.
+	It("records a stalled failure for the current generation", func() {
+		cr := generationCR(2, 2, []metav1.Condition{stalledCondition(2)}, false)
+		r, svc, checker, recorder := newReconcilerForTest(cr)
+
+		release := &models.StackRelease{ID: "rel-2"}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "InvalidSpec", "invalid workload spec").
+			Return(nil)
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// A runtime crash for the current generation still records resource_failed.
+	It("records a runtime failure for the current generation", func() {
+		cr := generationCR(2, 2, nil, true)
+		r, svc, checker, recorder := newReconcilerForTest(cr)
+
+		release := &models.StackRelease{ID: "rel-2"}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "CrashLoopBackOff", "back-off restarting failed container").
 			Return(nil)
 
 		_, err := r.Reconcile(context.Background(), reconcileRequest())
