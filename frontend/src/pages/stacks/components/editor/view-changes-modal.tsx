@@ -169,7 +169,8 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
 
 /**
  * Review-and-discard surface for undeployed changes. Renders compact grouped
- * change cards (Resources / Volumes / Connections); each card carries its own
+ * change cards (Resources / Volumes — an env reference belongs to the resource
+ * that reads it, so connections surface as env rows); each card carries its own
  * Discard wired to the edit session's per-resource/volume revert, and the
  * footer deploys straight from here.
  */
