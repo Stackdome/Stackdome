@@ -1,0 +1,53 @@
+# LibreChat — self-hosted, multi-provider AI chat UI (ChatGPT-style), backed by MongoDB.
+# 1. Replace REPLACE_JWT_SECRET_VALUE_HERE and REPLACE_JWT_REFRESH_SECRET_VALUE_HERE with
+#    random hex strings, e.g. `openssl rand -hex 32`.
+# 2. Replace REPLACE_CREDS_KEY_VALUE_HERE with a 64-character hex string (32 bytes) and
+#    REPLACE_CREDS_IV_VALUE_HERE with a 32-character hex string (16 bytes) — LibreChat
+#    refuses to boot if these aren't exactly that length: `openssl rand -hex 32` / `-hex 16`.
+# 3. Replace REPLACE_OPENAI_API_KEY_VALUE_HERE with a real OpenAI API key so the model
+#    picker has an endpoint to talk to. Without one, sign-up and the chat UI still load,
+#    but no provider is available to actually send a message.
+# 4. Open the app, click "Sign up", and create your first account — registration is open
+#    by default (ALLOW_REGISTRATION); turn it off once your account exists if this is
+#    single-tenant.
+# 5. Meilisearch-backed conversation search is disabled (SEARCH=false) to keep this
+#    template to two services; add a meilisearch service and set SEARCH=true to enable it.
+name: librechat
+
+services:
+  librechat:
+    image: ghcr.io/danny-avila/librechat:v0.8.7
+    ports:
+      - "3080:3080"
+    depends_on:
+      - mongodb
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "3080"
+      DOMAIN_CLIENT: "${self.public_url}"
+      DOMAIN_SERVER: "${self.public_url}"
+      MONGO_URI: "mongodb://${mongodb.host}:${mongodb.port}/LibreChat"
+      SEARCH: "false"
+      ALLOW_REGISTRATION: "true"
+      ALLOW_EMAIL_LOGIN: "true"
+      JWT_SECRET: "REPLACE_JWT_SECRET_VALUE_HERE"
+      JWT_REFRESH_SECRET: "REPLACE_JWT_REFRESH_SECRET_VALUE_HERE"
+      CREDS_KEY: "REPLACE_CREDS_KEY_VALUE_HERE"
+      CREDS_IV: "REPLACE_CREDS_IV_VALUE_HERE"
+      OPENAI_API_KEY: "REPLACE_OPENAI_API_KEY_VALUE_HERE"
+
+  mongodb:
+    image: mongo:8.0.20
+    # --bind_ip_all is required: Stackdome maps `command:` straight onto the pod's
+    # container command, which replaces the mongo image's ENTRYPOINT (unlike Docker
+    # Compose, which only overrides CMD and still runs docker-entrypoint.sh). That
+    # entrypoint script is what normally makes mongod listen on all interfaces;
+    # without it mongod defaults to 127.0.0.1 and every other service gets ECONNREFUSED.
+    command: mongod --noauth --bind_ip_all
+    expose:
+      - "27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
