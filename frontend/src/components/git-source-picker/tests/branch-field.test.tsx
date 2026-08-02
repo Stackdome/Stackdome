@@ -8,7 +8,7 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   listRepositoryBranches: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
 import { listRepositoryBranches } from "@/api/git-integrations";
 import { BranchField } from "../branch-field";

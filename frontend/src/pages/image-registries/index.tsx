@@ -9,7 +9,7 @@ import {
   type RegistryCredential,
 } from "@/api/registry-credentials";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { RegistriesErrorState, RegistriesEmptyState } from "./components/page-states";
 import { RegistryRow } from "./components/registry-row";
 import { AddRegistryDialog } from "./components/add-registry-dialog";

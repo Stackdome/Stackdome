@@ -1,11 +1,11 @@
-import { parseAndValidateDockerCompose } from "@/lib/docker-compose-parser";
+import { parseAndValidateDockerCompose } from "@/pages/stacks/lib/docker-compose-parser";
 import {
   convertDockerComposeToStackData,
   type ConversionResult,
-} from "@/lib/docker-compose-converter";
+} from "@/pages/stacks/lib/docker-compose-converter";
 import type { DockerComposeFile } from "@/types/docker-compose";
 import type { FormStackData } from "@/pages/stacks/schemas/form-schema";
-import type { Template } from "./types";
+import type { Template } from "@/pages/stacks/data/templates/types";
 
 export interface TemplateFormResult {
   data: FormStackData;

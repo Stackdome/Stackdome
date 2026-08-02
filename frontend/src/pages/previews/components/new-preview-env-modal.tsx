@@ -9,7 +9,7 @@ import { FieldShell } from "@/components/branded";
 import { Textarea } from "@/components/ui/textarea";
 import { createPreviewEnv } from "@/api/preview-envs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import type { StackPreviewConfig } from "@/api/preview-configs";
 import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";

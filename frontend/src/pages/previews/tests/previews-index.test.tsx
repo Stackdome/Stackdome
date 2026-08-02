@@ -20,7 +20,7 @@ vi.mock("@/api/preview-configs", async (importOriginal) => ({
 vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
   usePreviewEnvs: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 vi.mock("@/hooks/use-current-user", () => ({
   useCurrentUser: () => ({ canWriteAnyProject: true }),
 }));

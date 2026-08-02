@@ -12,7 +12,7 @@ vi.mock("@/api/git-integrations", () => ({
 vi.mock("@/api/preview-configs", () => ({
   createPreviewConfig: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 vi.mock("@/hooks/use-resource-projects", () => ({

@@ -6,7 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 const signup = vi.fn();
 vi.mock("../../hooks/use-signup", () => ({ useSignup: () => ({ signup, loading: false, error: null }) }));
 vi.mock("../../hooks/use-invite-info", () => ({ useInviteInfo: () => ({ state: "new-user", info }) }));
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   isUserLoggedIn: vi.fn(() => false),
   setAuthSession: vi.fn(),
   logoutAndRedirect: vi.fn(),

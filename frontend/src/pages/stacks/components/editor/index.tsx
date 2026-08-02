@@ -24,7 +24,7 @@ import { useEditorTour } from "@/pages/stacks/onboarding/use-editor-tour";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
-import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
+import type { StackResource, Volume, Stack } from "@/api/stack-types";
 import type { StackConnection } from "@/api/connections";
 import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
 import { applyStackByName, getStackById, deleteStack, getStacksByOrg } from "@/api/stacks";
@@ -41,7 +41,7 @@ import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-re
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
 import { addonIdsFromConnections } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useOrgDomains } from "@/hooks/use-org-domains";

@@ -17,7 +17,7 @@ vi.mock("@/api/secrets", async (importOriginal) => ({
   createSecret: vi.fn(),
   updateSecret: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
 }));

@@ -5,7 +5,7 @@ import { BranchField } from "@/components/git-source-picker/branch-field";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   configurePhaseSchema, DEFAULT_STACKFILE_PATH, type ConfigurePhaseValues,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { completeGitHubOAuth } from "@/api/auth-github";
 import { getCurrentUser } from "@/api/users";
-import { setAuthSession } from "@/helpers/common";
+import { setAuthSession } from "@/lib/common";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getErrorMessage } from "@/api/client";
 

@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 
 import { DeployStackCard, EndpointPills, headerStatus, relativeAge } from "../stack-card";
 import { ReleaseState } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 
 const baseStack = {
   id: "s1",

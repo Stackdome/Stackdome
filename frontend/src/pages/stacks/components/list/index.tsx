@@ -11,7 +11,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useConfirm } from "@/components/branded/confirm";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useStacks } from "@/pages/stacks/contexts/stack-context";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { Input } from "@/components/ui/input";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PageHeader, EmptyState } from "@/components/branded";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 import { DeployStackCard, headerStatus } from "./stack-card";
 import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
 import { useCurrentUser } from "@/hooks/use-current-user";

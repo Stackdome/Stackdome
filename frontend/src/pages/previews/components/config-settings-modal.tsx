@@ -13,7 +13,7 @@ import {
   type StackPreviewConfig,
 } from "@/api/preview-configs";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import {
   configSettingsSchema, DEFAULT_STACKFILE_PATH, type ConfigSettingsValues,

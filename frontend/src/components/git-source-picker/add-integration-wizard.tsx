@@ -7,12 +7,12 @@ import { FieldShell } from "@/components/branded";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createGitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
 import { cn } from "@/lib/utils";
-import { GIT_INTEGRATION_TYPE_CREDENTIALS, type ProviderId } from "./lib/derive-row";
-import { credentialsFormSchema, type CredentialsFormValues } from "./lib/form-schemas";
-import { ProviderLogo } from "./components/provider-logo";
+import { GIT_INTEGRATION_TYPE_CREDENTIALS, type ProviderId } from "@/lib/git-integrations";
+import { credentialsFormSchema, type CredentialsFormValues } from "@/components/git-source-picker/credentials-form-schema";
+import { ProviderLogo } from "@/components/branded/provider-logo";
 
 type Phase = "provider" | "github" | "credentials" | "connecting" | "done";
 

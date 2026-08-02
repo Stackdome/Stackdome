@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { templates, getTemplateById } from "@/data/templates/registry";
-import { templateToFormData } from "@/data/templates/template-to-form";
+import { templates, getTemplateById } from "@/pages/stacks/data/templates/registry";
+import { templateToFormData } from "@/pages/stacks/data/templates/template-to-form";
 
 describe("template conversion round-trip", () => {
   it.each(templates.map((t) => [t.id, t] as const))(

@@ -13,7 +13,7 @@ vi.mock("@/api/preview-configs", () => ({
 vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
   usePreviewEnvs: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 vi.mock("@/hooks/use-resource-projects", () => ({

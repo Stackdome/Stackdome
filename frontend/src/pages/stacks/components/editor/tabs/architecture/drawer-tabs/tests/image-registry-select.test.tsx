@@ -25,7 +25,7 @@ vi.mock("@/api/registry-credentials", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   listRegistryCredentials: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
 import { listRegistryCredentials } from "@/api/registry-credentials";
 

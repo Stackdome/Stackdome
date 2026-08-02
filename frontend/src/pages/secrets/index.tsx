@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import { deleteSecret, createSecret, updateSecret } from "@/api/secrets";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useResourceProjects } from "@/hooks/use-resource-projects";

@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import type { components } from './types/openapi';
 import { API_BASE_URL } from './base-url';
 import { refreshAccessToken } from './auth-refresh';
-import { clearAuthSession } from '@/helpers/common';
+import { clearAuthSession } from '@/lib/common';
 
 // OpenAPI Error types
 export type ApiError = components["schemas"]["Error"];

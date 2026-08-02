@@ -8,7 +8,7 @@ import {
   STATUS_PENDING_INSTALL,
   STATUS_INSTALLED,
   STATUS_ACTIVE,
-} from "../derive-row";
+} from "@/lib/git-integrations";
 
 function integration(overrides: Partial<GitIntegration> = {}): GitIntegration {
   return {

@@ -1,4 +1,4 @@
-import type { Template } from "../types";
+import type { Template } from "@/pages/stacks/data/templates/types";
 import icon from "./icon.svg";
 import stackYaml from "./stack.yaml?raw";
 

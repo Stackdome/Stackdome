@@ -1,8 +1,8 @@
 import * as React from "react";
 import type { User } from "@/api/users";
-import { getCurrentUser as getStoredUser } from "@/helpers/common";
+import { getCurrentUser as getStoredUser } from "@/lib/common";
 import { getCurrentUser as fetchCurrentUser } from "@/api/users";
-import { AUTH_SESSION_CHANGED } from "@/helpers/auth-events";
+import { AUTH_SESSION_CHANGED } from "@/lib/auth-events";
 
 type ProjectRole = "Developer" | "Viewer";
 

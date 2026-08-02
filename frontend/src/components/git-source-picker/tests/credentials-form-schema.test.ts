@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { credentialsFormSchema, verifyIntegrationFormSchema, updateCredentialsFormSchema } from "../form-schemas";
+import { credentialsFormSchema, verifyIntegrationFormSchema, updateCredentialsFormSchema } from "@/components/git-source-picker/credentials-form-schema";
 
 describe("credentialsFormSchema", () => {
   it("accepts a host and token with no username", () => {

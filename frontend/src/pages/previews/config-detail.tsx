@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 import { getPreviewConfig, type StackPreviewConfig } from "@/api/preview-configs";
 import { deletePreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";

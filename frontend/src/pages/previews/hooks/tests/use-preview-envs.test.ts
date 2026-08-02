@@ -6,7 +6,7 @@ vi.mock("@/api/preview-envs", async (importOriginal) => {
   const orig = await importOriginal<typeof import("@/api/preview-envs")>();
   return { ...orig, listAllPreviewEnvs: vi.fn() };
 });
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 vi.mock("@/hooks/use-resource-projects", () => ({

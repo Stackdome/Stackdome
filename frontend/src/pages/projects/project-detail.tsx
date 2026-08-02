@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getProject, renameProject } from "@/api/projects";
 import { getErrorMessage } from "@/api/client";
 import type { Project } from "@/api/projects";

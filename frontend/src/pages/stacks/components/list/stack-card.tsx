@@ -19,7 +19,7 @@ import {
 } from "@/components/branded/status-variant";
 import { deriveHeaderHealth, latestDeployFailed } from "@/pages/stacks/components/editor/tabs/deployments/derive";
 import { cn } from "@/lib/utils";
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 
 export type RailTone = StatusTone;
 

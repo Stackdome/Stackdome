@@ -30,7 +30,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Panel, FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage, isNotFoundError } from "@/api/client";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import * as addonsApi from "@/api/addons";

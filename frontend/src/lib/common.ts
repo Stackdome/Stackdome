@@ -1,5 +1,5 @@
 import type { User } from "@/api/users";
-import { AUTH_SESSION_CHANGED } from "@/helpers/auth-events";
+import { AUTH_SESSION_CHANGED } from "@/lib/auth-events";
 
 function notifyAuthSessionChanged() {
   if (typeof window !== "undefined") {

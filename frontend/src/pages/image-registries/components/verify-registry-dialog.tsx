@@ -8,7 +8,7 @@ import { FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { verifyRegistryCredential, type RegistryCredential } from "@/api/registry-credentials";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { verifyRegistrySchema } from "../lib/form-schemas";
 
 interface VerifyRegistryDialogProps {

@@ -5,13 +5,13 @@ import {
   listInstallations,
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { GITHUB_APP_INSTALLED_MESSAGE } from "@/hooks/use-github-setup-landing";
 import {
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   STATUS_INSTALLED,
   STATUS_ACTIVE,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 
 export type GithubConnectState = "idle" | "waiting" | "connected" | "error";
 

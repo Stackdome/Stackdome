@@ -14,7 +14,7 @@ import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { cn } from "@/lib/utils";
 import { createRegistryCredential, type RegistryCredentialPurpose } from "@/api/registry-credentials";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { createRegistrySchema } from "../lib/form-schemas";
 import {
   REGISTRY_PROVIDERS, PURPOSE_BOTH, PURPOSE_PULL, PURPOSE_PUSH, PURPOSE_LABELS,

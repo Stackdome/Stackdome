@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
-import { AddIntegrationWizard } from "../add-integration-wizard";
+import { AddIntegrationWizard } from "@/components/git-source-picker/add-integration-wizard";
 
 afterEach(cleanup);
 
@@ -23,7 +23,7 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   createGitIntegration: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
 import { createGitIntegration } from "@/api/git-integrations";
 

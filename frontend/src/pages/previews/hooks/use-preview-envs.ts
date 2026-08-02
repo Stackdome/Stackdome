@@ -5,7 +5,7 @@ import {
   type PreviewStack,
 } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 
 const POLL_MS = 7_000;

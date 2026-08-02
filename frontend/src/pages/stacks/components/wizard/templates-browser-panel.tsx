@@ -2,7 +2,7 @@ import { useMemo, useState, type KeyboardEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Search, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Template } from "@/data/templates/types";
+import type { Template } from "@/pages/stacks/data/templates/types";
 import { WizardFooter } from "./wizard-footer";
 
 interface TemplatesBrowserPanelProps {

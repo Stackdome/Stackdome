@@ -4,7 +4,7 @@ import githubLightUrl from "@/assets/brand/github-light.svg";
 import gitlabUrl from "@/assets/brand/gitlab.svg";
 import bitbucketUrl from "@/assets/brand/bitbucket.svg";
 import giteaUrl from "@/assets/brand/gitea.svg";
-import type { ProviderId } from "../lib/derive-row";
+import type { ProviderId } from "@/lib/git-integrations";
 
 // `light` renders in light mode (chip is light), `dark` renders in dark mode
 // (chip is dark). GitHub ships separate marks for each theme; the rest are

@@ -11,8 +11,8 @@ import {
   convertVolumeToStackVolume,
   getConversionSummary,
   type ConversionResult,
-} from '../docker-compose-converter';
-import { parseDockerCompose } from '../docker-compose-parser';
+} from "@/pages/stacks/lib/docker-compose-converter";
+import { parseDockerCompose } from "@/pages/stacks/lib/docker-compose-parser";
 import type { DockerComposeFile, DockerComposeService } from '@/types/docker-compose';
 import type { FormStackResourceData, FormVolumeExtendedData } from '@/pages/stacks/schemas/form-schema';
 

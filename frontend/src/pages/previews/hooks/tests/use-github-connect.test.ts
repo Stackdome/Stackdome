@@ -7,7 +7,7 @@ vi.mock("@/api/git-integrations", () => ({
   listInstallations: vi.fn(),
   listGitIntegrations: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 
@@ -17,7 +17,7 @@ import {
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   STATUS_INSTALLED,
   STATUS_PENDING_INSTALL,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 import { useGithubConnect } from "../use-github-connect";
 
 const flow = {

@@ -14,8 +14,8 @@ vi.mock("@/api/organizations", async (importOriginal) => ({
   getOrganization: (...args: unknown[]) => getOrganizationMock(...args),
 }));
 
-vi.mock("@/helpers/common", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/helpers/common")>()),
+vi.mock("@/lib/common", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/common")>()),
   getCurrentOrganizationId: () => "org-1",
 }));
 

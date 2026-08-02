@@ -1,4 +1,4 @@
-import { sanitizeKubernetesName } from "@/lib/docker-compose-converter";
+import { sanitizeKubernetesName } from "@/pages/stacks/lib/docker-compose-converter";
 import type { PickedRepo } from "@/components/git-source-picker/types";
 import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/stack-model/policy";
 

@@ -8,7 +8,7 @@ import {
   extractNetworks,
   getDockerComposeSummary,
   createSampleDockerCompose,
-} from "../docker-compose-parser";
+} from "@/pages/stacks/lib/docker-compose-parser";
 import { readFileSync } from 'fs';
 import { join } from 'path';
 

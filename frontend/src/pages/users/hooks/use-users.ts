@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { listOrganizationUsers, type User } from "@/api/organizations";
 import { listInvites, type OrgInvite } from "@/api/invites";
