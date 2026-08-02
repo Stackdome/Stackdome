@@ -5,6 +5,8 @@ import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/s
 import { canonicalFromSnapshot, canonicalFromStack } from "../from-api";
 import { canonicalFromDraft } from "../from-form";
 import { diffStacks, isEmptyDiff } from "../diff";
+import { draftToSnapshot } from "@/pages/stacks/lib/draft-sync/draft-snapshot";
+import { bumpImage, firstImageResourceName, templateDrafts } from "./template-drafts";
 
 /**
  * One fixture per phantom-change bug this codebase has shipped a fix for, plus
@@ -282,4 +284,46 @@ describe("the diff still sees real edits", () => {
       expect.objectContaining({ name: "cache", fromName: "redis", change: "renamed" }),
     ]);
   });
+});
+
+/**
+ * The same invariants over the shipped templates, whose drafts come out of the
+ * compose converter rather than a fixture written alongside the rule.
+ */
+describe("every shipped template", () => {
+  const BUMPED = "example.test/bumped:v2";
+
+  for (const [id, draft] of templateDrafts()) {
+    describe(id, () => {
+      const deployed = draftToSnapshot(draft);
+
+      it("is not staged against the release it produced", () => {
+        const diff = diffStacks(canonicalFromSnapshot(deployed), canonicalFromDraft(draft), {
+          baselineIsRelease: true,
+        });
+        expect(diff).toEqual({ resources: [], volumes: [] });
+      });
+
+      it("stages one resource, and only that one, when an image is retagged", () => {
+        const name = firstImageResourceName(draft);
+        const diff = diffStacks(
+          canonicalFromSnapshot(deployed),
+          canonicalFromDraft(bumpImage(draft, name, BUMPED)),
+          { baselineIsRelease: true },
+        );
+        expect(diff.resources.map((r) => r.name)).toEqual([name]);
+        expect(diff.resources[0].fields).toEqual([
+          expect.objectContaining({ path: "source.image.ref", to: BUMPED }),
+        ]);
+      });
+
+      it("is clean again once that retag is deployed", () => {
+        const bumped = bumpImage(draft, firstImageResourceName(draft), BUMPED);
+        const diff = diffStacks(canonicalFromSnapshot(draftToSnapshot(bumped)), canonicalFromDraft(bumped), {
+          baselineIsRelease: true,
+        });
+        expect(diff).toEqual({ resources: [], volumes: [] });
+      });
+    });
+  }
 });

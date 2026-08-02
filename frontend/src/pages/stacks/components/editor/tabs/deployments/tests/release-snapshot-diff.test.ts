@@ -246,3 +246,44 @@ describe("diffSnapshots git revisions", () => {
     expect(diffSnapshots(prev, cur).resources).toEqual([]);
   });
 });
+
+/**
+ * The deploy pill counts what this module returns and the changes modal renders
+ * it, so an entry with no legible row is a number the reader cannot account for
+ * — "Undeployed changes (1)" over an empty modal. Values format independently
+ * of the rule that found them, so the guard belongs here, on the output.
+ */
+describe("diffSnapshots never reports a change it cannot show", () => {
+  const cases: Array<[string, unknown[], unknown[]]> = [
+    ["an empty array replacing an absent one", [web({ depends_on: undefined })], [web({ depends_on: [] })]],
+    ["an empty command replacing an absent one", [web({ execution_config: {} })], [web({ execution_config: { command: [] } })]],
+    ["ports emptied to an empty array", [web({ ports: [] })], [web({ ports: [] })]],
+    ["an absent env list against an empty one", [web({ execution_config: { environment_variables: [] } })], [web({ execution_config: {} })]],
+  ];
+
+  for (const [label, prev, cur] of cases) {
+    it(`stays silent about ${label}`, () => {
+      expect(diffSnapshots(snap(prev), snap(cur)).resources).toEqual([]);
+    });
+  }
+
+  /**
+   * A port with no number is a real difference to the model and formats to
+   * nothing here, so this is the case that reaches the drop: without it the
+   * modal renders a titled card with no rows under it, and the pill counts it.
+   */
+  it("drops an entry whose only change formats away on both sides", () => {
+    const prev = snap([web({ ports: [{ protocol: "TCP" }] })]);
+    const cur = snap([web({ ports: [{ protocol: "UDP" }] })]);
+    expect(diffSnapshots(prev, cur).resources).toEqual([]);
+  });
+
+  it("keeps the legible rows of an entry that also has an illegible one", () => {
+    const prev = snap([web({ ports: [{ protocol: "TCP" }], execution_config: { command: ["a"] } })]);
+    const cur = snap([web({ ports: [{ protocol: "UDP" }], execution_config: { command: ["b"] } })]);
+    const [entry] = diffSnapshots(prev, cur).resources;
+    const rows = entry.sections.flatMap((s) => s.rows);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ from: "a", to: "b" });
+  });
+});
