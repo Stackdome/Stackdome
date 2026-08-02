@@ -37,8 +37,6 @@ export interface CanonicalStack {
   volumes: CanonicalVolume[];
 }
 
-export const EMPTY_CANONICAL_STACK: CanonicalStack = { resources: [], volumes: [] };
-
 export function resourcesByName(stack: CanonicalStack): Map<string, CanonicalResource> {
   return new Map(stack.resources.map((r) => [r.name, r]));
 }

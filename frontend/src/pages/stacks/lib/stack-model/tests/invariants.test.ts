@@ -4,7 +4,7 @@ import type { StackReleaseSnapshot } from "@/api/releases";
 import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/spec-to-form";
 import { canonicalFromSnapshot, canonicalFromStack } from "../from-api";
 import { canonicalFromDraft } from "../from-form";
-import { diffStacks, isEmptyDiff } from "../diff";
+import { diffStacks } from "../diff";
 import { draftToSnapshot } from "@/pages/stacks/lib/draft-sync/draft-snapshot";
 import { bumpImage, firstImageResourceName, templateDrafts } from "./template-drafts";
 
@@ -189,7 +189,7 @@ describe("canonical model invariants", () => {
         const diff = diffStacks(canonicalFromSnapshot(snapshot), canonicalFromDraft(draftOf(stack)), {
           baselineIsRelease: true,
         });
-        expect(isEmptyDiff(diff)).toBe(true);
+        expect(diff).toEqual({ resources: [], volumes: [] });
       });
     }
   });
@@ -211,7 +211,7 @@ describe("canonical model invariants", () => {
     const diff = diffStacks(canonicalFromSnapshot(deployed), canonicalFromDraft(draftOf(stack)), {
       baselineIsRelease: true,
     });
-    expect(isEmptyDiff(diff)).toBe(true);
+    expect(diff).toEqual({ resources: [], volumes: [] });
   });
 
   it("still reports a revision the spec pins itself", () => {

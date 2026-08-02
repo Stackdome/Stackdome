@@ -5,9 +5,10 @@ import { serverConnectionIndex, type ServerConnectionIndex } from "../server-sta
 import { canonicalFromStack } from "@/pages/stacks/lib/stack-model/from-api";
 import { canonicalFromDraft, type CanonicalDraft } from "@/pages/stacks/lib/stack-model/from-form";
 import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/spec-to-form";
-import { EMPTY_CANONICAL_STACK } from "@/pages/stacks/lib/stack-model/canonical";
 
 const kinds = (ops: SyncOp[]) => ops.map((o) => o.kind);
+
+const EMPTY_STACK = { resources: [], volumes: [] };
 
 const web = {
   id: "r-web",
@@ -57,7 +58,7 @@ function draft(resources: unknown[], volumes: unknown[] = [], connections: unkno
 }
 
 const emptyDraft = (): CanonicalDraft => ({
-  ...EMPTY_CANONICAL_STACK,
+  ...EMPTY_STACK,
   held: new Set(),
   issues: new Map(),
   indexByName: new Map(),
@@ -74,7 +75,7 @@ describe("computeSyncOps", () => {
   });
 
   it("creates a new resource", () => {
-    expect(kinds(computeSyncOps(EMPTY_CANONICAL_STACK, draft([web]), noConnections))).toEqual([
+    expect(kinds(computeSyncOps(EMPTY_STACK, draft([web]), noConnections))).toEqual([
       "createResource",
     ]);
   });
@@ -106,7 +107,7 @@ describe("computeSyncOps", () => {
   });
 
   it("emits createVolume before resource ops", () => {
-    const ks = kinds(computeSyncOps(EMPTY_CANONICAL_STACK, draft([web], [dataVolume]), noConnections));
+    const ks = kinds(computeSyncOps(EMPTY_STACK, draft([web], [dataVolume]), noConnections));
     expect(ks.indexOf("createVolume")).toBeLessThan(ks.indexOf("createResource"));
   });
 
@@ -136,7 +137,7 @@ describe("computeSyncOps", () => {
   it("does not create new connections to a held resource", () => {
     const d = draft([{ ...web, name: "api" }], [], [secretConn("api")]);
     const withHeld: CanonicalDraft = { ...d, resources: [], held: new Set(["api"]) };
-    expect(computeSyncOps(EMPTY_CANONICAL_STACK, withHeld, noConnections)).toEqual([]);
+    expect(computeSyncOps(EMPTY_STACK, withHeld, noConnections)).toEqual([]);
   });
 
   it("skips a server connection without an id (heals on the next refetch)", () => {

@@ -26,7 +26,11 @@ import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
 import type { StackResource, Volume, Stack } from "@/api/stack-types";
 import type { StackConnection } from "@/api/connections";
-import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
+import {
+  alignBaselineToDraft,
+  resourceRenameFingerprint,
+  volumeRenameFingerprint,
+} from "@/pages/stacks/lib/stack-diff";
 import { applyStackByName, getStackById, deleteStack, getStacksByOrg } from "@/api/stacks";
 import { stackNameConflictError } from "@/pages/stacks/lib/stack-name-conflict";
 import { createStackFetchGate } from "@/pages/stacks/lib/canvas/stack-fetch-gate";
@@ -257,15 +261,15 @@ export default function CanvasEditorPage() {
   const baselineResources = useMemo<FormStackResourceData[]>(
     () =>
       (snapshotResources
-        ? alignBaselineToDraft(snapshotResources, alignResources, renameFingerprint)
-        : alignBaselineToDraft(serverResources, alignResources, renameFingerprint)) as FormStackResourceData[],
+        ? alignBaselineToDraft(snapshotResources, alignResources, resourceRenameFingerprint)
+        : alignBaselineToDraft(serverResources, alignResources, resourceRenameFingerprint)) as FormStackResourceData[],
     [snapshotResources, serverResources, alignResources],
   );
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () =>
       (snapshotVolumes
-        ? alignBaselineToDraft(snapshotVolumes, alignVolumes, renameFingerprint)
-        : alignBaselineToDraft(serverVolumes, alignVolumes, renameFingerprint)) as VolumeFormData[],
+        ? alignBaselineToDraft(snapshotVolumes, alignVolumes, volumeRenameFingerprint)
+        : alignBaselineToDraft(serverVolumes, alignVolumes, volumeRenameFingerprint)) as VolumeFormData[],
     [snapshotVolumes, serverVolumes, alignVolumes],
   );
 

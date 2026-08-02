@@ -16,8 +16,8 @@ export type VolumeArr = Partial<FormVolumeExtendedData>[];
 
 import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-model/equal";
 import { getAtPath } from "@/pages/stacks/lib/stack-model/path";
-
-export { deepEqual, pairByFingerprint, getAtPath };
+import { resourceFingerprint, volumeFingerprint } from "@/pages/stacks/lib/stack-model/diff";
+import { canonicalResourceFromForm, canonicalVolumeFromForm } from "@/pages/stacks/lib/stack-model/from-form";
 
 /** Deep clone via JSON round-trip. Form data is plain JSON so this is safe.
  *  Passes undefined through (JSON.parse(JSON.stringify(undefined)) throws). */
@@ -107,14 +107,19 @@ export function alignBaselineToDraft<T extends { name?: string }>(
 }
 
 /**
- * Content identity for rename detection: everything except the entry's `name`
- * and its live `status` telemetry (status drifts between the deploy-time
- * baseline and the live draft and is never dirt — see diffOneResource).
+ * Content identity for rename detection, in the canonical terms the diff uses.
+ * Two entries pair as a rename here exactly when they pair as a rename in
+ * `diffStacks`; both surfaces must reach the same verdict about the same pair.
+ *
+ * `alignBaselineToDraft` only fingerprints named entries, so canonicalizing
+ * cannot fail on a nameless one.
  */
-export function renameFingerprint(entry: unknown): string {
-  if (entry == null || typeof entry !== "object") return JSON.stringify(entry ?? null);
-  const { name: _name, status: _status, ...rest } = entry as Record<string, unknown>;
-  return JSON.stringify(rest);
+export function resourceRenameFingerprint(entry: unknown): string {
+  return resourceFingerprint(canonicalResourceFromForm(entry as FormStackResourceData));
+}
+
+export function volumeRenameFingerprint(entry: unknown): string {
+  return volumeFingerprint(canonicalVolumeFromForm(entry as FormVolumeExtendedData));
 }
 
 /**

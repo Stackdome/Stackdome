@@ -1,5 +1,5 @@
 import type { CanonicalResource, CanonicalStack, CanonicalVolume } from "./canonical";
-import { deepEqual, pairByFingerprint } from "./equal";
+import { deepEqual, isStructurallyEmpty, pairByFingerprint } from "./equal";
 import { REVISION_KEYS, sectionForField, type FieldSection } from "./policy";
 
 export type ChangeKind = "added" | "removed" | "changed";
@@ -30,10 +30,6 @@ export interface DiffOptions {
   /** The baseline is a deployed release, so revisions the current spec leaves
    *  unpinned were written there by the pin resolver rather than by a user. */
   baselineIsRelease?: boolean;
-}
-
-export function isEmptyDiff(d: StackDiff): boolean {
-  return d.resources.length === 0 && d.volumes.length === 0;
 }
 
 /**
@@ -123,14 +119,22 @@ function resourceFields(
 
 /** Content identity ignoring the name and any resolver-written revision, so a
  *  rename pairs across the delete + create the backend reconciles it as. */
-function resourceFingerprint(r: CanonicalResource): string {
+export function resourceFingerprint(r: CanonicalResource): string {
   const flat = flattenResource(r);
   for (const key of REVISION_KEYS) flat.delete(`source.git.${key}`);
-  return JSON.stringify([...flat.entries()].sort(([a], [b]) => a.localeCompare(b)));
+  return stableFingerprint(flat);
 }
 
-function volumeFingerprint(v: CanonicalVolume): string {
-  return JSON.stringify([...flattenVolume(v).entries()].sort(([a], [b]) => a.localeCompare(b)));
+export function volumeFingerprint(v: CanonicalVolume): string {
+  return stableFingerprint(flattenVolume(v));
+}
+
+/** Key order is not content, and neither is the spelling of an absent value:
+ *  the form emits `init_spec: null` where the API omits the key entirely. Both
+ *  must fingerprint alike or a rename fails to pair across the two shapes. */
+function stableFingerprint(flat: Map<string, unknown>): string {
+  const entries = [...flat.entries()].filter(([, v]) => !isStructurallyEmpty(v));
+  return JSON.stringify(entries.sort(([a], [b]) => a.localeCompare(b)));
 }
 
 function diffEntities<T extends { name: string }>(
@@ -160,7 +164,10 @@ function diffEntities<T extends { name: string }>(
   const renamedFrom = new Set(pairs.map(([r]) => r));
   const renamedTo = new Set(pairs.map(([, a]) => a));
   for (const [from, to] of pairs) {
-    out.push({ name: to.name, fromName: from.name, change: "renamed", fields: [] });
+    // The fingerprint ignores revision keys so a resolver-written commit cannot
+    // block pairing, which means a renamed entry can still differ. Report those
+    // fields or the edit is invisible on every surface.
+    out.push({ name: to.name, fromName: from.name, change: "renamed", fields: fieldsOf(from, to) });
   }
   for (const r of removed) {
     if (renamedFrom.has(r)) continue;

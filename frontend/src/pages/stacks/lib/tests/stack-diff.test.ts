@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { alignBaselineToDraft, cloneJson, pairByFingerprint, renameFingerprint, revertResource } from "../stack-diff";
+import { alignBaselineToDraft, cloneJson, resourceRenameFingerprint, revertResource } from "../stack-diff";
+import { pairByFingerprint } from "../stack-model/equal";
 
 describe("cloneJson", () => {
   it("passes undefined through (JSON.parse(JSON.stringify(undefined)) would throw)", () => {
@@ -66,7 +67,7 @@ describe("alignBaselineToDraft", () => {
       { name: "mysqla", image_spec: { image: "mysql:8" }, status: { state: "Pending" } },
       { name: "postgres", image_spec: { image: "postgres:16" } },
     ];
-    const aligned = alignBaselineToDraft(baseline, draft, renameFingerprint);
+    const aligned = alignBaselineToDraft(baseline, draft, resourceRenameFingerprint);
     // The renamed baseline slots into the draft's position instead of leaving a
     // hole + an appended deletion — so positional diffing reads ONE change.
     expect(aligned.map((r) => r?.name)).toEqual(["mysql", "postgres"]);
@@ -76,7 +77,7 @@ describe("alignBaselineToDraft", () => {
   it("does not pair when content also changed (stays add + remove)", () => {
     const baseline = [{ name: "mysql", image_spec: { image: "mysql:8" } }];
     const draft = [{ name: "mysqla", image_spec: { image: "mysql:9" } }];
-    const aligned = alignBaselineToDraft(baseline, draft, renameFingerprint);
+    const aligned = alignBaselineToDraft(baseline, draft, resourceRenameFingerprint);
     expect(aligned[0]).toBeUndefined();
     expect(aligned[1]?.name).toBe("mysql");
   });
