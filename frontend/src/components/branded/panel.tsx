@@ -19,7 +19,7 @@ interface PanelProps {
 }
 
 /**
- * Panel composes a section: optional eyebrow header (title + count + amber action link)
+ * Panel composes a section: optional eyebrow header (title + count + ink action link)
  * with a hairline divider above the body content.
  */
 export function Panel({ title, count, action, className, bodyClassName, bare, tone = "default", invalid, children }: PanelProps) {
@@ -54,11 +54,11 @@ export function Panel({ title, count, action, className, bodyClassName, bare, to
           )}
           {action && (
             tone === "soft" ? (
-              <span className="text-[12.5px] text-brand hover:text-brand-press transition-colors">
+              <span className="text-[12.5px] text-fg-2 hover:text-foreground transition-colors">
                 {action}
               </span>
             ) : (
-              <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-brand hover:text-brand-darker transition-colors">
+              <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-fg-2 hover:text-foreground transition-colors">
                 {action}
               </span>
             )

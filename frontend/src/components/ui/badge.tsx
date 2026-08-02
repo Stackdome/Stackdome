@@ -12,11 +12,11 @@ const badgeVariants = cva(
         default: "border-transparent bg-foreground/5 text-fg-2 [a&]:hover:bg-foreground/10",
         secondary: "border-border bg-transparent text-fg-2 [a&]:hover:bg-foreground/5",
         destructive:
-          "border-danger-border bg-danger-bg text-danger [a&]:hover:bg-danger-bg/70",
+          "border-danger-border bg-danger-bg text-danger font-mono text-[10.5px] uppercase tracking-[0.14em] [a&]:hover:bg-danger-bg/70",
         outline: "border-border text-foreground bg-transparent [a&]:hover:bg-foreground/5",
-        success: "border-success-border bg-success-bg text-success",
-        warning: "border-warn-border bg-warn-bg text-warn",
-        info: "border-info-border bg-info-bg text-info",
+        success: "border-success-border bg-success-bg text-success font-mono text-[10.5px] uppercase tracking-[0.14em]",
+        warning: "border-warn-border bg-warn-bg text-warn font-mono text-[10.5px] uppercase tracking-[0.14em]",
+        info: "border-info-border bg-info-bg text-info font-mono text-[10.5px] uppercase tracking-[0.14em]",
       },
     },
     defaultVariants: {

@@ -27,6 +27,8 @@ export function AlertBanner({ children, action, className }: AlertBannerProps) {
           type="button"
           onClick={action.onClick}
           disabled={action.disabled}
+          // Deliberate exception to the --ring focus convention: this action sits
+          // inside a danger-tinted banner, so its outline matches --danger instead.
           className="flex-none whitespace-nowrap text-[13px] font-semibold text-danger hover:underline focus-visible:outline-2 focus-visible:outline-danger focus-visible:outline-offset-2 rounded disabled:opacity-50 disabled:pointer-events-none"
         >
           {action.label}
