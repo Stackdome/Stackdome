@@ -11,6 +11,23 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Route names for the streaming (SSE) endpoints. These are exempted from the
+// request timeout middleware so long-running follow streams are not cut off.
+const (
+	routeNameStreamStackLogs     = "stream-stack-logs"
+	routeNameStreamResourceLogs  = "stream-resource-logs"
+	routeNameStreamReleaseEvents = "stream-release-events"
+)
+
+// streamingRouteNames is the set of route names exempt from the request timeout.
+func streamingRouteNames() map[string]struct{} {
+	return map[string]struct{}{
+		routeNameStreamStackLogs:     {},
+		routeNameStreamResourceLogs:  {},
+		routeNameStreamReleaseEvents: {},
+	}
+}
+
 func (s apiServer) routes() *mux.Router {
 	mainRouter := mux.NewRouter()
 
@@ -270,14 +287,14 @@ func (s apiServer) routes() *mux.Router {
 	projectResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Update).Methods(http.MethodPut)
 	projectResourceRouter.HandleFunc("/stacks/{id}/apply", stackHandler.Apply).Methods(http.MethodPut)
 	projectResourceRouter.HandleFunc("/stacks/{id}", stackHandler.Delete).Methods(http.MethodDelete)
-	projectResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/logs", stackHandler.StreamLogs).Methods(http.MethodGet).Name(routeNameStreamStackLogs)
 	projectResourceRouter.HandleFunc("/stacks/{id}/metrics", stackHandler.GetMetrics).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.Create).Methods(http.MethodPost)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources", stackResourceHandler.List).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.GetByResourceName).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Update).Methods(http.MethodPut)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}", stackResourceHandler.Delete).Methods(http.MethodDelete)
-	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/logs", stackResourceHandler.StreamLogs).Methods(http.MethodGet).Name(routeNameStreamResourceLogs)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/metrics", stackResourceHandler.GetMetrics).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/builds", imageBuildHandler.ListByResourceName).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/resources/{resource_name}/actions/restart", stackResourceHandler.Restart).Methods(http.MethodPost)
@@ -294,7 +311,7 @@ func (s apiServer) routes() *mux.Router {
 	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}", stackReleaseHandler.GetByID).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/cancel", stackReleaseHandler.Cancel).Methods(http.MethodPost)
 	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events", stackReleaseHandler.ListEvents).Methods(http.MethodGet)
-	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events/stream", stackReleaseHandler.StreamEvents).Methods(http.MethodGet)
+	projectResourceRouter.HandleFunc("/stacks/{id}/releases/{release_id}/events/stream", stackReleaseHandler.StreamEvents).Methods(http.MethodGet).Name(routeNameStreamReleaseEvents)
 
 	// Secrets (project-scoped)
 	projectResourceRouter.HandleFunc("/secrets", secretHandler.Create).Methods(http.MethodPost)

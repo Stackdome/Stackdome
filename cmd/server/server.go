@@ -17,7 +17,13 @@ import (
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/google/uuid"
 	gorillahandlers "github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
+
+// requestTimeoutDuration bounds how long a normal request may run before its
+// context is cancelled. Streaming (SSE) routes are exempt via
+// newRequestTimeoutMiddleware so long-running follow streams are not cut off.
+const requestTimeoutDuration = 180 * time.Second
 
 type Server interface {
 	Start()
@@ -49,6 +55,11 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	openapi, err := NewOpenAPIMiddleWare(openapi.OpenAPISpec)
 	check(err, "Unable to create openapi spec middleware")
 	mainRouter.Use(openapi.Middleware)
+
+	// Apply the request timeout as router middleware so it can be exempted
+	// per-route. Streaming (SSE) routes carry a name in streamingRouteNames and
+	// are skipped, letting follow=true streams outlive the timeout.
+	mainRouter.Use(newRequestTimeoutMiddleware(requestTimeoutDuration, streamingRouteNames()))
 
 	// referring to the router as type http.Handler allows us to add middleware via more handlers
 	var mainHandler http.Handler = mainRouter
@@ -83,7 +94,7 @@ func NewAPIServer(env environment.EnvImpl) Server {
 
 	s.httpServer = &http.Server{
 		Addr:        env.Environment().Config.Server.BindAddress,
-		Handler:     WithRequestTimeoutMiddleware(mainHandler, 180*time.Second),
+		Handler:     mainHandler,
 		ReadTimeout: 120 * time.Second,
 	}
 
@@ -239,13 +250,23 @@ func removeTrailingSlash(next http.Handler) http.Handler {
 	})
 }
 
-func WithRequestTimeoutMiddleware(next http.Handler, timeoutDuration time.Duration) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancelFn := context.WithTimeout(r.Context(), timeoutDuration)
-		defer cancelFn()
-		r = r.WithContext(ctx)
-		next.ServeHTTP(w, r)
-	})
+// newRequestTimeoutMiddleware returns gorilla/mux middleware that applies a
+// context timeout to every matched route except those whose route name is in
+// exemptRouteNames (the streaming SSE routes). mux applies parent-router
+// middleware to the matched leaf route, so mux.CurrentRoute reflects the
+// specific route being served.
+func newRequestTimeoutMiddleware(timeoutDuration time.Duration, exemptRouteNames map[string]struct{}) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, exempt := exemptRouteNames[mux.CurrentRoute(r).GetName()]; exempt {
+				next.ServeHTTP(w, r)
+				return
+			}
+			ctx, cancelFn := context.WithTimeout(r.Context(), timeoutDuration)
+			defer cancelFn()
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
 }
 
 func check(err error, msg string) {
