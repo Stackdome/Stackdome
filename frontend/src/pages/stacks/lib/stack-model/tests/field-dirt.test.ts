@@ -55,6 +55,57 @@ describe("isFieldDirty on a named resource", () => {
     expect(isFieldDirty({ ...pinned, gitCommitPin: undefined }, pinned, "gitCommitPin")).toBe(true);
   });
 
+  /**
+   * Mounts are keyed by target path in canonical terms but addressed by row
+   * index in the drawer, so the index resolves against the draft.
+   */
+  describe("volume mounts", () => {
+    const mounted = (rows: Array<Record<string, unknown>>) =>
+      gitResource({}, { volume_mounts: rows });
+    const data = { source_volume_name: "data", source_sub_path: "", target_path: "/data" };
+    const logs = { source_volume_name: "logs", source_sub_path: "", target_path: "/logs" };
+
+    it("tints the row whose volume changed", () => {
+      const draft = mounted([{ ...data, source_volume_name: "data-v2" }]);
+      expect(isFieldDirty(draft, mounted([data]), "volume_mounts.0")).toBe(true);
+    });
+
+    it("tints the row whose sub path changed", () => {
+      const draft = mounted([{ ...data, source_sub_path: "inner" }]);
+      expect(isFieldDirty(draft, mounted([data]), "volume_mounts.0")).toBe(true);
+    });
+
+    it("tints the row that was retargeted", () => {
+      const draft = mounted([{ ...data, target_path: "/var/data" }]);
+      expect(isFieldDirty(draft, mounted([data]), "volume_mounts.0")).toBe(true);
+    });
+
+    it("leaves the untouched sibling row alone", () => {
+      const draft = mounted([{ ...data, source_volume_name: "data-v2" }, logs]);
+      expect(isFieldDirty(draft, mounted([data, logs]), "volume_mounts.1")).toBe(false);
+    });
+
+    /** Guards the exact-match lookup: a prefix test would let /data light /data.bak. */
+    it("does not let a mount light its dotted neighbour", () => {
+      const bak = { ...data, source_volume_name: "backup", target_path: "/data.bak" };
+      const draft = mounted([{ ...data, source_volume_name: "data-v2" }, bak]);
+      expect(isFieldDirty(draft, mounted([data, bak]), "volume_mounts.1")).toBe(false);
+    });
+
+    it("does not treat a reorder as an edit", () => {
+      expect(isFieldDirty(mounted([logs, data]), mounted([data, logs]), "volume_mounts.0")).toBe(false);
+    });
+
+    it("says nothing about a half-typed row that has no target yet", () => {
+      const draft = mounted([data, { source_volume_name: "logs" }]);
+      expect(isFieldDirty(draft, mounted([data]), "volume_mounts.1")).toBe(false);
+    });
+
+    it("stays clean when nothing about the mounts changed", () => {
+      expect(isFieldDirty(mounted([data]), mounted([data]), "volume_mounts.0")).toBe(false);
+    });
+  });
+
   it("lights the source toggle for a change of kind, not a change inside the source", () => {
     const asImage = { name: "worker", sourceType: "image" as const, source: { image: { ref: "nginx:1" } } };
     expect(

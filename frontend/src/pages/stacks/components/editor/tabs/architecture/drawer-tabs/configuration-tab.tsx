@@ -713,7 +713,18 @@ function StackResourceConfigurationTabImpl({
               </p>
             )}
             {mounts.map((vm: VolumeMount, vmIdx: number) => (
-              <div key={vmIdx} className="border-b border-secondary/80 py-1">
+              // Mounts are attached on the canvas, not here, so the row shows
+              // that it differs from the baseline without offering a reset that
+              // would silently detach the volume.
+              <DirtyField
+                key={vmIdx}
+                draft={draft}
+                baseline={baseline}
+                path={`volume_mounts.${vmIdx}`}
+                compact
+                hideReset
+                className="border-b border-secondary/80 py-1"
+              >
                 <div className="flex items-center gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20">
                   <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-foreground/80 dark:text-fg-2">
                     <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
@@ -739,7 +750,7 @@ function StackResourceConfigurationTabImpl({
                     </Button>
                   )}
                 </div>
-              </div>
+              </DirtyField>
             ))}
           </div>
         ) : (

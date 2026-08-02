@@ -41,6 +41,9 @@ function sourceKind(r: CanonicalResource): string {
   return "";
 }
 
+/** A mount row addressed by its position in the drawer's list. */
+const MOUNT_ROW_PATH = /^volume_mounts\.(\d+)$/;
+
 function canonicalPaths(formPath: string): string[] {
   return FORM_PATH_TO_CANONICAL[formPath] ?? [formPath];
 }
@@ -67,6 +70,14 @@ export function isFieldDirty(
   if (!d || !b) return !deepEqual(getAtPath(draft, formPath), getAtPath(baseline, formPath));
   if (formPath === "sourceType") return sourceKind(d) !== sourceKind(b);
   const dirty = changedPaths(d, b, draft as object);
+  const mountRow = MOUNT_ROW_PATH.exec(formPath);
+  if (mountRow) {
+    // Canonical keys a mount by its target path, so the row index has to be
+    // resolved against the draft. Exact match only: a prefix test would let
+    // `/data` light `/data.bak`, and a bare `mounts` would light every row.
+    const target = draft?.volume_mounts?.[Number(mountRow[1])]?.target_path;
+    return !!target && dirty.has(`mounts.${target}`);
+  }
   return canonicalPaths(formPath).some(
     (p) => dirty.has(p) || [...dirty].some((path) => path.startsWith(`${p}.`)),
   );
