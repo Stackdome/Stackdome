@@ -8,6 +8,8 @@ import (
 	"github.com/Stackdome/stackdome/install"
 )
 
+const apiServerResourceName = "api-server"
+
 var externallyReachable bool
 
 func applyCRs(vals install.TemplateValues, domain string) error {
@@ -108,7 +110,7 @@ func waitForAPIServer() error {
 }
 
 func apiServerHealthURL() string {
-	svcIP, err := output("kubectl", "get", "svc", "api-server",
+	svcIP, err := output("kubectl", "get", "svc", apiServerResourceName,
 		"-n", chartNamespace,
 		"-o", "jsonpath={.spec.clusterIP}")
 	if err != nil || svcIP == "" {
@@ -118,7 +120,7 @@ func apiServerHealthURL() string {
 }
 
 func apiServerBaseURL() string {
-	svcIP, err := output("kubectl", "get", "svc", "api-server",
+	svcIP, err := output("kubectl", "get", "svc", apiServerResourceName,
 		"-n", chartNamespace,
 		"-o", "jsonpath={.spec.clusterIP}")
 	if err != nil || svcIP == "" {
