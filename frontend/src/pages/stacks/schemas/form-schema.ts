@@ -300,6 +300,26 @@ const FormStackSchema = ApiStackSchema.extend({
         });
       }
     });
+    // An env row sourcing another resource becomes a connection addressed by
+    // name. A name no longer in the stack renders as "references unknown
+    // resource" and fails the deploy, so reject it here instead.
+    (r?.execution_config?.environment_variables ?? []).forEach((row, rowIdx) => {
+      if (row?.from !== "resource" && row?.from !== "resourceTemplate") return;
+      if (names.has(row.resourceName)) return;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [
+          "spec",
+          "stack_resources",
+          idx,
+          "execution_config",
+          "environment_variables",
+          rowIdx,
+          "resourceName",
+        ],
+        message: `Unknown resource "${row.resourceName}"`,
+      });
+    });
   });
 });
 
