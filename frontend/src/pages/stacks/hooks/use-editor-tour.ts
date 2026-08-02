@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
-import { runCanvasTour, runTimelineStep, runLiveStep, tourStage } from "./tour";
+import { runCanvasTour, runTimelineStep, runLiveStep, tourStage } from "@/pages/stacks/lib/onboarding/tour";
 
 /** Drives the in-editor tour beats off editor state. The delays let the target
     DOM render before a beat tries to anchor to it. */

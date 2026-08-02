@@ -20,7 +20,7 @@ import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deploymen
 import { ArchitectureTab } from "@/pages/stacks/components/editor/tabs/architecture/architecture-tab";
 import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-editor-shell";
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
-import { useEditorTour } from "@/pages/stacks/onboarding/use-editor-tour";
+import { useEditorTour } from "@/pages/stacks/hooks/use-editor-tour";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";

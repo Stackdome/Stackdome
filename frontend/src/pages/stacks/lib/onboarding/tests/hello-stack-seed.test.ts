@@ -3,7 +3,7 @@ import {
   buildHelloStackSeed,
   HELLO_STACK_WEB_IMAGE,
   HELLO_STACK_WORKER_IMAGE,
-} from "../hello-stack-seed";
+} from "@/pages/stacks/lib/onboarding/hello-stack-seed";
 
 describe("buildHelloStackSeed", () => {
   const seed = buildHelloStackSeed();
