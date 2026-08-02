@@ -1,4 +1,4 @@
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 
 export const stackNameTakenMessage = (name: string): string =>
   `A stack named "${name}" already exists`;
