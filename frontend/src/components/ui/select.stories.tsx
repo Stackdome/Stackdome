@@ -60,6 +60,33 @@ export const LongList: Story = {
   ),
 }
 
+// aria-invalid drives border-danger via the same token the Button CssCheck
+// story reads live — keeps this passing as the palette evolves.
+export const Invalid: Story = {
+  render: () => (
+    <Select defaultValue="Next.js">
+      <SelectTrigger className="w-56" aria-invalid>
+        <SelectValue placeholder="Select a framework" />
+      </SelectTrigger>
+      <SelectContent>
+        {FRAMEWORKS.map((f) => (
+          <SelectItem key={f} value={f}>{f}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  ),
+  play: async ({ canvas }) => {
+    const trigger = canvas.getByRole('combobox')
+    await expect(trigger).toHaveAttribute('aria-invalid', 'true')
+    const probe = document.createElement('div')
+    probe.style.color = getComputedStyle(document.documentElement).getPropertyValue('--danger').trim()
+    document.body.appendChild(probe)
+    const expected = getComputedStyle(probe).color
+    probe.remove()
+    await expect(getComputedStyle(trigger).borderColor).toBe(expected)
+  },
+}
+
 // Focus-visible must render as a solid outline ring off --ring, not the
 // removed ring-* utilities — tab to the trigger rather than clicking so
 // :focus-visible actually engages. Mirrors Button's KeyboardFocusOutline.
