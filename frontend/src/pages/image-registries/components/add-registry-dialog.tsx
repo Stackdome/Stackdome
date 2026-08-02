@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
-import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
+import { WizardFooter } from "@/components/wizard-footer";
 import { cn } from "@/lib/utils";
 import { createRegistryCredential, type RegistryCredentialPurpose } from "@/api/registry-credentials";
 import { getErrorMessage } from "@/api/client";

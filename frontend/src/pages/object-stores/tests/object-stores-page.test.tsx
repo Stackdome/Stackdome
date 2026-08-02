@@ -42,7 +42,7 @@ vi.mock("../components/object-store-form-dialog", () => ({
   ObjectStoreFormDialog: () => null,
 }));
 
-vi.mock("../hooks/use-object-stores", () => ({
+vi.mock("@/hooks/use-object-stores", () => ({
   useObjectStores: () => ({
     objectStores: [mkStore()],
     loading: false,

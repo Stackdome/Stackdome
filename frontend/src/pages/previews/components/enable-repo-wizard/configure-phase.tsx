@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { FieldShell } from "@/components/branded";
 import { BranchField } from "@/components/git-source-picker/branch-field";
-import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
+import { WizardFooter } from "@/components/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
 import { getCurrentOrganizationId } from "@/lib/common";

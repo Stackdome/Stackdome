@@ -11,7 +11,7 @@ const mockCheckAgain = vi.fn().mockResolvedValue(undefined);
 let mockConnectState = "idle";
 let mockConnectError: string | null = null;
 
-vi.mock("@/pages/previews/hooks/use-github-connect", () => ({
+vi.mock("@/hooks/use-github-connect", () => ({
   useGithubConnect: () => ({
     state: mockConnectState,
     error: mockConnectError,

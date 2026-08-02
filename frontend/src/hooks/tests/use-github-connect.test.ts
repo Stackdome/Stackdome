@@ -18,7 +18,7 @@ import {
   STATUS_INSTALLED,
   STATUS_PENDING_INSTALL,
 } from "@/lib/git-integrations";
-import { useGithubConnect } from "../use-github-connect";
+import { useGithubConnect } from "@/hooks/use-github-connect";
 
 const flow = {
   manifest: { name: "stackdome-org1" },

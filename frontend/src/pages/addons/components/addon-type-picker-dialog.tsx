@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AddonTypeIcon } from "./addon-type-icon";
+import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 
 export type AddonType = "postgres";
 

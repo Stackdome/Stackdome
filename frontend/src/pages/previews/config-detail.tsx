@@ -20,7 +20,7 @@ import { getCurrentOrganizationId } from "@/lib/common";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 import { PreviewEnvCard } from "./components/preview-env-card";
 import { ConfigSettingsModal } from "./components/config-settings-modal";
 import { NewPreviewEnvModal } from "./components/new-preview-env-modal";

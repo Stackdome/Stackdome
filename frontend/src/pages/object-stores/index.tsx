@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PlusCircle, AlertCircle, Loader2, Cloud } from "lucide-react";
-import { useObjectStores } from "./hooks/use-object-stores";
+import { useObjectStores } from "@/hooks/use-object-stores";
 import { ObjectStoreList } from "./components/object-store-list";
 import { ObjectStoreFormDialog } from "./components/object-store-form-dialog";
 import type { ObjectStore } from "./types";

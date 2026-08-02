@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCurrentOrganizationId } from "@/lib/common";
-import type { ObjectStore } from "../types";
+import type { ObjectStore } from "@/pages/object-stores/types";
 import { getErrorMessage, isNotFoundError } from "@/api/client";
 import * as objectStoresApi from "@/api/object-stores";
 

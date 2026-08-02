@@ -7,7 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { EnvVarsEditor, type EnvVarFormRow } from "../env-vars-editor";
 import type { Secret } from "@/api/secrets";
 
-vi.mock("@/pages/secrets/hooks/use-secrets", () => ({
+vi.mock("@/hooks/use-secrets", () => ({
   useSecrets: () => ({
     secrets: [
       { id: "s1", name: "api-token", type: "Generic" },

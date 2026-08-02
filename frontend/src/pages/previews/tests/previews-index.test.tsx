@@ -17,7 +17,7 @@ vi.mock("@/api/preview-configs", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   listAllPreviewConfigs: vi.fn(),
 }));
-vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
+vi.mock("@/hooks/use-preview-envs", () => ({
   usePreviewEnvs: vi.fn(),
 }));
 vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
@@ -33,7 +33,7 @@ vi.mock("@/pages/previews/components/enable-repo-wizard/enable-repo-wizard", () 
 }));
 
 import { listAllPreviewConfigs } from "@/api/preview-configs";
-import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 
 const config = {
   id: "cfg-1",

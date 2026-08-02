@@ -10,7 +10,7 @@ vi.mock("@/api/preview-configs", () => ({
   updatePreviewConfig: vi.fn(),
   deletePreviewConfig: vi.fn(),
 }));
-vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
+vi.mock("@/hooks/use-preview-envs", () => ({
   usePreviewEnvs: vi.fn(),
 }));
 vi.mock("@/lib/common", () => ({
@@ -24,7 +24,7 @@ vi.mock("@/hooks/use-current-user", () => ({
 }));
 
 import { getPreviewConfig } from "@/api/preview-configs";
-import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 import type { PreviewStack } from "@/api/preview-envs";
 import PreviewConfigDetailPage from "../config-detail";
 

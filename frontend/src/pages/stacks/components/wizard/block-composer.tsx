@@ -5,13 +5,13 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { blockCatalog, BLOCK_CATEGORY_META, getBlockById } from "@/pages/stacks/data/blocks/registry";
 import { addBlockToStack, emptyStack } from "@/pages/stacks/lib/block-to-form";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
-import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
+import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 import { emptyDraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import type { FormStackResourceData, FormVolumeExtendedData } from "@/pages/stacks/schemas/form-schema";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
-import { WizardFooter } from "./wizard-footer";
+import { WizardFooter } from "@/components/wizard-footer";
 
 interface BlockComposerProps {
   onBack: () => void;

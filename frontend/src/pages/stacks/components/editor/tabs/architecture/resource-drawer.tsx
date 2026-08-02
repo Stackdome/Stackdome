@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X, ScrollText, Trash2 } from "lucide-react";
 import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import type { UseStackEditSession, EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";

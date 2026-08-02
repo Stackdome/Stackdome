@@ -18,7 +18,7 @@ import { triggerPostgresBackup } from "@/api/postgres-backups";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
-import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
+import { useObjectStores } from "@/hooks/use-object-stores";
 import { detectPlan } from "./lib/payload";
 import { PLAN_PRESETS } from "./lib/plan-presets";
 import { PostgresDetailHeader } from "./components/postgres-detail-header";

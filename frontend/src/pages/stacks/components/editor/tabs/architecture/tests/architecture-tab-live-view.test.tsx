@@ -31,7 +31,7 @@ vi.mock("../canvas-editor", () => ({
 const EMPTY_ADDONS: never[] = [];
 const EMPTY_SECRETS: never[] = [];
 const NO_TOPOLOGY = { topology: null };
-vi.mock("@/pages/addons/hooks/use-postgres-addons", () => ({
+vi.mock("@/hooks/use-postgres-addons", () => ({
   usePostgresAddons: () => ({ addons: EMPTY_ADDONS }),
 }));
 vi.mock("@/pages/stacks/hooks/use-secrets", () => ({

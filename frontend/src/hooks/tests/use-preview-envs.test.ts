@@ -14,7 +14,7 @@ vi.mock("@/hooks/use-resource-projects", () => ({
 }));
 
 import { listAllPreviewEnvs } from "@/api/preview-envs";
-import { usePreviewEnvs } from "../use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => {

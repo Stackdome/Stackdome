@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { getCurrentOrganizationId } from "@/lib/common";
-import type { Secret } from "../types";
+import type { Secret } from "@/pages/secrets/types";
 import { getErrorMessage, isNotFoundError } from "@/api/client";
 import * as secretsApi from "@/api/secrets";
 

@@ -6,7 +6,7 @@ import { MemoryRouter, Routes, Route } from "react-router-dom";
 vi.mock("@/api/stacks", () => ({
   getStacksByOrg: vi.fn(),
 }));
-vi.mock("@/pages/previews/hooks/use-preview-envs", () => ({
+vi.mock("@/hooks/use-preview-envs", () => ({
   usePreviewEnvs: vi.fn(),
 }));
 vi.mock("@/lib/common", () => ({
@@ -20,7 +20,7 @@ vi.mock("@/pages/stacks/components/wizard/stack-create-wizard", () => ({
 }));
 
 import { getStacksByOrg } from "@/api/stacks";
-import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 import { StackProvider } from "@/pages/stacks/contexts/stack-context";
 import StacksPage from "../index";
 

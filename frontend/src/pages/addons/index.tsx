@@ -6,7 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, EmptyState } from "@/components/branded";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { usePostgresAddons } from "./hooks/use-postgres-addons";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import { AddonList } from "./components/addon-list";
 import { AddonTypePickerDialog, type AddonType } from "./components/addon-type-picker-dialog";
 

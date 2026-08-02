@@ -25,7 +25,7 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   updateGitIntegration: vi.fn(),
 }));
 vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
-vi.mock("@/pages/previews/hooks/use-github-connect", () => ({
+vi.mock("@/hooks/use-github-connect", () => ({
   useGithubConnect: () => ({ state: "idle", error: null, connect: vi.fn() }),
 }));
 vi.mock("@/components/ui/use-toast", () => ({

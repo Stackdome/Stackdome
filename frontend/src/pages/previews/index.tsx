@@ -6,7 +6,7 @@ import { PageHeader, EmptyState, Panel } from "@/components/branded";
 import { ProviderLogo } from "@/components/branded/provider-logo";
 import { providerIdForHost } from "@/lib/git-integrations";
 import { listAllPreviewConfigs, type StackPreviewConfig } from "@/api/preview-configs";
-import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 import { EnableRepoWizard } from "@/pages/previews/components/enable-repo-wizard/enable-repo-wizard";
 import { repoTail } from "@/components/git-source-picker/git-source-picker";
 import { getCurrentOrganizationId } from "@/lib/common";

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { PlusCircle, AlertCircle, Loader2, KeyRound, Search, ChevronDown } from "lucide-react";
-import { useSecrets } from "./hooks/use-secrets";
+import { useSecrets } from "@/hooks/use-secrets";
 import { SecretList, formatSecretType } from "./components/secret-list";
 import { SecretFormDialog } from "./components/secret-form-dialog";
 import type { Secret } from "./types";

@@ -5,7 +5,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Input } from "@/components/ui/input";
 import { blockCatalog, BLOCK_CATEGORY_META } from "@/pages/stacks/data/blocks/registry";
 import { BlockPicker, blockMatchesQuery } from "@/pages/stacks/components/wizard/block-picker";
-import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
+import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 
 const SERVICE_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id === "services");
 const DATA_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id !== "services");

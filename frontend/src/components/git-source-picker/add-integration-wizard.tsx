@@ -4,11 +4,11 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FieldShell } from "@/components/branded";
-import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
+import { WizardFooter } from "@/components/wizard-footer";
 import { createGitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/lib/common";
-import { useGithubConnect } from "@/pages/previews/hooks/use-github-connect";
+import { useGithubConnect } from "@/hooks/use-github-connect";
 import { cn } from "@/lib/utils";
 import { GIT_INTEGRATION_TYPE_CREDENTIALS, type ProviderId } from "@/lib/git-integrations";
 import { credentialsFormSchema, type CredentialsFormValues } from "@/components/git-source-picker/credentials-form-schema";

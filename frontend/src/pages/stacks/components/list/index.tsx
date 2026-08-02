@@ -24,7 +24,7 @@ import { PageHeader, EmptyState } from "@/components/branded";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/api/stack-types";
 import { DeployStackCard, headerStatus } from "./stack-card";
-import { usePreviewEnvs } from "@/pages/previews/hooks/use-preview-envs";
+import { usePreviewEnvs } from "@/hooks/use-preview-envs";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { cn } from "@/lib/utils";
 
