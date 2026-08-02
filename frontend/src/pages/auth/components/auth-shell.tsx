@@ -44,7 +44,8 @@ export function AuthShell({ title, sub, below, children }: AuthShellProps) {
           {sub && <p className="mx-auto mt-2.5 text-sm leading-relaxed text-muted-foreground">{sub}</p>}
         </div>
 
-        {/* Pill controls inside a stadium plate — the plate is rounded like its contents. */}
+        {/* Pill controls inside a stadium plate — the plate is rounded like its contents.
+            Deliberate exception above the rounded-lg (22px) ceiling: the stadium plate. */}
         <div className="mt-8 rounded-[36px] border border-border bg-card p-6 [&_button]:rounded-full [&_input]:rounded-full [&_input]:pl-4">
           {children}
         </div>

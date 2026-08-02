@@ -10,6 +10,7 @@ interface LiveViewToggleProps {
   draftDirty: boolean;
 }
 
+// deliberate off-scale: rounded-sm (9px) reads too round on this ~22px segment
 const SEGMENT_BASE =
   "flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-[12px] font-medium transition-colors";
 

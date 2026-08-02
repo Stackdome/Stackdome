@@ -216,7 +216,7 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
           }
         />
       ) : logText ? (
-        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-[#070a0f]">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border bg-code-bg">
           <div className="h-full">
             <LazyLog
               text={logText}
@@ -227,8 +227,8 @@ export function LogViewer({ stackId, organizationId, resources = [], liveStatusR
               follow={filters.timeRange === 'live-4h'}
               height="auto"
               style={{
-                backgroundColor: '#070a0f',
-                color: '#94a3b8',
+                backgroundColor: 'var(--code-bg)',
+                color: 'var(--code-fg)',
                 fontSize: '12px',
                 lineHeight: '1.7',
                 fontFamily: 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace',

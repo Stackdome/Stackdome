@@ -186,7 +186,7 @@ export function TemplatesBrowserPanel({
               <TemplateBadge
                 template={selected}
                 active
-                className="h-[60px] w-[60px] rounded-[10px] border-brand-border bg-brand-bg text-[22px]"
+                className="h-[60px] w-[60px] rounded-md border-brand-border bg-brand-bg text-[22px]"
               />
               <div>
                 <div className="text-2xl font-medium tracking-tight">

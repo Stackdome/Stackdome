@@ -43,7 +43,7 @@ export function Sparkline({ data, className }: { data: number[]; className?: str
       {bars.map((v, i) => (
         <span
           key={i}
-          className={cn("w-[5px] rounded-[1px]", v == null ? "bg-border/40" : className)}
+          className={cn("w-[5px] rounded-none", v == null ? "bg-border/40" : className)}
           style={{ height: v == null ? "10%" : `${Math.max(6, Math.round((v / max) * 100))}%` }}
         />
       ))}
@@ -59,6 +59,7 @@ export function MetricBar({ label, value, pct, fill }: { label: string; value: s
         <span className="text-[11.5px] text-fg-2">{label}</span>
         <span className="font-mono text-[12px] text-foreground">{value}</span>
       </div>
+      {/* deliberate off-scale: 5px-tall usage bar, rounded-sm (9px) would read as a full pill here */}
       <div className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-muted">
         <span className={cn("block h-full rounded-[3px]", fill)} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
       </div>

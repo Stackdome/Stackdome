@@ -718,6 +718,7 @@ function StackResourceConfigurationTabImpl({
                     <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
                     <span className="truncate">{vm.source_volume_name}</span>
                   </div>
+                  {/* deliberate off-scale: ~22px-tall code chip, rounded-sm reads too round */}
                   <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
                     {vm.target_path}
                   </code>
