@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { createStackFetchGate } from "../canvas/stack-fetch-gate";
+import { createStackFetchGate } from "../stack-fetch-gate";
 
 describe("createStackFetchGate", () => {
   it("applies responses arriving in order", () => {
