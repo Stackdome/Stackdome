@@ -3,12 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
 )
 
 const (
+	crdsDirName         = "crds"
+	templatesDirName    = "templates"
 	chartRepo           = "oci://quay.io/stackdome/charts/stackdome-agent"
 	defaultChartVersion = "0.6.10-alpha"
 	chartRelease        = "stackdome-agent"
@@ -98,16 +101,50 @@ func updateAgentCRDs(chartVersion string) error {
 		return fmt.Errorf("pulling stackdome-agent chart: %w", err)
 	}
 
-	crdDir := filepath.Join(dir, chartRelease, "crds")
-	if _, err := os.Stat(crdDir); err != nil {
+	// The stackdome CRDs live in the stackdome-agent-standalone subchart, not the
+	// umbrella chart, and traefik/cert-manager/cnpg each ship their own.
+	crdDirs, err := findCRDDirs(filepath.Join(dir, chartRelease))
+	if err != nil {
+		return fmt.Errorf("scanning chart for CRDs: %w", err)
+	}
+	if len(crdDirs) == 0 {
 		stepLog("Chart ships no CRDs -- skipping")
 		return nil
 	}
 
-	if err := run("kubectl", "apply", "--server-side", "--force-conflicts", "-f", crdDir); err != nil {
-		return fmt.Errorf("applying CRDs: %w", err)
+	for _, crdDir := range crdDirs {
+		if err := run("kubectl", "apply", "--server-side", "--force-conflicts", "-f", crdDir); err != nil {
+			return fmt.Errorf("applying CRDs from %s: %w", crdDir, err)
+		}
 	}
 	return nil
+}
+
+func findCRDDirs(chartRoot string) ([]string, error) {
+	var dirs []string
+	err := filepath.WalkDir(chartRoot, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() {
+			return nil
+		}
+		// Only a chart root's crds/ is skipped by helm on upgrade. A
+		// templates/crds/ is an ordinary template the release already owns, and
+		// its unrendered {{ }} would not parse here anyway.
+		if entry.Name() == templatesDirName {
+			return filepath.SkipDir
+		}
+		if entry.Name() == crdsDirName {
+			dirs = append(dirs, path)
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return dirs, nil
 }
 
 func waitForOperatorPods() error {
