@@ -204,6 +204,7 @@ func (s *stackResourceService) populateRegistryUrlForResource(ctx context.Contex
 }
 
 func (s *stackResourceService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
+	applyStatefulWorkloadDefault(resource)
 	if err := s.prepareResource(ctx, stack, resource); err != nil {
 		return nil, err
 	}

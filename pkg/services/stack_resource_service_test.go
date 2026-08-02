@@ -9,6 +9,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	ginkgo "github.com/onsi/ginkgo/v2"
+	gomega "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -165,3 +167,63 @@ func TestStackResourceService_Restart(t *testing.T) {
 		assert.Equal(t, "error: resource not found", err.Error())
 	})
 }
+
+var _ = ginkgo.Describe("stackResourceService workload type defaulting", func() {
+	var (
+		ctrl              *gomock.Controller
+		mockResourceStore *mocks.MockStackResourceStore
+		svc               *stackResourceService
+		ctx               context.Context
+		stack             *models.Stack
+	)
+
+	datastoreSpec := func() *models.StackResource {
+		return &models.StackResource{
+			Name:         "db",
+			WorkloadType: models.WorkloadTypeService,
+			ImageConfig:  &models.ImageConfigSpec{Image: "postgres:16"},
+		}
+	}
+
+	ginkgo.BeforeEach(func() {
+		ctrl = gomock.NewController(ginkgo.GinkgoT())
+		mockResourceStore = mocks.NewMockStackResourceStore(ctrl)
+		svc = &stackResourceService{stackResourceStore: mockResourceStore}
+		ctx = context.Background()
+		stack = &models.Stack{ID: "stack-1", UserID: "user-1", Namespace: "ns-1"}
+	})
+
+	ginkgo.AfterEach(func() {
+		ctrl.Finish()
+	})
+
+	ginkgo.It("promotes a datastore image to StatefulService on create", func() {
+		var persisted *models.StackResource
+		mockResourceStore.EXPECT().
+			CreateWithTx(ctx, gomock.Any(), stack).
+			DoAndReturn(func(_ context.Context, resource *models.StackResource, _ *models.Stack) (*models.StackResource, *errors.ServiceError) {
+				persisted = resource
+				return resource, nil
+			})
+
+		_, err := svc.InternalCreateWithTx(ctx, stack, datastoreSpec())
+
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(persisted.WorkloadType).To(gomega.Equal(models.WorkloadTypeStatefulService))
+	})
+
+	ginkgo.It("leaves the workload type untouched on update", func() {
+		var persisted *models.StackResource
+		mockResourceStore.EXPECT().
+			UpdateWithTx(ctx, "resource-1", gomock.Any(), stack).
+			DoAndReturn(func(_ context.Context, _ string, resource *models.StackResource, _ *models.Stack) (*models.StackResource, *errors.ServiceError) {
+				persisted = resource
+				return resource, nil
+			})
+
+		_, err := svc.InternalUpdateWithTx(ctx, stack, "resource-1", datastoreSpec())
+
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(persisted.WorkloadType).To(gomega.Equal(models.WorkloadTypeService))
+	})
+})
