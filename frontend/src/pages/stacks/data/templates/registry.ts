@@ -6,6 +6,7 @@ import { grafana } from "@/pages/stacks/data/templates/grafana/template";
 import { immich } from "@/pages/stacks/data/templates/immich/template";
 import { prometheus } from "@/pages/stacks/data/templates/prometheus/template";
 import { gitea } from "@/pages/stacks/data/templates/gitea/template";
+import { vaultwarden } from "@/pages/stacks/data/templates/vaultwarden/template";
 
 /** Curated templates shown in the Templates Browser. Add a template by dropping a folder and listing it here. */
 export const templates: Template[] = [
@@ -16,6 +17,7 @@ export const templates: Template[] = [
   immich,
   prometheus,
   gitea,
+  vaultwarden,
 ];
 
 export function getTemplateById(id: string): Template | undefined {
