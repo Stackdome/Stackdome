@@ -9,6 +9,7 @@ import { gitea } from "@/pages/stacks/data/templates/gitea/template";
 import { vaultwarden } from "@/pages/stacks/data/templates/vaultwarden/template";
 import { uptimeKuma } from "@/pages/stacks/data/templates/uptime-kuma/template";
 import { librechat } from "@/pages/stacks/data/templates/librechat/template";
+import { twenty } from "@/pages/stacks/data/templates/twenty/template";
 
 /** Curated templates shown in the Templates Browser. Add a template by dropping a folder and listing it here. */
 export const templates: Template[] = [
@@ -22,6 +23,7 @@ export const templates: Template[] = [
   vaultwarden,
   uptimeKuma,
   librechat,
+  twenty,
 ];
 
 export function getTemplateById(id: string): Template | undefined {
