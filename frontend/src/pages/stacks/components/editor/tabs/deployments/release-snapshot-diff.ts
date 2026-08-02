@@ -33,17 +33,29 @@ function mountLabel(m: FormMountRow): string {
   return `${m.source_volume_name ?? ""}${sub}${m.read_only ? " (read only)" : ""}`;
 }
 
-function formatValue(path: string, value: unknown): string | undefined {
-  if (isStructurallyEmpty(value)) return undefined;
+/** The friendly rendering for values this module knows how to phrase. Returns
+ *  nothing when it has no better idea than the raw value — a port row carrying
+ *  a protocol but no number, an env row whose source is off the known union. */
+function knownLabel(path: string, value: unknown): string | undefined {
   if (path.startsWith("env.")) return envRowLabel(value as FormEnvRow);
   if (path.startsWith("mounts.")) return mountLabel(value as FormMountRow);
   if (path === "ports") {
-    const ports = (value as { number?: number }[]).map((p) => p.number).filter((n) => n != null);
-    return ports.length ? ports.join(", ") : undefined;
+    const numbers = (value as { number?: number }[]).map((p) => p?.number).filter((n) => n != null);
+    return numbers.length ? numbers.join(", ") : undefined;
   }
-  if (Array.isArray(value)) return value.length ? value.map(String).join(" ") : undefined;
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  if (Array.isArray(value) && value.every((v) => typeof v !== "object")) return value.map(String).join(" ");
+  return undefined;
+}
+
+/**
+ * Anything the model calls non-empty renders as something a reader can act on.
+ * Returning undefined for a real value would drop its row, and an entry whose
+ * rows all dropped would vanish from the count it exists to explain — and take
+ * the deploy button with it, since the pill deploys only a non-empty diff.
+ */
+function formatValue(path: string, value: unknown): string | undefined {
+  if (isStructurallyEmpty(value)) return undefined;
+  return knownLabel(path, value) || (typeof value === "object" ? JSON.stringify(value) : String(value));
 }
 
 function toRow(change: FieldChange): DiffRow {
@@ -55,27 +67,17 @@ function toRow(change: FieldChange): DiffRow {
   };
 }
 
-function isLegible(row: DiffRow): boolean {
-  return row.from !== undefined || row.to !== undefined;
-}
-
 function toSections(fields: FieldChange[]): DiffSection[] {
   const bySection = new Map<FieldSection, DiffRow[]>();
   for (const field of fields) {
-    const row = toRow(field);
-    if (!isLegible(row)) continue;
     const rows = bySection.get(field.section) ?? [];
-    rows.push(row);
+    rows.push(toRow(field));
     bySection.set(field.section, rows);
   }
   const order: FieldSection[] = ["configuration", "deployment", "environment"];
   return order
     .filter((kind) => bySection.get(kind)?.length)
     .map((kind) => ({ kind, rows: bySection.get(kind)! }));
-}
-
-function hasSomethingToSay(d: ResourceDiff): boolean {
-  return d.change !== "modified" || d.sections.length > 0;
 }
 
 function toResourceDiff(entry: EntityDiff): ResourceDiff {
@@ -111,10 +113,10 @@ export function diffSnapshots(prev?: Snap, cur?: Snap): SnapshotDiff {
   const diff = diffStacks(canonicalFromSnapshot(prev), canonicalFromSnapshot(cur), {
     baselineIsRelease: true,
   });
+  // Every field change renders at least one row, so an entry the model reports
+  // always arrives with something to show and nothing needs filtering out.
   return {
-    // The deploy pill counts these entries, so modified entries whose rows all
-    // formatted away must not survive.
-    resources: diff.resources.map(toResourceDiff).filter(hasSomethingToSay),
-    volumes: diff.volumes.map(toItemDiff).filter((v) => v.change !== "modified" || v.rows.length > 0),
+    resources: diff.resources.map(toResourceDiff),
+    volumes: diff.volumes.map(toItemDiff),
   };
 }

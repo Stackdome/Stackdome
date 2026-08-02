@@ -265,21 +265,36 @@ describe("diffSnapshots never reports a change it cannot show", () => {
   }
 
   /**
-   * A port with no number is a real difference to the model and formats to
-   * nothing here, so this case reaches the drop.
+   * A port carrying a protocol but no number has no friendly phrasing, and the
+   * model still calls it a change. It falls back to the raw value: dropping the
+   * row would hide the entry from the count it explains and disable Deploy,
+   * which only enables on a non-empty diff.
    */
-  it("drops an entry whose only change formats away on both sides", () => {
+  it("falls back to the raw value rather than dropping a row it cannot phrase", () => {
     const prev = snap([web({ ports: [{ protocol: "TCP" }] })]);
     const cur = snap([web({ ports: [{ protocol: "UDP" }] })]);
-    expect(diffSnapshots(prev, cur).resources).toEqual([]);
-  });
-
-  it("keeps the legible rows of an entry that also has an illegible one", () => {
-    const prev = snap([web({ ports: [{ protocol: "TCP" }], execution_config: { command: ["a"] } })]);
-    const cur = snap([web({ ports: [{ protocol: "UDP" }], execution_config: { command: ["b"] } })]);
     const [entry] = diffSnapshots(prev, cur).resources;
+    expect(entry).toMatchObject({ name: "web", change: "modified" });
     const rows = entry.sections.flatMap((s) => s.rows);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ from: "a", to: "b" });
+    expect(rows[0].from).toContain("TCP");
+    expect(rows[0].to).toContain("UDP");
+  });
+
+  it("still prefers the friendly phrasing when it has one", () => {
+    const prev = snap([web({ ports: [{ number: 3000 }] })]);
+    const cur = snap([web({ ports: [{ number: 8080 }] })]);
+    const rows = diffSnapshots(prev, cur).resources[0].sections.flatMap((s) => s.rows);
+    expect(rows[0]).toMatchObject({ from: "3000", to: "8080" });
+  });
+
+  it("gives every reported entry at least one row to show", () => {
+    const prev = snap([web({ ports: [{ protocol: "TCP" }], execution_config: { command: ["a"] } })]);
+    const cur = snap([web({ ports: [{ protocol: "UDP" }], execution_config: { command: ["b"] } })]);
+    for (const entry of diffSnapshots(prev, cur).resources) {
+      const rows = entry.sections.flatMap((s) => s.rows);
+      expect(rows.length).toBeGreaterThan(0);
+      for (const row of rows) expect(row.from !== undefined || row.to !== undefined).toBe(true);
+    }
   });
 });
