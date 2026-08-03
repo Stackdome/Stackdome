@@ -88,8 +88,10 @@
   /* ── Canvas ── */
   --wire: #FF6007;
   --surface-node: #FFFFFF;
-  --grid: rgba(25, 23, 20, 0.05);
-  --grid-bold: rgba(25, 23, 20, 0.08);
+  /* Dot-grid tokens: dots need far firmer alpha than hairlines — a 1-1.5px
+     disc at hairline alpha is invisible (see website design-system gotchas). */
+  --grid: rgba(25, 23, 20, 0.16);
+  --grid-bold: rgba(25, 23, 20, 0.24);
 
   /* ── Terminal / code surfaces — dark in both themes ── */
   --code-bg: #181611;
@@ -186,8 +188,10 @@
 
   --wire: #FF7A2E;
   --surface-node: #1D1A15;
-  --grid: rgba(255, 253, 247, 0.05);
-  --grid-bold: rgba(255, 253, 247, 0.09);
+  /* Dark is not the light alpha flipped: white dots on the near-black field
+     separate less, so they run firmer than the light values. */
+  --grid: rgba(255, 253, 247, 0.2);
+  --grid-bold: rgba(255, 253, 247, 0.3);
 
   /* ── Terminal / code surfaces — dark in both themes ── */
   --code-bg: #181611;
