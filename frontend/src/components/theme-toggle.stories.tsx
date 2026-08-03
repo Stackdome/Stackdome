@@ -23,3 +23,16 @@ export const Default: Story = {
     expect(style.backgroundColor).not.toBe('transparent')
   },
 }
+
+// The auth header is a nav-equivalent row that already has its own chrome
+// (the room + plate), so the toggle sits flat at rest like the website's
+// `.auth-top-right .icon-btn` — no fill, no border, no shadow.
+export const OnAuthHeader: Story = {
+  args: { variant: 'ghost' },
+  play: async ({ canvas }) => {
+    const button = canvas.getByRole('button', { name: /toggle theme/i })
+    const style = getComputedStyle(button)
+    expect(style.backgroundColor).toBe('rgba(0, 0, 0, 0)')
+    expect(style.boxShadow).toBe('none')
+  },
+}

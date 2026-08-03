@@ -30,7 +30,7 @@ export function AuthShell({ title, sub, below, children }: AuthShellProps) {
         <Link to="/" aria-label="Stackdome — home" className="transition-opacity hover:opacity-70">
           <StackdomeWordmark size={15} />
         </Link>
-        <ThemeToggle />
+        <ThemeToggle variant="ghost" />
       </header>
 
       <main className="relative z-[1] mx-auto flex w-full max-w-[428px] flex-1 flex-col px-6 py-20">
