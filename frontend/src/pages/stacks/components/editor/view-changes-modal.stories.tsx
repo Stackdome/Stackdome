@@ -25,13 +25,6 @@ const diff: SnapshotDiff = {
   volumes: [
     { name: 'web-data', change: 'added', rows: [{ key: 'size', to: '5Gi', kind: 'added' }] },
   ],
-  connections: [
-    {
-      name: 'postgres → web',
-      change: 'added',
-      rows: [{ key: 'env', to: 'DATABASE_URL', kind: 'added' }],
-    },
-  ],
 }
 
 const meta = {
@@ -77,7 +70,7 @@ export const Saving: Story = {
 /** Autosave in a terminal error state: empty diff means "not saved". */
 export const SaveErrored: Story = {
   args: {
-    diff: { resources: [], volumes: [], connections: [] },
+    diff: { resources: [], volumes: [] },
     errored: true,
   },
 }

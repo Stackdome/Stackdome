@@ -11,7 +11,7 @@ import { FieldShell, AlertBanner } from "@/components/branded";
 import { Textarea } from "@/components/ui/textarea";
 import { syncPreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { parseImageOverrides } from "@/pages/previews/lib/parse-image-overrides";
 import { syncEnvSchema, type SyncEnvValues } from "@/pages/previews/lib/form-schemas";

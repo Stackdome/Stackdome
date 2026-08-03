@@ -9,7 +9,7 @@ import {
   GIT_INTEGRATION_TYPE_CREDENTIALS,
   STATUS_INSTALLED,
   STATUS_ACTIVE,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 
 afterEach(cleanup);
 
@@ -19,10 +19,10 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   listRepositories: vi.fn(),
   getRepository: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 // The nested connect wizard drags in the whole github-connect flow; the picker
 // only needs its open/close contract.
-vi.mock("@/pages/git-integrations/add-integration-wizard", () => ({
+vi.mock("@/components/git-source-picker/add-integration-wizard", () => ({
   AddIntegrationWizard: ({ open }: { open: boolean }) =>
     open ? <div data-testid="add-integration-wizard" /> : null,
 }));

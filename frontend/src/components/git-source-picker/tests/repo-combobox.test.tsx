@@ -9,7 +9,7 @@ import {
   GIT_INTEGRATION_TYPE_CREDENTIALS,
   STATUS_INSTALLED,
   STATUS_ACTIVE,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 
 // cmdk (used by the Command primitive) reads ResizeObserver on mount, which
 // jsdom doesn't implement.
@@ -43,7 +43,7 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   listRepositories: vi.fn(),
   getRepository: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
 import { listGitIntegrations, listRepositories, getRepository } from "@/api/git-integrations";
 

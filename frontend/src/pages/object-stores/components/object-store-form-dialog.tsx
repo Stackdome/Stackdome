@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { createObjectStore, updateObjectStore } from "@/api/object-stores";
 import { useResourceProjects } from "@/hooks/use-resource-projects";

@@ -1,254 +1,198 @@
 import { describe, it, expect } from "vitest";
+import type { Stack } from "@/api/stacks";
 import { computeSyncOps, type SyncOp } from "../ops";
-import type { ServerStackState } from "../server-state";
-import type { DesiredStackState } from "../desired-state";
+import { serverConnectionIndex, type ServerConnectionIndex } from "../server-state";
+import { canonicalFromStack } from "@/pages/stacks/lib/stack-model/from-api";
+import { canonicalFromDraft, type CanonicalDraft } from "@/pages/stacks/lib/stack-model/from-form";
+import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/spec-to-form";
 
-const emptyServer = (): ServerStackState => ({
-  resourcesByName: new Map(), volumeIdByName: new Map(), volumesByName: new Map(), connections: new Map(),
-});
-const emptyDesired = (): DesiredStackState => ({
-  resources: new Map(), held: new Set(), volumes: new Map(), connections: new Map(), resourceIssues: new Map(),
-});
 const kinds = (ops: SyncOp[]) => ops.map((o) => o.kind);
 
-const webResource = { name: "web", source: { image: { ref: "nginx:1" } } } as never;
-const secretConn = (to: string) => ({
-  kind: "env", from: { type: "secret", id: "s-1" }, to: { type: "stack_resource", name: to },
-  mappings: [{ target: { type: "env", name: "TOKEN" }, value: { output: "token" } }],
-}) as never;
+const EMPTY_STACK = { resources: [], volumes: [] };
+
+const web = {
+  id: "r-web",
+  name: "web",
+  source: { image: { ref: "nginx:1" } },
+  ports: [],
+  volume_mounts: [],
+  depends_on: [],
+  execution_config: { command: [], args: [], environment_variables: [] },
+};
+
+const secretConn = (to: string, secretId = "s-1", envName = "TOKEN") => ({
+  id: `c-${secretId}-${to}`,
+  kind: "env",
+  from: { type: "secret", id: secretId },
+  to: { type: "stack_resource", name: to },
+  mappings: [{ target: { type: "env", name: envName }, value: { output: "token" } }],
+});
+
+const mountConn = (mountPath: string, extra: Record<string, unknown> = {}, to = "web") => ({
+  id: "vm-1",
+  kind: "volume_mount",
+  from: { type: "volume", name: "web-data" },
+  to: { type: "stack_resource", name: to },
+  config: { mount_path: mountPath, ...extra },
+});
+
+const dataVolume = { id: "v-1", name: "web-data", spec: { size: "1Gi", access_mode: "ReadWriteOnce" } };
+
+function specOf(resources: unknown[], volumes: unknown[] = [], connections: unknown[] = []): Stack {
+  return { id: "s1", name: "demo", spec: { stack_resources: resources, volumes, connections } } as unknown as Stack;
+}
+
+/** The server side: what it holds, plus the connection ids the write path needs. */
+function server(resources: unknown[], volumes: unknown[] = [], connections: unknown[] = []) {
+  const stack = specOf(resources, volumes, connections);
+  return { stack: canonicalFromStack(stack), connections: serverConnectionIndex(stack) };
+}
+
+/** The draft side, built the way the editor builds it: server shapes → form → canonical. */
+function draft(resources: unknown[], volumes: unknown[] = [], connections: unknown[] = []): CanonicalDraft {
+  const stack = specOf(resources, volumes, connections);
+  return canonicalFromDraft({
+    resources: formResourcesFromSpec(stack.spec?.stack_resources, stack.spec?.connections),
+    volumes: (stack.spec?.volumes ?? []).map(mapVolumeToFormData),
+  });
+}
+
+const emptyDraft = (): CanonicalDraft => ({
+  ...EMPTY_STACK,
+  held: new Set(),
+  issues: new Map(),
+  indexByName: new Map(),
+});
+
+const heldDraft = (names: string[]): CanonicalDraft => ({ ...emptyDraft(), held: new Set(names) });
+
+const noConnections: ServerConnectionIndex = new Map();
 
 describe("computeSyncOps", () => {
-  it("returns no ops when server and desired match", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    expect(computeSyncOps(server, desired)).toEqual([]);
+  it("returns no ops when the server already holds the draft", () => {
+    const s = server([web]);
+    expect(computeSyncOps(s.stack, draft([web]), s.connections)).toEqual([]);
   });
 
   it("creates a new resource", () => {
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    expect(kinds(computeSyncOps(emptyServer(), desired))).toEqual(["createResource"]);
+    expect(kinds(computeSyncOps(EMPTY_STACK, draft([web]), noConnections))).toEqual([
+      "createResource",
+    ]);
   });
 
   it("updates a changed resource by name", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    const desired = emptyDesired();
-    desired.resources.set("web", { name: "web", source: { image: { ref: "nginx:2" } } } as never);
-    const ops = computeSyncOps(server, desired);
-    expect(ops).toEqual([{ kind: "updateResource", name: "web", resource: desired.resources.get("web") }]);
+    const s = server([web]);
+    const ops = computeSyncOps(s.stack, draft([{ ...web, source: { image: { ref: "nginx:2" } } }]), s.connections);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({ kind: "updateResource", name: "web" });
   });
 
-  it("treats structurally-empty differences as equal (no spurious updates)", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", { name: "web", source: { image: { ref: "nginx:1" } }, depends_on: [] } as never);
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    expect(computeSyncOps(server, desired)).toEqual([]);
+  it("treats structurally-empty differences as equal", () => {
+    const s = server([{ ...web, depends_on: [], labels: {} }]);
+    const { depends_on, ...withoutEmpties } = web;
+    void depends_on;
+    expect(computeSyncOps(s.stack, draft([withoutEmpties]), s.connections)).toEqual([]);
   });
 
   it("deletes a resource's connections before the resource (no backend cascade)", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set("k1", { id: "c-1", conn: secretConn("web") });
-    const ops = computeSyncOps(server, emptyDesired());
-    const ks = kinds(ops);
+    const s = server([web], [], [secretConn("web")]);
+    const ks = kinds(computeSyncOps(s.stack, emptyDraft(), s.connections));
     expect(ks.indexOf("deleteConnection")).toBeLessThan(ks.indexOf("deleteResource"));
   });
 
   it("orders a rename as create-new before delete-old", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    const desired = emptyDesired();
-    desired.resources.set("web2", { name: "web2", source: { image: { ref: "nginx:1" } } } as never);
-    const ks = kinds(computeSyncOps(server, desired));
+    const s = server([web]);
+    const ks = kinds(computeSyncOps(s.stack, draft([{ ...web, name: "web2" }]), s.connections));
     expect(ks.indexOf("createResource")).toBeLessThan(ks.indexOf("deleteResource"));
   });
 
   it("emits createVolume before resource ops", () => {
-    const desired = emptyDesired();
-    desired.volumes.set("web-data", { name: "web-data" } as never);
-    desired.resources.set("web", webResource);
-    const ks = kinds(computeSyncOps(emptyServer(), desired));
+    const ks = kinds(computeSyncOps(EMPTY_STACK, draft([web], [dataVolume]), noConnections));
     expect(ks.indexOf("createVolume")).toBeLessThan(ks.indexOf("createResource"));
   });
 
   it("never deletes or updates volumes (no thin endpoints; revert handles removal)", () => {
-    const server = emptyServer();
-    server.volumesByName.set("old-data", { name: "old-data" } as never);
-    server.volumeIdByName.set("old-data", "v-9");
-    const ops = computeSyncOps(server, emptyDesired());
-    expect(ops).toEqual([]);
+    const s = server([], [dataVolume]);
+    expect(computeSyncOps(s.stack, emptyDraft(), s.connections)).toEqual([]);
   });
 
   it("updates a connection whose mappings changed, keyed by server id", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set("env|secret:s-1|stack_resource:web|", { id: "c-1", conn: secretConn("web") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    const changed = secretConn("web") as { mappings: unknown[] };
-    changed.mappings = [{ target: { type: "env", name: "API_TOKEN" }, value: { output: "token" } }];
-    desired.connections.set("env|secret:s-1|stack_resource:web|", changed as never);
-    expect(computeSyncOps(server, desired)).toEqual([
-      { kind: "updateConnection", id: "c-1", identityKey: "env|secret:s-1|stack_resource:web|", conn: changed },
-    ]);
+    const s = server([web], [], [secretConn("web")]);
+    const ops = computeSyncOps(s.stack, draft([web], [], [secretConn("web", "s-1", "API_TOKEN")]), s.connections);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({ kind: "updateConnection", id: "c-s-1-web" });
   });
 
   it("creates a connection with a new identity and deletes the replaced one", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set("env|secret:s-1|stack_resource:web|", { id: "c-1", conn: secretConn("web") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set("env|secret:s-2|stack_resource:web|", secretConn("web"));
-    const ks = kinds(computeSyncOps(server, desired));
+    const s = server([web], [], [secretConn("web", "s-1")]);
+    const ks = kinds(computeSyncOps(s.stack, draft([web], [], [secretConn("web", "s-2")]), s.connections));
     expect(ks).toEqual(["deleteConnection", "createConnection"]);
   });
 
   it("exempts held resources and their connections from deletion", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("api", { name: "api", source: { image: { ref: "node:20" } } } as never);
-    server.connections.set("k", { id: "c-2", conn: secretConn("api") });
-    const desired = emptyDesired();
-    desired.held.add("api");
-    expect(computeSyncOps(server, desired)).toEqual([]);
+    const s = server([{ ...web, name: "api" }], [], [secretConn("api")]);
+    expect(computeSyncOps(s.stack, heldDraft(["api"]), s.connections)).toEqual([]);
   });
 
   it("does not create new connections to a held resource", () => {
-    const desired = emptyDesired();
-    desired.held.add("api");
-    desired.connections.set("k", secretConn("api")); // desired connection, but target is held
-    expect(computeSyncOps(emptyServer(), desired)).toEqual([]);
+    const d = draft([{ ...web, name: "api" }], [], [secretConn("api")]);
+    const withHeld: CanonicalDraft = { ...d, resources: [], held: new Set(["api"]) };
+    expect(computeSyncOps(EMPTY_STACK, withHeld, noConnections)).toEqual([]);
   });
 
-  it("skips a server connection without an id for update/delete (heals on next refetch)", () => {
-    const server = emptyServer();
-    server.connections.set("k", { id: undefined, conn: secretConn("web") });
-    expect(computeSyncOps(server, emptyDesired())).toEqual([]);
+  it("skips a server connection without an id (heals on the next refetch)", () => {
+    const { id, ...idless } = secretConn("web");
+    void id;
+    const s = server([web], [], [idless]);
+    expect(computeSyncOps(s.stack, draft([web]), s.connections)).toEqual([]);
   });
 
-  // ── Config-aware update tests ─────────────────────────────────────────────
-
-  const vmConn = (mountPath: string, subPath?: string) => ({
-    kind: "volume_mount",
-    from: { type: "volume", name: "web-data" },
-    to: { type: "stack_resource", name: "web" },
-    config: { mount_path: mountPath, ...(subPath ? { sub_path: subPath } : {}) },
-  }) as never;
-
-  const vmKey = "volume_mount|volume:web-data|stack_resource:web|db:";
-
-  it("emits updateConnection when mount_path config changes", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set(vmKey, vmConn("/mnt/data"));
-    const ops = computeSyncOps(server, desired);
-    expect(ops).toEqual([{ kind: "updateConnection", id: "vm-1", identityKey: vmKey, conn: vmConn("/mnt/data") }]);
+  it("updates a mount whose path changed", () => {
+    const s = server([web], [dataVolume], [mountConn("/data")]);
+    const ops = computeSyncOps(s.stack, draft([web], [dataVolume], [mountConn("/mnt/data")]), s.connections);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({ kind: "updateConnection", id: "vm-1" });
   });
 
-  it("emits updateConnection when sub_path is added to config", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set(vmKey, vmConn("/data", "logs"));
-    const ops = computeSyncOps(server, desired);
+  it("updates a mount that gained a sub path", () => {
+    const s = server([web], [dataVolume], [mountConn("/data")]);
+    const ops = computeSyncOps(
+      s.stack,
+      draft([web], [dataVolume], [mountConn("/data", { sub_path: "logs" })]),
+      s.connections,
+    );
     expect(ops).toHaveLength(1);
     expect(ops[0].kind).toBe("updateConnection");
   });
 
-  it("emits no op when volume_mount connection config is unchanged", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data", "sub") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set(vmKey, vmConn("/data", "sub"));
-    expect(computeSyncOps(server, desired)).toEqual([]);
+  it("emits nothing for an unchanged mount, read_only and all", () => {
+    const conn = mountConn("/data", { sub_path: "logs", read_only: true });
+    const s = server([web], [dataVolume], [conn]);
+    expect(computeSyncOps(s.stack, draft([web], [dataVolume], [conn]), s.connections)).toEqual([]);
   });
 
-  it("does not delete a server volume_mount connection that is present in desired", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set(vmKey, vmConn("/data"));
-    const ops = computeSyncOps(server, desired);
-    expect(ops.some((o) => o.kind === "deleteConnection")).toBe(false);
+  it("deletes a mount the draft no longer has", () => {
+    const s = server([web], [dataVolume], [mountConn("/data")]);
+    const ops = computeSyncOps(s.stack, draft([web], [dataVolume]), s.connections);
+    expect(ops).toHaveLength(1);
+    expect(ops[0]).toMatchObject({ kind: "deleteConnection", id: "vm-1" });
   });
 
-  it("deletes a server volume_mount connection absent from desired (mount row removed)", () => {
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(vmKey, { id: "vm-1", conn: vmConn("/data") });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    // no volume_mount connection in desired → should be deleted
-    expect(computeSyncOps(server, desired)).toEqual([
-      { kind: "deleteConnection", id: "vm-1", identityKey: vmKey },
-    ]);
-  });
-
-  // Finding 1: read_only round-trip — server conn with read_only:true, desired from
-  // round-tripped row → shapes match → NO op (no spurious updateConnection).
-  it("emits no op when volume_mount connection with read_only:true is unchanged", () => {
-    const vmConnRO = {
-      kind: "volume_mount",
-      from: { type: "volume", name: "web-data" },
-      to: { type: "stack_resource", name: "web" },
-      config: { mount_path: "/data", sub_path: "logs", read_only: true },
-    } as never;
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(vmKey, { id: "vm-1", conn: vmConnRO });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set(vmKey, vmConnRO);
-    expect(computeSyncOps(server, desired)).toEqual([]);
-  });
-
-  // Finding 2: addon-config comparison — server and desired both carry { superuser: true };
-  // deep-equal must hold so no spurious updateConnection is emitted.
-  it("emits no op for unchanged addon connection with superuser config", () => {
+  it("emits nothing for an unchanged addon connection with superuser config", () => {
     const addonConn = {
+      id: "c-1",
       kind: "env",
       from: { type: "addon/postgres", id: "a-1" },
       to: { type: "stack_resource", name: "web" },
       config: { superuser: true },
       mappings: [{ target: { type: "env", name: "PG_URL" }, value: { output: "url" } }],
-    } as never;
-    const addonKey = "env|addon/postgres:a-1|stack_resource:web|superuser";
-    const server = emptyServer();
-    server.resourcesByName.set("web", webResource);
-    server.connections.set(addonKey, { id: "c-1", conn: addonConn });
-    const desired = emptyDesired();
-    desired.resources.set("web", webResource);
-    desired.connections.set(addonKey, addonConn);
-    expect(computeSyncOps(server, desired)).toEqual([]);
+    };
+    const s = server([web], [], [addonConn]);
+    expect(computeSyncOps(s.stack, draft([web], [], [addonConn]), s.connections)).toEqual([]);
   });
 
-  // Finding 3: held-resource volume_mount — server has a volume_mount connection to "api";
-  // desired omits "api" and marks it held → connection must NOT be deleted.
-  it("does not delete a volume_mount connection to a held resource", () => {
-    const apiVmConn = {
-      kind: "volume_mount",
-      from: { type: "volume", name: "api-data" },
-      to: { type: "stack_resource", name: "api" },
-      config: { mount_path: "/data" },
-    } as never;
-    const apiVmKey = "volume_mount|volume:api-data|stack_resource:api|db:";
-    const server = emptyServer();
-    server.connections.set(apiVmKey, { id: "vm-2", conn: apiVmConn });
-    const desired = emptyDesired();
-    desired.held.add("api");
-    expect(computeSyncOps(server, desired)).toEqual([]);
+  it("does not delete a mount belonging to a held resource", () => {
+    const s = server([{ ...web, name: "api" }], [dataVolume], [mountConn("/data", {}, "api")]);
+    expect(computeSyncOps(s.stack, heldDraft(["api"]), s.connections)).toEqual([]);
   });
 });

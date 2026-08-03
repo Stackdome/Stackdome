@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import type { PostgresAddon } from "@/api/addons";
 import { StatusPill } from "./status-pill";
-import { AddonTypeIcon } from "./addon-type-icon";
+import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 import {
   filterAndSortAddons,
   countByBucket,

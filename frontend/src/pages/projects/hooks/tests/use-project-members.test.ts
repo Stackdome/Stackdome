@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor, act, cleanup } from "@testing-library/react";
 
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: vi.fn(() => "org-1") }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: vi.fn(() => "org-1") }));
 vi.mock("@/api/projects", () => ({
   listProjectMembers: vi.fn(), addProjectMember: vi.fn(), updateProjectMemberRole: vi.fn(), removeProjectMember: vi.fn(),
 }));

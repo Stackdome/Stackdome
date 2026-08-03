@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { http, HttpResponse } from 'msw'
 import { IntegrationRow } from './integration-row'
-import { GIT_INTEGRATION_TYPE_GITHUB_APP } from '../lib/derive-row'
+import { GIT_INTEGRATION_TYPE_GITHUB_APP } from '@/lib/git-integrations'
 import { ORG_ID } from '../../../../.storybook/fixtures'
 import type { GitIntegration } from '@/api/git-integrations'
 

@@ -14,7 +14,7 @@ vi.mock("@/api/postgres-backups", async () => {
   };
 });
 
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: vi.fn(() => "org-1"),
 }));
 

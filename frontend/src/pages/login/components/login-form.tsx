@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { useLogin } from "../hooks/use-login";
 import type { LoginFormData } from "../types";
 import { loginSchema } from "../types";
-import { setAuthSession } from "@/helpers/common";
+import { setAuthSession } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { FieldLabel } from "@/pages/auth/components/auth-shell";

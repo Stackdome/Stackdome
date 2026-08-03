@@ -24,7 +24,7 @@ export interface ReleaseBodyTabsProps {
  */
 export function ReleaseBodyTabs({ children, diff, hasPrev, prevSeq, loading = false }: ReleaseBodyTabsProps) {
   const [tab, setTab] = useState<TabId>("outcomes");
-  const changeCount = diff.resources.length + diff.volumes.length + diff.connections.length;
+  const changeCount = diff.resources.length + diff.volumes.length;
 
   const tabClass = (id: TabId) =>
     cn(

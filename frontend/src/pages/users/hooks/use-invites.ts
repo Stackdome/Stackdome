@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { createInvite, resendInvite, revokeInvite, type OrgInviteCreateResponse } from "@/api/invites";
 import { toInviteCreateRequest, type InviteFormData } from "../schemas/invite-schema";

@@ -19,7 +19,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { listOrganizationUsers } from "@/api/organizations";
 import type { User } from "@/api/organizations";
 

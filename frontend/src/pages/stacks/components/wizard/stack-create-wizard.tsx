@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layers } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { templates } from "@/data/templates/registry";
+import { templates } from "@/pages/stacks/data/templates/registry";
 import { useTemplateImport } from "@/pages/stacks/hooks/use-template-import";
 import { useDockerComposeImport } from "@/pages/stacks/hooks/use-docker-compose-import";
 import { WizardChooser } from "./wizard-chooser";
@@ -10,7 +10,7 @@ import { BlockComposer } from "./block-composer";
 import { TemplatesBrowserPanel } from "./templates-browser-panel";
 import { DockerComposeImportPanel } from "./docker-compose-import-panel";
 import { GitSourcePanel } from "./git-source-panel";
-import type { Template } from "@/data/templates/types";
+import type { Template } from "@/pages/stacks/data/templates/types";
 
 type Phase = "chooser" | "composer" | "template" | "compose" | "git";
 

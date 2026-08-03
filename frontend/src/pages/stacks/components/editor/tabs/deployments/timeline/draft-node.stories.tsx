@@ -34,7 +34,6 @@ const stagedDiff: SnapshotDiff = {
     },
   ],
   volumes: [],
-  connections: [{ name: 'web → orders-db', change: 'added', rows: [] }],
 }
 
 // Saved draft awaiting deploy, expanded to show the staged diff vs the live release.

@@ -10,7 +10,7 @@ vi.mock("@/api/preview-configs", () => ({
   updatePreviewConfig: vi.fn(),
   deletePreviewConfig: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: () => "org1",
 }));
 vi.mock("@/hooks/use-resource-projects", () => ({

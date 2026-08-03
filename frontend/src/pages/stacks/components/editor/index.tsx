@@ -9,7 +9,7 @@ import { useStacks } from "@/pages/stacks/contexts/stack-context";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useMemo, useState, useEffect, useCallback, useRef } from "react";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import { useStackEditSession, type EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
 import { statusVariant } from "@/components/branded/status-variant";
@@ -20,13 +20,17 @@ import { jumpTargetIndex } from "@/pages/stacks/components/editor/tabs/deploymen
 import { ArchitectureTab } from "@/pages/stacks/components/editor/tabs/architecture/architecture-tab";
 import { CanvasEditorShell } from "@/pages/stacks/components/editor/canvas-editor-shell";
 import { EDITOR_TABS, type EditorTabId } from "@/pages/stacks/components/editor/editor-tabs";
-import { useEditorTour } from "@/pages/stacks/onboarding/use-editor-tour";
+import { useEditorTour } from "@/pages/stacks/hooks/use-editor-tour";
 import { ViewChangesModal } from "@/pages/stacks/components/editor/view-changes-modal";
 import { DraftTabPlaceholder } from "@/pages/stacks/components/editor/draft-tab-placeholder";
 import type { FormStackResourceData, FormVolumeExtendedData as VolumeFormData, FormStackData } from "@/pages/stacks/schemas/form-schema";
-import type { StackResource, Volume, Stack } from "@/pages/stacks/types";
+import type { StackResource, Volume, Stack } from "@/api/stack-types";
 import type { StackConnection } from "@/api/connections";
-import { alignBaselineToDraft, renameFingerprint } from "@/pages/stacks/lib/stack-diff";
+import {
+  alignBaselineToDraft,
+  resourceRenameFingerprint,
+  volumeRenameFingerprint,
+} from "@/pages/stacks/lib/stack-diff";
 import { applyStackByName, getStackById, deleteStack, getStacksByOrg } from "@/api/stacks";
 import { stackNameConflictError } from "@/pages/stacks/lib/stack-name-conflict";
 import { createStackFetchGate } from "@/pages/stacks/lib/canvas/stack-fetch-gate";
@@ -41,17 +45,17 @@ import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-re
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
 import { addonIdsFromConnections } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
-import { useOrgDomains } from "@/hooks/use-org-domains";
+import { useOrgDomains } from "@/pages/stacks/hooks/use-org-domains";
 import { sortIngresses } from "@/pages/stacks/lib/public-endpoints";
 import { convertFormStackToApiStack, FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { useToast } from "@/components/ui/use-toast";
 import { useDraftSync } from "@/pages/stacks/hooks/use-draft-sync";
 import { useStackRevert } from "@/pages/stacks/hooks/use-stack-revert";
 import { useVolumeDelete } from "@/pages/stacks/hooks/use-volume-delete";
-import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
+import { canonicalFromDraft } from "@/pages/stacks/lib/stack-model/from-form";
 import { SYNC_STATUS } from "@/pages/stacks/lib/draft-sync/constants";
 import { useConfirm } from "@/components/branded/confirm";
 
@@ -257,15 +261,15 @@ export default function CanvasEditorPage() {
   const baselineResources = useMemo<FormStackResourceData[]>(
     () =>
       (snapshotResources
-        ? alignBaselineToDraft(snapshotResources, alignResources, renameFingerprint)
-        : alignBaselineToDraft(serverResources, alignResources, renameFingerprint)) as FormStackResourceData[],
+        ? alignBaselineToDraft(snapshotResources, alignResources, resourceRenameFingerprint)
+        : alignBaselineToDraft(serverResources, alignResources, resourceRenameFingerprint)) as FormStackResourceData[],
     [snapshotResources, serverResources, alignResources],
   );
   const baselineVolumes = useMemo<VolumeFormData[]>(
     () =>
       (snapshotVolumes
-        ? alignBaselineToDraft(snapshotVolumes, alignVolumes, renameFingerprint)
-        : alignBaselineToDraft(serverVolumes, alignVolumes, renameFingerprint)) as VolumeFormData[],
+        ? alignBaselineToDraft(snapshotVolumes, alignVolumes, volumeRenameFingerprint)
+        : alignBaselineToDraft(serverVolumes, alignVolumes, volumeRenameFingerprint)) as VolumeFormData[],
     [snapshotVolumes, serverVolumes, alignVolumes],
   );
 
@@ -464,11 +468,11 @@ export default function CanvasEditorPage() {
   // Live drawer validation: compute desired state from draft and expose zod issues
   // per resource index. Issue paths are relative to the resource root (no
   // ["spec","stack_resources",idx] prefix — drop that prefix at this boundary).
-  const desiredState = useMemo(() => buildDesiredState(session.draft), [session.draft]);
+  const canonicalDraft = useMemo(() => canonicalFromDraft(session.draft), [session.draft]);
 
   const validationErrors = useMemo(() => {
     const resources: { [index: number]: { [field: string]: string | undefined } } = {};
-    desiredState.resourceIssues.forEach((issues, idx) => {
+    canonicalDraft.issues.forEach((issues, idx) => {
       resources[idx] = {};
       for (const issue of issues) {
         const fieldKey = issue.path.join(".");
@@ -476,7 +480,7 @@ export default function CanvasEditorPage() {
       }
     });
     return { resources, volumes: {} };
-  }, [desiredState.resourceIssues]);
+  }, [canonicalDraft.issues]);
 
   // Merge live zod validation (index-keyed) with backend field errors (name-keyed).
   // Resolve each server error's resource NAME to its CURRENT index here so the
@@ -961,16 +965,11 @@ export default function CanvasEditorPage() {
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>
   );
 
-  const dirtyTotal = session.dirty.dirtyResourceIdx.size + session.dirty.dirtyVolumeIdx.size;
-
-  // The staged diff is the single change authority: its cur side is the
-  // in-memory draft snapshot, so autosave settledness can't lag it. Session
-  // dirt only fills the window where the diff isn't derivable yet (release
-  // detail still loading, or a new-stack draft outside the lifecycle).
+  // Count and modal contents must come from the same staged diff, so no count
+  // can appear that the modal cannot itemize. Zero until the diff's baseline
+  // (the deployed release's snapshot) has loaded.
   const staged = lifecycle.stagedDiff;
-  const changeCount = staged
-    ? staged.resources.length + staged.volumes.length + staged.connections.length
-    : dirtyTotal;
+  const changeCount = staged ? staged.resources.length + staged.volumes.length : 0;
 
   return (
     <ReleaseDetailProvider value={releaseDetail}>

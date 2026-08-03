@@ -3,6 +3,12 @@ import { deriveDeployLifecycle } from "../use-deploy-lifecycle";
 import type { Stack } from "@/api/stacks";
 import type { StackRelease, StackReleaseSnapshot } from "@/api/releases";
 
+/**
+ * The phase drives the deploy pill and `stagedDiff` fills the changes modal, so
+ * the two must agree: a phase that promises pending work hands over rows to
+ * show, and a phase with no baseline yet promises nothing.
+ */
+
 const mkStack = (image: string, updatedAt?: string): Stack =>
   ({
     spec: { stack_resources: [{ name: "web", source: { image: { ref: image } } }] },
@@ -77,6 +83,7 @@ describe("deriveDeployLifecycle", () => {
       liveSnapshot: snap("nginx:1.25"),
     });
     expect(r.phase).toBe("staged");
+    expect(r.stagedDiff?.resources).toHaveLength(1);
     expect(r.stagedDiff?.resources[0]).toMatchObject({ name: "web", change: "modified" });
   });
 
@@ -145,6 +152,7 @@ describe("deriveDeployLifecycle", () => {
       liveSnapshot: undefined,
     });
     expect(r.phase).toBe("clean");
+    expect(r.stagedDiff).toBeUndefined();
   });
 
   it("prefers draftSnapshot over the saved spec for the staged diff", () => {

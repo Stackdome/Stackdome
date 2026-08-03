@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getRefreshToken } from "@/helpers/common";
+import { getRefreshToken } from "@/lib/common";
 import { API_BASE_URL } from "./base-url";
 
 // Bare axios (not the shared `api` instance) so refresh bypasses the interceptors.

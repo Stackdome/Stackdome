@@ -10,14 +10,14 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   updateGitIntegration: vi.fn(),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
 }));
 
 import { updateGitIntegration } from "@/api/git-integrations";
 import { UpdateCredentialsDialog } from "../update-credentials-dialog";
-import { GIT_INTEGRATION_TYPE_CREDENTIALS } from "../../lib/derive-row";
+import { GIT_INTEGRATION_TYPE_CREDENTIALS } from "@/lib/git-integrations";
 import type { GitIntegration } from "@/api/git-integrations";
 
 const integration: GitIntegration = {

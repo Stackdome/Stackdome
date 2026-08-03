@@ -16,7 +16,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { NavUser } from "@/components/nav-user";
 import { StackdomeMark } from "@/components/branded";
 import { Link } from "react-router-dom";
-import { getCurrentUser } from "@/helpers/common";
+import { getCurrentUser } from "@/lib/common";
 
 // SidebarSection type for navigation
 export interface SidebarSection {

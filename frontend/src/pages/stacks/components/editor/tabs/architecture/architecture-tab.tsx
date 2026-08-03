@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import {
   ReactFlowProvider,
   useNodesState,

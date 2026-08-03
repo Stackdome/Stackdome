@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader, Panel } from "@/components/branded";
-import { AddIntegrationWizard } from "./add-integration-wizard";
+import { AddIntegrationWizard } from "@/components/git-source-picker/add-integration-wizard";
 import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
 import {
@@ -10,9 +10,9 @@ import {
   type GitIntegration,
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
-import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "./lib/derive-row";
+import { GIT_INTEGRATION_TYPE_GITHUB_APP } from "@/lib/git-integrations";
 import { IntegrationsErrorState, IntegrationsEmptyState } from "./components/page-states";
 import { IntegrationRow } from "./components/integration-row";
 import { VerifyIntegrationDialog } from "./components/verify-integration-dialog";

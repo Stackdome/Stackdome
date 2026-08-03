@@ -4,7 +4,7 @@ import { Box, Cpu, MemoryStick, AlertCircle, Clock } from "lucide-react";
 import { EmptyState, StatusPill, type StatusVariant } from "@/components/branded";
 import { cn } from "@/lib/utils";
 import { useMetricsStream } from "./use-metrics-stream";
-import type { StackResource } from "@/pages/stacks/types";
+import type { StackResource } from "@/api/stack-types";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import type { SseStreamStatus } from "@/api/observability";
 import { isResourceReady, readyResourceNames } from "@/pages/stacks/lib/resource-readiness";

@@ -6,7 +6,7 @@ import { InviteAcceptForm } from "@/pages/signup/components/invite-accept-form";
 import { AuthShell, SwapLink } from "@/pages/auth/components/auth-shell";
 import { useInviteInfo } from "@/pages/signup/hooks/use-invite-info";
 import type { OrgInviteInfo } from "@/api/invites";
-import { isUserLoggedIn, logoutAndRedirect } from "@/helpers/common";
+import { isUserLoggedIn, logoutAndRedirect } from "@/lib/common";
 import { Button } from "@/components/ui/button";
 
 // ------------------------------------------------------------------

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { stackNameConflictError, stackNameTakenMessage } from "./stack-name-conflict";
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 
 const stack = (name: string, project_id: string): Pick<Stack, "name" | "project_id"> => ({
   name,

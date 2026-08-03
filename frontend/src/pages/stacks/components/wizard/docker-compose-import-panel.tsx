@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { FieldShell } from '@/components/branded';
 import { Upload } from 'lucide-react';
-import { WizardFooter } from './wizard-footer';
+import { WizardFooter } from "@/components/wizard-footer";
 
 export interface DockerComposeImportPanelProps {
   onImport: (yaml: string) => Promise<void>;

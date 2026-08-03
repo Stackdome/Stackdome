@@ -11,7 +11,7 @@ import {
   STATUS_ACTIVE,
   STATUS_PENDING_INSTALL,
   REPOSITORY_SELECTION_ALL,
-} from "../../lib/derive-row";
+} from "@/lib/git-integrations";
 import type { GitIntegration } from "@/api/git-integrations";
 
 afterEach(cleanup);
@@ -20,7 +20,7 @@ vi.mock("@/api/git-integrations", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   listInstallations: vi.fn().mockResolvedValue({ items: [] }),
 }));
-vi.mock("@/helpers/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
+vi.mock("@/lib/common", () => ({ getCurrentOrganizationId: () => "org-1" }));
 
 import { listInstallations } from "@/api/git-integrations";
 

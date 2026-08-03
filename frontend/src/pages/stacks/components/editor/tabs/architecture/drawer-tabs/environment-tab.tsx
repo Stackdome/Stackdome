@@ -23,7 +23,7 @@ import { envRowsDiff } from "@/pages/stacks/lib/stack-diff";
 
 import type { FormEnvVarData } from "@/pages/stacks/schemas/form-schema";
 import { EnvRow, type EnvFrom, type EnvRowErrors, type AddonBindingPatch } from "./env-row";
-import { AddonTypeIcon } from "@/pages/addons/components/addon-type-icon";
+import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 import type { PostgresAddon } from "@/api/addons";
 
 interface StackResourceEnvironmentTabProps {

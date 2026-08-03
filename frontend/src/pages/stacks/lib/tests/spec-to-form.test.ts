@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { formResourcesFromSpec, mapVolumeToFormData } from "@/pages/stacks/lib/spec-to-form";
-import type { StackResource, Volume } from "@/pages/stacks/types";
+import type { StackResource, Volume } from "@/api/stack-types";
 import type { StackConnection } from "@/api/connections";
 
 // Fixtures use the same server shapes as connection-mapping.test.ts; only the

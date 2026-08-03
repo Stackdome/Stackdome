@@ -8,10 +8,10 @@ import { FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { updateGitIntegration, type GitIntegration } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { updateCredentialsFormSchema } from "@/pages/git-integrations/lib/form-schemas";
-import { providerIdFor, PROVIDER_DISPLAY_NAMES } from "../lib/derive-row";
-import { ProviderLogo } from "./provider-logo";
+import { getCurrentOrganizationId } from "@/lib/common";
+import { updateCredentialsFormSchema } from "@/components/git-source-picker/credentials-form-schema";
+import { providerIdFor, PROVIDER_DISPLAY_NAMES } from "@/lib/git-integrations";
+import { ProviderLogo } from "@/components/branded/provider-logo";
 
 interface UpdateCredentialsDialogProps {
   integration: GitIntegration | null;

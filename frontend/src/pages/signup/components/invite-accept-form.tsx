@@ -8,7 +8,7 @@ import { useSignup } from "../hooks/use-signup";
 import { inviteAcceptSchema } from "../types";
 import type { InviteAcceptFormData } from "../types";
 import type { OrgInviteInfo } from "@/api/invites";
-import { setAuthSession } from "@/helpers/common";
+import { setAuthSession } from "@/lib/common";
 import { isErrorStatus, getErrorMessage } from "@/api/client";
 import { FieldLabel } from "@/pages/auth/components/auth-shell";
 import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";

@@ -65,7 +65,6 @@ const stagedDiff: SnapshotDiff = {
     },
   ],
   volumes: [],
-  connections: [],
 }
 
 const meta = {

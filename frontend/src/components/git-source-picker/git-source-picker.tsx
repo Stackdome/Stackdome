@@ -12,12 +12,12 @@ import {
   type GitRepository,
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { AddIntegrationWizard } from "@/pages/git-integrations/add-integration-wizard";
+import { getCurrentOrganizationId } from "@/lib/common";
+import { AddIntegrationWizard } from "@/components/git-source-picker/add-integration-wizard";
 import {
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   GIT_INTEGRATION_TYPE_CREDENTIALS,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 import { CredentialsDropdown, usableIntegrations } from "./credentials-dropdown";
 import type { PickedRepo } from "./types";
 

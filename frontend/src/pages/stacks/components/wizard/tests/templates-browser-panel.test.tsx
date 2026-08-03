@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeAll, afterEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TemplatesBrowserPanel } from "../templates-browser-panel";
-import type { Template } from "@/data/templates/types";
+import type { Template } from "@/pages/stacks/data/templates/types";
 
 const tooljet: Template = {
   id: "tooljet",

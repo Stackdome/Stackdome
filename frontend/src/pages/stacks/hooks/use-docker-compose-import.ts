@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
-import { convertDockerComposeToStackData } from '@/lib/docker-compose-converter';
-import { parseAndValidateDockerCompose } from '@/lib/docker-compose-parser';
+import { convertDockerComposeToStackData } from '@/pages/stacks/lib/docker-compose-converter';
+import { parseAndValidateDockerCompose } from '@/pages/stacks/lib/docker-compose-parser';
 import { formatImportWarnings } from '@/pages/stacks/lib/import-warnings-toast';
 import type { DockerComposeFile } from '@/types/docker-compose';
 

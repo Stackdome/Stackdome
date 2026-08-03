@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ProviderLogo } from "@/pages/git-integrations/components/provider-logo";
+import { ProviderLogo } from "@/components/branded/provider-logo";
 import {
   providerIdFor,
   PROVIDER_DISPLAY_NAMES,
@@ -15,7 +15,7 @@ import {
   GIT_INTEGRATION_TYPE_CREDENTIALS,
   STATUS_INSTALLED,
   STATUS_ACTIVE,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 import type { GitIntegration } from "@/api/git-integrations";
 import { cn } from "@/lib/utils";
 

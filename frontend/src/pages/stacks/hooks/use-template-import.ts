@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/components/ui/use-toast";
-import { templateToFormData } from "@/data/templates/template-to-form";
+import { templateToFormData } from "@/pages/stacks/data/templates/template-to-form";
 import { formatImportWarnings } from "@/pages/stacks/lib/import-warnings-toast";
-import type { Template } from "@/data/templates/types";
+import type { Template } from "@/pages/stacks/data/templates/types";
 
 export interface TemplateImportState {
   isDialogOpen: boolean;

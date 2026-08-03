@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { X, ScrollText, Trash2 } from "lucide-react";
 import { useSecrets } from "@/pages/stacks/hooks/use-secrets";
-import { usePostgresAddons } from "@/pages/addons/hooks/use-postgres-addons";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import type { PostgresAddon } from "@/api/addons";
 import type { ReleaseLiveStatus } from "@/api/releases";
 import type { UseStackEditSession, EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
@@ -15,6 +15,7 @@ import { useResourceTabProps } from "@/pages/stacks/components/editor/tabs/archi
 import { nodePresentation } from "@/pages/stacks/lib/canvas/node-presentation";
 import { EndpointInlineList, type EndpointUrl } from "@/pages/stacks/components/editor/public-endpoint-row";
 import { deriveResourceOutputNames } from "@/pages/stacks/lib/derive-resource-outputs";
+import { renameResourceReferences } from "@/pages/stacks/lib/rename-references";
 import { NodeGlyph } from "./nodes/node-glyph";
 
 /** Radix tab values used by the sub-tab components (they render their own TabsContent). */
@@ -124,7 +125,12 @@ export function ResourceDrawer({
   const onChange = useCallback(
     (index: number, updated: Partial<FormStackResourceData>) => {
       if (readOnly) return;
-      session.updateResources((prev) => prev.map((r, i) => (i === index ? updated : r)));
+      session.updateResources((prev) => {
+        const next = prev.map((r, i) => (i === index ? updated : r)) as FormStackResourceData[];
+        // Siblings address this resource by name, so a rename has to carry them
+        // with it or their connections point at a resource that no longer exists.
+        return renameResourceReferences(next, prev[index]?.name ?? "", updated.name ?? "");
+      });
     },
     [session, readOnly],
   );

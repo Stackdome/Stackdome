@@ -13,8 +13,12 @@ import {
   SYNC_STATUS,
   type SyncStatus,
 } from "@/pages/stacks/lib/draft-sync/constants";
-import { serverStateFromStack, type ServerStackState } from "@/pages/stacks/lib/draft-sync/server-state";
-import { buildDesiredState } from "@/pages/stacks/lib/draft-sync/desired-state";
+import { serverConnectionIndex, type ServerConnectionIndex } from "@/pages/stacks/lib/draft-sync/server-state";
+import { canonicalFromStack } from "@/pages/stacks/lib/stack-model/from-api";
+import { formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
+import { deepEqual } from "@/pages/stacks/lib/stack-model/equal";
+import { canonicalFromDraft } from "@/pages/stacks/lib/stack-model/from-form";
+import type { CanonicalStack } from "@/pages/stacks/lib/stack-model/canonical";
 import { computeSyncOps, type SyncOp } from "@/pages/stacks/lib/draft-sync/ops";
 import { isBadRequestError } from "@/api/client";
 import { parseApiError, type ParsedFieldError } from "@/api/errors";
@@ -119,19 +123,23 @@ export function useDraftSync({
   const refetchStackRef = useRef(refetchStack);
   refetchStackRef.current = refetchStack;
 
-  const mirrorRef = useRef<ServerStackState | null>(null);
+  const mirrorRef = useRef<{ stack: CanonicalStack; connections: ServerConnectionIndex } | null>(null);
   const runningRef = useRef<Promise<boolean> | null>(null);
   const queuedRef = useRef(false);
   const failuresRef = useRef(0);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const maxWaitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** The exact resources array the engine wrote while adopting server state.
+   *  Must stay an identity, not a boolean: a flag would also swallow a user
+   *  edit landing in the same React commit. */
+  const adoptedDraftRef = useRef<unknown>(null);
 
   // Seed the mirror once from the fetched stack; afterwards the engine's own
   // refetches (and notifyExternalUpdate) keep it truthful.
   useEffect(() => {
     if (enabled && stack && !mirrorRef.current) {
-      mirrorRef.current = serverStateFromStack(stack);
+      mirrorRef.current = { stack: canonicalFromStack(stack), connections: serverConnectionIndex(stack) };
     }
   }, [enabled, stack]);
 
@@ -144,6 +152,45 @@ export function useDraftSync({
       clearTimeout(maxWaitTimerRef.current);
       maxWaitTimerRef.current = null;
     }
+  }, []);
+
+  /**
+   * Take the server's version of the resources the user was not editing.
+   *
+   * The draft is seeded once per session, and a write may come back with more
+   * than it was sent — an applied default, a normalized field — so the draft
+   * has to absorb that or report a change nobody made for the rest of the
+   * session.
+   *
+   * Only entries whose object identity survived the whole cycle are adopted:
+   * a resource typed into while the save was in flight keeps the user's
+   * version and heals on the next cycle. A keystroke never loses to a response.
+   */
+  const adoptServerState = useCallback((fresh: Stack, untouched: Set<object>) => {
+    const session = sessionRef.current;
+    if (!session.isActive) return;
+    const serverForms = formResourcesFromSpec(fresh.spec?.stack_resources, fresh.spec?.connections);
+    const byName = new Map(serverForms.map((r) => [r.name, r]));
+    // State updaters must stay pure; `next` is built outside one so a replay
+    // cannot leave the ref holding an array React discarded.
+    const current = session.draft.resources;
+    let changed = false;
+    const next = current.map((draftResource) => {
+      if (!untouched.has(draftResource as unknown as object)) return draftResource;
+      const server = draftResource.name ? byName.get(draftResource.name) : undefined;
+      if (!server || deepEqual(draftResource, server)) return draftResource;
+      changed = true;
+      // The stashed sources are client-only; the server never returns them, so
+      // adoption must carry them across.
+      return {
+        ...server,
+        ...(draftResource.stashedGitSource ? { stashedGitSource: draftResource.stashedGitSource } : {}),
+        ...(draftResource.stashedImageSource ? { stashedImageSource: draftResource.stashedImageSource } : {}),
+      };
+    });
+    if (!changed) return;
+    adoptedDraftRef.current = next;
+    session.updateResources(next);
   }, []);
 
   const startCycle = useCallback((): Promise<boolean> => {
@@ -161,8 +208,11 @@ export function useDraftSync({
         resources: cloneJson(s.draft.resources),
         volumes: cloneJson(s.draft.volumes),
       };
-      const desired = buildDesiredState(snapshot);
-      const ops = computeSyncOps(mirror, desired);
+      // Resource identities as the cycle starts. Anything still holding one of
+      // these references at the end was not edited while the save was in
+      // flight, and is safe to refresh from the server's answer.
+      const untouched = new Set<object>(s.draft.resources as unknown as object[]);
+      const ops = computeSyncOps(mirror.stack, canonicalFromDraft(snapshot), mirror.connections);
       if (ops.length === 0) {
         failuresRef.current = 0;
         setFailureCount(0);
@@ -188,8 +238,9 @@ export function useDraftSync({
         const fresh = fetchFresh
           ? await fetchFresh()
           : await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
-        mirrorRef.current = serverStateFromStack(fresh);
+        mirrorRef.current = { stack: canonicalFromStack(fresh), connections: serverConnectionIndex(fresh) };
         if (!fetchFresh) onRefreshedRef.current(fresh);
+        adoptServerState(fresh, untouched);
         // Deliberately NOT rebasing the session here: the diff baseline stays
         // pinned to the deployed release so autosaved edits remain visibly
         // dirty/revertable. Only deploy or discard moves the baseline.
@@ -216,7 +267,7 @@ export function useDraftSync({
           const fresh = fetchFresh
             ? await fetchFresh()
             : await getStackById(currentIds.orgId, currentIds.projectName, currentIds.stackId);
-          mirrorRef.current = serverStateFromStack(fresh);
+          mirrorRef.current = { stack: canonicalFromStack(fresh), connections: serverConnectionIndex(fresh) };
           if (!fetchFresh) onRefreshedRef.current(fresh);
         } catch {
           /* keep the stale mirror; the next attempt refetches again */
@@ -255,7 +306,7 @@ export function useDraftSync({
     });
     runningRef.current = run;
     return run;
-  }, []);
+  }, [adoptServerState]);
 
   // Debounce: every draft change (while active+enabled) restarts the idle
   // window; a max-wait timer guarantees persistence under continuous typing.
@@ -270,6 +321,12 @@ export function useDraftSync({
       // Disabled / session ended: no cycle will run to clear pending, so
       // reset it here rather than leaving the lifecycle stuck on "editing".
       setPending(false);
+      return;
+    }
+    // An engine-adopted draft is not a user edit and must not arm a save — but
+    // only that exact array; anything after it is the user typing.
+    if (draft.resources === adoptedDraftRef.current) {
+      adoptedDraftRef.current = null;
       return;
     }
     if (firstArmRef.current) firstArmRef.current = false;
@@ -306,7 +363,7 @@ export function useDraftSync({
   flushRef.current = flush;
 
   const notifyExternalUpdate = useCallback((fresh: Stack) => {
-    mirrorRef.current = serverStateFromStack(fresh);
+    mirrorRef.current = { stack: canonicalFromStack(fresh), connections: serverConnectionIndex(fresh) };
   }, []);
 
   // Best-effort persistence when the tab hides or the page unmounts.
