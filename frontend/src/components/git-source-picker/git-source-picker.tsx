@@ -203,7 +203,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
             className={cn(
               "-mb-px border-b-2 px-0.5 py-2 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
               tab === t.key
-                ? "border-brand text-foreground"
+                ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
@@ -257,7 +257,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
                       type="button"
                       className={cn(
                         "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-accent",
-                        value?.cloneUrl && value.cloneUrl === (r.clone_url ?? "") && "bg-brand-bg",
+                        value?.cloneUrl && value.cloneUrl === (r.clone_url ?? "") && "bg-foreground/5",
                       )}
                       onClick={() => void pickRepo(r)}
                     >
@@ -279,7 +279,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
                         href={configureUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand hover:underline"
+                        className="text-foreground hover:underline"
                       >
                         Don&apos;t see your repository? Configure in GitHub →
                       </a>

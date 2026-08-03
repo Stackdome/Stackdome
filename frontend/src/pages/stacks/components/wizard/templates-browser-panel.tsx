@@ -49,7 +49,7 @@ function ExternalLinkButton({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground/80 transition-colors hover:border-brand-border hover:text-brand"
+      className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground/80 transition-colors hover:border-border-strong hover:text-foreground"
     >
       <ExternalLink className="h-3.5 w-3.5" />
       {label}

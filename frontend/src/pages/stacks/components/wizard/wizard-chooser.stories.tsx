@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 import { WizardChooser } from './wizard-chooser'
 
 const meta = {
@@ -18,5 +18,14 @@ export const Default: Story = {
     onPickCompose: fn(),
     onPickBlank: fn(),
     onPickGit: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    // Option tiles hover to an ink wash, never brand orange (D8: assert the
+    // parsed stylesheet, not a synthetic :hover).
+    const canvas = within(canvasElement)
+    const tiles = canvas.getAllByRole('button')
+    for (const tile of tiles) {
+      expect(tile.className).not.toContain('hover:border-brand')
+    }
   },
 }

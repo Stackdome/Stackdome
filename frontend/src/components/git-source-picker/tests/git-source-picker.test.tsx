@@ -132,6 +132,20 @@ describe("GitSourcePicker", () => {
     );
   });
 
+  it("underlines the active tab in ink, never brand orange", async () => {
+    const user = userEvent.setup();
+    renderPicker();
+    const providerTab = await screen.findByRole("tab", { name: /connected provider/i });
+    expect(providerTab.className).toContain("border-foreground");
+    expect(providerTab.className).not.toContain("border-brand");
+
+    const urlTab = screen.getByRole("tab", { name: /public url/i });
+    await user.click(urlTab, { pointerEventsCheck: 0 });
+    expect(urlTab.className).toContain("border-foreground");
+    expect(urlTab.className).not.toContain("border-brand");
+    expect(providerTab.className).not.toContain("border-foreground");
+  });
+
   it("clears the Public URL field and re-emits null when switching away and back", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
