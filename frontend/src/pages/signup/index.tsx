@@ -95,7 +95,7 @@ function InviteSignup({ token }: { token: string }) {
       <div className="py-2 text-center">
         <Link
           to="/sign-in"
-          className="inline-block text-sm text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80"
+          className="inline-block text-sm text-foreground underline underline-offset-4"
         >
           Go to sign in →
         </Link>

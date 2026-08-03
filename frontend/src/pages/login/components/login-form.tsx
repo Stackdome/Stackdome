@@ -12,6 +12,8 @@ import { getErrorMessage } from "@/api/client";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { FieldLabel } from "@/pages/auth/components/auth-shell";
 import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
+import { AlertBanner } from "@/components/branded/alert-banner";
+import { FieldError } from "@/components/branded/field-error";
 
 export function LoginForm() {
   const [formData, setFormData] = useState<LoginFormData>({ email: "", password: "" });
@@ -73,11 +75,7 @@ export function LoginForm() {
       <GitHubSignInButton />
 
       <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
-        {serverError && (
-          <div className="rounded-2xl border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger">
-            {serverError}
-          </div>
-        )}
+        {serverError && <AlertBanner>{serverError}</AlertBanner>}
 
         <div className="space-y-2">
           <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -92,9 +90,7 @@ export function LoginForm() {
             disabled={isLoading}
             aria-invalid={!!errors.email}
           />
-          {errors.email && (
-            <p className="text-xs text-danger">{errors.email}</p>
-          )}
+          <FieldError>{errors.email}</FieldError>
         </div>
 
         <div className="space-y-2">
@@ -109,12 +105,10 @@ export function LoginForm() {
             disabled={isLoading}
             aria-invalid={!!errors.password}
           />
-          {errors.password && (
-            <p className="text-xs text-danger">{errors.password}</p>
-          )}
+          <FieldError>{errors.password}</FieldError>
         </div>
 
-        <Button type="submit" variant="outline" className="w-full" disabled={isLoading}>
+        <Button type="submit" variant="default" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="animate-spin h-4 w-4" />
