@@ -25,6 +25,18 @@ resources:
       LOG_LEVEL: info
     depends_on: [db]
 
+  storybook:
+    build:
+      repo: https://github.com/Stackdome/stackdome
+      branch: main
+      dockerfile: Dockerfile.storybook
+      context: .
+    ports:
+      - name: http
+        port: 80
+        public: true
+        subdomain: stackdome-storybook
+
   db:
     image: postgres:16-alpine
     ports:
