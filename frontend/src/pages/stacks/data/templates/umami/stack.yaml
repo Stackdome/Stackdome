@@ -1,0 +1,36 @@
+# Umami — privacy-focused, open-source web analytics (Postgres).
+# 1. Replace REPLACE_APP_SECRET_VALUE_HERE with a random string (secures auth tokens).
+# 2. Replace REPLACE_POSTGRES_PASSWORD_VALUE_HERE in BOTH places (db and umami's
+#    DATABASE_URL) with the same value.
+# 3. Log in with the auto-created default account: admin / umami — change the
+#    password immediately after first login.
+# 4. Services may restart until postgres finishes initializing; that settles itself.
+name: umami
+
+services:
+  umami:
+    image: ghcr.io/umami-software/umami:3.2.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    environment:
+      APP_SECRET: "REPLACE_APP_SECRET_VALUE_HERE"
+      # Kept fully literal on purpose: a ${db.host} reference would turn this
+      # row read-only, hiding the password placeholder from the editor. The
+      # literal host works because a resource's service is named after it.
+      DATABASE_URL: "postgresql://umami:REPLACE_POSTGRES_PASSWORD_VALUE_HERE@db:5432/umami"
+
+  db:
+    image: postgres:16
+    expose:
+      - "5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: "umami"
+      POSTGRES_USER: "umami"
+      POSTGRES_PASSWORD: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
+
+volumes:
+  db-data:
