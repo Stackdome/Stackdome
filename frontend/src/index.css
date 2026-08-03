@@ -444,6 +444,17 @@ body {
     );
   }
 
+  /* ── the header — same box as the marketing nav's `.nav-inner`/`.wrap`:
+     --nav-h (58px) + the 0.5px hairline the nav's frosted bar adds on scroll. */
+  .auth-header {
+    height: 59px;
+    padding: 0 32px;
+    border: 0.5px solid transparent;
+  }
+  @media (max-width: 560px) {
+    .auth-header { padding: 0 20px; }
+  }
+
   /* ── THE PLATE — inset product-panel material (§6), not a card on a shadow ── */
   .auth-plate {
     border-radius: 36px;

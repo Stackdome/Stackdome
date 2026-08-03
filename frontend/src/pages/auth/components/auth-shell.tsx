@@ -26,9 +26,9 @@ export function AuthShell({ title, sub, below, children }: AuthShellProps) {
       </div>
 
       {/* Same 1280px track as the marketing nav, so brand and toggle don't drift apart on wide screens. */}
-      <header className="absolute inset-x-0 top-0 z-10 mx-auto flex h-16 w-full max-w-[1280px] items-center justify-between px-6 md:px-8">
+      <header className="auth-header absolute inset-x-0 top-0 z-10 mx-auto flex w-full max-w-[1280px] items-center justify-between">
         <Link to="/" aria-label="Stackdome — home" className="transition-opacity hover:opacity-70">
-          <StackdomeWordmark size={20} />
+          <StackdomeWordmark size={15} />
         </Link>
         <ThemeToggle />
       </header>
