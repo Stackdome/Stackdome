@@ -75,8 +75,6 @@ function filterRows(
   });
 }
 
-const COLUMN_HEAD_CLASS = "text-[11px] uppercase tracking-widest text-muted-foreground font-mono";
-
 function TabCount({ count }: { count: number }) {
   return <span className="ml-1.5 font-mono text-[11px] text-muted-foreground">{count}</span>;
 }
@@ -109,10 +107,10 @@ export default function UsersPage() {
 
   const tableHeader = (
     <TableRow className="hover:bg-transparent">
-      <TableHead className={COLUMN_HEAD_CLASS}>User</TableHead>
-      <TableHead className={COLUMN_HEAD_CLASS}>Org role</TableHead>
-      <TableHead className={COLUMN_HEAD_CLASS}>Projects</TableHead>
-      <TableHead className={COLUMN_HEAD_CLASS}>Last active</TableHead>
+      <TableHead>User</TableHead>
+      <TableHead>Org role</TableHead>
+      <TableHead>Projects</TableHead>
+      <TableHead>Last active</TableHead>
       <TableHead />
     </TableRow>
   );
@@ -196,7 +194,7 @@ export default function UsersPage() {
                 placeholder="Search by name or email"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="pl-8 h-9 w-[280px]"
+                className="pl-8 w-[280px]"
               />
             </div>
 
@@ -217,7 +215,7 @@ export default function UsersPage() {
 
             {/* Project filter */}
             <Select value={project} onValueChange={setProject}>
-              <SelectTrigger className="h-9 w-[180px]">
+              <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="All projects" />
               </SelectTrigger>
               <SelectContent>

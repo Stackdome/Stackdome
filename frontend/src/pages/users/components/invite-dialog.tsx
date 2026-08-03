@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -16,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FieldShell } from "@/components/branded";
+import { FieldShell, AlertBanner } from "@/components/branded";
 import { inviteSchema } from "../schemas/invite-schema";
 import { useInvites } from "../hooks/use-invites";
 import { useProjectOptions } from "../hooks/use-project-options";
@@ -33,91 +34,46 @@ interface InviteDialogProps {
 // Default badge pill shown next to default project
 function DefaultPill() {
   return (
-    <span className="inline-flex items-center px-1.5 py-px text-[9px] font-mono uppercase tracking-wider rounded text-brand bg-brand-bg border border-brand-border">
+    <span className="inline-flex items-center px-1.5 py-px text-[9px] font-mono uppercase tracking-wider rounded text-fg-2 bg-foreground/5 border border-border">
       DEFAULT
     </span>
   );
 }
 
-// Role card — vertically stacked button with name + radio + description
+// Role card — labeled radio card with name + description. Selected state is an
+// ink tint (rubric: active/selected = ink tint, never brand orange).
 function RoleCard({
   role,
   selected,
-  onSelect,
   disabled,
 }: {
   role: "Developer" | "Viewer";
   selected: boolean;
-  onSelect: () => void;
   disabled?: boolean;
 }) {
   const description =
     role === "Developer"
       ? "Create, edit, deploy, and remove resources in this project."
       : "Read-only access to this project’s resources and configuration.";
+  const inputId = `invite-role-${role}`;
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      disabled={disabled}
+    <label
+      htmlFor={inputId}
       className={[
-        "flex flex-col items-start gap-1.5 rounded-md border p-3.5 text-left transition-all",
+        "flex flex-col items-start gap-1.5 rounded-md border p-3.5 text-left transition-colors",
         selected
-          ? "border-brand bg-brand-bg"
-          : "border-border bg-card hover:border-brand/50",
+          ? "border-border-strong bg-foreground/5"
+          : "border-border bg-card hover:bg-muted/30",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",
       ].join(" ")}
     >
       <div className="flex w-full items-center justify-between">
-        <span
-          className={[
-            "text-sm font-medium font-mono",
-            selected ? "text-brand" : "text-foreground",
-          ].join(" ")}
-        >
-          {role}
-        </span>
-        {/* Radio dot */}
-        <span
-          className={[
-            "h-3.5 w-3.5 rounded-full border",
-            selected ? "border-brand bg-brand" : "border-border-strong bg-transparent",
-          ].join(" ")}
-          style={selected ? { boxShadow: "inset 0 0 0 3px var(--card)" } : undefined}
-        />
+        <span className="text-sm font-medium font-mono text-foreground">{role}</span>
+        <RadioGroupItem id={inputId} value={role} disabled={disabled} />
       </div>
       <span className="text-[11px] text-muted-foreground leading-snug">{description}</span>
-    </button>
-  );
-}
-
-// Server error banner — shown at top of form body
-function ServerErrorBanner({
-  message,
-  onDismiss,
-}: {
-  message: string;
-  onDismiss: () => void;
-}) {
-  return (
-    <div className="flex items-start gap-2.5 rounded-md border border-danger-border bg-danger-bg px-3.5 py-3">
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
-      <div className="grow">
-        <p className="text-sm font-medium text-foreground">
-          We couldn&apos;t create the invitation
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{message}</p>
-      </div>
-      <button
-        type="button"
-        onClick={onDismiss}
-        aria-label="Dismiss error"
-        className="ml-1 shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <span aria-hidden className="text-sm leading-none">&times;</span>
-      </button>
-    </div>
+    </label>
   );
 }
 
@@ -245,7 +201,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
               "flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
               isSuccess
                 ? "border-success-border bg-success-bg text-success"
-                : "border-brand-border bg-brand-bg text-brand",
+                : "border-border bg-foreground/5 text-foreground",
             ].join(" ")}
           >
             {isSuccess ? (
@@ -272,10 +228,11 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
             <div className="min-w-0 space-y-4">
               {/* Server error banner */}
               {localServerError && (
-                <ServerErrorBanner
-                  message={localServerError}
-                  onDismiss={() => setLocalServerError(null)}
-                />
+                <AlertBanner
+                  action={{ label: "Dismiss", onClick: () => setLocalServerError(null) }}
+                >
+                  We couldn&apos;t create the invitation — {localServerError}
+                </AlertBanner>
               )}
 
               {/* Email field */}
@@ -351,17 +308,20 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
 
               {/* Role field */}
               <FieldShell label="Role on this project" required>
-                <div className="grid grid-cols-2 gap-2.5">
+                <RadioGroup
+                  value={role}
+                  onValueChange={(v) => setRole(v as "Developer" | "Viewer")}
+                  className="grid grid-cols-2 gap-2.5"
+                >
                   {(["Developer", "Viewer"] as const).map((r) => (
                     <RoleCard
                       key={r}
                       role={r}
                       selected={role === r}
-                      onSelect={() => setRole(r)}
                       disabled={isSubmitting}
                     />
                   ))}
-                </div>
+                </RadioGroup>
               </FieldShell>
             </div>
 
@@ -427,7 +387,7 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium">One-time invite link</span>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-brand">
+                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                     SHOWN ONCE
                   </span>
                 </div>
@@ -438,9 +398,9 @@ export function InviteDialog({ open, onOpenChange, onCreated }: InviteDialogProp
                   <code className="min-w-0 grow truncate font-mono text-xs text-foreground">
                     {inviteUrl}
                   </code>
-                  <Button variant="ghost" size="icon" onClick={handleCopy} className="shrink-0 h-7 w-7">
+                  <Button variant="ghost" size="icon" onClick={handleCopy} className="shrink-0" aria-label="Copy invite link">
                     {copied ? (
-                      <Check className="h-3.5 w-3.5 text-brand" />
+                      <Check className="h-3.5 w-3.5 text-success" />
                     ) : (
                       <Copy className="h-3.5 w-3.5" />
                     )}

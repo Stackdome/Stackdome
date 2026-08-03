@@ -17,7 +17,7 @@ export function ProjectChip({ membership, isDefault }: ProjectChipProps) {
   return (
     <span className="inline-flex items-center gap-1 px-2 py-px rounded border border-border bg-card text-[11px] font-mono">
       {showDefault && (
-        <span className="px-1 py-px rounded text-[9px] uppercase tracking-wider text-brand bg-brand-bg border border-brand-border">
+        <span className="px-1 py-px rounded text-[9px] uppercase tracking-wider text-fg-2 bg-foreground/5 border border-border">
           default
         </span>
       )}

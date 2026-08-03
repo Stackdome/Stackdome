@@ -196,6 +196,24 @@ export function makeImageBuild(overrides: Partial<ImageBuild> = {}): ImageBuild 
   } as ImageBuild
 }
 
+export type OrgInvite = Schemas['OrgInvite']
+
+export function makeOrgInvite(overrides: Partial<OrgInvite> = {}): OrgInvite {
+  return {
+    id: 'inv-1',
+    email: 'newhire@example.com',
+    organisation_id: ORG_ID,
+    project_name: DEFAULT_PROJECT,
+    role: 'Developer',
+    status: 'pending',
+    invited_by: 'ada@example.com',
+    email_sent: true,
+    created_at: '2026-08-01T09:00:00Z',
+    expires_at: '2026-08-02T09:00:00Z',
+    ...overrides,
+  } as OrgInvite
+}
+
 export function makeCluster(overrides: Partial<Cluster> = {}): Cluster {
   return {
     id: 'c1',
