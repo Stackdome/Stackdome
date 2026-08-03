@@ -411,3 +411,14 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Canvas nodes/edges render fully custom (ResourceNode/AttachmentNode/
+   ConnectionEdge), so xyflow's built-in node/edge/handle default colors never
+   apply — only the drag-select marquee is generic chrome outside that custom
+   rendering, and it ships blue (#0059dc) by default. Set the non-"-default"
+   variable so it wins regardless of stylesheet load order (see
+   @xyflow/react/dist/style.css var(--xy-x, var(--xy-x-default)) pattern). */
+.react-flow {
+  --xy-selection-background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --xy-selection-border: 1px dotted var(--border-strong);
+}

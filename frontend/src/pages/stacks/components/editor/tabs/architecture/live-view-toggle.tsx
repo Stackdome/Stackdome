@@ -26,7 +26,7 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
       aria-pressed={mode === value}
       onClick={() => onModeChange(value)}
       className={`${SEGMENT_BASE} ${
-        mode === value ? "bg-brand-bg text-brand" : "text-fg-muted hover:text-foreground"
+        mode === value ? "bg-foreground/[0.06] text-foreground" : "text-fg-muted hover:text-foreground"
       }`}
     >
       {label}
@@ -37,7 +37,7 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
     <div
       role="group"
       aria-label="Canvas view"
-      className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 shadow-sm"
+      className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 shadow-[var(--edge)]"
     >
       {segment(
         "draft",

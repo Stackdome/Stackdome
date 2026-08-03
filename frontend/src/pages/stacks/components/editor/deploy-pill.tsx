@@ -78,7 +78,7 @@ export function DeployPill({
     <div
       data-testid="deploy-pill"
       className={cn(
-        "absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2.5 rounded-md border border-brand-border bg-background/90 py-2 shadow-xl shadow-background/60 ring-1 ring-brand/10 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-[260ms]",
+        "absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2.5 rounded-md border border-brand-border bg-background py-2 shadow-[var(--edge)] animate-in fade-in slide-in-from-top-2 duration-[260ms]",
         hasChanges ? "pl-4 pr-2" : "px-2",
       )}
     >

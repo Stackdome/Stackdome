@@ -45,10 +45,10 @@ export function ConnectionEdge({ id, source, target, data }: EdgeProps) {
 
   return (
     <>
-      <BaseEdge id={id} path={path} style={{ stroke: "var(--brand)", strokeWidth: 1.4, strokeOpacity: 0.7, strokeDasharray: "6 5" }} />
+      <BaseEdge id={id} path={path} style={{ stroke: "var(--wire)", strokeWidth: 1.4, strokeOpacity: 0.7, strokeDasharray: "6 5" }} />
       <polygon
         points="0,-3.5 7,0 0,3.5"
-        fill="var(--brand)"
+        fill="var(--wire)"
         transform={`translate(${geo.targetX}, ${geo.targetY}) rotate(${ARROW_ANGLE[geo.targetPosition]}) translate(-7, 0)`}
       />
     </>
