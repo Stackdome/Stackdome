@@ -43,6 +43,19 @@ export function makeProject(overrides: Partial<Project> = {}): Project {
   }
 }
 
+export type ProjectMembership = Schemas['ProjectMembership']
+
+export function makeProjectMembership(overrides: Partial<ProjectMembership> = {}): ProjectMembership {
+  return {
+    id: 'pm-1',
+    user_id: 'u1',
+    role: 'Developer',
+    created_at: '2026-07-20T09:00:00Z',
+    user: makeUser(),
+    ...overrides,
+  } as ProjectMembership
+}
+
 // Same base shape the unit tests use (stack-card.test.tsx); the generated Stack
 // schema marks everything optional-readonly, so a partial literal cast is the
 // established pattern for fixtures.

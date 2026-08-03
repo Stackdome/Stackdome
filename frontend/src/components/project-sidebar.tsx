@@ -1,8 +1,5 @@
 import * as React from "react";
-import {
-  Command,
-  PlusCircle,
-} from "lucide-react";
+import { PlusCircle } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -17,8 +14,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { NavUser } from "@/components/nav-user";
+import { StackdomeMark } from "@/components/branded";
 import { Link } from "react-router-dom";
-import { cn } from "@/lib/utils";
 import { getCurrentUser } from "@/helpers/common";
 
 // SidebarSection type for navigation
@@ -49,17 +46,17 @@ export function ProjectSidebar({ sections }: ProjectSidebarProps) {
   };
   return (
     <Sidebar variant="inset">
-      <SidebarHeader>
+      <SidebarHeader className="px-2 py-3">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild tooltip="Stackdome">
               <Link to="/">
-                <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                  <Command className="size-4" />
+                <div className="flex aspect-square size-8 shrink-0 items-center justify-center rounded-md border border-brand-border bg-brand-bg">
+                  <StackdomeMark size={18} />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">StackDome</span>
-                  <span className="truncate text-xs">{getCurrentUser()?.organisation}</span>
+                  <span className="truncate font-semibold lowercase" style={{ letterSpacing: "0.04em" }}>stackdome</span>
+                  <span className="truncate text-[10px] font-mono uppercase tracking-[0.5px] text-muted-foreground">{getCurrentUser()?.organisation}</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -91,10 +88,8 @@ export function ProjectSidebar({ sections }: ProjectSidebarProps) {
                   )}
                   {section.items.map(item => (
                     <SidebarMenuSubItem key={item.label}>
-                      <SidebarMenuSubButton asChild>
-                        <Link to={item.href} className={cn(item.active ? "bg-primary/10 text-primary" : "")}
-                          onClick={item.onClick}
-                        >
+                      <SidebarMenuSubButton asChild isActive={item.active}>
+                        <Link to={item.href} onClick={item.onClick}>
                           {item.icon}
                           <span>{item.label}</span>
                         </Link>
