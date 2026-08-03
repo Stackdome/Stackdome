@@ -40,6 +40,10 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
       className={cn(
         "relative w-[216px] cursor-grab overflow-hidden rounded-lg border bg-surface-node shadow-[var(--edge)] transition-colors",
         borderClass,
+        // Deliberate exception to "orange = wires only": a drop is about to
+        // create a connection edge, so the transient drag-affordance borrows
+        // the wire colour. Distinct from the steady-state ink-wash `selected`
+        // treatment above — orange reads as "act now", ink reads as "at rest".
         data.dropTarget && "border-brand ring-[3px] ring-brand/30",
         dirty === "removed" && "opacity-60",
       )}

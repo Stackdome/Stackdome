@@ -56,7 +56,7 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
   }, [toggleZen]);
 
   const cell =
-    "flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-brand";
+    "flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground";
   const square =
     "flex size-8 items-center justify-center rounded-md border border-border bg-control shadow-[var(--edge)] transition-colors";
 
@@ -105,7 +105,9 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
         onClick={onToggleConnections}
         className={cn(
           square,
-          showConnections ? "border-brand text-brand" : "border-border text-muted-foreground hover:text-foreground",
+          showConnections
+            ? "border-border-strong bg-foreground/[0.06] text-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Workflow className="size-4" />
