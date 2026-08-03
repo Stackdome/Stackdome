@@ -328,7 +328,7 @@ export function CanvasEditorShell({
                       onChange={(e) => onNameChange?.(e.target.value)}
                       placeholder="name-your-stack"
                       className={cn(
-                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0 md:text-[29px]",
+                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none md:text-[29px]",
                         nameError
                           ? "border-danger"
                           : "border-border/60 hover:border-border focus-visible:border-foreground",

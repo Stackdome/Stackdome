@@ -47,7 +47,7 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
             <span
               aria-hidden
               data-testid="draft-dirty-dot"
-              className="inline-block size-1.5 rounded-full bg-brand"
+              className="inline-block size-1.5 rounded-full bg-foreground"
             />
           )}
         </>,

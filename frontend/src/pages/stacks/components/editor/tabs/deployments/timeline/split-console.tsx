@@ -87,7 +87,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                 onClick={() => setSelected(vm.name)}
                 className={cn(
                   "mt-0.5 flex w-full items-center gap-2 rounded border px-2.5 py-[7px] text-left hover:bg-muted",
-                  selected === vm.name ? "border-brand bg-background" : "border-transparent",
+                  selected === vm.name ? "border-border-strong bg-foreground/[0.06]" : "border-transparent",
                 )}
               >
                 <span className={cn("h-[7px] w-[7px] flex-none rounded-full", toneDotClass(tone))} />

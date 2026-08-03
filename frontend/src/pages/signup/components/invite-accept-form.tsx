@@ -91,7 +91,7 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
   if (phase === "accepted") {
     return (
       <div className="space-y-4 text-center py-8">
-        <p className="text-2xl font-semibold">You&apos;re in!</p>
+        <p className="text-2xl font-semibold">You&apos;re in.</p>
         <p className="text-sm text-muted-foreground">Taking you to Stackdome…</p>
       </div>
     );

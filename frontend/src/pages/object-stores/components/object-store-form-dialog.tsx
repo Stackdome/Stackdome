@@ -219,7 +219,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="os-name">
-                Name <span className="text-danger">*</span>
+                Name <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
               </Label>
               <Input
                 id="os-name"
@@ -236,7 +236,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
 
             <div className="grid gap-2">
               <Label htmlFor="os-destination">
-                Destination path <span className="text-danger">*</span>
+                Destination path <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
               </Label>
               <Input
                 id="os-destination"
@@ -255,7 +255,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
 
             <div className="grid gap-2">
               <Label htmlFor="os-retention">
-                Retention <span className="text-danger">*</span>
+                Retention <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
               </Label>
               <Input
                 id="os-retention"
@@ -287,7 +287,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="os-region">
-                      Region <span className="text-danger">*</span>
+                      Region <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
                     </Label>
                     <Input
                       id="os-region"
@@ -321,7 +321,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 </div>
 
                 <SecretKeyPicker
-                  label={<>Access Key ID <span className="text-danger">*</span></>}
+                  label={<>Access Key ID <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the access key id."
                   value={values.s3?.accessKeyId ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -337,7 +337,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 />
 
                 <SecretKeyPicker
-                  label={<>Secret Access Key <span className="text-danger">*</span></>}
+                  label={<>Secret Access Key <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the secret access key."
                   value={values.s3?.secretAccessKey ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -379,7 +379,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 </div>
 
                 <SecretKeyPicker
-                  label={<>Connection string <span className="text-danger">*</span></>}
+                  label={<>Connection string <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the Azure connection string."
                   value={values.azure?.connectionString ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -400,7 +400,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
 
               <TabsContent value="gcs" className="flex flex-col gap-4">
                 <SecretKeyPicker
-                  label={<>Service account credentials <span className="text-danger">*</span></>}
+                  label={<>Service account credentials <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the GCS service account JSON."
                   value={
                     values.gcs?.serviceAccountCredentials ?? { secret_id: "", key: "" }

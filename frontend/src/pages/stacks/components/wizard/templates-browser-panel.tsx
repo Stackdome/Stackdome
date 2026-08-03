@@ -25,7 +25,7 @@ function TemplateBadge({
     <div
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted font-mono font-semibold",
-        active ? "text-brand" : "text-foreground/80",
+        active ? "text-foreground font-medium" : "text-foreground/80",
         className,
       )}
     >

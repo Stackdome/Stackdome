@@ -155,7 +155,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
       <div className="mb-[18px] grid grid-cols-1 gap-3.5 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-[18px]">
           <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-muted-foreground">
-            <Cpu className="size-4 text-brand" />
+            <Cpu className="size-4 text-[var(--chart-1)]" />
             Stack CPU
           </div>
           <div className="mt-3 flex items-end justify-between gap-4">
@@ -165,13 +165,13 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
               </div>
               <div className="mt-1 font-mono text-[11px] text-fg-muted">millicores</div>
             </div>
-            <Sparkline data={cpuHist} className="bg-brand" />
+            <Sparkline data={cpuHist} className="bg-[var(--chart-1)]" />
           </div>
         </div>
 
         <div className="rounded-lg border border-border bg-card p-[18px]">
           <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-muted-foreground">
-            <MemoryStick className="size-4 text-brand" />
+            <MemoryStick className="size-4 text-fg-2" />
             Stack memory
           </div>
           <div className="mt-3 flex items-end justify-between gap-4">
@@ -221,7 +221,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
                     label="CPU"
                     value={r.displayMetrics.cpu}
                     pct={(toNumber(r.metrics.cpu_usage) / cpuMax) * 100}
-                    fill="bg-brand"
+                    fill="bg-[var(--chart-1)]"
                   />
                   <MetricBar
                     label="Memory"

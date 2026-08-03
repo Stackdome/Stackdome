@@ -119,7 +119,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
           <CardContent className="space-y-6">
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="name">Cluster name <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="name">Cluster name <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -141,7 +141,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_url">API server URL <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="cluster_url">API server URL <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -163,7 +163,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_ca_data">CA certificate <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="cluster_ca_data">CA certificate <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -200,7 +200,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_sa_token">Service account token <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="cluster_sa_token">Service account token <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -257,7 +257,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
             </div>
             {formData.cluster_image_registry && (
               <div>
-                <Label htmlFor="registry-size">Registry size <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="registry-size">Registry size <span className="text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Input
                   id="registry-size"
                   name="registry-size"

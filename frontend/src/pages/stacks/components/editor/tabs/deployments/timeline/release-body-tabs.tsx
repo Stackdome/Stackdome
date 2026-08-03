@@ -29,7 +29,7 @@ export function ReleaseBodyTabs({ children, diff, hasPrev, prevSeq, loading = fa
   const tabClass = (id: TabId) =>
     cn(
       "-mb-px flex items-center gap-1.5 border-b-2 pb-2 text-[12.5px] font-medium",
-      tab === id ? "border-brand text-foreground" : "border-transparent text-fg-muted hover:text-fg-2",
+      tab === id ? "border-foreground text-foreground" : "border-transparent text-fg-muted hover:text-fg-2",
     );
 
   return (
