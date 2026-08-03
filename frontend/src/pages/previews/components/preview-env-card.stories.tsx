@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { fn } from 'storybook/test'
+import { expect, fn } from 'storybook/test'
 import type { PreviewStack } from '@/api/preview-envs'
 import { PreviewEnvCard } from './preview-env-card'
 
@@ -33,7 +33,19 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Ready: Story = {}
+export const Ready: Story = {
+  play: async ({ canvas }) => {
+    // Hover/focus stay ink, never brand orange (rubric #3, #8) — mirrors the
+    // fix on the sibling DeployStackCard (stack-card.tsx).
+    const card = await canvas.findByRole('link', { name: /pr #128/i })
+    await expect(card.className).not.toContain('ring-brand')
+    await expect(card.className).not.toContain('outline-none')
+    await expect(card.className).toContain('outline-[var(--ring)]')
+
+    const title = await canvas.findByText('PR #128')
+    await expect(title.className).not.toContain('text-brand')
+  },
+}
 
 export const Deploying: Story = {
   args: { env: makeEnv({ status: { phase: 'Deploying' } } as Partial<PreviewStack>) },

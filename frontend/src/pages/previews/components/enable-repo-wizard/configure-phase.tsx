@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { FieldShell } from "@/components/branded";
+import { FieldShell, AlertBanner } from "@/components/branded";
 import { BranchField } from "@/components/git-source-picker/branch-field";
 import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
@@ -166,7 +166,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
           />
         </FieldShell>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <AlertBanner>{error}</AlertBanner>}
       </div>
       <WizardFooter
         onBack={onBack}
