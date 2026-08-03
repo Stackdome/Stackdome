@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { isPathDirty } from "@/pages/stacks/lib/stack-diff";
+import { isFieldDirty } from "@/pages/stacks/lib/stack-model/field-dirt";
 
 interface DirtyFieldProps {
   /** The draft object to compare. Pass the resource (or whatever subtree the path resolves against). */
@@ -52,7 +52,7 @@ export function DirtyField({
     return <>{children}</>;
   }
 
-  const dirty = isPathDirty(draft, baseline, path);
+  const dirty = isFieldDirty(draft as never, baseline as never, path);
   const showReset = dirty && !hideReset && !!onReset;
 
   // Negative margin extends the wrapper out to the accordion's left edge so the

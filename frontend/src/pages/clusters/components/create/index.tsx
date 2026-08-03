@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import ClusterCreateForm from "./cluster-create-form";
 import { createCluster } from "@/api/clusters";
 import type { ClusterData } from "../../hooks/use-clusters";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { useToast } from "@/components/ui/use-toast";
 import { extractErrorMessage } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";

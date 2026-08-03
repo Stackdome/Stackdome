@@ -1,6 +1,21 @@
-import type { Stack, StackUpdateRequest, StackResource, StackResourceUpdateRequest, Volume } from "@/api/stacks";
+import type { Stack, StackResource, StackUpdateRequest, StackResourceUpdateRequest, Volume } from "@/api/stacks";
 import type { StackReleaseSnapshot } from "@/api/releases";
-import { cleanServerResource } from "./server-state";
+
+/**
+ * Strip the fields the server owns and the PUT schema rejects.
+ *
+ * The canonical adapter is not a substitute here: it is built for comparing, so
+ * it drops nameless resources, sorts env vars and materializes defaults. This
+ * body is replace-all — anything it fails to carry is deleted from the stack.
+ */
+function cleanResource(r: StackResource): StackResourceUpdateRequest {
+  const { id, stack_id, revision, outputs, status, ...rest } = r as StackResource & {
+    outputs?: unknown;
+    status?: unknown;
+  };
+  void id; void stack_id; void revision; void outputs; void status;
+  return rest as StackResourceUpdateRequest;
+}
 
 function cleanVolume(v: Volume) {
   // Strip every readOnly Volume field (id, project_id, status) — the whole-stack
@@ -57,7 +72,7 @@ export function snapshotToUpdateRequest(
     labels: current.labels,
     spec: {
       stack_resources: (snap.resources ?? []).map((r) =>
-        withExplicitEmptyCollections(cleanServerResource(r as StackResource)),
+        withExplicitEmptyCollections(cleanResource(r as StackResource)),
       ),
       volumes: (snap.volumes ?? []).length > 0 ? (snap.volumes ?? []).map((v) => cleanVolume(v as Volume)) : undefined,
       ...(connections.length > 0 ? { connections } : {}),
@@ -77,7 +92,7 @@ export function stackToUpdateRequest(stack: Stack, labels: Stack["labels"]): Sta
     labels,
     spec: {
       stack_resources: (stack.spec?.stack_resources ?? []).map((r) =>
-        withExplicitEmptyCollections(cleanServerResource(r as StackResource)),
+        withExplicitEmptyCollections(cleanResource(r as StackResource)),
       ),
       volumes:
         (stack.spec?.volumes ?? []).length > 0

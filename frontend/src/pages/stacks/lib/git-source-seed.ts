@@ -1,5 +1,6 @@
-import { sanitizeKubernetesName } from "@/lib/docker-compose-converter";
+import { sanitizeKubernetesName } from "@/pages/stacks/lib/docker-compose-converter";
 import type { PickedRepo } from "@/components/git-source-picker/types";
+import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/stack-model/policy";
 
 export interface GitServiceForm {
   serviceName: string;
@@ -54,8 +55,8 @@ export function buildGitSeed(repo: PickedRepo, form: GitServiceForm) {
         source: {
           git: {
             repo_url: repo.cloneUrl,
-            dockerfile_path: form.dockerfilePath.trim() || "Dockerfile",
-            build_context: form.buildContext.trim() || ".",
+            dockerfile_path: form.dockerfilePath.trim() || DEFAULT_DOCKERFILE_PATH,
+            build_context: form.buildContext.trim() || DEFAULT_BUILD_CONTEXT,
             ...(repo.integrationId ? { integration_id: repo.integrationId } : {}),
           },
         },

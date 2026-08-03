@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { promoteAdmin, demoteAdmin } from "@/api/organizations";
 

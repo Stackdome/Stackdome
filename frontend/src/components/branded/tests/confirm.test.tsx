@@ -6,7 +6,11 @@ import userEvent from "@testing-library/user-event";
 
 import { ConfirmProvider, useConfirm, type ConfirmOptions } from "../confirm";
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  // A leaked lock would silently fail the next test rather than this one.
+  document.body.style.pointerEvents = "";
+});
 
 function Harness({ opts, onResult }: { opts: ConfirmOptions; onResult: (ok: boolean) => void }) {
   const confirm = useConfirm();

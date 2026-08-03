@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { Stack } from "@/pages/stacks/types";
+import type { Stack } from "@/api/stack-types";
 import { isTerminal } from "@/pages/stacks/components/editor/tabs/deployments/release-states";
 import type { useReleaseDetail } from "@/pages/stacks/components/editor/tabs/deployments/use-release-detail";
 

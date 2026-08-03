@@ -5,7 +5,7 @@ import { makeStack } from '../../../../../.storybook/fixtures'
 import { baselineHandlers } from '../../../../../.storybook/msw-handlers'
 import { withConfirm, withCurrentUser, withStack } from '../../../../../.storybook/decorators'
 import { ReleaseState } from '@/pages/stacks/components/editor/tabs/deployments/release-states'
-import type { Stack } from '@/pages/stacks/types'
+import type { Stack } from '@/api/stack-types'
 import StacksPage from './index'
 
 const previewEnvsEmpty = http.get(

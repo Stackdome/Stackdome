@@ -8,10 +8,10 @@ import {
   type GitIntegration,
   type GitInstallation,
 } from "@/api/git-integrations";
-import { getCurrentOrganizationId } from "@/helpers/common";
-import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, PROVIDER_DISPLAY_NAMES, type RowViewModel } from "../lib/derive-row";
+import { getCurrentOrganizationId } from "@/lib/common";
+import { deriveRow, providerIdFor, GIT_INTEGRATION_TYPE_GITHUB_APP, PROVIDER_DISPLAY_NAMES, type RowViewModel } from "@/lib/git-integrations";
 import { RowMenu } from "./row-menu";
-import { ProviderLogo } from "./provider-logo";
+import { ProviderLogo } from "@/components/branded/provider-logo";
 
 function Banner({
   banner,

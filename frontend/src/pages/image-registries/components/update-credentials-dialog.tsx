@@ -8,7 +8,7 @@ import { FieldShell } from "@/components/branded";
 import { useToast } from "@/components/ui/use-toast";
 import { updateRegistryCredential, type RegistryCredential } from "@/api/registry-credentials";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { rotateRegistrySchema } from "../lib/form-schemas";
 import { providerIdForHost, REGISTRY_PROVIDERS } from "../lib/providers";
 import { ProviderLogo } from "./provider-logo";

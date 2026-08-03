@@ -10,7 +10,7 @@ import {
   STATUS_INSTALLED,
   STATUS_ACTIVE,
   STATUS_PENDING_INSTALL,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 import type { GitIntegration } from "@/api/git-integrations";
 
 afterEach(cleanup);

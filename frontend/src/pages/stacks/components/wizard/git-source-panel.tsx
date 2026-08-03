@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { FieldShell } from "@/components/branded";
-import { WizardFooter } from "./wizard-footer";
+import { WizardFooter } from "@/components/wizard-footer";
 import { GitSourcePicker } from "@/components/git-source-picker/git-source-picker";
 import { BranchField } from "@/components/git-source-picker/branch-field";
 import type { PickedRepo } from "@/components/git-source-picker/types";

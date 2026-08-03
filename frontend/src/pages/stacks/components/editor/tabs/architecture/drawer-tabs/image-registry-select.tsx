@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { listRegistryCredentials, type RegistryCredential } from "@/api/registry-credentials";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { splitImageRef, joinImageRef, dockerHostsEqual } from "@/pages/stacks/lib/image-ref";
 
 export interface ImageSourcePatch {

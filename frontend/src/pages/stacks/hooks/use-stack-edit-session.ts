@@ -1,15 +1,14 @@
 import { useCallback, useMemo, useState } from "react";
 import {
   cloneJson,
-  diffStack,
   revertResource,
   revertVolume,
   revertEnvRow,
   revertResourceField,
-  type StackDiff,
   type ResourceArr,
   type VolumeArr,
 } from "@/pages/stacks/lib/stack-diff";
+import { sessionDirt, type SessionDirt } from "@/pages/stacks/lib/stack-model/session-dirt";
 
 export type EditSessionTab = "configuration" | "deployment" | "environment";
 
@@ -58,7 +57,7 @@ export interface UseStackEditSession {
   openResourceIdx: number | null;
   openVolumeIdx: number | null;
   openTab: EditSessionTab | null;
-  dirty: StackDiff;
+  dirty: SessionDirt;
   linkedAddonIds: Set<string>;
   start: (baseline: EditSessionDraft, opts?: EditSessionStartOpts) => void;
   discard: () => void;
@@ -156,6 +155,10 @@ export function useStackEditSession(): UseStackEditSession {
         if (!prev.isActive) return prev;
         const nextResources =
           typeof updater === "function" ? updater(prev.draft.resources) : updater;
+        // An updater that changed nothing must not churn state: downstream
+        // effects key on draft identity, and a new object for the same content
+        // reads as an edit.
+        if (nextResources === prev.draft.resources) return prev;
         return { ...prev, draft: { ...prev.draft, resources: nextResources } };
       });
     },
@@ -168,6 +171,7 @@ export function useStackEditSession(): UseStackEditSession {
         if (!prev.isActive) return prev;
         const nextVolumes =
           typeof updater === "function" ? updater(prev.draft.volumes) : updater;
+        if (nextVolumes === prev.draft.volumes) return prev;
         return { ...prev, draft: { ...prev.draft, volumes: nextVolumes } };
       });
     },
@@ -197,8 +201,8 @@ export function useStackEditSession(): UseStackEditSession {
     });
   }, []);
 
-  const dirty = useMemo<StackDiff>(
-    () => diffStack(state.draft, state.baseline),
+  const dirty = useMemo<SessionDirt>(
+    () => sessionDirt(state.draft, state.baseline),
     [state.draft, state.baseline],
   );
 

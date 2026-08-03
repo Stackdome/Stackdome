@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { renderHook, act, cleanup } from "@testing-library/react";
 import { useTemplateImport } from "../use-template-import";
-import { getTemplateById } from "@/data/templates/registry";
+import { getTemplateById } from "@/pages/stacks/data/templates/registry";
 
 const navigate = vi.fn();
 vi.mock("react-router-dom", () => ({ useNavigate: () => navigate }));

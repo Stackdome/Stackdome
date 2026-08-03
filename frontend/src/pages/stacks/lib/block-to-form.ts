@@ -1,8 +1,8 @@
 import type { BlockPreset } from "@/pages/stacks/data/blocks/types";
 import { BlockId, DATA_BLOCK_CATEGORIES } from "@/pages/stacks/data/blocks/types";
 import { PLACEHOLDER_PASSWORDS } from "@/pages/stacks/data/blocks/registry";
-import { parseAndValidateDockerCompose } from "@/lib/docker-compose-parser";
-import { convertDockerComposeToStackData } from "@/lib/docker-compose-converter";
+import { parseAndValidateDockerCompose } from "@/pages/stacks/lib/docker-compose-parser";
+import { convertDockerComposeToStackData } from "@/pages/stacks/lib/docker-compose-converter";
 import type {
   FormStackData,
   FormStackResourceData,

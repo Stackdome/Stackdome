@@ -42,7 +42,7 @@ export interface DeriveDeployLifecycleArgs {
 }
 
 function diffIsEmpty(d: SnapshotDiff): boolean {
-  return d.resources.length === 0 && d.volumes.length === 0 && d.connections.length === 0;
+  return d.resources.length === 0 && d.volumes.length === 0;
 }
 
 /** Baseline for a stack that has never converged: every saved resource reads as "added". */

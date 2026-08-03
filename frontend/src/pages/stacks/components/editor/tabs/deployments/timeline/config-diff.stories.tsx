@@ -65,9 +65,6 @@ const mixedDiff: SnapshotDiff = {
       rows: [{ key: 'size', from: '5Gi', to: '10Gi', kind: 'changed' }],
     },
   ],
-  connections: [
-    { name: 'web → orders-db', change: 'added', rows: [] },
-  ],
 }
 
 export const AddedRemovedChanged: Story = {
@@ -76,7 +73,7 @@ export const AddedRemovedChanged: Story = {
 
 export const Empty: Story = {
   args: {
-    diff: { resources: [], volumes: [], connections: [] },
+    diff: { resources: [], volumes: [] },
     hasPrev: true,
     prevSeq: 11,
   },
@@ -99,7 +96,6 @@ const largeDiff: SnapshotDiff = {
     ],
   })),
   volumes: [],
-  connections: [],
 }
 
 export const LargeDiff: Story = {

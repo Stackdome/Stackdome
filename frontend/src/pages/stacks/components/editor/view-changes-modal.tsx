@@ -169,7 +169,9 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
 
 /**
  * Review-and-discard surface for undeployed changes. Renders compact grouped
- * change cards (Resources / Volumes / Connections); each card carries its own
+ * change cards (Resources / Volumes only — connections have no group of their
+ * own; they surface as env rows on the resource that reads them). Each card
+ * carries its own
  * Discard wired to the edit session's per-resource/volume revert, and the
  * footer deploys straight from here.
  */
@@ -187,8 +189,7 @@ export function ViewChangesModal({
   deployBusy,
   canWrite,
 }: ViewChangesModalProps) {
-  const empty =
-    !diff || (diff.resources.length === 0 && diff.volumes.length === 0 && diff.connections.length === 0);
+  const empty = !diff || (diff.resources.length === 0 && diff.volumes.length === 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,17 +241,6 @@ export function ViewChangesModal({
                   sections={[{ rows: v.rows }]}
                   onDiscard={() => onDiscardVolume(v.name)}
                   discardHint="Deleted volume data can't be restored. Discard all recreates this volume empty."
-                />
-              ))}
-              {diff!.connections.length > 0 && <GroupLabel>Connections</GroupLabel>}
-              {diff!.connections.map((c) => (
-                <ChangeCard
-                  key={`c-${c.name}`}
-                  name={c.name}
-                  change={c.change}
-                  note={c.note}
-                  sections={[{ rows: c.rows }]}
-                  discardHint="Manage connections on the canvas"
                 />
               ))}
             </>

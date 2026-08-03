@@ -30,7 +30,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Panel, FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { useToast } from "@/components/ui/use-toast";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
@@ -48,8 +48,8 @@ import {
   JsonAreaParseError,
 } from "../lib/payload";
 import StickyActionBar from "@/components/sticky-action-bar";
-import { useObjectStores } from "@/pages/object-stores/hooks/use-object-stores";
-import { usePostgresAddons } from "../hooks/use-postgres-addons";
+import { useObjectStores } from "@/hooks/use-object-stores";
+import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import { eligibleRestoreSources } from "../lib/restore-sources";
 import { BackupConfigFields } from "./backup-config-fields";
 import { RestoreInitFields } from "./restore-init-fields";

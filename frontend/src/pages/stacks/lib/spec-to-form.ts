@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { StackResource, Volume } from "@/pages/stacks/types";
+import type { StackResource, Volume } from "@/api/stack-types";
 import type { StackConnection } from "@/api/connections";
 import {
   convertApiResourceToFormResource,

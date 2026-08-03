@@ -2,14 +2,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor, cleanup, act } from "@testing-library/react";
 import React from "react";
-import { AUTH_SESSION_CHANGED } from "@/helpers/auth-events";
+import { AUTH_SESSION_CHANGED } from "@/lib/auth-events";
 
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentUser: vi.fn(),
 }));
 vi.mock("@/api/users", () => ({ getCurrentUser: vi.fn() }));
 
-import { getCurrentUser as getStoredUser } from "@/helpers/common";
+import { getCurrentUser as getStoredUser } from "@/lib/common";
 import { getCurrentUser as fetchCurrentUser } from "@/api/users";
 import { CurrentUserProvider } from "@/contexts/current-user-context";
 import { useCurrentUser } from "@/hooks/use-current-user";

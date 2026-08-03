@@ -8,7 +8,7 @@ import {
   type PostgresAddon,
   type PostgresCredentials,
 } from "@/api/addons";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 

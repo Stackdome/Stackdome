@@ -6,7 +6,7 @@ import type { User } from "@/api/users";
 import GithubCallbackPage from "@/pages/auth/github-callback";
 import * as authGithub from "@/api/auth-github";
 import * as usersApi from "@/api/users";
-import * as common from "@/helpers/common";
+import * as common from "@/lib/common";
 
 const navigateMock = vi.fn();
 vi.mock("react-router-dom", async (orig) => {

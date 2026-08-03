@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { GitPullRequest } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { WizardFooter } from "@/pages/stacks/components/wizard/wizard-footer";
+import { WizardFooter } from "@/components/wizard-footer";
 import { GitSourcePicker } from "@/components/git-source-picker/git-source-picker";
 import type { PickedRepo } from "@/components/git-source-picker/types";
 import { ConfigurePhase } from "./configure-phase";

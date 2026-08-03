@@ -22,7 +22,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { logoutAndRedirect } from "@/helpers/common"
+import { logoutAndRedirect } from "@/lib/common"
 
 export function NavUser({
   user,

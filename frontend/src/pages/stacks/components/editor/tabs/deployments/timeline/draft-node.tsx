@@ -24,7 +24,6 @@ function changedNames(diff?: SnapshotDiff): string[] {
     else names.push(r.name);
   }
   for (const v of diff.volumes) names.push(v.name);
-  for (const c of diff.connections) names.push(c.name);
   return names;
 }
 

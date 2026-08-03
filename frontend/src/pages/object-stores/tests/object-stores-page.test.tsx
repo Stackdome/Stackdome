@@ -18,7 +18,7 @@ vi.mock("@/components/ui/use-toast", () => ({
   useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
 }));
 
-vi.mock("@/helpers/common", () => ({
+vi.mock("@/lib/common", () => ({
   getCurrentOrganizationId: vi.fn(() => "org-1"),
 }));
 
@@ -42,7 +42,7 @@ vi.mock("../components/object-store-form-dialog", () => ({
   ObjectStoreFormDialog: () => null,
 }));
 
-vi.mock("../hooks/use-object-stores", () => ({
+vi.mock("@/hooks/use-object-stores", () => ({
   useObjectStores: () => ({
     objectStores: [mkStore()],
     loading: false,

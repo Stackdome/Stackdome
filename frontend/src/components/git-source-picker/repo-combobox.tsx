@@ -23,11 +23,11 @@ import {
   type GitRepository,
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
-import { getCurrentOrganizationId } from "@/helpers/common";
+import { getCurrentOrganizationId } from "@/lib/common";
 import {
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   GIT_INTEGRATION_TYPE_CREDENTIALS,
-} from "@/pages/git-integrations/lib/derive-row";
+} from "@/lib/git-integrations";
 import { usableIntegrations } from "./credentials-dropdown";
 import { repoTail } from "./git-source-picker";
 

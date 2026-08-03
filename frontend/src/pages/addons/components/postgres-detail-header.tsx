@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { AddonTypeIcon } from "./addon-type-icon";
+import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 import type { PostgresAddon } from "@/api/addons";
 
 // Map the backend's PostgresAddon status state to the StatusPill variant.

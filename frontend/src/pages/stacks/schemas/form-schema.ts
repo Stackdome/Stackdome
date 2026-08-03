@@ -19,6 +19,8 @@ import { ADDON_OUTPUT_FIELDS } from "@/pages/stacks/lib/addon-presets";
 import { buildDesiredConnections, mountsToConnections } from "@/pages/stacks/lib/connection-mapping";
 import type { FormEnvRow, FormMountRow } from "@/pages/stacks/lib/connection-mapping";
 import { splitImageRef } from "@/pages/stacks/lib/image-ref";
+import { DEFAULT_BUILD_CONTEXT, DEFAULT_DOCKERFILE_PATH } from "@/pages/stacks/lib/stack-model/policy";
+import { withGitDefaults } from "@/pages/stacks/lib/stack-model/normalize";
 
 /**
  * Form-specific UI schema additions
@@ -298,6 +300,26 @@ const FormStackSchema = ApiStackSchema.extend({
         });
       }
     });
+    // An env row sourcing another resource becomes a connection addressed by
+    // name. A name no longer in the stack renders as "references unknown
+    // resource" and fails the deploy, so reject it here instead.
+    (r?.execution_config?.environment_variables ?? []).forEach((row, rowIdx) => {
+      if (row?.from !== "resource" && row?.from !== "resourceTemplate") return;
+      if (names.has(row.resourceName)) return;
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [
+          "spec",
+          "stack_resources",
+          idx,
+          "execution_config",
+          "environment_variables",
+          rowIdx,
+          "resourceName",
+        ],
+        message: `Unknown resource "${row.resourceName}"`,
+      });
+    });
   });
 });
 
@@ -468,6 +490,9 @@ function convertApiResourceToFormResource(
     ...resource,
     name: resource.name ?? "",
     sourceType,
+    // The form spells the git build defaults out in its fields, so the read
+    // path must too — otherwise every unset one reads as a user edit.
+    ...(git ? { source: { ...resource.source, git: withGitDefaults(git) } } : {}),
     gitRevisionType,
     gitRevisionValue,
     gitCommitPin,
@@ -518,8 +543,8 @@ function prepareFormResourceForApi(resource: FormStackResourceData): StackResour
     prepared.source = {
       git: {
         repo_url: existingGit?.repo_url ?? '',
-        dockerfile_path: existingGit?.dockerfile_path ?? 'Dockerfile',
-        build_context: existingGit?.build_context ?? '.',
+        dockerfile_path: existingGit?.dockerfile_path ?? DEFAULT_DOCKERFILE_PATH,
+        build_context: existingGit?.build_context ?? DEFAULT_BUILD_CONTEXT,
         branch: resource.gitRevisionType === 'branch' ? resource.gitRevisionValue : undefined,
         tag: resource.gitRevisionType === 'tag' ? resource.gitRevisionValue : undefined,
         commit: resource.gitCommitPin || undefined,

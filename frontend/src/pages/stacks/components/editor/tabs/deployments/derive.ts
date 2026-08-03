@@ -4,7 +4,7 @@ import { ReleaseEventType, type ReleaseEvent, type StackRelease, type ReleaseLiv
 import type { Stages } from "@/components/branded";
 import { statusVariant, type StatusVariant } from "@/components/branded/status-variant";
 import { ReleaseState, isTerminal } from "./release-states";
-import { unpinnedRevisionKeys } from "./release-snapshot-diff";
+import { REVISION_KEYS, type RevisionKey } from "@/pages/stacks/lib/stack-model/policy";
 
 export type Stack = components["schemas"]["Stack"];
 export type ReleaseHealth = components["schemas"]["ReleaseHealth"];
@@ -32,16 +32,24 @@ export function deriveHeaderHealth(stack: Stack): ReleaseHealth | undefined {
  * the pin resolver at deploy time). Each revision key the saved spec doesn't pin is
  * a deploy-time fact, not config drift — strip it so the diff baseline compares
  * intent with intent instead of reading every branch-tracking resource as dirty.
+ *
+ * Not interchangeable with the model's dropResolvedRevisions: unpinned-ness is
+ * judged against the SAVED SPEC here, against the draft there. Judged against the
+ * draft, a user clearing a pin would be erased instead of shown.
  */
 export function stripUnpinnedGitRevisions(
   snapshotResources: StackResource[],
   savedResources: StackResource[],
 ): StackResource[] {
   const savedByName = new Map(savedResources.map((r) => [r.name, r]));
+  const unpinned = (saved: StackResource | undefined): RevisionKey[] => {
+    const savedGit = saved?.source?.git;
+    return savedGit ? REVISION_KEYS.filter((k) => !savedGit[k]) : [];
+  };
   return snapshotResources.map((r) => {
     const git = r.source?.git;
     if (!git) return r;
-    const drop = unpinnedRevisionKeys(savedByName.get(r.name)).filter((k) => git[k]);
+    const drop = unpinned(savedByName.get(r.name)).filter((k) => git[k]);
     if (!drop.length) return r;
     const stripped = { ...git };
     for (const k of drop) delete stripped[k];

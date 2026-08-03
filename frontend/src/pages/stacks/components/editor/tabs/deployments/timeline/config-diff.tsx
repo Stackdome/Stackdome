@@ -86,7 +86,7 @@ export interface ConfigDiffProps {
 }
 
 export function ConfigDiff({ diff, hasPrev, prevSeq }: ConfigDiffProps) {
-  if (!diff.resources.length && !diff.volumes.length && !diff.connections.length) {
+  if (!diff.resources.length && !diff.volumes.length) {
     return (
       <div className="text-[12.5px] text-fg-muted">
         {hasPrev ? `No configuration changes since #${prevSeq ?? "previous"}.` : "Initial release — nothing to compare."}
@@ -98,7 +98,6 @@ export function ConfigDiff({ diff, hasPrev, prevSeq }: ConfigDiffProps) {
     <div className="space-y-2.5">
       {diff.resources.map((d) => <ResourceCard key={d.name} d={d} />)}
       <Group label="Volumes" items={diff.volumes} />
-      <Group label="Connections" items={diff.connections} />
     </div>
   );
 }

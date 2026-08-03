@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn } from 'storybook/test'
 import { makeStack } from '../../../../../.storybook/fixtures'
 import { ReleaseState } from '@/pages/stacks/components/editor/tabs/deployments/release-states'
-import type { Stack } from '@/pages/stacks/types'
+import type { Stack } from '@/api/stack-types'
 import { DeployStackCard } from './stack-card'
 
 const meta = {
