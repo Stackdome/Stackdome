@@ -30,10 +30,9 @@ export function RowMenu({
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="icon"
           aria-label="Open row menu"
-          className="h-8 w-8 rounded-md border-border"
         >
           <Ellipsis className="h-4 w-4" />
         </Button>

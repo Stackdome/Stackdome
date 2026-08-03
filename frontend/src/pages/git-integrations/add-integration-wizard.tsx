@@ -62,7 +62,7 @@ function Stepper({ phase }: { phase: Phase }) {
         const isPast = STEPS.findIndex((s) => s.phase === currentStep) > i;
         return (
           <div key={step.phase} className="flex flex-1 flex-col gap-1.5">
-            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-brand" : "bg-border")} />
+            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-foreground" : "bg-border")} />
             <span
               data-current={isCurrent}
               className={cn(
@@ -180,7 +180,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
           Connect a git provider so Stackdome can clone repositories and trigger preview environments
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-brand">
+          <span className="flex h-6 w-6 items-center justify-center text-muted-foreground">
             <GitBranch className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
@@ -210,7 +210,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                       onClick={() => pickProvider(p)}
                       className={cn(
                         "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
-                        "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                        "hover:border-primary focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2",
                       )}
                     >
                       <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
@@ -244,14 +244,14 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   onClick={startAppInstall}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
-                    "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                    "hover:border-primary focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2",
                     "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border",
                   )}
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
                     <Github className="h-4 w-4" />
                     Install GitHub App
-                    <span className="rounded-sm bg-brand-bg px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[1.5px] text-brand">
+                    <span className="rounded-sm bg-foreground/10 px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[1.5px] text-foreground">
                       Recommended
                     </span>
                   </span>
@@ -270,7 +270,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   }}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
-                    "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                    "hover:border-primary focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2",
                   )}
                 >
                   <span className="flex items-center gap-2 text-sm font-medium">
@@ -290,7 +290,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
           {phase === "connecting" && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-brand">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-foreground">
                 <Github className="h-6 w-6" />
               </span>
               <div className="space-y-1">
@@ -301,8 +301,8 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
               </div>
 
               {github.error ? (
-                <div className="w-full space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-left">
-                  <p className="text-sm font-medium text-destructive">Couldn&apos;t connect to GitHub</p>
+                <div className="w-full space-y-2 rounded-md border border-danger-border bg-danger-bg p-4 text-left">
+                  <p className="text-sm font-medium text-danger">Couldn&apos;t connect to GitHub</p>
                   <p className="text-xs text-muted-foreground">{github.error}</p>
                   <Button type="button" variant="outline" size="sm" onClick={() => void github.connect()}>
                     Retry
@@ -329,7 +329,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                           {status === "done" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />}
                           {status === "active" && (
                             <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center motion-safe:animate-pulse">
-                              <span className="h-2 w-2 rounded-full bg-brand" />
+                              <span className="h-2 w-2 rounded-full bg-warn" />
                             </span>
                           )}
                           {status === "pending" && <Circle className="h-3.5 w-3.5 shrink-0 text-border" />}
@@ -411,8 +411,8 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   />
                 </FieldShell>
                 {submitError && (
-                  <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 p-3">
-                    <p className="text-sm font-medium text-destructive">Couldn&apos;t verify the token</p>
+                  <div className="space-y-1 rounded-md border border-danger-border bg-danger-bg p-3">
+                    <p className="text-sm font-medium text-danger">Couldn&apos;t verify the token</p>
                     <p className="text-xs text-muted-foreground">{submitError}</p>
                   </div>
                 )}
@@ -428,7 +428,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
           {phase === "done" && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-success">
                 <CheckCircle2 className="h-8 w-8" />
               </span>
               <div className="space-y-1">

@@ -238,22 +238,17 @@ export default function SecretsPage() {
                   placeholder="Filter secrets…"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  className="pl-9 h-9"
+                  className="pl-9"
                 />
               </div>
               <div className="ml-auto flex items-center gap-2">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                    >
-                      Type:{" "}
-                      <span className="text-foreground">
-                        {typeFilter === ALL_TYPES ? "All" : formatSecretType(typeFilter)}
-                      </span>
-                      <ChevronDown className="h-3 w-3 flex-none" />
-                    </button>
+                    <Button variant="outline" size="sm">
+                      <span className="text-fg-2">Type:</span>{" "}
+                      <span>{typeFilter === ALL_TYPES ? "All" : formatSecretType(typeFilter)}</span>
+                      <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
@@ -263,37 +258,34 @@ export default function SecretsPage() {
                     <DropdownMenuItem
                       onSelect={() => setTypeFilter(ALL_TYPES)}
                       className={cn(
-                        "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                        typeFilter === ALL_TYPES && "text-brand"
+                        "justify-between text-[13px]",
+                        typeFilter === ALL_TYPES && "font-semibold text-foreground"
                       )}
                     >
                       <span>All</span>
-                      <span className="tabular-nums opacity-80">{secrets.length}</span>
+                      <span className="tabular-nums text-fg-2">{secrets.length}</span>
                     </DropdownMenuItem>
                     {typeOptions.map((o) => (
                       <DropdownMenuItem
                         key={o.type}
                         onSelect={() => setTypeFilter(o.type)}
                         className={cn(
-                          "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                          typeFilter === o.type && "text-brand"
+                          "justify-between text-[13px]",
+                          typeFilter === o.type && "font-semibold text-foreground"
                         )}
                       >
                         <span>{formatSecretType(o.type)}</span>
-                        <span className="tabular-nums opacity-80">{o.count}</span>
+                        <span className="tabular-nums text-fg-2">{o.count}</span>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                    >
-                      Sort: <span className="text-foreground">{sortLabel}</span>
-                      <ChevronDown className="h-3 w-3 flex-none" />
-                    </button>
+                    <Button variant="outline" size="sm">
+                      <span className="text-fg-2">Sort:</span> <span>{sortLabel}</span>
+                      <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                    </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
                     align="end"
@@ -305,8 +297,8 @@ export default function SecretsPage() {
                         key={o.key}
                         onSelect={() => setSortKey(o.key)}
                         className={cn(
-                          "font-mono text-[11px] uppercase tracking-[1.5px]",
-                          sortKey === o.key && "text-brand"
+                          "text-[13px]",
+                          sortKey === o.key && "font-semibold text-foreground"
                         )}
                       >
                         {o.label}
