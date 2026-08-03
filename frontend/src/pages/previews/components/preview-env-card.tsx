@@ -85,7 +85,7 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
                 variant="ghost"
                 size="icon"
                 aria-label={`Actions for PR #${env.pr_number}`}
-                className="h-7 w-7 flex-none"
+                className="flex-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Ellipsis className="h-4 w-4" />

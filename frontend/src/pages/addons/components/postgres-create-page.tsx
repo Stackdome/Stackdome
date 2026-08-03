@@ -540,7 +540,7 @@ export default function PostgresFormPage() {
             <CollapsibleTrigger asChild>
               <button
                 type="button"
-                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
+                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2 transition-colors"
               >
                 <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                   Backups
@@ -573,7 +573,7 @@ export default function PostgresFormPage() {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex-1 text-left group focus:outline-none px-5 py-3"
+                  className="flex-1 text-left group focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2 px-5 py-3"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />

@@ -277,7 +277,7 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
                   variant="ghost"
                   size="icon"
                   aria-label={`Actions for ${stack.name}`}
-                  className="h-7 w-7 flex-none"
+                  className="flex-none"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Ellipsis className="h-4 w-4" />

@@ -23,7 +23,7 @@ const ICON: Record<AttachmentKind, LucideIcon> = {
 function AttachmentNodeImpl({ data }: NodeProps<AttachmentFlowNode>) {
   const Icon = ICON[data.kind];
   return (
-    <div className="w-[180px] cursor-pointer rounded-lg border border-border bg-surface-node px-[13px] py-2.5 shadow-[var(--edge)] transition-colors hover:border-brand/60">
+    <div className="w-[180px] cursor-pointer rounded-lg border border-border bg-surface-node px-[13px] py-2.5 shadow-[var(--edge)] transition-colors hover:border-border-strong">
       <Handle type="target" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
       <Handle type="source" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />
       <div className="flex items-center gap-2.5">

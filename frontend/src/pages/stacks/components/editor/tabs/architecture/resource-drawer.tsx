@@ -277,7 +277,7 @@ export function ResourceDrawer({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-brand-bg hover:text-brand"
+          className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-foreground/5 hover:text-foreground"
           disabled={!onViewLogs}
           onClick={() => onViewLogs?.(resource.name)}
         >
