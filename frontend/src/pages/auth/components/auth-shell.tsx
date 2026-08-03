@@ -10,18 +10,13 @@ interface AuthShellProps {
   children: React.ReactNode;
 }
 
-// "The room and the plate": the page around the form is the brand room — a
-// warm brand-tinted sky falling to the page ground — and the form sits in an
-// inset plate. The header is absolute chrome so the column centers on the
-// viewport, not on the leftover space under a flow header.
+// "The room and the plate": the page around the form is the open-sky room
+// (.auth-shell) and the form sits in an inset plate (.auth-plate). The header
+// is absolute chrome so the column centers on the viewport, not on the
+// leftover space under a flow header.
 export function AuthShell({ title, sub, below, children }: AuthShellProps) {
   return (
-    <div className="relative flex min-h-svh flex-col overflow-hidden bg-background text-foreground">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[52svh] bg-gradient-to-b from-brand-bg to-transparent"
-      />
-
+    <div className="auth-shell relative flex min-h-svh flex-col overflow-hidden text-foreground">
       {/* Clouds sit on the horizon; day/night cuts are separate art, swapped by CSS. */}
       <div className="auth-sky" aria-hidden="true">
         <img className="auth-cloud ac-1 dark:hidden" src="/clouds/cloud-big-day.webp" alt="" draggable={false} />
@@ -40,13 +35,13 @@ export function AuthShell({ title, sub, below, children }: AuthShellProps) {
 
       <main className="relative z-[1] mx-auto flex w-full max-w-[428px] flex-1 flex-col px-6 py-20">
         <div className="mt-auto text-center">
-          <h1 className="text-[26px] font-semibold leading-tight tracking-tight">{title}</h1>
+          <h1 className="auth-title">{title}</h1>
           {sub && <p className="mx-auto mt-2.5 text-sm leading-relaxed text-muted-foreground">{sub}</p>}
         </div>
 
         {/* Pill controls inside a stadium plate — the plate is rounded like its contents.
             Deliberate exception above the rounded-lg (22px) ceiling: the stadium plate. */}
-        <div className="mt-8 rounded-[36px] border border-border bg-card p-6 [&_button]:rounded-full [&_input]:rounded-full [&_input]:pl-4">
+        <div className="auth-plate mt-8 [&_button]:rounded-full [&_input]:rounded-full [&_input]:pl-4">
           {children}
         </div>
 
