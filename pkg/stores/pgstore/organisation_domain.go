@@ -56,7 +56,7 @@ func (d dbOrganisationDomainStore) Create(ctx context.Context, domain *models.Or
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Create(&domain).Error
 	if err != nil {
-		return nil, errors.GeneralError("failed to create organisation domain: %s", err.Error())
+		return nil, createDomainError(domain.Domain, err)
 	}
 	return d.Get(ctx, domain.ID)
 }
@@ -74,9 +74,20 @@ func (d dbOrganisationDomainStore) CreateWithTx(ctx context.Context, domain *mod
 	}
 
 	if err := tx.Create(&domain).Error; err != nil {
-		return nil, errors.GeneralError("failed to create organisation domain: %s", err.Error())
+		return nil, createDomainError(domain.Domain, err)
 	}
 	return d.Get(ctx, domain.ID)
+}
+
+// createDomainError maps an insert failure to a service error. Domains are
+// globally unique, so a duplicate must surface as a Conflict — callers that
+// allocate a domain (seedOrgDomain) retry on Conflict and only give up on
+// anything else.
+func createDomainError(domain string, err error) *errors.ServiceError {
+	if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+		return errors.Conflict("domain '%s' is already taken", domain)
+	}
+	return errors.GeneralError("failed to create organisation domain: %s", err.Error())
 }
 
 func (d dbOrganisationDomainStore) Get(ctx context.Context, id string) (*models.OrganisationDomain, *errors.ServiceError) {
