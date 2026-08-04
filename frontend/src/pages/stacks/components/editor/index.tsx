@@ -103,6 +103,11 @@ export default function CanvasEditorPage() {
   const stackProjectId = fetchedStack?.project_id ?? currentStack?.project_id;
   const canWriteStack = canWrite(stackProjectId ?? "");
 
+  // Navigating straight from one stack to another keeps the previous fetch's
+  // payload until the new one lands — every consumer of savedStack would read
+  // the old stack, and a failed fetch would leave it there for good.
+  useEffect(() => { setFetchedStack(null); }, [id]);
+
   useEffect(() => {
     if (isNewStack) return;
     const path = `/stacks/${id}`;
@@ -188,10 +193,12 @@ export default function CanvasEditorPage() {
     let cancelled = false;
     void getPreviewConfig(deployIds.orgId, deployIds.projectName, previewConfigId)
       .then((config) => {
-        // Name only sharpens the crumb — a failed lookup leaves it loading, not broken.
         if (!cancelled) setLineage({ configId: previewConfigId, configName: config.name });
       })
-      .catch(() => {});
+      .catch(() => {
+        // The crumb only needs a label to be usable; its link works off the id.
+        if (!cancelled) setLineage({ configId: previewConfigId, configName: "Preview" });
+      });
     return () => { cancelled = true; };
   }, [previewConfigId, deployIds.orgId, deployIds.projectName, setLineage]);
 

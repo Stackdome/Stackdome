@@ -41,13 +41,13 @@ function AppLayoutContent({
   // swap the "Stacks" ancestor for the config that owns it.
   const previewAncestors: BreadcrumbItemType[] | null = lineage
     ? [
-        { name: 'Previews', path: '/previews', clickable: true },
-        {
-          name: lineage.configName ?? '...',
-          path: `/previews/${lineage.configId}`,
-          clickable: !!lineage.configName,
-        },
-      ]
+      { name: 'Previews', path: '/previews', clickable: true },
+      {
+        name: lineage.configName ?? '...',
+        path: `/previews/${lineage.configId}`,
+        clickable: !!lineage.configName,
+      },
+    ]
     : null;
 
   // Full-bleed layout for the canvas stack editor: /stacks/new (draft) and
@@ -74,7 +74,7 @@ function AppLayoutContent({
       return { name, path, clickable };
     })
     // The preview ancestors stand in for "Stacks", so drop that leading crumb.
-    .filter((_, index) => !previewAncestors || index > 0),
+      .filter((_, index) => !previewAncestors || index > 0),
   ];
 
   return (
