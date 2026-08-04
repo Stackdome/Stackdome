@@ -212,7 +212,7 @@ var _ = ginkgo.Describe("stackResourceService workload type defaulting", func() 
 		gomega.Expect(persisted.WorkloadType).To(gomega.Equal(models.WorkloadTypeStatefulService))
 	})
 
-	ginkgo.It("leaves the workload type untouched on update", func() {
+	ginkgo.It("re-promotes a datastore image to StatefulService on update", func() {
 		var persisted *models.StackResource
 		mockResourceStore.EXPECT().
 			UpdateWithTx(ctx, "resource-1", gomock.Any(), stack).
@@ -222,6 +222,25 @@ var _ = ginkgo.Describe("stackResourceService workload type defaulting", func() 
 			})
 
 		_, err := svc.InternalUpdateWithTx(ctx, stack, "resource-1", datastoreSpec())
+
+		gomega.Expect(err).To(gomega.BeNil())
+		gomega.Expect(persisted.WorkloadType).To(gomega.Equal(models.WorkloadTypeStatefulService))
+	})
+
+	ginkgo.It("keeps a non-datastore image a Service on update", func() {
+		var persisted *models.StackResource
+		mockResourceStore.EXPECT().
+			UpdateWithTx(ctx, "resource-1", gomock.Any(), stack).
+			DoAndReturn(func(_ context.Context, _ string, resource *models.StackResource, _ *models.Stack) (*models.StackResource, *errors.ServiceError) {
+				persisted = resource
+				return resource, nil
+			})
+
+		spec := datastoreSpec()
+		spec.Name = "api"
+		spec.ImageConfig = &models.ImageConfigSpec{Image: "nginx:1.27"}
+
+		_, err := svc.InternalUpdateWithTx(ctx, stack, "resource-1", spec)
 
 		gomega.Expect(err).To(gomega.BeNil())
 		gomega.Expect(persisted.WorkloadType).To(gomega.Equal(models.WorkloadTypeService))
