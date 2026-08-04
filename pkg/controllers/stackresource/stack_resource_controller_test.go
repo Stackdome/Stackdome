@@ -372,6 +372,67 @@ var _ = Describe("portsClosedEvent", func() {
 	})
 })
 
+var _ = Describe("tlsEvent", func() {
+	DescribeTable("mapping the TLSConfigured condition to a TLS event",
+		func(tc resourceEventCase) {
+			ev := tlsEvent(eventCaseCR(tc))
+			Expect(ev != nil).To(Equal(tc.wantEmit))
+			if !tc.wantEmit {
+				return
+			}
+			Expect(ev.Type).To(Equal(tc.wantType))
+			Expect(ev.Reason).To(Equal(tc.wantReason))
+			Expect(ev.Message).To(Equal(tc.wantMessage))
+		},
+		Entry("an issued certificate emits tls_ready", resourceEventCase{
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceTLSConfigured), metav1.ConditionTrue, controllers.ReasonTLSReady, "certificate issued"),
+			},
+			wantType:    models.ReleaseEventTypeResourceTLSReady,
+			wantReason:  controllers.ReasonTLSReady,
+			wantMessage: "certificate issued",
+			wantEmit:    true,
+		}),
+		Entry("an in-progress issuance emits tls_issuing", resourceEventCase{
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceTLSConfigured), metav1.ConditionFalse, controllers.ReasonCertificateIssuing, "waiting for cert-manager"),
+			},
+			wantType:    models.ReleaseEventTypeResourceTLSIssuing,
+			wantReason:  controllers.ReasonCertificateIssuing,
+			wantMessage: "waiting for cert-manager",
+			wantEmit:    true,
+		}),
+		Entry("any other False reason emits tls_failed", resourceEventCase{
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceTLSConfigured), metav1.ConditionFalse, "CertificateTimedOut", "no certificate after 10m"),
+			},
+			wantType:    models.ReleaseEventTypeResourceTLSFailed,
+			wantReason:  "CertificateTimedOut",
+			wantMessage: "no certificate after 10m",
+			wantEmit:    true,
+		}),
+		// Pre-0.6.11 agents set True on issuer discovery alone.
+		Entry("True without ReasonTLSReady emits nothing", resourceEventCase{
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceTLSConfigured), metav1.ConditionTrue, "IssuerFound", "issuer resolved"),
+			},
+			wantEmit: false,
+		}),
+		Entry("no TLSConfigured condition emits nothing", resourceEventCase{
+			conditions: []metav1.Condition{},
+			wantEmit:   false,
+		}),
+		Entry("a stale-generation condition emits nothing", resourceEventCase{
+			crGen:   2,
+			condGen: 1,
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceTLSConfigured), metav1.ConditionTrue, controllers.ReasonTLSReady, "certificate issued"),
+			},
+			wantEmit: false,
+		}),
+	)
+})
+
 func stackResourceTestScheme() *runtime.Scheme {
 	scheme := runtime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())

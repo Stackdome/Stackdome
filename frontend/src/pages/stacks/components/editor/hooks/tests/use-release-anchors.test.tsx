@@ -85,4 +85,39 @@ describe("useReleaseAnchors", () => {
     vi.advanceTimersByTime(15000);
     expect(refresh.mock.calls.length).toBe(calls);
   });
+
+  // TLS certs issue after the release converges; ingress URLs arrive late.
+  const detailWithIngress = (ingress: { url: string }[]) => ({
+    ensure: vi.fn(),
+    refresh: vi.fn(),
+    peek: vi.fn(() => ({
+      data: {
+        snapshot: { resources: [{ name: "web", ports: [{ exposed_to_public: true }] }] },
+        live_status: { resources: { web: { public_ingress: ingress } } },
+      },
+    })),
+  }) as never;
+
+  it("keeps polling the converged release while a public port has no ingress URL", () => {
+    const detail = detailWithIngress([]);
+    renderHook(() =>
+      useReleaseAnchors({ stack: stackWith("cur-1", ReleaseState.Released), releases: [], activeRelease: undefined, releaseDetail: detail }),
+    );
+    const refresh = (detail as { refresh: ReturnType<typeof vi.fn> }).refresh;
+    const calls = refresh.mock.calls.length;
+    vi.advanceTimersByTime(5000);
+    expect(refresh.mock.calls.length).toBe(calls + 1);
+    expect(refresh).toHaveBeenLastCalledWith("cur-1");
+  });
+
+  it("stops polling once every public port has an ingress URL", () => {
+    const detail = detailWithIngress([{ url: "https://web.example.com" }]);
+    renderHook(() =>
+      useReleaseAnchors({ stack: stackWith("cur-1", ReleaseState.Released), releases: [], activeRelease: undefined, releaseDetail: detail }),
+    );
+    const refresh = (detail as { refresh: ReturnType<typeof vi.fn> }).refresh;
+    const calls = refresh.mock.calls.length;
+    vi.advanceTimersByTime(15000);
+    expect(refresh.mock.calls.length).toBe(calls);
+  });
 });

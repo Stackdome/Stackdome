@@ -61,5 +61,27 @@ export function useReleaseAnchors({
   }, [statusReleaseId, statusReleaseState, refreshRelease]);
   const statusLiveStatus = releaseDetail.peek(statusReleaseId).data?.live_status;
 
+  // TLS certs finish issuing after the release converges, so ingress URLs land on
+  // the release detail after the terminal refetch. Keep polling the converged
+  // release while a deployed public port still has no ingress URL.
+  // Always terminates: a failed issuance still populates ingress with http URLs.
+  const ingressPending = (() => {
+    if (!convergedReleaseDetail) return false;
+    const live = convergedReleaseDetail.live_status?.resources ?? {};
+    return (convergedReleaseDetail.snapshot?.resources ?? []).some(
+      (r) =>
+        r.name &&
+        (r.ports ?? []).some((p) => p.exposed_to_public) &&
+        !live[r.name]?.public_ingress?.length,
+    );
+  })();
+  useEffect(() => {
+    if (!convergedReleaseId || !ingressPending) return;
+    const t = setInterval(() => {
+      if (document.visibilityState !== "hidden") refreshRelease(convergedReleaseId);
+    }, 5000);
+    return () => clearInterval(t);
+  }, [convergedReleaseId, ingressPending, refreshRelease]);
+
   return { baselineReleaseId, deployedSnapshot, convergedReleaseDetail, statusReleaseId, statusLiveStatus };
 }

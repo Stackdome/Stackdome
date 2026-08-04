@@ -145,8 +145,19 @@ func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgN
 	return s.seedOrgRegistry(ctx, orgID, orgName, platformCluster.ID)
 }
 
+// slugRepeatsBaseLabel reports whether "<orgSlug>.<baseDomain>" would start
+// with identical sequential labels ("test.test.…") — Let's Encrypt rejects
+// those as recursive on-demand issuance.
+func slugRepeatsBaseLabel(orgSlug, baseDomain string) bool {
+	firstLabel, _, _ := strings.Cut(baseDomain, ".")
+	return firstLabel == orgSlug
+}
+
 func (s *organisationService) seedOrgDomain(ctx context.Context, orgID, orgSlug, baseDomain string) *errors.ServiceError {
 	candidate := fmt.Sprintf("%s.%s", orgSlug, baseDomain)
+	if slugRepeatsBaseLabel(orgSlug, baseDomain) {
+		candidate = fmt.Sprintf("%s-%s.%s", orgSlug, slug.RandomSuffix(), baseDomain)
+	}
 	for attempt := 0; attempt < maxDomainSeedAttempts; attempt++ {
 		_, err := s.organisationDomainService.Create(ctx, &models.OrganisationDomain{
 			OrganisationID: orgID,

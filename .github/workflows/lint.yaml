@@ -36,3 +36,6 @@ jobs:
       - uses: golangci/golangci-lint-action@v8
         with:
           version: v2.12.2
+          # Stale analysis cache corrupts staticcheck's noreturn facts,
+          # producing false SA5011 on `if x == nil { t.Fatal }` patterns.
+          skip-cache: true
