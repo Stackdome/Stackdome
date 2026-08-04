@@ -156,7 +156,8 @@ type releaseEvent struct {
 func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stackID string, resource *models.StackResource, cr *corev1alpha1.StackResource) {
 	workload := resourceEvent(cr)
 	ports := portsClosedEvent(cr)
-	if workload == nil && ports == nil {
+	tls := tlsEvent(cr)
+	if workload == nil && ports == nil && tls == nil {
 		return
 	}
 
@@ -167,6 +168,7 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 
 	w.recordOnRelease(ctx, release, resource.Name, workload)
 	w.recordOnRelease(ctx, release, resource.Name, ports)
+	w.recordOnRelease(ctx, release, resource.Name, tls)
 }
 
 func (w *stackResourceReconciler) resolveRelease(ctx context.Context, stackID string, cr *corev1alpha1.StackResource) *models.StackRelease {
@@ -225,6 +227,26 @@ func portsClosedEvent(cr *corev1alpha1.StackResource) *releaseEvent {
 		controllers.ReasonPortNotListening,
 		portDialMessage(cr.Status.PortCheck.FailingPortNumbers),
 	}
+}
+
+// tlsEvent maps the current-generation TLSConfigured condition to a TLS event.
+// Pre-0.6.11 agents set True on issuer discovery alone, so True is keyed on the
+// reason. Any other False reason is a terminal issuance failure (the site
+// serves plain HTTP).
+func tlsEvent(cr *corev1alpha1.StackResource) *releaseEvent {
+	cond := currentGenCondition(cr, string(corev1alpha1.StackResourceTLSConfigured))
+	if cond == nil {
+		return nil
+	}
+	switch {
+	case cond.Status == metav1.ConditionTrue && cond.Reason == controllers.ReasonTLSReady:
+		return &releaseEvent{models.ReleaseEventTypeResourceTLSReady, cond.Reason, cond.Message}
+	case cond.Status == metav1.ConditionFalse && cond.Reason == controllers.ReasonCertificateIssuing:
+		return &releaseEvent{models.ReleaseEventTypeResourceTLSIssuing, cond.Reason, cond.Message}
+	case cond.Status == metav1.ConditionFalse:
+		return &releaseEvent{models.ReleaseEventTypeResourceTLSFailed, cond.Reason, cond.Message}
+	}
+	return nil
 }
 
 // resourceEvent maps the agent's summary verdict to one workload event.
