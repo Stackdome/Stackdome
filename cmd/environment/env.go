@@ -278,7 +278,7 @@ func (e *environmentImpl) initializeClusterManager(ctx context.Context) error {
 					StackService:         e.Services.StackService,
 					StackResourceService: e.Services.StackResourceService,
 					Env:                  e.Name,
-					ReleaseChecker:       e.Services.StackReleaseService,
+					ReleaseResolver:      e.Services.StackReleaseService,
 					EventRecorder:        e.Services.ReleaseEventRecorder,
 				})
 			},

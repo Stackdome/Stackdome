@@ -145,13 +145,12 @@ func (s *loggingService) StreamLogsForBuild(ctx context.Context, orgID string, b
 		return nil, err
 	}
 
-	if !build.Status.IsConditionTrue(string(buildsv1alpha1.BuildJobCreated)) || build.Status.BuildSourceRevision == "" {
+	if !build.Status.IsConditionTrue(string(buildsv1alpha1.BuildJobCreated)) {
 		return nil, errors.Conflict("build job for %s has not been created yet", buildID)
 	}
 
-	jobName := buildsv1alpha1.BuildJobName(build.StackResourceName, build.Status.BuildSourceRevision)
-
-	streamer, cerr := s.ClusterLoggingService.GetLogsForBuildPod(ctx, orgID, build.Namespace, jobName, options)
+	// build.ID holds the ImageBuild CR name; see createImageBuildInDB.
+	streamer, cerr := s.ClusterLoggingService.GetLogsForBuildPod(ctx, orgID, build.Namespace, build.ID, options)
 	if cerr != nil {
 		switch {
 		case stderrors.Is(cerr, clusterresource.ErrBuildPodNotFound):

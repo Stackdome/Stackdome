@@ -218,8 +218,10 @@ var _ = Describe("ConvergeReconciler", func() {
 		Expect(result.resultStop).To(BeTrue(), "expected resultStop when CAS fails")
 	})
 
-	It("marks failed and stops on deploy timeout", func() {
-		past := time.Now().UTC().Add(-time.Duration(models.DefaultDeployTimeoutMinutes)*time.Minute - time.Minute)
+	// There is no deploy timeout: a slow build or convergence never fails the
+	// release on time alone. It keeps polling however old the render is.
+	It("keeps polling a long-unconverged release instead of failing it", func() {
+		past := time.Now().UTC().Add(-24 * time.Hour)
 
 		release := &models.StackRelease{
 			ID:               "rel-1",
@@ -229,23 +231,21 @@ var _ = Describe("ConvergeReconciler", func() {
 			Manifest:         &models.ReleaseManifest{},
 		}
 
-		relSvc := NewMockreleaseService(ctrl)
-		relSvc.EXPECT().MarkFailed(gomock.Any(), "rel-1", gomock.Any(), gomock.Any()).
-			Return(true, nil)
-
 		stackSvc := NewMockstackService(ctrl)
 		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
 			Return(&models.Stack{ID: "stack-1"}, nil)
 
 		r := &convergeReconciler{
-			releaseService: relSvc,
+			// No expectations: any MarkFailed call fails the test.
+			releaseService: NewMockreleaseService(ctrl),
 			stackService:   stackSvc,
 			logger:         testLogger(),
 		}
 
 		result, err := r.Reconcile(context.Background(), release)
 		Expect(err).ToNot(HaveOccurred())
-		Expect(result.resultStop).To(BeTrue())
+		Expect(result.resultRequeueAfter).ToNot(BeNil())
+		Expect(*result.resultRequeueAfter).To(Equal(convergencePollInterval))
 	})
 
 	It("requeues at the convergence poll interval when not yet converged", func() {

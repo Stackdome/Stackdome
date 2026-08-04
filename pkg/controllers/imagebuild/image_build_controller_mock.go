@@ -57,6 +57,21 @@ func (mr *MockreleaseActiveCheckerMockRecorder) InternalGetActiveByStackID(ctx, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseActiveChecker)(nil).InternalGetActiveByStackID), ctx, stackID)
 }
 
+// MarkFailed mocks base method.
+func (m *MockreleaseActiveChecker) MarkFailed(ctx context.Context, id, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkFailed", ctx, id, message, outcome)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// MarkFailed indicates an expected call of MarkFailed.
+func (mr *MockreleaseActiveCheckerMockRecorder) MarkFailed(ctx, id, message, outcome any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailed", reflect.TypeOf((*MockreleaseActiveChecker)(nil).MarkFailed), ctx, id, message, outcome)
+}
+
 // MockstackClusterResolver is a mock of stackClusterResolver interface.
 type MockstackClusterResolver struct {
 	ctrl     *gomock.Controller

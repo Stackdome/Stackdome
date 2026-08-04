@@ -33,9 +33,6 @@ func applyStackSettingsDefaults(stack *models.Stack) {
 	if stack.Settings.MinSuccessfulReleases <= 0 {
 		stack.Settings.MinSuccessfulReleases = models.DefaultMinSuccessfulReleases
 	}
-	if stack.Settings.DeployTimeoutMinutes <= 0 {
-		stack.Settings.DeployTimeoutMinutes = models.DefaultDeployTimeoutMinutes
-	}
 }
 
 func applyStackResourcePortDefaults(resource *models.StackResource) {

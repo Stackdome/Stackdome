@@ -17,6 +17,14 @@ const (
 	ReasonPortNotListening     = "PortNotListening"
 )
 
+// TLSConfigured condition reasons written by the cluster agent's certificate
+// stage; the agent does not export them. Any other False reason is a terminal
+// issuance failure (the site serves plain HTTP).
+const (
+	ReasonTLSReady           = "TLSReady"
+	ReasonCertificateIssuing = "CertificateIssuing"
+)
+
 // Container-detail failure types exposed by the API.
 const (
 	FailureTypeCrashLoop            = "crash_loop"

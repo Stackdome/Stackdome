@@ -7451,11 +7451,10 @@ components:
     Stack:
       example:
         settings:
-          deploy_timeout_minutes: 2
           min_successful_releases: 5
           release_retention_limit: 5
         converged_release:
-          sequence: 7
+          sequence: 2
           completed_at: 2000-01-23T04:56:07.000+00:00
           health: null
           created_at: 2000-01-23T04:56:07.000+00:00
@@ -7849,7 +7848,7 @@ components:
           key: key
         revision: revision
         latest_release:
-          sequence: 7
+          sequence: 2
           completed_at: 2000-01-23T04:56:07.000+00:00
           health: null
           created_at: 2000-01-23T04:56:07.000+00:00
@@ -7917,7 +7916,6 @@ components:
       type: object
     StackSettings:
       example:
-        deploy_timeout_minutes: 2
         min_successful_releases: 5
         release_retention_limit: 5
       properties:
@@ -7929,22 +7927,16 @@ components:
           default: 5
           description: Minimum number of successful releases to always keep
           type: integer
-        deploy_timeout_minutes:
-          default: 15
-          description: Minutes to wait for a deploy to converge before marking it
-            failed
-          type: integer
       type: object
     StackList:
       example:
-        total: 9
+        total: 7
         items:
         - settings:
-            deploy_timeout_minutes: 2
             min_successful_releases: 5
             release_retention_limit: 5
           converged_release:
-            sequence: 7
+            sequence: 2
             completed_at: 2000-01-23T04:56:07.000+00:00
             health: null
             created_at: 2000-01-23T04:56:07.000+00:00
@@ -8338,7 +8330,7 @@ components:
             key: key
           revision: revision
           latest_release:
-            sequence: 7
+            sequence: 2
             completed_at: 2000-01-23T04:56:07.000+00:00
             health: null
             created_at: 2000-01-23T04:56:07.000+00:00
@@ -8354,11 +8346,10 @@ components:
           namespace: namespace
           id: id
         - settings:
-            deploy_timeout_minutes: 2
             min_successful_releases: 5
             release_retention_limit: 5
           converged_release:
-            sequence: 7
+            sequence: 2
             completed_at: 2000-01-23T04:56:07.000+00:00
             health: null
             created_at: 2000-01-23T04:56:07.000+00:00
@@ -8752,7 +8743,7 @@ components:
             key: key
           revision: revision
           latest_release:
-            sequence: 7
+            sequence: 2
             completed_at: 2000-01-23T04:56:07.000+00:00
             health: null
             created_at: 2000-01-23T04:56:07.000+00:00
@@ -13317,7 +13308,7 @@ components:
     ReleaseSummary:
       description: Lightweight release reference embedded in the stack for list views.
       example:
-        sequence: 7
+        sequence: 2
         completed_at: 2000-01-23T04:56:07.000+00:00
         health: null
         created_at: 2000-01-23T04:56:07.000+00:00

@@ -27,6 +27,12 @@ const (
 	ReleaseEventTypeResourceDeploying  ReleaseEventType = "resource_deploying"
 	ReleaseEventTypeResourceReady      ReleaseEventType = "resource_ready"
 	ReleaseEventTypeResourceFailed     ReleaseEventType = "resource_failed"
+	// ReleaseEventTypeResourcePortsClosed: the rollout landed but a declared
+	// port is not accepting connections.
+	ReleaseEventTypeResourcePortsClosed ReleaseEventType = "resource_ports_closed"
+	ReleaseEventTypeResourceTLSIssuing ReleaseEventType = "resource_tls_issuing"
+	ReleaseEventTypeResourceTLSReady   ReleaseEventType = "resource_tls_ready"
+	ReleaseEventTypeResourceTLSFailed  ReleaseEventType = "resource_tls_failed"
 	ReleaseEventTypeReleaseReleased    ReleaseEventType = "release_released"
 	ReleaseEventTypeReleaseFailed      ReleaseEventType = "release_failed"
 	ReleaseEventTypeReleaseSuperseded  ReleaseEventType = "release_superseded"

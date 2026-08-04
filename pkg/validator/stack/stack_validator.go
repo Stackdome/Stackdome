@@ -225,13 +225,6 @@ func validateStackSettings(spec *models.Stack) []errors.FieldError {
 			Message: fmt.Sprintf("min_successful_releases must be at most %d", models.MaxMinSuccessfulReleases),
 		})
 	}
-	if s.DeployTimeoutMinutes > models.MaxDeployTimeoutMinutes {
-		errs = append(errs, errors.FieldError{
-			Field:   fieldSpecSettings,
-			Code:    errors.VErrStackSettingsInvalid,
-			Message: fmt.Sprintf("deploy_timeout_minutes must be at most %d", models.MaxDeployTimeoutMinutes),
-		})
-	}
 	if s.MinSuccessfulReleases > 0 && s.ReleaseRetentionLimit > 0 && s.MinSuccessfulReleases > s.ReleaseRetentionLimit {
 		errs = append(errs, errors.FieldError{
 			Field:   fieldSpecSettings,

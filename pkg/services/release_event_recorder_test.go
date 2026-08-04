@@ -207,6 +207,50 @@ var _ = Describe("ReleaseEventRecorder", func() {
 			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceDeploying, controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080")).To(BeNil())
 		})
 
+		It("records a closed declared port as a warning on a serving resource", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourcePortsClosed))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelWarning))
+				Expect(ev.Scope).To(Equal(models.ReleaseEventScopeResource))
+				Expect(ev.Message).To(Equal("api is serving, but port 80 not accepting connections"))
+				Expect(ev.DedupeKey).To(Equal("resource:api:resource_ports_closed:PortNotListening"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourcePortsClosed, controllers.ReasonPortNotListening, "port 80 not accepting connections")).To(BeNil())
+		})
+
+		It("records certificate issuing as an info event", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourceTLSIssuing))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelInfo))
+				Expect(ev.Scope).To(Equal(models.ReleaseEventScopeResource))
+				Expect(ev.Message).To(Equal("Issuing TLS certificate for api"))
+				Expect(ev.DedupeKey).To(Equal("resource:api:resource_tls_issuing:CertificateIssuing"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceTLSIssuing, controllers.ReasonCertificateIssuing, "waiting for certificate api-tls")).To(BeNil())
+		})
+
+		It("records certificate ready as a success event", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourceTLSReady))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelSuccess))
+				Expect(ev.Message).To(Equal("HTTPS ready for api"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceTLSReady, controllers.ReasonTLSReady, "")).To(BeNil())
+		})
+
+		It("records certificate failure as a warning with the http fallback note", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourceTLSFailed))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelWarning))
+				Expect(ev.Message).To(Equal("TLS certificate not issued for api: issuance timed out; serving over HTTP"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceTLSFailed, "CertificateTimedOut", "issuance timed out")).To(BeNil())
+		})
+
 		It("rejects a non-resource event type", func() {
 			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, "", "")).NotTo(BeNil())
 		})

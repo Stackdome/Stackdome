@@ -20,8 +20,6 @@ type StackSettings struct {
 	ReleaseRetentionLimit *int32 `json:"release_retention_limit,omitempty"`
 	// Minimum number of successful releases to always keep
 	MinSuccessfulReleases *int32 `json:"min_successful_releases,omitempty"`
-	// Minutes to wait for a deploy to converge before marking it failed
-	DeployTimeoutMinutes *int32 `json:"deploy_timeout_minutes,omitempty"`
 }
 
 // NewStackSettings instantiates a new StackSettings object
@@ -34,8 +32,6 @@ func NewStackSettings() *StackSettings {
 	this.ReleaseRetentionLimit = &releaseRetentionLimit
 	var minSuccessfulReleases int32 = 5
 	this.MinSuccessfulReleases = &minSuccessfulReleases
-	var deployTimeoutMinutes int32 = 15
-	this.DeployTimeoutMinutes = &deployTimeoutMinutes
 	return &this
 }
 
@@ -48,8 +44,6 @@ func NewStackSettingsWithDefaults() *StackSettings {
 	this.ReleaseRetentionLimit = &releaseRetentionLimit
 	var minSuccessfulReleases int32 = 5
 	this.MinSuccessfulReleases = &minSuccessfulReleases
-	var deployTimeoutMinutes int32 = 15
-	this.DeployTimeoutMinutes = &deployTimeoutMinutes
 	return &this
 }
 
@@ -117,38 +111,6 @@ func (o *StackSettings) SetMinSuccessfulReleases(v int32) {
 	o.MinSuccessfulReleases = &v
 }
 
-// GetDeployTimeoutMinutes returns the DeployTimeoutMinutes field value if set, zero value otherwise.
-func (o *StackSettings) GetDeployTimeoutMinutes() int32 {
-	if o == nil || o.DeployTimeoutMinutes == nil {
-		var ret int32
-		return ret
-	}
-	return *o.DeployTimeoutMinutes
-}
-
-// GetDeployTimeoutMinutesOk returns a tuple with the DeployTimeoutMinutes field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *StackSettings) GetDeployTimeoutMinutesOk() (*int32, bool) {
-	if o == nil || o.DeployTimeoutMinutes == nil {
-		return nil, false
-	}
-	return o.DeployTimeoutMinutes, true
-}
-
-// HasDeployTimeoutMinutes returns a boolean if a field has been set.
-func (o *StackSettings) HasDeployTimeoutMinutes() bool {
-	if o != nil && o.DeployTimeoutMinutes != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetDeployTimeoutMinutes gets a reference to the given int32 and assigns it to the DeployTimeoutMinutes field.
-func (o *StackSettings) SetDeployTimeoutMinutes(v int32) {
-	o.DeployTimeoutMinutes = &v
-}
-
 func (o StackSettings) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.ReleaseRetentionLimit != nil {
@@ -156,9 +118,6 @@ func (o StackSettings) MarshalJSON() ([]byte, error) {
 	}
 	if o.MinSuccessfulReleases != nil {
 		toSerialize["min_successful_releases"] = o.MinSuccessfulReleases
-	}
-	if o.DeployTimeoutMinutes != nil {
-		toSerialize["deploy_timeout_minutes"] = o.DeployTimeoutMinutes
 	}
 	return json.Marshal(toSerialize)
 }

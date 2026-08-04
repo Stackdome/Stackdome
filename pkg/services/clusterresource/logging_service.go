@@ -15,7 +15,9 @@ import (
 	"github.com/samber/lo"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 )
 
 // ErrBuildPodNotFound is returned by GetLogsForBuildPod when no pod matches the
@@ -42,8 +44,8 @@ type ResourceError struct {
 type ClusterLoggingService interface {
 	// GetLogsForResources retrieves logs for the specified resources in the cluster.
 	GetLogsForResources(ctx context.Context, orgID string, resources []*models.StackResource, options LoggingParams) (interfaces.ServerSideStreamable, error)
-	// GetLogsForBuildPod streams logs from the pod of the given build Job.
-	GetLogsForBuildPod(ctx context.Context, orgID string, namespace string, jobName string, options LoggingParams) (interfaces.ServerSideStreamable, error)
+	// GetLogsForBuildPod streams logs from the build pod of the named ImageBuild.
+	GetLogsForBuildPod(ctx context.Context, orgID string, namespace string, buildName string, options LoggingParams) (interfaces.ServerSideStreamable, error)
 }
 
 type LoggingParams interface {
@@ -154,7 +156,7 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 	}, nil
 }
 
-func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, namespace string, jobName string, options LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, namespace string, buildName string, options LoggingParams) (interfaces.ServerSideStreamable, error) {
 	cluster, err := s.clusterService.GetClusterForOrg(ctx, orgID)
 	if err != nil {
 		return nil, err
@@ -169,6 +171,15 @@ func (s *loggingService) GetLogsForBuildPod(ctx context.Context, orgID string, n
 	if cerr != nil {
 		return nil, cerr
 	}
+
+	imageBuild := &buildsv1alpha1.ImageBuild{}
+	if cerr := ctrlRuntimeclient.Get(ctx, types.NamespacedName{Name: buildName, Namespace: namespace}, imageBuild); cerr != nil {
+		if apierrors.IsNotFound(cerr) {
+			return nil, fmt.Errorf("%w: build %s no longer exists in the cluster", ErrBuildPodNotFound, buildName)
+		}
+		return nil, fmt.Errorf("failed to get build %s: %w", buildName, cerr)
+	}
+	jobName := imageBuild.BuildJobName()
 
 	k8sclient, cerr := s.newK8sClient(clients.KubernetesClientSpec{
 		RestConfig:              restConfig,

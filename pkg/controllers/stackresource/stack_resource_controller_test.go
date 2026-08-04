@@ -187,259 +187,188 @@ var _ = Describe("computeStatusRewrite", func() {
 	})
 })
 
-func cond(condType string, status string, reason, message string) models.Condition {
-	return models.Condition{Type: condType, Status: status, Reason: reason, Message: message}
+func cond(condType string, status metav1.ConditionStatus, reason, message string) metav1.Condition {
+	return metav1.Condition{Type: condType, Status: status, Reason: reason, Message: message}
+}
+
+// Reasons the agent stamps on its summary and conditions. The agent API only
+// exports the two the hub branches on, so the rest are named once here.
+const (
+	reasonDependenciesNotReady = "DependenciesNotReady"
+	reasonBuildNotReady        = "BuildNotReady"
+	reasonFullyConverged       = "FullyConverged"
+	reasonNotConverged         = "NotConverged"
+	reasonInvalidSpec          = "InvalidSpec"
+)
+
+func withSummary(cr *corev1alpha1.StackResource, state corev1alpha1.StackResourceSummaryState, reason, message string, observedGeneration int64) *corev1alpha1.StackResource {
+	cr.Status.Summary = &corev1alpha1.StackResourceStatusSummary{
+		State:              state,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: observedGeneration,
+	}
+	return cr
+}
+
+func summaryCR(state corev1alpha1.StackResourceSummaryState, reason, message string, summaryGen, crGen int64) *corev1alpha1.StackResource {
+	cr := &corev1alpha1.StackResource{}
+	cr.Generation = crGen
+	return withSummary(cr, state, reason, message, summaryGen)
 }
 
 type resourceEventCase struct {
-	conditions               []models.Condition
-	failure                  *models.StackResourceFailure
-	converged                bool
-	stalledCurrentGeneration bool
-	runtimeCurrentGeneration bool
-	wantType                 models.ReleaseEventType
-	wantReason               string
-	wantMessage              string
-	wantEmit                 bool
+	crGen       int64 // defaults to 1 via the helper
+	condGen     int64 // ObservedGeneration stamped on all conditions; defaults to crGen
+	statusGen   int64 // Status.ObservedGeneration; defaults to crGen
+	conditions  []metav1.Condition
+	portCheck   *corev1alpha1.PortCheckStatus
+	wantType    models.ReleaseEventType
+	wantReason  string
+	wantMessage string
+	wantEmit    bool
+}
+
+func eventCaseCR(tc resourceEventCase) *corev1alpha1.StackResource {
+	if tc.crGen == 0 {
+		tc.crGen = 1
+	}
+	if tc.condGen == 0 {
+		tc.condGen = tc.crGen
+	}
+	if tc.statusGen == 0 {
+		tc.statusGen = tc.crGen
+	}
+	cr := &corev1alpha1.StackResource{}
+	cr.Generation = tc.crGen
+	cr.Status.ObservedGeneration = tc.statusGen
+	cr.Status.PortCheck = tc.portCheck
+	for _, c := range tc.conditions {
+		c.ObservedGeneration = tc.condGen
+		cr.Status.Conditions = append(cr.Status.Conditions, c)
+	}
+	return cr
 }
 
 var _ = Describe("resourceEvent", func() {
-	runtimeCrash := &models.StackResourceFailure{
-		Type: models.FailureTypeRuntimeCrash,
-		Container: &models.ContainerFailureDetail{
-			Reason:  controllers.ReasonCrashLoopBackOff,
-			Message: "back-off restarting failed container",
+	DescribeTable("mapping the agent summary to a workload event",
+		func(state corev1alpha1.StackResourceSummaryState, reason string, wantType models.ReleaseEventType) {
+			ev := resourceEvent(summaryCR(state, reason, "detail", 3, 3))
+			Expect(ev).NotTo(BeNil())
+			Expect(ev.Type).To(Equal(wantType))
+			Expect(ev.Reason).To(Equal(reason))
+			Expect(ev.Message).To(Equal("detail"))
 		},
+		Entry("waiting", corev1alpha1.SummaryStateWaiting, reasonDependenciesNotReady, models.ReleaseEventTypeResourceWaiting),
+		Entry("deploying", corev1alpha1.SummaryStateDeploying, corev1alpha1.ReasonPortNotListening, models.ReleaseEventTypeResourceDeploying),
+		Entry("ready", corev1alpha1.SummaryStateReady, reasonFullyConverged, models.ReleaseEventTypeResourceReady),
+		Entry("failed", corev1alpha1.SummaryStateFailed, controllers.ReasonCrashLoopBackOff, models.ReleaseEventTypeResourceFailed),
+	)
+
+	It("emits nothing while building — build events narrate that phase", func() {
+		Expect(resourceEvent(summaryCR(corev1alpha1.SummaryStateBuilding, reasonBuildNotReady, "building", 3, 3))).To(BeNil())
+	})
+
+	It("emits nothing for a build failure — build_failed is already on the timeline", func() {
+		Expect(resourceEvent(summaryCR(corev1alpha1.SummaryStateFailed, corev1alpha1.ReasonBuildFailed, "boom", 3, 3))).To(BeNil())
+	})
+
+	It("emits nothing for a stale summary", func() {
+		Expect(resourceEvent(summaryCR(corev1alpha1.SummaryStateReady, reasonFullyConverged, "", 2, 3))).To(BeNil())
+	})
+
+	It("emits nothing without a summary", func() {
+		Expect(resourceEvent(&corev1alpha1.StackResource{})).To(BeNil())
+	})
+})
+
+var _ = Describe("portsClosedEvent", func() {
+	convergedAndAvailable := []metav1.Condition{
+		cond(string(corev1alpha1.StackResourceConverged), metav1.ConditionTrue, "FullyConverged", "all replicas updated"),
+		cond(string(corev1alpha1.StackResourceStatusAvailable), metav1.ConditionTrue, "StackResourceAvailable", "StackResource is available"),
 	}
-	portNotListening := &models.StackResourceFailure{
-		Type: models.FailureTypeReadinessFailure,
-		Container: &models.ContainerFailureDetail{
-			FailureType: controllers.FailureTypePortNotListening,
-			Reason:      controllers.ReasonPortNotListening,
-			Message:     "readiness check failed: nothing listening on port 8080",
-		},
+	failingDial := &corev1alpha1.PortCheckStatus{
+		Status:             corev1alpha1.PortCheckStatusTypeFailure,
+		FailingPortNumbers: []int32{80},
 	}
 
-	DescribeTable("mapping conditions and failures to release events",
+	DescribeTable("mapping a landed rollout's port dial to a warning",
 		func(tc resourceEventCase) {
-			gotType, gotReason, gotMessage, gotEmit := resourceEvent(tc.conditions, tc.failure, tc.converged, tc.stalledCurrentGeneration, tc.runtimeCurrentGeneration)
-			Expect(gotEmit).To(Equal(tc.wantEmit))
+			ev := portsClosedEvent(eventCaseCR(tc))
+			Expect(ev != nil).To(Equal(tc.wantEmit))
 			if !tc.wantEmit {
 				return
 			}
-			Expect(gotType).To(Equal(tc.wantType))
-			Expect(gotReason).To(Equal(tc.wantReason))
-			Expect(gotMessage).To(Equal(tc.wantMessage))
+			Expect(ev.Type).To(Equal(tc.wantType))
+			Expect(ev.Reason).To(Equal(tc.wantReason))
+			Expect(ev.Message).To(Equal(tc.wantMessage))
 		},
-		Entry("dependencies not ready records waiting with the condition reason and message", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceDependenciesReady), string(models.ConditionFalse), "DependenciesNotReady", "waiting for mysql"),
-			},
-			wantType:    models.ReleaseEventTypeResourceWaiting,
-			wantReason:  "DependenciesNotReady",
-			wantMessage: "waiting for mysql",
+		Entry("a ready resource with a failing dial warns that the port is closed", resourceEventCase{
+			crGen:       2,
+			conditions:  convergedAndAvailable,
+			portCheck:   failingDial,
+			wantType:    models.ReleaseEventTypeResourcePortsClosed,
+			wantReason:  controllers.ReasonPortNotListening,
+			wantMessage: "port 80 not accepting connections",
 			wantEmit:    true,
 		}),
-		Entry("build in progress suppresses the resource event", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceBuildReady), string(models.ConditionFalse), "BuildNotReady", "application build is not yet ready"),
+		Entry("a not-converged resource is left to the deploying branch", resourceEventCase{
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceConverged), metav1.ConditionFalse, "NotConverged", "rollout not converged"),
+				cond(string(corev1alpha1.StackResourceStatusAvailable), metav1.ConditionTrue, "StackResourceAvailable", "StackResource is available"),
 			},
-			wantEmit: false,
+			portCheck: failingDial,
+			wantEmit:  false,
 		}),
-		Entry("dependencies-not-ready wins over build-not-ready", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceBuildReady), string(models.ConditionFalse), "BuildNotReady", "building"),
-				cond(string(corev1alpha1.StackResourceDependenciesReady), string(models.ConditionFalse), "DependenciesNotReady", "waiting for redis"),
+		Entry("an unavailable resource does not warn", resourceEventCase{
+			conditions: []metav1.Condition{
+				cond(string(corev1alpha1.StackResourceConverged), metav1.ConditionTrue, "FullyConverged", "all replicas updated"),
+				cond(string(corev1alpha1.StackResourceStatusAvailable), metav1.ConditionFalse, "StackResourceUnavailable", "no available replicas"),
 			},
-			wantType:    models.ReleaseEventTypeResourceWaiting,
-			wantReason:  "DependenciesNotReady",
-			wantMessage: "waiting for redis",
-			wantEmit:    true,
+			portCheck: failingDial,
+			wantEmit:  false,
 		}),
-		Entry("stalled for the current generation records failed with the condition reason and message", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), "JobFailed", "job has reached the specified backoff limit"),
-			},
-			stalledCurrentGeneration: true,
-			wantType:                 models.ReleaseEventTypeResourceFailed,
-			wantReason:               "JobFailed",
-			wantMessage:              "job has reached the specified backoff limit",
-			wantEmit:                 true,
+		Entry("a successful dial does not warn", resourceEventCase{
+			conditions: convergedAndAvailable,
+			portCheck:  &corev1alpha1.PortCheckStatus{Status: corev1alpha1.PortCheckStatusTypeSuccess},
+			wantEmit:   false,
 		}),
-		Entry("stalled carried over from a previous generation does not record failed", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), "JobFailed", "job has reached the specified backoff limit"),
-			},
-			stalledCurrentGeneration: false,
-			wantEmit:                 false,
+		Entry("no port check does not warn", resourceEventCase{
+			conditions: convergedAndAvailable,
+			wantEmit:   false,
 		}),
-		Entry("stalled by a terminal build failure is the imagebuild controller's event", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), stalledReasonBuildFailed, "application build failed terminally"),
-			},
-			stalledCurrentGeneration: true,
-			wantEmit:                 false,
-		}),
-		Entry("runtime crash for the current generation records failed with both reason and message", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "NotConverged", "rollout not converged"),
-			},
-			failure:                  runtimeCrash,
-			runtimeCurrentGeneration: true,
-			wantType:                 models.ReleaseEventTypeResourceFailed,
-			wantReason:               controllers.ReasonCrashLoopBackOff,
-			wantMessage:              "back-off restarting failed container",
-			wantEmit:                 true,
-		}),
-		Entry("runtime crash carried over from a previous generation does not record failed", resourceEventCase{
-			failure:                  runtimeCrash,
-			runtimeCurrentGeneration: false,
-			wantEmit:                 false,
-		}),
-		Entry("carried-over build failure does not masquerade as a runtime failure", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "NotConverged", "rollout not converged"),
-			},
-			failure: &models.StackResourceFailure{
-				Type:  models.FailureTypeBuildFailure,
-				Build: &models.BuildFailureDetail{Reason: "Error", Message: "kaniko exited"},
-			},
-			wantType:    models.ReleaseEventTypeResourceDeploying,
-			wantReason:  "NotConverged",
-			wantMessage: "rollout not converged",
-			wantEmit:    true,
-		}),
-		Entry("available and converged records ready", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionTrue), "StackResourceAvailable", "StackResource is available"),
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionTrue), "FullyConverged", "all replicas updated"),
-			},
-			converged: true,
-			wantType:  models.ReleaseEventTypeResourceReady,
-			wantEmit:  true,
-		}),
-		Entry("not converged records deploying with the convergence detail", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "NotConverged", "rollout not converged: 0/1 updated"),
-			},
-			wantType:    models.ReleaseEventTypeResourceDeploying,
-			wantReason:  "NotConverged",
-			wantMessage: "rollout not converged: 0/1 updated",
-			wantEmit:    true,
-		}),
-		Entry("degraded rollout (previous revision serving) records deploying, not ready", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionTrue), "StackResourceAvailable", "available on previous revision; current rollout not converged"),
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "NotConverged", "rollout not converged: 1/2 updated, 1/2 ready, 1 unavailable"),
-			},
-			wantType:    models.ReleaseEventTypeResourceDeploying,
-			wantReason:  "NotConverged",
-			wantMessage: "previous revision still serving; rollout not converged: 1/2 updated, 1/2 ready, 1 unavailable",
-			wantEmit:    true,
-		}),
-		Entry("stale Converged=True from a previous generation is not ready", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionTrue), "StackResourceAvailable", "StackResource is available"),
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionTrue), "FullyConverged", "all replicas updated"),
-			},
-			converged:   false,
-			wantType:    models.ReleaseEventTypeResourceDeploying,
-			wantReason:  "",
-			wantMessage: "previous revision still serving",
-			wantEmit:    true,
-		}),
-		Entry("a condemned port failure records failed with the agent's diagnosis", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionTrue), "ServingButStalled", "workload serving; terminal failure: readiness check failed: nothing listening on port 8080"),
-				cond(string(corev1alpha1.StackResourceStalled), string(models.ConditionTrue), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
-			},
-			failure:                  portNotListening,
-			stalledCurrentGeneration: true,
-			runtimeCurrentGeneration: true,
-			wantType:                 models.ReleaseEventTypeResourceFailed,
-			wantReason:               controllers.ReasonPortNotListening,
-			wantMessage:              "readiness check failed: nothing listening on port 8080",
-			wantEmit:                 true,
-		}),
-		Entry("a provisional port diagnosis mid-rollout records deploying, not a failure", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceStatusAvailable), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
-			},
-			failure:                  portNotListening,
-			runtimeCurrentGeneration: true,
-			wantType:                 models.ReleaseEventTypeResourceDeploying,
-			wantReason:               controllers.ReasonPortNotListening,
-			wantMessage:              "readiness check failed: nothing listening on port 8080",
-			wantEmit:                 true,
-		}),
-		Entry("a port diagnosis carried over from a previous generation keeps the condition's text", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
-			},
-			failure:                  portNotListening,
-			runtimeCurrentGeneration: false,
-			wantType:                 models.ReleaseEventTypeResourceDeploying,
-			wantReason:               "StackResourceDeploymentNotReady",
-			wantMessage:              "deployment is not yet available",
-			wantEmit:                 true,
-		}),
-		Entry("a crash outranks a stale port reason on the converged condition", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080"),
-			},
-			failure:                  runtimeCrash,
-			runtimeCurrentGeneration: true,
-			wantType:                 models.ReleaseEventTypeResourceFailed,
-			wantReason:               controllers.ReasonCrashLoopBackOff,
-			wantMessage:              "back-off restarting failed container",
-			wantEmit:                 true,
-		}),
-		Entry("a readiness failure without a container detail keeps the condition's text", resourceEventCase{
-			conditions: []models.Condition{
-				cond(string(corev1alpha1.StackResourceConverged), string(models.ConditionFalse), "StackResourceDeploymentNotReady", "deployment is not yet available"),
-			},
-			failure:                  &models.StackResourceFailure{Type: models.FailureTypeReadinessFailure},
-			runtimeCurrentGeneration: true,
-			wantType:                 models.ReleaseEventTypeResourceDeploying,
-			wantReason:               "StackResourceDeploymentNotReady",
-			wantMessage:              "deployment is not yet available",
-			wantEmit:                 true,
-		}),
-		Entry("no conditions emits nothing", resourceEventCase{
-			wantEmit: false,
+		Entry("a dial from a stale status is ignored", resourceEventCase{
+			crGen:      2,
+			statusGen:  1,
+			condGen:    2,
+			conditions: convergedAndAvailable,
+			portCheck:  failingDial,
+			wantEmit:   false,
 		}),
 	)
-})
 
-var _ = Describe("convergedForGeneration", func() {
-	crWithConverged := func(generation, observedGeneration int64, status metav1.ConditionStatus) *corev1alpha1.StackResource {
+	It("does not warn when only a stale Converged=True backs the failing dial", func() {
 		cr := &corev1alpha1.StackResource{}
-		cr.Generation = generation
-		cr.Status.Conditions = []metav1.Condition{{
-			Type:               string(corev1alpha1.StackResourceConverged),
-			Status:             status,
-			ObservedGeneration: observedGeneration,
-			Reason:             "FullyConverged",
-		}}
-		return cr
-	}
-
-	It("is true when Converged=True was written for the current generation", func() {
-		Expect(convergedForGeneration(crWithConverged(3, 3, metav1.ConditionTrue))).To(BeTrue())
+		cr.Generation = 2
+		cr.Status.ObservedGeneration = 2
+		cr.Status.PortCheck = failingDial
+		cr.Status.Conditions = []metav1.Condition{
+			{Type: string(corev1alpha1.StackResourceConverged), Status: metav1.ConditionTrue, Reason: "FullyConverged", Message: "all replicas updated", ObservedGeneration: 1},
+			{Type: string(corev1alpha1.StackResourceStatusAvailable), Status: metav1.ConditionTrue, Reason: "StackResourceAvailable", Message: "StackResource is available", ObservedGeneration: 2},
+		}
+		Expect(portsClosedEvent(cr)).To(BeNil())
 	})
 
-	It("is false when Converged=True is from a previous generation", func() {
-		Expect(convergedForGeneration(crWithConverged(3, 2, metav1.ConditionTrue))).To(BeFalse())
-	})
-
-	It("is false when Converged=False", func() {
-		Expect(convergedForGeneration(crWithConverged(3, 3, metav1.ConditionFalse))).To(BeFalse())
-	})
-
-	It("is false without a Converged condition", func() {
-		Expect(convergedForGeneration(&corev1alpha1.StackResource{})).To(BeFalse())
+	It("does not warn when only a stale Available=True backs the failing dial", func() {
+		cr := &corev1alpha1.StackResource{}
+		cr.Generation = 2
+		cr.Status.ObservedGeneration = 2
+		cr.Status.PortCheck = failingDial
+		cr.Status.Conditions = []metav1.Condition{
+			{Type: string(corev1alpha1.StackResourceStatusAvailable), Status: metav1.ConditionTrue, Reason: "StackResourceAvailable", Message: "StackResource is available", ObservedGeneration: 1},
+			{Type: string(corev1alpha1.StackResourceConverged), Status: metav1.ConditionTrue, Reason: "FullyConverged", Message: "all replicas updated", ObservedGeneration: 2},
+		}
+		Expect(portsClosedEvent(cr)).To(BeNil())
 	})
 })
 
@@ -453,8 +382,14 @@ func stackResourceTestScheme() *runtime.Scheme {
 func readyConditions() []metav1.Condition {
 	return []metav1.Condition{
 		{Type: string(corev1alpha1.StackResourceStatusAvailable), Status: metav1.ConditionTrue, Reason: "StackResourceAvailable", Message: "StackResource is available"},
-		{Type: string(corev1alpha1.StackResourceConverged), Status: metav1.ConditionTrue, Reason: "FullyConverged", Message: "all replicas updated"},
+		{Type: string(corev1alpha1.StackResourceConverged), Status: metav1.ConditionTrue, Reason: reasonFullyConverged, Message: "all replicas updated"},
 	}
+}
+
+// readyCR is the converged, available CR the agent summarises as Ready.
+func readyCR(hash string, extraConditions ...metav1.Condition) *corev1alpha1.StackResource {
+	cr := stackResourceCR(hash, append(readyConditions(), extraConditions...))
+	return withSummary(cr, corev1alpha1.SummaryStateReady, "", "", 0)
 }
 
 func stackResourceCR(hash string, conditions []metav1.Condition) *corev1alpha1.StackResource {
@@ -499,10 +434,9 @@ func failedStackResourceCR(hash string, conditions []metav1.Condition) *corev1al
 }
 
 // generationCR builds a CR pinned to an explicit generation and observed
-// generation, optionally carrying a runtime-crash LastFailure, so a superseded
-// rollout's failure (observedGeneration < generation, or a Stalled condition
-// whose ObservedGeneration lags) can be reproduced.
-func generationCR(generation, observedGeneration int64, conditions []metav1.Condition, withRuntimeFailure bool) *corev1alpha1.StackResource {
+// generation, so a superseded rollout (a summary or condition whose
+// ObservedGeneration lags) can be reproduced.
+func generationCR(generation, observedGeneration int64, conditions []metav1.Condition) *corev1alpha1.StackResource {
 	cr := &corev1alpha1.StackResource{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "web",
@@ -517,45 +451,24 @@ func generationCR(generation, observedGeneration int64, conditions []metav1.Cond
 			Conditions:         conditions,
 		},
 	}
-	if withRuntimeFailure {
-		cr.Status.LastFailureDetails = []corev1alpha1.LastFailureDetail{
-			{
-				ContainerName:           "web",
-				RestartCount:            3,
-				LastTerminationReason:   "CrashLoopBackOff",
-				LastTerminationMessage:  "back-off restarting failed container",
-				LastTerminationExitCode: ptr.To(int32(1)),
-			},
-		}
-	}
 	return cr
-}
-
-func stalledCondition(observedGeneration int64) metav1.Condition {
-	return metav1.Condition{
-		Type:               string(corev1alpha1.StackResourceStalled),
-		Status:             metav1.ConditionTrue,
-		ObservedGeneration: observedGeneration,
-		Reason:             "InvalidSpec",
-		Message:            "invalid workload spec",
-	}
 }
 
 func newReconcilerForTest(cr *corev1alpha1.StackResource) (
 	*stackResourceReconciler,
 	*mocks.MockStackResourceService,
-	*MockreleaseActiveChecker,
+	*MockreleaseResolver,
 	*MockresourceEventRecorder,
 ) {
 	mockCtrl := gomock.NewController(GinkgoT())
 
 	svc := mocks.NewMockStackResourceService(mockCtrl)
-	checker := NewMockreleaseActiveChecker(mockCtrl)
+	checker := NewMockreleaseResolver(mockCtrl)
 	recorder := NewMockresourceEventRecorder(mockCtrl)
 	r := &stackResourceReconciler{
 		client:               fake.NewClientBuilder().WithScheme(stackResourceTestScheme()).WithObjects(cr).Build(),
 		stackResourceService: svc,
-		releaseChecker:       checker,
+		releaseResolver:      checker,
 		eventRecorder:        recorder,
 		logger:               logger.NewLoggerWithPrefix(context.Background(), "sr-test"),
 	}
@@ -570,7 +483,7 @@ var _ = Describe("Reconcile", func() {
 	// Unchanged StatusHash keeps the controller out of the status-rewrite gate, so
 	// nothing downstream — status update, active-release lookup, event record — runs.
 	It("records nothing when the StatusHash is unchanged", func() {
-		cr := stackResourceCR("h1", readyConditions())
+		cr := readyCR("h1")
 		r, svc, _, _ := newReconcilerForTest(cr)
 
 		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "h1"}}
@@ -584,7 +497,7 @@ var _ = Describe("Reconcile", func() {
 	// No active release means the resource event is silently skipped, and the
 	// reconcile still succeeds because the status update already persisted.
 	It("skips the event and succeeds when there is no active release", func() {
-		cr := stackResourceCR("h2", readyConditions())
+		cr := readyCR("h2")
 		r, svc, checker, _ := newReconcilerForTest(cr)
 
 		db := &models.StackResource{ID: "sr-1", Name: "web", Status: nil}
@@ -599,7 +512,7 @@ var _ = Describe("Reconcile", func() {
 
 	// A recorder failure is non-fatal: the reconcile still returns no error.
 	It("does not fail the reconcile when the recorder errors", func() {
-		cr := stackResourceCR("h3", readyConditions())
+		cr := readyCR("h3")
 		r, svc, checker, recorder := newReconcilerForTest(cr)
 
 		release := &models.StackRelease{ID: "rel-1"}
@@ -616,9 +529,10 @@ var _ = Describe("Reconcile", func() {
 	})
 
 	// A crashing resource records resource_failed carrying both the reason code
-	// and the long termination message from its LastFailure.
-	It("records the LastFailure reason and message for a failed resource", func() {
-		cr := failedStackResourceCR("h-fail", nil)
+	// and the long termination message the agent put on its summary.
+	It("records the summary reason and message for a failed resource", func() {
+		cr := withSummary(failedStackResourceCR("h-fail", nil), corev1alpha1.SummaryStateFailed,
+			controllers.ReasonCrashLoopBackOff, "back-off restarting failed container", 0)
 		r, svc, checker, recorder := newReconcilerForTest(cr)
 
 		release := &models.StackRelease{ID: "rel-1"}
@@ -634,37 +548,12 @@ var _ = Describe("Reconcile", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// A Stalled=True condition wins over the LastFailure-derived detail.
-	It("lets a stalled condition override the LastFailure detail", func() {
-		cr := failedStackResourceCR("h-stalled", []metav1.Condition{
-			{
-				Type:    string(corev1alpha1.StackResourceStalled),
-				Status:  metav1.ConditionTrue,
-				Reason:  "InvalidSpec",
-				Message: "invalid workload spec",
-			},
-		})
-		r, svc, checker, recorder := newReconcilerForTest(cr)
-
-		release := &models.StackRelease{ID: "rel-1"}
-		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
-		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
-		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
-		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
-		recorder.EXPECT().
-			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "InvalidSpec", "invalid workload spec").
-			Return(nil)
-
-		_, err := r.Reconcile(context.Background(), reconcileRequest())
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	// Bug: a Stalled failure left over from a superseded release (its condition
+	// Bug: a failure verdict left over from a superseded release (its summary
 	// ObservedGeneration lags the CR generation) must NOT be re-emitted as
 	// resource_failed against the newly active release. The status update still
 	// persists, but no active-release lookup or event record happens.
-	It("does not record a stalled failure carried over from a previous generation", func() {
-		cr := generationCR(2, 2, []metav1.Condition{stalledCondition(1)}, false)
+	It("does not record a failure carried over from a previous generation", func() {
+		cr := withSummary(generationCR(2, 2, nil), corev1alpha1.SummaryStateFailed, reasonInvalidSpec, "invalid workload spec", 1)
 		r, svc, _, _ := newReconcilerForTest(cr)
 
 		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
@@ -676,25 +565,9 @@ var _ = Describe("Reconcile", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	// Bug: a runtime crash captured under a superseded release (top-level
-	// ObservedGeneration lags the CR generation) must NOT be re-emitted as
-	// resource_failed against the newly active release.
-	It("does not record a runtime failure carried over from a previous generation", func() {
-		cr := generationCR(2, 1, nil, true)
-		r, svc, _, _ := newReconcilerForTest(cr)
-
-		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
-		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
-		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
-		// checker + recorder must not be called.
-
-		_, err := r.Reconcile(context.Background(), reconcileRequest())
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	// A stalled failure for the current generation still records resource_failed.
-	It("records a stalled failure for the current generation", func() {
-		cr := generationCR(2, 2, []metav1.Condition{stalledCondition(2)}, false)
+	// A failure verdict for the current generation still records resource_failed.
+	It("records a failure for the current generation", func() {
+		cr := withSummary(generationCR(2, 2, nil), corev1alpha1.SummaryStateFailed, reasonInvalidSpec, "invalid workload spec", 2)
 		r, svc, checker, recorder := newReconcilerForTest(cr)
 
 		release := &models.StackRelease{ID: "rel-2"}
@@ -703,25 +576,7 @@ var _ = Describe("Reconcile", func() {
 		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
 		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
 		recorder.EXPECT().
-			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "InvalidSpec", "invalid workload spec").
-			Return(nil)
-
-		_, err := r.Reconcile(context.Background(), reconcileRequest())
-		Expect(err).NotTo(HaveOccurred())
-	})
-
-	// A runtime crash for the current generation still records resource_failed.
-	It("records a runtime failure for the current generation", func() {
-		cr := generationCR(2, 2, nil, true)
-		r, svc, checker, recorder := newReconcilerForTest(cr)
-
-		release := &models.StackRelease{ID: "rel-2"}
-		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
-		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
-		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
-		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
-		recorder.EXPECT().
-			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, "CrashLoopBackOff", "back-off restarting failed container").
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceFailed, reasonInvalidSpec, "invalid workload spec").
 			Return(nil)
 
 		_, err := r.Reconcile(context.Background(), reconcileRequest())
@@ -730,7 +585,7 @@ var _ = Describe("Reconcile", func() {
 
 	// Happy path: a changed StatusHash on an active release records the mapped event.
 	It("records the resource event for an active release", func() {
-		cr := stackResourceCR("h4", readyConditions())
+		cr := readyCR("h4")
 		r, svc, checker, recorder := newReconcilerForTest(cr)
 
 		release := &models.StackRelease{ID: "rel-1"}
@@ -745,4 +600,130 @@ var _ = Describe("Reconcile", func() {
 		_, err := r.Reconcile(context.Background(), reconcileRequest())
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	// A landed rollout whose declared port is dead records the ports-closed
+	// warning alongside the ready event, against the active release.
+	It("records a ports-closed warning for a converged resource with a failing dial", func() {
+		cr := readyCR("h-ports")
+		cr.Status.PortCheck = &corev1alpha1.PortCheckStatus{
+			Status:             corev1alpha1.PortCheckStatusTypeFailure,
+			FailingPortNumbers: []int32{80},
+		}
+		r, svc, checker, recorder := newReconcilerForTest(cr)
+
+		release := &models.StackRelease{ID: "rel-1"}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceReady, "", "").
+			Return(nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourcePortsClosed, controllers.ReasonPortNotListening, "port 80 not accepting connections").
+			Return(nil)
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// The old CR is still on the cluster while the new release deploys: its
+	// annotation resolves to a superseded release that is no longer the latest,
+	// so its state is dropped instead of landing on the new release's timeline.
+	It("does not record events observed from a CR written for a superseded release", func() {
+		cr := readyCR("h-stale-release")
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-1"}
+		cr.Status.PortCheck = &corev1alpha1.PortCheckStatus{
+			Status:             corev1alpha1.PortCheckStatusTypeFailure,
+			FailingPortNumbers: []int32{80},
+		}
+		r, svc, checker, _ := newReconcilerForTest(cr)
+
+		superseded := &models.StackRelease{ID: "rel-1", State: models.ReleaseStateSuperseded}
+		latest := &models.StackRelease{ID: "rel-2", State: models.ReleaseStateInProgress}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGet(gomock.Any(), "rel-1").Return(superseded, nil)
+		checker.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").Return(latest, nil)
+		// recorder must not be called.
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("records events from a CR written for the active release", func() {
+		cr := readyCR("h-matching-release")
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-1"}
+		r, svc, checker, recorder := newReconcilerForTest(cr)
+
+		release := &models.StackRelease{ID: "rel-1", State: models.ReleaseStateInProgress}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGet(gomock.Any(), "rel-1").Return(release, nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceReady, "", "").
+			Return(nil)
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// A cert can finish issuing, or pods flip state, after the release is done:
+	// a terminal release still records as long as it is the latest one.
+	It("records events on a terminal release that is still the latest", func() {
+		cr := readyCR("h-late-event")
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-1"}
+		r, svc, checker, recorder := newReconcilerForTest(cr)
+
+		release := &models.StackRelease{ID: "rel-1", State: models.ReleaseStateReleased}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGet(gomock.Any(), "rel-1").Return(release, nil)
+		checker.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").Return(release, nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceReady, "", "").
+			Return(nil)
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// The annotated release can be gone entirely (GC'd): skip, don't guess.
+	It("skips events when the annotated release no longer exists", func() {
+		cr := readyCR("h-gone-release")
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-gone"}
+		r, svc, checker, _ := newReconcilerForTest(cr)
+
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGet(gomock.Any(), "rel-gone").Return(nil, apperrors.NotFound("release not found"))
+		// recorder must not be called.
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	// CRs applied before the annotation existed carry no information, and must
+	// not go silent.
+	It("records events from a CR carrying no release-id annotation", func() {
+		cr := readyCR("h-no-annotation")
+		r, svc, checker, recorder := newReconcilerForTest(cr)
+
+		release := &models.StackRelease{ID: "rel-1"}
+		db := &models.StackResource{ID: "sr-1", Name: "web", Status: &models.StackResourceStatus{LastObservedStatusHash: "old"}}
+		svc.EXPECT().InternalGetByStackIDAndResourceName(gomock.Any(), "stack-1", "web").Return(db, nil)
+		svc.EXPECT().UpdateStatus(gomock.Any(), "sr-1", gomock.Any()).Return(nil)
+		checker.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil)
+		recorder.EXPECT().
+			RecordResourceEvent(gomock.Any(), release, "web", models.ReleaseEventTypeResourceReady, "", "").
+			Return(nil)
+
+		_, err := r.Reconcile(context.Background(), reconcileRequest())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 })

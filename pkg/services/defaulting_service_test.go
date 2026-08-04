@@ -16,7 +16,6 @@ func TestApplyStackSettingsDefaults_NilSettings(t *testing.T) {
 	assert.NotNil(t, result.Settings)
 	assert.Equal(t, models.DefaultReleaseRetentionLimit, result.Settings.ReleaseRetentionLimit)
 	assert.Equal(t, models.DefaultMinSuccessfulReleases, result.Settings.MinSuccessfulReleases)
-	assert.Equal(t, models.DefaultDeployTimeoutMinutes, result.Settings.DeployTimeoutMinutes)
 }
 
 func TestApplyStackSettingsDefaults_PartialSettings(t *testing.T) {
@@ -30,7 +29,6 @@ func TestApplyStackSettingsDefaults_PartialSettings(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 20, result.Settings.ReleaseRetentionLimit)
 	assert.Equal(t, models.DefaultMinSuccessfulReleases, result.Settings.MinSuccessfulReleases)
-	assert.Equal(t, models.DefaultDeployTimeoutMinutes, result.Settings.DeployTimeoutMinutes)
 }
 
 func TestApplyStackSettingsDefaults_AllSet(t *testing.T) {
@@ -38,7 +36,6 @@ func TestApplyStackSettingsDefaults_AllSet(t *testing.T) {
 		Settings: &models.StackSettings{
 			ReleaseRetentionLimit: 30,
 			MinSuccessfulReleases: 10,
-			DeployTimeoutMinutes:  45,
 		},
 	}
 	svc := NewStackDefaultingService()
@@ -46,7 +43,6 @@ func TestApplyStackSettingsDefaults_AllSet(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 30, result.Settings.ReleaseRetentionLimit)
 	assert.Equal(t, 10, result.Settings.MinSuccessfulReleases)
-	assert.Equal(t, 45, result.Settings.DeployTimeoutMinutes)
 }
 
 func TestNormalizeStackResourceReplicas(t *testing.T) {

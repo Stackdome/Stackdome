@@ -29,6 +29,7 @@ const (
 
 type releaseActiveChecker interface {
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
+	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *apperrors.ServiceError)
 }
 
 type stackClusterResolver interface {
@@ -364,6 +365,29 @@ func (r *ImageBuildReconciler) recordBuildEvent(
 		ctx, active, cr.Spec.ResourceName, eventType, build.ID, attribution, failure,
 	); recErr != nil {
 		r.Logger.Error(ctx, "failed to record build event for build %s: %v", build.ID, recErr)
+	}
+
+	if eventType == models.ReleaseEventTypeBuildFailed && attribution == "" {
+		r.failReleaseForBuild(ctx, active, cr.Spec.ResourceName, failure)
+	}
+}
+
+// failReleaseForBuild terminally fails the release whose pins own this build.
+// BuildPhaseFailed means the job's backoff limit is exhausted, so the release
+// can never converge. Only called when the pin match is deterministic.
+func (r *ImageBuildReconciler) failReleaseForBuild(ctx context.Context, release *models.StackRelease, resourceName string, failure *models.BuildFailureDetail) {
+	msg := fmt.Sprintf("build failed for %s", resourceName)
+	if failure != nil {
+		detail := failure.Message
+		if detail == "" {
+			detail = failure.Reason
+		}
+		if detail != "" {
+			msg = fmt.Sprintf("%s: %s", msg, detail)
+		}
+	}
+	if _, serr := r.releaseChecker.MarkFailed(ctx, release.ID, msg, nil); serr != nil {
+		r.Logger.Error(ctx, "failed to mark release %s failed after build failure: %v", release.ID, serr)
 	}
 }
 

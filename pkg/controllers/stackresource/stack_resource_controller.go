@@ -3,6 +3,8 @@ package stackresource
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/controllers"
 	apperrors "github.com/Stackdome/stackdome/pkg/errors"
@@ -28,24 +30,21 @@ const (
 
 //go:generate mockgen -source=stack_resource_controller.go -destination=stack_resource_controller_mock.go -package=stackresource
 
-type releaseActiveChecker interface {
+type releaseResolver interface {
+	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *apperrors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
+	InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
 }
 
 type resourceEventRecorder interface {
 	RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string, message string) *apperrors.ServiceError
 }
 
-// stalledReasonBuildFailed mirrors the Stalled condition reason the cluster
-// agent sets on a terminal build failure (image_build_reconciler.go); the
-// agent does not export its reason strings.
-const stalledReasonBuildFailed = "BuildFailed"
-
 type stackResourceReconciler struct {
 	client               client.Client
 	stackResourceService services.StackResourceService
 	stackService         services.StackService
-	releaseChecker       releaseActiveChecker
+	releaseResolver      releaseResolver
 	eventRecorder        resourceEventRecorder
 	logger               logger.Logger
 	env                  string
@@ -54,7 +53,7 @@ type stackResourceReconciler struct {
 type StackResourceReconcilerSpec struct {
 	StackResourceService services.StackResourceService
 	StackService         services.StackService
-	ReleaseChecker       releaseActiveChecker
+	ReleaseResolver      releaseResolver
 	EventRecorder        resourceEventRecorder
 	Log                  logger.Logger
 	Env                  string
@@ -65,7 +64,7 @@ func NewStackResourceReconciler(spec StackResourceReconcilerSpec) *stackResource
 		client:               nil,
 		stackResourceService: spec.StackResourceService,
 		stackService:         spec.StackService,
-		releaseChecker:       spec.ReleaseChecker,
+		releaseResolver:      spec.ReleaseResolver,
 		eventRecorder:        spec.EventRecorder,
 		logger:               spec.Log,
 		env:                  spec.Env,
@@ -140,149 +139,183 @@ func (w *stackResourceReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
-// recordResourceEvent records the observed resource state onto the active
-// release timeline. It runs only inside the StatusHash-change gate, so each
-// state transition is recorded at most once. A missing active release or a
-// recorder failure is non-fatal: the status update has already been persisted,
-// so both paths only log and return.
+// releaseEvent is one timeline event mapped from the CR, ready to record.
+// The mapping functions (resourceEvent, portsClosedEvent) return nil when
+// the CR's state maps to nothing.
+type releaseEvent struct {
+	Type    models.ReleaseEventType
+	Reason  string
+	Message string
+}
+
+// recordResourceEvent puts the resource's state on a release timeline.
+//
+//   - Runs only when StatusHash changed, so each state is recorded once.
+//   - The CR's release annotation says which release the state belongs to.
+//   - A failed record: log and move on. The status is already saved.
 func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stackID string, resource *models.StackResource, cr *corev1alpha1.StackResource) {
-	if resource.Status == nil {
+	workload := resourceEvent(cr)
+	ports := portsClosedEvent(cr)
+	if workload == nil && ports == nil {
 		return
 	}
-	eventType, reason, message, emit := resourceEvent(resource.Status.Conditions, resource.Status.LastFailure, convergedForGeneration(cr), stalledForGeneration(cr), observedForGeneration(cr))
-	if !emit {
+
+	release := w.resolveRelease(ctx, stackID, cr)
+	if release == nil {
 		return
 	}
-	active, serr := w.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
-	if serr != nil || active == nil {
-		w.logger.Debug(ctx, "no active release for stack %s; skipping resource event for %s", stackID, resource.Name)
+
+	w.recordOnRelease(ctx, release, resource.Name, workload)
+	w.recordOnRelease(ctx, release, resource.Name, ports)
+}
+
+// resolveRelease picks the release the CR's state belongs to:
+//
+//   - The CR's release annotation is authoritative — the apply step stamps it
+//     on every deploy.
+//   - Record on that release while it is active, or terminal but still the
+//     latest: a cert can finish issuing, or pods flip state, after the release
+//     is done.
+//   - Superseded (a newer sequence exists): drop. That state describes an old
+//     rollout.
+//   - No annotation (pre-annotation CR): fall back to the active release.
+func (w *stackResourceReconciler) resolveRelease(ctx context.Context, stackID string, cr *corev1alpha1.StackResource) *models.StackRelease {
+	releaseID := cr.Annotations[corev1alpha1.ReleaseIDAnnotation]
+	if releaseID == "" {
+		active, serr := w.releaseResolver.InternalGetActiveByStackID(ctx, stackID)
+		if serr != nil {
+			w.logger.Error(ctx, "failed to look up active release for stack %s: %v", stackID, serr)
+			return nil
+		}
+		return active
+	}
+
+	release, serr := w.releaseResolver.InternalGet(ctx, releaseID)
+	if serr != nil {
+		if !serr.Is404() {
+			w.logger.Error(ctx, "failed to look up release %s for stack %s: %v", releaseID, stackID, serr)
+		}
+		return nil
+	}
+	if release.State.Active() {
+		return release
+	}
+
+	latest, serr := w.releaseResolver.InternalGetLatestByStackID(ctx, stackID)
+	if serr != nil {
+		w.logger.Error(ctx, "failed to look up latest release for stack %s: %v", stackID, serr)
+		return nil
+	}
+	if latest == nil || latest.ID != release.ID {
+		w.logger.Debug(ctx, "CR for stack %s carries superseded release %s; skipping events", stackID, releaseID)
+		return nil
+	}
+	return release
+}
+
+func (w *stackResourceReconciler) recordOnRelease(ctx context.Context, release *models.StackRelease, resourceName string, ev *releaseEvent) {
+	if ev == nil {
 		return
 	}
-	if recErr := w.eventRecorder.RecordResourceEvent(ctx, active, resource.Name, eventType, reason, message); recErr != nil {
-		w.logger.Error(ctx, "failed to record resource event for %s: %v", resource.Name, recErr)
+	if recErr := w.eventRecorder.RecordResourceEvent(ctx, release, resourceName, ev.Type, ev.Reason, ev.Message); recErr != nil {
+		w.logger.Error(ctx, "failed to record %s event for %s: %v", ev.Type, resourceName, recErr)
 	}
 }
 
-// runtimeFailureDetail returns the reason code and long message of a runtime
-// crash, main container first, then init container. Build failures are the
-// imagebuild controller's to surface, so they are never read here.
-func runtimeFailureDetail(f *models.StackResourceFailure) (reason, message string) {
-	if f == nil || f.Type != models.FailureTypeRuntimeCrash {
-		return "", ""
-	}
-	for _, d := range []*models.ContainerFailureDetail{f.Container, f.InitContainer} {
-		if d == nil {
-			continue
-		}
-		if d.Reason != "" || d.Message != "" {
-			return d.Reason, d.Message
-		}
-	}
-	return "", ""
-}
-
-// convergedForGeneration mirrors the cluster agent's isResourceConverged: the
-// Converged condition only counts when it was written for the CR's current
-// generation, otherwise it is a leftover from a previous rollout. Computed
+// currentGenCondition returns the condition only when it was written for the
+// CR's current generation; a condition carrying a prior generation describes
+// a superseded rollout and must not produce events for this one. Computed
 // from the raw CR because the server-side condition model drops
 // ObservedGeneration.
-func convergedForGeneration(cr *corev1alpha1.StackResource) bool {
-	cond := meta.FindStatusCondition(cr.Status.Conditions, string(corev1alpha1.StackResourceConverged))
-	return cond != nil && cond.Status == metav1.ConditionTrue && cond.ObservedGeneration == cr.Generation
+func currentGenCondition(cr *corev1alpha1.StackResource, condType string) *metav1.Condition {
+	cond := meta.FindStatusCondition(cr.Status.Conditions, condType)
+	if cond == nil || cond.ObservedGeneration != cr.Generation {
+		return nil
+	}
+	return cond
 }
 
-// stalledForGeneration reports whether the Stalled condition was written for the
-// CR's current generation. Like convergedForGeneration it reads the raw CR
-// because the server-side condition model drops ObservedGeneration. The agent
-// does not rewrite Stalled on a NotReady report, so a stale Stalled=True can
-// outlive its generation even after the top-level Status.ObservedGeneration
-// advances — the condition's own ObservedGeneration is the authoritative signal.
-func stalledForGeneration(cr *corev1alpha1.StackResource) bool {
-	cond := meta.FindStatusCondition(cr.Status.Conditions, string(corev1alpha1.StackResourceStalled))
-	return cond != nil && cond.ObservedGeneration == cr.Generation
+// condIs returns the current-generation condition only when it has the given
+// status; nil otherwise.
+func condIs(cr *corev1alpha1.StackResource, condType string, status metav1.ConditionStatus) *metav1.Condition {
+	cond := currentGenCondition(cr, condType)
+	if cond == nil || cond.Status != status {
+		return nil
+	}
+	return cond
 }
 
-// observedForGeneration reports whether the CR's status was written for its
-// current generation. The cluster agent stamps Status.ObservedGeneration on
-// every terminal report, so a status still carrying a prior generation's value
-// is a leftover from a superseded rollout. Used to gate the runtime-failure
-// path, whose LastFailureDetails carry no generation of their own.
-func observedForGeneration(cr *corev1alpha1.StackResource) bool {
-	return cr.Status.ObservedGeneration == cr.Generation
+// portsClosedEvent flags a converged, Available resource whose last dial found
+// a declared port closed. Scoped to that state on purpose: while the rollout is
+// still converging, resourceEvent's deploying branch already reports the same
+// dial.
+func portsClosedEvent(cr *corev1alpha1.StackResource) *releaseEvent {
+	if cr.Status.ObservedGeneration != cr.Generation {
+		return nil
+	}
+	if cr.Status.PortCheck == nil || cr.Status.PortCheck.Status != corev1alpha1.PortCheckStatusTypeFailure {
+		return nil
+	}
+	if condIs(cr, string(corev1alpha1.StackResourceConverged), metav1.ConditionTrue) == nil ||
+		condIs(cr, string(corev1alpha1.StackResourceStatusAvailable), metav1.ConditionTrue) == nil {
+		return nil
+	}
+	return &releaseEvent{
+		models.ReleaseEventTypeResourcePortsClosed,
+		controllers.ReasonPortNotListening,
+		portDialMessage(cr.Status.PortCheck.FailingPortNumbers),
+	}
 }
 
-// resourceEvent maps the cluster-agent's status conditions (and any captured
-// runtime crash detail) to a release timeline event. Conditions are the
-// authoritative signal — Phase is a coarse rollup the agent writes alongside
-// them. emit is false when the imagebuild controller's build events already
-// cover the state (build in progress, terminal build failure) or no condition
-// maps to an event.
+// resourceEvent maps the agent's summary verdict to one workload event.
+//   - Stale or absent summary: superseded rollout (or an agent without the
+//     field, a wiring bug) — nothing to record.
+//   - Building: build events narrate that phase.
+//   - Failed with ReasonBuildFailed: build_failed is already on the timeline.
+func resourceEvent(cr *corev1alpha1.StackResource) *releaseEvent {
+	s := cr.Status.Summary
+	if s == nil || s.ObservedGeneration != cr.Generation {
+		return nil
+	}
+	switch s.State {
+	case corev1alpha1.SummaryStateWaiting:
+		return &releaseEvent{models.ReleaseEventTypeResourceWaiting, s.Reason, s.Message}
+	case corev1alpha1.SummaryStateDeploying:
+		return &releaseEvent{models.ReleaseEventTypeResourceDeploying, s.Reason, s.Message}
+	case corev1alpha1.SummaryStateReady:
+		return &releaseEvent{models.ReleaseEventTypeResourceReady, s.Reason, s.Message}
+	case corev1alpha1.SummaryStateFailed:
+		if s.Reason == corev1alpha1.ReasonBuildFailed {
+			return nil
+		}
+		return &releaseEvent{models.ReleaseEventTypeResourceFailed, s.Reason, s.Message}
+	}
+	return nil
+}
+
+// portDialMessage names the declared ports the last dial proved closed.
+func portDialMessage(ports []int32) string {
+	if len(ports) == 0 {
+		return "declared ports not accepting connections"
+	}
+	strs := make([]string, len(ports))
+	for i, p := range ports {
+		strs[i] = strconv.Itoa(int(p))
+	}
+	noun := "port"
+	if len(ports) > 1 {
+		noun = "ports"
+	}
+	return fmt.Sprintf("%s %s not accepting connections", noun, strings.Join(strs, ", "))
+}
+
+// computeStatusRewrite rebuilds the server-side status from the cluster CR.
 //
-// Available=True does NOT imply the rollout landed: the agent also reports it
-// when only the previous revision is still serving (Phase=Degraded). Ready
-// therefore additionally requires converged, and the not-converged path keeps
-// the Converged condition's detail so a stuck rollout is diagnosable from the
-// timeline — or the agent's readiness diagnosis when it has one, since the
-// condition only ever says "not ready yet".
-//
-// A failure carried over from a prior generation must not be attributed to the
-// new release, so every failure path is gated the same way the Ready path is
-// gated on convergedForGeneration: the Stalled condition only counts for its own
-// current generation (stalledCurrentGeneration), and the runtime crash detail
-// and the readiness diagnosis only count when the status as a whole is for the
-// current generation (runtimeCurrentGeneration). A terminal build failure is
-// suppressed regardless of generation because those events are always the
-// imagebuild controller's.
-func resourceEvent(conditions []models.Condition, failure *models.StackResourceFailure, converged, stalledCurrentGeneration, runtimeCurrentGeneration bool) (eventType models.ReleaseEventType, reason, message string, emit bool) {
-	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceStalled)); cond != nil && cond.Status == string(models.ConditionTrue) {
-		if cond.Reason == stalledReasonBuildFailed {
-			return "", "", "", false
-		}
-		if stalledCurrentGeneration {
-			return models.ReleaseEventTypeResourceFailed, cond.Reason, cond.Message, true
-		}
-	}
-	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceDependenciesReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
-		return models.ReleaseEventTypeResourceWaiting, cond.Reason, cond.Message, true
-	}
-	if cond := models.FindCondition(conditions, string(corev1alpha1.StackResourceBuildReady)); cond != nil && cond.Status == string(models.ConditionFalse) {
-		return "", "", "", false
-	}
-	if r, m := runtimeFailureDetail(failure); (r != "" || m != "") && runtimeCurrentGeneration {
-		return models.ReleaseEventTypeResourceFailed, r, m, true
-	}
-	available := models.FindCondition(conditions, string(corev1alpha1.StackResourceStatusAvailable))
-	availableTrue := available != nil && available.Status == string(models.ConditionTrue)
-	convergedCond := models.FindCondition(conditions, string(corev1alpha1.StackResourceConverged))
-	if availableTrue && converged {
-		return models.ReleaseEventTypeResourceReady, "", "", true
-	}
-	if convergedCond != nil && !converged {
-		if convergedCond.Status == string(models.ConditionFalse) {
-			reason, message = convergedCond.Reason, convergedCond.Message
-		}
-		if runtimeCurrentGeneration && failure != nil && failure.Type == models.FailureTypeReadinessFailure && failure.Container != nil {
-			reason, message = failure.Container.Reason, failure.Container.Message
-		}
-		if availableTrue {
-			if message == "" {
-				message = "previous revision still serving"
-			} else {
-				message = "previous revision still serving; " + message
-			}
-		}
-		return models.ReleaseEventTypeResourceDeploying, reason, message, true
-	}
-	return "", "", "", false
-}
-
-// computeStatusRewrite rebuilds the whole server-side status from the cluster
-// CR. Build failures are owned by the imagebuild controller — the workload CR
-// never reports them — so when the CR yields no failure of its own, an
-// existing build_failure is carried over instead of being clobbered with nil.
-// A CR-derived (runtime) failure still overwrites it, and clearing a build
-// failure stays with the imagebuild controller, which clears it on build
-// success.
+// The workload CR never reports build failures — those belong to the
+// imagebuild controller. So:
+//   - CR has no failure: keep an existing build_failure, don't clobber it.
+//   - CR has a runtime failure: it wins.
+//   - Clearing a build_failure is the imagebuild controller's job, on success.
 func computeStatusRewrite(current *models.StackResourceStatus, clusterInstance *corev1alpha1.StackResource) *models.StackResourceStatus {
 	updated := mapClusterStatusToServerStatus(clusterInstance)
 	if updated.LastFailure == nil && current != nil && current.LastFailure != nil &&

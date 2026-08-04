@@ -73,7 +73,7 @@ func TestInternalUpdateShellStack_ValidSettings_Updates(t *testing.T) {
 	existing := &models.Stack{ID: stackID, Name: "demo", Namespace: "ns-demo"}
 	spec := &models.Stack{
 		Name:     "demo",
-		Settings: &models.StackSettings{ReleaseRetentionLimit: 20, MinSuccessfulReleases: 5, DeployTimeoutMinutes: 30},
+		Settings: &models.StackSettings{ReleaseRetentionLimit: 20, MinSuccessfulReleases: 5},
 		StackResources: []*models.StackResource{
 			{Name: "web"},
 		},

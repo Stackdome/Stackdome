@@ -438,6 +438,72 @@ var _ = Describe("recordBuildEvent", func() {
 		r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhasePending), gitBuildModel("differentsha"))
 	})
 
+	// A terminal build failure whose pins deterministically belong to the active
+	// release fails that release: it can never converge, and there is no deploy
+	// timeout to catch it.
+	It("fails the release when a pin-matched build terminally fails", func() {
+		r, checker, recorder := newEventReconciler()
+		active := &models.StackRelease{
+			ID: "rel-1",
+			Pins: models.ReleasePins{Resources: map[string]models.ResourcePins{
+				testEventResourceName: {GitSHA: "abc123"},
+			}},
+		}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhaseFailed)
+		cr.Status.LastBuildFailureDetail = &corev1alpha1.LastFailureDetail{
+			LastTerminationReason:  "Error",
+			LastTerminationMessage: "COPY failed: file not found",
+		}
+
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(active, nil)
+		recorder.EXPECT().
+			RecordBuildEvent(
+				gomock.Any(), active, testEventResourceName,
+				models.ReleaseEventTypeBuildFailed, testEventBuildID,
+				"", gomock.Any(),
+			).
+			Return(nil)
+		checker.EXPECT().
+			MarkFailed(gomock.Any(), "rel-1", "build failed for "+testEventResourceName+": COPY failed: file not found", nil).
+			Return(true, nil)
+
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("abc123"))
+	})
+
+	// Best-effort attribution is not enough to fail a release: the specs above
+	// with BuildPhaseFailed and no pin match set no MarkFailed expectation, so
+	// gomock rejects any call. A pin-matched but non-terminal attempt failure
+	// must not fail the release either.
+	It("does not fail the release on a pin-matched build attempt failure", func() {
+		r, checker, recorder := newEventReconciler()
+		active := &models.StackRelease{
+			ID: "rel-1",
+			Pins: models.ReleasePins{Resources: map[string]models.ResourcePins{
+				testEventResourceName: {GitSHA: "abc123"},
+			}},
+		}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhasePending)
+		cr.Status.LastBuildFailureDetail = &corev1alpha1.LastFailureDetail{
+			LastTerminationReason: "Error",
+		}
+
+		checker.EXPECT().
+			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
+			Return(active, nil)
+		recorder.EXPECT().
+			RecordBuildEvent(
+				gomock.Any(), active, testEventResourceName,
+				models.ReleaseEventTypeBuildAttemptFailed, testEventBuildID,
+				"", gomock.Any(),
+			).
+			Return(nil)
+		// No MarkFailed expectation: gomock fails the spec on any call.
+
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("abc123"))
+	})
+
 	It("swallows recorder errors", func() {
 		r, checker, recorder := newEventReconciler()
 		active := &models.StackRelease{ID: "rel-1"}

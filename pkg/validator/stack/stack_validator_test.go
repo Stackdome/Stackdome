@@ -506,17 +506,6 @@ func TestValidateForCreateRejectsMinSuccessfulAboveMax(t *testing.T) {
 	}
 }
 
-func TestValidateForCreateRejectsDeployTimeoutAboveMax(t *testing.T) {
-	v := newTestValidator(t)
-	spec := stackWithPorts(models.Port{Name: "http", Number: 8080, Protocol: "http"})
-	spec.Settings = &models.StackSettings{DeployTimeoutMinutes: models.MaxDeployTimeoutMinutes + 1}
-
-	err := v.ValidateForCreate(context.Background(), spec)
-	fe := requireSingleFieldError(t, err)
-	if got, want := fe.Message, "deploy_timeout_minutes must be at most 120"; got != want {
-		t.Fatalf("unexpected message: got %q want %q", got, want)
-	}
-}
 
 func TestValidateForCreateRejectsMinSuccessfulExceedingRetention(t *testing.T) {
 	v := newTestValidator(t)
@@ -547,19 +536,6 @@ func TestValidateShellRejectsRetentionLimitAboveMax(t *testing.T) {
 	}
 }
 
-func TestValidateShellRejectsDeployTimeoutAboveMax(t *testing.T) {
-	v := newTestValidator(t)
-	spec := &models.Stack{
-		Name:     "demo",
-		Settings: &models.StackSettings{DeployTimeoutMinutes: models.MaxDeployTimeoutMinutes + 1},
-	}
-
-	err := v.ValidateShell(context.Background(), spec)
-	fe := requireSingleFieldError(t, err)
-	if fe.Code != errors.VErrStackSettingsInvalid {
-		t.Fatalf("unexpected code: got %q want %q", fe.Code, errors.VErrStackSettingsInvalid)
-	}
-}
 
 func TestValidateShellRejectsMinSuccessfulExceedingRetention(t *testing.T) {
 	v := newTestValidator(t)
@@ -585,7 +561,6 @@ func TestValidateShellAcceptsValidSettings(t *testing.T) {
 		Settings: &models.StackSettings{
 			ReleaseRetentionLimit: 20,
 			MinSuccessfulReleases: 10,
-			DeployTimeoutMinutes:  30,
 		},
 	}
 
@@ -609,7 +584,6 @@ func TestValidateForCreateAcceptsValidSettings(t *testing.T) {
 	spec.Settings = &models.StackSettings{
 		ReleaseRetentionLimit: 20,
 		MinSuccessfulReleases: 10,
-		DeployTimeoutMinutes:  30,
 	}
 
 	err := v.ValidateForCreate(context.Background(), spec)
