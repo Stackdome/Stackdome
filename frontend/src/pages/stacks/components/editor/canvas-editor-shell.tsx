@@ -432,7 +432,9 @@ export function CanvasEditorShell({
               </>
             )}
           </div>
-          {opsBody && <div className="absolute inset-0 overflow-auto bg-background">{opsBody}</div>}
+          {/* z-20 clears the canvas layer's own z-10 children (the live-view
+              toggle), which stay mounted underneath. */}
+          {opsBody && <div className="absolute inset-0 z-20 overflow-auto bg-background">{opsBody}</div>}
         </div>
       </div>
     </HeaderCollapseContext.Provider>
