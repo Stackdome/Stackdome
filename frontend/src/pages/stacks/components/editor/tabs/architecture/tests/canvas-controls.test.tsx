@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, afterEach } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import { useState } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { SidebarProvider } from "@/components/ui/sidebar";
@@ -81,5 +81,15 @@ describe("CanvasControls", () => {
     render(<Harness onAutoLayout={onAutoLayout} />);
     fireEvent.click(screen.getByRole("button", { name: "Auto layout" }));
     expect(onAutoLayout).toHaveBeenCalled();
+  });
+
+  it("entering zen refits the view instead of rearranging the graph", () => {
+    vi.useFakeTimers();
+    const onAutoLayout = vi.fn();
+    render(<Harness onAutoLayout={onAutoLayout} />);
+    fireEvent.click(screen.getByRole("button", { name: "Zen mode" }));
+    act(() => { vi.advanceTimersByTime(500); });
+    expect(onAutoLayout).not.toHaveBeenCalled();
+    vi.useRealTimers();
   });
 });

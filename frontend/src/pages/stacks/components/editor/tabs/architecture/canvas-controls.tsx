@@ -34,12 +34,13 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
     const next = !zenActive;
     setHeaderCollapsed(next);
     setSidebarOpen(!next);
-    // Entering zen reclaims the header + sidebar space — re-layout once the
-    // collapse has settled so the fit measures the final pane size.
+    // Entering zen reclaims the header + sidebar space — refit once the collapse
+    // has settled so the fit measures the final pane size. Fit, not auto layout:
+    // zen reveals the graph, it doesn't rearrange what the user placed.
     // ponytail: 250ms outlasts the sidebar's 200ms transition; switch to a
     // transitionend listener if the timing ever drifts.
-    if (next) window.setTimeout(onAutoLayout, 250);
-  }, [zenActive, setHeaderCollapsed, setSidebarOpen, onAutoLayout]);
+    if (next) window.setTimeout(() => fitView(FIT_OPTIONS), 250);
+  }, [zenActive, setHeaderCollapsed, setSidebarOpen, fitView]);
 
   // ⌘. toggles zen. Lives here (not the shell) because zen also needs the
   // sidebar; the canvas stays mounted across tabs, so the shortcut is global.
@@ -72,7 +73,7 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
         </button>
         <span className="h-px w-full bg-border" aria-hidden />
         <button type="button" aria-label="Fit to view" title="Fit to view" className={cell} onClick={() => fitView(FIT_OPTIONS)}>
-          <Maximize2 className="size-3.5" />
+          <Focus className="size-3.5" />
         </button>
       </div>
       <div className="flex flex-col overflow-hidden rounded-md border border-border bg-popover shadow-lg">
@@ -94,7 +95,7 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
           onClick={toggleZen}
           className={cn(cell, zenActive && "text-brand")}
         >
-          <Focus className="size-4" />
+          <Maximize2 className="size-4" />
         </button>
       </div>
       <button
