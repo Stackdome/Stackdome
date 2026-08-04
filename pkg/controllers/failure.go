@@ -52,13 +52,25 @@ func MapFailureType(reason string) string {
 	}
 }
 
-func MapLastFailureDetails(resourceName string, details []corev1alpha1.LastFailureDetail) *models.StackResourceFailure {
-	if len(details) == 0 {
+// MapLastFailureDetails maps the CR's failure details onto the server-side
+// failure. Details stamped for a different release are dropped: the CR
+// outlives releases, so a detail captured under a previous rollout is stale.
+// An empty ReleaseID on either side keeps the detail (pre-annotation CR, or
+// an agent that predates the stamp).
+func MapLastFailureDetails(resourceName, releaseID string, details []corev1alpha1.LastFailureDetail) *models.StackResourceFailure {
+	current := details[:0:0]
+	for _, d := range details {
+		if releaseID != "" && d.ReleaseID != "" && d.ReleaseID != releaseID {
+			continue
+		}
+		current = append(current, d)
+	}
+	if len(current) == 0 {
 		return nil
 	}
-	failure := &models.StackResourceFailure{Type: failureTypeForDetails(details)}
+	failure := &models.StackResourceFailure{Type: failureTypeForDetails(current)}
 	initName := resourceName + "-init"
-	for _, d := range details {
+	for _, d := range current {
 		fd := mapContainerFailureDetail(d)
 		switch d.ContainerName {
 		case resourceName:

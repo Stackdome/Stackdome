@@ -92,7 +92,7 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Links[0].Kind).To(Equal(models.ReleaseEventLinkKindBuildLogs))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, "", failure)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, failure)).To(BeNil())
 		})
 
 		It("falls back to the failure reason in the build_failed message when no message was captured", func() {
@@ -102,7 +102,7 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Metadata[models.ReleaseEventMetaReason]).To(Equal("OOMKilled"))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, "", failure)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, failure)).To(BeNil())
 		})
 
 		It("omits failure detail and reason metadata when build_failed has no failure", func() {
@@ -111,7 +111,7 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Metadata).NotTo(HaveKey(models.ReleaseEventMetaReason))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, "", nil)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, nil)).To(BeNil())
 		})
 
 		It("records build_attempt_failed as a resource-scoped warning with retry wording", func() {
@@ -124,19 +124,11 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Metadata[models.ReleaseEventMetaReason]).To(Equal("StepFailed"))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildAttemptFailed, buildID, "", failure)).To(BeNil())
-		})
-
-		It("records attribution metadata when provided", func() {
-			expectInsert(func(ev *models.ReleaseEvent) {
-				Expect(ev.Metadata[models.ReleaseEventMetaAttribution]).To(Equal("dependency"))
-			})
-
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildStarted, buildID, "dependency", nil)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildAttemptFailed, buildID, failure)).To(BeNil())
 		})
 
 		It("rejects a non-build event type", func() {
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceReady, buildID, "", nil)).NotTo(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceReady, buildID, nil)).NotTo(BeNil())
 		})
 	})
 

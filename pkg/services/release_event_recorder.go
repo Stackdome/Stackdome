@@ -32,7 +32,7 @@ type ReleaseEventRecorder interface {
 	RecordReleaseCheckFailed(ctx context.Context, release *models.StackRelease, resourceName, check, reason string) *errors.ServiceError
 	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
-	RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError
+	RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, failure *models.BuildFailureDetail) *errors.ServiceError
 	RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string, message string) *errors.ServiceError
 	RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError
 }
@@ -188,7 +188,7 @@ func (r *releaseEventRecorder) RecordReleaseStarted(ctx context.Context, release
 	return serr
 }
 
-func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError {
+func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, failure *models.BuildFailureDetail) *errors.ServiceError {
 	var message string
 	switch eventType {
 	case models.ReleaseEventTypeBuildStarted:
@@ -203,9 +203,6 @@ func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *mo
 		return errors.GeneralError("unsupported build event type %q", eventType)
 	}
 	metadata := models.ReleaseEventMetadata{models.ReleaseEventMetaBuildID: buildID}
-	if attribution != "" {
-		metadata[models.ReleaseEventMetaAttribution] = attribution
-	}
 	if failure != nil && failure.Reason != "" {
 		metadata[models.ReleaseEventMetaReason] = failure.Reason
 	}

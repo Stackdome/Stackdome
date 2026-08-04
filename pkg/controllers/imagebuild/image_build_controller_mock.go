@@ -18,60 +18,6 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockreleaseActiveChecker is a mock of releaseActiveChecker interface.
-type MockreleaseActiveChecker struct {
-	ctrl     *gomock.Controller
-	recorder *MockreleaseActiveCheckerMockRecorder
-	isgomock struct{}
-}
-
-// MockreleaseActiveCheckerMockRecorder is the mock recorder for MockreleaseActiveChecker.
-type MockreleaseActiveCheckerMockRecorder struct {
-	mock *MockreleaseActiveChecker
-}
-
-// NewMockreleaseActiveChecker creates a new mock instance.
-func NewMockreleaseActiveChecker(ctrl *gomock.Controller) *MockreleaseActiveChecker {
-	mock := &MockreleaseActiveChecker{ctrl: ctrl}
-	mock.recorder = &MockreleaseActiveCheckerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockreleaseActiveChecker) EXPECT() *MockreleaseActiveCheckerMockRecorder {
-	return m.recorder
-}
-
-// InternalGetActiveByStackID mocks base method.
-func (m *MockreleaseActiveChecker) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalGetActiveByStackID", ctx, stackID)
-	ret0, _ := ret[0].(*models.StackRelease)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalGetActiveByStackID indicates an expected call of InternalGetActiveByStackID.
-func (mr *MockreleaseActiveCheckerMockRecorder) InternalGetActiveByStackID(ctx, stackID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseActiveChecker)(nil).InternalGetActiveByStackID), ctx, stackID)
-}
-
-// MarkFailed mocks base method.
-func (m *MockreleaseActiveChecker) MarkFailed(ctx context.Context, id, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MarkFailed", ctx, id, message, outcome)
-	ret0, _ := ret[0].(bool)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// MarkFailed indicates an expected call of MarkFailed.
-func (mr *MockreleaseActiveCheckerMockRecorder) MarkFailed(ctx, id, message, outcome any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkFailed", reflect.TypeOf((*MockreleaseActiveChecker)(nil).MarkFailed), ctx, id, message, outcome)
-}
-
 // MockstackClusterResolver is a mock of stackClusterResolver interface.
 type MockstackClusterResolver struct {
 	ctrl     *gomock.Controller
@@ -136,15 +82,15 @@ func (m *MockbuildEventRecorder) EXPECT() *MockbuildEventRecorderMockRecorder {
 }
 
 // RecordBuildEvent mocks base method.
-func (m *MockbuildEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError {
+func (m *MockbuildEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, failure *models.BuildFailureDetail) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordBuildEvent", ctx, release, resourceName, eventType, buildID, attribution, failure)
+	ret := m.ctrl.Call(m, "RecordBuildEvent", ctx, release, resourceName, eventType, buildID, failure)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
 // RecordBuildEvent indicates an expected call of RecordBuildEvent.
-func (mr *MockbuildEventRecorderMockRecorder) RecordBuildEvent(ctx, release, resourceName, eventType, buildID, attribution, failure any) *gomock.Call {
+func (mr *MockbuildEventRecorderMockRecorder) RecordBuildEvent(ctx, release, resourceName, eventType, buildID, failure any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordBuildEvent", reflect.TypeOf((*MockbuildEventRecorder)(nil).RecordBuildEvent), ctx, release, resourceName, eventType, buildID, attribution, failure)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordBuildEvent", reflect.TypeOf((*MockbuildEventRecorder)(nil).RecordBuildEvent), ctx, release, resourceName, eventType, buildID, failure)
 }

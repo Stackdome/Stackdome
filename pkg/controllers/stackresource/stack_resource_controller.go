@@ -169,48 +169,8 @@ func (w *stackResourceReconciler) recordResourceEvent(ctx context.Context, stack
 	w.recordOnRelease(ctx, release, resource.Name, ports)
 }
 
-// resolveRelease picks the release the CR's state belongs to:
-//
-//   - The CR's release annotation is authoritative — the apply step stamps it
-//     on every deploy.
-//   - Record on that release while it is active, or terminal but still the
-//     latest: a cert can finish issuing, or pods flip state, after the release
-//     is done.
-//   - Superseded (a newer sequence exists): drop. That state describes an old
-//     rollout.
-//   - No annotation (pre-annotation CR): fall back to the active release.
 func (w *stackResourceReconciler) resolveRelease(ctx context.Context, stackID string, cr *corev1alpha1.StackResource) *models.StackRelease {
-	releaseID := cr.Annotations[corev1alpha1.ReleaseIDAnnotation]
-	if releaseID == "" {
-		active, serr := w.releaseResolver.InternalGetActiveByStackID(ctx, stackID)
-		if serr != nil {
-			w.logger.Error(ctx, "failed to look up active release for stack %s: %v", stackID, serr)
-			return nil
-		}
-		return active
-	}
-
-	release, serr := w.releaseResolver.InternalGet(ctx, releaseID)
-	if serr != nil {
-		if !serr.Is404() {
-			w.logger.Error(ctx, "failed to look up release %s for stack %s: %v", releaseID, stackID, serr)
-		}
-		return nil
-	}
-	if release.State.Active() {
-		return release
-	}
-
-	latest, serr := w.releaseResolver.InternalGetLatestByStackID(ctx, stackID)
-	if serr != nil {
-		w.logger.Error(ctx, "failed to look up latest release for stack %s: %v", stackID, serr)
-		return nil
-	}
-	if latest == nil || latest.ID != release.ID {
-		w.logger.Debug(ctx, "CR for stack %s carries superseded release %s; skipping events", stackID, releaseID)
-		return nil
-	}
-	return release
+	return controllers.ResolveEventRelease(ctx, w.releaseResolver, w.logger, stackID, cr.Annotations[corev1alpha1.ReleaseIDAnnotation])
 }
 
 func (w *stackResourceReconciler) recordOnRelease(ctx context.Context, release *models.StackRelease, resourceName string, ev *releaseEvent) {
@@ -333,7 +293,7 @@ func mapClusterStatusToServerStatus(clusterInstance *corev1alpha1.StackResource)
 		PublicIngresses:        mapToPublicIngresses(clusterInstance.Status.ExternalAddress),
 		ObservedCrRevision:     clusterInstance.Status.ObservedRevision,
 		InternalServiceName:    clusterInstance.Status.InternalAddress,
-		LastFailure:            controllers.MapLastFailureDetails(clusterInstance.Name, clusterInstance.Status.LastFailureDetails),
+		LastFailure:            controllers.MapLastFailureDetails(clusterInstance.Name, clusterInstance.Annotations[corev1alpha1.ReleaseIDAnnotation], clusterInstance.Status.LastFailureDetails),
 		Replicas:               clusterInstance.Status.Replicas,
 		AvailableReplicas:      clusterInstance.Status.AvailableReplicas,
 		UpdatedReplicas:        clusterInstance.Status.UpdatedReplicas,

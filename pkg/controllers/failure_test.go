@@ -37,7 +37,7 @@ func TestMapFailureType(t *testing.T) {
 }
 
 func TestMapLastFailureDetails_nil(t *testing.T) {
-	got := controllers.MapLastFailureDetails("web", nil)
+	got := controllers.MapLastFailureDetails("web", "", nil)
 	if got != nil {
 		t.Errorf("expected nil for empty details, got %v", got)
 	}
@@ -53,7 +53,7 @@ func TestMapLastFailureDetails_mainContainer(t *testing.T) {
 			LastTerminationExitCode: ptr.To(int32(1)),
 		},
 	}
-	got := controllers.MapLastFailureDetails("web", details)
+	got := controllers.MapLastFailureDetails("web", "", details)
 	if got == nil {
 		t.Fatal("expected non-nil failure")
 	}
@@ -83,7 +83,7 @@ func TestMapLastFailureDetails_initContainer(t *testing.T) {
 			LastTerminationExitCode: ptr.To(int32(2)),
 		},
 	}
-	got := controllers.MapLastFailureDetails("web", details)
+	got := controllers.MapLastFailureDetails("web", "", details)
 	if got == nil {
 		t.Fatal("expected non-nil failure")
 	}
@@ -132,7 +132,7 @@ var _ = Describe("MapLastFailureDetails", func() {
 	const resourceName = "web"
 
 	It("types a readiness failure from the agent's detail type", func() {
-		failure := controllers.MapLastFailureDetails(resourceName, []corev1alpha1.LastFailureDetail{{
+		failure := controllers.MapLastFailureDetails(resourceName, "", []corev1alpha1.LastFailureDetail{{
 			Type:                   corev1alpha1.FailureTypeReadinessFailure,
 			ContainerName:          resourceName,
 			LastTerminationReason:  controllers.ReasonPortNotListening,
@@ -149,7 +149,7 @@ var _ = Describe("MapLastFailureDetails", func() {
 	})
 
 	It("treats an empty detail type as a runtime crash, for older agents", func() {
-		failure := controllers.MapLastFailureDetails(resourceName, []corev1alpha1.LastFailureDetail{{
+		failure := controllers.MapLastFailureDetails(resourceName, "", []corev1alpha1.LastFailureDetail{{
 			ContainerName:         resourceName,
 			LastTerminationReason: controllers.ReasonCrashLoopBackOff,
 			RestartCount:          5,
@@ -159,8 +159,58 @@ var _ = Describe("MapLastFailureDetails", func() {
 		Expect(failure.Container.FailureType).To(Equal(controllers.FailureTypeCrashLoop))
 	})
 
+	It("drops details stamped for a different release", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, "release-new", []corev1alpha1.LastFailureDetail{{
+			ContainerName:         resourceName,
+			LastTerminationReason: controllers.ReasonCrashLoopBackOff,
+			ReleaseID:             "release-old",
+		}})
+
+		Expect(failure).To(BeNil())
+	})
+
+	It("keeps details stamped for the resolved release", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, "release-new", []corev1alpha1.LastFailureDetail{{
+			ContainerName:         resourceName,
+			LastTerminationReason: controllers.ReasonCrashLoopBackOff,
+			ReleaseID:             "release-new",
+		}})
+
+		Expect(failure).NotTo(BeNil())
+		Expect(failure.Container.FailureType).To(Equal(controllers.FailureTypeCrashLoop))
+	})
+
+	It("keeps unstamped details, for agents that predate the stamp", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, "release-new", []corev1alpha1.LastFailureDetail{{
+			ContainerName:         resourceName,
+			LastTerminationReason: controllers.ReasonCrashLoopBackOff,
+		}})
+
+		Expect(failure).NotTo(BeNil())
+	})
+
+	It("keeps stamped details when the CR carries no release annotation", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, "", []corev1alpha1.LastFailureDetail{{
+			ContainerName:         resourceName,
+			LastTerminationReason: controllers.ReasonCrashLoopBackOff,
+			ReleaseID:             "release-old",
+		}})
+
+		Expect(failure).NotTo(BeNil())
+	})
+
+	It("filters stale details out of a mixed slice", func() {
+		failure := controllers.MapLastFailureDetails(resourceName, "release-new", []corev1alpha1.LastFailureDetail{
+			{Type: corev1alpha1.FailureTypeReadinessFailure, ContainerName: resourceName, ReleaseID: "release-old"},
+			{ContainerName: resourceName, LastTerminationReason: controllers.ReasonCrashLoopBackOff, ReleaseID: "release-new"},
+		})
+
+		Expect(failure.Type).To(Equal(models.FailureTypeRuntimeCrash))
+		Expect(failure.Container.FailureType).To(Equal(controllers.FailureTypeCrashLoop))
+	})
+
 	It("types a mixed slice as a readiness failure", func() {
-		failure := controllers.MapLastFailureDetails(resourceName, []corev1alpha1.LastFailureDetail{
+		failure := controllers.MapLastFailureDetails(resourceName, "", []corev1alpha1.LastFailureDetail{
 			{Type: corev1alpha1.FailureTypeRuntimeCrash, ContainerName: resourceName + "-init"},
 			{Type: corev1alpha1.FailureTypeReadinessFailure, ContainerName: resourceName},
 		})

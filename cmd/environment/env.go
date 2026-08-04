@@ -289,7 +289,7 @@ func (e *environmentImpl) initializeClusterManager(ctx context.Context) error {
 					DBImageBuildService:   e.Services.ImageBuildService,
 					DBResourceService:     e.Services.StackResourceService,
 					GitIntegrationService: e.Services.GitIntegrationService,
-					ReleaseChecker:        e.Services.StackReleaseService,
+					ReleaseResolver:       e.Services.StackReleaseService,
 					EventRecorder:         e.Services.ReleaseEventRecorder,
 					StackService:          e.Services.StackService,
 				})
@@ -776,6 +776,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		ReleaseService:       e.Services.StackReleaseService,
 		EventRecorder:        e.Services.ReleaseEventRecorder,
 		StackService:         e.Services.StackService,
+		ImageBuildService:    e.Services.ImageBuildService,
 		ClusterManager:       e.ClusterManager,
 		SecretService:        e.Services.SecretService,
 		CredentialResolver:   e.Services.CredentialResolver,

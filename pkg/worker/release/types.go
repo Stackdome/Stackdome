@@ -49,6 +49,10 @@ type eventRecorder interface {
 	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 }
 
+type imageBuildService interface {
+	ListByStackID(ctx context.Context, stackID string) ([]*models.ImageBuild, *errors.ServiceError)
+}
+
 type stackService interface {
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
 	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError

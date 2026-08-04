@@ -127,6 +127,10 @@ type ImageBuildStatus struct {
 	BuildSourceRevision    string              `json:"build_source_revision"`
 	LastObservedStatusHash string              `json:"last_observed_status_hash,omitempty"`
 	LastBuildFailureDetail *BuildFailureDetail `json:"last_build_failure_detail,omitempty"`
+	// ReleaseID is the release that triggered this build: the agent copies the
+	// parent StackResource's release-id annotation onto the ImageBuild at
+	// creation, and builds are never mutated after that.
+	ReleaseID string `json:"release_id,omitempty"`
 }
 
 // IsConditionTrue reports whether the status carries the given condition type
