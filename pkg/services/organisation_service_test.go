@@ -217,6 +217,39 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 	})
 })
 
+var _ = DescribeTable("slugRepeatsBaseLabel",
+	func(orgSlug, base string, want bool) {
+		Expect(slugRepeatsBaseLabel(orgSlug, base)).To(Equal(want))
+	},
+	Entry("slug equals the base's first label", "test", "test.stackdome.io", true),
+	Entry("slug distinct from every base label", "acme", "apps.example.com", false),
+	Entry("slug matching a deeper base label only", "stackdome", "test.stackdome.io", false),
+)
+
+var _ = Describe("seedOrgDomain", func() {
+	DescribeTable("picks a candidate that avoids identical sequential labels",
+		func(orgSlug, base, wantFirstCandidate string) {
+			ctrl := gomock.NewController(GinkgoT())
+			defer ctrl.Finish()
+			domainSvc := mocks.NewMockOrganisationDomainsService(ctrl)
+			svc := &organisationService{organisationDomainService: domainSvc, logger: logger.NewLogger()}
+			domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
+					Expect(spec.Domain).To(MatchRegexp(wantFirstCandidate))
+					return &models.OrganisationDomain{}, nil
+				})
+
+			Expect(svc.seedOrgDomain(context.Background(), "org-1", orgSlug, base)).To(BeNil())
+		},
+		Entry("a slug distinct from the base stays plain",
+			"acme", "apps.example.com", `^acme\.apps\.example\.com$`),
+		Entry("a slug equal to the base's first label goes straight to the suffixed form",
+			"test", "test.stackdome.io", `^test-[0-9a-f]{6}\.test\.stackdome\.io$`),
+		Entry("a slug matching a deeper base label stays plain",
+			"stackdome", "test.stackdome.io", `^stackdome\.test\.stackdome\.io$`),
+	)
+})
+
 var _ = Describe("orgRegistryName", func() {
 	const (
 		nameOrgID     = "11112222-3333-4444-5555-666677778888"
