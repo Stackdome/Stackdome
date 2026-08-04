@@ -8,10 +8,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { usePreviewLineage } from "@/hooks/use-preview-lineage"
 
 export function NavStacks() {
   const location = useLocation();
-  const isStacksActive = location.pathname.startsWith('/stacks');
+  const { lineage } = usePreviewLineage();
+  // A preview stack hands its highlight to Previews.
+  const isStacksActive = location.pathname.startsWith('/stacks') && !lineage;
 
   return (
     <SidebarMenu>

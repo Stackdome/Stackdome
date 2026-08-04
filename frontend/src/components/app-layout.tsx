@@ -11,7 +11,9 @@ import {
   BreadcrumbSeparator
 } from "@/components/ui/breadcrumb";
 import { BreadcrumbProvider } from "@/contexts/breadcrumb-context";
+import { PreviewLineageProvider } from "@/contexts/preview-lineage-context";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { usePreviewLineage } from "@/hooks/use-preview-lineage";
 import { useGithubSetupLanding } from "@/hooks/use-github-setup-landing";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
@@ -30,9 +32,23 @@ function AppLayoutContent({
   useGithubSetupLanding();
   const location = useLocation();
   const { customLabels, loadingLabels, nonClickablePaths } = useBreadcrumb();
+  const { lineage } = usePreviewLineage();
 
   // Parse the current path for breadcrumbs
   const pathSegments = location.pathname.split('/').filter(Boolean);
+
+  // A preview stack sits at /stacks/<id>, but it belongs to its preview config —
+  // swap the "Stacks" ancestor for the config that owns it.
+  const previewAncestors: BreadcrumbItemType[] | null = lineage
+    ? [
+        { name: 'Previews', path: '/previews', clickable: true },
+        {
+          name: lineage.configName ?? '...',
+          path: `/previews/${lineage.configId}`,
+          clickable: !!lineage.configName,
+        },
+      ]
+    : null;
 
   // Full-bleed layout for the canvas stack editor: /stacks/new (draft) and
   // /stacks/<id> (existing). A single trailing segment only — not /stacks.
@@ -41,6 +57,7 @@ function AppLayoutContent({
   // Create breadcrumb items based on the current path
   const breadcrumbItems: BreadcrumbItemType[] = [
     { name: 'Home', path: '/', clickable: true },
+    ...(previewAncestors ?? []),
     ...pathSegments.map((segment, index): BreadcrumbItemType => {
       const path = '/' + pathSegments.slice(0, index + 1).join('/');
       const clickable = !nonClickablePaths[path];
@@ -55,7 +72,9 @@ function AppLayoutContent({
       // Otherwise, capitalize the segment
       const name = segment.charAt(0).toUpperCase() + segment.slice(1);
       return { name, path, clickable };
-    }),
+    })
+    // The preview ancestors stand in for "Stacks", so drop that leading crumb.
+    .filter((_, index) => !previewAncestors || index > 0),
   ];
 
   return (
@@ -135,8 +154,10 @@ export function AppLayout({
   children?: React.ReactNode;
 }) {
   return (
-    <BreadcrumbProvider>
-      <AppLayoutContent children={children} />
-    </BreadcrumbProvider>
+    <PreviewLineageProvider>
+      <BreadcrumbProvider>
+        <AppLayoutContent children={children} />
+      </BreadcrumbProvider>
+    </PreviewLineageProvider>
   );
 }

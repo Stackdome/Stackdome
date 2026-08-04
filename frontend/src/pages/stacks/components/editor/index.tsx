@@ -45,6 +45,9 @@ import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-re
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
 import { addonIdsFromConnections } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { usePreviewLineage } from "@/hooks/use-preview-lineage";
+import { PREVIEW_CONFIG_ID_LABEL, PREVIEW_STACK_LABEL } from "@/contexts/preview-lineage-context";
+import { getPreviewConfig } from "@/api/preview-configs";
 import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -89,6 +92,7 @@ export default function CanvasEditorPage() {
   const [nameError, setNameError] = useState<string | undefined>();
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const { setLineage } = usePreviewLineage();
   const { toast } = useToast();
   const { projects, projectNameById, defaultProjectName } = useResourceProjects();
   const { canWrite } = useCurrentUser();
@@ -165,6 +169,35 @@ export default function CanvasEditorPage() {
     stackId: savedStack?.id || "",
   }), [savedStack, projectNameById, defaultProjectName]);
   const idsReady = !!deployIds.stackId && !!deployIds.projectName;
+
+  // Preview stacks live at /stacks/<id> but belong to a preview config; publish
+  // that so the breadcrumb and sidebar can place the page under Previews.
+  const previewConfigId = useMemo(() => {
+    const labels = savedStack?.labels ?? [];
+    if (!labels.some((l) => l.key === PREVIEW_STACK_LABEL && l.value === "true")) return undefined;
+    return labels.find((l) => l.key === PREVIEW_CONFIG_ID_LABEL)?.value;
+  }, [savedStack?.labels]);
+
+  useEffect(() => {
+    if (!previewConfigId) {
+      setLineage(null);
+      return;
+    }
+    setLineage({ configId: previewConfigId });
+    if (!deployIds.orgId || !deployIds.projectName) return;
+    let cancelled = false;
+    void getPreviewConfig(deployIds.orgId, deployIds.projectName, previewConfigId)
+      .then((config) => {
+        // Name only sharpens the crumb — a failed lookup leaves it loading, not broken.
+        if (!cancelled) setLineage({ configId: previewConfigId, configName: config.name });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [previewConfigId, deployIds.orgId, deployIds.projectName, setLineage]);
+
+  // Leaving the stack page hands the highlight back to Stacks.
+  useEffect(() => () => setLineage(null), [setLineage]);
+
   const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.projectName, deployIds.stackId);
 
