@@ -187,6 +187,7 @@ func (s *stackResourceService) prepareResource(ctx context.Context, stack *model
 	resource.StackID = stack.ID
 	resource.UserID = stack.UserID
 	resource.Namespace = stack.Namespace
+	applyStatefulWorkloadDefault(resource)
 	applyStackResourcePortDefaults(resource)
 	normalizeStackResourceReplicas(resource)
 	return s.populateRegistryUrlForResource(ctx, stack, resource)
@@ -204,7 +205,6 @@ func (s *stackResourceService) populateRegistryUrlForResource(ctx context.Contex
 }
 
 func (s *stackResourceService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
-	applyStatefulWorkloadDefault(resource)
 	if err := s.prepareResource(ctx, stack, resource); err != nil {
 		return nil, err
 	}
