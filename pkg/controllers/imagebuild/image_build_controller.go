@@ -27,10 +27,6 @@ const (
 
 //go:generate mockgen -source=image_build_controller.go -destination=image_build_controller_mock.go -package=imagebuild
 
-type releaseActiveChecker interface {
-	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *apperrors.ServiceError)
-}
-
 type stackClusterResolver interface {
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *apperrors.ServiceError)
 }
@@ -42,7 +38,6 @@ type buildEventRecorder interface {
 		resourceName string,
 		eventType models.ReleaseEventType,
 		buildID string,
-		attribution string,
 		failure *models.BuildFailureDetail,
 	) *apperrors.ServiceError
 }
@@ -55,7 +50,7 @@ type ImageBuildReconciler struct {
 	DBVolumeService       services.VolumeService
 	GitIntegrationService services.GitIntegrationService
 	Logger                logger.Logger
-	releaseChecker        releaseActiveChecker
+	releaseResolver       controllers.ReleaseResolver
 	eventRecorder         buildEventRecorder
 	stackResolver         stackClusterResolver
 
@@ -70,7 +65,7 @@ type ImageBuildReconcilerSpec struct {
 	DBResourceService     services.StackResourceService
 	GitIntegrationService services.GitIntegrationService
 	Log                   logger.Logger
-	ReleaseChecker        releaseActiveChecker
+	ReleaseResolver       controllers.ReleaseResolver
 	EventRecorder         buildEventRecorder
 	StackService          stackClusterResolver
 }
@@ -83,7 +78,7 @@ func NewImageBuildReconciler(spec ImageBuildReconcilerSpec) *ImageBuildReconcile
 		DBResourceService:     spec.DBResourceService,
 		GitIntegrationService: spec.GitIntegrationService,
 		Logger:                spec.Log,
-		releaseChecker:        spec.ReleaseChecker,
+		releaseResolver:       spec.ReleaseResolver,
 		eventRecorder:         spec.EventRecorder,
 		stackResolver:         spec.StackService,
 		clock:                 time.Now,
@@ -189,7 +184,7 @@ func (r *ImageBuildReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		if err := r.propagateBuildFailureToStackResource(ctx, dbStackResouce, imageBuild.Status); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to propagate build failure to stack resource: %w", err)
 		}
-		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild.Status)
+		dbResourceBuild.Status = mapClusterStatusToServerStatus(imageBuild)
 		if serr := r.DBImageBuildService.InternalUpdateStatus(ctx, dbResourceBuild.ID, dbResourceBuild.Status); serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update image build status: %w", serr)
 		}
@@ -227,7 +222,7 @@ func (r *ImageBuildReconciler) createImageBuildInDB(
 			SourceContext:           *dbSourceContext,
 			SourceRevision:          dbSourceRevision,
 		},
-		Status: mapClusterStatusToServerStatus(imageBuildCr.Status),
+		Status: mapClusterStatusToServerStatus(imageBuildCr),
 	}
 
 	_, serr := r.DBImageBuildService.InternalCreate(ctx, dbImageBuild)
@@ -301,20 +296,23 @@ func (r *ImageBuildReconciler) buildDBBuildSrcContextFromClusterObject(
 	return &res, nil
 }
 
-func mapClusterStatusToServerStatus(clusterStatus buildsv1alpha1.ImageBuildStatus) *models.ImageBuildStatus {
+func mapClusterStatusToServerStatus(cr *buildsv1alpha1.ImageBuild) *models.ImageBuildStatus {
 	return &models.ImageBuildStatus{
-		Conditions:             models.ConvertConditions(clusterStatus.Conditions),
-		State:                  string(clusterStatus.Phase),
-		ImageURL:               clusterStatus.ImageUrl,
-		BuildSourceRevision:    clusterStatus.BuildSourceRevision,
-		LastObservedStatusHash: clusterStatus.StatusHash,
-		LastBuildFailureDetail: controllers.MapBuildFailureDetail(clusterStatus.LastBuildFailureDetail),
+		Conditions:             models.ConvertConditions(cr.Status.Conditions),
+		State:                  string(cr.Status.Phase),
+		ImageURL:               cr.Status.ImageUrl,
+		BuildSourceRevision:    cr.Status.BuildSourceRevision,
+		LastObservedStatusHash: cr.Status.StatusHash,
+		LastBuildFailureDetail: controllers.MapBuildFailureDetail(cr.Status.LastBuildFailureDetail),
+		ReleaseID:              cr.Annotations[corev1alpha1.ReleaseIDAnnotation],
 	}
 }
 
 // recordBuildEvent emits a release event for an observed build phase transition.
-// It is best-effort: recorder failures and a missing active release window are
-// logged and swallowed so they never fail the reconcile.
+// The build's release-id annotation says which release the event belongs to —
+// same gating as the stackresource controller. Best-effort: recorder failures
+// and an unresolvable release are logged and swallowed so they never fail the
+// reconcile.
 func (r *ImageBuildReconciler) recordBuildEvent(
 	ctx context.Context,
 	stackID string,
@@ -343,51 +341,15 @@ func (r *ImageBuildReconciler) recordBuildEvent(
 		return
 	}
 
-	active, serr := r.releaseChecker.InternalGetActiveByStackID(ctx, stackID)
-	if serr != nil {
-		r.Logger.Debug(ctx, "no active release lookup for stack %s: %v", stackID, serr)
+	release := controllers.ResolveEventRelease(ctx, r.releaseResolver, r.Logger, stackID, cr.Annotations[corev1alpha1.ReleaseIDAnnotation])
+	if release == nil {
 		return
-	}
-	if active == nil {
-		r.Logger.Debug(ctx, "no active release for stack %s; skipping build event", stackID)
-		return
-	}
-
-	attribution := models.ReleaseEventAttributionActiveRelease
-	if buildMatchesReleasePins(active, cr.Spec.ResourceName, build.Spec.SourceRevision) {
-		// The active release's pins deterministically identify this build, so no
-		// best-effort attribution marker is needed.
-		attribution = ""
 	}
 
 	if recErr := r.eventRecorder.RecordBuildEvent(
-		ctx, active, cr.Spec.ResourceName, eventType, build.ID, attribution, failure,
+		ctx, release, cr.Spec.ResourceName, eventType, build.ID, failure,
 	); recErr != nil {
 		r.Logger.Error(ctx, "failed to record build event for build %s: %v", build.ID, recErr)
-	}
-}
-
-// buildMatchesReleasePins reports whether the active release's pins
-// deterministically identify this build's source revision for the resource. It
-// only returns true when the pins carry a matching per-resource revision;
-// absent per-resource revision data it returns false so the caller falls back
-// to best-effort active-release attribution.
-func buildMatchesReleasePins(
-	active *models.StackRelease,
-	resourceName string,
-	rev models.BuildSourceRevision,
-) bool {
-	pins, ok := active.Pins.Resources[resourceName]
-	if !ok {
-		return false
-	}
-	switch {
-	case rev.Git != nil && rev.Git.Commit != "":
-		return pins.GitSHA != "" && pins.GitSHA == rev.Git.Commit
-	case rev.Volume != nil && rev.Volume.CurrentVolumeHash != "":
-		return pins.VolumeHash != "" && pins.VolumeHash == rev.Volume.CurrentVolumeHash
-	default:
-		return false
 	}
 }
 

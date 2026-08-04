@@ -92,7 +92,7 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Links[0].Kind).To(Equal(models.ReleaseEventLinkKindBuildLogs))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, "", failure)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, failure)).To(BeNil())
 		})
 
 		It("falls back to the failure reason in the build_failed message when no message was captured", func() {
@@ -102,7 +102,7 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Metadata[models.ReleaseEventMetaReason]).To(Equal("OOMKilled"))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, "", failure)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, failure)).To(BeNil())
 		})
 
 		It("omits failure detail and reason metadata when build_failed has no failure", func() {
@@ -111,7 +111,7 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Metadata).NotTo(HaveKey(models.ReleaseEventMetaReason))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, "", nil)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildFailed, buildID, nil)).To(BeNil())
 		})
 
 		It("records build_attempt_failed as a resource-scoped warning with retry wording", func() {
@@ -124,19 +124,11 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.Metadata[models.ReleaseEventMetaReason]).To(Equal("StepFailed"))
 			})
 
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildAttemptFailed, buildID, "", failure)).To(BeNil())
-		})
-
-		It("records attribution metadata when provided", func() {
-			expectInsert(func(ev *models.ReleaseEvent) {
-				Expect(ev.Metadata[models.ReleaseEventMetaAttribution]).To(Equal("dependency"))
-			})
-
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildStarted, buildID, "dependency", nil)).To(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeBuildAttemptFailed, buildID, failure)).To(BeNil())
 		})
 
 		It("rejects a non-build event type", func() {
-			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceReady, buildID, "", nil)).NotTo(BeNil())
+			Expect(rec.RecordBuildEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceReady, buildID, nil)).NotTo(BeNil())
 		})
 	})
 
@@ -205,6 +197,50 @@ var _ = Describe("ReleaseEventRecorder", func() {
 				Expect(ev.DedupeKey).To(Equal("resource:api:resource_deploying:PortNotListening"))
 			})
 			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceDeploying, controllers.ReasonPortNotListening, "readiness check failed: nothing listening on port 8080")).To(BeNil())
+		})
+
+		It("records a closed declared port as a warning on a serving resource", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourcePortsClosed))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelWarning))
+				Expect(ev.Scope).To(Equal(models.ReleaseEventScopeResource))
+				Expect(ev.Message).To(Equal("api is serving, but port 80 not accepting connections"))
+				Expect(ev.DedupeKey).To(Equal("resource:api:resource_ports_closed:PortNotListening"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourcePortsClosed, controllers.ReasonPortNotListening, "port 80 not accepting connections")).To(BeNil())
+		})
+
+		It("records certificate issuing as an info event", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourceTLSIssuing))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelInfo))
+				Expect(ev.Scope).To(Equal(models.ReleaseEventScopeResource))
+				Expect(ev.Message).To(Equal("Issuing TLS certificate for api"))
+				Expect(ev.DedupeKey).To(Equal("resource:api:resource_tls_issuing:CertificateIssuing"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceTLSIssuing, controllers.ReasonCertificateIssuing, "waiting for certificate api-tls")).To(BeNil())
+		})
+
+		It("records certificate ready as a success event", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourceTLSReady))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelSuccess))
+				Expect(ev.Message).To(Equal("HTTPS ready for api"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceTLSReady, controllers.ReasonTLSReady, "")).To(BeNil())
+		})
+
+		It("records certificate failure as a warning with the http fallback note", func() {
+			expectInsert(func(ev *models.ReleaseEvent) {
+				Expect(ev.Type).To(Equal(models.ReleaseEventTypeResourceTLSFailed))
+				Expect(ev.Level).To(Equal(models.ReleaseEventLevelWarning))
+				Expect(ev.Message).To(Equal("TLS certificate not issued for api: issuance timed out; serving over HTTP"))
+			})
+
+			Expect(rec.RecordResourceEvent(context.Background(), newTestRelease(), resourceName, models.ReleaseEventTypeResourceTLSFailed, "CertificateTimedOut", "issuance timed out")).To(BeNil())
 		})
 
 		It("rejects a non-resource event type", func() {

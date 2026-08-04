@@ -46,6 +46,7 @@ type StackReleaseService interface {
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 	InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+	InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 	MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError)
 	SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError)
@@ -502,6 +503,10 @@ func (s *stackReleaseService) InternalGet(ctx context.Context, releaseID string)
 
 func (s *stackReleaseService) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
 	return s.store.GetActiveByStackID(ctx, stackID)
+}
+
+func (s *stackReleaseService) InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+	return s.store.GetLatestByStackID(ctx, stackID)
 }
 
 func (s *stackReleaseService) InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {

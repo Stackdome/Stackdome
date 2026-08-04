@@ -7892,11 +7892,6 @@ export interface components {
              * @default 5
              */
             min_successful_releases: number;
-            /**
-             * @description Minutes to wait for a deploy to converge before marking it failed
-             * @default 15
-             */
-            deploy_timeout_minutes: number;
         };
         StackList: {
             items?: components["schemas"]["Stack"][];

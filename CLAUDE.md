@@ -50,6 +50,35 @@ Notes:
 - **Mocks:** Always use `go.uber.org/mock/gomock` + `mockgen`. Never hand-roll mock structs. For package-private interfaces, generate mocks in-package with `mockgen -source=<file>.go -destination=<file>_mock.go -package=<pkg>` and add a `//go:generate` directive to the source file. Generated mock files do NOT take a `_test` suffix — `<file>_mock.go`, never `<file>_mock_test.go`. Existing generated mocks live in `pkg/mocks/` (for exported interfaces) and `*_mock.go` files (for in-package interfaces); older `*_mock_test.go` files may be renamed when their package is next touched.
 - **No magic strings.** Always use defined constants (model enums, annotation keys, state values, error codes) instead of raw string literals. This applies to both production code and tests — e.g. use `models.ReleaseStateReleased` not `"Released"`, `models.SkipClusterProvisioningAnnotation` not `"stack.stackdome.io/skip-cluster-provisioning"`. If no constant exists and one is needed, define it first. If a raw string is truly unavoidable, get explicit approval before using it.
 - **No defensive programming.** Never write `if s.someValidator != nil { ... }` around work that must always happen (validation, authorization, persistence), and do NOT add explicit nil-check-and-panic guards in constructors either (`if spec.X == nil { panic(...) }`). A missing required dependency is a wiring bug: just use the dependency unconditionally and let the natural nil-pointer panic surface it — e2e tests catch mis-wiring. Nil-guards are only acceptable for genuinely optional behavior where nil substitutes a default implementation (e.g. `RegistryClients` → real client) — never where nil silently skips the work. Tests wire every seam with mocks instead of relying on skip-when-nil.
+- **Comments: simple, short, useful.** Write them in plain language a tired reader can parse. Use bullet points when the comment covers more than one thing. Add a short example when the code calls for it (a tricky format, a non-obvious input). Be brief — nobody reads a wall of LLM-generated prose, and a long comment is usually a sign the code should be clearer instead.
+
+  ```go
+  // Bad: one dense paragraph restating the code.
+  // recordResourceEvent records the observed resource state onto the active
+  // release timeline. It runs only inside the StatusHash-change gate, so each
+  // state transition is recorded at most once. A missing active release or a
+  // recorder failure is non-fatal: the status update has already been persisted...
+
+  // Good: says what matters, in bullets.
+  //   - Runs only when StatusHash changed, so each state is recorded once.
+  //   - TLS events fall back to the latest release: a cert can finish issuing
+  //     after the release is done.
+  //   - No release, or a failed record: log and move on. Status is already saved.
+  ```
+- **Don't comment for the sake of it. Code is the best comment.** A comment that restates the line below it is noise. Before writing one, try to make the comment unnecessary: a clearer name, a smaller function, an extracted helper, an early return. Comment only what the code genuinely cannot say — why a non-obvious choice was made, a constraint imposed from outside (an agent's behaviour, a k8s rule), a surprising ordering. Always strive for simplicity and readability.
+
+  ```go
+  // Noise — the code already says this.
+  // increment the retry count
+  retries++
+
+  // Better — no comment needed, the name carries it.
+  func currentGenCondition(cr *corev1alpha1.StackResource, condType string) *metav1.Condition
+
+  // Worth keeping — the reason is invisible from the code.
+  // Pre-0.6.11 agents set True on issuer discovery alone, so key on the reason.
+  case cond.Status == metav1.ConditionTrue && cond.Reason == controllers.ReasonTLSReady:
+  ```
 
 ## Agent skills
 

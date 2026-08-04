@@ -23,17 +23,14 @@ const (
 const (
 	DefaultReleaseRetentionLimit = 10
 	DefaultMinSuccessfulReleases = 5
-	DefaultDeployTimeoutMinutes  = 15
 
 	MaxReleaseRetentionLimit = 50
 	MaxMinSuccessfulReleases = 20
-	MaxDeployTimeoutMinutes  = 120
 )
 
 type StackSettings struct {
 	ReleaseRetentionLimit int `json:"release_retention_limit"`
 	MinSuccessfulReleases int `json:"min_successful_releases"`
-	DeployTimeoutMinutes  int `json:"deploy_timeout_minutes"`
 }
 
 func (s *StackSettings) Scan(value interface{}) error {
@@ -55,7 +52,6 @@ func (s *Stack) EffectiveSettings() StackSettings {
 	settings := StackSettings{
 		ReleaseRetentionLimit: DefaultReleaseRetentionLimit,
 		MinSuccessfulReleases: DefaultMinSuccessfulReleases,
-		DeployTimeoutMinutes:  DefaultDeployTimeoutMinutes,
 	}
 	if s.Settings == nil {
 		return settings
@@ -65,9 +61,6 @@ func (s *Stack) EffectiveSettings() StackSettings {
 	}
 	if s.Settings.MinSuccessfulReleases > 0 {
 		settings.MinSuccessfulReleases = s.Settings.MinSuccessfulReleases
-	}
-	if s.Settings.DeployTimeoutMinutes > 0 {
-		settings.DeployTimeoutMinutes = s.Settings.DeployTimeoutMinutes
 	}
 	return settings
 }

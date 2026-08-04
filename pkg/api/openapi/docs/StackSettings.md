@@ -6,7 +6,6 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **ReleaseRetentionLimit** | Pointer to **int32** | Maximum total releases to retain per stack | [optional] [default to 10]
 **MinSuccessfulReleases** | Pointer to **int32** | Minimum number of successful releases to always keep | [optional] [default to 5]
-**DeployTimeoutMinutes** | Pointer to **int32** | Minutes to wait for a deploy to converge before marking it failed | [optional] [default to 15]
 
 ## Methods
 
@@ -76,31 +75,6 @@ SetMinSuccessfulReleases sets MinSuccessfulReleases field to given value.
 `func (o *StackSettings) HasMinSuccessfulReleases() bool`
 
 HasMinSuccessfulReleases returns a boolean if a field has been set.
-
-### GetDeployTimeoutMinutes
-
-`func (o *StackSettings) GetDeployTimeoutMinutes() int32`
-
-GetDeployTimeoutMinutes returns the DeployTimeoutMinutes field if non-nil, zero value otherwise.
-
-### GetDeployTimeoutMinutesOk
-
-`func (o *StackSettings) GetDeployTimeoutMinutesOk() (*int32, bool)`
-
-GetDeployTimeoutMinutesOk returns a tuple with the DeployTimeoutMinutes field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetDeployTimeoutMinutes
-
-`func (o *StackSettings) SetDeployTimeoutMinutes(v int32)`
-
-SetDeployTimeoutMinutes sets DeployTimeoutMinutes field to given value.
-
-### HasDeployTimeoutMinutes
-
-`func (o *StackSettings) HasDeployTimeoutMinutes() bool`
-
-HasDeployTimeoutMinutes returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

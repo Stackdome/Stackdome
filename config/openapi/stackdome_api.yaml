@@ -4834,10 +4834,6 @@ components:
           type: integer
           default: 5
           description: Minimum number of successful releases to always keep
-        deploy_timeout_minutes:
-          type: integer
-          default: 15
-          description: Minutes to wait for a deploy to converge before marking it failed
 
     StackList:
       type: object

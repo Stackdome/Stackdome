@@ -24,8 +24,8 @@ frontend:
 .PHONY: frontend
 
 MOCKGEN := $(shell go env GOPATH)/bin/mockgen
-mocks: $(MOCKGEN)
-	go generate ./pkg/stores/... ./pkg/logger/... ./pkg/validator/... ./pkg/services/... ./pkg/auth/... ./pkg/worker/stack/... ./pkg/worker/release/... ./pkg/clients/... ./pkg/credentials/... ./pkg/clustermanager/... ./pkg/handlers/... ./pkg/resourceaccess/...
+mocks: 20 20 12 61 79 80 81 98 33 100 204 250 395 398 399 400 701MOCKGEN)
+	go generate ./pkg/controllers ./pkg/stores/... ./pkg/logger/... ./pkg/validator/... ./pkg/services/... ./pkg/auth/... ./pkg/worker/stack/... ./pkg/worker/release/... ./pkg/clients/... ./pkg/credentials/... ./pkg/clustermanager/... ./pkg/handlers/... ./pkg/resourceaccess/...
 .PHONY: mocks
 
 $(MOCKGEN):

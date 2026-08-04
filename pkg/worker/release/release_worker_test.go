@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -218,8 +219,10 @@ var _ = Describe("ConvergeReconciler", func() {
 		Expect(result.resultStop).To(BeTrue(), "expected resultStop when CAS fails")
 	})
 
-	It("marks failed and stops on deploy timeout", func() {
-		past := time.Now().UTC().Add(-time.Duration(models.DefaultDeployTimeoutMinutes)*time.Minute - time.Minute)
+	// There is no deploy timeout: a slow build or convergence never fails the
+	// release on time alone. It keeps polling however old the render is.
+	It("keeps polling a long-unconverged release instead of failing it", func() {
+		past := time.Now().UTC().Add(-24 * time.Hour)
 
 		release := &models.StackRelease{
 			ID:               "rel-1",
@@ -229,24 +232,110 @@ var _ = Describe("ConvergeReconciler", func() {
 			Manifest:         &models.ReleaseManifest{},
 		}
 
-		relSvc := NewMockreleaseService(ctrl)
-		relSvc.EXPECT().MarkFailed(gomock.Any(), "rel-1", gomock.Any(), gomock.Any()).
-			Return(true, nil)
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{ID: "stack-1"}, nil)
+
+		buildSvc := NewMockimageBuildService(ctrl)
+		buildSvc.EXPECT().ListByStackID(gomock.Any(), "stack-1").Return(nil, nil)
+
+		r := &convergeReconciler{
+			// No expectations: any MarkFailed call fails the test.
+			releaseService:    NewMockreleaseService(ctrl),
+			stackService:      stackSvc,
+			imageBuildService: buildSvc,
+			logger:            testLogger(),
+		}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultRequeueAfter).ToNot(BeNil())
+		Expect(*result.resultRequeueAfter).To(Equal(convergencePollInterval))
+	})
+
+	// The fail-fast that replaced the deploy timeout: a terminally failed build
+	// this release triggered can never converge.
+	It("marks failed and stops when this release's build terminally fails", func() {
+		release := &models.StackRelease{
+			ID:               "rel-1",
+			StackID:          "stack-1",
+			ManifestRevision: "rev-1",
+			Manifest:         &models.ReleaseManifest{},
+		}
 
 		stackSvc := NewMockstackService(ctrl)
 		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
 			Return(&models.Stack{ID: "stack-1"}, nil)
 
+		buildSvc := NewMockimageBuildService(ctrl)
+		buildSvc.EXPECT().ListByStackID(gomock.Any(), "stack-1").Return([]*models.ImageBuild{{
+			StackResourceName: "web",
+			Status: &models.ImageBuildStatus{
+				State:                  string(buildsv1alpha1.BuildPhaseFailed),
+				ReleaseID:              "rel-1",
+				LastBuildFailureDetail: &models.BuildFailureDetail{Message: "COPY failed: file not found"},
+			},
+		}}, nil)
+
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().
+			MarkFailed(gomock.Any(), "rel-1", "build failed for web: COPY failed: file not found", gomock.Any()).
+			Return(true, nil)
+
 		r := &convergeReconciler{
-			releaseService: relSvc,
-			stackService:   stackSvc,
-			logger:         testLogger(),
+			releaseService:    relSvc,
+			stackService:      stackSvc,
+			imageBuildService: buildSvc,
+			logger:            testLogger(),
 		}
 
 		result, err := r.Reconcile(context.Background(), release)
 		Expect(err).ToNot(HaveOccurred())
 		Expect(result.resultStop).To(BeTrue())
 	})
+
+	// Another release's failed build — or one from an agent that predates the
+	// release-id annotation — says nothing about this release: keep polling.
+	DescribeTable("keeps polling on a failed build that is not this release's",
+		func(build *models.ImageBuild) {
+			release := &models.StackRelease{
+				ID:               "rel-2",
+				StackID:          "stack-1",
+				ManifestRevision: "rev-2",
+				Manifest:         &models.ReleaseManifest{},
+			}
+
+			stackSvc := NewMockstackService(ctrl)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+				Return(&models.Stack{ID: "stack-1"}, nil)
+
+			buildSvc := NewMockimageBuildService(ctrl)
+			buildSvc.EXPECT().ListByStackID(gomock.Any(), "stack-1").
+				Return([]*models.ImageBuild{build}, nil)
+
+			r := &convergeReconciler{
+				releaseService:    NewMockreleaseService(ctrl),
+				stackService:      stackSvc,
+				imageBuildService: buildSvc,
+				logger:            testLogger(),
+			}
+
+			result, err := r.Reconcile(context.Background(), release)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.resultRequeueAfter).ToNot(BeNil())
+		},
+		Entry("prior release's failure", &models.ImageBuild{
+			StackResourceName: "web",
+			Status: &models.ImageBuildStatus{
+				State:     string(buildsv1alpha1.BuildPhaseFailed),
+				ReleaseID: "rel-1",
+			},
+		}),
+		Entry("no release id on the build", &models.ImageBuild{
+			StackResourceName: "web",
+			Status:            &models.ImageBuildStatus{State: string(buildsv1alpha1.BuildPhaseFailed)},
+		}),
+	)
 
 	It("requeues at the convergence poll interval when not yet converged", func() {
 		now := time.Now().UTC()
@@ -263,10 +352,14 @@ var _ = Describe("ConvergeReconciler", func() {
 		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
 			Return(&models.Stack{ID: "stack-1"}, nil)
 
+		buildSvc := NewMockimageBuildService(ctrl)
+		buildSvc.EXPECT().ListByStackID(gomock.Any(), "stack-1").Return(nil, nil)
+
 		r := &convergeReconciler{
-			releaseService: NewMockreleaseService(ctrl),
-			stackService:   stackSvc,
-			logger:         testLogger(),
+			releaseService:    NewMockreleaseService(ctrl),
+			stackService:      stackSvc,
+			imageBuildService: buildSvc,
+			logger:            testLogger(),
 		}
 
 		result, err := r.Reconcile(context.Background(), release)

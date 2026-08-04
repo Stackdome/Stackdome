@@ -310,6 +310,45 @@ func (mr *MockeventRecorderMockRecorder) RecordReleaseStarted(ctx, release any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseStarted", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseStarted), ctx, release)
 }
 
+// MockimageBuildService is a mock of imageBuildService interface.
+type MockimageBuildService struct {
+	ctrl     *gomock.Controller
+	recorder *MockimageBuildServiceMockRecorder
+	isgomock struct{}
+}
+
+// MockimageBuildServiceMockRecorder is the mock recorder for MockimageBuildService.
+type MockimageBuildServiceMockRecorder struct {
+	mock *MockimageBuildService
+}
+
+// NewMockimageBuildService creates a new mock instance.
+func NewMockimageBuildService(ctrl *gomock.Controller) *MockimageBuildService {
+	mock := &MockimageBuildService{ctrl: ctrl}
+	mock.recorder = &MockimageBuildServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockimageBuildService) EXPECT() *MockimageBuildServiceMockRecorder {
+	return m.recorder
+}
+
+// ListByStackID mocks base method.
+func (m *MockimageBuildService) ListByStackID(ctx context.Context, stackID string) ([]*models.ImageBuild, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByStackID", ctx, stackID)
+	ret0, _ := ret[0].([]*models.ImageBuild)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListByStackID indicates an expected call of ListByStackID.
+func (mr *MockimageBuildServiceMockRecorder) ListByStackID(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByStackID", reflect.TypeOf((*MockimageBuildService)(nil).ListByStackID), ctx, stackID)
+}
+
 // MockstackService is a mock of stackService interface.
 type MockstackService struct {
 	ctrl     *gomock.Controller

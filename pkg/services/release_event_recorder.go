@@ -32,7 +32,7 @@ type ReleaseEventRecorder interface {
 	RecordReleaseCheckFailed(ctx context.Context, release *models.StackRelease, resourceName, check, reason string) *errors.ServiceError
 	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 	RecordReleaseStarted(ctx context.Context, release *models.StackRelease) *errors.ServiceError
-	RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError
+	RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, failure *models.BuildFailureDetail) *errors.ServiceError
 	RecordResourceEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, reason string, message string) *errors.ServiceError
 	RecordReleaseTerminal(ctx context.Context, release *models.StackRelease, state models.StackReleaseState, message string) *errors.ServiceError
 }
@@ -56,6 +56,10 @@ var eventTypeMeta = map[models.ReleaseEventType]struct {
 	models.ReleaseEventTypeResourceDeploying:    {models.ReleaseEventScopeResource, models.ReleaseEventLevelInfo},
 	models.ReleaseEventTypeResourceReady:        {models.ReleaseEventScopeResource, models.ReleaseEventLevelSuccess},
 	models.ReleaseEventTypeResourceFailed:       {models.ReleaseEventScopeResource, models.ReleaseEventLevelError},
+	models.ReleaseEventTypeResourcePortsClosed:  {models.ReleaseEventScopeResource, models.ReleaseEventLevelWarning},
+	models.ReleaseEventTypeResourceTLSIssuing:   {models.ReleaseEventScopeResource, models.ReleaseEventLevelInfo},
+	models.ReleaseEventTypeResourceTLSReady:     {models.ReleaseEventScopeResource, models.ReleaseEventLevelSuccess},
+	models.ReleaseEventTypeResourceTLSFailed:    {models.ReleaseEventScopeResource, models.ReleaseEventLevelWarning},
 	models.ReleaseEventTypeReleaseReleased:      {models.ReleaseEventScopeRelease, models.ReleaseEventLevelSuccess},
 	models.ReleaseEventTypeReleaseFailed:        {models.ReleaseEventScopeRelease, models.ReleaseEventLevelError},
 	models.ReleaseEventTypeReleaseSuperseded:    {models.ReleaseEventScopeRelease, models.ReleaseEventLevelWarning},
@@ -184,7 +188,7 @@ func (r *releaseEventRecorder) RecordReleaseStarted(ctx context.Context, release
 	return serr
 }
 
-func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError {
+func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, failure *models.BuildFailureDetail) *errors.ServiceError {
 	var message string
 	switch eventType {
 	case models.ReleaseEventTypeBuildStarted:
@@ -199,9 +203,6 @@ func (r *releaseEventRecorder) RecordBuildEvent(ctx context.Context, release *mo
 		return errors.GeneralError("unsupported build event type %q", eventType)
 	}
 	metadata := models.ReleaseEventMetadata{models.ReleaseEventMetaBuildID: buildID}
-	if attribution != "" {
-		metadata[models.ReleaseEventMetaAttribution] = attribution
-	}
 	if failure != nil && failure.Reason != "" {
 		metadata[models.ReleaseEventMetaReason] = failure.Reason
 	}
@@ -258,6 +259,17 @@ func (r *releaseEventRecorder) RecordResourceEvent(
 		text = fmt.Sprintf("%s failed to start", resourceName)
 		if detail != "" {
 			text = fmt.Sprintf("%s: %s", text, detail)
+		}
+	case models.ReleaseEventTypeResourcePortsClosed:
+		text = fmt.Sprintf("%s is serving, but %s", resourceName, detail)
+	case models.ReleaseEventTypeResourceTLSIssuing:
+		text = fmt.Sprintf("Issuing TLS certificate for %s", resourceName)
+	case models.ReleaseEventTypeResourceTLSReady:
+		text = fmt.Sprintf("HTTPS ready for %s", resourceName)
+	case models.ReleaseEventTypeResourceTLSFailed:
+		text = fmt.Sprintf("TLS certificate not issued for %s; serving over HTTP", resourceName)
+		if detail != "" {
+			text = fmt.Sprintf("TLS certificate not issued for %s: %s; serving over HTTP", resourceName, detail)
 		}
 	default:
 		return errors.GeneralError("unsupported resource event type %q", eventType)

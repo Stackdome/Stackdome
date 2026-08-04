@@ -87,7 +87,6 @@ func presentStackSettings(s *models.Stack) *openapi.StackSettings {
 	return &openapi.StackSettings{
 		ReleaseRetentionLimit: ptr.To(int32(effective.ReleaseRetentionLimit)),
 		MinSuccessfulReleases: ptr.To(int32(effective.MinSuccessfulReleases)),
-		DeployTimeoutMinutes:  ptr.To(int32(effective.DeployTimeoutMinutes)),
 	}
 }
 
@@ -350,9 +349,6 @@ func convertStackSettings(s *openapi.StackSettings) *models.StackSettings {
 	}
 	if s.MinSuccessfulReleases != nil {
 		result.MinSuccessfulReleases = int(*s.MinSuccessfulReleases)
-	}
-	if s.DeployTimeoutMinutes != nil {
-		result.DeployTimeoutMinutes = int(*s.DeployTimeoutMinutes)
 	}
 	return result
 }

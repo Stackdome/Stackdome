@@ -606,7 +606,6 @@ const StackSettings = z
   .object({
     release_retention_limit: z.number().int().default(10),
     min_successful_releases: z.number().int().default(5),
-    deploy_timeout_minutes: z.number().int().default(15),
   })
   .partial()
   .passthrough();

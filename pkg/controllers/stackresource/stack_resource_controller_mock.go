@@ -18,32 +18,47 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockreleaseActiveChecker is a mock of releaseActiveChecker interface.
-type MockreleaseActiveChecker struct {
+// MockreleaseResolver is a mock of releaseResolver interface.
+type MockreleaseResolver struct {
 	ctrl     *gomock.Controller
-	recorder *MockreleaseActiveCheckerMockRecorder
+	recorder *MockreleaseResolverMockRecorder
 	isgomock struct{}
 }
 
-// MockreleaseActiveCheckerMockRecorder is the mock recorder for MockreleaseActiveChecker.
-type MockreleaseActiveCheckerMockRecorder struct {
-	mock *MockreleaseActiveChecker
+// MockreleaseResolverMockRecorder is the mock recorder for MockreleaseResolver.
+type MockreleaseResolverMockRecorder struct {
+	mock *MockreleaseResolver
 }
 
-// NewMockreleaseActiveChecker creates a new mock instance.
-func NewMockreleaseActiveChecker(ctrl *gomock.Controller) *MockreleaseActiveChecker {
-	mock := &MockreleaseActiveChecker{ctrl: ctrl}
-	mock.recorder = &MockreleaseActiveCheckerMockRecorder{mock}
+// NewMockreleaseResolver creates a new mock instance.
+func NewMockreleaseResolver(ctrl *gomock.Controller) *MockreleaseResolver {
+	mock := &MockreleaseResolver{ctrl: ctrl}
+	mock.recorder = &MockreleaseResolverMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockreleaseActiveChecker) EXPECT() *MockreleaseActiveCheckerMockRecorder {
+func (m *MockreleaseResolver) EXPECT() *MockreleaseResolverMockRecorder {
 	return m.recorder
 }
 
+// InternalGet mocks base method.
+func (m *MockreleaseResolver) InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGet", ctx, releaseID)
+	ret0, _ := ret[0].(*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGet indicates an expected call of InternalGet.
+func (mr *MockreleaseResolverMockRecorder) InternalGet(ctx, releaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockreleaseResolver)(nil).InternalGet), ctx, releaseID)
+}
+
 // InternalGetActiveByStackID mocks base method.
-func (m *MockreleaseActiveChecker) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+func (m *MockreleaseResolver) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InternalGetActiveByStackID", ctx, stackID)
 	ret0, _ := ret[0].(*models.StackRelease)
@@ -52,9 +67,24 @@ func (m *MockreleaseActiveChecker) InternalGetActiveByStackID(ctx context.Contex
 }
 
 // InternalGetActiveByStackID indicates an expected call of InternalGetActiveByStackID.
-func (mr *MockreleaseActiveCheckerMockRecorder) InternalGetActiveByStackID(ctx, stackID any) *gomock.Call {
+func (mr *MockreleaseResolverMockRecorder) InternalGetActiveByStackID(ctx, stackID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseActiveChecker)(nil).InternalGetActiveByStackID), ctx, stackID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseResolver)(nil).InternalGetActiveByStackID), ctx, stackID)
+}
+
+// InternalGetLatestByStackID mocks base method.
+func (m *MockreleaseResolver) InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetLatestByStackID", ctx, stackID)
+	ret0, _ := ret[0].(*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetLatestByStackID indicates an expected call of InternalGetLatestByStackID.
+func (mr *MockreleaseResolverMockRecorder) InternalGetLatestByStackID(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetLatestByStackID", reflect.TypeOf((*MockreleaseResolver)(nil).InternalGetLatestByStackID), ctx, stackID)
 }
 
 // MockresourceEventRecorder is a mock of resourceEventRecorder interface.

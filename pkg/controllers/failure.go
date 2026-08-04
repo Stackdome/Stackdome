@@ -17,6 +17,14 @@ const (
 	ReasonPortNotListening     = "PortNotListening"
 )
 
+// TLSConfigured condition reasons written by the cluster agent's certificate
+// stage; the agent does not export them. Any other False reason is a terminal
+// issuance failure (the site serves plain HTTP).
+const (
+	ReasonTLSReady           = "TLSReady"
+	ReasonCertificateIssuing = "CertificateIssuing"
+)
+
 // Container-detail failure types exposed by the API.
 const (
 	FailureTypeCrashLoop            = "crash_loop"
@@ -44,13 +52,25 @@ func MapFailureType(reason string) string {
 	}
 }
 
-func MapLastFailureDetails(resourceName string, details []corev1alpha1.LastFailureDetail) *models.StackResourceFailure {
-	if len(details) == 0 {
+// MapLastFailureDetails maps the CR's failure details onto the server-side
+// failure. Details stamped for a different release are dropped: the CR
+// outlives releases, so a detail captured under a previous rollout is stale.
+// An empty ReleaseID on either side keeps the detail (pre-annotation CR, or
+// an agent that predates the stamp).
+func MapLastFailureDetails(resourceName, releaseID string, details []corev1alpha1.LastFailureDetail) *models.StackResourceFailure {
+	current := details[:0:0]
+	for _, d := range details {
+		if releaseID != "" && d.ReleaseID != "" && d.ReleaseID != releaseID {
+			continue
+		}
+		current = append(current, d)
+	}
+	if len(current) == 0 {
 		return nil
 	}
-	failure := &models.StackResourceFailure{Type: failureTypeForDetails(details)}
+	failure := &models.StackResourceFailure{Type: failureTypeForDetails(current)}
 	initName := resourceName + "-init"
-	for _, d := range details {
+	for _, d := range current {
 		fd := mapContainerFailureDetail(d)
 		switch d.ContainerName {
 		case resourceName:

@@ -27,6 +27,12 @@ const (
 	ReleaseEventTypeResourceDeploying  ReleaseEventType = "resource_deploying"
 	ReleaseEventTypeResourceReady      ReleaseEventType = "resource_ready"
 	ReleaseEventTypeResourceFailed     ReleaseEventType = "resource_failed"
+	// ReleaseEventTypeResourcePortsClosed: the rollout landed but a declared
+	// port is not accepting connections.
+	ReleaseEventTypeResourcePortsClosed ReleaseEventType = "resource_ports_closed"
+	ReleaseEventTypeResourceTLSIssuing ReleaseEventType = "resource_tls_issuing"
+	ReleaseEventTypeResourceTLSReady   ReleaseEventType = "resource_tls_ready"
+	ReleaseEventTypeResourceTLSFailed  ReleaseEventType = "resource_tls_failed"
 	ReleaseEventTypeReleaseReleased    ReleaseEventType = "release_released"
 	ReleaseEventTypeReleaseFailed      ReleaseEventType = "release_failed"
 	ReleaseEventTypeReleaseSuperseded  ReleaseEventType = "release_superseded"
@@ -58,18 +64,10 @@ const (
 
 // Well-known metadata keys.
 const (
-	ReleaseEventMetaAttribution = "attribution"
-	ReleaseEventMetaReason      = "reason"
-	ReleaseEventMetaCheck       = "check"
-	ReleaseEventMetaBuildID     = "build_id"
+	ReleaseEventMetaReason  = "reason"
+	ReleaseEventMetaCheck   = "check"
+	ReleaseEventMetaBuildID = "build_id"
 )
-
-// ReleaseEventAttributionActiveRelease is set on a build event whose build
-// could not be matched to the release's pins (no per-resource git SHA/volume
-// hash match), so it was attributed to whichever release was active when the
-// build status changed. Consumers should treat such events as best-effort:
-// the build may belong to an older or concurrent release.
-const ReleaseEventAttributionActiveRelease = "active_release"
 
 // Link kinds.
 const ReleaseEventLinkKindBuildLogs = "build_logs"

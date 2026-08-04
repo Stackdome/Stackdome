@@ -23,13 +23,13 @@ import (
 )
 
 func TestMapClusterStatusToServerStatus_noFailure(t *testing.T) {
-	status := buildsv1alpha1.ImageBuildStatus{
+	cr := &buildsv1alpha1.ImageBuild{Status: buildsv1alpha1.ImageBuildStatus{
 		Phase:      buildsv1alpha1.BuildPhaseSuccess,
 		StatusHash: "abc123",
 		ImageUrl:   "registry.io/img:tag",
-	}
+	}}
 
-	got := mapClusterStatusToServerStatus(status)
+	got := mapClusterStatusToServerStatus(cr)
 
 	if got.LastBuildFailureDetail != nil {
 		t.Errorf("expected LastBuildFailureDetail to be nil, got %v", got.LastBuildFailureDetail)
@@ -40,7 +40,7 @@ func TestMapClusterStatusToServerStatus_noFailure(t *testing.T) {
 }
 
 func TestMapClusterStatusToServerStatus_withFailure(t *testing.T) {
-	status := buildsv1alpha1.ImageBuildStatus{
+	cr := &buildsv1alpha1.ImageBuild{Status: buildsv1alpha1.ImageBuildStatus{
 		Phase:      buildsv1alpha1.BuildPhaseFailed,
 		StatusHash: "def456",
 		LastBuildFailureDetail: &corev1alpha1.LastFailureDetail{
@@ -50,9 +50,9 @@ func TestMapClusterStatusToServerStatus_withFailure(t *testing.T) {
 			LastTerminationMessage:  "COPY failed: file not found",
 			LastTerminationExitCode: ptr.To(int32(1)),
 		},
-	}
+	}}
 
-	got := mapClusterStatusToServerStatus(status)
+	got := mapClusterStatusToServerStatus(cr)
 
 	if got.LastBuildFailureDetail == nil {
 		t.Fatal("expected LastBuildFailureDetail to be set")
@@ -221,16 +221,16 @@ const (
 	testEventOtherClusterID = "cluster-2"
 )
 
-func newEventReconciler() (*ImageBuildReconciler, *MockreleaseActiveChecker, *MockbuildEventRecorder) {
+func newEventReconciler() (*ImageBuildReconciler, *mocks.MockReleaseResolver, *MockbuildEventRecorder) {
 	ctrl := gomock.NewController(GinkgoT())
-	checker := NewMockreleaseActiveChecker(ctrl)
+	resolver := mocks.NewMockReleaseResolver(ctrl)
 	recorder := NewMockbuildEventRecorder(ctrl)
 	r := &ImageBuildReconciler{
-		Logger:         logger.NewLoggerWithPrefix(context.Background(), "event-test"),
-		releaseChecker: checker,
-		eventRecorder:  recorder,
+		Logger:          logger.NewLoggerWithPrefix(context.Background(), "event-test"),
+		releaseResolver: resolver,
+		eventRecorder:   recorder,
 	}
-	return r, checker, recorder
+	return r, resolver, recorder
 }
 
 func eventBuildCR(phase buildsv1alpha1.BuildPhase) *buildsv1alpha1.ImageBuild {
@@ -253,12 +253,13 @@ func gitBuildModel(commit string) *models.ImageBuild {
 }
 
 var _ = Describe("recordBuildEvent", func() {
-	DescribeTable("phase to event type mapping with best-effort active-release attribution",
+	// CRs without a release-id annotation fall back to the active release.
+	DescribeTable("phase to event type mapping",
 		func(phase buildsv1alpha1.BuildPhase, eventType models.ReleaseEventType) {
-			r, checker, recorder := newEventReconciler()
+			r, resolver, recorder := newEventReconciler()
 			active := &models.StackRelease{ID: "rel-1"}
 
-			checker.EXPECT().
+			resolver.EXPECT().
 				InternalGetActiveByStackID(gomock.Any(), testEventStackID).
 				Return(active, nil)
 			recorder.EXPECT().
@@ -268,7 +269,6 @@ var _ = Describe("recordBuildEvent", func() {
 					testEventResourceName,
 					eventType,
 					testEventBuildID,
-					models.ReleaseEventAttributionActiveRelease,
 					nil,
 				).
 				Return(nil)
@@ -281,7 +281,7 @@ var _ = Describe("recordBuildEvent", func() {
 	)
 
 	It("includes the mapped failure detail on failed builds", func() {
-		r, checker, recorder := newEventReconciler()
+		r, resolver, recorder := newEventReconciler()
 		active := &models.StackRelease{ID: "rel-1"}
 		cr := eventBuildCR(buildsv1alpha1.BuildPhaseFailed)
 		cr.Status.LastBuildFailureDetail = &corev1alpha1.LastFailureDetail{
@@ -290,7 +290,7 @@ var _ = Describe("recordBuildEvent", func() {
 			LastTerminationExitCode: ptr.To(int32(1)),
 		}
 
-		checker.EXPECT().
+		resolver.EXPECT().
 			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
 			Return(active, nil)
 		recorder.EXPECT().
@@ -300,7 +300,6 @@ var _ = Describe("recordBuildEvent", func() {
 				testEventResourceName,
 				models.ReleaseEventTypeBuildFailed,
 				testEventBuildID,
-				models.ReleaseEventAttributionActiveRelease,
 				&models.BuildFailureDetail{
 					FailureType: "exit_error",
 					Reason:      "Error",
@@ -314,7 +313,7 @@ var _ = Describe("recordBuildEvent", func() {
 	})
 
 	It("records build_attempt_failed when a pending build carries a failure detail", func() {
-		r, checker, recorder := newEventReconciler()
+		r, resolver, recorder := newEventReconciler()
 		active := &models.StackRelease{ID: "rel-1"}
 		cr := eventBuildCR(buildsv1alpha1.BuildPhasePending)
 		cr.Status.LastBuildFailureDetail = &corev1alpha1.LastFailureDetail{
@@ -324,7 +323,7 @@ var _ = Describe("recordBuildEvent", func() {
 			LastTerminationExitCode: ptr.To(int32(137)),
 		}
 
-		checker.EXPECT().
+		resolver.EXPECT().
 			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
 			Return(active, nil)
 		// build_attempt_failed only: gomock rejects a build_started call.
@@ -335,7 +334,6 @@ var _ = Describe("recordBuildEvent", func() {
 				testEventResourceName,
 				models.ReleaseEventTypeBuildAttemptFailed,
 				testEventBuildID,
-				models.ReleaseEventAttributionActiveRelease,
 				&models.BuildFailureDetail{
 					FailureType:  "out_of_memory",
 					Reason:       "OOMKilled",
@@ -361,8 +359,8 @@ var _ = Describe("recordBuildEvent", func() {
 
 	DescribeTable("skips the recorder when there is no active release",
 		func(active *models.StackRelease, serr *apperrors.ServiceError) {
-			r, checker, _ := newEventReconciler()
-			checker.EXPECT().
+			r, resolver, _ := newEventReconciler()
+			resolver.EXPECT().
 				InternalGetActiveByStackID(gomock.Any(), testEventStackID).
 				Return(active, serr)
 			// No recorder EXPECT: it must not be called.
@@ -372,81 +370,70 @@ var _ = Describe("recordBuildEvent", func() {
 		Entry("lookup error", nil, apperrors.GeneralError("boom")),
 	)
 
-	DescribeTable("deterministic pin match drops the attribution marker",
-		func(pins models.ReleasePins, build *models.ImageBuild) {
-			r, checker, recorder := newEventReconciler()
-			active := &models.StackRelease{ID: "rel-1", Pins: pins}
+	// Same gating as the stackresource controller: the CR's release-id
+	// annotation is authoritative.
+	It("records on the annotated release while it is active", func() {
+		r, resolver, recorder := newEventReconciler()
+		release := &models.StackRelease{ID: "rel-1", State: models.ReleaseStateInProgress}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhasePending)
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-1"}
 
-			checker.EXPECT().
-				InternalGetActiveByStackID(gomock.Any(), testEventStackID).
-				Return(active, nil)
-			recorder.EXPECT().
-				RecordBuildEvent(
-					gomock.Any(),
-					active,
-					testEventResourceName,
-					models.ReleaseEventTypeBuildStarted,
-					testEventBuildID,
-					"", // deterministic pin match: no attribution marker
-					nil,
-				).
-				Return(nil)
-
-			r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhasePending), build)
-		},
-		Entry("git commit pin match",
-			models.ReleasePins{Resources: map[string]models.ResourcePins{
-				testEventResourceName: {GitSHA: "abc123"},
-			}},
-			gitBuildModel("abc123"),
-		),
-		Entry("volume hash pin match",
-			models.ReleasePins{Resources: map[string]models.ResourcePins{
-				testEventResourceName: {VolumeHash: "vh-9"},
-			}},
-			&models.ImageBuild{
-				ID: testEventBuildID,
-				Spec: models.BuildConfigSpec{
-					SourceRevision: models.BuildSourceRevision{
-						Volume: &models.VolumeRevision{CurrentVolumeHash: "vh-9"},
-					},
-				},
-			},
-		),
-	)
-
-	It("falls back to active-release attribution on a pin mismatch", func() {
-		r, checker, recorder := newEventReconciler()
-		active := &models.StackRelease{
-			ID: "rel-1",
-			Pins: models.ReleasePins{Resources: map[string]models.ResourcePins{
-				testEventResourceName: {GitSHA: "abc123"},
-			}},
-		}
-
-		checker.EXPECT().
-			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
-			Return(active, nil)
+		resolver.EXPECT().InternalGet(gomock.Any(), "rel-1").Return(release, nil)
 		recorder.EXPECT().
 			RecordBuildEvent(
-				gomock.Any(), active, testEventResourceName,
-				models.ReleaseEventTypeBuildStarted, testEventBuildID,
-				models.ReleaseEventAttributionActiveRelease, nil,
+				gomock.Any(), release, testEventResourceName,
+				models.ReleaseEventTypeBuildStarted, testEventBuildID, nil,
 			).
 			Return(nil)
 
-		r.recordBuildEvent(context.Background(), testEventStackID, eventBuildCR(buildsv1alpha1.BuildPhasePending), gitBuildModel("differentsha"))
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("deadbeef"))
+	})
+
+	// A build report can land after the release is done (e.g. success right as
+	// convergence completes): a terminal release still records while latest.
+	It("records on a terminal release that is still the latest", func() {
+		r, resolver, recorder := newEventReconciler()
+		release := &models.StackRelease{ID: "rel-1", State: models.ReleaseStateReleased}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhaseSuccess)
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-1"}
+
+		resolver.EXPECT().InternalGet(gomock.Any(), "rel-1").Return(release, nil)
+		resolver.EXPECT().InternalGetLatestByStackID(gomock.Any(), testEventStackID).Return(release, nil)
+		recorder.EXPECT().
+			RecordBuildEvent(
+				gomock.Any(), release, testEventResourceName,
+				models.ReleaseEventTypeBuildSucceeded, testEventBuildID, nil,
+			).
+			Return(nil)
+
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("deadbeef"))
+	})
+
+	// The leak this closes: an old build's failure must never land on the
+	// release that superseded its own.
+	It("records nothing when the build's release was superseded", func() {
+		r, resolver, _ := newEventReconciler()
+		superseded := &models.StackRelease{ID: "rel-1", State: models.ReleaseStateSuperseded}
+		latest := &models.StackRelease{ID: "rel-2", State: models.ReleaseStateInProgress}
+		cr := eventBuildCR(buildsv1alpha1.BuildPhaseFailed)
+		cr.Annotations = map[string]string{corev1alpha1.ReleaseIDAnnotation: "rel-1"}
+
+		resolver.EXPECT().InternalGet(gomock.Any(), "rel-1").Return(superseded, nil)
+		resolver.EXPECT().InternalGetLatestByStackID(gomock.Any(), testEventStackID).Return(latest, nil)
+		// recorder must not be called.
+
+		r.recordBuildEvent(context.Background(), testEventStackID, cr, gitBuildModel("deadbeef"))
 	})
 
 	It("swallows recorder errors", func() {
-		r, checker, recorder := newEventReconciler()
+		r, resolver, recorder := newEventReconciler()
 		active := &models.StackRelease{ID: "rel-1"}
 
-		checker.EXPECT().
+		resolver.EXPECT().
 			InternalGetActiveByStackID(gomock.Any(), testEventStackID).
 			Return(active, nil)
 		recorder.EXPECT().
-			RecordBuildEvent(gomock.Any(), active, testEventResourceName, gomock.Any(), testEventBuildID, gomock.Any(), gomock.Any()).
+			RecordBuildEvent(gomock.Any(), active, testEventResourceName, gomock.Any(), testEventBuildID, gomock.Any()).
 			Return(apperrors.GeneralError("db down"))
 
 		// Must not panic or otherwise surface the error.
@@ -469,13 +456,13 @@ func reconcileCR(phase buildsv1alpha1.BuildPhase, statusHash string) *buildsv1al
 }
 
 func newReconcileHarness(cr *buildsv1alpha1.ImageBuild) (
-	*ImageBuildReconciler, *mocks.MockStackResourceService, *mocks.MockImageBuildService, *MockreleaseActiveChecker, *MockbuildEventRecorder, *MockstackClusterResolver,
+	*ImageBuildReconciler, *mocks.MockStackResourceService, *mocks.MockImageBuildService, *mocks.MockReleaseResolver, *MockbuildEventRecorder, *MockstackClusterResolver,
 ) {
 	ctrl := gomock.NewController(GinkgoT())
 
 	resources := mocks.NewMockStackResourceService(ctrl)
 	builds := mocks.NewMockImageBuildService(ctrl)
-	checker := NewMockreleaseActiveChecker(ctrl)
+	releases := mocks.NewMockReleaseResolver(ctrl)
 	recorder := NewMockbuildEventRecorder(ctrl)
 	resolver := NewMockstackClusterResolver(ctrl)
 
@@ -487,11 +474,11 @@ func newReconcileHarness(cr *buildsv1alpha1.ImageBuild) (
 		DBResourceService:   resources,
 		DBImageBuildService: builds,
 		Logger:              logger.NewLoggerWithPrefix(context.Background(), "reconcile-test"),
-		releaseChecker:      checker,
+		releaseResolver:     releases,
 		eventRecorder:       recorder,
 		stackResolver:       resolver,
 	}
-	return r, resources, builds, checker, recorder, resolver
+	return r, resources, builds, releases, recorder, resolver
 }
 
 func expectOwnedStack(resolver *MockstackClusterResolver) {

@@ -25,6 +25,7 @@ type ReleaseWorkerSpec struct {
 	ReleaseService        releaseService
 	EventRecorder         eventRecorder
 	StackService          stackService
+	ImageBuildService     imageBuildService
 	ClusterManager        clustermanager.ClusterManager
 	CRBuilder             builders.ClusterResourceBuilder
 	SecretBuilder         builders.SecretBuilder

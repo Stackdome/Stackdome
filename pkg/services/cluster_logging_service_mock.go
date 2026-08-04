@@ -44,18 +44,18 @@ func (m *MockClusterLoggingService) EXPECT() *MockClusterLoggingServiceMockRecor
 }
 
 // GetLogsForBuildPod mocks base method.
-func (m *MockClusterLoggingService) GetLogsForBuildPod(ctx context.Context, orgID, namespace, jobName string, options clusterresource.LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (m *MockClusterLoggingService) GetLogsForBuildPod(ctx context.Context, orgID, namespace, buildName string, options clusterresource.LoggingParams) (interfaces.ServerSideStreamable, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetLogsForBuildPod", ctx, orgID, namespace, jobName, options)
+	ret := m.ctrl.Call(m, "GetLogsForBuildPod", ctx, orgID, namespace, buildName, options)
 	ret0, _ := ret[0].(interfaces.ServerSideStreamable)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetLogsForBuildPod indicates an expected call of GetLogsForBuildPod.
-func (mr *MockClusterLoggingServiceMockRecorder) GetLogsForBuildPod(ctx, orgID, namespace, jobName, options any) *gomock.Call {
+func (mr *MockClusterLoggingServiceMockRecorder) GetLogsForBuildPod(ctx, orgID, namespace, buildName, options any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogsForBuildPod", reflect.TypeOf((*MockClusterLoggingService)(nil).GetLogsForBuildPod), ctx, orgID, namespace, jobName, options)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogsForBuildPod", reflect.TypeOf((*MockClusterLoggingService)(nil).GetLogsForBuildPod), ctx, orgID, namespace, buildName, options)
 }
 
 // GetLogsForResources mocks base method.

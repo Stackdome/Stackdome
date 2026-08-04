@@ -58,17 +58,17 @@ func (mr *MockReleaseEventRecorderMockRecorder) Record(ctx, input any) *gomock.C
 }
 
 // RecordBuildEvent mocks base method.
-func (m *MockReleaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID, attribution string, failure *models.BuildFailureDetail) *errors.ServiceError {
+func (m *MockReleaseEventRecorder) RecordBuildEvent(ctx context.Context, release *models.StackRelease, resourceName string, eventType models.ReleaseEventType, buildID string, failure *models.BuildFailureDetail) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RecordBuildEvent", ctx, release, resourceName, eventType, buildID, attribution, failure)
+	ret := m.ctrl.Call(m, "RecordBuildEvent", ctx, release, resourceName, eventType, buildID, failure)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
 // RecordBuildEvent indicates an expected call of RecordBuildEvent.
-func (mr *MockReleaseEventRecorderMockRecorder) RecordBuildEvent(ctx, release, resourceName, eventType, buildID, attribution, failure any) *gomock.Call {
+func (mr *MockReleaseEventRecorderMockRecorder) RecordBuildEvent(ctx, release, resourceName, eventType, buildID, failure any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordBuildEvent", reflect.TypeOf((*MockReleaseEventRecorder)(nil).RecordBuildEvent), ctx, release, resourceName, eventType, buildID, attribution, failure)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordBuildEvent", reflect.TypeOf((*MockReleaseEventRecorder)(nil).RecordBuildEvent), ctx, release, resourceName, eventType, buildID, failure)
 }
 
 // RecordReleaseCheckFailed mocks base method.

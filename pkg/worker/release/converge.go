@@ -7,19 +7,22 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 )
 
 type convergeReconciler struct {
-	releaseService releaseService
-	stackService   stackService
-	logger         logger.Logger
+	releaseService    releaseService
+	stackService      stackService
+	imageBuildService imageBuildService
+	logger            logger.Logger
 }
 
 func newConvergeReconciler(spec ReleaseWorkerSpec) *convergeReconciler {
 	return &convergeReconciler{
-		releaseService: spec.ReleaseService,
-		stackService:   spec.StackService,
-		logger:         logger.NewLoggerWithPrefix(context.Background(), "release-converge"),
+		releaseService:    spec.ReleaseService,
+		stackService:      spec.StackService,
+		imageBuildService: spec.ImageBuildService,
+		logger:            logger.NewLoggerWithPrefix(context.Background(), "release-converge"),
 	}
 }
 
@@ -54,9 +57,12 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 		}
 	}
 
-	deployTimeout := time.Duration(latest.EffectiveSettings().DeployTimeoutMinutes) * time.Minute
-	if release.RenderedAt != nil && time.Since(*release.RenderedAt) > deployTimeout {
-		msg := fmt.Sprintf("timed out waiting for convergence after %s", deployTimeout)
+	failedBuild, buildErr := r.failedReleaseBuild(ctx, release)
+	if buildErr != nil {
+		return resultNil, fmt.Errorf("failed to check builds: %w", buildErr)
+	}
+	if failedBuild != nil {
+		msg := buildFailedMessage(failedBuild)
 		outcome := buildOutcome(latest, release)
 		if _, markErr := r.releaseService.MarkFailed(ctx, release.ID, msg, &outcome); markErr != nil {
 			return resultNil, fmt.Errorf("failed to mark failed: %w", markErr)
@@ -65,7 +71,49 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 		return resultStop, nil
 	}
 
+	// No deploy timeout: the agent reconciles level-triggered, so convergence
+	// can arrive at any time. Poll until converged, superseded, or a real
+	// failure signal (build failed, apply error) terminates the release.
 	return resultRequeueAfter(convergencePollInterval), nil
+}
+
+// failedReleaseBuild returns a terminally failed build that this release
+// triggered — Status.ReleaseID carries the release-id annotation the agent
+// copies onto the ImageBuild at creation. Such a release can never converge:
+// this is the fail-fast that replaced the deploy timeout. A prior release's
+// failed build carries that release's ID, so it can never kill this one.
+//
+// ponytail: a release that reuses a prior release's already-failed build
+// (identical revision and build config) matches nothing here and polls
+// forever; needs the agent to re-stamp reused builds to close.
+func (r *convergeReconciler) failedReleaseBuild(ctx context.Context, release *models.StackRelease) (*models.ImageBuild, error) {
+	builds, serr := r.imageBuildService.ListByStackID(ctx, release.StackID)
+	if serr != nil {
+		return nil, serr
+	}
+	for _, b := range builds {
+		if b.Status == nil || b.Status.State != string(buildsv1alpha1.BuildPhaseFailed) {
+			continue
+		}
+		if b.Status.ReleaseID != "" && b.Status.ReleaseID == release.ID {
+			return b, nil
+		}
+	}
+	return nil, nil
+}
+
+func buildFailedMessage(b *models.ImageBuild) string {
+	msg := fmt.Sprintf("build failed for %s", b.StackResourceName)
+	if f := b.Status.LastBuildFailureDetail; f != nil {
+		detail := f.Message
+		if detail == "" {
+			detail = f.Reason
+		}
+		if detail != "" {
+			msg = fmt.Sprintf("%s: %s", msg, detail)
+		}
+	}
+	return msg
 }
 
 func buildOutcome(stack *models.Stack, release *models.StackRelease) models.ReleaseOutcome {

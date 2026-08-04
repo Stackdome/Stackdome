@@ -17,6 +17,7 @@ import (
 
 func startedBuild() *models.ImageBuild {
 	return &models.ImageBuild{
+		ID:                "build-1",
 		StackResourceName: "api",
 		Namespace:         "stack-ns",
 		Status: &models.ImageBuildStatus{
@@ -67,12 +68,15 @@ var _ = Describe("LoggingService.StreamLogsForBuild", func() {
 		Expect(err).To(MatchError(ContainSubstring("has not been created")))
 	})
 
-	It("errors when the build has no source revision", func() {
+	It("streams when the build has no source revision but the job was created", func() {
 		build := startedBuild()
 		build.Status.BuildSourceRevision = ""
 		mockBuilds.EXPECT().GetByID(ctx, "build-1").Return(build, nil)
+		mockCLS.EXPECT().
+			GetLogsForBuildPod(ctx, "org-1", "stack-ns", "build-1", gomock.Any()).
+			Return(nil, nil)
 		_, err := svc.StreamLogsForBuild(ctx, "org-1", "build-1", &LoggingParams{})
-		Expect(err).To(MatchError(ContainSubstring("has not been created")))
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("maps ErrBuildPodNotReady to a conflict", func() {
@@ -84,13 +88,12 @@ var _ = Describe("LoggingService.StreamLogsForBuild", func() {
 		Expect(err).To(MatchError(ContainSubstring("logs are not available yet")))
 	})
 
-	It("resolves the job name and delegates to the cluster logging service", func() {
-		build := startedBuild()
-		mockBuilds.EXPECT().GetByID(ctx, "build-1").Return(build, nil)
+	It("delegates to the cluster logging service with the build CR name", func() {
+		mockBuilds.EXPECT().GetByID(ctx, "build-1").Return(startedBuild(), nil)
 
-		expectedJob := buildsv1alpha1.BuildJobName("api", "abc123")
+		// The CR name is the build ID, not StackResourceName and not the never-populated Name.
 		mockCLS.EXPECT().
-			GetLogsForBuildPod(ctx, "org-1", "stack-ns", expectedJob, gomock.Any()).
+			GetLogsForBuildPod(ctx, "org-1", "stack-ns", "build-1", gomock.Any()).
 			Return(nil, nil)
 
 		_, err := svc.StreamLogsForBuild(ctx, "org-1", "build-1", &LoggingParams{})
