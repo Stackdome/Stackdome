@@ -1,5 +1,7 @@
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Undo2 } from "lucide-react";
 import { StatusPill } from "@/components/branded";
+import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/branded/confirm";
 import type { StackRelease } from "@/api/releases";
 import type { Stack } from "@/api/stacks";
 import type { EditSessionTab } from "@/pages/stacks/hooks/use-stack-edit-session";
@@ -20,7 +22,6 @@ export interface TimelineNodeProps {
   onToggle: (id: string) => void;
   onRollback: (id: string) => void;
   onCancel: (id: string) => void;
-  onCopyId: (id: string) => void;
   /** releases[0] — render LIVE progress from the stack rather than the stored outcome. */
   isActive: boolean;
   /** This release currently serves traffic (stack.converged_release). */
@@ -37,10 +38,22 @@ export interface TimelineNodeProps {
  * release; only the body differs (live progress for the latest, stored post-mortem for earlier).
  */
 export function TimelineNode(props: TimelineNodeProps) {
-  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, onCopyId, isActive, isLive, stack, logContext, onJumpToResource, refetchReleases } = props;
+  const { release, prevReleaseId, prevSeq, detail, isOpen, onToggle, onRollback, onCancel, isActive, isLive, stack, logContext, onJumpToResource, refetchReleases } = props;
   const id = release.id ?? "";
   const state = release.state ?? "";
   const deploying = isDeploying(state);
+  // Rolling back to the release already serving traffic would be a no-op.
+  const canRollback = state === ReleaseState.Released && !!release.id && !isLive;
+
+  const confirm = useConfirm();
+  const requestRollback = async () => {
+    const ok = await confirm({
+      title: `Roll back to release #${release.sequence}?`,
+      description: "The stack is redeployed from this release's snapshot, replacing what is currently live.",
+      confirmLabel: "Roll back",
+    });
+    if (ok) onRollback(id);
+  };
 
   const sha = releaseGitSha(release);
   const dur = formatDuration(release.rendered_at, release.completed_at);
@@ -76,12 +89,23 @@ export function TimelineNode(props: TimelineNodeProps) {
         {ts && <span className="flex-none font-mono text-[11px] text-fg-muted">{ts}</span>}
         <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${isOpen ? "rotate-180" : ""}`} />
         <span onClick={(e) => e.stopPropagation()}>
-          <ReleaseMenu release={release} onRollback={onRollback} onCancel={onCancel} onCopyId={onCopyId} />
+          <ReleaseMenu release={release} onCancel={onCancel} />
         </span>
       </div>
 
       {isOpen && (
-        <div className={`mb-1 mt-1.5 rounded-md border ${cardBorder} bg-card p-4`}>
+        <div className={`relative mb-1 mt-1.5 rounded-md border ${cardBorder} bg-card p-4`}>
+          {canRollback && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="absolute right-4 top-4 z-10 h-7 text-[12px]"
+              onClick={(e) => { e.stopPropagation(); void requestRollback(); }}
+            >
+              <Undo2 className="mr-1 h-3.5 w-3.5" />
+              Rollback to this
+            </Button>
+          )}
           {isActive ? (
             <LiveReleaseBody
               release={release}

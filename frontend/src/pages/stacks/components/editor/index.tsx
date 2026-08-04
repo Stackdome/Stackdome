@@ -707,10 +707,6 @@ export default function CanvasEditorPage() {
     (releaseId: string) => runDeploy(() => rollbackRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId, releaseId), "Rollback started"),
     [runDeploy, deployIds],
   );
-  const onCopyId = useCallback((releaseId: string) => {
-    void navigator.clipboard?.writeText(releaseId);
-    toast({ title: "Release ID copied", variant: "success" });
-  }, [toast]);
 
   // Draft deploy: validates name, creates the stack, starts the first release,
   // and navigates to the new page. There is no separate "create" step — the
@@ -969,7 +965,6 @@ export default function CanvasEditorPage() {
       lifecycle={lifecycle}
       onRollback={onRollback}
       onCancel={onCancelDeploy}
-      onCopyId={onCopyId}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>

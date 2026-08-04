@@ -34,7 +34,7 @@ beforeAll(() => {
 
 const stack = { spec: { stack_resources: [] } } as unknown as Stack;
 const releases: StackRelease[] = [{ id: "r1", sequence: 14, state: "Released", cause: { kind: "manual" } } as StackRelease];
-const handlers = { onRollback: vi.fn(), onCancel: vi.fn(), onCopyId: vi.fn() };
+const handlers = { onRollback: vi.fn(), onCancel: vi.fn() };
 const base = { orgId: "o", projectName: "t", stackId: "s", stack, loading: false, error: null, ...handlers };
 
 const stubDetail: ReleaseDetail = { ensure: vi.fn(), peek: () => ({ loading: false }), refresh: vi.fn() };

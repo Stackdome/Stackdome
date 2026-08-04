@@ -22,7 +22,6 @@ export interface TimelineRailProps {
   draftNode?: React.ReactNode;
   onRollback: (id: string) => void;
   onCancel: (id: string) => void;
-  onCopyId: (id: string) => void;
   initialWindow?: number;
 }
 
@@ -39,7 +38,7 @@ function dotShape(state: string, isLive: boolean): RailDotShape {
  * opens by default, earlier nodes start closed. An optional draft node leads the rail.
  */
 export function TimelineRail(props: TimelineRailProps) {
-  const { releases, activeRelease, stack, logContext, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, onCopyId, initialWindow = 15 } = props;
+  const { releases, activeRelease, stack, logContext, onJumpToResource, refetchReleases, banner, draftNode, onRollback, onCancel, initialWindow = 15 } = props;
   const detail = useReleaseDetailContext();
   const liveReleaseId = stack.converged_release?.id;
   const [openIds, setOpenIds] = useState<Set<string>>(
@@ -96,7 +95,6 @@ export function TimelineRail(props: TimelineRailProps) {
                 onToggle={toggle}
                 onRollback={onRollback}
                 onCancel={onCancel}
-                onCopyId={onCopyId}
                 // Live body only while the newest release is deploying or is the
                 // released/live one. A newest FAILED/CANCELLED release never
                 // converged — it has no live_status, so the live body would show
