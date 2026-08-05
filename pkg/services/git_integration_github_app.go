@@ -87,7 +87,7 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		return nil, serr
 	}
 
-	state := fmt.Sprintf("%s:%s", uuid.NewString(), integration.ID)
+	state := appFlowState(integration)
 	if serr := s.oauthStates.Create(ctx, &models.OAuthState{
 		State:     state,
 		Provider:  models.OAuthProviderGitHubAppManifest,
@@ -136,7 +136,7 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 // callback and is what binds the new installation to this org. The row stores
 // no credentials — platform creds resolve from config at read time.
 func (s *gitIntegrationService) platformAppInstallFlow(ctx context.Context, integration *models.GitIntegration) (*models.GitHubAppManifestFlow, *errors.ServiceError) {
-	state := fmt.Sprintf("%s:%s", uuid.NewString(), integration.ID)
+	state := appFlowState(integration)
 	if serr := s.oauthStates.Create(ctx, &models.OAuthState{
 		State:     state,
 		Provider:  models.OAuthProviderGitHubAppInstall,
@@ -168,17 +168,9 @@ func (s *gitIntegrationService) HandleGitHubAppSetup(ctx context.Context, instal
 		return "", errors.BadRequest("the GitHub App setup link has expired; restart the flow")
 	}
 
-	_, integrationID, found := strings.Cut(record.State, ":")
-	if !found || integrationID == "" {
-		return "", errors.BadRequest("malformed state parameter")
-	}
-
-	integration, serr := s.store.GetByID(ctx, integrationID)
+	integration, serr := s.stateIntegration(ctx, record.State)
 	if serr != nil {
 		return "", serr
-	}
-	if integration.Type != models.GitIntegrationTypeGitHubApp {
-		return "", errors.BadRequest("state does not reference a GitHub App integration")
 	}
 
 	creds, serr := s.appCredentials(integration)
@@ -260,17 +252,9 @@ func (s *gitIntegrationService) HandleGitHubManifestCallback(ctx context.Context
 		return "", errors.BadRequest("the GitHub App setup link has expired; restart the flow")
 	}
 
-	_, integrationID, found := strings.Cut(record.State, ":")
-	if !found || integrationID == "" {
-		return "", errors.BadRequest("malformed state parameter")
-	}
-
-	integration, serr := s.store.GetByID(ctx, integrationID)
+	integration, serr := s.stateIntegration(ctx, record.State)
 	if serr != nil {
 		return "", serr
-	}
-	if integration.Type != models.GitIntegrationTypeGitHubApp {
-		return "", errors.BadRequest("state does not reference a GitHub App integration")
 	}
 
 	creds, err := s.githubApp.ConvertManifestCode(ctx, code)
@@ -299,6 +283,35 @@ func (s *gitIntegrationService) HandleGitHubManifestCallback(ctx context.Context
 	}
 
 	return githubAppInstallURL(creds.Slug), nil
+}
+
+// appFlowState is the single-use state minted when a GitHub App flow starts:
+// "nonce:orgID:integrationID". It comes back on the unauthenticated callback
+// and is what binds the result to the org.
+func appFlowState(integration *models.GitIntegration) string {
+	return fmt.Sprintf("%s:%s:%s", uuid.NewString(), integration.OrganisationID, integration.ID)
+}
+
+// stateIntegration resolves the integration a flow state points at. If the
+// row was deleted mid-flow (user removed the pending card, then reconnected)
+// the org's current GitHub App row takes its place, so the callback still
+// binds instead of dead-ending on a not-found.
+func (s *gitIntegrationService) stateIntegration(ctx context.Context, state string) (*models.GitIntegration, *errors.ServiceError) {
+	parts := strings.SplitN(state, ":", 3)
+	if len(parts) != 3 || parts[1] == "" || parts[2] == "" {
+		return nil, errors.BadRequest("malformed state parameter")
+	}
+	integration, serr := s.store.GetByID(ctx, parts[2])
+	if serr != nil && serr.Is404() {
+		integration, serr = s.store.GetGitHubAppForOrg(ctx, parts[1])
+	}
+	if serr != nil {
+		return nil, serr
+	}
+	if integration.Type != models.GitIntegrationTypeGitHubApp {
+		return nil, errors.BadRequest("state does not reference a GitHub App integration")
+	}
+	return integration, nil
 }
 
 func githubAppInstallURL(slug string) string {

@@ -85,12 +85,15 @@ export function IntegrationRow({
   onVerify,
   onRemove,
   onUpdateCredentials,
+  onAddAccount,
 }: {
   integration: GitIntegration;
   onVerify: (integration: GitIntegration) => void;
   onRemove: (integration: GitIntegration) => void;
   /** Opens the update-credentials dialog for this row (credentials-type only). */
   onUpdateCredentials?: (integration: GitIntegration) => void;
+  /** Starts the install flow for another GitHub account (github_app only). */
+  onAddAccount?: (integration: GitIntegration) => void;
 }) {
   const [installations, setInstallations] = useState<GitInstallation[]>([]);
   const requestSeq = useRef(0);
@@ -167,6 +170,13 @@ export function IntegrationRow({
           onVerify={isGithubApp ? undefined : () => onVerify(integration)}
           onUpdateCredentials={
             isGithubApp || !onUpdateCredentials ? undefined : () => onUpdateCredentials(integration)
+          }
+          onAddAccount={
+            // BYO rows already have the direct manageUrl link; only platform
+            // rows (no install_url) need the state-minting flow.
+            isGithubApp && !integration.install_url && onAddAccount
+              ? () => onAddAccount(integration)
+              : undefined
           }
           manageUrl={isGithubApp ? integration.install_url : undefined}
           onRemove={() => onRemove(integration)}

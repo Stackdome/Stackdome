@@ -11,9 +11,15 @@ import {
 export function RowMenu({
   onVerify,
   onUpdateCredentials,
+  onAddAccount,
   manageUrl,
   onRemove,
 }: {
+  /** Platform-app rows: starts the install flow for another account. Same
+      "Manage on GitHub" label as BYO's manageUrl link, but it must mint a
+      fresh single-use state per click — a bare install link can't bind an
+      installation to the org on the shared platform app. */
+  onAddAccount?: () => void;
   /** Direct verification only works for credentials-type integrations
       (backend rejects github_app: access there flows through per-installation
       tokens, not stored credentials). Omit to hide the item. */
@@ -25,7 +31,7 @@ export function RowMenu({
   manageUrl?: string;
   onRemove: () => void;
 }) {
-  const hasPrimaryItems = !!(onVerify || onUpdateCredentials || manageUrl);
+  const hasPrimaryItems = !!(onVerify || onUpdateCredentials || onAddAccount || manageUrl);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -55,6 +61,12 @@ export function RowMenu({
           <DropdownMenuItem onSelect={() => setTimeout(() => onUpdateCredentials(), 0)}>
             <KeyRound className="h-4 w-4" />
             Update credentials
+          </DropdownMenuItem>
+        )}
+        {onAddAccount && (
+          <DropdownMenuItem onSelect={() => setTimeout(() => onAddAccount(), 0)}>
+            <ExternalLink className="h-4 w-4" />
+            Manage on GitHub
           </DropdownMenuItem>
         )}
         {manageUrl && (
