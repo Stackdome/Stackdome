@@ -158,18 +158,25 @@ func injectLoggerMiddleware(next http.Handler, baseLogger applogger.Logger) http
 	})
 }
 
+// publicAPIPaths are the routes that skip authentication: signup/login,
+// browser redirects arriving from GitHub (state-validated), and the
+// HMAC-verified webhook receiver. A GitHub redirect route missing from this
+// list dies in the JWT middleware with "Authorization header missing".
+var publicAPIPaths = []string{
+	"^/api/v1/user-signup",
+	"^/api/v1/auth",
+	"^/api/v1/config$",
+	"^/api/v1/invites/[^/]+/info$",
+	"^/api/v1/git-integrations/github/manifest/callback$",
+	"^/api/v1/git-integrations/github/setup$",
+	"^/api/v1/webhooks/github$",
+	"^/health",
+}
+
 func setupAuthenticationMiddleWare(mainHandler http.Handler, env environment.EnvImpl) http.Handler {
 	authenticationHandler := NewAuthSelectHandler(AuthSelectorHandlerSpec{
 		MainHandler: mainHandler,
-		PublicPaths: []string{
-			"^/api/v1/user-signup",
-			"^/api/v1/auth",
-			"^/api/v1/config$",
-			"^/api/v1/invites/[^/]+/info$",
-			"^/api/v1/git-integrations/github/manifest/callback$",
-			"^/api/v1/webhooks/github$",
-			"^/health",
-		},
+		PublicPaths: publicAPIPaths,
 		// Set JWT authentication as the default handler.
 		DefaultAuthHandler: auth.NewJwtAuthnHandler(mainHandler, auth.JWTAuthnHandlerSpec{
 			JWTSecret:  []byte(env.Environment().Config.JwtSecret),
