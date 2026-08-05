@@ -225,7 +225,34 @@ func (s *gitIntegrationService) Delete(ctx context.Context, ID string) *errors.S
 	if permErr := s.permissions.Check(ctx, integration.OrganisationID, auth.ResourceGitIntegrations, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
+	s.uninstallFromGitHub(ctx, integration)
 	return s.store.Delete(ctx, ID)
+}
+
+// uninstallFromGitHub removes the app from every account this integration
+// bound. Without it a deleted-then-reconnected org dead-ends: GitHub shows
+// "Configure" for a still-installed account, never fires the setup callback,
+// and the new pending row can never bind. Best-effort — a GitHub outage must
+// not block the local delete; a leftover installation is recoverable by hand.
+func (s *gitIntegrationService) uninstallFromGitHub(ctx context.Context, integration *models.GitIntegration) {
+	if integration.Type != models.GitIntegrationTypeGitHubApp {
+		return
+	}
+	creds, serr := s.appCredentials(integration)
+	if serr != nil {
+		s.logger.Warn(ctx, "skipping GitHub uninstall for integration '%s': %s", integration.ID, serr.Reason)
+		return
+	}
+	installations, serr := s.installations.ListByIntegrationID(ctx, integration.ID)
+	if serr != nil {
+		s.logger.Warn(ctx, "skipping GitHub uninstall for integration '%s': %s", integration.ID, serr.Reason)
+		return
+	}
+	for _, in := range installations {
+		if err := s.githubApp.DeleteInstallation(ctx, creds, in.InstallationID); err != nil {
+			s.logger.Warn(ctx, "failed to uninstall GitHub installation %d: %s", in.InstallationID, err.Error())
+		}
+	}
 }
 
 func (s *gitIntegrationService) Verify(ctx context.Context, ID, repoURL string) *errors.ServiceError {
