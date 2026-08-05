@@ -15,7 +15,10 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
-const previewCommentMarker = "<!-- stackdome-preview -->"
+const (
+	previewCommentMarker = "<!-- stackdome-preview -->"
+	urlsPendingNote      = "_⏳ Public URLs are still being provisioned — this comment updates when they are ready._"
+)
 
 // PreviewCommentService maintains the sticky PR comment for a preview stack.
 // Perm-less: reached only from the preview worker, never from user requests.
@@ -130,11 +133,13 @@ func writeOutputs(b *strings.Builder, preview *models.PreviewStack) {
 	if outputs.CommitSHA != "" {
 		fmt.Fprintf(b, "\nDeployed commit: `%s`\n", outputs.CommitSHA)
 	}
-	if len(outputs.URLs) == 0 {
-		return
+	if len(outputs.URLs) > 0 {
+		b.WriteString("\n| Resource | URL |\n| --- | --- |\n")
+		for _, u := range outputs.URLs {
+			fmt.Fprintf(b, "| %s | %s |\n", u.Resource, u.URL)
+		}
 	}
-	b.WriteString("\n| Resource | URL |\n| --- | --- |\n")
-	for _, u := range outputs.URLs {
-		fmt.Fprintf(b, "| %s | %s |\n", u.Resource, u.URL)
+	if outputs.URLsPending {
+		b.WriteString("\n" + urlsPendingNote + "\n")
 	}
 }

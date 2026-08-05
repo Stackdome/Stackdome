@@ -87,6 +87,8 @@ var _ = Describe("ConvergeReconciler", func() {
 
 			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).
 				Return(&models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+				Return(&models.Stack{ID: "stack-1"}, nil)
 			commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).Return(nil)
 			previewStore.EXPECT().Update(gomock.Any(), preview).
 				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
@@ -111,13 +113,157 @@ var _ = Describe("ConvergeReconciler", func() {
 
 			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).
 				Return(&models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+				Return(&models.Stack{ID: "stack-1"}, nil)
 			commentService.EXPECT().InternalUpsertComment(gomock.Any(), preview).
 				Return(stderrors.New("github down"))
+			previewStore.EXPECT().Update(gomock.Any(), preview).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.GitHubCommentPending).To(BeTrue())
+					return p, nil
+				})
 
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultStop))
 			Expect(preview.GitHubCommentPending).To(BeTrue())
+		})
+	})
+
+	Context("pending public URLs", func() {
+		var (
+			preview   *models.PreviewStack
+			stackID   string
+			releaseID string
+			release   *models.StackRelease
+		)
+
+		exposedResource := func(status *models.StackResourceStatus) *models.StackResource {
+			return &models.StackResource{
+				Name:   "web",
+				Ports:  models.Ports{{Name: "http", Number: 8080, ExposedToPublic: true}},
+				Status: status,
+			}
+		}
+
+		BeforeEach(func() {
+			stackID = "stack-1"
+			releaseID = "rel-1"
+			release = &models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}
+			preview = &models.PreviewStack{
+				ID:              "p-urls",
+				StackID:         &stackID,
+				ActiveReleaseID: &releaseID,
+				CommitSHA:       "abc1234",
+				Status:          models.PreviewStackStatus{Phase: models.PreviewStackPhaseDeploying},
+			}
+		})
+
+		It("requeues and keeps the comment pending while an exposed resource has no URL", func() {
+			stack := &models.Stack{
+				ID:             stackID,
+				StackResources: []*models.StackResource{exposedResource(&models.StackResourceStatus{})},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Phase).To(Equal(models.PreviewStackPhaseReady))
+					Expect(p.Status.Outputs.URLs).To(BeEmpty())
+					Expect(p.Status.Outputs.URLsPending).To(BeTrue())
+					Expect(p.GitHubCommentPending).To(BeTrue())
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultRequeueAfter(convergePollInterval)))
+		})
+
+		It("treats an ingress with an empty URL as still pending", func() {
+			stack := &models.Stack{
+				ID: stackID,
+				StackResources: []*models.StackResource{
+					exposedResource(&models.StackResourceStatus{PublicIngresses: []models.Ingress{{TargetPort: 8080}}}),
+				},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Outputs.URLs).To(BeEmpty())
+					Expect(p.Status.Outputs.URLsPending).To(BeTrue())
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultRequeueAfter(convergePollInterval)))
+		})
+
+		It("finalises the comment on a later pass once the http fallback URL lands", func() {
+			preview.Status = models.PreviewStackStatus{
+				Phase:   models.PreviewStackPhaseReady,
+				Reason:  "ReleaseConverged",
+				Outputs: &models.PreviewStackOutputs{CommitSHA: "abc1234", URLsPending: true},
+			}
+			preview.GitHubCommentPending = true
+			preview.GitHubCommentID = 4242
+
+			stack := &models.Stack{
+				ID: stackID,
+				StackResources: []*models.StackResource{
+					exposedResource(&models.StackResourceStatus{
+						PublicIngresses: []models.Ingress{{URL: "http://pr-1-web.example.com", TargetPort: 8080}},
+					}),
+				},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) error {
+					Expect(p.Status.Outputs.URLs).To(HaveLen(1))
+					Expect(p.Status.Outputs.URLs[0].URL).To(Equal("http://pr-1-web.example.com"))
+					return nil
+				})
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Outputs.URLsPending).To(BeFalse())
+					Expect(p.GitHubCommentPending).To(BeFalse())
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
+		})
+
+		It("does not wait on resources with no publicly exposed port", func() {
+			stack := &models.Stack{
+				ID: stackID,
+				StackResources: []*models.StackResource{
+					{Name: "worker", Ports: models.Ports{{Name: "metrics", Number: 9090}}, Status: &models.StackResourceStatus{}},
+				},
+			}
+
+			releaseSvc.EXPECT().InternalGet(gomock.Any(), releaseID).Return(release, nil)
+			stackSvc.EXPECT().InternalGetStack(gomock.Any(), stackID).Return(stack, nil)
+			commentService.EXPECT().InternalUpsertComment(gomock.Any(), gomock.Any()).Return(nil)
+			previewStore.EXPECT().Update(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(ctx context.Context, p *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(p.Status.Outputs.URLsPending).To(BeFalse())
+					Expect(p.GitHubCommentPending).To(BeFalse())
+					return p, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
 		})
 	})
 

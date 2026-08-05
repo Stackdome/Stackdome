@@ -90,6 +90,10 @@ func (s *PreviewStackStatus) Scan(value any) error {
 type PreviewStackOutputs struct {
 	CommitSHA string       `json:"commit_sha,omitempty"`
 	URLs      []PreviewURL `json:"urls,omitempty"`
+	// True while a publicly exposed resource still has no ingress URL. The
+	// agent publishes URLs only after TLS is issued (or after its ~2min
+	// fallback to http), which lands after the release goes live.
+	URLsPending bool `json:"urls_pending,omitempty"`
 }
 
 // PreviewURL maps a resource name to its public URL.

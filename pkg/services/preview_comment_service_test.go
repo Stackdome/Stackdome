@@ -151,5 +151,20 @@ var _ = Describe("PreviewCommentService", func() {
 			Expect(body).To(ContainSubstring("Preview environment is live"))
 			Expect(body).ToNot(ContainSubstring("Deployed commit"))
 		})
+
+		It("notes that URLs are still being provisioned when none have landed", func() {
+			preview.Status.Outputs.URLs = nil
+			preview.Status.Outputs.URLsPending = true
+			body := renderPreviewComment(preview)
+			Expect(body).To(ContainSubstring("Preview environment is live"))
+			Expect(body).To(ContainSubstring("`abc123`"))
+			Expect(body).To(ContainSubstring(urlsPendingNote))
+		})
+
+		It("drops the pending note once the URLs land", func() {
+			body := renderPreviewComment(preview)
+			Expect(body).To(ContainSubstring("https://pr-7-web.example.dev"))
+			Expect(body).ToNot(ContainSubstring(urlsPendingNote))
+		})
 	})
 })
