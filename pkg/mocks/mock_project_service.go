@@ -146,6 +146,21 @@ func (mr *MockProjectServiceMockRecorder) InternalCreateDefaultProject(ctx, orgI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalCreateDefaultProject", reflect.TypeOf((*MockProjectService)(nil).InternalCreateDefaultProject), ctx, orgID)
 }
 
+// InternalGetProjectByOrgAndName mocks base method.
+func (m *MockProjectService) InternalGetProjectByOrgAndName(ctx context.Context, orgID, name string) (*models.Project, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetProjectByOrgAndName", ctx, orgID, name)
+	ret0, _ := ret[0].(*models.Project)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetProjectByOrgAndName indicates an expected call of InternalGetProjectByOrgAndName.
+func (mr *MockProjectServiceMockRecorder) InternalGetProjectByOrgAndName(ctx, orgID, name any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetProjectByOrgAndName", reflect.TypeOf((*MockProjectService)(nil).InternalGetProjectByOrgAndName), ctx, orgID, name)
+}
+
 // InternalListUserProjects mocks base method.
 func (m *MockProjectService) InternalListUserProjects(ctx context.Context, userID, orgID string) ([]*models.ProjectMembership, *errors.ServiceError) {
 	m.ctrl.T.Helper()
