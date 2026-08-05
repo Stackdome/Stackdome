@@ -36,11 +36,12 @@ const (
 	GitHubEventInstallation = "installation"
 	GitHubEventPullRequest  = "pull_request"
 	GitHubEventPush         = "push"
-	// GitHubEventIssueComment covers comments on PRs (GitHub delivers PR
-	// comments under this event name). Subscribed now so already-created apps
-	// receive them when the hub starts handling them; unknown events are
-	// dropped by the webhook handler until then.
+	// issue_comment and label are subscribed ahead of use so already-created
+	// apps receive them when the hub starts handling them; unknown events are
+	// dropped by the webhook handler until then. GitHub delivers PR comments
+	// under issue_comment.
 	GitHubEventIssueComment = "issue_comment"
+	GitHubEventLabel        = "label"
 )
 
 // CreateGitHubAppManifest starts the manifest flow: it creates (or reuses) the
@@ -113,7 +114,7 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		// GitHub rejects "installation" as a default_event — installation
 		// lifecycle deliveries are sent to every app automatically, so only
 		// subscribable events belong here.
-		DefaultEvents: []string{GitHubEventPush, GitHubEventPullRequest, GitHubEventIssueComment},
+		DefaultEvents: []string{GitHubEventPush, GitHubEventPullRequest, GitHubEventIssueComment, GitHubEventLabel},
 	}
 	// The API contract exposes the manifest as a free-form object, so marshal
 	// the typed manifest into the generic map the model carries.
