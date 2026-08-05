@@ -187,6 +187,17 @@ func (s *gitIntegrationService) HandleGitHubAppSetup(ctx context.Context, instal
 		return "", errors.BadRequest("installation %d is suspended on GitHub", installationID)
 	}
 
+	// One GitHub account, one Stackdome organisation. A GitHub account can
+	// hold only one installation of the shared app, so re-binding it here
+	// would silently move repos between orgs and break webhook attribution.
+	existing, serr := s.installations.GetByInstallationID(ctx, in.ID)
+	if serr != nil && !serr.Is404() {
+		return "", serr
+	}
+	if serr == nil && existing.GitIntegrationID != integration.ID {
+		return "", errors.Conflict("the GitHub account '%s' is already connected to another organisation; disconnect it there first", in.AccountLogin)
+	}
+
 	if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
 		GitIntegrationID:    integration.ID,
 		InstallationID:      in.ID,

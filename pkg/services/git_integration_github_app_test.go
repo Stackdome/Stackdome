@@ -500,6 +500,7 @@ var _ = Describe("platform GitHub App", func() {
 			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(&githubapp.Installation{
 				ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all",
 			}, nil)
+			deps.installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).Return(nil, errors.NotFound("none"))
 
 			var upserted *models.GitInstallation
 			deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -537,6 +538,7 @@ var _ = Describe("platform GitHub App", func() {
 			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(&githubapp.Installation{
 				ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all",
 			}, nil)
+			deps.installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).Return(nil, errors.NotFound("none"))
 
 			var upserted *models.GitInstallation
 			deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
@@ -554,6 +556,21 @@ var _ = Describe("platform GitHub App", func() {
 			_, serr := svc.HandleGitHubAppSetup(context.Background(), 77, "state-1")
 			Expect(serr).To(BeNil())
 			Expect(upserted.GitIntegrationID).To(Equal("gi-new"))
+		})
+
+		It("rejects an installation already bound to another organisation", func() {
+			deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1", models.OAuthProviderGitHubAppInstall).
+				Return(&models.OAuthState{State: "uuid:org-1:gi-app", CreatedAt: time.Now().UTC()}, nil)
+			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(&githubapp.Installation{
+				ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all",
+			}, nil)
+			deps.installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).
+				Return(&models.GitInstallation{GitIntegrationID: "gi-other-org", InstallationID: 77}, nil)
+
+			_, serr := svc.HandleGitHubAppSetup(context.Background(), 77, "state-1")
+			Expect(serr).NotTo(BeNil())
+			Expect(serr.Reason).To(ContainSubstring("already connected to another organisation"))
 		})
 
 		It("rejects an installation the platform app does not have", func() {
