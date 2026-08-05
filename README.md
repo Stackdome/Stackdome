@@ -39,12 +39,12 @@ The system follows a **hub-and-spoke model**:
 - **Stack deployments** -- Deploy multi-service applications from container images or git repositories
 - **Managed PostgreSQL** -- Provision PostgreSQL clusters with automated backups, restore, and HA (via CloudNativePG)
 - **Environment interpolation** -- Template-based cross-service references (`{{ STACKDOME_POSTGRES_INTERNAL }}`)
-- **RBAC** -- Role-based access control with Casbin (viewer, editor, admin roles with org-scoped isolation)
+- **RBAC** -- Role-based access control with Casbin (OrgAdmin and OrgMember org roles, Developer and Viewer project roles, with org-scoped isolation)
 - **Secrets management** -- Encrypted key-value storage for sensitive configuration
 - **Container builds** -- Build container images from git repos using Kaniko
 - **In-cluster registry** -- Managed container registry (Zot) per cluster
 - **Volume management** -- Persistent storage with git, remote dir, and build artifact sources
-- **WebSocket log streaming** -- Real-time log access for deployed services
+- **Live log streaming** -- Real-time log access for deployed services over Server-Sent Events (SSE)
 
 ## Prerequisites
 
