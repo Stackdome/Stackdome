@@ -1346,6 +1346,37 @@ paths:
       security:
       - Bearer: []
       summary: List all stacks the user has access to across all projects
+  /api/v1/organizations/{org_id}/postgres-addons:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostgresAddonList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List all PostgresAddons the user has access to across all projects
   /api/v1/organizations/{org_id}/clusters:
     get:
       parameters:
@@ -3702,6 +3733,54 @@ paths:
       - Bearer: []
       summary: Update stack connection
   /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes:
+    get:
+      parameters:
+      - description: The ID of the organization
+        explode: false
+        in: path
+        name: org_id
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The name of the project
+        explode: false
+        in: path
+        name: project_name
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: The id of record
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          type: string
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeList'
+          description: Successful operation
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden
+        "404":
+          description: Stack not found
+        "500":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+          description: Internal server error
+      security:
+      - Bearer: []
+      summary: List volumes used by the stack
     post:
       parameters:
       - description: The ID of the organization
@@ -7259,6 +7338,129 @@ components:
       - spec
       type: object
     VolumeList:
+      example:
+        total: 0
+        items:
+        - project_id: project_id
+          name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          id: id
+          spec:
+            needs_sync_before_use: true
+            storage_class: storage_class
+            size: size
+            source:
+              git_repo_source:
+                repo_url: repo_url
+                revision:
+                  commit: commit
+                  tag: tag
+                  branch: branch
+              remote_source:
+                path: path
+                current_directory_hash: current_directory_hash
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+            access_mode: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            last_synced_git_revision: last_synced_git_revision
+            last_remote_sync_hash: last_remote_sync_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+        - project_id: project_id
+          name: name
+          annotations:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          id: id
+          spec:
+            needs_sync_before_use: true
+            storage_class: storage_class
+            size: size
+            source:
+              git_repo_source:
+                repo_url: repo_url
+                revision:
+                  commit: commit
+                  tag: tag
+                  branch: branch
+              remote_source:
+                path: path
+                current_directory_hash: current_directory_hash
+              build_source:
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              - destination_path: destination_path
+                resource_ref: resource_ref
+                source_path: source_path
+              source_type: null
+            access_mode: null
+          labels:
+          - value: value
+            key: key
+          - value: value
+            key: key
+          status:
+            phase: phase
+            build_artifact_syncs:
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            - build_id: build_id
+              resource_name: resource_name
+              status: status
+            last_synced_git_revision: last_synced_git_revision
+            last_remote_sync_hash: last_remote_sync_hash
+            conditions:
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
+            - reason: reason
+              last_transition_time: 2000-01-23T04:56:07.000+00:00
+              type: type
+              message: message
+              observed_generation: 1
+              status: status
       properties:
         items:
           items:
