@@ -26,7 +26,7 @@ beforeAll(() => {
 const stack = { spec: { stack_resources: [] } } as unknown as Stack;
 const rels = (n: number): StackRelease[] => Array.from({ length: n }, (_, i) => ({ id: `r${n - i}`, sequence: n - i, state: "Released", cause: { kind: "manual" } } as StackRelease));
 
-const base = { stack, onRollback: vi.fn(), onCancel: vi.fn(), onCopyId: vi.fn() };
+const base = { stack, onRollback: vi.fn(), onCancel: vi.fn() };
 
 const stubDetail: ReleaseDetail = { ensure: vi.fn(), peek: () => ({ loading: false }), refresh: vi.fn() };
 function renderRail(ui: React.ReactElement) {

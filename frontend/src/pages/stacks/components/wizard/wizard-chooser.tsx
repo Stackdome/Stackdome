@@ -37,7 +37,7 @@ interface AltStart {
   desc: string;
   onClick?: () => void;
   disabled?: boolean;
-  soon?: boolean;
+  tag?: string;
 }
 
 export function WizardChooser({
@@ -71,6 +71,7 @@ export function WizardChooser({
       label: "Docker compose",
       desc: "Import a compose.yml.",
       onClick: onPickCompose,
+      tag: "experimental",
     },
     {
       icon: Code,
@@ -118,9 +119,9 @@ export function WizardChooser({
                   <span className="text-sm font-medium text-foreground">
                     {a.label}
                   </span>
-                  {a.soon && (
+                  {a.tag && (
                     <span className="rounded-full border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
-                      soon
+                      {a.tag}
                     </span>
                   )}
                 </span>

@@ -45,6 +45,9 @@ import { useReleaseAnchors } from "@/pages/stacks/components/editor/hooks/use-re
 import { mapVolumeToFormData, formResourcesFromSpec } from "@/pages/stacks/lib/spec-to-form";
 import { addonIdsFromConnections } from "@/pages/stacks/lib/connection-mapping";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
+import { usePreviewLineage } from "@/hooks/use-preview-lineage";
+import { PREVIEW_CONFIG_ID_LABEL, PREVIEW_STACK_LABEL } from "@/contexts/preview-lineage-context";
+import { getPreviewConfig } from "@/api/preview-configs";
 import { getCurrentOrganizationId } from "@/lib/common";
 import { useResourceProjects } from "@/hooks/use-resource-projects";
 import { useCurrentUser } from "@/hooks/use-current-user";
@@ -89,6 +92,7 @@ export default function CanvasEditorPage() {
   const [nameError, setNameError] = useState<string | undefined>();
 
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
+  const { setLineage } = usePreviewLineage();
   const { toast } = useToast();
   const { projects, projectNameById, defaultProjectName } = useResourceProjects();
   const { canWrite } = useCurrentUser();
@@ -98,6 +102,11 @@ export default function CanvasEditorPage() {
   // Viewer read-only gating: only OrgAdmin / project Developer may mutate this stack.
   const stackProjectId = fetchedStack?.project_id ?? currentStack?.project_id;
   const canWriteStack = canWrite(stackProjectId ?? "");
+
+  // Navigating straight from one stack to another keeps the previous fetch's
+  // payload until the new one lands — every consumer of savedStack would read
+  // the old stack, and a failed fetch would leave it there for good.
+  useEffect(() => { setFetchedStack(null); }, [id]);
 
   useEffect(() => {
     if (isNewStack) return;
@@ -165,6 +174,37 @@ export default function CanvasEditorPage() {
     stackId: savedStack?.id || "",
   }), [savedStack, projectNameById, defaultProjectName]);
   const idsReady = !!deployIds.stackId && !!deployIds.projectName;
+
+  // Preview stacks live at /stacks/<id> but belong to a preview config; publish
+  // that so the breadcrumb and sidebar can place the page under Previews.
+  const previewConfigId = useMemo(() => {
+    const labels = savedStack?.labels ?? [];
+    if (!labels.some((l) => l.key === PREVIEW_STACK_LABEL && l.value === "true")) return undefined;
+    return labels.find((l) => l.key === PREVIEW_CONFIG_ID_LABEL)?.value;
+  }, [savedStack?.labels]);
+
+  useEffect(() => {
+    if (!previewConfigId) {
+      setLineage(null);
+      return;
+    }
+    setLineage({ configId: previewConfigId });
+    if (!deployIds.orgId || !deployIds.projectName) return;
+    let cancelled = false;
+    void getPreviewConfig(deployIds.orgId, deployIds.projectName, previewConfigId)
+      .then((config) => {
+        if (!cancelled) setLineage({ configId: previewConfigId, configName: config.name });
+      })
+      .catch(() => {
+        // The crumb only needs a label to be usable; its link works off the id.
+        if (!cancelled) setLineage({ configId: previewConfigId, configName: "Preview" });
+      });
+    return () => { cancelled = true; };
+  }, [previewConfigId, deployIds.orgId, deployIds.projectName, setLineage]);
+
+  // Leaving the stack page hands the highlight back to Stacks.
+  useEffect(() => () => setLineage(null), [setLineage]);
+
   const releasesResult = useReleases({ ...deployIds, enabled: idsReady });
   const releaseDetail = useReleaseDetail(deployIds.orgId, deployIds.projectName, deployIds.stackId);
 
@@ -674,10 +714,6 @@ export default function CanvasEditorPage() {
     (releaseId: string) => runDeploy(() => rollbackRelease(deployIds.orgId, deployIds.projectName, deployIds.stackId, releaseId), "Rollback started"),
     [runDeploy, deployIds],
   );
-  const onCopyId = useCallback((releaseId: string) => {
-    void navigator.clipboard?.writeText(releaseId);
-    toast({ title: "Release ID copied", variant: "success" });
-  }, [toast]);
 
   // Draft deploy: validates name, creates the stack, starts the first release,
   // and navigates to the new page. There is no separate "create" step — the
@@ -936,7 +972,6 @@ export default function CanvasEditorPage() {
       lifecycle={lifecycle}
       onRollback={onRollback}
       onCancel={onCancelDeploy}
-      onCopyId={onCopyId}
     />
   ) : (
     <div className="text-center text-muted-foreground py-12">Stack ID not available</div>

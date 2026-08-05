@@ -12,6 +12,7 @@ vi.mock("@/api/releases", () => ({
   ReleaseEventType: { ResourceWaiting: "resource_waiting", ResourceDeploying: "resource_deploying", ResourceReady: "resource_ready", ResourceFailed: "resource_failed" },
 }));
 import { useReleaseDetail } from "../../use-release-detail";
+import { ConfirmProvider } from "@/components/branded/confirm";
 import { TimelineNode } from "../timeline-node";
 import { getRelease, listReleaseEvents, ReleaseEventScope } from "@/api/releases";
 import type { StackRelease } from "@/api/releases";
@@ -50,7 +51,6 @@ function Wrap(over: Partial<React.ComponentProps<typeof TimelineNode>> & { relea
       onToggle={vi.fn()}
       onRollback={vi.fn()}
       onCancel={vi.fn()}
-      onCopyId={vi.fn()}
       isActive={false}
       isLive={false}
       stack={stack}
@@ -83,6 +83,24 @@ describe("TimelineNode", () => {
     render(<Wrap release={{ id: "r1", sequence: 7, state: "Released" } as StackRelease} isActive isOpen />);
     expect(screen.getByText("Build")).toBeInTheDocument();
     expect(screen.getByText("Deploy")).toBeInTheDocument();
+  });
+
+  it("offers rollback on an earlier release, and only after confirmation", async () => {
+    const onRollback = vi.fn();
+    render(
+      <ConfirmProvider>
+        <Wrap release={{ id: "r1", sequence: 12, state: "Released" } as StackRelease} isOpen onRollback={onRollback} />
+      </ConfirmProvider>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: /Rollback to this/ }));
+    expect(onRollback).not.toHaveBeenCalled();
+    await userEvent.click(await screen.findByRole("button", { name: /^Roll back$/ }));
+    await waitFor(() => expect(onRollback).toHaveBeenCalledWith("r1"));
+  });
+
+  it("offers no rollback on the live release — it is already serving traffic", () => {
+    render(<Wrap release={{ id: "r1", sequence: 13, state: "Released" } as StackRelease} isOpen isLive />);
+    expect(screen.queryByRole("button", { name: /Rollback to this/ })).not.toBeInTheDocument();
   });
 
   it("renders the historical post-mortem for a non-active node when open", async () => {

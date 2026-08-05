@@ -25,10 +25,9 @@ export interface DeploymentsTabProps {
   lifecycle: DeployLifecycle;
   onRollback: (id: string) => void;
   onCancel: (id: string) => void;
-  onCopyId: (id: string) => void;
 }
 
-export function DeploymentsTab({ orgId, projectName, stackId, stack, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel, onCopyId }: DeploymentsTabProps) {
+export function DeploymentsTab({ orgId, projectName, stackId, stack, onJumpToResource, refetchReleases, releases, activeRelease, loading, error, lifecycle, onRollback, onCancel }: DeploymentsTabProps) {
   if (error) return <EmptyState title="Could not load deployments" description={error} />;
 
   const logContext = { orgId, projectName, stackId };
@@ -72,7 +71,6 @@ export function DeploymentsTab({ orgId, projectName, stackId, stack, onJumpToRes
             draftNode={draftNode}
             onRollback={onRollback}
             onCancel={onCancel}
-            onCopyId={onCopyId}
           />
         )}
       </div>

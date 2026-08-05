@@ -16,6 +16,7 @@ func NewStackDefaultingService() DefaultingService[*models.Stack] {
 
 func (s *stackDefaultingService) PopulateDefaultValues(resource *models.Stack) (*models.Stack, error) {
 	for i := range resource.StackResources {
+		applyStackResourceWorkloadTypeDefault(resource.StackResources[i])
 		applyStackResourcePortDefaults(resource.StackResources[i])
 		normalizeStackResourceReplicas(resource.StackResources[i])
 	}
@@ -44,6 +45,18 @@ func applyStackResourcePortDefaults(resource *models.StackResource) {
 			resource.Ports[i].Protocol = models.PortProtocolHTTP
 		}
 	}
+}
+
+// applyStackResourceWorkloadTypeDefault fills in the OpenAPI default for
+// workload_type. Stackfile-built stacks (PR previews, compose import) omit it,
+// and the enum has no value for "" — an empty one fails client-side validation
+// and reads as a deleted resource. Runs before the replica normalization below
+// so both see the same workload type.
+func applyStackResourceWorkloadTypeDefault(resource *models.StackResource) {
+	if resource == nil || resource.WorkloadType != "" {
+		return
+	}
+	resource.WorkloadType = models.WorkloadTypeService
 }
 
 // singleInstanceReplicas is the replica count hard-coded for workloads that

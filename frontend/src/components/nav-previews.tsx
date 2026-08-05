@@ -6,10 +6,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { usePreviewLineage } from "@/hooks/use-preview-lineage"
 
 export function NavPreviews() {
   const location = useLocation();
-  const isActive = location.pathname.startsWith("/previews");
+  const { lineage } = usePreviewLineage();
+  // A preview stack renders under /stacks, but it belongs to Previews.
+  const isActive = location.pathname.startsWith("/previews") || !!lineage;
 
   return (
     <SidebarMenu>

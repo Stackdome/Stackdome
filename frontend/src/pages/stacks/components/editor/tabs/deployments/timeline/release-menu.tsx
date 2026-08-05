@@ -6,14 +6,15 @@ import { ReleaseState } from "../release-states";
 
 export interface ReleaseMenuProps {
   release: StackRelease;
-  onRollback: (id: string) => void;
   onCancel: (id: string) => void;
-  onCopyId: (id: string) => void;
 }
 
-export function ReleaseMenu({ release, onRollback, onCancel, onCopyId }: ReleaseMenuProps) {
-  const id = release.id ?? "";
-  const state = release.state ?? "";
+export function ReleaseMenu({ release, onCancel }: ReleaseMenuProps) {
+  // Only a Pending release can be cancelled — once InProgress the backend
+  // rejects it (the rollout is already applied to the cluster). Cancel is the
+  // menu's only item, so there is nothing to open otherwise.
+  if (release.state !== ReleaseState.Pending || !release.id) return null;
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -22,13 +23,7 @@ export function ReleaseMenu({ release, onRollback, onCancel, onCopyId }: Release
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[180px]">
-        {state === ReleaseState.Released && release.id && <DropdownMenuItem onClick={() => onRollback(release.id!)}>Rollback to this</DropdownMenuItem>}
-        {/* Only a Pending release can be cancelled — once InProgress the backend
-            rejects it (the rollout is already applied to the cluster). */}
-        {state === ReleaseState.Pending && release.id && (
-          <DropdownMenuItem variant="destructive" onClick={() => onCancel(release.id!)}>Cancel release</DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={() => onCopyId(id)}>Copy release ID</DropdownMenuItem>
+        <DropdownMenuItem variant="destructive" onClick={() => onCancel(release.id!)}>Cancel release</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
