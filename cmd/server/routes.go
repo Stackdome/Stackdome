@@ -309,7 +309,6 @@ func (s apiServer) routes() *mux.Router {
 	projectResourceRouter.HandleFunc("/stacks/{id}/volumes", volumeHandler.ListByStackID).Methods(http.MethodGet)
 
 	// Volumes (project-scoped)
-	projectResourceRouter.HandleFunc("/volumes", volumeHandler.Create).Methods(http.MethodPost)
 	projectResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.GetByID).Methods(http.MethodGet)
 	projectResourceRouter.HandleFunc("/volumes/{id}", volumeHandler.Delete).Methods(http.MethodDelete)
 

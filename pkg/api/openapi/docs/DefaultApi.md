@@ -101,7 +101,6 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stacks | Create a new stack
 [**ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id} | Delete a volume
 [**ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id} | Get a specific volume
-[**ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/volumes | Create a new volume
 [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersCurrentGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersCurrentGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/current | Get the workspace user for the current user
 [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdDelete) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id} | Delete a workspace user
 [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id} | Get a workspace user by ID
@@ -7124,79 +7123,6 @@ Name | Type | Description  | Notes
 ### HTTP request headers
 
 - **Content-Type**: Not defined
-- **Accept**: application/json
-
-[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
-[[Back to Model list]](../README.md#documentation-for-models)
-[[Back to README]](../README.md)
-
-
-## ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost
-
-> Volume ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost(ctx, orgId, projectName).Volume(volume).Execute()
-
-Create a new volume
-
-### Example
-
-```go
-package main
-
-import (
-    "context"
-    "fmt"
-    "os"
-    openapiclient "./openapi"
-)
-
-func main() {
-    orgId := "orgId_example" // string | The ID of the organization
-    projectName := "projectName_example" // string | The name of the project
-    volume := *openapiclient.NewVolume("Name_example", *openapiclient.NewVolumeSpec("Size_example", false, openapiclient.VolumeAccessMode("ReadWriteOnce"))) // Volume | 
-
-    configuration := openapiclient.NewConfiguration()
-    apiClient := openapiclient.NewAPIClient(configuration)
-    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost(context.Background(), orgId, projectName).Volume(volume).Execute()
-    if err != nil {
-        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost``: %v\n", err)
-        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
-    }
-    // response from `ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost`: Volume
-    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameVolumesPost`: %v\n", resp)
-}
-```
-
-### Path Parameters
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
-**orgId** | **string** | The ID of the organization | 
-**projectName** | **string** | The name of the project | 
-
-### Other Parameters
-
-Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdProjectsProjectNameVolumesPostRequest struct via the builder pattern
-
-
-Name | Type | Description  | Notes
-------------- | ------------- | ------------- | -------------
-
-
- **volume** | [**Volume**](Volume.md) |  | 
-
-### Return type
-
-[**Volume**](Volume.md)
-
-### Authorization
-
-[Bearer](../README.md#Bearer)
-
-### HTTP request headers
-
-- **Content-Type**: application/json
 - **Accept**: application/json
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)

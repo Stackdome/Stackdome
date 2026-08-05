@@ -6,7 +6,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/errors"
-	"github.com/Stackdome/stackdome/pkg/handlers/validation"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/gorilla/mux"
@@ -62,38 +61,6 @@ func (h *volumeHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	handleGet(w, r, cfg)
-}
-
-func (h *volumeHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var ws openapi.Volume
-	cfg := &handlerConfig{
-		&ws,
-		validation.ValidateVolume(&ws),
-		func() (interface{}, *errors.ServiceError) {
-			ctx := r.Context()
-			projectID, serr := resolveProjectID(r, h.projectService)
-			if serr != nil {
-				return nil, serr
-			}
-			convertedObject := presenters.ConvertVolume(&ws)
-			currentUser, err := auth.GetCurrentUserFromCtx(ctx)
-			if err != nil {
-				return nil, errors.Unauthorized("failed to fetch user")
-			}
-			orgID := mux.Vars(r)["org_id"]
-			convertedObject.OrganisationID = orgID
-			convertedObject.ProjectID = projectID
-			convertedObject.UserID = currentUser.ID
-
-			obj, serr := h.volumeService.Create(ctx, convertedObject)
-			if serr != nil {
-				return nil, serr
-			}
-			return presenters.PresentVolume(obj, true), nil
-		},
-		handleError,
-	}
-	handle(w, r, cfg, http.StatusCreated)
 }
 
 func (h *volumeHandler) ListByStackID(w http.ResponseWriter, r *http.Request) {
