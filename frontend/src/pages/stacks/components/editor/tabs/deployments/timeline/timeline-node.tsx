@@ -49,7 +49,7 @@ export function TimelineNode(props: TimelineNodeProps) {
   const requestRollback = async () => {
     const ok = await confirm({
       title: `Roll back to release #${release.sequence}?`,
-      description: "The stack is redeployed from this release's snapshot, replacing what is currently live.",
+      description: "The stack redeploys this release's snapshot, replacing what is currently live.",
       confirmLabel: "Roll back",
     });
     if (ok) onRollback(id);
