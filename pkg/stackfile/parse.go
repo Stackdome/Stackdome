@@ -14,19 +14,27 @@ const MaxStackfileSize = 1 << 20 // 1MB
 
 // Load parses raw YAML bytes into a Stackfile and validates it.
 func Load(content []byte) (*Stackfile, error) {
+	sf, _, err := LoadWithWarnings(content)
+	return sf, err
+}
+
+// LoadWithWarnings is Load plus warnings about keys the decoder ignored.
+// Unknown keys never fail the load: old files carrying dropped fields such as
+// `stateful:` must keep working.
+func LoadWithWarnings(content []byte) (*Stackfile, []string, error) {
 	if len(content) > MaxStackfileSize {
-		return nil, fmt.Errorf("stackfile too large (%d bytes, max %d)", len(content), MaxStackfileSize)
+		return nil, nil, fmt.Errorf("stackfile too large (%d bytes, max %d)", len(content), MaxStackfileSize)
 	}
 	var sf Stackfile
 	if err := yaml.Unmarshal(content, &sf); err != nil {
-		return nil, fmt.Errorf("failed to parse stackfile: %w", err)
+		return nil, nil, fmt.Errorf("failed to parse stackfile: %w", err)
 	}
 
 	if err := Validate(&sf); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	return &sf, nil
+	return &sf, collectUnknownKeys(content), nil
 }
 
 func Validate(sf *Stackfile) error {
