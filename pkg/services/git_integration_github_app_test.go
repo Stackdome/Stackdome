@@ -168,7 +168,7 @@ func TestHandleGitHubManifestCallbackSealsCredentials(t *testing.T) {
 		Status:         models.GitIntegrationStatusPendingInstall,
 	}
 	deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1:gi-app", models.OAuthProviderGitHubAppManifest).
-		Return(&models.OAuthState{State: "state-1:gi-app", CreatedAt: time.Now().UTC()}, nil)
+		Return(&models.OAuthState{State: "state-1:org-1:gi-app", CreatedAt: time.Now().UTC()}, nil)
 	deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
 	deps.appClient.EXPECT().ConvertManifestCode(gomock.Any(), "tmp-code").Return(&githubapp.AppCredentials{
 		AppID:         4242,
@@ -476,7 +476,7 @@ var _ = Describe("platform GitHub App", func() {
 
 		It("binds the new installation to the org that started the flow", func() {
 			deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1", models.OAuthProviderGitHubAppInstall).
-				Return(&models.OAuthState{State: "uuid:gi-app", CreatedAt: time.Now().UTC()}, nil)
+				Return(&models.OAuthState{State: "uuid:org-1:gi-app", CreatedAt: time.Now().UTC()}, nil)
 			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
 			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(&githubapp.Installation{
 				ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all",
@@ -503,9 +503,43 @@ var _ = Describe("platform GitHub App", func() {
 			Expect(integration.Status).To(Equal(models.GitIntegrationStatusInstalled))
 		})
 
+		It("falls back to the org's current row when the state's row was deleted mid-flow", func() {
+			recreated := &models.GitIntegration{
+				ID:             "gi-new",
+				OrganisationID: "org-1",
+				Type:           models.GitIntegrationTypeGitHubApp,
+				Status:         models.GitIntegrationStatusPendingInstall,
+				DataHash:       gitIntegrationDataHash(nil),
+			}
+			deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1", models.OAuthProviderGitHubAppInstall).
+				Return(&models.OAuthState{State: "uuid:org-1:gi-app", CreatedAt: time.Now().UTC()}, nil)
+			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(nil, errors.NotFound("gone"))
+			deps.store.EXPECT().GetGitHubAppForOrg(gomock.Any(), "org-1").Return(recreated, nil)
+			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(&githubapp.Installation{
+				ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all",
+			}, nil)
+
+			var upserted *models.GitInstallation
+			deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, in *models.GitInstallation) (*models.GitInstallation, *errors.ServiceError) {
+					upserted = in
+					return in, nil
+				})
+			deps.installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-new").
+				Return([]*models.GitInstallation{{InstallationID: 77}}, nil)
+			deps.store.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, in *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError) {
+					return in, nil
+				})
+
+			_, serr := svc.HandleGitHubAppSetup(context.Background(), 77, "state-1")
+			Expect(serr).To(BeNil())
+			Expect(upserted.GitIntegrationID).To(Equal("gi-new"))
+		})
+
 		It("rejects an installation the platform app does not have", func() {
 			deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1", models.OAuthProviderGitHubAppInstall).
-				Return(&models.OAuthState{State: "uuid:gi-app", CreatedAt: time.Now().UTC()}, nil)
+				Return(&models.OAuthState{State: "uuid:org-1:gi-app", CreatedAt: time.Now().UTC()}, nil)
 			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
 			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(nil, fmt.Errorf("404 not found"))
 

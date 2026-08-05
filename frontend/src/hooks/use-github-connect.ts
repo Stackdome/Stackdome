@@ -6,7 +6,10 @@ import {
 } from "@/api/git-integrations";
 import { getErrorMessage } from "@/api/client";
 import { getCurrentOrganizationId } from "@/lib/common";
-import { GITHUB_APP_INSTALLED_MESSAGE } from "@/hooks/use-github-setup-landing";
+import {
+  GITHUB_APP_INSTALLED_MESSAGE,
+  GITHUB_APP_SETUP_ERROR_MESSAGE,
+} from "@/hooks/use-github-setup-landing";
 import {
   GIT_INTEGRATION_TYPE_GITHUB_APP,
   STATUS_INSTALLED,
@@ -134,8 +137,12 @@ export function useGithubConnect(): GithubConnect {
     if (state !== "waiting") return;
     const onMessage = (ev: MessageEvent) => {
       if (ev.origin !== window.location.origin) return;
-      if ((ev.data as { type?: string })?.type === GITHUB_APP_INSTALLED_MESSAGE) {
+      const data = ev.data as { type?: string; reason?: string };
+      if (data?.type === GITHUB_APP_INSTALLED_MESSAGE) {
         setState("connected");
+      } else if (data?.type === GITHUB_APP_SETUP_ERROR_MESSAGE) {
+        setError(data.reason ?? "The GitHub App install failed.");
+        setState("error");
       }
     };
     window.addEventListener("message", onMessage);

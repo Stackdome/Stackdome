@@ -3,6 +3,7 @@ package handlers
 import (
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
@@ -158,10 +159,17 @@ func (h *gitIntegrationHandler) GitHubManifestCallback(w http.ResponseWriter, r 
 
 	redirectURL, serr := h.gitIntegrationService.HandleGitHubManifestCallback(r.Context(), code, state)
 	if serr != nil {
-		handleError(r.Context(), w, serr)
+		redirectSetupError(w, r, serr)
 		return
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// redirectSetupError sends the browser back to the SPA with the failure
+// reason instead of a raw JSON body — these callbacks render in a popup a
+// person is looking at.
+func redirectSetupError(w http.ResponseWriter, r *http.Request, serr *errors.ServiceError) {
+	http.Redirect(w, r, "/git-integrations?setup_error="+url.QueryEscape(serr.Reason), http.StatusFound)
 }
 
 // GitHubAppSetup is unauthenticated: the browser lands here from GitHub after
@@ -170,13 +178,13 @@ func (h *gitIntegrationHandler) GitHubManifestCallback(w http.ResponseWriter, r 
 func (h *gitIntegrationHandler) GitHubAppSetup(w http.ResponseWriter, r *http.Request) {
 	installationID, err := strconv.ParseInt(r.URL.Query().Get("installation_id"), 10, 64)
 	if err != nil {
-		handleError(r.Context(), w, errors.MalformedRequest("installation_id must be a number"))
+		redirectSetupError(w, r, errors.MalformedRequest("installation_id must be a number"))
 		return
 	}
 
 	redirectURL, serr := h.gitIntegrationService.HandleGitHubAppSetup(r.Context(), installationID, r.URL.Query().Get("state"))
 	if serr != nil {
-		handleError(r.Context(), w, serr)
+		redirectSetupError(w, r, serr)
 		return
 	}
 	http.Redirect(w, r, redirectURL, http.StatusFound)
