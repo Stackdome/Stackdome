@@ -405,9 +405,12 @@ func (s *previewStackService) InternalBuildStackFromContent(
 	preview *models.PreviewStack,
 	stackFileBytes []byte,
 ) (*models.Stack, *errors.OperationError) {
-	sf, err := stackfile.Load(stackFileBytes)
+	sf, warnings, err := stackfile.LoadWithWarnings(stackFileBytes)
 	if err != nil {
 		return nil, errors.Permanent("InvalidStackfile", fmt.Sprintf("failed to parse stackfile: %v", err))
+	}
+	for _, w := range warnings {
+		s.logger.Warn(ctx, "stackfile: %s", w)
 	}
 
 	// Merge env overrides into the stackfile before ToStack so that override
