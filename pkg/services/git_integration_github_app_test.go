@@ -460,6 +460,25 @@ var _ = Describe("platform GitHub App", func() {
 		})
 	})
 
+	Describe("Delete", func() {
+		It("uninstalls every bound installation from GitHub before deleting the row", func() {
+			integration := &models.GitIntegration{
+				ID:             "gi-app",
+				OrganisationID: "org-1",
+				Type:           models.GitIntegrationTypeGitHubApp,
+				Status:         models.GitIntegrationStatusInstalled,
+			}
+			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+			deps.installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-app").
+				Return([]*models.GitInstallation{{InstallationID: 77}, {InstallationID: 88}}, nil)
+			deps.appClient.EXPECT().DeleteInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(nil)
+			deps.appClient.EXPECT().DeleteInstallation(gomock.Any(), gomock.Any(), int64(88)).Return(fmt.Errorf("github down"))
+			deps.store.EXPECT().Delete(gomock.Any(), "gi-app").Return(nil)
+
+			Expect(svc.Delete(context.Background(), "gi-app")).To(BeNil())
+		})
+	})
+
 	Describe("HandleGitHubAppSetup", func() {
 		var integration *models.GitIntegration
 

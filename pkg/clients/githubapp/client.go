@@ -84,6 +84,8 @@ type Client interface {
 	ListInstallations(ctx context.Context, creds *AppCredentials) ([]Installation, error)
 	// GetInstallation fetches one installation of the app by its GitHub id.
 	GetInstallation(ctx context.Context, creds *AppCredentials, installationID int64) (*Installation, error)
+	// DeleteInstallation uninstalls the app from the installation's account.
+	DeleteInstallation(ctx context.Context, creds *AppCredentials, installationID int64) error
 	// MintInstallationToken creates a short-lived installation access token.
 	MintInstallationToken(ctx context.Context, creds *AppCredentials, installationID int64) (*Token, error)
 	// ListInstallationRepos lists one page of repositories the installation
@@ -240,6 +242,17 @@ func (c *client) GetInstallation(ctx context.Context, creds *AppCredentials, ins
 		RepositorySelection: in.GetRepositorySelection(),
 		Suspended:           !in.GetSuspendedAt().IsZero(),
 	}, nil
+}
+
+func (c *client) DeleteInstallation(ctx context.Context, creds *AppCredentials, installationID int64) error {
+	gh, err := c.appClient(creds)
+	if err != nil {
+		return err
+	}
+	if _, err := gh.Apps.DeleteInstallation(ctx, installationID); err != nil {
+		return fmt.Errorf("failed to delete installation %d: %w", installationID, err)
+	}
+	return nil
 }
 
 func (c *client) MintInstallationToken(ctx context.Context, creds *AppCredentials, installationID int64) (*Token, error) {
