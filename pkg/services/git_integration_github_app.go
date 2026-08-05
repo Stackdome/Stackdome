@@ -27,11 +27,20 @@ const (
 	githubAppsBaseURL    = "https://github.com"
 	manifestCallbackPath = "/api/v1/git-integrations/github/manifest/callback"
 	githubWebhookPath    = "/api/v1/webhooks/github"
+	// setupCompleteRedirect is where the browser lands after a platform-app
+	// install. setup_action tells the SPA it is the install popup, so it can
+	// notify its opener and close.
+	setupCompleteRedirect = "/git-integrations?setup_action=install"
 
 	// GitHub webhook event names.
 	GitHubEventInstallation = "installation"
 	GitHubEventPullRequest  = "pull_request"
 	GitHubEventPush         = "push"
+	// GitHubEventIssueComment covers comments on PRs (GitHub delivers PR
+	// comments under this event name). Subscribed now so already-created apps
+	// receive them when the hub starts handling them; unknown events are
+	// dropped by the webhook handler until then.
+	GitHubEventIssueComment = "issue_comment"
 )
 
 // CreateGitHubAppManifest starts the manifest flow: it creates (or reuses) the
@@ -60,7 +69,15 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		if serr != nil {
 			return nil, serr
 		}
-	} else if integration.Status == models.GitIntegrationStatusInstalled {
+	}
+
+	// Platform mode allows re-running the flow on an installed integration:
+	// that is how a second GitHub account (personal + org) gets added, since
+	// the shared-app webhook cannot attribute new installations to an org.
+	if s.platformApp != nil {
+		return s.platformAppInstallFlow(ctx, integration)
+	}
+	if integration.Status == models.GitIntegrationStatusInstalled {
 		return nil, errors.Conflict("a GitHub App is already installed for this organisation")
 	}
 
@@ -90,11 +107,13 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 			githubapp.PermContents:     githubapp.PermLevelRead,
 			githubapp.PermMetadata:     githubapp.PermLevelRead,
 			githubapp.PermPullRequests: githubapp.PermLevelWrite,
+			// Issues read is what allows the issue_comment event below.
+			githubapp.PermIssues: githubapp.PermLevelRead,
 		},
 		// GitHub rejects "installation" as a default_event — installation
 		// lifecycle deliveries are sent to every app automatically, so only
 		// subscribable events belong here.
-		DefaultEvents: []string{GitHubEventPush, GitHubEventPullRequest},
+		DefaultEvents: []string{GitHubEventPush, GitHubEventPullRequest, GitHubEventIssueComment},
 	}
 	// The API contract exposes the manifest as a free-form object, so marshal
 	// the typed manifest into the generic map the model carries.
@@ -108,6 +127,86 @@ func (s *gitIntegrationService) CreateGitHubAppManifest(ctx context.Context, org
 		GitHubURL: fmt.Sprintf("%s/settings/apps/new?state=%s", githubAppsBaseURL, state),
 		State:     state,
 	}, nil
+}
+
+// platformAppInstallFlow is the manifest flow's shortcut when the hub runs one
+// platform-wide GitHub App: there is nothing to create on GitHub, so the user
+// goes straight to the app's install page. The state comes back on the setup
+// callback and is what binds the new installation to this org. The row stores
+// no credentials — platform creds resolve from config at read time.
+func (s *gitIntegrationService) platformAppInstallFlow(ctx context.Context, integration *models.GitIntegration) (*models.GitHubAppManifestFlow, *errors.ServiceError) {
+	state := fmt.Sprintf("%s:%s", uuid.NewString(), integration.ID)
+	if serr := s.oauthStates.Create(ctx, &models.OAuthState{
+		State:     state,
+		Provider:  models.OAuthProviderGitHubAppInstall,
+		CreatedAt: time.Now().UTC(),
+	}); serr != nil {
+		return nil, serr
+	}
+
+	return &models.GitHubAppManifestFlow{
+		GitHubURL: fmt.Sprintf("%s?state=%s", githubAppInstallURL(s.platformApp.Slug), state),
+		State:     state,
+	}, nil
+}
+
+// HandleGitHubAppSetup finishes the platform-app install: GitHub redirects the
+// browser to the app's setup URL with the new installation id and the state
+// issued when the flow started. Unauthenticated: the state is the proof of
+// initiation, exactly as in the manifest callback.
+func (s *gitIntegrationService) HandleGitHubAppSetup(ctx context.Context, installationID int64, state string) (string, *errors.ServiceError) {
+	if installationID == 0 || state == "" {
+		return "", errors.BadRequest("installation_id and state are required")
+	}
+
+	record, serr := s.oauthStates.Consume(ctx, state, models.OAuthProviderGitHubAppInstall)
+	if serr != nil {
+		return "", serr
+	}
+	if time.Since(record.CreatedAt) > manifestStateTTL {
+		return "", errors.BadRequest("the GitHub App setup link has expired; restart the flow")
+	}
+
+	_, integrationID, found := strings.Cut(record.State, ":")
+	if !found || integrationID == "" {
+		return "", errors.BadRequest("malformed state parameter")
+	}
+
+	integration, serr := s.store.GetByID(ctx, integrationID)
+	if serr != nil {
+		return "", serr
+	}
+	if integration.Type != models.GitIntegrationTypeGitHubApp {
+		return "", errors.BadRequest("state does not reference a GitHub App integration")
+	}
+
+	creds, serr := s.appCredentials(integration)
+	if serr != nil {
+		return "", serr
+	}
+	// The id from the query string is not trusted on its own: confirm with
+	// GitHub that this installation really belongs to our app.
+	in, err := s.githubApp.GetInstallation(ctx, creds, installationID)
+	if err != nil {
+		return "", errors.NotFound("installation %d was not found on the platform GitHub App: %s", installationID, err.Error())
+	}
+	if in.Suspended {
+		return "", errors.BadRequest("installation %d is suspended on GitHub", installationID)
+	}
+
+	if _, serr := s.installations.Upsert(ctx, &models.GitInstallation{
+		GitIntegrationID:    integration.ID,
+		InstallationID:      in.ID,
+		AccountLogin:        in.AccountLogin,
+		AccountType:         models.GitAccountType(in.AccountType),
+		RepositorySelection: in.RepositorySelection,
+	}); serr != nil {
+		return "", serr
+	}
+	if serr := syncInstallationStatus(ctx, s.store, s.installations, integration); serr != nil {
+		return "", serr
+	}
+	return s.externalURL + setupCompleteRedirect, nil
 }
 
 func manifestToMap(manifest githubapp.AppManifest) (map[string]any, *errors.ServiceError) {
@@ -400,6 +499,9 @@ func (s *gitIntegrationService) installedApp(ctx context.Context, integrationID,
 	if integration.Type != models.GitIntegrationTypeGitHubApp {
 		return nil, nil, errors.BadRequest("integration '%s' is not a GitHub App", integrationID)
 	}
+	if integration.Status != models.GitIntegrationStatusInstalled {
+		return nil, nil, errors.BadRequest("the GitHub App setup has not been completed yet")
+	}
 	creds, serr := s.appCredentials(integration)
 	if serr != nil {
 		return nil, nil, serr
@@ -409,14 +511,19 @@ func (s *gitIntegrationService) installedApp(ctx context.Context, integrationID,
 
 // appCredentials unseals the integration and extracts the app credentials.
 func (s *gitIntegrationService) appCredentials(integration *models.GitIntegration) (*githubapp.AppCredentials, *errors.ServiceError) {
-	return unsealAppCredentials(s.encryptionService, integration)
+	return unsealAppCredentials(s.encryptionService, s.platformApp, integration)
 }
 
-// unsealAppCredentials decrypts the integration's auth blob (when not already
-// unsealed) and returns the GitHub App credentials. Shared by the integration
-// service and the webhook ingress service.
-func unsealAppCredentials(enc EncryptionService, integration *models.GitIntegration) (*githubapp.AppCredentials, *errors.ServiceError) {
+// unsealAppCredentials returns the GitHub App credentials for an integration.
+// Shared by the integration service and the webhook ingress service.
+//   - Sealed auth on the row (BYO app): decrypt and use it.
+//   - No sealed auth + platform app configured: the platform credentials, read
+//     from config every time so a key rotation is just an env change.
+func unsealAppCredentials(enc EncryptionService, platform *githubapp.AppCredentials, integration *models.GitIntegration) (*githubapp.AppCredentials, *errors.ServiceError) {
 	if integration.EncryptedAuth == "" {
+		if platform != nil {
+			return platform, nil
+		}
 		return nil, errors.BadRequest("the GitHub App setup has not been completed yet")
 	}
 	if integration.Auth == nil {
@@ -453,9 +560,28 @@ func (s *gitIntegrationService) reconcileInstallations(ctx context.Context, inte
 		return errors.BadRequest("failed to list installations from GitHub: %s", err.Error())
 	}
 
+	// A platform-backed integration (no sealed auth of its own) shares the app
+	// with every org, so GitHub's list spans all of them. Only installations
+	// the setup callback already bound to this integration are its to
+	// reconcile. BYO apps own their whole list.
+	sharedApp := s.platformApp != nil && integration.EncryptedAuth == ""
+	owned := map[int64]bool{}
+	if sharedApp {
+		local, serr := s.installations.ListByIntegrationID(ctx, integration.ID)
+		if serr != nil {
+			return serr
+		}
+		for _, l := range local {
+			owned[l.InstallationID] = true
+		}
+	}
+
 	return s.atomic.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
 		live := make(map[int64]bool, len(remote))
 		for _, in := range remote {
+			if sharedApp && !owned[in.ID] {
+				continue
+			}
 			if in.Suspended {
 				// Suspended installations can't mint tokens; treat as absent so
 				// they are pruned below, matching the webhook suspend handling.

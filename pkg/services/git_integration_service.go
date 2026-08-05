@@ -46,6 +46,7 @@ type GitIntegrationService interface {
 	// GitHub App manifest flow, installations, and discovery.
 	CreateGitHubAppManifest(ctx context.Context, organisationID string) (*models.GitHubAppManifestFlow, *errors.ServiceError)
 	HandleGitHubManifestCallback(ctx context.Context, code, state string) (string, *errors.ServiceError)
+	HandleGitHubAppSetup(ctx context.Context, installationID int64, state string) (string, *errors.ServiceError)
 	ListInstallations(ctx context.Context, integrationID string, refresh bool) ([]*models.GitInstallation, *errors.ServiceError)
 	ListRepositories(ctx context.Context, integrationID string, page int, installationUUID string) (*githubapp.RepoPage, *errors.ServiceError)
 	GetRepository(ctx context.Context, integrationID, owner, repo string) (*githubapp.Repo, *errors.ServiceError)
@@ -72,6 +73,9 @@ type GitIntegrationServiceSpec struct {
 	// ExternalURL is the hub's externally reachable base URL, required for
 	// the GitHub App manifest flow.
 	ExternalURL string
+	// PlatformApp is the platform-wide GitHub App every org installs. Nil
+	// keeps each org creating its own app through the manifest flow.
+	PlatformApp *githubapp.AppCredentials
 	// GitClients is optional; it defaults to real git clients.
 	GitClients verifyGitClientProvider
 }
@@ -87,6 +91,7 @@ type gitIntegrationService struct {
 	permissions       auth.PermissionService
 	logger            logger.Logger
 	externalURL       string
+	platformApp       *githubapp.AppCredentials
 	gitClients        verifyGitClientProvider
 }
 
@@ -106,6 +111,7 @@ func NewGitIntegrationService(spec GitIntegrationServiceSpec) GitIntegrationServ
 		permissions:       spec.Permissions,
 		logger:            spec.Logger,
 		externalURL:       strings.TrimSuffix(spec.ExternalURL, "/"),
+		platformApp:       spec.PlatformApp,
 		gitClients:        gitClients,
 	}
 }

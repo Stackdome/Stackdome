@@ -56,6 +56,26 @@ describe("useGithubConnect", () => {
     expect(createGitHubAppManifest).toHaveBeenCalledWith("org1");
   });
 
+  it("navigates the popup to the install page when there is no manifest", async () => {
+    const popup = { location: { href: "" } } as unknown as Window;
+    openSpy.mockReturnValue(popup);
+    (createGitHubAppManifest as ReturnType<typeof vi.fn>).mockResolvedValue({
+      github_url: "https://github.com/apps/stackdome-cloud/installations/new?state=s2",
+      state: "s2",
+    });
+
+    const { result } = renderHook(() => useGithubConnect());
+    await act(async () => {
+      await result.current.connect();
+    });
+
+    expect(popup.location.href).toBe(
+      "https://github.com/apps/stackdome-cloud/installations/new?state=s2",
+    );
+    expect(document.querySelectorAll("form")).toHaveLength(0);
+    expect(result.current.state).toBe("waiting");
+  });
+
   it("errors when the popup is blocked", async () => {
     openSpy.mockReturnValue(null);
     const { result } = renderHook(() => useGithubConnect());

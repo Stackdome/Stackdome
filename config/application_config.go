@@ -20,6 +20,8 @@ type ApplicationConfig struct {
 	LogLevel      string             `json:"log_level"`
 	LogFormat     string             `json:"log_format"`
 	GitHubOAuth   *GitHubOAuthConfig `json:"github_oauth"`
+	// GitHubApp is the platform-wide GitHub App; unset means per-org apps.
+	GitHubApp *GitHubAppConfig `json:"github_app"`
 	// ServerExternalURL is the externally reachable base URL of the hub,
 	// required for the GitHub App manifest flow (browser redirects, webhooks).
 	ServerExternalURL string `json:"server_external_url"`
@@ -50,6 +52,7 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 
 	c.GitHubOAuth.LoadEnvVariables()
+	c.GitHubApp.LoadEnvVariables()
 	c.PlatformCluster.LoadEnvVariables()
 
 	if val, ok := EnvServerExternalURL.Lookup(); ok {
@@ -67,10 +70,12 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	}
 }
 
-// gitHubOAuthCallbackPath is the route the GitHub OAuth handler is mounted on;
-// it must match the "/github/callback" route under /api/v1/auth in
-// cmd/server/routes.go.
-const gitHubOAuthCallbackPath = "/api/v1/auth/github/callback"
+// gitHubOAuthCallbackPath is the SPA route GitHub sends the browser back to
+// (frontend/src/App.tsx). That page reads code+state and calls the hub's
+// /api/v1/auth/github/callback itself, so the API route is never GitHub's
+// redirect target — sending the browser there would render raw JSON and no
+// session would be established.
+const gitHubOAuthCallbackPath = "/auth/github/callback"
 
 func (c *ApplicationConfig) Validate() error {
 	validateFuncs := []func() error{
@@ -215,6 +220,7 @@ func NewApplicationConfig() *ApplicationConfig {
 		LogLevel:        "info",
 		LogFormat:       "json",
 		GitHubOAuth:     NewGitHubOAuthConfig(),
+		GitHubApp:       &GitHubAppConfig{},
 		PlatformCluster: &ClusterConfig{},
 	}
 }
@@ -231,6 +237,35 @@ type GitHubOAuthConfig struct {
 
 func (c *GitHubOAuthConfig) Enabled() bool {
 	return c.ClientID != "" && c.ClientSecret != ""
+}
+
+// GitHubAppConfig is the platform-wide GitHub App every org installs. Not
+// configured: each org creates its own app through the manifest flow. Login
+// uses the same app's client id/secret via the GITHUB_CLIENT_* vars.
+type GitHubAppConfig struct {
+	AppID         int64  `json:"app_id"`
+	Slug          string `json:"slug"`
+	PrivateKey    string `json:"private_key"`
+	WebhookSecret string `json:"webhook_secret"`
+}
+
+func (c *GitHubAppConfig) Configured() bool {
+	return c.AppID != 0 && c.Slug != "" && c.PrivateKey != "" && c.WebhookSecret != ""
+}
+
+func (c *GitHubAppConfig) LoadEnvVariables() {
+	if val, ok := EnvGitHubAppID.Lookup(); ok {
+		c.AppID = int64(val)
+	}
+	if val, ok := EnvGitHubAppSlug.Lookup(); ok {
+		c.Slug = val
+	}
+	if val, ok := EnvGitHubAppPrivateKey.Lookup(); ok {
+		c.PrivateKey = val
+	}
+	if val, ok := EnvGitHubAppWebhookSecret.Lookup(); ok {
+		c.WebhookSecret = val
+	}
 }
 
 func (c *GitHubOAuthConfig) LoadEnvVariables() {

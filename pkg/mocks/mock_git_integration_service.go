@@ -117,6 +117,21 @@ func (mr *MockGitIntegrationServiceMockRecorder) GetRepository(ctx, integrationI
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRepository", reflect.TypeOf((*MockGitIntegrationService)(nil).GetRepository), ctx, integrationID, owner, repo)
 }
 
+// HandleGitHubAppSetup mocks base method.
+func (m *MockGitIntegrationService) HandleGitHubAppSetup(ctx context.Context, installationID int64, state string) (string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HandleGitHubAppSetup", ctx, installationID, state)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// HandleGitHubAppSetup indicates an expected call of HandleGitHubAppSetup.
+func (mr *MockGitIntegrationServiceMockRecorder) HandleGitHubAppSetup(ctx, installationID, state any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HandleGitHubAppSetup", reflect.TypeOf((*MockGitIntegrationService)(nil).HandleGitHubAppSetup), ctx, installationID, state)
+}
+
 // HandleGitHubManifestCallback mocks base method.
 func (m *MockGitIntegrationService) HandleGitHubManifestCallback(ctx context.Context, code, state string) (string, *errors.ServiceError) {
 	m.ctrl.T.Helper()

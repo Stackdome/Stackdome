@@ -179,6 +179,7 @@ func (s apiServer) routes() *mux.Router {
 	// GitHub App manifest callback (browser redirect) and webhook receiver;
 	// both are unauthenticated and validated by state / HMAC respectively.
 	apiV1Router.HandleFunc("/git-integrations/github/manifest/callback", gitIntegrationHandler.GitHubManifestCallback).Methods(http.MethodGet)
+	apiV1Router.HandleFunc("/git-integrations/github/setup", gitIntegrationHandler.GitHubAppSetup).Methods(http.MethodGet)
 	apiV1Router.HandleFunc("/webhooks/github", gitIntegrationHandler.GitHubWebhook).Methods(http.MethodPost)
 
 	authenticationRouter := apiV1Router.PathPrefix("/auth").Subrouter()

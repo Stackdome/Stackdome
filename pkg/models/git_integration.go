@@ -40,6 +40,9 @@ const (
 // OAuthProviderGitHubAppManifest scopes manifest-flow state records.
 const OAuthProviderGitHubAppManifest = "github_app_manifest"
 
+// OAuthProviderGitHubAppInstall scopes platform-app install state records.
+const OAuthProviderGitHubAppInstall = "github_app_install"
+
 // Condition recorded on image builds when a GitHub App token refresh fails.
 const (
 	GitTokenRefreshFailedConditionType   = "GitTokenRefreshFailed"

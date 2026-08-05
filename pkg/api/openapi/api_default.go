@@ -1251,6 +1251,112 @@ func (a *DefaultApiService) ApiV1GitIntegrationsGithubManifestCallbackGetExecute
 	return localVarHTTPResponse, nil
 }
 
+type ApiApiV1GitIntegrationsGithubSetupGetRequest struct {
+	ctx            context.Context
+	ApiService     *DefaultApiService
+	installationId *int64
+	state          *string
+}
+
+func (r ApiApiV1GitIntegrationsGithubSetupGetRequest) InstallationId(installationId int64) ApiApiV1GitIntegrationsGithubSetupGetRequest {
+	r.installationId = &installationId
+	return r
+}
+
+func (r ApiApiV1GitIntegrationsGithubSetupGetRequest) State(state string) ApiApiV1GitIntegrationsGithubSetupGetRequest {
+	r.state = &state
+	return r
+}
+
+func (r ApiApiV1GitIntegrationsGithubSetupGetRequest) Execute() (*http.Response, error) {
+	return r.ApiService.ApiV1GitIntegrationsGithubSetupGetExecute(r)
+}
+
+/*
+ApiV1GitIntegrationsGithubSetupGet Platform GitHub App setup redirect target (unauthenticated, state-validated)
+
+	@param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
+	@return ApiApiV1GitIntegrationsGithubSetupGetRequest
+*/
+func (a *DefaultApiService) ApiV1GitIntegrationsGithubSetupGet(ctx context.Context) ApiApiV1GitIntegrationsGithubSetupGetRequest {
+	return ApiApiV1GitIntegrationsGithubSetupGetRequest{
+		ApiService: a,
+		ctx:        ctx,
+	}
+}
+
+// Execute executes the request
+func (a *DefaultApiService) ApiV1GitIntegrationsGithubSetupGetExecute(r ApiApiV1GitIntegrationsGithubSetupGetRequest) (*http.Response, error) {
+	var (
+		localVarHTTPMethod = http.MethodGet
+		localVarPostBody   interface{}
+		formFiles          []formFile
+	)
+
+	localBasePath, err := a.client.cfg.ServerURLWithContext(r.ctx, "DefaultApiService.ApiV1GitIntegrationsGithubSetupGet")
+	if err != nil {
+		return nil, &GenericOpenAPIError{error: err.Error()}
+	}
+
+	localVarPath := localBasePath + "/api/v1/git-integrations/github/setup"
+
+	localVarHeaderParams := make(map[string]string)
+	localVarQueryParams := url.Values{}
+	localVarFormParams := url.Values{}
+	if r.installationId == nil {
+		return nil, reportError("installationId is required and must be specified")
+	}
+	if r.state == nil {
+		return nil, reportError("state is required and must be specified")
+	}
+
+	localVarQueryParams.Add("installation_id", parameterToString(*r.installationId, ""))
+	localVarQueryParams.Add("state", parameterToString(*r.state, ""))
+	// to determine the Content-Type header
+	localVarHTTPContentTypes := []string{}
+
+	// set Content-Type header
+	localVarHTTPContentType := selectHeaderContentType(localVarHTTPContentTypes)
+	if localVarHTTPContentType != "" {
+		localVarHeaderParams["Content-Type"] = localVarHTTPContentType
+	}
+
+	// to determine the Accept header
+	localVarHTTPHeaderAccepts := []string{}
+
+	// set Accept header
+	localVarHTTPHeaderAccept := selectHeaderAccept(localVarHTTPHeaderAccepts)
+	if localVarHTTPHeaderAccept != "" {
+		localVarHeaderParams["Accept"] = localVarHTTPHeaderAccept
+	}
+	req, err := a.client.prepareRequest(r.ctx, localVarPath, localVarHTTPMethod, localVarPostBody, localVarHeaderParams, localVarQueryParams, localVarFormParams, formFiles)
+	if err != nil {
+		return nil, err
+	}
+
+	localVarHTTPResponse, err := a.client.callAPI(req)
+	if err != nil || localVarHTTPResponse == nil {
+		return localVarHTTPResponse, err
+	}
+
+	localVarBody, err := ioutil.ReadAll(localVarHTTPResponse.Body)
+	localVarHTTPResponse.Body.Close()
+	localVarHTTPResponse.Body = ioutil.NopCloser(bytes.NewBuffer(localVarBody))
+	if err != nil {
+		return localVarHTTPResponse, err
+	}
+
+	if localVarHTTPResponse.StatusCode >= 300 {
+		newErr := &GenericOpenAPIError{
+			body:  localVarBody,
+			error: localVarHTTPResponse.Status,
+		}
+		return localVarHTTPResponse, newErr
+	}
+
+	return localVarHTTPResponse, nil
+}
+
 type ApiApiV1InvitesTokenInfoGetRequest struct {
 	ctx        context.Context
 	ApiService *DefaultApiService

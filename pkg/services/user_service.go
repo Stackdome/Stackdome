@@ -149,10 +149,8 @@ func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, 
 		return nil, fmt.Errorf("failed to create organisation for oauth user: %w", serr)
 	}
 
-	if u.projectService != nil {
-		if _, projectErr := u.projectService.InternalCreateDefaultProject(ctx, createdOrg.ID); projectErr != nil {
-			return nil, fmt.Errorf("failed to create default project for oauth user: %w", projectErr)
-		}
+	if _, projectErr := u.projectService.InternalCreateDefaultProject(ctx, createdOrg.ID); projectErr != nil {
+		return nil, fmt.Errorf("failed to create default project for oauth user: %w", projectErr)
 	}
 
 	user := &models.User{

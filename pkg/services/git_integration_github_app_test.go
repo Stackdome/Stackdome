@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -15,6 +16,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 )
 
@@ -275,6 +278,7 @@ func TestProcessGitHubWebhookInstallationCreated(t *testing.T) {
 	integration.Status = models.GitIntegrationStatusPendingInstall
 	payload := installationWebhookPayload(t, "created")
 
+	deps.installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).Return(nil, errors.NotFound("no installation row yet"))
 	deps.store.EXPECT().ListGitHubApps(gomock.Any()).Return([]*models.GitIntegration{integration}, nil)
 	deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(_ context.Context, installation *models.GitInstallation) (*models.GitInstallation, *errors.ServiceError) {
@@ -303,6 +307,7 @@ func TestProcessGitHubWebhookRejectsBadSignature(t *testing.T) {
 	integration := sealedGitHubApp(t, deps.encryption, models.GitHubAppCredentials{AppID: 4242, WebhookSecret: "hook-secret"})
 	payload := installationWebhookPayload(t, "created")
 
+	deps.installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).Return(nil, errors.NotFound("no installation row yet"))
 	deps.store.EXPECT().ListGitHubApps(gomock.Any()).Return([]*models.GitIntegration{integration}, nil)
 
 	serr := svc.ProcessGitHubWebhook(context.Background(), GitHubEventInstallation, payload, signWebhook(payload, "wrong-secret"))
@@ -316,6 +321,7 @@ func TestProcessGitHubWebhookInstallationDeleted(t *testing.T) {
 	integration := sealedGitHubApp(t, deps.encryption, models.GitHubAppCredentials{AppID: 4242, WebhookSecret: "hook-secret"})
 	payload := installationWebhookPayload(t, "deleted")
 
+	deps.installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).Return(nil, errors.NotFound("no installation row yet"))
 	deps.store.EXPECT().ListGitHubApps(gomock.Any()).Return([]*models.GitIntegration{integration}, nil)
 	deps.installations.EXPECT().DeleteByInstallationID(gomock.Any(), "gi-app", int64(77)).Return(nil)
 	deps.installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-app").Return(nil, nil)
@@ -372,3 +378,299 @@ func TestInternalMintForRepoFallsThroughWhenNoInstallationCoversOwner(t *testing
 		t.Fatalf("expected 404 to fall through, got %v", serr)
 	}
 }
+
+var _ = Describe("platform GitHub App", func() {
+	const platformSlug = "stackdome-cloud"
+
+	var (
+		ctrl     *gomock.Controller
+		svc      GitIntegrationService
+		deps     *githubAppServiceMocks
+		platform *githubapp.AppCredentials
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		DeferCleanup(ctrl.Finish)
+
+		encryption, err := NewAESEncryptionService(EncryptionServiceSpec{Masterkey: strings.Repeat("k", 64)})
+		Expect(err).NotTo(HaveOccurred())
+
+		permissions := mocks.NewMockPermissionService(ctrl)
+		permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		deps = &githubAppServiceMocks{
+			store:         mocks.NewMockGitIntegrationStore(ctrl),
+			installations: mocks.NewMockGitInstallationStore(ctrl),
+			oauthStates:   mocks.NewMockOAuthStateStore(ctrl),
+			organisations: mocks.NewMockOrganisationStore(ctrl),
+			atomic:        mocks.NewMockAtomicExecutor(ctrl),
+			appClient:     mocks.NewMockGitHubAppClient(ctrl),
+			encryption:    encryption,
+		}
+		deps.atomic.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			}).AnyTimes()
+
+		platform = &githubapp.AppCredentials{
+			AppID:         4242,
+			Slug:          platformSlug,
+			PEM:           "-----BEGIN RSA PRIVATE KEY-----",
+			WebhookSecret: "hook-secret",
+		}
+		svc = NewGitIntegrationService(GitIntegrationServiceSpec{
+			Store:             deps.store,
+			InstallationStore: deps.installations,
+			OAuthStateStore:   deps.oauthStates,
+			OrganisationStore: deps.organisations,
+			AtomicExecutor:    deps.atomic,
+			GitHubAppClient:   deps.appClient,
+			EncryptionService: encryption,
+			Permissions:       permissions,
+			Logger:            logger.NewLogger(),
+			ExternalURL:       "https://hub.example.com",
+			PlatformApp:       platform,
+		})
+	})
+
+	Describe("CreateGitHubAppManifest", func() {
+		It("skips app creation and sends the user to the install page", func() {
+			deps.store.EXPECT().GetGitHubAppForOrg(gomock.Any(), "org-1").Return(nil, errors.NotFound("none"))
+			deps.store.EXPECT().Create(gomock.Any(), gomock.Any()).Return(&models.GitIntegration{
+				ID:             "gi-app",
+				OrganisationID: "org-1",
+				Type:           models.GitIntegrationTypeGitHubApp,
+				Status:         models.GitIntegrationStatusPendingInstall,
+			}, nil)
+
+			var stored *models.OAuthState
+			deps.oauthStates.EXPECT().Create(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, state *models.OAuthState) *errors.ServiceError {
+					stored = state
+					return nil
+				})
+
+			flow, serr := svc.CreateGitHubAppManifest(context.Background(), "org-1")
+			Expect(serr).To(BeNil())
+			Expect(flow.Manifest).To(BeNil())
+			Expect(flow.GitHubURL).To(Equal("https://github.com/apps/" + platformSlug + "/installations/new?state=" + flow.State))
+			Expect(stored.Provider).To(Equal(models.OAuthProviderGitHubAppInstall))
+			Expect(stored.State).To(HaveSuffix(":gi-app"))
+		})
+	})
+
+	Describe("HandleGitHubAppSetup", func() {
+		var integration *models.GitIntegration
+
+		BeforeEach(func() {
+			// Platform-backed rows carry no credentials; they resolve from config.
+			integration = &models.GitIntegration{
+				ID:             "gi-app",
+				OrganisationID: "org-1",
+				Type:           models.GitIntegrationTypeGitHubApp,
+				Status:         models.GitIntegrationStatusPendingInstall,
+				DataHash:       gitIntegrationDataHash(nil),
+			}
+		})
+
+		It("binds the new installation to the org that started the flow", func() {
+			deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1", models.OAuthProviderGitHubAppInstall).
+				Return(&models.OAuthState{State: "uuid:gi-app", CreatedAt: time.Now().UTC()}, nil)
+			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(&githubapp.Installation{
+				ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all",
+			}, nil)
+
+			var upserted *models.GitInstallation
+			deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, in *models.GitInstallation) (*models.GitInstallation, *errors.ServiceError) {
+					upserted = in
+					return in, nil
+				})
+			deps.installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-app").
+				Return([]*models.GitInstallation{{InstallationID: 77}}, nil)
+			deps.store.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, in *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError) {
+					return in, nil
+				})
+
+			redirect, serr := svc.HandleGitHubAppSetup(context.Background(), 77, "state-1")
+			Expect(serr).To(BeNil())
+			Expect(redirect).To(Equal("https://hub.example.com/git-integrations?setup_action=install"))
+			Expect(upserted.GitIntegrationID).To(Equal("gi-app"))
+			Expect(upserted.AccountLogin).To(Equal("acme"))
+			Expect(integration.Status).To(Equal(models.GitIntegrationStatusInstalled))
+		})
+
+		It("rejects an installation the platform app does not have", func() {
+			deps.oauthStates.EXPECT().Consume(gomock.Any(), "state-1", models.OAuthProviderGitHubAppInstall).
+				Return(&models.OAuthState{State: "uuid:gi-app", CreatedAt: time.Now().UTC()}, nil)
+			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+			deps.appClient.EXPECT().GetInstallation(gomock.Any(), gomock.Any(), int64(77)).Return(nil, fmt.Errorf("404 not found"))
+
+			_, serr := svc.HandleGitHubAppSetup(context.Background(), 77, "state-1")
+			Expect(serr).NotTo(BeNil())
+			Expect(serr.Is404()).To(BeTrue())
+		})
+
+		It("leaves another org's installation of the same app alone on refresh", func() {
+			integration.Status = models.GitIntegrationStatusInstalled
+			deps.store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+			deps.appClient.EXPECT().ListInstallations(gomock.Any(), gomock.Any()).Return([]githubapp.Installation{
+				{ID: 77, AccountLogin: "acme", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all"},
+				{ID: 99, AccountLogin: "other-org", AccountType: string(models.GitAccountTypeOrganization), RepositorySelection: "all"},
+			}, nil)
+			deps.installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-app").
+				Return([]*models.GitInstallation{{InstallationID: 77}}, nil).AnyTimes()
+			deps.installations.EXPECT().Upsert(gomock.Any(), gomock.Any()).DoAndReturn(
+				func(_ context.Context, in *models.GitInstallation) (*models.GitInstallation, *errors.ServiceError) {
+					Expect(in.InstallationID).To(Equal(int64(77)))
+					return in, nil
+				})
+
+			_, serr := svc.ListInstallations(context.Background(), "gi-app", true)
+			Expect(serr).To(BeNil())
+		})
+	})
+})
+
+var _ = Describe("platform GitHub App webhooks", func() {
+	It("resolves deliveries via the installation row and verifies with the platform secret", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		DeferCleanup(ctrl.Finish)
+
+		encryption, err := NewAESEncryptionService(EncryptionServiceSpec{Masterkey: strings.Repeat("k", 64)})
+		Expect(err).NotTo(HaveOccurred())
+
+		platform := &githubapp.AppCredentials{
+			AppID:         4242,
+			Slug:          "stackdome-cloud",
+			PEM:           "-----BEGIN RSA PRIVATE KEY-----",
+			WebhookSecret: "platform-hook-secret",
+		}
+		store := mocks.NewMockGitIntegrationStore(ctrl)
+		installations := mocks.NewMockGitInstallationStore(ctrl)
+		svc := NewGitHubWebhookService(GitHubWebhookServiceSpec{
+			Store:             store,
+			InstallationStore: installations,
+			EncryptionService: encryption,
+			PreviewWebhook:    NewMockPreviewWebhookService(ctrl),
+			Logger:            logger.NewLogger(),
+			PlatformApp:       platform,
+		})
+
+		// Platform-backed row: no sealed auth of its own.
+		integration := &models.GitIntegration{
+			ID:             "gi-app",
+			OrganisationID: "org-1",
+			Type:           models.GitIntegrationTypeGitHubApp,
+			Status:         models.GitIntegrationStatusInstalled,
+		}
+		payload, err := json.Marshal(map[string]any{
+			"action": "deleted",
+			"installation": map[string]any{
+				"id":     77,
+				"app_id": 4242,
+				"account": map[string]any{
+					"login": "acme",
+					"type":  models.GitAccountTypeOrganization,
+				},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		installations.EXPECT().GetByInstallationID(gomock.Any(), int64(77)).
+			Return(&models.GitInstallation{GitIntegrationID: "gi-app", InstallationID: 77}, nil)
+		store.EXPECT().GetByID(gomock.Any(), "gi-app").Return(integration, nil)
+		installations.EXPECT().DeleteByInstallationID(gomock.Any(), "gi-app", int64(77)).Return(nil)
+		installations.EXPECT().ListByIntegrationID(gomock.Any(), "gi-app").Return(nil, nil)
+		store.EXPECT().Update(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(_ context.Context, in *models.GitIntegration) (*models.GitIntegration, *errors.ServiceError) {
+				Expect(in.Status).To(Equal(models.GitIntegrationStatusPendingInstall))
+				return in, nil
+			})
+
+		serr := svc.ProcessGitHubWebhook(context.Background(), GitHubEventInstallation, payload, signWebhookGinkgo(payload, platform.WebhookSecret))
+		Expect(serr).To(BeNil())
+	})
+
+	It("acks an installation event with no binding yet instead of erroring", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		DeferCleanup(ctrl.Finish)
+
+		encryption, err := NewAESEncryptionService(EncryptionServiceSpec{Masterkey: strings.Repeat("k", 64)})
+		Expect(err).NotTo(HaveOccurred())
+
+		store := mocks.NewMockGitIntegrationStore(ctrl)
+		installations := mocks.NewMockGitInstallationStore(ctrl)
+		svc := NewGitHubWebhookService(GitHubWebhookServiceSpec{
+			Store:             store,
+			InstallationStore: installations,
+			EncryptionService: encryption,
+			PreviewWebhook:    NewMockPreviewWebhookService(ctrl),
+			Logger:            logger.NewLogger(),
+			PlatformApp:       &githubapp.AppCredentials{AppID: 4242, Slug: "stackdome-cloud", PEM: "k", WebhookSecret: "s"},
+		})
+
+		payload, err := json.Marshal(map[string]any{
+			"action":       "created",
+			"installation": map[string]any{"id": 88, "app_id": 4242},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		// Setup callback hasn't bound installation 88 yet; nothing sealed to
+		// match by app id either. The delivery must be acked, not retried.
+		installations.EXPECT().GetByInstallationID(gomock.Any(), int64(88)).
+			Return(nil, errors.NotFound("not bound yet"))
+		store.EXPECT().ListGitHubApps(gomock.Any()).Return(nil, nil)
+
+		Expect(svc.ProcessGitHubWebhook(context.Background(), GitHubEventInstallation, payload, "sha256=irrelevant")).To(BeNil())
+	})
+})
+
+func signWebhookGinkgo(payload []byte, secret string) string {
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(payload)
+	return "sha256=" + hex.EncodeToString(mac.Sum(nil))
+}
+
+var _ = Describe("platform GitHub App re-run", func() {
+	It("allows starting the flow again when already installed, to add another account", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		DeferCleanup(ctrl.Finish)
+
+		encryption, err := NewAESEncryptionService(EncryptionServiceSpec{Masterkey: strings.Repeat("k", 64)})
+		Expect(err).NotTo(HaveOccurred())
+		permissions := mocks.NewMockPermissionService(ctrl)
+		permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		store := mocks.NewMockGitIntegrationStore(ctrl)
+		oauthStates := mocks.NewMockOAuthStateStore(ctrl)
+		svc := NewGitIntegrationService(GitIntegrationServiceSpec{
+			Store:             store,
+			InstallationStore: mocks.NewMockGitInstallationStore(ctrl),
+			OAuthStateStore:   oauthStates,
+			OrganisationStore: mocks.NewMockOrganisationStore(ctrl),
+			AtomicExecutor:    mocks.NewMockAtomicExecutor(ctrl),
+			GitHubAppClient:   mocks.NewMockGitHubAppClient(ctrl),
+			EncryptionService: encryption,
+			Permissions:       permissions,
+			Logger:            logger.NewLogger(),
+			ExternalURL:       "https://hub.example.com",
+			PlatformApp:       &githubapp.AppCredentials{AppID: 4242, Slug: "stackdome-cloud", PEM: "k", WebhookSecret: "s"},
+		})
+
+		store.EXPECT().GetGitHubAppForOrg(gomock.Any(), "org-1").Return(&models.GitIntegration{
+			ID:             "gi-app",
+			OrganisationID: "org-1",
+			Type:           models.GitIntegrationTypeGitHubApp,
+			Status:         models.GitIntegrationStatusInstalled,
+		}, nil)
+		oauthStates.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil)
+
+		flow, serr := svc.CreateGitHubAppManifest(context.Background(), "org-1")
+		Expect(serr).To(BeNil())
+		Expect(flow.GitHubURL).To(ContainSubstring("/apps/stackdome-cloud/installations/new?state="))
+	})
+})

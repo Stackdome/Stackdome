@@ -53,3 +53,21 @@ spec:
       value: "{{.EncryptionKey}}"
     - name: LOG_LEVEL
       value: info
+    - name: SERVER_EXTERNAL_URL
+      value: "{{if .TLSEnabled}}https{{else}}http{{end}}://{{.Domain}}"
+    {{- if .GitHubClientID }}
+    - name: GITHUB_CLIENT_ID
+      value: "{{.GitHubClientID}}"
+    - name: GITHUB_CLIENT_SECRET
+      value: "{{.GitHubClientSecret}}"
+    {{- end }}
+    {{- if .GitHubAppID }}
+    - name: GITHUB_APP_ID
+      value: "{{.GitHubAppID}}"
+    - name: GITHUB_APP_SLUG
+      value: "{{.GitHubAppSlug}}"
+    - name: GITHUB_APP_PRIVATE_KEY
+      value: {{yamlStr .GitHubAppPrivateKey}}
+    - name: GITHUB_APP_WEBHOOK_SECRET
+      value: "{{.GitHubAppWebhookSecret}}"
+    {{- end }}

@@ -3,6 +3,7 @@ package install
 import (
 	"bytes"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"text/template"
 )
@@ -21,6 +22,23 @@ type TemplateValues struct {
 	DBWorkloadType string
 	StackUID       string
 	TLSEnabled     bool
+	// GitHub OAuth login credentials; empty leaves login disabled.
+	GitHubClientID     string
+	GitHubClientSecret string
+	// Platform-wide GitHub App; empty leaves each org creating its own.
+	GitHubAppID            string
+	GitHubAppSlug          string
+	GitHubAppPrivateKey    string
+	GitHubAppWebhookSecret string
+}
+
+// manifestFuncs renders a Go string as a quoted YAML scalar — JSON encoding is
+// valid YAML — so multi-line values such as a PEM survive templating.
+var manifestFuncs = template.FuncMap{
+	"yamlStr": func(s string) (string, error) {
+		b, err := json.Marshal(s)
+		return string(b), err
+	},
 }
 
 func RenderManifest(name string, vals TemplateValues) ([]byte, error) {
@@ -30,7 +48,7 @@ func RenderManifest(name string, vals TemplateValues) ([]byte, error) {
 		return nil, fmt.Errorf("reading embedded manifest %s: %w", path, err)
 	}
 
-	tmpl, err := template.New(name).Parse(string(raw))
+	tmpl, err := template.New(name).Funcs(manifestFuncs).Parse(string(raw))
 	if err != nil {
 		return nil, fmt.Errorf("parsing template %s: %w", name, err)
 	}

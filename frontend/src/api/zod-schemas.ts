@@ -2094,6 +2094,47 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/v1/git-integrations/github/setup",
+    alias: "getApiv1gitIntegrationsgithubsetup",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "installation_id",
+        type: "Query",
+        schema: z.number().int(),
+      },
+      {
+        name: "state",
+        type: "Query",
+        schema: z.string(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 302,
+        description: `Redirects the browser back to the git integrations page`,
+        schema: z.void(),
+      },
+      {
+        status: 400,
+        description: `Invalid or expired state`,
+        schema: z.void(),
+      },
+      {
+        status: 404,
+        description: `The installation was not found on the platform app`,
+        schema: z.void(),
+      },
+      {
+        status: 500,
+        description: `Internal server error`,
+        schema: z.void(),
+      },
+    ],
+  },
+  {
+    method: "get",
     path: "/api/v1/invites/:token/info",
     alias: "getApiv1invitesTokeninfo",
     requestFormat: "json",

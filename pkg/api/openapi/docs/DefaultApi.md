@@ -15,6 +15,7 @@ Method | HTTP request | Description
 [**ApiV1AuthRefreshPost**](DefaultApi.md#ApiV1AuthRefreshPost) | **Post** /api/v1/auth/refresh | Refresh JWT token
 [**ApiV1ConfigGet**](DefaultApi.md#ApiV1ConfigGet) | **Get** /api/v1/config | Get public application configuration
 [**ApiV1GitIntegrationsGithubManifestCallbackGet**](DefaultApi.md#ApiV1GitIntegrationsGithubManifestCallbackGet) | **Get** /api/v1/git-integrations/github/manifest/callback | GitHub App manifest redirect target (unauthenticated, state-validated)
+[**ApiV1GitIntegrationsGithubSetupGet**](DefaultApi.md#ApiV1GitIntegrationsGithubSetupGet) | **Get** /api/v1/git-integrations/github/setup | Platform GitHub App setup redirect target (unauthenticated, state-validated)
 [**ApiV1InvitesTokenInfoGet**](DefaultApi.md#ApiV1InvitesTokenInfoGet) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 [**ApiV1OrganizationsIdGet**](DefaultApi.md#ApiV1OrganizationsIdGet) | **Get** /api/v1/organizations/{id} | Get an organization
 [**ApiV1OrganizationsIdPut**](DefaultApi.md#ApiV1OrganizationsIdPut) | **Put** /api/v1/organizations/{id} | Update an organization
@@ -811,6 +812,70 @@ Other parameters are passed through a pointer to a apiApiV1GitIntegrationsGithub
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **code** | **string** |  | 
+ **state** | **string** |  | 
+
+### Return type
+
+ (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: Not defined
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1GitIntegrationsGithubSetupGet
+
+> ApiV1GitIntegrationsGithubSetupGet(ctx).InstallationId(installationId).State(state).Execute()
+
+Platform GitHub App setup redirect target (unauthenticated, state-validated)
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    installationId := int64(789) // int64 | 
+    state := "state_example" // string | 
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1GitIntegrationsGithubSetupGet(context.Background()).InstallationId(installationId).State(state).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1GitIntegrationsGithubSetupGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+}
+```
+
+### Path Parameters
+
+
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1GitIntegrationsGithubSetupGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **installationId** | **int64** |  | 
  **state** | **string** |  | 
 
 ### Return type

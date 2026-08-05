@@ -472,6 +472,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 			BaseURL: e.Config.GitHubAPIBaseURL,
 		}),
 		ExternalURL:       e.Config.ServerExternalURL,
+		PlatformApp:       platformGitHubApp(e.Config.GitHubApp),
 		EncryptionService: encryptionService,
 		Permissions:       e.PermissionService,
 		Logger:            e.Logger,
@@ -714,6 +715,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		EncryptionService: encryptionService,
 		PreviewWebhook:    previewWebhookService,
 		Logger:            e.Logger,
+		PlatformApp:       platformGitHubApp(e.Config.GitHubApp),
 	})
 
 	e.Services = Services{
@@ -1009,4 +1011,19 @@ func (e *environmentImpl) Shutdown(ctx context.Context) error {
 
 	e.Logger.Infof("%s environment shutdown completed", e.Name)
 	return nil
+}
+
+// platformGitHubApp converts the GITHUB_APP_* config into app credentials, or
+// nil when the hub runs without a platform-wide app and each org creates its
+// own through the manifest flow.
+func platformGitHubApp(cfg *config.GitHubAppConfig) *githubapp.AppCredentials {
+	if !cfg.Configured() {
+		return nil
+	}
+	return &githubapp.AppCredentials{
+		AppID:         cfg.AppID,
+		Slug:          cfg.Slug,
+		PEM:           cfg.PrivateKey,
+		WebhookSecret: cfg.WebhookSecret,
+	}
 }

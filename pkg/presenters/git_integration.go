@@ -78,7 +78,11 @@ func PresentGitIntegrationList(in []*models.GitIntegration) []openapi.GitIntegra
 // until the callback).
 func PresentGitHubAppManifestFlow(in *models.GitHubAppManifestFlow) openapi.GitHubAppManifestFlow {
 	res := openapi.GitHubAppManifestFlow{}
-	res.SetManifest(in.Manifest)
+	// A platform-wide app has nothing to create, so it carries no manifest and
+	// github_url points straight at the install page.
+	if in.Manifest != nil {
+		res.SetManifest(in.Manifest)
+	}
 	res.SetGithubUrl(in.GitHubURL)
 	res.SetState(in.State)
 	return res
