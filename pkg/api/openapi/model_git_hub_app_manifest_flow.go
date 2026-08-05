@@ -16,7 +16,7 @@ import (
 
 // GitHubAppManifestFlow struct for GitHubAppManifestFlow
 type GitHubAppManifestFlow struct {
-	// GitHub App manifest to POST to github_url as the manifest form field
+	// GitHub App manifest to POST to github_url as the manifest form field. Absent when the hub runs a platform-wide GitHub App: github_url is then the app's install page and the browser is redirected to it.
 	Manifest  map[string]interface{} `json:"manifest,omitempty"`
 	GithubUrl *string                `json:"github_url,omitempty"`
 	State     *string                `json:"state,omitempty"`

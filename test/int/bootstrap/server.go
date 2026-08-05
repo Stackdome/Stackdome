@@ -36,6 +36,7 @@ func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.Databas
 			},
 			Database:        dbConfig,
 			GitHubOAuth:     &config.GitHubOAuthConfig{},
+			GitHubApp:       &config.GitHubAppConfig{},
 			PlatformCluster: &config.ClusterConfig{},
 		},
 		port:           ServerPort,

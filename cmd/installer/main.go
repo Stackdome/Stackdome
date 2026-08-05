@@ -34,7 +34,14 @@ func usage() {
 	fmt.Println("Usage:")
 	fmt.Println("  stackdome-install install --email you@company.com [--domain stackdome.example.com]")
 	fmt.Println("                            [--image IMAGE] [--chart-version VERSION]")
-	fmt.Println("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION]")
+	fmt.Println("                            [GitHub flags]")
+	fmt.Println("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION] [GitHub flags]")
+	fmt.Println()
+	fmt.Println("GitHub flags (all optional, stored in the bootstrap secret and reused by")
+	fmt.Println("later upgrades unless given again):")
+	fmt.Println("  --github-client-id ID --github-client-secret SECRET   'Sign in with GitHub'")
+	fmt.Println("  --github-app-id ID --github-app-slug SLUG             platform GitHub App")
+	fmt.Println("  --github-app-key-file PATH --github-app-webhook-secret SECRET")
 	fmt.Println()
 	fmt.Println("upgrade reuses the email, domain and secrets of the existing install,")
 	fmt.Println("and keeps the deployed image unless --image is given.")
@@ -46,6 +53,7 @@ func runInstall(args []string) {
 	domain := fs.String("domain", "", "Dashboard domain (default: stackdome.<PUBLIC_IP>.nip.io)")
 	image := fs.String("image", defaultAPIServerImage, "API server container image")
 	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
+	github := registerGitHubFlags(fs)
 	_ = fs.Parse(args)
 
 	if *email == "" {
@@ -76,6 +84,9 @@ func runInstall(args []string) {
 		APIServerImage: *image,
 		DBWorkloadType: string(models.WorkloadTypeStatefulService),
 		TLSEnabled:     isTLSDomain(preflight.Domain),
+	}
+	if err := github.applyTo(&vals); err != nil {
+		exitErr("Reading GitHub credentials failed", err)
 	}
 
 	secrets, err := loadOrCreateSecrets(&vals)

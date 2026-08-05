@@ -98,7 +98,12 @@ export function useGithubConnect(): GithubConnect {
     }
     try {
       const flow = await createGitHubAppManifest(orgId);
-      postManifestToPopup(flow.github_url ?? "", flow.manifest);
+      if (flow.manifest) {
+        postManifestToPopup(flow.github_url ?? "", flow.manifest);
+      } else {
+        // Platform-wide app: nothing to create, github_url is the install page.
+        popup.location.href = flow.github_url ?? "";
+      }
       // Usually null here — the integration record appears only after the
       // user confirms app creation in the popup; the poll re-resolves it.
       const list = await listGitIntegrations(orgId);

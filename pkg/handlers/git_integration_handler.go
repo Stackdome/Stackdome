@@ -164,6 +164,24 @@ func (h *gitIntegrationHandler) GitHubManifestCallback(w http.ResponseWriter, r 
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 }
 
+// GitHubAppSetup is unauthenticated: the browser lands here from GitHub after
+// installing the platform app, carrying the new installation id; the
+// single-use state proves the flow was initiated by an org admin.
+func (h *gitIntegrationHandler) GitHubAppSetup(w http.ResponseWriter, r *http.Request) {
+	installationID, err := strconv.ParseInt(r.URL.Query().Get("installation_id"), 10, 64)
+	if err != nil {
+		handleError(r.Context(), w, errors.MalformedRequest("installation_id must be a number"))
+		return
+	}
+
+	redirectURL, serr := h.gitIntegrationService.HandleGitHubAppSetup(r.Context(), installationID, r.URL.Query().Get("state"))
+	if serr != nil {
+		handleError(r.Context(), w, serr)
+		return
+	}
+	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
 // GitHubWebhook is unauthenticated at the HTTP layer; deliveries are
 // HMAC-verified against the matched integration's webhook secret.
 func (h *gitIntegrationHandler) GitHubWebhook(w http.ResponseWriter, r *http.Request) {

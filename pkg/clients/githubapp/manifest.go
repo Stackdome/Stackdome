@@ -5,6 +5,7 @@ const (
 	PermContents     = "contents"
 	PermMetadata     = "metadata"
 	PermPullRequests = "pull_requests"
+	PermIssues       = "issues"
 	PermLevelRead    = "read"
 	PermLevelWrite   = "write"
 )

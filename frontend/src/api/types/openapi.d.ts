@@ -1491,6 +1491,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/git-integrations/github/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Platform GitHub App setup redirect target (unauthenticated, state-validated) */
+        get: {
+            parameters: {
+                query: {
+                    installation_id: number;
+                    state: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Redirects the browser back to the git integrations page */
+                302: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid or expired state */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description The installation was not found on the platform app */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Internal server error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/webhooks/github": {
         parameters: {
             query?: never;
@@ -8144,7 +8202,7 @@ export interface components {
             value: string;
         };
         GitHubAppManifestFlow: {
-            /** @description GitHub App manifest to POST to github_url as the manifest form field */
+            /** @description GitHub App manifest to POST to github_url as the manifest form field. Absent when the hub runs a platform-wide GitHub App: github_url is then the app's install page and the browser is redirected to it. */
             manifest?: {
                 [key: string]: unknown;
             };

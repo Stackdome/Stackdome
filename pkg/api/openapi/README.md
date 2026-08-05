@@ -89,6 +89,7 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1AuthRefreshPost**](docs/DefaultApi.md#apiv1authrefreshpost) | **Post** /api/v1/auth/refresh | Refresh JWT token
 *DefaultApi* | [**ApiV1ConfigGet**](docs/DefaultApi.md#apiv1configget) | **Get** /api/v1/config | Get public application configuration
 *DefaultApi* | [**ApiV1GitIntegrationsGithubManifestCallbackGet**](docs/DefaultApi.md#apiv1gitintegrationsgithubmanifestcallbackget) | **Get** /api/v1/git-integrations/github/manifest/callback | GitHub App manifest redirect target (unauthenticated, state-validated)
+*DefaultApi* | [**ApiV1GitIntegrationsGithubSetupGet**](docs/DefaultApi.md#apiv1gitintegrationsgithubsetupget) | **Get** /api/v1/git-integrations/github/setup | Platform GitHub App setup redirect target (unauthenticated, state-validated)
 *DefaultApi* | [**ApiV1InvitesTokenInfoGet**](docs/DefaultApi.md#apiv1invitestokeninfoget) | **Get** /api/v1/invites/{token}/info | Get public invite info (unauthenticated)
 *DefaultApi* | [**ApiV1OrganizationsIdGet**](docs/DefaultApi.md#apiv1organizationsidget) | **Get** /api/v1/organizations/{id} | Get an organization
 *DefaultApi* | [**ApiV1OrganizationsIdPut**](docs/DefaultApi.md#apiv1organizationsidput) | **Put** /api/v1/organizations/{id} | Update an organization

@@ -5,6 +5,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"gopkg.in/yaml.v3"
 
 	"github.com/Stackdome/stackdome/install"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -60,6 +61,68 @@ var _ = Describe("RenderManifest", func() {
 			Expect(string(out)).To(ContainSubstring("image: \"quay.io/stackdome/stackdome:main-abc1234\""))
 			Expect(string(out)).To(ContainSubstring("fqdn: \"stackdome.example.com\""))
 			Expect(string(out)).To(ContainSubstring("tls: true"))
+		})
+
+		It("derives SERVER_EXTERNAL_URL from the domain and TLS mode", func() {
+			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+				Domain:     "stackdome.example.com",
+				TLSEnabled: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(ContainSubstring("value: \"https://stackdome.example.com\""))
+
+			out, err = install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+				Domain:     "stackdome.10.0.0.1.nip.io",
+				TLSEnabled: false,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(ContainSubstring("value: \"http://stackdome.10.0.0.1.nip.io\""))
+		})
+
+		It("renders the GitHub OAuth credentials only when set", func() {
+			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+				Domain:             "stackdome.example.com",
+				GitHubClientID:     "Iv1.abc",
+				GitHubClientSecret: "shhh",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(ContainSubstring("name: GITHUB_CLIENT_ID"))
+			Expect(string(out)).To(ContainSubstring("value: \"Iv1.abc\""))
+			Expect(string(out)).To(ContainSubstring("value: \"shhh\""))
+
+			out, err = install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+				Domain: "stackdome.example.com",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).NotTo(ContainSubstring("GITHUB_CLIENT_ID"))
+		})
+
+		It("keeps a multi-line private key intact as a YAML scalar", func() {
+			pem := "-----BEGIN RSA PRIVATE KEY-----\nabc\ndef\n-----END RSA PRIVATE KEY-----\n"
+			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+				Domain:              "stackdome.example.com",
+				GitHubAppID:         "4242",
+				GitHubAppSlug:       "stackdome-cloud",
+				GitHubAppPrivateKey: pem,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			var parsed struct {
+				Spec struct {
+					EnvironmentVariables []struct {
+						Name  string `yaml:"name"`
+						Value string `yaml:"value"`
+					} `yaml:"environmentVariables"`
+				} `yaml:"spec"`
+			}
+			Expect(yaml.Unmarshal(out, &parsed)).To(Succeed())
+
+			env := map[string]string{}
+			for _, e := range parsed.Spec.EnvironmentVariables {
+				env[e.Name] = e.Value
+			}
+			Expect(env["GITHUB_APP_PRIVATE_KEY"]).To(Equal(pem))
+			Expect(env["GITHUB_APP_ID"]).To(Equal("4242"))
 		})
 
 		It("omits the cluster-issuer annotation without TLS", func() {

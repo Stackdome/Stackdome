@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Manifest** | Pointer to **map[string]interface{}** | GitHub App manifest to POST to github_url as the manifest form field | [optional] 
+**Manifest** | Pointer to **map[string]interface{}** | GitHub App manifest to POST to github_url as the manifest form field. Absent when the hub runs a platform-wide GitHub App: github_url is then the app&#39;s install page and the browser is redirected to it. | [optional] 
 **GithubUrl** | Pointer to **string** |  | [optional] 
 **State** | Pointer to **string** |  | [optional] 
 

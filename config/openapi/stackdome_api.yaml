@@ -673,6 +673,30 @@ paths:
           description: Invalid or expired state
         '500':
           description: Internal server error
+  /api/v1/git-integrations/github/setup:
+    get:
+      summary: Platform GitHub App setup redirect target (unauthenticated, state-validated)
+      parameters:
+        - in: query
+          name: installation_id
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: state
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: Redirects the browser back to the git integrations page
+        '400':
+          description: Invalid or expired state
+        '404':
+          description: The installation was not found on the platform app
+        '500':
+          description: Internal server error
   /api/v1/webhooks/github:
     post:
       summary: GitHub webhook receiver (unauthenticated, HMAC-verified)
@@ -5386,7 +5410,10 @@ components:
         manifest:
           type: object
           additionalProperties: true
-          description: GitHub App manifest to POST to github_url as the manifest form field
+          description: >-
+            GitHub App manifest to POST to github_url as the manifest form field.
+            Absent when the hub runs a platform-wide GitHub App: github_url is
+            then the app's install page and the browser is redirected to it.
         github_url:
           type: string
         state:

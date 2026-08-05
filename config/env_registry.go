@@ -12,6 +12,13 @@ var (
 	EnvGitHubClientID     = StringVar("GITHUB_CLIENT_ID", "GitHub OAuth app client ID", nil, false)
 	EnvGitHubClientSecret = StringVar("GITHUB_CLIENT_SECRET", "GitHub OAuth app client secret", nil, false)
 	EnvGitHubRedirectURI  = StringVar("GITHUB_REDIRECT_URI", "GitHub OAuth app redirect URI (optional; derived from SERVER_EXTERNAL_URL when unset)", nil, false)
+	// The GITHUB_APP_* vars configure one platform-wide GitHub App that every
+	// org installs; unset leaves each org creating its own app via the
+	// manifest flow.
+	EnvGitHubAppID            = IntVar("GITHUB_APP_ID", "Platform GitHub App numeric ID", nil, false)
+	EnvGitHubAppSlug          = StringVar("GITHUB_APP_SLUG", "Platform GitHub App URL slug", nil, false)
+	EnvGitHubAppPrivateKey    = StringVar("GITHUB_APP_PRIVATE_KEY", "Platform GitHub App private key (PEM)", nil, false)
+	EnvGitHubAppWebhookSecret = StringVar("GITHUB_APP_WEBHOOK_SECRET", "Platform GitHub App webhook secret", nil, false)
 
 	// Server
 	EnvServerHostname    = StringVar("SERVER_HOSTNAME", "Server hostname/domain", nil, false)

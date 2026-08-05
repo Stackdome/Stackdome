@@ -9,7 +9,7 @@ func TestGitHubRedirectURIDerivedFromExternalURL(t *testing.T) {
 	c := NewApplicationConfig()
 	c.LoadEnvVariables()
 
-	want := "https://hub.example.com/api/v1/auth/github/callback"
+	want := "https://hub.example.com/auth/github/callback"
 	if c.GitHubOAuth.RedirectURI != want {
 		t.Fatalf("expected derived redirect %q, got %q", want, c.GitHubOAuth.RedirectURI)
 	}
@@ -22,7 +22,7 @@ func TestGitHubRedirectURITrimsTrailingSlash(t *testing.T) {
 	c := NewApplicationConfig()
 	c.LoadEnvVariables()
 
-	want := "https://hub.example.com/api/v1/auth/github/callback"
+	want := "https://hub.example.com/auth/github/callback"
 	if c.GitHubOAuth.RedirectURI != want {
 		t.Fatalf("expected no double slash, got %q", c.GitHubOAuth.RedirectURI)
 	}

@@ -12,6 +12,7 @@ func runUpgrade(args []string) {
 	fs := flag.NewFlagSet("upgrade", flag.ExitOnError)
 	image := fs.String("image", "", "API server container image (default: keep the currently deployed one)")
 	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
+	github := registerGitHubFlags(fs)
 	_ = fs.Parse(args)
 
 	totalPhases = 4
@@ -70,6 +71,13 @@ func runUpgrade(args []string) {
 		JWTSecret:      secrets.JWTSecret,
 		EncryptionKey:  secrets.EncryptionKey,
 		AdminPassword:  secrets.AdminPassword,
+	}
+	if err := github.applyTo(&vals); err != nil {
+		exitErr("Reading GitHub credentials failed", err)
+	}
+
+	if err := mergeGitHubConfig(&vals, secrets); err != nil {
+		exitErr("Storing GitHub credentials failed", err)
 	}
 
 	if err := installStackdomeAgent(*chartVersion); err != nil {

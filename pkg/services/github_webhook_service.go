@@ -35,6 +35,17 @@ func truncateForLog(s string) string {
 // GitHubWebhookService is the ingress for GitHub webhook deliveries. It is
 // deliberately separate from GitIntegrationService so webhook dispatch can
 // depend on the preview webhook router without a construction cycle.
+//
+// How we find out which org a delivery belongs to:
+//   - First, look up the git_installations row by installation id. This works
+//     for both app modes. For the shared platform app it is the ONLY safe
+//     way: all orgs share one app id, so the app id cannot tell orgs apart.
+//   - If there is no row, match by app id across BYO integrations. Each BYO
+//     app has its own unique app id, so a match names exactly one org. This
+//     only happens on a BYO app's very first delivery, before its row exists.
+//   - If neither works for an installation event, we ack it and do nothing.
+//     For the platform app, the setup callback links the install to its org —
+//     the webhook never does. Erroring would just make GitHub retry forever.
 type GitHubWebhookService interface {
 	// ProcessGitHubWebhook resolves the integration a delivery belongs to,
 	// HMAC-verifies the payload against that integration's webhook secret,
@@ -48,6 +59,9 @@ type GitHubWebhookServiceSpec struct {
 	EncryptionService EncryptionService
 	PreviewWebhook    PreviewWebhookService
 	Logger            logger.Logger
+	// PlatformApp mirrors GitIntegrationServiceSpec.PlatformApp; nil means
+	// per-org apps.
+	PlatformApp *githubapp.AppCredentials
 }
 
 type gitHubWebhookService struct {
@@ -56,6 +70,7 @@ type gitHubWebhookService struct {
 	encryption     EncryptionService
 	previewWebhook PreviewWebhookService
 	logger         logger.Logger
+	platformApp    *githubapp.AppCredentials
 }
 
 func NewGitHubWebhookService(spec GitHubWebhookServiceSpec) GitHubWebhookService {
@@ -65,6 +80,7 @@ func NewGitHubWebhookService(spec GitHubWebhookServiceSpec) GitHubWebhookService
 		encryption:     spec.EncryptionService,
 		previewWebhook: spec.PreviewWebhook,
 		logger:         spec.Logger,
+		platformApp:    spec.PlatformApp,
 	}
 }
 
@@ -91,6 +107,12 @@ func (s *gitHubWebhookService) ProcessGitHubWebhook(ctx context.Context, event s
 	integration, creds, serr := s.webhookIntegration(ctx, parsed)
 	if serr != nil {
 		s.logger.Warn(ctx, "github webhook: cannot resolve integration for '%s' event: %s", event, serr.Reason)
+		if event == GitHubEventInstallation && serr.Is404() {
+			// A new platform-app install has no org link until the setup
+			// callback runs. Ack it so GitHub does not keep retrying a
+			// delivery we can never match.
+			return nil
+		}
 		return serr
 	}
 	if err := github.ValidateSignature(signature, payload, []byte(creds.WebhookSecret)); err != nil {
@@ -109,18 +131,27 @@ func (s *gitHubWebhookService) ProcessGitHubWebhook(ctx context.Context, event s
 	}
 }
 
-// webhookIntegration resolves the integration a delivery belongs to. Only
-// installation events carry the full installation object with app_id;
-// repository events (pull_request) carry the slim {id, node_id} reference, so
-// they resolve through the stored installation row instead.
+// webhookIntegration finds the integration a delivery belongs to. The lookup
+// order is explained on GitHubWebhookService. pull_request payloads only
+// carry {id, node_id} for the installation — no app id — so there is no
+// fallback for them: unknown installation means no org has that repo
+// connection.
 func (s *gitHubWebhookService) webhookIntegration(ctx context.Context, parsed any) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
 	switch e := parsed.(type) {
 	case *github.InstallationEvent:
+		// Try the installation row first.
+		if installationID := e.GetInstallation().GetID(); installationID != 0 {
+			integration, creds, serr := s.findAppByInstallation(ctx, installationID)
+			if serr == nil {
+				return integration, creds, nil
+			}
+		}
+		// No row yet: a BYO app's first delivery. Match by app id.
 		appID := e.GetInstallation().GetAppID()
 		if appID == 0 {
 			return nil, nil, errors.BadRequest("installation payload has no app id")
 		}
-		return s.findAppByID(ctx, appID)
+		return s.findBYOAppByAppID(ctx, appID)
 	case *github.PullRequestEvent:
 		installationID := e.GetInstallation().GetID()
 		if installationID == 0 {
@@ -132,17 +163,24 @@ func (s *gitHubWebhookService) webhookIntegration(ctx context.Context, parsed an
 	}
 }
 
-// findAppByID locates a github_app integration by GitHub app ID.
-func (s *gitHubWebhookService) findAppByID(ctx context.Context, appID int64) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
+// findBYOAppByAppID finds the BYO integration that owns a GitHub app id.
+//   - Each BYO app has its own unique app id, so a match names exactly one
+//     org.
+//   - Rows using the platform app store no credentials and MUST be skipped:
+//     they would all report the same platform app id, and picking the first
+//     match would hand the delivery — and later its repo tokens — to the
+//     wrong org. Those rows are only ever found via the installation row.
+func (s *gitHubWebhookService) findBYOAppByAppID(ctx context.Context, appID int64) (*models.GitIntegration, *githubapp.AppCredentials, *errors.ServiceError) {
 	integrations, serr := s.store.ListGitHubApps(ctx)
 	if serr != nil {
 		return nil, nil, serr
 	}
 	for _, integration := range integrations {
+		// No stored credentials = platform-app row. Skip (see doc above).
 		if integration.EncryptedAuth == "" {
 			continue
 		}
-		creds, serr := unsealAppCredentials(s.encryption, integration)
+		creds, serr := unsealAppCredentials(s.encryption, s.platformApp, integration)
 		if serr != nil {
 			continue
 		}
@@ -164,7 +202,7 @@ func (s *gitHubWebhookService) findAppByInstallation(ctx context.Context, instal
 	if serr != nil {
 		return nil, nil, serr
 	}
-	creds, serr := unsealAppCredentials(s.encryption, integration)
+	creds, serr := unsealAppCredentials(s.encryption, s.platformApp, integration)
 	if serr != nil {
 		return nil, nil, serr
 	}

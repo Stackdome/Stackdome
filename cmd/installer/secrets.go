@@ -4,8 +4,10 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math/big"
+	"os"
 	"strings"
 
 	"github.com/Stackdome/stackdome/install"
@@ -17,10 +19,69 @@ const (
 )
 
 type BootstrapSecrets struct {
-	DBPassword    string
-	JWTSecret     string
-	EncryptionKey string
-	AdminPassword string
+	DBPassword             string
+	JWTSecret              string
+	EncryptionKey          string
+	AdminPassword          string
+	AdminEmail             string
+	GitHubClientID         string
+	GitHubClientSecret     string
+	GitHubAppID            string
+	GitHubAppSlug          string
+	GitHubAppPrivateKey    string
+	GitHubAppWebhookSecret string
+}
+
+// githubFlags are the GitHub credentials install and upgrade both accept.
+// Empty values keep whatever the bootstrap secret already stores.
+type githubFlags struct {
+	clientID         *string
+	clientSecret     *string
+	appID            *string
+	appSlug          *string
+	appKeyFile       *string
+	appWebhookSecret *string
+}
+
+func registerGitHubFlags(fs *flag.FlagSet) *githubFlags {
+	return &githubFlags{
+		clientID:         fs.String("github-client-id", "", "GitHub client ID for 'Sign in with GitHub'"),
+		clientSecret:     fs.String("github-client-secret", "", "GitHub client secret for 'Sign in with GitHub'"),
+		appID:            fs.String("github-app-id", "", "Platform GitHub App numeric ID"),
+		appSlug:          fs.String("github-app-slug", "", "Platform GitHub App URL slug"),
+		appKeyFile:       fs.String("github-app-key-file", "", "Path to the platform GitHub App private key (PEM)"),
+		appWebhookSecret: fs.String("github-app-webhook-secret", "", "Platform GitHub App webhook secret"),
+	}
+}
+
+func (f *githubFlags) applyTo(vals *install.TemplateValues) error {
+	// The hub enables the platform app only when all four values are set, so a
+	// partial set would silently disable the feature.
+	appFlagsGiven := 0
+	for _, v := range []string{*f.appID, *f.appSlug, *f.appKeyFile, *f.appWebhookSecret} {
+		if v != "" {
+			appFlagsGiven++
+		}
+	}
+	if appFlagsGiven != 0 && appFlagsGiven != 4 {
+		return fmt.Errorf("--github-app-id, --github-app-slug, --github-app-key-file and --github-app-webhook-secret must be given together")
+	}
+
+	vals.GitHubClientID = *f.clientID
+	vals.GitHubClientSecret = *f.clientSecret
+	vals.GitHubAppID = *f.appID
+	vals.GitHubAppSlug = *f.appSlug
+	vals.GitHubAppWebhookSecret = *f.appWebhookSecret
+
+	if *f.appKeyFile == "" {
+		return nil
+	}
+	pem, err := os.ReadFile(*f.appKeyFile)
+	if err != nil {
+		return fmt.Errorf("reading GitHub App private key: %w", err)
+	}
+	vals.GitHubAppPrivateKey = string(pem)
+	return nil
 }
 
 func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error) {
@@ -31,6 +92,9 @@ func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error
 		vals.JWTSecret = existing.JWTSecret
 		vals.EncryptionKey = existing.EncryptionKey
 		vals.AdminPassword = existing.AdminPassword
+		if err := mergeGitHubConfig(vals, existing); err != nil {
+			return nil, err
+		}
 		return existing, nil
 	}
 
@@ -57,6 +121,49 @@ func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error
 	}
 
 	return secrets, nil
+}
+
+// mergeGitHubConfig reconciles the --github-* flags already on vals with what
+// the bootstrap secret holds: flags win, stored values fill the gaps, and the
+// secret is rewritten only when something actually changed. This is what keeps
+// GitHub credentials alive across upgrades, which re-render every manifest.
+func mergeGitHubConfig(vals *install.TemplateValues, existing *BootstrapSecrets) error {
+	fields := []struct{ flag, stored *string }{
+		{&vals.GitHubClientID, &existing.GitHubClientID},
+		{&vals.GitHubClientSecret, &existing.GitHubClientSecret},
+		{&vals.GitHubAppID, &existing.GitHubAppID},
+		{&vals.GitHubAppSlug, &existing.GitHubAppSlug},
+		{&vals.GitHubAppPrivateKey, &existing.GitHubAppPrivateKey},
+		{&vals.GitHubAppWebhookSecret, &existing.GitHubAppWebhookSecret},
+	}
+	changed := false
+	for _, f := range fields {
+		if *f.flag == "" {
+			*f.flag = *f.stored
+		}
+		if *f.flag != *f.stored {
+			*f.stored = *f.flag
+			changed = true
+		}
+	}
+	// The secret is re-rendered whole, so every field it carries must be on
+	// vals — upgrade only knows the email from the secret itself.
+	if vals.AdminEmail == "" {
+		vals.AdminEmail = existing.AdminEmail
+	}
+	if !changed {
+		return nil
+	}
+
+	manifest, err := install.RenderManifest("bootstrap-secret.yaml", *vals)
+	if err != nil {
+		return fmt.Errorf("rendering bootstrap secret: %w", err)
+	}
+	if err := kubectlApply(manifest); err != nil {
+		return fmt.Errorf("updating bootstrap secret: %w", err)
+	}
+	stepLog("GitHub credentials stored")
+	return nil
 }
 
 func readExistingSecrets() (*BootstrapSecrets, error) {
@@ -87,10 +194,18 @@ func readExistingSecrets() (*BootstrapSecrets, error) {
 	}
 
 	s := &BootstrapSecrets{
-		DBPassword:    decode("db-password"),
-		JWTSecret:     decode("jwt-secret"),
-		EncryptionKey: decode("encryption-key"),
-		AdminPassword: decode("admin-password"),
+		DBPassword:         decode("db-password"),
+		JWTSecret:          decode("jwt-secret"),
+		EncryptionKey:      decode("encryption-key"),
+		AdminPassword:      decode("admin-password"),
+		AdminEmail:         decode("admin-email"),
+		GitHubClientID:     decode("github-client-id"),
+		GitHubClientSecret: decode("github-client-secret"),
+
+		GitHubAppID:            decode("github-app-id"),
+		GitHubAppSlug:          decode("github-app-slug"),
+		GitHubAppPrivateKey:    decode("github-app-private-key"),
+		GitHubAppWebhookSecret: decode("github-app-webhook-secret"),
 	}
 
 	if s.DBPassword == "" || s.JWTSecret == "" || s.EncryptionKey == "" || s.AdminPassword == "" {
