@@ -1,0 +1,24 @@
+# Vaultwarden — self-hosted Bitwarden-compatible password manager (SQLite).
+# 1. Replace REPLACE_ADMIN_TOKEN_VALUE_HERE (protects the /admin panel at DOMAIN/admin).
+# 2. Open the vault, click "Create Account", and sign up your first user — no invite needed.
+# 3. Once you have an account, set SIGNUPS_ALLOWED to "false" to close public registration.
+# 4. The bundled web vault hard-refuses any non-HTTPS request (bitwarden/clients api.service.ts
+#    rejects requests that don't start with "https://") — this isn't just a browser secure-context
+#    check, it fails even on http://localhost. It only works once served over real HTTPS, which
+#    Stackdome's ingress provides for the deployed public_url.
+name: vaultwarden
+
+services:
+  vaultwarden:
+    image: vaultwarden/server:1.37.1
+    ports:
+      - "80:80"
+    environment:
+      DOMAIN: "${self.public_url}"
+      ADMIN_TOKEN: "REPLACE_ADMIN_TOKEN_VALUE_HERE"
+      SIGNUPS_ALLOWED: "true"
+    volumes:
+      - vaultwarden-data:/data
+
+volumes:
+  vaultwarden-data:
