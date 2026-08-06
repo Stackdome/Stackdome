@@ -153,7 +153,7 @@ func (e *environmentImpl) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig.BaseDomain, e.BootstrapConfig.Email); err != nil {
+	if err := config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig); err != nil {
 		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil

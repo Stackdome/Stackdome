@@ -5,6 +5,9 @@ import (
 	"encoding/base64"
 	stderrors "errors"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
 	apperrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -13,7 +16,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	certutil "k8s.io/client-go/util/cert"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 // Suite bootstrapped by TestServices in services_suite_test.go.
@@ -350,6 +357,108 @@ var _ = Describe("ClusterService", func() {
 			name, err := svc.DefaultStorageClass(ctx, "cluster-1")
 			Expect(err).To(BeNil())
 			Expect(name).To(BeEmpty())
+		})
+	})
+
+	Describe("Platform wildcard TLS", func() {
+		const (
+			cloudflareToken = "cf-token"
+			contactEmail    = "ops@example.com"
+			baseDomain      = "apps.example.com"
+			tlsNamespace    = "stackdome-control-plane"
+		)
+
+		var (
+			k8sClient       client.Client
+			platformCluster *models.Cluster
+			tlsCtx          context.Context
+		)
+
+		fullConfig := func() *config.BootstrapConfig {
+			return &config.BootstrapConfig{
+				BaseDomain:            baseDomain,
+				DNSCloudflareAPIToken: cloudflareToken,
+				ACMEEnvironment:       config.ACMEEnvironmentStaging,
+				TLSNamespace:          tlsNamespace,
+			}
+		}
+
+		key := func(name, namespace string) client.ObjectKey {
+			return client.ObjectKey{Name: name, Namespace: namespace}
+		}
+
+		BeforeEach(func() {
+			scheme := runtime.NewScheme()
+			Expect(corev1.AddToScheme(scheme)).To(Succeed())
+			Expect(cmv1.AddToScheme(scheme)).To(Succeed())
+			k8sClient = fake.NewClientBuilder().WithScheme(scheme).Build()
+			platformCluster = &models.Cluster{ID: "cluster-platform", Platform: true}
+			tlsCtx = auth.SetIdentityInContext(context.Background(), &auth.Identity{
+				IsSystem:     true,
+				ContactEmail: contactEmail,
+			})
+		})
+
+		It("creates the Cloudflare token, DNS issuer, and wildcard certificate", func() {
+			clusterManager.EXPECT().GetClient(platformCluster.ID).Return(k8sClient, nil)
+
+			Expect(svc.InternalEnsurePlatformWildcardTLS(tlsCtx, platformCluster, fullConfig())).To(BeNil())
+
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(tlsCtx, key(models.CloudflareAPITokenSecretName, tlsNamespace), secret)).To(Succeed())
+			Expect(secret.Data).To(HaveKeyWithValue(models.CloudflareAPITokenSecretKey, []byte(cloudflareToken)))
+
+			issuer := &cmv1.Issuer{}
+			Expect(k8sClient.Get(tlsCtx, key(models.DNSIssuerName, tlsNamespace), issuer)).To(Succeed())
+			Expect(issuer.Spec.ACME.Server).To(Equal(config.ACMEStagingDirectoryURL))
+			Expect(issuer.Spec.ACME.Email).To(Equal(contactEmail))
+			Expect(issuer.Spec.ACME.PrivateKey.Name).To(Equal(models.DNSIssuerPrivateKeySecretName))
+			Expect(issuer.Spec.ACME.Solvers).To(HaveLen(1))
+			cloudflare := issuer.Spec.ACME.Solvers[0].DNS01.Cloudflare
+			Expect(cloudflare.APIToken.Name).To(Equal(models.CloudflareAPITokenSecretName))
+			Expect(cloudflare.APIToken.Key).To(Equal(models.CloudflareAPITokenSecretKey))
+
+			certificate := &cmv1.Certificate{}
+			Expect(k8sClient.Get(tlsCtx, key(models.PlatformWildcardTLSName, tlsNamespace), certificate)).To(Succeed())
+			Expect(certificate.Spec.DNSNames).To(Equal([]string{"*.apps.example.com"}))
+			Expect(certificate.Spec.SecretName).To(Equal("platform-wildcard-tls"))
+			Expect(certificate.Spec.IssuerRef.Name).To(Equal(models.DNSIssuerName))
+			Expect(certificate.Spec.IssuerRef.Kind).To(Equal(cmv1.IssuerKind))
+		})
+
+		It("creates a missing TLS namespace", func() {
+			clusterManager.EXPECT().GetClient(platformCluster.ID).Return(k8sClient, nil)
+
+			Expect(svc.InternalEnsurePlatformWildcardTLS(tlsCtx, platformCluster, fullConfig())).To(BeNil())
+
+			namespace := &corev1.Namespace{}
+			Expect(k8sClient.Get(tlsCtx, key(tlsNamespace, ""), namespace)).To(Succeed())
+		})
+
+		It("updates the Cloudflare token on a subsequent invocation", func() {
+			clusterManager.EXPECT().GetClient(platformCluster.ID).Return(k8sClient, nil).Times(2)
+
+			Expect(svc.InternalEnsurePlatformWildcardTLS(tlsCtx, platformCluster, fullConfig())).To(BeNil())
+			rotated := fullConfig()
+			rotated.DNSCloudflareAPIToken = "cf-token-v2"
+			Expect(svc.InternalEnsurePlatformWildcardTLS(tlsCtx, platformCluster, rotated)).To(BeNil())
+
+			secret := &corev1.Secret{}
+			Expect(k8sClient.Get(tlsCtx, key(models.CloudflareAPITokenSecretName, tlsNamespace), secret)).To(Succeed())
+			Expect(secret.Data).To(HaveKeyWithValue(models.CloudflareAPITokenSecretKey, []byte("cf-token-v2")))
+		})
+
+		It("does not look up a cluster client without a base domain", func() {
+			cfg := fullConfig()
+			cfg.BaseDomain = ""
+
+			Expect(svc.InternalEnsurePlatformWildcardTLS(tlsCtx, platformCluster, cfg)).To(BeNil())
+		})
+
+		It("returns a service error when the cluster client is unavailable", func() {
+			clusterManager.EXPECT().GetClient(platformCluster.ID).Return(nil, stderrors.New("unavailable"))
+
+			Expect(svc.InternalEnsurePlatformWildcardTLS(tlsCtx, platformCluster, fullConfig())).ToNot(BeNil())
 		})
 	})
 

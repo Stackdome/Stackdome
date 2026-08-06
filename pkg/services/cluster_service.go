@@ -11,6 +11,7 @@ import (
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -19,11 +20,13 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	certutil "k8s.io/client-go/util/cert"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 const httpsScheme = "https"
@@ -41,6 +44,7 @@ type ClusterService interface {
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 	InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError
+	InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError
 	DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError)
 }
 
@@ -450,6 +454,105 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 
 	s.logger.Info(ctx, "ClusterIssuer %s already exists on cluster %s, skipping", models.DefaultClusterIssuerName, cluster.ID)
 	return nil
+}
+
+// InternalEnsurePlatformWildcardTLS creates or reconciles the namespace-scoped
+// DNS-01 resources used to issue a wildcard certificate for the platform apps
+// domain.
+func (s *clusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
+	if cfg.BaseDomain == "" {
+		return nil
+	}
+
+	k8sClient, err := s.clusterManager.GetClient(cluster.ID)
+	if err != nil {
+		return errors.GeneralError("failed to get client for cluster %s: %v", cluster.ID, err)
+	}
+
+	email := auth.ContactEmailFromCtx(ctx)
+	if email == "" {
+		return errors.GeneralError("no ACME contact email available for DNS Issuer %s", models.DNSIssuerName)
+	}
+
+	if err := ensureTLSNamespace(ctx, k8sClient, cfg.TLSNamespace); err != nil {
+		return errors.GeneralError("failed to ensure Namespace %s: %v", cfg.TLSNamespace, err)
+	}
+	if err := ensureCloudflareToken(ctx, k8sClient, cfg.TLSNamespace, cfg.DNSCloudflareAPIToken); err != nil {
+		return errors.GeneralError("failed to ensure Secret %s: %v", models.CloudflareAPITokenSecretName, err)
+	}
+	if err := ensureDNSIssuer(ctx, k8sClient, cfg.TLSNamespace, email, cfg.ACMEDirectoryURL()); err != nil {
+		return errors.GeneralError("failed to ensure Issuer %s: %v", models.DNSIssuerName, err)
+	}
+	if err := ensureWildcardCertificate(ctx, k8sClient, cfg.TLSNamespace, cfg.BaseDomain); err != nil {
+		return errors.GeneralError("failed to ensure Certificate %s: %v", models.PlatformWildcardTLSName, err)
+	}
+
+	s.logger.Info(ctx, "platform wildcard TLS ensured for *.%s on cluster %s", cfg.BaseDomain, cluster.ID)
+	return nil
+}
+
+func ensureTLSNamespace(ctx context.Context, k8sClient client.Client, namespace string) error {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: namespace}}
+	_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, ns, func() error {
+		return nil
+	})
+	return err
+}
+
+func ensureCloudflareToken(ctx context.Context, k8sClient client.Client, namespace, token string) error {
+	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{
+		Name:      models.CloudflareAPITokenSecretName,
+		Namespace: namespace,
+	}}
+	_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, secret, func() error {
+		secret.Data = map[string][]byte{models.CloudflareAPITokenSecretKey: []byte(token)}
+		return nil
+	})
+	return err
+}
+
+func ensureDNSIssuer(ctx context.Context, k8sClient client.Client, namespace, email, acmeDirectoryURL string) error {
+	issuer := &cmv1.Issuer{ObjectMeta: metav1.ObjectMeta{
+		Name:      models.DNSIssuerName,
+		Namespace: namespace,
+	}}
+	_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, issuer, func() error {
+		issuer.Spec = cmv1.IssuerSpec{IssuerConfig: cmv1.IssuerConfig{ACME: &cmacme.ACMEIssuer{
+			Server: acmeDirectoryURL,
+			Email:  email,
+			PrivateKey: cmmeta.SecretKeySelector{
+				LocalObjectReference: cmmeta.LocalObjectReference{Name: models.DNSIssuerPrivateKeySecretName},
+			},
+			Solvers: []cmacme.ACMEChallengeSolver{{DNS01: &cmacme.ACMEChallengeSolverDNS01{
+				Cloudflare: &cmacme.ACMEIssuerDNS01ProviderCloudflare{APIToken: &cmmeta.SecretKeySelector{
+					LocalObjectReference: cmmeta.LocalObjectReference{Name: models.CloudflareAPITokenSecretName},
+					Key:                  models.CloudflareAPITokenSecretKey,
+				}},
+			}}},
+		}}}
+		return nil
+	})
+	return err
+}
+
+func ensureWildcardCertificate(ctx context.Context, k8sClient client.Client, namespace, baseDomain string) error {
+	certificate := &cmv1.Certificate{ObjectMeta: metav1.ObjectMeta{
+		Name:      models.PlatformWildcardTLSName,
+		Namespace: namespace,
+	}}
+	_, err := controllerutil.CreateOrUpdate(ctx, k8sClient, certificate, func() error {
+		certificate.Spec = cmv1.CertificateSpec{
+			SecretName: models.PlatformWildcardTLSName,
+			DNSNames:   []string{"*." + baseDomain},
+			IssuerRef: cmmeta.IssuerReference{
+				Name:  models.DNSIssuerName,
+				Kind:  cmv1.IssuerKind,
+				Group: cmv1.SchemeGroupVersion.Group,
+			},
+		}
+		return nil
+	})
+	return err
 }
 
 func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {

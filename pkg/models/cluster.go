@@ -6,6 +6,17 @@ import (
 
 const DefaultClusterIssuerName = "letsencrypt-prod"
 
+// Fixed names for the platform wildcard TLS resources. The DNS Issuer and its
+// supporting Secret are namespace-scoped, so all of these resources reside in
+// the namespace selected by the bootstrap configuration.
+const (
+	CloudflareAPITokenSecretName  = "cloudflare-api-token"
+	CloudflareAPITokenSecretKey   = "api-token"
+	DNSIssuerName                 = "letsencrypt-dns"
+	DNSIssuerPrivateKeySecretName = "letsencrypt-dns-key"
+	PlatformWildcardTLSName       = "platform-wildcard-tls"
+)
+
 // PlatformClusterName is the fixed name of the bootstrap-provisioned platform
 // cluster row; it is not configurable.
 const PlatformClusterName = "platform"

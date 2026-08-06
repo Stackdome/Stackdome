@@ -60,18 +60,26 @@ func (s *Service) Run(ctx context.Context) error {
 		ContactEmail: s.bootstrapCfg.Email,
 	})
 
-	if _, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
+	cluster, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
 		Name:           models.PlatformClusterName,
 		OrganisationID: org.ID,
 		Platform:       true,
 		ClusterURL:     s.clusterCfg.ClusterURL,
 		ClusterCAData:  s.clusterCfg.ClusterCAData,
 		Token:          s.clusterCfg.Token,
-	}); cErr != nil {
+	})
+	if cErr != nil {
 		return fmt.Errorf("failed to upsert platform cluster: %w", cErr)
 	}
 
-	return s.ensurePlatformDomain(sysCtx, org.ID)
+	if err := s.ensurePlatformDomain(sysCtx, org.ID); err != nil {
+		return err
+	}
+	if err := s.clusterService.InternalEnsurePlatformWildcardTLS(sysCtx, cluster, s.bootstrapCfg); err != nil {
+		return fmt.Errorf("failed to create or update platform wildcard TLS: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) ensurePlatformOrg(ctx context.Context) (*models.Organisation, error) {
