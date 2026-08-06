@@ -58,10 +58,14 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     setFullAccess(true);
     setSelectedScopes(new Set());
     setError(null);
+    setScopesError(null);
     setCreated(null);
     setCopied(false);
     getApiTokenScopes()
-      .then(setScopes)
+      .then((res) => {
+        setScopes(res);
+        setScopesError(null);
+      })
       .catch((e) => setScopesError(getErrorMessage(e)));
   }, [open]);
 
