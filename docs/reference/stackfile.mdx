@@ -60,7 +60,7 @@ volumes:
 
 | Field | Type | Required and default | Example |
 | --- | --- | --- | --- |
-| `name` | string | Required, non-empty; no default. Must be unique within the project. | `storefront` |
+| `name` | string | Required, non-empty; no default. Must be unique within the signup-created organization's default project. | `storefront` |
 | `resources` | map of resource name to resource object | Required with at least one entry; no default. | `web: { image: nginx:latest }` |
 | `volumes` | map of volume name to volume definition | Optional; no volumes by default. | `web-data: { size: 1Gi }` |
 

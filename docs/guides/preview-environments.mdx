@@ -12,12 +12,12 @@ Give each eligible pull request an isolated copy of the application at its own U
 - A GitHub repository connected to Stackdome through a GitHub App installation for automatic pull-request events. Public repository URLs support manual previews only.
 - A `stackfile.yaml` committed on the pull request branch and validated with the current CLI.
 - Enough destination capacity for one full copy of the declared stack per active preview.
-- An administrator who can enable the repository in the dashboard or API. The current public CLI has no preview-configuration, sync, list, or delete commands.
+- Access to enable the repository in the dashboard or API. The current public CLI has no preview-configuration, sync, list, or delete commands.
 
 ## Agent prompt
 
 ```text
-Prepare this repository for per-pull-request preview environments. Inspect the application, create or update the committed stackfile.yaml with its resources and public ports, validate it with the current Stackdome CLI, and identify the exact dashboard-only repository configuration an administrator must enable. After a preview is created, verify its Ready state and public URL. Do not invent preview CLI commands or claim that validation alone enabled the automation.
+Prepare this repository for per-pull-request preview environments. Inspect the application, create or update the committed stackfile.yaml with its resources and public ports, validate it with the current Stackdome CLI, and identify the exact dashboard-only repository configuration that must be enabled. After a preview is created, verify its Ready state and public URL. Do not invent preview CLI commands or claim that validation alone enabled the automation.
 ```
 
 ## Agent actions
@@ -33,7 +33,7 @@ Prepare this repository for per-pull-request preview environments. Inspect the a
     Run `stackdome validate --file stackfile.yaml`. Commit the validated Stackfile at the configured path on every branch that should preview; Stackdome reads the pull request head commit.
   </Step>
   <Step title="Hand off dashboard-only setup">
-    Ask an administrator to use **Platform → Previews → Enable repository** and select the connected repository, base branch, Stackfile path, active-preview cap, and configuration-level environment values. The CLI cannot perform this step.
+    Use **Platform → Previews → Enable repository** and select the connected repository, base branch, Stackfile path, active-preview cap, and configuration-level environment values. The CLI cannot perform this step.
   </Step>
   <Step title="Verify an actual pull request">
     Open or synchronize an eligible pull request, wait for the environment to become **Ready**, and test the URL from its sticky pull-request comment or dashboard card. Do not treat a successful local Stackfile validation as a running preview.
@@ -78,7 +78,7 @@ On a preview, Stackdome pins matching git resources to the pull request's head c
   - Exact Stackfile fields: top-level `name` and `resources` are required; each resource uses exactly one of `build` or `image`; a public URL requires a port with `name`, `port`, `protocol: HTTP`, and `public: true`.
   - Machine checks available before enablement: `stackdome validate --file stackfile.yaml` exits `0`. Machine checks after enablement come from the created preview's state, commit, and URL; the CLI has no preview status command.
   - Recovery: validate the exact Stackfile fetched from the pull request head, confirm the configured Stackfile path and base branch, and confirm the pull request is not from a fork. For a failed environment, use the dashboard failure message and the pull-request comment; do not run ordinary `stackdome deploy` and call it a preview repair.
-  - Configuration, manual creation, sync, and deletion are dashboard/API-only. Ask for administrator action when those mutations are required.
+  - Configuration, manual creation, sync, and deletion are dashboard/API-only. Hand those mutations back to the user when the agent has no dashboard or API access.
 </Visibility>
 
 <Visibility for="humans">

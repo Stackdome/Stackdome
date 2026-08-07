@@ -21,7 +21,7 @@ stackdome deploy --wait -o json
 stackdome status -o json
 ```
 
-`stackdome whoami -o json` verifies the active server, organization, project, and authentication method before the deployment begins. `stackdome init` converts a Compose file when one is present or creates a starter `stackfile.yaml`; edit that generated file from evidence in the repository, then run `stackdome validate` again before deploying.
+`stackdome whoami -o json` verifies the active server, signup-created organization, default project, and authentication method before deployment. Organization and project selection are not part of the alpha workflow. `stackdome init` converts a Compose file when one is present or creates a starter `stackfile.yaml`; edit that generated file from evidence in the repository, then run `stackdome validate` again before deploying.
 
 `stackdome deploy --wait -o json` waits for a terminal release state. It exits non-zero unless the release reaches `Released`. Retain the returned `release.id` as the deployed release ID and require `release.state` to be `Released`. In the status result, require `converged_release.id` to equal that deployed release ID, `converged_release.state` to be `Released`, and `converged_release.health` to be `ok`. If you also claim it is still the newest attempt, require `latest_release.id` to equal the deployed release ID and `latest_release.state` to be `Released`.
 

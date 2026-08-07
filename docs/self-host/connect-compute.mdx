@@ -21,7 +21,7 @@ Treat delete-then-connect as recovery for an unused organization, not as workloa
 
 ## Prerequisites
 
-- **You are an organization admin.** **Clusters** and **Domains** appear in the sidebar only for organization admins; members never see them and cannot register a cluster.
+- **Access to the Stackdome dashboard.** Open **Clusters** under **Platform** to register compute. During alpha, every signup owns one organization and uses its default project, so there is no role or project-selection step.
 - **The target cluster runs `stackdome-agent`.** Without the agent, the hub will happily store your credentials and write custom resources that nothing ever reconciles. Install the chart into the `stackdome-control-plane` namespace on the target cluster before you register it.
 - **The cluster's API server is reachable from the hub.** The hub opens outbound connections to the URL you register. For a cluster on another machine that means its API port — commonly `6443` — has to be open to the machine running Stackdome, not just to your laptop.
 - **`kubectl` access to the target cluster**, to create the service account in the next section.

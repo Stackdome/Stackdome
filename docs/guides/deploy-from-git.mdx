@@ -6,33 +6,33 @@ keywords: ["deploy from git", "repository deployment", "Dockerfile build", "priv
 
 ## Outcome
 
-Deploy a repository as a Stackdome resource. Stackdome clones the selected revision, builds its Dockerfile, stores the resulting image in the deployment destination's build registry, and waits until the release is healthy. A public port produces a URL you can return to the user.
+Deploy the public [Stackdome demo repository](https://github.com/Stackdome/stackdome-demo) as a three-resource stack. Stackdome builds its web application and worker from separate repository contexts, runs Redis from a published image, provisions persistent Redis storage, and waits until the release is healthy. The web resource produces a public URL you can return to the user.
 
 ## Prerequisites
 
-- The repository and evidence about how it runs: its Dockerfile, Compose file, build context, listening ports, required environment variables, and startup command.
+- A local clone of `https://github.com/Stackdome/stackdome-demo.git`. The example application is under `hello-stack`.
 - The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
 - Stackdome Cloud supplies the registry used for git builds. On self-hosted Stackdome, git builds require [connected compute with an image registry](/self-host/connect-compute).
-- For a private repository, a git provider already connected by an organization admin. The current public CLI cannot create or manage git-provider credentials; use the dashboard flow below or the API before deploying.
+- For a private repository, a git provider already connected to the organization. The current public CLI cannot create or manage git-provider credentials; use the dashboard flow below or the API before deploying.
 - For the GitHub App flow on a self-hosted installation, an externally reachable `SERVER_EXTERNAL_URL` and a GitHub account allowed to install the app for the repository owner.
 
 ## Agent prompt
 
 ```text
-Inspect this repository and deploy it to Stackdome from git. Use repository evidence for the Dockerfile, build context, revision, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, retain the returned release ID, verify that the converged release ID matches it and converged health is ok, and return the public URL. If the repository is private and no git provider is configured, stop and tell me that provider setup currently requires the Stackdome dashboard or API.
+Clone https://github.com/Stackdome/stackdome-demo.git and deploy its hello-stack application to Stackdome. Use the repository's Compose file as an architectural reference for creating the Stackfile, and cross-check it against the Dockerfiles and README. Run stackdome init beside hello-stack/docker-compose.yml only as experimental scaffolding, replace local build paths with the repository URL and repository-root contexts, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, retain the returned release ID, verify that the converged release ID matches it and converged health is ok, and return the web URL.
 ```
 
 ## Agent actions
 
 <Steps>
   <Step title="Inspect the repository">
-    Read the Dockerfile, Compose file, package or build configuration, documented startup command, ports, environment requirements, dependencies, and storage paths. Do not infer a runtime when the repository provides evidence.
+    Use `hello-stack/docker-compose.yml` as the topology reference, then cross-check `hello-stack/README.md` and both Dockerfiles. Create one Stackfile resource for each service and carry over only behavior supported by the Stackfile schema. The repository declares `web` on port `3000`, a stateless `worker`, Redis on port `6379`, and persistent Redis data under `/data`.
   </Step>
   <Step title="Initialize the Stackfile">
-    Run `stackdome init` from the repository root. It converts a supported Compose file when present or creates a starter `stackfile.yaml`.
+    Run `stackdome init --name hello-stack` from the repository's `hello-stack` directory. Its experimental converter creates a draft from `docker-compose.yml` and warns that the two local builds need a git repository. Treat the Compose file—not the generated draft—as the source of architectural hints.
   </Step>
   <Step title="Set the git build source">
-    Edit the generated resource so `build.repo` points to the repository. Set at most one of `branch`, `tag`, or `commit`, and set `dockerfile` and `context` only when repository evidence differs from the defaults.
+    Set both build resources to `https://github.com/Stackdome/stackdome-demo.git` on `main`. Use `hello-stack/web` for the web context and `hello-stack/worker` for the worker context because build paths are resolved from the cloned repository root.
   </Step>
   <Step title="Validate and authenticate">
     Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
@@ -50,36 +50,81 @@ Pushing a commit does not deploy an ordinary stack automatically. Run the deploy
 - `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
 - `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
 - A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
-- The committed Stackfile records the repository, revision policy, build context, ports, and other runtime requirements found in the repository.
+- The Stackfile records both demo build contexts, web port `3000`, Redis port `6379`, Redis dependencies, and the persistent `/data` mount found in the repository.
 
 ## CLI workflow
 
-Run the initializer from the repository root, then edit the file it creates:
+Clone the demo and run the initializer beside its Compose file:
 
 ```bash
-stackdome init
+git clone https://github.com/Stackdome/stackdome-demo.git
+cd stackdome-demo/hello-stack
+stackdome init --name hello-stack
 ```
 
-Replace the generated resource source with a build definition based on repository evidence. This example pins a branch and uses a Dockerfile in a service directory:
+The initializer discovers all three services and the Redis volume. It cannot turn local Compose build paths into a remote source automatically, so complete the generated file with the repository URL and repository-root contexts:
+
+<Warning>
+  Docker Compose conversion is experimental. Use Compose to understand the application and create the Stackfile; a converted Stackfile is only a draft and usually needs manual work for build-based services. Compose paths such as `./web` are relative to the local Compose file; Stackdome needs a Git repository URL and a context relative to the root of the cloned repository. Review every converted resource and require `stackdome validate` to pass before deployment.
+</Warning>
 
 ```yaml
-name: storefront
+name: hello-stack
 
 resources:
   web:
     build:
-      repo: https://github.com/acme/storefront.git
+      repo: https://github.com/Stackdome/stackdome-demo.git
       branch: main
-      dockerfile: services/web/Dockerfile
-      context: services/web
+      context: hello-stack/web
     ports:
       - name: http
-        port: 8080
+        port: 3000
         protocol: HTTP
         public: true
+    env:
+      CELEBRATION: confetti
+      HAT: party
+      HEADLINE: Your stack is now live.
+      PUBLIC_URL: "{{ self.public_url }}"
+      REDIS_URL: "redis://{{ redis.host }}:6379"
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      repo: https://github.com/Stackdome/stackdome-demo.git
+      branch: main
+      context: hello-stack/worker
+    env:
+      CELEBRATION: confetti
+      REDIS_URL: "redis://{{ redis.host }}:6379"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    ports:
+      - name: redis
+        port: 6379
+        protocol: TCP
+        public: false
+    volumes:
+      - name: redis
+        path: /data
+    stateful: true
+
+volumes:
+  redis:
+    size: 1Gi
+    access_mode: ReadWriteOnce
 ```
 
-Omit `branch` to let the server resolve the repository's default branch, or use exactly one of `tag` or `commit`. A commit is the reproducible choice. The Dockerfile path is relative to the build context. See the [Stackfile reference](/reference/stackfile) for all fields and the current release gaps.
+The two build contexts are relative to the repository root, not to the directory where you ran the CLI. `{{ redis.host }}` creates the resource connection and supplies the destination hostname to both Node.js processes. Omit `branch` to let the server resolve the repository's default branch, or use exactly one of `tag` or `commit`. A commit is the reproducible choice. See the [Stackfile guide](/guides/stackfile) for the Compose conversion details and the [Stackfile reference](/reference/stackfile) for every field.
 
 Validate before authentication or deployment:
 
@@ -200,7 +245,7 @@ Each row's **⋯** menu holds the actions available for that kind of provider.
 | **Manage on GitHub** | GitHub App providers only. Opens the app's installation page on GitHub. |
 | **Remove integration** | Both. Confirms with *"Remove this integration?"* — *"Repositories using this integration lose access for clones."* |
 
-**Verify repository access** is the cheapest way to find out whether a token actually works, before a build depends on it. It opens a dialog — *"Confirms the &lt;host&gt; integration can access a repository."* — with one field, **Repository URL**, showing `https://github.com/acme/webapp` as a hint. Stackdome then tries a real access check against that repository.
+**Verify repository access** is the cheapest way to find out whether a token actually works, before a build depends on it. It opens a dialog — *"Confirms the &lt;host&gt; integration can access a repository."* — with one field, **Repository URL**. For this guide, use `https://github.com/Stackdome/stackdome-demo`. Stackdome then tries a real access check against that repository.
 
 - Success is a **Repository access verified** toast.
 - Failure is a **Couldn't verify repository access** toast carrying the reason, most often `verification failed for '<url>': <what the provider said>`.

@@ -32,7 +32,7 @@ The `stackdome` CLI deploys, inspects, and operates stacks. Run `stackdome --hel
 | `validate` | Validate a Stackfile | — |
 | `version` | Print the CLI version | — |
 | `volume` | Manage volumes | `create`, `delete`, `list` |
-| `whoami` | Show the authenticated user, organization, project, and auth method | — |
+| `whoami` | Show the authenticated user, signup-created organization, default project, and auth method | — |
 
 ## Global flags
 
@@ -77,10 +77,10 @@ Environment values overlay the saved CLI configuration for the current process.
 | `STACKDOME_TOKEN` | Supplies the API access token. It is not refreshable and is not written to the config file by ordinary commands. |
 | `STACKDOME_URL` | Overrides the Stackdome server URL for the process. |
 | `STACKDOME_ORG` | Supplies the organization ID. Use it with `STACKDOME_PROJECT` to skip scope discovery. |
-| `STACKDOME_PROJECT` | Supplies the project name. Use it with `STACKDOME_ORG` to skip scope discovery. |
+| `STACKDOME_PROJECT` | Supplies the internal project scope. This is `default` during alpha. Use it with `STACKDOME_ORG` to skip scope discovery. |
 | `STACKDOME_CONFIG` | Overrides the default config path, `~/.stackdome/config.json`. |
 
-Set both `STACKDOME_ORG` and `STACKDOME_PROJECT` for a narrowly scoped token that cannot read projects. Setting only one still requires the CLI to discover the missing scope.
+Set both `STACKDOME_ORG` and `STACKDOME_PROJECT=default` for a narrowly scoped token that cannot discover its scope. Setting only one still requires the CLI to discover the missing value. Organization and project selection are not exposed during alpha.
 
 ## Exit codes
 

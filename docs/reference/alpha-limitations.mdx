@@ -9,9 +9,10 @@ Stackdome is in alpha. Plan around these current limits:
 | --- | --- | --- |
 | Cloud availability | Open while capacity is available | Join the availability list or self-host |
 | Cloud lifecycle | Ephemeral | Use self-hosted Stackdome for infrastructure you control |
+| Account scope | One organization and its default project | No organization or project selection is exposed during alpha |
 | Connected compute | One cluster per organization | Replace the connected cluster if necessary |
 | Multi-cluster | Not selectable during alpha | No user-facing multi-cluster workflow yet |
 
 Cloud and self-hosted installations use the same Stackfile and CLI workflow. If Cloud capacity or ephemerality does not fit the task, follow the [self-hosted installation guide](/self-host/install).
 
-There is no user-facing cluster selector during alpha. Do not present multi-cluster placement as an available deployment choice.
+Every signup receives one organization and uses its default project. There is no user-facing organization, project, or cluster selector during alpha. Do not present those as deployment choices.
