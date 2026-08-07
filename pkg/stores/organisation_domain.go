@@ -7,6 +7,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -source=organisation_domain.go -destination=../mocks/mock_organisation_domain_store.go -package=mocks
+
 type OrganisationDomainStore interface {
 	CreateWithTx(ctx context.Context, domain *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError)
 	BulkCreate(ctx context.Context, domains []*models.OrganisationDomain) ([]*models.OrganisationDomain, *errors.ServiceError)

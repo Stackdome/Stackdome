@@ -21,6 +21,7 @@ import (
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
 // Suite bootstrapped by TestServices in services_suite_test.go.
@@ -424,6 +425,8 @@ var _ = Describe("ClusterService", func() {
 			Expect(certificate.Spec.SecretName).To(Equal("platform-wildcard-tls"))
 			Expect(certificate.Spec.IssuerRef.Name).To(Equal(models.DNSIssuerName))
 			Expect(certificate.Spec.IssuerRef.Kind).To(Equal(cmv1.IssuerKind))
+			Expect(certificate.Spec.SecretTemplate).NotTo(BeNil())
+			Expect(certificate.Spec.SecretTemplate.Labels).To(HaveKeyWithValue(corev1alpha1.LabelPlatformWildcardTLSSecret, "true"))
 		})
 
 		It("creates a missing TLS namespace", func() {

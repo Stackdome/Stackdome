@@ -218,7 +218,7 @@ func (v *validator) validateExposedPortDomain(ctx context.Context, stack *models
 			break
 		}
 	}
-	if exposedIdx == -1 {
+	if exposedIdx == -1 || v.platformBaseDomain != "" {
 		return nil, nil
 	}
 	domains, serr := v.domains.ListByOrganisationID(ctx, stack.OrganisationID)

@@ -24,7 +24,6 @@ type StackDomainsService interface {
 	InternalDeleteWithTx(ctx context.Context, id string) *errors.ServiceError
 	GetByFqdn(ctx context.Context, fqdn string) (*models.StackDomain, *errors.ServiceError)
 	ListByFqdnPrefix(ctx context.Context, prefix string) ([]*models.StackDomain, *errors.ServiceError)
-	DomainToUseForStack(ctx context.Context, stack *models.Stack) (*models.OrganisationDomain, *errors.ServiceError)
 	PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError
 	InternalDeleteDomainsForResourceWithTx(ctx context.Context, resourceID string) *errors.ServiceError
 }
@@ -33,11 +32,18 @@ type stackDomainService struct {
 	domainsStore            stores.StackDomainsStore
 	organisationDomainStore stores.OrganisationDomainStore
 	logger                  logger.Logger
+	platformBaseDomain      string
+}
+
+type domainSelection struct {
+	domain   string
+	platform bool
 }
 
 type StackDomainsServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
+	SessionFactory     db.SessionFactory
+	Logger             logger.Logger
+	PlatformBaseDomain string
 }
 
 func NewStackDomainsService(spec StackDomainsServiceSpec) StackDomainsService {
@@ -48,7 +54,8 @@ func NewStackDomainsService(spec StackDomainsServiceSpec) StackDomainsService {
 		organisationDomainStore: pgstore.NewOrganisationDomainStore(pgstore.OrganisationDomainStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger: spec.Logger,
+		logger:             spec.Logger,
+		platformBaseDomain: spec.PlatformBaseDomain,
 	}
 }
 
@@ -65,7 +72,7 @@ func (s *stackDomainService) InternalCreateWithTx(ctx context.Context, spec *mod
 		return nil, err
 	}
 	if existing != nil {
-		return nil, errors.Conflict("domain with fqdn '%s' already exists", spec.Fqdn)
+		return nil, errors.Conflict("domain '%s' is already in use", spec.Fqdn)
 	}
 	if spec.OrganisationID == "" {
 		return nil, errors.BadRequest("organisation id is required")
@@ -94,70 +101,125 @@ func (s *stackDomainService) InternalDeleteWithTx(ctx context.Context, id string
 	return s.domainsStore.DeleteWithTx(ctx, id)
 }
 
-func (s *stackDomainService) DomainToUseForStack(ctx context.Context, stack *models.Stack) (*models.OrganisationDomain, *errors.ServiceError) {
-	domains, err := s.organisationDomainStore.ListByOrganisationID(ctx, stack.OrganisationID)
-	if err != nil {
-		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", stack.OrganisationID, err)
-		return nil, err
-	}
-	if len(domains) == 0 {
-		return nil, errors.NotFound("no domains found for organisation %s", stack.OrganisationID)
-	}
-
-	// In the future we can pin a domain to a project or group.
-	// For now we just return the first one
-	return domains[0], nil
-}
-
 func (s *stackDomainService) PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError {
-	if !stackResourceHasExposedPorts(resource.Ports) {
-		return s.deleteStaleDomainsForResourceWithTx(ctx, resource)
-	}
-
-	domainToUse, err := s.DomainToUseForStack(ctx, stack)
+	existingDomains, err := s.domainsStore.ListByStackResourceID(ctx, resource.ID)
 	if err != nil {
 		return err
 	}
 
-	AssignExposedPortFQDNs(stack.ID, resource.Name, domainToUse.Domain, resource.Ports)
-
-	for j := range resource.Ports {
-		if !resource.Ports[j].ExposedToPublic {
-			continue
-		}
-
-		domain := &models.StackDomain{
-			Fqdn:              resource.Ports[j].ExposedFqdn,
-			OrganisationID:    stack.OrganisationID,
-			StackID:           stack.ID,
-			StackResourceID:   resource.ID,
-			StackResourceName: resource.Name,
-			TargetPort:        resource.Ports[j].Number,
-		}
-
-		present, err := s.domainPresentForStackResourceAndPort(ctx, resource.ID, resource.Ports[j].Number)
+	existingByPort := stackDomainsByPort(existingDomains)
+	var selection *domainSelection
+	if hasUnassignedPublicPort(resource.Ports, existingByPort) {
+		selection, err = s.domainForNewAssignments(ctx, stack.OrganisationID)
 		if err != nil {
 			return err
 		}
-		if present {
+	}
+
+	publicPorts := make(map[int]struct{})
+	for i := range resource.Ports {
+		port := &resource.Ports[i]
+		if !port.ExposedToPublic {
+			clearPortDomain(port)
 			continue
 		}
-		if _, cerr := s.InternalCreateWithTx(ctx, domain); cerr != nil {
-			if cerr.Code == errors.ErrorConflict {
-				existing, _ := s.GetByFqdn(ctx, resource.Ports[j].ExposedFqdn)
-				if existing != nil {
-					return errors.Conflict(
-						"domain '%s' is already in use by resource '%s' in another stack (id: %s)",
-						resource.Ports[j].ExposedFqdn, existing.StackResourceName, existing.StackID)
-				}
-				return errors.Conflict("domain '%s' is already in use", resource.Ports[j].ExposedFqdn)
-			}
-			return errors.GeneralError(
-				"failed to create domain for stack resource '%s': %s", resource.Name, cerr.Error())
+		publicPorts[port.Number] = struct{}{}
+
+		if existing := existingByPort[port.Number]; existing != nil {
+			port.ExposedFqdn = existing.Fqdn
+			continue
+		}
+
+		if createErr := s.assignDomainToPortWithTx(ctx, stack, resource, port, selection); createErr != nil {
+			return createErr
 		}
 	}
 
-	return s.deleteStaleDomainsForResourceWithTx(ctx, resource)
+	return s.deleteStaleDomainsWithTx(ctx, existingDomains, publicPorts)
+}
+
+func stackDomainsByPort(domains models.StackDomainList) map[int]*models.StackDomain {
+	byPort := make(map[int]*models.StackDomain, len(domains))
+	for _, domain := range domains {
+		byPort[domain.TargetPort] = domain
+	}
+	return byPort
+}
+
+func hasUnassignedPublicPort(ports models.Ports, existingByPort map[int]*models.StackDomain) bool {
+	for _, port := range ports {
+		if port.ExposedToPublic && existingByPort[port.Number] == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *stackDomainService) domainForNewAssignments(ctx context.Context, organisationID string) (*domainSelection, *errors.ServiceError) {
+	organisationDomains, err := s.organisationDomainStore.ListByOrganisationID(ctx, organisationID)
+	if err != nil {
+		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", organisationID, err)
+		return nil, err
+	}
+	if len(organisationDomains) != 0 {
+		return &domainSelection{domain: organisationDomains[0].Domain}, nil
+	}
+	if s.platformBaseDomain != "" {
+		return &domainSelection{domain: s.platformBaseDomain, platform: true}, nil
+	}
+	return nil, errors.BadRequest("no domain is configured for public port allocation")
+}
+
+func clearPortDomain(port *models.Port) {
+	port.ExposedFqdn = ""
+	port.GeneratedSubdomainPrefix = ""
+}
+
+func (s *stackDomainService) assignDomainToPortWithTx(
+	ctx context.Context,
+	stack *models.Stack,
+	resource *models.StackResource,
+	port *models.Port,
+	selection *domainSelection,
+) *errors.ServiceError {
+	if selection.platform {
+		fqdn, generatedPrefix, err := FQDNForPortWithPlatformDomain(resource.ID, resource.Name, selection.domain, *port)
+		if err != nil {
+			return errors.BadRequest("failed to allocate platform domain: %s", err.Error())
+		}
+		port.ExposedFqdn = fqdn
+		port.GeneratedSubdomainPrefix = generatedPrefix
+	} else {
+		port.ExposedFqdn, port.GeneratedSubdomainPrefix = FQDNForPortWithCustomDomain(stack.ID, resource.Name, selection.domain, *port)
+	}
+
+	domain := &models.StackDomain{
+		Fqdn:              port.ExposedFqdn,
+		OrganisationID:    stack.OrganisationID,
+		StackID:           stack.ID,
+		StackResourceID:   resource.ID,
+		StackResourceName: resource.Name,
+		TargetPort:        port.Number,
+	}
+	_, err := s.InternalCreateWithTx(ctx, domain)
+	return err
+}
+
+func (s *stackDomainService) deleteStaleDomainsWithTx(
+	ctx context.Context,
+	existingDomains models.StackDomainList,
+	publicPorts map[int]struct{},
+) *errors.ServiceError {
+	for _, existingDomain := range existingDomains {
+		if _, ok := publicPorts[existingDomain.TargetPort]; ok {
+			continue
+		}
+		if deleteErr := s.domainsStore.DeleteWithTx(ctx, existingDomain.ID); deleteErr != nil {
+			return deleteErr
+		}
+	}
+
+	return nil
 }
 
 func (s *stackDomainService) InternalDeleteDomainsForResourceWithTx(ctx context.Context, resourceID string) *errors.ServiceError {
@@ -171,37 +233,6 @@ func (s *stackDomainService) InternalDeleteDomainsForResourceWithTx(ctx context.
 		}
 	}
 	return nil
-}
-
-func (s *stackDomainService) deleteStaleDomainsForResourceWithTx(ctx context.Context, resource *models.StackResource) *errors.ServiceError {
-	existingDomains, err := s.domainsStore.ListByStackResourceID(ctx, resource.ID)
-	if err != nil {
-		return err
-	}
-	if len(existingDomains) == 0 {
-		return nil
-	}
-
-	currentPortDomainMap := exposedPortNumberSet(resource.Ports)
-	for _, existingDomain := range existingDomains {
-		if _, ok := currentPortDomainMap[existingDomain.TargetPort]; !ok {
-			if err := s.domainsStore.DeleteWithTx(ctx, existingDomain.ID); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (s *stackDomainService) domainPresentForStackResourceAndPort(ctx context.Context, stackResourceID string, port int) (bool, *errors.ServiceError) {
-	domain, err := s.domainsStore.GetByStackResourceAndPort(ctx, stackResourceID, port)
-	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			return false, nil
-		}
-		return false, err
-	}
-	return domain != nil, nil
 }
 
 func (s *stackDomainService) Create(ctx context.Context, spec *models.StackDomain) (*models.StackDomain, *errors.ServiceError) {

@@ -172,6 +172,7 @@ var _ = ginkgo.Describe("stackResourceService workload type defaulting", func() 
 	var (
 		ctrl              *gomock.Controller
 		mockResourceStore *mocks.MockStackResourceStore
+		mockDomains       *mocks.MockStackDomainsService
 		svc               *stackResourceService
 		ctx               context.Context
 		stack             *models.Stack
@@ -188,9 +189,20 @@ var _ = ginkgo.Describe("stackResourceService workload type defaulting", func() 
 	ginkgo.BeforeEach(func() {
 		ctrl = gomock.NewController(ginkgo.GinkgoT())
 		mockResourceStore = mocks.NewMockStackResourceStore(ctrl)
-		svc = &stackResourceService{stackResourceStore: mockResourceStore}
+		mockDomains = mocks.NewMockStackDomainsService(ctrl)
+		svc = &stackResourceService{
+			stackResourceStore: mockResourceStore,
+			domainNameService:  mockDomains,
+		}
 		ctx = context.Background()
 		stack = &models.Stack{ID: "stack-1", UserID: "user-1", Namespace: "ns-1"}
+
+		mockDomains.EXPECT().
+			PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, gomock.Any()).
+			Return(nil)
+		mockResourceStore.EXPECT().
+			UpdatePortsWithTx(ctx, gomock.Any(), gomock.Any()).
+			Return(nil)
 	})
 
 	ginkgo.AfterEach(func() {

@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/stdr"
 	"github.com/mt-sre/devkube/dev"
@@ -272,6 +273,7 @@ func (tc *TestCluster) getSchemeBuilder() runtime.SchemeBuilder {
 		registryv1alpha1.AddToScheme,
 		storagev1alpha1.AddToScheme,
 		usersv1alpha1.AddToScheme,
+		cmv1.AddToScheme,
 		clientgoscheme.AddToScheme,
 	}
 }

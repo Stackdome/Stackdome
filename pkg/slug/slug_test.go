@@ -11,6 +11,18 @@ import (
 
 var dns1123Label = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`)
 
+var _ = Describe("slug.Make", func() {
+	DescribeTable("normalises values without truncation or fallback",
+		func(input, expected string) {
+			Expect(slug.Make(input)).To(Equal(expected))
+		},
+		Entry("transliterates unicode", "Über Örg", "uber-org"),
+		Entry("replaces underscores", "Hello__World", "hello-world"),
+		Entry("collapses and trims hyphens", "--hello---world--", "hello-world"),
+		Entry("returns empty for values without slug characters", "___", ""),
+	)
+})
+
 var _ = Describe("slug.FromOrgName", func() {
 	DescribeTable("normalises org names into DNS-1123 labels",
 		func(input, expected string) {
@@ -29,6 +41,10 @@ var _ = Describe("slug.FromOrgName", func() {
 		long := strings.Repeat("a", slug.MaxSlugLength+20)
 		result := slug.FromOrgName(long)
 		Expect(len(result)).To(Equal(slug.MaxSlugLength))
+	})
+
+	It("falls back to org when shared normalization is empty", func() {
+		Expect(slug.FromOrgName("___")).To(Equal("org"))
 	})
 
 	It("does not leave a trailing hyphen after capping", func() {

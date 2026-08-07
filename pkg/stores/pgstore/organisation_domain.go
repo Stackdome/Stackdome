@@ -80,9 +80,7 @@ func (d dbOrganisationDomainStore) CreateWithTx(ctx context.Context, domain *mod
 }
 
 // createDomainError maps an insert failure to a service error. Domains are
-// globally unique, so a duplicate must surface as a Conflict — callers that
-// allocate a domain (seedOrgDomain) retry on Conflict and only give up on
-// anything else.
+// globally unique, so a duplicate must surface as a Conflict.
 func createDomainError(domain string, err error) *errors.ServiceError {
 	if stderrors.Is(err, gorm.ErrDuplicatedKey) {
 		return errors.Conflict("domain '%s' is already taken", domain)

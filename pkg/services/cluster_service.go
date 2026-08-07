@@ -27,6 +27,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
 const httpsScheme = "https"
@@ -544,6 +545,9 @@ func ensureWildcardCertificate(ctx context.Context, k8sClient client.Client, nam
 		certificate.Spec = cmv1.CertificateSpec{
 			SecretName: models.PlatformWildcardTLSName,
 			DNSNames:   []string{"*." + baseDomain},
+			SecretTemplate: &cmv1.CertificateSecretTemplate{Labels: map[string]string{
+				corev1alpha1.LabelPlatformWildcardTLSSecret: "true",
+			}},
 			IssuerRef: cmmeta.IssuerReference{
 				Name:  models.DNSIssuerName,
 				Kind:  cmv1.IssuerKind,

@@ -14,7 +14,7 @@ import (
 
 // RendererVersion is bumped whenever the rendering logic changes in a way that
 // could produce different CRs from the same input.
-const RendererVersion = "2026-06-14.1"
+const RendererVersion = "2026-08-07.1"
 
 var printer = spew.ConfigState{
 	Indent:         " ",

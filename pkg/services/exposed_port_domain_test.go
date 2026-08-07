@@ -1,12 +1,87 @@
 package services
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/models"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
+
+var _ = Describe("Platform domain ID", func() {
+	It("is stable and distinct for each resource port", func() {
+		first := platformDomainID("resource-a", 8080)
+
+		Expect(first).To(Equal("aa982eec"))
+		Expect(platformDomainID("resource-a", 8080)).To(Equal(first))
+		Expect(platformDomainID("resource-b", 8080)).NotTo(Equal(first))
+		Expect(platformDomainID("resource-a", 8081)).NotTo(Equal(first))
+	})
+})
+
+var _ = Describe("Platform port FQDN", func() {
+	It("uses the resource name without an explicit prefix", func() {
+		fqdn, generatedID, err := FQDNForPortWithPlatformDomain(
+			"resource-a", "My App", "platform.example.com", models.Port{Number: 8080},
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(generatedID).To(Equal("aa982eec"))
+		Expect(fqdn).To(Equal("my-app-aa982eec.platform.example.com"))
+	})
+
+	DescribeTable("uses an explicit or preview prefix",
+		func(prefix, want string) {
+			fqdn, generatedID, err := FQDNForPortWithPlatformDomain(
+				"resource-a", "My App", "platform.example.com", models.Port{Number: 8080, SubdomainPrefix: prefix},
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(generatedID).To(Equal("aa982eec"))
+			Expect(fqdn).To(Equal(want))
+		},
+		Entry("explicit prefix", "api", "api-aa982eec.platform.example.com"),
+		Entry("preview prefix", "pr-42-api", "pr-42-api-aa982eec.platform.example.com"),
+	)
+
+	It("truncates the readable head and retains the full ID", func() {
+		fqdn, generatedID, err := FQDNForPortWithPlatformDomain(
+			"resource-a", strings.Repeat("a", 60), "platform.example.com", models.Port{Number: 8080},
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+		firstLabel, baseDomain, found := strings.Cut(fqdn, ".")
+		Expect(found).To(BeTrue())
+		Expect(firstLabel).To(HaveLen(63))
+		Expect(baseDomain).To(Equal("platform.example.com"))
+		Expect(firstLabel).To(Equal(strings.Repeat("a", 54) + "-aa982eec"))
+		Expect(generatedID).To(Equal("aa982eec"))
+	})
+
+	It("removes a hyphen at the truncation boundary", func() {
+		readableHead := strings.Repeat("a", 53) + "-longer"
+
+		fqdn, generatedID, err := FQDNForPortWithPlatformDomain(
+			"resource-a", readableHead, "platform.example.com", models.Port{Number: 8080},
+		)
+
+		Expect(err).NotTo(HaveOccurred())
+		firstLabel, _, found := strings.Cut(fqdn, ".")
+		Expect(found).To(BeTrue())
+		Expect(firstLabel).To(Equal(strings.Repeat("a", 53) + "-aa982eec"))
+		Expect(generatedID).To(Equal("aa982eec"))
+	})
+
+	It("rejects an empty slug", func() {
+		_, _, err := FQDNForPortWithPlatformDomain(
+			"resource-a", "___", "platform.example.com", models.Port{Number: 8080},
+		)
+
+		Expect(err).To(HaveOccurred())
+	})
+})
 
 func TestEncodeStackResourceSubdomainPrefix_stableForStackIDAndName(t *testing.T) {
 	stackID := "stack-abc"
@@ -24,41 +99,22 @@ func TestEncodeStackResourceSubdomainPrefix_stableForStackIDAndName(t *testing.T
 	)
 }
 
-func TestAssignExposedPortFQDNs_generatedPrefix(t *testing.T) {
-	ports := models.Ports{
-		{Number: 8080, ExposedToPublic: true},
-	}
+var _ = Describe("Custom port FQDN", func() {
+	It("preserves the legacy generated hostname", func() {
+		fqdn, generatedPrefix := FQDNForPortWithCustomDomain(
+			"stack-1", "web", "example.com", models.Port{Number: 8080},
+		)
 
-	AssignExposedPortFQDNs("stack-1", "web", "example.com", ports)
+		Expect(fqdn).To(Equal("ek2dzkf3b56u664x.web.example.com"))
+		Expect(generatedPrefix).To(Equal("ek2dzkf3b56u664x"))
+	})
 
-	require.NotEmpty(t, ports[0].GeneratedSubdomainPrefix)
-	assert.Contains(t, ports[0].ExposedFqdn, "web.example.com")
-	assert.Contains(t, ports[0].ExposedFqdn, ports[0].GeneratedSubdomainPrefix)
-}
+	It("uses the explicit prefix without generating one", func() {
+		fqdn, generatedPrefix := FQDNForPortWithCustomDomain(
+			"stack-1", "web", "example.com", models.Port{Number: 443, SubdomainPrefix: "api"},
+		)
 
-func TestAssignExposedPortFQDNs_customPrefix(t *testing.T) {
-	ports := models.Ports{
-		{Number: 443, ExposedToPublic: true, SubdomainPrefix: "api"},
-	}
-
-	AssignExposedPortFQDNs("stack-1", "web", "example.com", ports)
-
-	assert.Empty(t, ports[0].GeneratedSubdomainPrefix)
-	assert.Equal(t, "api.example.com", ports[0].ExposedFqdn)
-}
-
-func TestAssignExposedPortFQDNs_skipsPrivatePorts(t *testing.T) {
-	ports := models.Ports{
-		{Number: 8080, ExposedToPublic: false},
-	}
-
-	AssignExposedPortFQDNs("stack-1", "web", "example.com", ports)
-
-	assert.Empty(t, ports[0].ExposedFqdn)
-	assert.Empty(t, ports[0].GeneratedSubdomainPrefix)
-}
-
-func TestStackResourceHasExposedPorts(t *testing.T) {
-	assert.False(t, stackResourceHasExposedPorts(models.Ports{{Number: 80}}))
-	assert.True(t, stackResourceHasExposedPorts(models.Ports{{Number: 80, ExposedToPublic: true}}))
-}
+		Expect(fqdn).To(Equal("api.example.com"))
+		Expect(generatedPrefix).To(BeEmpty())
+	})
+})

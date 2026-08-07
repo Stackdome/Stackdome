@@ -13,7 +13,7 @@ const (
 	crdsDirName         = "crds"
 	templatesDirName    = "templates"
 	chartRepo           = "oci://quay.io/stackdome/charts/stackdome-agent"
-	defaultChartVersion = "0.6.11-alpha-rc5"
+	defaultChartVersion = "0.6.12-alpha-rc1"
 	chartRelease        = "stackdome-agent"
 	chartNamespace      = "stackdome-control-plane"
 )

@@ -19,8 +19,7 @@ import (
 //go:generate mockgen -destination=../mocks/mock_organisation_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services OrganisationService
 
 const (
-	shortOrgIDLength      = 8
-	maxDomainSeedAttempts = 5
+	shortOrgIDLength = 8
 	// maxRegistryNameLength keeps the registry CR name inside Kubernetes
 	// limits on the cluster: the StatefulSet's controller-revision-hash pod
 	// label appends "-<10 char hash>" and must fit a 63-character label.
@@ -116,9 +115,8 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 	return s.organisationStore.Get(ctx, org.ID)
 }
 
-// seedPlatformInfra gives a new tenant org a subdomain of the platform base
-// domain and a seed registry on the shared platform cluster. No platform
-// cluster configured (self-hosted install) → no-op.
+// seedPlatformInfra gives a new tenant org a seed registry on the shared
+// platform cluster. No platform cluster configured (self-hosted install) → no-op.
 func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgName string) *errors.ServiceError {
 	platformCluster, err := s.clusterStore.GetPlatformCluster(ctx)
 	if err != nil {
@@ -129,49 +127,7 @@ func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgN
 	}
 	ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
 
-	platformOrg, pErr := s.InternalGetPlatformOrg(ctx)
-	if pErr != nil {
-		return pErr
-	}
-	baseDomain, dErr := s.organisationDomainService.GetDefaultDomainForOrganisation(ctx, platformOrg.ID)
-	if dErr != nil {
-		return dErr
-	}
-
-	orgSlug := slug.FromOrgName(orgName)
-	if sErr := s.seedOrgDomain(ctx, orgID, orgSlug, baseDomain.Domain); sErr != nil {
-		return sErr
-	}
 	return s.seedOrgRegistry(ctx, orgID, orgName, platformCluster.ID)
-}
-
-// slugRepeatsBaseLabel reports whether "<orgSlug>.<baseDomain>" would start
-// with identical sequential labels ("test.test.…") — Let's Encrypt rejects
-// those as recursive on-demand issuance.
-func slugRepeatsBaseLabel(orgSlug, baseDomain string) bool {
-	firstLabel, _, _ := strings.Cut(baseDomain, ".")
-	return firstLabel == orgSlug
-}
-
-func (s *organisationService) seedOrgDomain(ctx context.Context, orgID, orgSlug, baseDomain string) *errors.ServiceError {
-	candidate := fmt.Sprintf("%s.%s", orgSlug, baseDomain)
-	if slugRepeatsBaseLabel(orgSlug, baseDomain) {
-		candidate = fmt.Sprintf("%s-%s.%s", orgSlug, slug.RandomSuffix(), baseDomain)
-	}
-	for attempt := 0; attempt < maxDomainSeedAttempts; attempt++ {
-		_, err := s.organisationDomainService.Create(ctx, &models.OrganisationDomain{
-			OrganisationID: orgID,
-			Domain:         candidate,
-		})
-		if err == nil {
-			return nil
-		}
-		if err.Code != errors.ErrorConflict {
-			return err
-		}
-		candidate = fmt.Sprintf("%s-%s.%s", orgSlug, slug.RandomSuffix(), baseDomain)
-	}
-	return errors.Conflict("could not allocate a unique domain for organisation")
 }
 
 func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgName, clusterID string) *errors.ServiceError {

@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"regexp"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -66,22 +65,18 @@ var _ = Describe("Organisation.Platform", func() {
 
 var _ = Describe("OrganisationService platform-infra seeding", func() {
 	const (
-		orgName        = "Acme Inc"
-		orgID          = "11112222-3333-4444-5555-666677778888"
-		platformOrgID  = "platform-org"
-		baseDomain     = "apps.example.com"
-		expectedSlug   = "acme-inc"
-		expectedDomain = expectedSlug + "." + baseDomain
-		registryName   = expectedSlug + "-11112222-cluster1"
-		storageSize    = "50Gi"
-		storageClass   = "standard"
+		orgName      = "Acme Inc"
+		orgID        = "11112222-3333-4444-5555-666677778888"
+		expectedSlug = "acme-inc"
+		registryName = expectedSlug + "-11112222-cluster1"
+		storageSize  = "50Gi"
+		storageClass = "standard"
 	)
 
 	var (
 		ctrl         *gomock.Controller
 		orgStore     *mocks.MockOrganisationStore
 		clusterStore *mocks.MockClusterStore
-		domainSvc    *mocks.MockOrganisationDomainsService
 		registrySvc  *mocks.MockImageRegistryService
 		svc          *organisationService
 		ctx          context.Context
@@ -100,11 +95,8 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		orgStore.EXPECT().Get(gomock.Any(), orgID).Return(&models.Organisation{ID: orgID, Name: orgName}, nil)
 	}
 
-	expectPlatformClusterAndOrg := func() {
+	expectPlatformCluster := func() {
 		clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).Return(&models.Cluster{ID: "cluster-1"}, nil)
-		orgStore.EXPECT().GetPlatformOrg(gomock.Any()).Return(&models.Organisation{ID: platformOrgID}, nil)
-		domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), platformOrgID).
-			Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
 	}
 
 	BeforeEach(func() {
@@ -112,15 +104,13 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		ctx = context.Background()
 		orgStore = mocks.NewMockOrganisationStore(ctrl)
 		clusterStore = mocks.NewMockClusterStore(ctrl)
-		domainSvc = mocks.NewMockOrganisationDomainsService(ctrl)
 		registrySvc = mocks.NewMockImageRegistryService(ctrl)
 		svc = &organisationService{
-			organisationStore:         orgStore,
-			clusterStore:              clusterStore,
-			organisationDomainService: domainSvc,
-			imageRegistryService:      registrySvc,
-			orgRegistryDefaults:       models.OrgRegistryDefaults{StorageSize: storageSize, StorageClass: storageClass},
-			logger:                    logger.NewLogger(),
+			organisationStore:    orgStore,
+			clusterStore:         clusterStore,
+			imageRegistryService: registrySvc,
+			orgRegistryDefaults:  models.OrgRegistryDefaults{StorageSize: storageSize, StorageClass: storageClass},
+			logger:               logger.NewLogger(),
 		}
 	})
 
@@ -149,13 +139,9 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		Expect(org.Platform).To(BeTrue())
 	})
 
-	It("seeds the org domain and a seed registry on the platform cluster", func() {
+	It("seeds a registry on the platform cluster", func() {
 		expectOrgCreated()
-		expectPlatformClusterAndOrg()
-		domainSvc.EXPECT().Create(gomock.Any(), &models.OrganisationDomain{
-			OrganisationID: orgID,
-			Domain:         expectedDomain,
-		}).Return(&models.OrganisationDomain{}, nil)
+		expectPlatformCluster()
 		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), &models.ClusterImageRegistry{
 			ClusterID:           "cluster-1",
 			OrganisationID:      orgID,
@@ -170,44 +156,9 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		Expect(org).ToNot(BeNil())
 	})
 
-	It("retries the domain with a random suffix when the first attempt conflicts", func() {
-		expectOrgCreated()
-		expectPlatformClusterAndOrg()
-		suffixed := regexp.MustCompile(`^` + expectedSlug + `-[0-9a-f]{6}\.` + regexp.QuoteMeta(baseDomain) + `$`)
-		gomock.InOrder(
-			domainSvc.EXPECT().Create(gomock.Any(), &models.OrganisationDomain{
-				OrganisationID: orgID,
-				Domain:         expectedDomain,
-			}).Return(nil, errors.Conflict("domain already exists")),
-			domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
-					Expect(spec.Domain).To(MatchRegexp(suffixed.String()))
-					return &models.OrganisationDomain{}, nil
-				}),
-		)
-		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), gomock.Any()).Return(&models.ClusterImageRegistry{}, nil)
-		expectOrgFetched()
-
-		org, serr := svc.InternalCreate(ctx, tenantOrg())
-		Expect(serr).To(BeNil())
-		Expect(org).ToNot(BeNil())
-	})
-
-	It("fails org creation when domain creation returns a non-conflict error", func() {
-		expectOrgCreated()
-		expectPlatformClusterAndOrg()
-		boom := errors.GeneralError("domain store unavailable")
-		domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, boom)
-
-		org, serr := svc.InternalCreate(ctx, tenantOrg())
-		Expect(org).To(BeNil())
-		Expect(serr).To(Equal(boom))
-	})
-
 	It("fails org creation when seed-registry creation fails", func() {
 		expectOrgCreated()
-		expectPlatformClusterAndOrg()
-		domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).Return(&models.OrganisationDomain{}, nil)
+		expectPlatformCluster()
 		boom := errors.GeneralError("cluster unreachable")
 		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), gomock.Any()).Return(nil, boom)
 
@@ -215,39 +166,6 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		Expect(org).To(BeNil())
 		Expect(serr).To(Equal(boom))
 	})
-})
-
-var _ = DescribeTable("slugRepeatsBaseLabel",
-	func(orgSlug, base string, want bool) {
-		Expect(slugRepeatsBaseLabel(orgSlug, base)).To(Equal(want))
-	},
-	Entry("slug equals the base's first label", "test", "test.stackdome.io", true),
-	Entry("slug distinct from every base label", "acme", "apps.example.com", false),
-	Entry("slug matching a deeper base label only", "stackdome", "test.stackdome.io", false),
-)
-
-var _ = Describe("seedOrgDomain", func() {
-	DescribeTable("picks a candidate that avoids identical sequential labels",
-		func(orgSlug, base, wantFirstCandidate string) {
-			ctrl := gomock.NewController(GinkgoT())
-			defer ctrl.Finish()
-			domainSvc := mocks.NewMockOrganisationDomainsService(ctrl)
-			svc := &organisationService{organisationDomainService: domainSvc, logger: logger.NewLogger()}
-			domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
-					Expect(spec.Domain).To(MatchRegexp(wantFirstCandidate))
-					return &models.OrganisationDomain{}, nil
-				})
-
-			Expect(svc.seedOrgDomain(context.Background(), "org-1", orgSlug, base)).To(BeNil())
-		},
-		Entry("a slug distinct from the base stays plain",
-			"acme", "apps.example.com", `^acme\.apps\.example\.com$`),
-		Entry("a slug equal to the base's first label goes straight to the suffixed form",
-			"test", "test.stackdome.io", `^test-[0-9a-f]{6}\.test\.stackdome\.io$`),
-		Entry("a slug matching a deeper base label stays plain",
-			"stackdome", "test.stackdome.io", `^stackdome\.test\.stackdome\.io$`),
-	)
 })
 
 var _ = Describe("orgRegistryName", func() {

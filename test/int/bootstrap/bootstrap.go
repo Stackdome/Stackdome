@@ -88,8 +88,8 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("MinIO deployment failed: %w", err)
 	}
 
-	// Export PLATFORM_* env from the provisioned cluster so the server seeds
-	// platform defaults (Platform=true cluster, platform org, base domain) at boot.
+	// Export PLATFORM_* env from the provisioned cluster so the server creates
+	// the platform cluster, platform org, and wildcard TLS resources at boot.
 	logger.Info("Exporting platform-provisioning environment")
 	if err := exportPlatformProvisioningEnv(ctx, env.Cluster); err != nil {
 		return fmt.Errorf("failed to export platform provisioning env: %w", err)
@@ -103,7 +103,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 
-	// The booted server seeded the infrastructure-only platform org + cluster.
+	// The booted server created the infrastructure-only platform org + cluster.
 	// Resolve the platform cluster from the DB (tenants never see it via API),
 	// then sign up the suite's tenant org, which inherits it at read time.
 	var platformCluster models.Cluster

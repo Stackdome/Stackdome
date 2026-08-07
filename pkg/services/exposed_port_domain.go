@@ -2,29 +2,52 @@ package services
 
 import (
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/base32"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/slug"
 )
 
-// AssignExposedPortFQDNs mutates ports in place, setting generated prefixes and FQDNs
-// for every port with ExposedToPublic=true. Uses stackID+resourceName for stable prefixes.
-func AssignExposedPortFQDNs(stackID, resourceName, orgDomain string, ports models.Ports) {
-	for i := range ports {
-		if !ports[i].ExposedToPublic {
-			continue
-		}
-		if ports[i].SubdomainPrefix != "" {
-			ports[i].ExposedFqdn = fmt.Sprintf("%s.%s", ports[i].SubdomainPrefix, orgDomain)
-			continue
-		}
-		prefix := EncodeStackResourceSubdomainPrefix(stackID, resourceName, ports[i].Number)
-		ports[i].GeneratedSubdomainPrefix = prefix
-		ports[i].ExposedFqdn = fmt.Sprintf("%s.%s.%s", prefix, resourceName, orgDomain)
+const platformDomainLabelMaxLength = 63
+
+func platformDomainID(resourceID string, port int) string {
+	sum := sha256.Sum256([]byte(resourceID + ":" + strconv.Itoa(port)))
+	return hex.EncodeToString(sum[:])[:8]
+}
+
+func FQDNForPortWithPlatformDomain(resourceID, resourceName, baseDomain string, port models.Port) (string, string, error) {
+	readableHead := resourceName
+	if port.SubdomainPrefix != "" {
+		readableHead = port.SubdomainPrefix
 	}
+
+	head := slug.Make(readableHead)
+	if head == "" {
+		return "", "", errors.New("platform domain slug is empty")
+	}
+
+	id := platformDomainID(resourceID, port.Number)
+	maxHeadLength := platformDomainLabelMaxLength - len(id) - 1
+	if len(head) > maxHeadLength {
+		head = strings.TrimRight(head[:maxHeadLength], "-")
+	}
+
+	return fmt.Sprintf("%s-%s.%s", head, id, baseDomain), id, nil
+}
+
+func FQDNForPortWithCustomDomain(stackID, resourceName, customDomain string, port models.Port) (fqdn, generatedPrefix string) {
+	if port.SubdomainPrefix != "" {
+		return fmt.Sprintf("%s.%s", port.SubdomainPrefix, customDomain), ""
+	}
+
+	generatedPrefix = EncodeStackResourceSubdomainPrefix(stackID, resourceName, port.Number)
+	return fmt.Sprintf("%s.%s.%s", generatedPrefix, resourceName, customDomain), generatedPrefix
 }
 
 // EncodeStackResourceSubdomainPrefix returns a short stable subdomain token from
@@ -41,23 +64,4 @@ func EncodeStackResourceSubdomainPrefix(stackID, resourceName string, port int) 
 		base32Encoded = base32Encoded[:16]
 	}
 	return strings.ToLower(base32Encoded)
-}
-
-func stackResourceHasExposedPorts(ports models.Ports) bool {
-	for _, port := range ports {
-		if port.ExposedToPublic {
-			return true
-		}
-	}
-	return false
-}
-
-func exposedPortNumberSet(ports models.Ports) map[int]struct{} {
-	set := make(map[int]struct{})
-	for _, port := range ports {
-		if port.ExposedToPublic {
-			set[port.Number] = struct{}{}
-		}
-	}
-	return set
 }

@@ -181,6 +181,53 @@ var _ = Describe("validateReferences", func() {
 		Expect(fields(errs)).To(HaveKey("ports[0]"))
 	})
 
+	DescribeTable("exposed port domain availability",
+		func(resource func() *models.StackResource, platformBaseDomain string, domains func() *MockdomainLister, wantCode, wantField string) {
+			v := NewValidator(ValidatorSpec{
+				Volumes:            NewMockvolumeGetter(ctrl),
+				Secrets:            NewMocksecretGetter(ctrl),
+				Domains:            domains(),
+				Credentials:        mocks.NewMockCredentialResolver(ctrl),
+				GitIntegrations:    NewMockgitIntegrationGetter(ctrl),
+				PlatformBaseDomain: platformBaseDomain,
+			})
+
+			errs, serr := v.Validate(context.Background(), testStack(), resource(), nil)
+
+			Expect(serr).To(BeNil())
+			if wantCode == "" {
+				Expect(errs).To(BeEmpty())
+				return
+			}
+			Expect(codes(errs)).To(HaveKey(wantCode))
+			Expect(fields(errs)).To(HaveKey(wantField))
+		},
+		Entry("private-only resource performs no domain lookup",
+			func() *models.StackResource {
+				r := validImageResource()
+				r.Ports[0].ExposedToPublic = false
+				return r
+			}, "", func() *MockdomainLister { return NewMockdomainLister(ctrl) }, "", ""),
+		Entry("public resource with a platform base domain performs no domain lookup",
+			validImageResource, "platform.example", func() *MockdomainLister { return NewMockdomainLister(ctrl) }, "", ""),
+		Entry("public resource without a platform base domain accepts one custom domain",
+			validImageResource, "", func() *MockdomainLister {
+				domains := NewMockdomainLister(ctrl)
+				domains.EXPECT().
+					ListByOrganisationID(gomock.Any(), "org-1").
+					Return([]*models.OrganisationDomain{{Domain: "customer.example"}}, nil)
+				return domains
+			}, "", ""),
+		Entry("public resource without any domain reports the port field error",
+			validImageResource, "", func() *MockdomainLister {
+				domains := NewMockdomainLister(ctrl)
+				domains.EXPECT().
+					ListByOrganisationID(gomock.Any(), "org-1").
+					Return(nil, nil)
+				return domains
+			}, errors.VErrDomainNotConfigured, "ports[0]"),
+	)
+
 	It("propagates a non-404 domain lookup error instead of masking it as not-found", func() {
 		domains := NewMockdomainLister(ctrl)
 		domains.EXPECT().

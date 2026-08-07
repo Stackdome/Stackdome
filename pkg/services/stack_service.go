@@ -72,6 +72,7 @@ type StackServiceSpec struct {
 	ReferenceService      ReferenceService
 	CredentialResolver    CredentialResolver
 	GitIntegrationService GitIntegrationService
+	PlatformBaseDomain    string
 }
 
 type stackService struct {
@@ -120,9 +121,10 @@ func NewStackService(spec StackServiceSpec) StackService {
 		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		Domains:         organisationDomainService,
-		Credentials:     spec.CredentialResolver,
-		GitIntegrations: spec.GitIntegrationService,
+		Domains:            organisationDomainService,
+		Credentials:        spec.CredentialResolver,
+		GitIntegrations:    spec.GitIntegrationService,
+		PlatformBaseDomain: spec.PlatformBaseDomain,
 	})
 	return &stackService{
 		stackStore: pgstore.NewStackStore(&pgstore.StackStoreSpec{

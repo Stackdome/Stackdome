@@ -31,7 +31,6 @@ const (
 type bootstrapDeps struct {
 	orgSvc     *mocks.MockOrganisationService
 	clusterSvc *mocks.MockClusterService
-	domainSvc  *mocks.MockOrganisationDomainsService
 	logger     *mocks.MockLogger
 }
 
@@ -41,19 +40,17 @@ func newBootstrapDeps(ctrl *gomock.Controller) *bootstrapDeps {
 	return &bootstrapDeps{
 		orgSvc:     mocks.NewMockOrganisationService(ctrl),
 		clusterSvc: mocks.NewMockClusterService(ctrl),
-		domainSvc:  mocks.NewMockOrganisationDomainsService(ctrl),
 		logger:     logger,
 	}
 }
 
 func (d *bootstrapDeps) service(bootstrapCfg *config.BootstrapConfig, clusterCfg *config.ClusterConfig) *bootstrap.Service {
 	return bootstrap.NewService(bootstrap.Spec{
-		OrganisationService:       d.orgSvc,
-		ClusterService:            d.clusterSvc,
-		OrganisationDomainService: d.domainSvc,
-		BootstrapConfig:           bootstrapCfg,
-		ClusterConfig:             clusterCfg,
-		Logger:                    d.logger,
+		OrganisationService: d.orgSvc,
+		ClusterService:      d.clusterSvc,
+		BootstrapConfig:     bootstrapCfg,
+		ClusterConfig:       clusterCfg,
+		Logger:              d.logger,
 	})
 }
 
@@ -101,7 +98,7 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	When("bootstrapping a fresh install", func() {
-		It("creates the platform org, cluster, domain, and wildcard TLS", func() {
+		It("creates the platform org, cluster, and wildcard TLS", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
 				Return(nil, errors.NotFound("platform organisation not found"))
 			deps.orgSvc.EXPECT().InternalCreate(gomock.Any(), gomock.Any()).
@@ -126,15 +123,6 @@ var _ = Describe("Bootstrap", func() {
 					return platformCluster, nil
 				})
 
-			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
-				Return(nil, errors.NotFound("domain not found"))
-			deps.domainSvc.EXPECT().Create(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(_ context.Context, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
-					Expect(spec.OrganisationID).To(Equal(orgID))
-					Expect(spec.Domain).To(Equal(baseDomain))
-					return &models.OrganisationDomain{ID: "dom-1"}, nil
-				})
-
 			bootstrapCfg := fullBootstrapConfig()
 			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), platformCluster, bootstrapCfg).
 				DoAndReturn(func(callCtx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
@@ -157,8 +145,6 @@ var _ = Describe("Bootstrap", func() {
 			platformCluster := &models.Cluster{ID: clusterID}
 			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				Return(platformCluster, nil)
-			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
-				Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
 			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), platformCluster, gomock.Any()).
 				Return(errors.GeneralError("certificate request failed"))
 
@@ -175,8 +161,6 @@ var _ = Describe("Bootstrap", func() {
 			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
 				Return(&models.Cluster{ID: clusterID}, nil)
 
-			deps.domainSvc.EXPECT().GetDefaultDomainForOrganisation(gomock.Any(), orgID).
-				Return(&models.OrganisationDomain{Domain: baseDomain}, nil)
 			bootstrapCfg := fullBootstrapConfig()
 			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), &models.Cluster{ID: clusterID}, bootstrapCfg).
 				Return(nil)

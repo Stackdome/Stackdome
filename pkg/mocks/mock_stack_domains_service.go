@@ -71,21 +71,6 @@ func (mr *MockStackDomainsServiceMockRecorder) Delete(ctx, id any) *gomock.Call 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockStackDomainsService)(nil).Delete), ctx, id)
 }
 
-// DomainToUseForStack mocks base method.
-func (m *MockStackDomainsService) DomainToUseForStack(ctx context.Context, stack *models.Stack) (*models.OrganisationDomain, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DomainToUseForStack", ctx, stack)
-	ret0, _ := ret[0].(*models.OrganisationDomain)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// DomainToUseForStack indicates an expected call of DomainToUseForStack.
-func (mr *MockStackDomainsServiceMockRecorder) DomainToUseForStack(ctx, stack any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DomainToUseForStack", reflect.TypeOf((*MockStackDomainsService)(nil).DomainToUseForStack), ctx, stack)
-}
-
 // Get mocks base method.
 func (m *MockStackDomainsService) Get(ctx context.Context, id string) (*models.StackDomain, *errors.ServiceError) {
 	m.ctrl.T.Helper()
