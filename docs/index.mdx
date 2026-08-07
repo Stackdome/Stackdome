@@ -1,42 +1,23 @@
 ---
-title: "Stackdome"
-description: "A self-hosted platform that deploys and manages applications across your own Kubernetes clusters."
+title: "Stackdome documentation"
+description: "Deploy, debug, and operate applications with coding agents, the CLI, or the dashboard."
 ---
 
-Stackdome is a self-hosted platform-as-a-service you run on your own servers. You point it at a git repository or a container image, and it gives you back a running application on a URL — the same flow you get from a hosted PaaS, except every cluster, database, and domain stays under your control. Underneath it is plain Kubernetes: Stackdome turns what you describe in the dashboard or the REST API into Deployments, Services, and Ingresses on clusters you own. Managed PostgreSQL, encrypted secrets, persistent volumes, custom domains with TLS, and preview environments for pull requests all come from the same install.
+Stackdome gives coding agents and developers one workflow to ship and operate applications. Start on Stackdome Cloud or connect a self-hosted installation; your Stackfile and deployment commands stay the same.
 
-## How it works
-
-Stackdome is hub-and-spoke. One **API server** is the hub: it holds all state in PostgreSQL and serves both the REST API and the web UI. Every cluster you register is a spoke running the `stackdome-agent` operator.
-
-When you deploy, the hub writes a Kubernetes custom resource into the target cluster. The agent there reconciles it into real Kubernetes objects — Deployments, Services, Ingresses. Status flows back the other way: the agent writes progress onto the custom resource's status, controllers in the hub watch those changes, PostgreSQL is updated, and the dashboard reflects the new state.
-
-{/* Keep this SVG on one line. Mintlify's MDX pipeline drops <text>, <line>, <ellipse> and <marker> children from a multi-line inline SVG. */}
-<svg viewBox="0 0 920 570" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stackdome architecture: one hub API server with PostgreSQL writes custom resources into each managed cluster, where the stackdome-agent reconciles them into Kubernetes workloads and reports status back to the hub." style={{width:'100%',height:'auto',fontFamily:"ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif"}}><defs><marker id="ah" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto"><path d="M0 0 L10 4 L0 8 z" fill="#6366f1"/></marker><marker id="ahm" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="7" orient="auto"><path d="M0 0 L10 4 L0 8 z" fill="currentColor" fill-opacity="0.45"/></marker></defs><g fill="currentColor" stroke="currentColor"><rect x="392" y="16" width="136" height="38" rx="19" fill="currentColor" fill-opacity="0.05" stroke-opacity="0.18"/><text x="460" y="40" text-anchor="middle" font-size="14" stroke="none" fill-opacity="0.85">You</text><line x1="460" y1="54" x2="460" y2="98" stroke="#6366f1" stroke-width="1.75" marker-end="url(#ah)"/><text x="474" y="82" font-size="12" stroke="none" fill-opacity="0.6">web UI · REST API</text><rect x="196" y="104" width="528" height="150" rx="14" fill="#6366f1" fill-opacity="0.05" stroke="#6366f1" stroke-opacity="0.45"/><text x="220" y="130" font-size="12" stroke="none" fill="#6366f1" font-weight="600" letter-spacing="0.06em">HUB — ONE API SERVER YOU INSTALL</text><rect x="224" y="146" width="212" height="82" rx="10" fill="currentColor" fill-opacity="0.05" stroke-opacity="0.2"/><text x="330" y="180" text-anchor="middle" font-size="14" stroke="none" fill-opacity="0.9">API server</text><text x="330" y="200" text-anchor="middle" font-size="11.5" stroke="none" fill-opacity="0.55">REST API · web UI</text><path d="M512 158 h132 v58 a66 8 0 0 1 -132 0 z" fill="currentColor" fill-opacity="0.05" stroke="none"/><path d="M512 158 v58 a66 8 0 0 0 132 0 v-58" fill="none" stroke-opacity="0.2"/><ellipse cx="578" cy="158" rx="66" ry="8" fill="currentColor" fill-opacity="0.05" stroke-opacity="0.2"/><text x="578" y="196" text-anchor="middle" font-size="13" stroke="none" fill-opacity="0.85">PostgreSQL</text><line x1="436" y1="187" x2="506" y2="187" stroke-opacity="0.3" stroke-width="1.5"/><path d="M272 254 V288 H186 V330" fill="none" stroke="#6366f1" stroke-width="1.75" marker-end="url(#ah)"/><path d="M648 254 V288 H734 V330" fill="none" stroke="#6366f1" stroke-width="1.75" marker-end="url(#ah)"/><path d="M300 330 V312 H352 V254" fill="none" stroke-opacity="0.38" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ahm)"/><path d="M620 330 V312 H568 V254" fill="none" stroke-opacity="0.38" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ahm)"/><rect x="80" y="330" width="330" height="170" rx="14" fill="currentColor" fill-opacity="0.03" stroke-opacity="0.18" stroke-dasharray="6 4"/><text x="104" y="356" font-size="12" stroke="none" fill-opacity="0.5" letter-spacing="0.06em">MANAGED CLUSTER</text><rect x="104" y="372" width="128" height="60" rx="9" fill="currentColor" fill-opacity="0.06" stroke-opacity="0.22"/><text x="168" y="398" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.9">stackdome-</text><text x="168" y="415" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.9">agent</text><line x1="232" y1="402" x2="272" y2="402" stroke="#6366f1" stroke-width="1.6" marker-end="url(#ah)"/><rect x="278" y="360" width="112" height="118" rx="9" fill="currentColor" fill-opacity="0.06" stroke-opacity="0.22"/><text x="334" y="390" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Deployments</text><text x="334" y="412" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Services</text><text x="334" y="434" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Ingresses</text><text x="334" y="458" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Volumes</text><rect x="510" y="330" width="330" height="170" rx="14" fill="currentColor" fill-opacity="0.03" stroke-opacity="0.18" stroke-dasharray="6 4"/><text x="534" y="356" font-size="12" stroke="none" fill-opacity="0.5" letter-spacing="0.06em">MANAGED CLUSTER</text><rect x="534" y="372" width="128" height="60" rx="9" fill="currentColor" fill-opacity="0.06" stroke-opacity="0.22"/><text x="598" y="398" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.9">stackdome-</text><text x="598" y="415" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.9">agent</text><line x1="662" y1="402" x2="702" y2="402" stroke="#6366f1" stroke-width="1.6" marker-end="url(#ah)"/><rect x="708" y="360" width="112" height="118" rx="9" fill="currentColor" fill-opacity="0.06" stroke-opacity="0.22"/><text x="764" y="390" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Deployments</text><text x="764" y="412" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Services</text><text x="764" y="434" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Ingresses</text><text x="764" y="458" text-anchor="middle" font-size="12.5" stroke="none" fill-opacity="0.85">Volumes</text><line x1="236" y1="528" x2="276" y2="528" stroke="#6366f1" stroke-width="1.75" marker-end="url(#ah)"/><text x="286" y="532" font-size="12" stroke="none" fill-opacity="0.65">hub writes custom resources</text><line x1="502" y1="528" x2="542" y2="528" stroke-opacity="0.38" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ahm)"/><text x="552" y="532" font-size="12" stroke="none" fill-opacity="0.65">agent reports status back</text></g></svg>
-
-The hub is built to drive many clusters, and every cluster it drives is managed from the same dashboard and the same API. Today, though, each organization registers one cluster — the dashboard says so plainly: "Currently only one cluster is supported." [Add a cluster](/self-host/add-a-cluster) covers what that means in practice.
-
-## Start here
+Start with an agent to deploy from a repository, run the CLI directly when you want each command in front of you, or complete the same work in the dashboard.
 
 <CardGroup cols={2}>
-  <Card title="Quickstart" icon="rocket" href="/quickstart">
-    Install Stackdome on a single server and sign in to your dashboard.
+  <Card title="Quickstart with an agent" icon="sparkles" href="/quickstart">
+    Give your coding agent one deployment prompt and verify the returned release and URL.
   </Card>
-  <Card title="Deploy your first app" icon="circle-play" href="/deploy-first-app">
-    Take a container image or a git repository from nothing to a live URL.
+  <Card title="Use the CLI" icon="terminal" href="/get-started/cli">
+    Authenticate with an API token, create a Stackfile, deploy, and inspect status.
   </Card>
-  <Card title="Managed PostgreSQL" icon="database" href="/guides/postgres">
-    Provision a Postgres database with backups and connect it to your app.
+  <Card title="Use the dashboard" icon="display" href="/deploy-first-app">
+    Deploy a repository through the visual workflow and open its public endpoint.
   </Card>
-  <Card title="Self-hosting" icon="server" href="/self-host/install">
-    Install options, registering a cluster, and server configuration.
+  <Card title="Self-host Stackdome" icon="server" href="/self-host/install">
+    Install Stackdome on your infrastructure and use the same application workflow.
   </Card>
 </CardGroup>
-
-Once you are signed in, the dashboard is organised around your **Stacks** — your applications — with **Previews**, **Secrets**, **Object Stores**, and **Addons** alongside them, and **Git Providers** and **Image Registries** under integrations for connecting your source code and private images. If you are an organization admin, you also get **Clusters** and **Domains**, where you register the clusters Stackdome deploys to and the domains it issues certificates for.
-
-## What Stackdome is not
-
-- **Not a managed service today.** Everything in this documentation is the self-hosted product: you install the hub on your own server, and it is yours to operate, back up, and upgrade. A managed Stackdome cloud is planned, but it is not what these pages describe.
-- **Not a Kubernetes control plane manager.** Stackdome deploys onto clusters, it does not run them. Node capacity, cluster upgrades, and control-plane health stay with you or your cloud provider.
-- **Not a router or a certificate authority.** Stackdome does not implement routing or TLS issuance itself. Routing is expressed as ordinary Kubernetes Ingress resources, and certificates are issued by cert-manager — when you install against a real domain, the installer registers a Let's Encrypt issuer for it.

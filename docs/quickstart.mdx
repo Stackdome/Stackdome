@@ -1,97 +1,73 @@
 ---
-title: "Quickstart"
-description: "Install Stackdome on a server and sign in to the dashboard."
+title: "Quickstart with a coding agent"
+description: "Ask a coding agent to deploy your repository and return its live Stackdome URL."
 ---
 
-One installer takes a bare Linux server to a working Stackdome install: a Kubernetes cluster, the API server, a database, an image registry, and an admin account you can sign in with. It runs unattended and waits for each piece to come up before moving on, so the slow part is pulling images.
+Use the Stackdome agent plugin to turn a repository into a validated Stackfile, deploy it, and return the public URL. The same workflow targets Stackdome Cloud or a self-hosted installation.
 
-## Prerequisites
+## Install the plugin
 
-You need a Linux server you can log in to. Before it changes anything on that server, the installer checks all of the following and stops if any of them fails:
-
-- **Root access.** The installer reads the current user's id and refuses to continue unless it is 0. Its own error tells you to rerun it under `sudo`.
-- **Linux on `amd64` or `arm64`.** Any other operating system or architecture is rejected outright.
-- **Ports 80, 443, and 6443 free.** The installer stops if any of the three is already in use. If k3s is already running on the server, the check is skipped for those ports, since k3s is what will be holding them.
-- **`curl` on the `PATH`.** The installer uses it to fetch k3s and Helm, and to look up the server's public IP.
-- **Outbound internet access.** The installer detects your server's public IP by calling `ifconfig.me`, and cannot continue if that fails.
-
-Two more things are checked but never block the install. Capacity: the installer warns if the server has fewer than **2 CPUs**, less than **4 GB of RAM**, or less than **20 GB of free disk** on `/`. Treat those numbers as the practical floor. And reachability: once everything is up it probes your domain over port 80 and warns you if the dashboard is not reachable from the internet, so open **ports 80 and 443 for inbound traffic** in your firewall or cloud security group and you will not see that warning.
-
-## Install
-
-You need the `stackdome-install` binary for your server's architecture, `amd64` or `arm64`.
-
-<Note>
-A public download for `stackdome-install` is not available yet. Once one is published, this page will point at it.
-</Note>
-
-Put the binary on the server as `stackdome-install`, make it executable, and run it as root:
+At alpha release, the plugin installer is:
 
 ```bash
-chmod +x ./stackdome-install
-sudo ./stackdome-install --email you@company.com
+stackdome plugin install
 ```
 
-`--email` is the only required flag. It becomes your admin account's email address, and it is also the contact address registered with Let's Encrypt when you install on a custom domain, so use a real one.
+<Warning>
+  `stackdome plugin install` is the alpha-release installer. Until that command is present in the installed CLI, install the current deploy skill with `npx skills add stackdome/skills`.
+</Warning>
 
-To put the dashboard on a domain you own, pass `--domain`:
+The current deploy skill is available to Agent Skills-compatible coding tools, including Claude Code, Codex, Cursor, and GitHub Copilot.
 
-```bash
-sudo ./stackdome-install --email you@company.com --domain stackdome.example.com
+## Ask your agent to deploy
+
+Open your coding agent in the repository and send this prompt:
+
+```text
+Deploy this repository to Stackdome and give me the live URL.
 ```
 
-Point that name's DNS `A` record at the server before you run the installer. Stackdome requests a Let's Encrypt certificate for a custom domain and the validation happens over port 80 on that hostname, so the name has to resolve and the port has to be open.
+The agent inspects the repository, runs `stackdome init`, edits the generated `stackfile.yaml`, validates it, authenticates with your API token, and waits for the deployment to finish. See the [AI-agent workflow](/guides/ai-agents) for the complete operating contract.
+
+## Choose where to run
+
+Start on Stackdome Cloud for an ephemeral environment without setting up infrastructure. Cloud access is open while capacity is available, and capacity is limited during alpha.
+
+If you already have a self-hosted installation, give the agent its URL instead. Moving between Stackdome Cloud and a self-hosted installation does not change your Stackfile or deployment commands.
 
 <Warning>
-A `--domain` install also needs **cert-manager** already present in the cluster. The installer applies a Let's Encrypt issuer, which is one of cert-manager's own custom resources, and it treats a failure to apply it as fatal — the install stops there. The installer does not install cert-manager for you. If you are only trying Stackdome out, omit `--domain` and take the `nip.io` path below, which asks for no certificate at all. See [TLS](/self-host/install#tls) for the detail.
+  Share an API token with the agent when authentication is required. Never give an agent your Stackdome account password. See [API-token authentication](/reference/authentication).
 </Warning>
 
-Omit `--domain` and the installer derives one for you: `stackdome.<PUBLIC_IP>.nip.io`, using the public IP it detected.
+## Verify the release
 
-<Note>
-`nip.io` is a public DNS service that resolves any hostname containing an IP address straight back to that IP — `stackdome.203.0.113.10.nip.io` resolves to `203.0.113.10`. That is why a trial install needs no DNS setup at all: the name works the moment the installer picks it.
-</Note>
+Successful completion requires all three checks:
 
-A third flag, `--image`, overrides the API server container image and defaults to `quay.io/stackdome/stackdome:latest`. Leave it alone unless you are pinning a specific version.
+1. The deploy result has a terminal release state of `Released`.
+2. The current status is healthy: `converged_release.state` is `Released` and `converged_release.health` is `ok` in `stackdome status -o json`.
+3. For a public service, the agent returns at least one public URL. `stackdome open -o json` returns the URL list without opening a browser.
 
-<Note>
-Certificates are only requested for real domains. On a `nip.io` address — and on `.sslip.io`, `.local`, and `.localhost` — the installer skips Let's Encrypt entirely, so no trusted certificate is issued for your dashboard and your browser will warn you the first time you visit. Continue past the warning; it is expected on a trial install.
-</Note>
+Do not treat a submitted release, an in-progress release, or a process that is only listening locally as a completed deployment.
 
-## What the installer created
+## If Cloud is at capacity
 
-When it finishes, the installer prints a summary of what is ready:
+Cloud capacity is limited during alpha. If no environment is available, join the availability list or [connect a self-hosted Stackdome installation](/self-host/install). You can use the same `stackfile.yaml` and repeat the same deployment workflow against the new destination.
 
-- An **admin user** called `Platform Admin`, with the email you passed to `--email` and a generated password.
-- An organization named **Default**, with your dashboard domain configured on it.
-- A cluster named **local**, registered and connected — the server itself, which is where your apps will run.
-- An **in-cluster image registry** with 50Gi of storage, used to hold the images Stackdome builds for you.
-- A **PostgreSQL database** on a 10Gi persistent volume, holding Stackdome's own state.
+Read [Stackdome Cloud during alpha](/get-started/cloud-alpha) for the current commitments and limitations.
 
-<Warning>
-The summary prints your admin password, and the installer tells you plainly that it will not be shown again. Copy it into your password manager before you close the terminal.
-</Warning>
+## Next steps
 
-## Sign in
-
-Open the dashboard URL from the summary — `https://` followed by your domain. You land on the sign-in page:
-
-![The Stackdome sign-in form, headed "Welcome back.", with empty Email and Password fields and a Continue button](/images/quickstart-sign-in.png)
-
-Enter the email you passed to `--email` and the password from the summary, then press **Continue →**.
-
-<Note>
-Stackdome can also offer a **Continue with GitHub** button, but only when the server has been configured with a GitHub OAuth client ID and client secret. Until you set both, email and password is the only way in and the button does not appear.
-</Note>
-
-Signing in lands you on your dashboard, which opens on **Stacks** — the list of your applications. Every stack gets a card showing its resource and volume counts, its current status, and when it last changed, and the controls above the list filter and sort them. Here is how it looks on an install with a handful of stacks already running:
-
-![The Stacks list, with a "Filter stacks" box above stack cards showing resource and volume counts, an OK status, and when each stack last changed](/images/quickstart-dashboard.png)
-
-The sidebar is your map: **Stacks**, **Previews**, **Secrets**, **Object Stores**, and **Addons** under Platform, and **Git Providers** and **Image Registries** under Integrations. As an organization admin you also see **Clusters** and **Domains** — the `local` cluster the installer registered is already listed there.
-
-## Next step
-
-<Card title="Deploy your first app" icon="circle-play" href="/deploy-first-app">
-  Take a container image or a git repository from nothing to a live URL.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Understand the agent workflow" icon="bot" href="/guides/ai-agents">
+    Follow the commands, completion checks, and failure routes an agent uses.
+  </Card>
+  <Card title="Use the CLI directly" icon="terminal" href="/get-started/cli">
+    Run the same deployment workflow one command at a time.
+  </Card>
+  <Card title="Define the Stackfile" icon="file-code" href="/reference/stackfile">
+    Review the configuration generated by `stackdome init`.
+  </Card>
+  <Card title="Deploy in the dashboard" icon="display" href="/deploy-first-app">
+    Complete the visual deployment walkthrough.
+  </Card>
+</CardGroup>

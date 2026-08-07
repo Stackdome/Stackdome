@@ -1,0 +1,43 @@
+---
+title: "Quickstart with the CLI"
+description: "Authenticate, create a Stackfile, deploy an application, and verify its status with the Stackdome CLI."
+---
+
+Use the CLI when you want to run the same application-delivery workflow directly. You need the URL of Stackdome Cloud or a self-hosted installation and an API token created for your account.
+
+Read [authentication and API tokens](/reference/authentication) before handling credentials. To understand or extend the generated configuration, use the [Stackfile reference](/reference/stackfile).
+
+## Deploy the repository
+
+Run these commands from the repository root:
+
+```bash
+stackdome login --url https://<your-stackdome-host> --token <api-token>
+stackdome whoami -o json
+stackdome init
+stackdome validate
+stackdome deploy --wait -o json
+stackdome status -o json
+```
+
+`stackdome whoami -o json` verifies the active server, organization, project, and authentication method before the deployment begins. `stackdome init` converts a Compose file when one is present or creates a starter `stackfile.yaml`; edit that generated file from evidence in the repository, then run `stackdome validate` again before deploying.
+
+`stackdome deploy --wait -o json` waits for a terminal release state. It exits non-zero unless the release reaches `Released`. Confirm that the returned `release.state` is `Released`, then confirm that `converged_release.state` is `Released` and `converged_release.health` is `ok` in the status result.
+
+For a public service, return its URL without opening a browser:
+
+```bash
+stackdome open -o json
+```
+
+The `urls` array contains the public resource URLs. A service with no public port is not expected to return one.
+
+## Structured output
+
+With `-o json` or `-o yaml`, `stdout` contains only structured result data. Progress, prompts, warnings, and other prose are written to `stderr`, so automation can parse `stdout` without stripping human-readable messages.
+
+Use `stackdome <command> --help` to verify flags before adding commands to automation.
+
+<Card title="Stackdome Cloud during alpha" icon="cloud" href="/get-started/cloud-alpha">
+  Review Cloud availability, ephemerality, and the self-hosted fallback.
+</Card>
