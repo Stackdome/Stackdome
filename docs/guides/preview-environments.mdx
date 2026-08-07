@@ -3,11 +3,93 @@ title: "Preview environments"
 description: "Create a temporary environment for every pull request."
 ---
 
+## Outcome
+
+Give each eligible pull request an isolated copy of the application at its own URL, update it when the pull request changes, and tear it down when the pull request closes.
+
+## Prerequisites
+
+- A GitHub repository connected to Stackdome through a GitHub App installation for automatic pull-request events. Public repository URLs support manual previews only.
+- A `stackfile.yaml` committed on the pull request branch and validated with the current CLI.
+- Enough destination capacity for one full copy of the declared stack per active preview.
+- An administrator who can enable the repository in the dashboard or API. The current public CLI has no preview-configuration, sync, list, or delete commands.
+
+## Agent prompt
+
+```text
+Prepare this repository for per-pull-request preview environments. Inspect the application, create or update the committed stackfile.yaml with its resources and public ports, validate it with the current Stackdome CLI, and identify the exact dashboard-only repository configuration an administrator must enable. After a preview is created, verify its Ready state and public URL. Do not invent preview CLI commands or claim that validation alone enabled the automation.
+```
+
+## Agent actions
+
+<Steps>
+  <Step title="Inspect the repository">
+    Read the Dockerfile, Compose file, runtime configuration, public ports, environment requirements, dependencies, and persistent-data paths. A preview deploys the whole Stackfile, not only the changed service.
+  </Step>
+  <Step title="Prepare the Stackfile">
+    Run `stackdome init` when the repository has no Stackfile, then edit the generated file from repository evidence. Ensure at least one HTTP port is public when the preview needs a URL.
+  </Step>
+  <Step title="Validate and commit">
+    Run `stackdome validate --file stackfile.yaml`. Commit the validated Stackfile at the configured path on every branch that should preview; Stackdome reads the pull request head commit.
+  </Step>
+  <Step title="Hand off dashboard-only setup">
+    Ask an administrator to use **Platform → Previews → Enable repository** and select the connected repository, base branch, Stackfile path, active-preview cap, and configuration-level environment values. The CLI cannot perform this step.
+  </Step>
+  <Step title="Verify an actual pull request">
+    Open or synchronize an eligible pull request, wait for the environment to become **Ready**, and test the URL from its sticky pull-request comment or dashboard card. Do not treat a successful local Stackfile validation as a running preview.
+  </Step>
+</Steps>
+
+## Success criteria
+
+- `stackdome validate --file stackfile.yaml` exits successfully for the file committed at the configured path.
+- The preview configuration targets the intended connected repository and base branch, with an active-preview cap that fits available capacity.
+- An eligible pull request reaches **Ready** and reports the deployed head commit.
+- At least one public resource URL is present in the pull-request comment or dashboard card, and `curl --head --max-time 15 <preview-url>` reaches it.
+- Closing the pull request starts teardown and the preview is eventually marked deleted; no documentation or automation assumes a timer-based expiry.
+
+## CLI and Stackfile boundary
+
+The CLI can initialize and validate the Stackfile used by previews. It cannot enable a repository, inspect preview status, sync a preview, or delete a preview configuration.
+
+```yaml
+name: albumshots
+
+resources:
+  web:
+    build:
+      repo: https://github.com/acme/albumshots.git
+      branch: main
+    ports:
+      - name: http
+        port: 3000
+        protocol: HTTP
+        public: true
+```
+
+```bash
+stackdome init
+stackdome validate --file stackfile.yaml
+```
+
+On a preview, Stackdome pins matching git resources to the pull request's head commit. The `branch` above remains the ordinary-stack revision policy; it does not cause the preview to deploy `main` instead of the pull request.
+
+<Visibility for="agents">
+  - Exact Stackfile fields: top-level `name` and `resources` are required; each resource uses exactly one of `build` or `image`; a public URL requires a port with `name`, `port`, `protocol: HTTP`, and `public: true`.
+  - Machine checks available before enablement: `stackdome validate --file stackfile.yaml` exits `0`. Machine checks after enablement come from the created preview's state, commit, and URL; the CLI has no preview status command.
+  - Recovery: validate the exact Stackfile fetched from the pull request head, confirm the configured Stackfile path and base branch, and confirm the pull request is not from a fork. For a failed environment, use the dashboard failure message and the pull-request comment; do not run ordinary `stackdome deploy` and call it a preview repair.
+  - Configuration, manual creation, sync, and deletion are dashboard/API-only. Ask for administrator action when those mutations are required.
+</Visibility>
+
+<Visibility for="humans">
+
+## Dashboard workflow
+
 A **preview environment** is a complete, throwaway copy of a stack, deployed from a pull request branch, reachable at its own URL, and torn down when the pull request closes. Stackdome calls the feature **Previews**, in the sidebar under **Platform**.
 
 You do not point Previews at an existing stack. You point it at a **repository**, and the stack comes from a **stackfile** committed in that repository. Every pull request against that repository's base branch then gets its own stack, built from the stackfile at that pull request's head commit.
 
-## Prerequisites
+### Dashboard prerequisites
 
 - **A connected git provider.** Previews are driven by GitHub webhook deliveries, so the repository must be reachable through a GitHub App installation you connected under **Git Providers**. See [Deploy from git](/guides/deploy-from-git). The repository picker also accepts a plain public URL, but a public URL only supports environments you create by hand — pull request automation needs a connected provider.
 - **A stackfile in the repository.** This is the template for the environment: it defines the whole stack — every **resource**, its **source**, its **ports**, its environment. See [Write the stackfile](#write-the-stackfile) below.
@@ -43,7 +125,7 @@ That is enough to get an environment. The rules those five keys follow:
 One thing to expect: on a preview, Stackdome rewrites the branch of any resource whose `build.repo` matches the configuration's repository, pinning it to the pull request's head commit. So `branch: main` above does not mean previews build `main` — it is only what that resource does outside a preview.
 
 <Note>
-This is a minimal example, not a reference. The format has more to it — `image`, `env`, `volumes`, `depends_on`, `secrets`, `addons`, `command` and `args`, `replicas` — and public ports can set `subdomain` to choose their hostname prefix, which a preview then prefixes again with `pr-<number>-`.
+This is a minimal example, not a reference. See the [Stackfile reference](/reference/stackfile) for the fields accepted by the installed release and validate every change with `stackdome validate`.
 </Note>
 
 ## Enable a repository
@@ -168,3 +250,16 @@ Every open pull request builds and runs a **full copy of the stack** — every r
 
 The only limit is **Max active previews**, per configuration, defaulting to `10`. It caps how many environments can exist at once — not how many build at once. When a configuration is at its cap, a new pull request creates nothing: the delivery is logged as skipped and no comment is posted, so the pull request looks like previews are simply not enabled. Set the cap to what your cluster can actually hold.
 </Warning>
+
+</Visibility>
+
+## Related tasks
+
+<CardGroup cols={2}>
+  <Card title="Deploy from git" icon="git-branch" href="/guides/deploy-from-git">
+    Connect a repository and verify its ordinary deployment workflow.
+  </Card>
+  <Card title="Stackfile reference" icon="file-code" href="/reference/stackfile">
+    Check the fields and current validator behavior used by previews.
+  </Card>
+</CardGroup>

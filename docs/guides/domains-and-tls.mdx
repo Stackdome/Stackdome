@@ -3,12 +3,94 @@ title: "Domains and TLS"
 description: "Configure your organization domain and understand the hostnames Stackdome generates."
 ---
 
-Your organization has one **domain**, and every hostname Stackdome hands out sits underneath it. You do not name those hostnames — Stackdome derives them from the **stack**, the **resource**, and the **port**. This page covers where the domain comes from, the DNS you have to create for it, the exact shape of a generated hostname, and what Stackdome does and does not do about certificates.
+## Outcome
+
+Expose an application at a Stackdome-generated public URL and verify that the current release is healthy and reachable. On a TLS-eligible organization domain, the URL completes a trusted HTTPS handshake.
 
 ## Prerequisites
 
+- A resource with an HTTP port and evidence of the port the application actually listens on.
+- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
+- An organization domain already configured. Organization-domain management is currently dashboard/API-only; the public CLI has no domain command.
+- For self-hosted Stackdome, DNS for the organization domain and wildcard application hostnames must point at the installation before HTTPS can be issued.
+
+## Agent prompt
+
+```text
+Expose this service at a public Stackdome URL. Confirm the application port from repository or image evidence, mark that port public in stackfile.yaml, validate and deploy the change, return the URL, and verify release health and HTTPS when the organization domain is TLS-eligible. If the organization has no domain, stop and identify the dashboard-only domain setup step instead of inventing a CLI command.
+```
+
+## Agent actions
+
+<Steps>
+  <Step title="Confirm the listening port">
+    Inspect the application and container configuration. Use the container's destination port, not a local development host-port mapping.
+  </Step>
+  <Step title="Confirm the domain boundary">
+    Ask an admin to confirm the organization domain in **Platform → Domains** when it is not already known. The current CLI cannot add, list, or remove organization domains.
+  </Step>
+  <Step title="Expose the port">
+    Set the port's `protocol` to `HTTP` and `public` to `true` in `stackfile.yaml`. Omit `subdomain` to let Stackdome generate the prefix, or set it only when the user requested a stable custom prefix and the installed validator accepts it.
+  </Step>
+  <Step title="Validate and deploy">
+    Run `stackdome validate`, confirm scope with `stackdome whoami -o json`, then run `stackdome deploy --wait -o json` and `stackdome status -o json`.
+  </Step>
+  <Step title="Return and test the URL">
+    Run `stackdome open -o json`, select an entry from `urls`, and test it without disabling certificate verification. On a self-hosted failure, check DNS and ports before inspecting certificate infrastructure.
+  </Step>
+</Steps>
+
+## Success criteria
+
+- `stackdome validate` exits successfully with an HTTP port whose `public` field is `true`.
+- `stackdome deploy --wait -o json` returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- `stackdome open -o json` returns at least one entry in `urls` for the public resource.
+- `curl --head --max-time 15 <url>` completes without `--insecure`; for a TLS-eligible domain, this verifies the served certificate is trusted by that client.
+
+## CLI and Stackfile workflow
+
+Organization domains themselves are dashboard/API-only. The supported CLI/Stackfile path begins after an administrator has configured the domain: declare the public port, deploy it, and retrieve the URL.
+
+```yaml
+resources:
+  web:
+    image: ghcr.io/acme/storefront-web:1.4.0
+    ports:
+      - name: http
+        port: 8080
+        protocol: HTTP
+        public: true
+```
+
+```bash
+stackdome validate
+stackdome whoami -o json
+stackdome deploy --wait -o json
+stackdome status -o json
+stackdome open -o json
+curl --head --max-time 15 https://<generated-hostname>
+```
+
+Do not construct the generated hostname yourself. Use the current value from `stackdome open -o json`, because changing the resource name, port, or organization domain can change the URL.
+
+<Visibility for="agents">
+  - Exact Stackfile fields: `resources.<resource>.ports[]` requires `name` and `port`; set `protocol: HTTP` and `public: true`. `subdomain` is optional.
+  - Require `release.state == "Released"`, `converged_release.state == "Released"`, `converged_release.health == "ok"`, and at least one `urls` entry before returning a public endpoint.
+  - Recovery: rerun `stackdome open -o json`, resolve the returned host with `dig +short <hostname>`, and test `curl --head --max-time 15 <url>` without `--insecure`. Use `stackdome status --conditions` and `stackdome release events <release-id> --follow` for deployment failures.
+  - There is no supported public CLI command for adding or removing domains, configuring DNS, or managing certificate issuers. Do not guess one. For self-hosted installations, route unresolved DNS or certificate issuance to the human dashboard and self-hosted notes below.
+</Visibility>
+
+<Visibility for="humans">
+
+## Dashboard workflow
+
+Your organization has one **domain**, and every hostname Stackdome hands out sits underneath it. You do not name those hostnames — Stackdome derives them from the **stack**, the **resource**, and the **port**. This page covers where the domain comes from, the DNS you have to create for it, the exact shape of a generated hostname, and what Stackdome does and does not do about certificates.
+
+### Dashboard prerequisites
+
 - **You are an organization admin.** **Domains** is admin-only, as is **Clusters**.
-- **A domain whose DNS you control.** You will be creating records on it. If you only want to try Stackdome, you do not need one — see [Install Stackdome](/self-host/install) for the `nip.io` path, and read [Certificates](#certificates) for what you give up.
+- **A domain whose DNS you control.** You will be creating records on it. If you only want to try Stackdome, you do not need one — see [Install Stackdome](/self-host/install) for the `nip.io` path, and read [Self-hosted certificate notes](#self-hosted-certificate-notes) for what you give up.
 - **A domain already configured**, if you are only reading the hostname rules. The installer puts one on the organization for you.
 
 ## The organization domain
@@ -112,9 +194,9 @@ The stack header lists the public endpoints it has as a pill — the resource na
 **A fixed prefix, through the API only.** A public port accepts a `subdomain_prefix`. Set it and the hostname becomes `<subdomain_prefix>.<organization-domain>` — one label, and the resource name drops out. There is no field for this in the drawer; it is only reachable through the API. Two ports in the same stack asking for the same prefix are rejected with `subdomain_duplicate`.
 </Note>
 
-## Certificates
+## Self-hosted certificate notes
 
-Stackdome configures certificate issuance. It does not perform it, and it does not check that it happened.
+On a self-hosted installation, Stackdome configures certificate issuance. It does not perform it, and it does not check that it happened.
 
 ### What gets configured
 
@@ -181,7 +263,7 @@ kubectl get certificaterequest,order,challenge -A
 
 `kubectl get clusterissuer letsencrypt-prod` returning `NotFound` means the issuer was never applied — likely a cluster registered while cert-manager was absent. A `Certificate` stuck `False`/`Pending` with a `Challenge` that never completes is the DNS-or-port-80 case in [Troubleshooting](#troubleshooting).
 
-## Troubleshooting
+## Dashboard and self-hosted troubleshooting
 
 **The hostname resolves but nothing is served.** The port is internal. A hostname is only generated for a port marked public, so if you are guessing at a hostname for an internal port, there isn't one. Open the resource in the drawer, check the port, and confirm it appears in the stack header's public endpoints afterwards. If the header lists no endpoint, no public port exists.
 
@@ -192,11 +274,13 @@ kubectl get certificaterequest,order,challenge -A
 1. Resolve the hostname from off your network. If a wildcard is supposed to cover it, confirm the wildcard exists and that no record for an intermediate name is shadowing it.
 2. Confirm port 80 is open inbound on the server and not being redirected to 443 before the challenge path is served.
 3. `kubectl describe challenge -A` and read the reason. It reports what the ACME server saw.
-4. Confirm an ingress controller matching the solver's ingress class is running — the three commands in [Certificates](#certificates) print the class the issuer asks for and the classes your cluster serves. If nothing matches, there is nothing to serve the challenge, and it fails with no useful clue on the Stackdome side.
+4. Confirm an ingress controller matching the solver's ingress class is running — the three commands in [Self-hosted certificate notes](#self-hosted-certificate-notes) print the class the issuer asks for and the classes your cluster serves. If nothing matches, there is nothing to serve the challenge, and it fails with no useful clue on the Stackdome side.
 
 **A URL that used to work now 404s.** Someone renamed the resource or changed the port number. Both are inputs to the generated prefix, so both mint a new hostname. Read the current one off the stack header.
 
 **HTTPS breaks after you change the organization domain.** Generated hostnames are rebuilt from the organization's domain, so changing it changes every hostname the next time a resource is saved. Update DNS for the new domain, and expect fresh certificates to be requested for the new names.
+
+</Visibility>
 
 <Card title="Stacks and resources" icon="cube" href="/concepts/stacks-and-resources">
   What a port is, and the difference between a public and an internal one.
