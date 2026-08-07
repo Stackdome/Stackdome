@@ -3,19 +3,119 @@ title: "Postgres"
 description: "Create a managed Postgres instance and connect it to your resources."
 ---
 
+## Outcome
+
+Provision a managed PostgreSQL database, connect the application through generated environment variables, and deploy a healthy release without putting database credentials in the Stackfile.
+
+## Prerequisites
+
+- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
+- A repository with a valid `stackfile.yaml` and the database name and connection-variable contract the application expects.
+- Enough destination capacity for the requested database size and instances.
+- For scheduled backups, an object store configured through the dashboard or API. The public CLI can trigger and list backups, but it cannot register an object store or configure a backup schedule.
+
+## Agent prompt
+
+```text
+Add managed PostgreSQL to this application, connect it through environment variables in the Stackfile, validate the Stackfile, deploy the change, and verify that both the database and application are healthy. Keep credentials out of stackfile.yaml and do not print them in the result.
+```
+
+## Agent actions
+
+<Steps>
+  <Step title="Inspect the application">
+    Determine the database name, supported PostgreSQL version, migration command, and whether the application expects one connection URL or separate host, port, database, username, and password variables.
+  </Step>
+  <Step title="Create the addon">
+    Run `stackdome addon postgres create <addon-name>` with explicit database, version, instance count, and storage values. Use `-o json` and retain only non-secret metadata.
+  </Step>
+  <Step title="Wait for credentials to be ready">
+    Poll `stackdome addon postgres info <addon-name> -o json` with a bounded retry interval. Do not deploy the application until `status.state` is `Ready`.
+  </Step>
+  <Step title="Connect the Stackfile">
+    Add an `addons` mapping to the application resource. Map `DATABASE_URL` to `{{ url }}`, or map only the individual outputs the application needs. Do not call the credentials command merely to copy a password into the Stackfile.
+  </Step>
+  <Step title="Validate, deploy, and verify">
+    Run `stackdome validate` and `stackdome deploy --wait -o json`; retain the non-empty `release.id` as the deployed release ID, then run `stackdome status -o json`. Run migrations through the application's normal release or startup mechanism, then check application logs for connection failures.
+  </Step>
+</Steps>
+
+## Success criteria
+
+- `stackdome addon postgres info <name> -o json` returns the expected addon and `status.state` as `Ready`.
+- `stackdome validate` exits successfully with the addon mapping in place.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+- The application completes its database readiness check or migrations without authentication or connection errors, and no credential value appears in the Stackfile or agent response.
+
+## CLI and Stackfile workflow
+
+The current CLI supports creating, listing, inspecting, backing up, reading backup history, retrieving credentials, and deleting PostgreSQL addons. Create an instance with explicit values so CLI defaults do not silently choose an incompatible version or database name:
+
+```bash
+stackdome addon postgres create storefront-db \
+  --database app \
+  --version 16 \
+  --instances 1 \
+  --storage 10Gi \
+  -o json
+stackdome addon postgres info storefront-db -o json
+```
+
+After the addon reports `Ready`, connect it by name in the application resource:
+
+```yaml
+resources:
+  api:
+    image: ghcr.io/acme/storefront-api:1.4.0
+    addons:
+      storefront-db:
+        type: postgres
+        database: app
+        env:
+          DATABASE_URL: "{{ url }}"
+```
+
+Available addon outputs are `host`, `port`, `database`, `username`, `password`, `sslmode`, `ca_certificate`, and `url`. Map only what the application uses. Stackdome resolves these values during deployment.
+
+```bash
+stackdome validate
+stackdome whoami -o json
+stackdome deploy --wait -o json
+stackdome status -o json
+```
+
+Scheduled backup configuration, restore, custom object-store selection, advanced placement, hibernation, and fencing remain dashboard/API capabilities. The CLI can trigger an immediate backup after an object store is already configured:
+
+```bash
+stackdome addon postgres backup storefront-db -o json
+stackdome addon postgres backups storefront-db -o json
+```
+
+<Visibility for="agents">
+  - Exact Stackfile fields: `resources.<resource>.addons.<addon-name>.type` must be `postgres`; `database` selects the database; `env.<ENV_NAME>` contains an addon output reference such as `"{{ url }}"`.
+  - Treat `stackdome addon postgres credentials` output as secret material. Use it only when a user-authorized migration tool needs direct credentials, keep structured output out of logs, and never copy it into `stackfile.yaml`.
+  - Parse `status.state` from `addon postgres info`, retain `release.id` as the deployed release ID, then require a successful deploy exit, `release.state == "Released"`, `converged_release.id` equal to that ID, `converged_release.state == "Released"`, and `converged_release.health == "ok"`.
+  - Recovery: inspect `stackdome addon postgres info <name> -o json`, `stackdome release events <release-id> --follow`, and `stackdome logs <resource> --tail 100`. Correct the addon/database name or output mapping, validate, and redeploy. Do not delete the addon as a retry strategy; `stackdome addon postgres delete <name> --yes` permanently destroys its database and storage.
+</Visibility>
+
+<Visibility for="humans">
+
+## Dashboard workflow
+
 An **addon** is a database Stackdome runs and looks after for you. It lives outside any **stack** — you create it once from the **Addons** page, and any **resource** in any stack can then read its credentials. Postgres is the only addon type available today.
 
 This is not the same thing as the **Postgres** tile in a stack's **+ Add resource** panel. That tile adds an ordinary **resource** running the `postgres:16` image: your container, your **volume**, your problem when it comes to backups and upgrades. An addon is the managed path — Stackdome provisions the database, holds its credentials, and hands out only the fields you ask for.
 
-## Prerequisites
+### Dashboard prerequisites
 
-- **A registered cluster.** An addon is placed on your organization's cluster automatically — the create form has no cluster field, and the API rejects one (`cluster_id` is read-only). See [Add a cluster](/self-host/add-a-cluster).
-- **A storage class named `standard`, or the override below.** The form always asks for that name, and it cannot be changed after creation. If your cluster names its class something else, expect creation to fail — see the warning below.
+- **Connected compute on self-hosted Stackdome.** An addon is placed on your organization's compute automatically — the create form has no destination field, and the API rejects `cluster_id` because it is read-only. See [Connect compute](/self-host/connect-compute).
+- **A compatible storage class on self-hosted Stackdome.** The form initially asks for `standard`, and the choice cannot be changed after creation. If your cluster uses another name, use the self-hosted note below.
 - **An Object Store, if you want backups.** Scheduled backups cannot be enabled without one. See [Volumes and object stores](/guides/volumes-and-object-stores).
 - **An account that can create addons.** If yours cannot, the **Add Addon** button is not rendered at all.
 
 <Warning>
-**Storage class is hardcoded to `standard`.** Three things are true of it: the create form has no storage-class field and always sends `standard`, the hub requires the field and never substitutes a default, and the value cannot be changed once the instance exists (`Storage class cannot be changed`). Kubernetes distributions disagree about the name — a k3s cluster, which is what the Stackdome installer builds, calls its default class `local-path`. So unless your cluster really has a class called `standard`, expect creation to fail, and set the real name under **Advanced** before you create it:
+**Self-hosted storage class.** The create form sends `standard` unless Advanced JSON overrides it, and the value cannot be changed once the instance exists (`Storage class cannot be changed`). Kubernetes distributions disagree about the name — a k3s cluster, which is what the Stackdome installer builds, calls its default class `local-path`. Set the real name under **Advanced** before you create it:
 
 ```json
 {
@@ -250,3 +350,16 @@ Open the instance from **Addons** and choose **Delete**. The confirmation is blu
 </Warning>
 
 A referenced instance cannot be deleted. The API refuses with `addon '<id>' is in use by <references> and cannot be deleted`, and the dashboard adds *"Remove the stack references first, then try again."* Unbind the variables in every stack that reads it, deploy those stacks, then delete. Once accepted, the instance moves to **Deleting** and is torn down in the background — *"&lt;name&gt; is being torn down."*
+
+</Visibility>
+
+## Related tasks
+
+<CardGroup cols={2}>
+  <Card title="Environment variables and secrets" icon="key" href="/guides/environment-variables">
+    Map addon outputs and secret keys into an application.
+  </Card>
+  <Card title="Volumes and object stores" icon="hard-drive" href="/guides/volumes-and-object-stores">
+    Configure persistent application data and Postgres backup destinations.
+  </Card>
+</CardGroup>

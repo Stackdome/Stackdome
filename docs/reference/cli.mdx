@@ -1,0 +1,97 @@
+---
+title: "CLI reference"
+description: "Stackdome CLI commands, global flags, structured output behavior, environment variables, and exit codes."
+keywords: ["Stackdome CLI reference", "command reference", "structured output", "exit codes", "CLI environment variables"]
+---
+
+The `stackdome` CLI deploys, inspects, and operates stacks. Run `stackdome --help` for the command inventory in your installed release and `stackdome <command> --help` before adding flags to automation.
+
+## Command inventory
+
+| Command | Purpose | Subcommands or arguments |
+| --- | --- | --- |
+| `addon` | Manage addons | `postgres`; then `backup`, `backups`, `create`, `credentials`, `delete`, `info`, `list` |
+| `build` | View build history | `info`, `list`, `logs` |
+| `completion` | Generate shell completion | `bash`, `zsh`, `fish` |
+| `config` | Manage CLI configuration | `set-context`, `set-stack`, `view` |
+| `deploy` | Deploy a stack from a Stackfile or stack JSON | — |
+| `destroy` | Delete the current stack | — |
+| `help` | Show help for a command | `[command]` |
+| `init` | Scaffold a new Stackfile | — |
+| `login` | Authenticate with a Stackdome server | — |
+| `logout` | Clear stored credentials | — |
+| `logs` | Stream logs from a stack or resource | — |
+| `open` | Open a resource's public URL, or return URLs in structured mode | — |
+| `release` | Inspect and cancel stack releases | `cancel`, `events`, `info`, `list` |
+| `restart` | Restart a stack resource | — |
+| `secret` | Manage secrets | `create`, `delete`, `info`, `list`, `set` |
+| `signup` | Create a Stackdome account | — |
+| `stack` | Manage stacks | `delete`, `info`, `list` |
+| `status` | Show stack and resource status | `[resource]` |
+| `token` | Manage API tokens | `create`, `delete`, `list`, `scopes` |
+| `validate` | Validate a Stackfile | — |
+| `version` | Print the CLI version | — |
+| `volume` | Manage volumes | `create`, `delete`, `list` |
+| `whoami` | Show the authenticated user, signup-created organization, default project, and auth method | — |
+
+## Global flags
+
+These flags are available on every command:
+
+| Flag | Default | Behavior |
+| --- | --- | --- |
+| `--log-level <level>` | `warn` | Set logging to `debug`, `info`, `warn`, or `error`. |
+| `--no-color` | off | Disable colored output. |
+| `-o, --output <format>` | `table` | Select `table`, `json`, or `yaml` output. |
+
+Command-specific flags belong to that command. Check them with `stackdome <command> --help`; do not assume that a flag on one command exists on another.
+
+## Automation and non-interactive use
+
+For agent and CI workflows:
+
+- Authenticate with an API token and provide required values through flags or environment variables.
+- Use `-o json` or `-o yaml` for machine-readable results.
+- Pass `--yes` when a destructive command's help offers it. A confirmation cannot be answered through non-interactive standard input; without `--yes`, the command exits with invalid-input status.
+- Do not depend on interactive login or signup prompts.
+- Run `stackdome whoami -o json` before making changes to confirm the server and scope in use.
+
+`stackdome login` specifically requires `--token`, or both `--email` and `--password`, when standard input is not a terminal. Agents and CI should use token authentication. See [authentication](/reference/authentication).
+
+## Standard output and standard error
+
+With `-o json` or `-o yaml`, `stdout` contains only the structured result. Prompts, progress, warnings, and other prose go to `stderr`. Parse `stdout`; retain `stderr` for diagnostics.
+
+Some commands stream results. For example, `stackdome status --watch -o json` emits one structured object per refresh rather than one JSON array.
+
+<Warning>
+  `stackdome status --conditions` affects human-readable table rendering only in the current release candidate. With `-o json` or `-o yaml`, it returns the same structured stack object as `stackdome status` and does not add condition history.
+</Warning>
+
+## Environment variables
+
+Environment values overlay the saved CLI configuration for the current process.
+
+| Variable | Behavior |
+| --- | --- |
+| `STACKDOME_TOKEN` | Supplies the API access token. It is not refreshable and is not written to the config file by ordinary commands. |
+| `STACKDOME_URL` | Overrides the Stackdome server URL for the process. |
+| `STACKDOME_ORG` | Supplies the organization ID. Use it with `STACKDOME_PROJECT` to skip scope discovery. |
+| `STACKDOME_PROJECT` | Supplies the internal project scope. This is `default` during alpha. Use it with `STACKDOME_ORG` to skip scope discovery. |
+| `STACKDOME_CONFIG` | Overrides the default config path, `~/.stackdome/config.json`. |
+
+Set both `STACKDOME_ORG` and `STACKDOME_PROJECT=default` for a narrowly scoped token that cannot discover its scope. Setting only one still requires the CLI to discover the missing value. Organization and project selection are not exposed during alpha.
+
+## Exit codes
+
+| Code | Meaning |
+| --- | --- |
+| `0` | Success |
+| `1` | General error |
+| `2` | Authentication or authorization failure |
+| `3` | Not found |
+| `4` | Invalid input or usage |
+| `5` | Conflict |
+| `130` | Canceled |
+
+Exit code `130` applies to canceled command paths that return the CLI's cancellation error, including a declined confirmation. It is not a universal interrupt result in the current release: interrupting `stackdome status --watch` exits `0`, while other paths that return a raw cancellation may fall back to the general-error behavior and exit `1`. A bad flag or wrong argument count exits with code `4`.

@@ -3,16 +3,132 @@ title: "Volumes and object stores"
 description: "Give a resource persistent storage, and register object stores for backups."
 ---
 
+## Outcome
+
+Keep application data across restarts and redeployments by declaring a persistent volume at the exact data directory the service uses. The deployed release is healthy, and Stackdome reports the expected volume name, size, access mode, and provisioning phase.
+
+Object stores solve a different outcome: they hold PostgreSQL addon backups. Registering an object store is currently dashboard/API-only; there is no public `stackdome object-store` command and object stores are not Stackfile mounts.
+
+## Prerequisites
+
+- A repository with a `stackfile.yaml` and evidence of the directory the application writes to.
+- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
+- A size chosen from the application's current data and expected growth. Volume size and access mode cannot be changed after creation in the current platform workflow.
+- For an object store, an existing Generic secret containing provider credentials and access to the Stackdome dashboard or API.
+
+## Agent prompt
+
+```text
+Add persistent storage for the data directory used by this service. Declare the volume and mount in stackfile.yaml from repository or image evidence, validate the Stackfile, deploy the change, and verify that the release is healthy and the volume is provisioned. Do not delete or replace any existing volume without explicit approval.
+```
+
+## Agent actions
+
+<Steps>
+  <Step title="Find the persistent data directory">
+    Inspect image documentation, Dockerfile declarations, Compose volumes, application configuration, and existing deployment files. Distinguish durable application data from caches and temporary files.
+  </Step>
+  <Step title="Declare the volume and mount">
+    Add a named entry under top-level `volumes`, then mount that name under the resource's `volumes` array at an absolute container path. Choose the size and access mode before deployment.
+  </Step>
+  <Step title="Validate and deploy">
+    Run `stackdome validate`, confirm the active scope with `stackdome whoami -o json`, run `stackdome deploy --wait -o json`, and retain its non-empty `release.id` as the deployed release ID.
+  </Step>
+  <Step title="Verify persistence resources">
+    Poll `stackdome volume list --stack <stack-name> -o json` for at most five minutes. Select the volume by name and require `status.phase` to equal `Ready`; `Pending` is not success. Then run `stackdome status -o json` and require the converged release ID to equal the deployed release ID, its state to be `Released`, and its health to be `ok`.
+  </Step>
+  <Step title="Test the application behavior">
+    Use an application-specific, reversible write/read check when available. Restart only the affected resource with `stackdome restart <resource>` if the command is appropriate for the service, then confirm the data remains.
+  </Step>
+</Steps>
+
+## Success criteria
+
+- `stackdome validate` exits successfully with the top-level volume and resource mount present.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+- `stackdome volume list --stack <stack-name> -o json` contains the expected `name`, `spec.size`, and `spec.access_mode`, and that selected volume has `status.phase` equal to `Ready`.
+- An application-specific read after restart returns the data written before restart, when a safe persistence check is available.
+
+## CLI and Stackfile workflow
+
+Declare storage and its mount together in the Stackfile:
+
+```yaml
+name: storefront
+
+resources:
+  api:
+    image: ghcr.io/acme/storefront-api:1.4.0
+    volumes:
+      - name: app-data
+        path: /var/lib/storefront
+
+volumes:
+  app-data:
+    size: 10Gi
+    access_mode: ReadWriteOnce
+```
+
+`path` must be an absolute path inside the container. `size` is required, and `access_mode` defaults to `ReadWriteOnce` when omitted; set it explicitly for reviewable agent changes. The name in the resource mount must match a top-level volume name.
+
+```bash
+stackdome validate
+stackdome whoami -o json
+stackdome deploy --wait -o json
+stackdome volume list --stack storefront -o json
+stackdome status -o json
+```
+
+Wait for the selected volume, not merely the first array entry. Use this agent-readable bounded procedure; it needs no additional JSON command-line tool:
+
+1. Make at most **30 attempts over five minutes**, waiting ten seconds only after a confirmed `Pending` result.
+2. On each attempt, run `stackdome volume list --stack <stack-name> -o json`.
+3. If the command exits nonzero, stop immediately. Preserve its `stderr` as the diagnostic; do not classify an authentication, authorization, server, or network error as storage provisioning.
+4. Parse `stdout` as a JSON array. If it is not valid JSON or is not an array, stop immediately and report an invalid structured-response error.
+5. Select the single element whose `name` exactly equals the declared volume name. If it is missing, stop immediately and report the stack name and missing volume; do not keep polling the wrong target.
+6. Require that selected object's declared `spec.size` and `spec.access_mode`. If either differs, stop immediately and report the mismatch.
+7. Read that selected object's `status.phase`:
+   - `Ready` passes the volume gate.
+   - `Pending` permits the next attempt after ten seconds, unless this was attempt 30.
+   - A missing or any other phase is an immediate diagnostic error; do not treat it as still provisioning.
+
+After 30 successful responses that all selected the expected volume in `Pending`, the wait has timed out. Do not report success and do not delete the volume. Run only the verified volume and stack-status diagnostics:
+
+```bash
+stackdome volume list --stack <stack-name> -o json
+stackdome status --stack <stack-name> -o json
+stackdome status --stack <stack-name> --conditions
+```
+
+Inspect the selected volume's `status.conditions` for its `reason` and `message`, and inspect stack conditions for a workload waiting on storage. On self-hosted Stackdome, correct the default storage class or available capacity; on Stackdome Cloud, route the unresolved provisioning condition to support. If the user chooses to back out a new mount while storage is repaired, remove only that mount from the Stackfile, validate, and redeploy. Delete and recreate a newly created empty volume only after explicit approval and after the provisioning cause is corrected.
+
+The CLI also exposes `stackdome volume create`, `list`, and `delete`. `volume create` provisions a volume but does not declare the application mount; for a reproducible application change, keep the definition and mount in `stackfile.yaml` and deploy them together.
+
+Object-store registration and editing remain dashboard/API-only. Once an object store is configured on a PostgreSQL addon, the CLI can trigger and list addon backups as described in [Postgres](/guides/postgres#cli-and-stackfile-workflow).
+
+<Visibility for="agents">
+  - Exact Stackfile fields: `volumes.<name>.size` and optional `volumes.<name>.access_mode` define storage; `resources.<resource>.volumes[]` requires `name` and absolute `path`.
+  - Parse each successful `volume list` response as a JSON array and locate exactly one volume by `name`; do not rely on array order. A nonzero CLI exit, invalid JSON/non-array response, missing selected volume, spec mismatch, or missing/unexpected phase is an immediate diagnostic error and must not consume the polling window.
+  - Retry only when a successful, valid response contains the exact selected volume with `status.phase == "Pending"`. Within at most 30 attempts over five minutes, require the declared `spec.size`, `spec.access_mode`, and `status.phase == "Ready"`, then require `converged_release.id` to equal the retained deployed release ID, its state to be `Released`, and its health to be `ok`. `Pending` never satisfies the gate.
+  - Recovery: after a timeout made only of confirmed `Pending` results, run `stackdome volume list --stack <stack-name> -o json`, `stackdome status --stack <stack-name> -o json`, and `stackdome status --stack <stack-name> --conditions`. Inspect the selected volume's conditions and stack conditions, stop the success path, and route the storage-class or capacity problem to the self-hosted operator or Cloud support.
+  - Never delete an existing volume automatically. After explicit approval and after its mounts have been removed and deployed, `stackdome volume delete <name> --stack <stack-name> --yes` permanently destroys the data and cannot be undone.
+</Visibility>
+
+<Visibility for="humans">
+
+## Dashboard workflow
+
 Two kinds of storage share this page, and they have almost nothing to do with each other.
 
 A **volume** is a disk. It belongs to a **stack**, and one or more **resources** in that stack **mount** it at a **mount path** inside the container. What you write there survives a restart and a redeploy.
 
 An **object store** is a bucket somewhere else — S3, Azure, GCS. Nothing mounts one. Its only job today is to be the destination for **Postgres addon** backups.
 
-## Prerequisites
+### Dashboard prerequisites
 
 - **A stack with at least one resource.** A volume is created already attached to a resource, so the **Volume** tile stays disabled until the stack has one.
-- **A cluster whose default storage class can provision disks.** Stackdome never asks you which storage class to use for a volume — there is no field in the dialog, and the API sends none — so your cluster's default `StorageClass` is what provisions it. Check what that is before you start:
+- **On self-hosted Stackdome, a cluster whose default storage class can provision disks.** Stackdome never asks you which storage class to use for a volume — there is no field in the dialog, and the API sends none — so your cluster's default `StorageClass` is what provisions it. Check what that is before you start:
 
   ```bash
   kubectl get storageclass
@@ -139,6 +255,8 @@ Choose **New Object Store**.
 Turn on backups on the Postgres addon and pick the store there — the addon's **Backups** section has the **Object Store** select, and it refuses to enable scheduled backups or WAL archiving without one. Restoring a new instance from a store's backups goes through the same list.
 
 Deleting a store that an addon still points at is refused. The toast shows the reason the API gives; when the API returns no message, the dashboard falls back to *"This Object Store is in use by one or more Postgres add-ons."* Either way, detach it from the addon first.
+
+</Visibility>
 
 <Card title="Postgres" icon="database" href="/guides/postgres">
   Enabling scheduled backups, WAL archiving, and restoring an instance from an object store.

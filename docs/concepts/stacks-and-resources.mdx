@@ -3,7 +3,7 @@ title: "Stacks and resources"
 description: "How Stackdome models an application: stacks, resources, sources, and ports."
 ---
 
-Stackdome has a small vocabulary. Five words carry almost all of it — **stack**, **resource**, **source**, **port**, **volume** — plus **addon** for the databases Stackdome runs for you. This page defines each one, and the rest of the documentation uses them exactly this way.
+Stackdome has a small application vocabulary. Five words carry almost all of it — **stack**, **resource**, **source**, **port**, **volume** — plus **addon** for the databases Stackdome runs for you. These concepts stay the same whether you deploy to Stackdome Cloud or a self-hosted installation.
 
 ## Stack
 
@@ -14,7 +14,7 @@ A stack is the unit you deploy. It belongs to your organization, it has a name, 
 
 Every card in the **Stacks** list shows both counts, so a stack reads as `3 resources · 2 volumes`. Names must be free: creating a second stack with a name already in use is rejected as a conflict.
 
-A stack is also the boundary around everything inside it. Stackdome gives each stack its own Kubernetes namespace, named after the stack with a unique suffix, and the stack is what you deploy and roll back as a whole — you do not ship one resource at a time.
+A stack is also the boundary around everything inside it. You deploy, inspect, and roll it back as a whole; you do not ship one resource at a time. Stackdome isolates its runtime resources from those of other stacks.
 
 ## Resource
 
@@ -33,7 +33,7 @@ A resource cannot have both a git source and an image source. If a request sets 
 
 The **Build from** toggle offers two:
 
-**Git repository.** You pick a repository from a connected provider under **Git Providers** and a revision — a branch, a tag, or a commit. Stackdome builds the image itself: it clones the repository at that revision, builds the `Dockerfile` (path and build context are adjustable, defaulting to `Dockerfile` and `.`), and pushes the result to the image registry inside your cluster — leave **Push registry**, under **Advanced**, blank for that, or set it to send the image to a registry of your own. On the canvas a resource built this way reads `git build` where an image reference would be.
+**Git repository.** You pick a repository from a connected provider under **Git Providers** and a revision — a branch, a tag, or a commit. Stackdome builds the image itself: it clones the repository at that revision, builds the `Dockerfile` (path and build context are adjustable, defaulting to `Dockerfile` and `.`), and pushes the result to the deployment destination's default build registry. Leave **Push registry**, under **Advanced**, blank to use that destination, or set it to send the image to a registry of your own. On the canvas a resource built this way reads `git build` where an image reference would be.
 
 **Container image.** You give an image reference such as `postgres:16` or `ghcr.io/acme/api:v2`. Stackdome pulls it as-is, with no build step. Public images need nothing else; a private one uses a credential you saved under **Image Registries**.
 
@@ -71,7 +71,7 @@ Every port is one of two things:
 - **Internal.** Reachable only by other resources in the same stack. This is the default.
 - **Public.** Stackdome also publishes it at a hostname on your domain, so the port is reachable from the internet. The stack header lists every public endpoint it has.
 
-You never type a port name. Stackdome derives one as `port-<number>` from the number you enter, and re-derives it if you change the number, so port `8080` gets the name `port-8080`. That derivation exists because a name is required underneath and Kubernetes will not accept a bare number as a port name. If you set a name yourself through the API, it must be 1–15 characters of lowercase letters, digits, and hyphens, contain **at least one letter**, and carry no consecutive or leading or trailing hyphens — anything else comes back as `port_name_invalid`.
+You never type a port name. Stackdome derives one as `port-<number>` from the number you enter, and re-derives it if you change the number, so port `8080` gets the name `port-8080`. If you set a name yourself through the API, it must be 1–15 characters of lowercase letters, digits, and hyphens, contain **at least one letter**, and carry no consecutive or leading or trailing hyphens — anything else comes back as `port_name_invalid`.
 
 The drawer summarises the section by counting public ports when there are any (`1 exposed`) and internal ones otherwise (`2 internal`).
 
@@ -113,4 +113,6 @@ Edits are collected as a draft. The pill above the canvas counts the changes you
 
 ## Where it runs
 
-Every stack runs on one registered cluster. You do not choose it per stack: Stackdome uses the cluster registered for your organization, falling back to the platform cluster it runs on itself. The hub writes a custom resource for your stack into that cluster, and the cluster's agent turns it into Kubernetes objects: Deployments, Services, Ingresses, and volumes. [How Stackdome works](/) walks through that path.
+Every stack runs on the compute connected to your organization; you do not select a destination per stack. During alpha, each organization can connect one cluster. A self-hosted single-server install connects its local compute automatically.
+
+The application model ends at that boundary. If you operate a self-hosted installation and need the underlying custom-resource and workload mapping, see [Self-hosted architecture](/self-host/architecture).

@@ -1,0 +1,70 @@
+---
+title: "Restart a resource"
+description: "Restart one running resource without changing stack configuration or creating a rollback."
+---
+
+Restart a resource when its current process needs to be replaced without changing the Stackfile or deploying a new release.
+
+```bash
+stackdome restart <resource>
+```
+
+For example:
+
+```bash
+stackdome restart web
+```
+
+Use `--stack` when the target is not in the current context:
+
+```bash
+stackdome restart web --stack storefront
+```
+
+The command exits after Stackdome accepts the restart request and writes its confirmation to `stderr`. It does not wait for the replacement process to become ready. The current command also does not emit a structured result when `-o json` or `-o yaml` is selected.
+
+## What restart changes
+
+A restart asks Stackdome to replace the running instance of one resource.
+
+- It does not edit `stackfile.yaml` or the stored stack configuration.
+- It does not create a release.
+- It does not select an older release or roll back code or configuration.
+- It does not change persistent volume or addon data.
+
+Use a deployment for configuration or source changes. Use the dashboard-only [release rollback](/concepts/releases#rolling-back) when you need to redeploy a previous released snapshot.
+
+## Verify the restart
+
+Observe logs and status immediately after the request. Use separate terminals if you want both streams live:
+
+```bash
+stackdome logs web --tail 100 --follow
+```
+
+```bash
+stackdome status --watch
+```
+
+Wait for the resource to return to its ready state and check the new startup lines for the expected initialization. Then capture a final structured status result:
+
+```bash
+stackdome status -o json
+```
+
+Require `converged_release.state` to remain `Released` and `converged_release.health` to return to `ok`. If a newer release exists, also confirm that its ID matches `converged_release.id` before describing the current deployment as successful.
+
+<Visibility for="agents">
+  A zero exit from `stackdome restart` proves only that the API accepted the request. Do not report recovery until status is healthy again and the resource's startup logs show the expected behavior.
+</Visibility>
+
+## If the resource does not recover
+
+Run the bounded checks before changing configuration:
+
+```bash
+stackdome status --conditions
+stackdome logs web --since 15m --tail 200
+```
+
+Use the newest false or failing condition and the matching log lines to decide whether the issue is a runtime crash, readiness failure, missing dependency, or application error. If the release itself failed during an image build, switch to the [build-failure guide](/guides/build-failures).

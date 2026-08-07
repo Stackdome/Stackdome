@@ -1,0 +1,92 @@
+---
+title: "Diagnose build failures"
+description: "Trace a failed image build from its structured status to condition evidence and build logs."
+keywords: ["build failure", "stackdome build logs", "image build diagnostics", "Dockerfile error", "registry failure"]
+---
+
+Diagnose a build in three passes: find its ID, inspect the structured failure evidence, then read the build log for the failing step.
+
+```bash
+stackdome build list
+stackdome build info <build-id> -o json
+stackdome build logs <build-id>
+```
+
+Use the full build ID from structured output when automating. The CLI also accepts an unambiguous ID prefix for interactive use.
+
+## Read the build record first
+
+`stackdome build list` shows the resource, state, source revision, start time, and duration. Filter a busy stack or select another stack with:
+
+```bash
+stackdome build list --resource web --stack storefront -o json
+```
+
+For the selected build, inspect these fields from `stackdome build info <build-id> -o json`:
+
+| Field | Evidence |
+| --- | --- |
+| `stack_resource_name` | The resource whose image was being built. |
+| `source_revision` | The branch, tag, commit, or volume revision requested for the build. |
+| `build_context` | The repository or volume source and build context sent to the builder. |
+| `status.state` | `Pending`, `Building`, `Success`, or `Failed`. |
+| `status.conditions[]` | Machine-reported condition `type`, `status`, `reason`, `message`, and transition time. |
+| `status.last_build_failure_detail` | Best-effort `failure_type`, `reason`, `message`, restart count, and process `exit_code`. |
+| `status.image_url` | The produced image reference after a successful build. |
+
+The failure detail is best effort and may be absent. Its `message` and the build logs are the primary evidence for what the builder actually reported.
+
+## Follow the decision guide
+
+The API exposes a small set of distinct condition reasons. Use those exact reasons when present; do not infer a more specific category from the build state alone.
+
+| Evidence | What it proves | Next action |
+| --- | --- | --- |
+| `SourceRevisionInvalid` | The resolved git revision did not contain the concrete commit and fetchable branch or tag expected by the builder. | Verify the configured branch, tag, or commit and deploy a corrected Stackfile. |
+| `RegistryNotReady` | The cluster registry was not ready when the builder resolved its destination. | Check the cluster registry, wait for it to become ready, and inspect the build again. |
+| `RepositoryResolveFailed` | Stackdome could not resolve the destination image repository before starting the build job. | Check the registry target and its configured push credentials. Retain the condition reason and message as evidence. |
+| `BuildJobFailed` | The build job failed. This reason does not identify which build stage failed. | Read `last_build_failure_detail`, then the build log. |
+| `BuildJobCreated` is absent | The build job has not been created. Build logs are not available yet. | Read the other conditions and release events; retry logs only after job creation. |
+
+The current API does **not** assign stable, separate condition reasons for every authentication, checkout, Dockerfile, registry-push, or Docker execution failure. When the record only says `BuildJobFailed`, classify it from explicit failure detail or log text:
+
+| Suspected stage | Evidence you need before naming it |
+| --- | --- |
+| Stackdome API authentication | The CLI command itself returns authentication or authorization exit code `2`. This is separate from the build record. |
+| Git authentication | `status.last_build_failure_detail.reason` or `.message`, or the build log, explicitly reports rejected credentials or repository authorization. |
+| Source checkout | A `SourceRevisionInvalid` condition, or a failure message/log that explicitly names clone, checkout, repository, or revision failure. |
+| Dockerfile | A failure message/log that explicitly names the Dockerfile path, parsing, or an instruction in that file. |
+| Registry | `RegistryNotReady`, `RepositoryResolveFailed`, or a failure message/log that explicitly reports a registry connection, authentication, or push failure. |
+| Build execution | A captured non-zero `exit_code` or a failure message/log that identifies the command or image-build step that exited. |
+
+<Visibility for="agents">
+  Report the API's exact `reason`, `message`, and `exit_code`, followed by the smallest relevant build-log excerpt. If none names a stage, report an unclassified `BuildJobFailed`; do not turn a generic failure into an authentication, Dockerfile, or registry diagnosis.
+</Visibility>
+
+## Inspect the build log
+
+Start with a bounded log request:
+
+```bash
+stackdome build logs <build-id> --tail 200
+```
+
+Add `--since 30m` to narrow the time range or `--follow` while the build is still running:
+
+```bash
+stackdome build logs <build-id> --since 30m --follow
+```
+
+If the server says the build pod is starting, wait for the `BuildJobCreated` condition and retry. If it says logs are no longer available, rely on the retained build record and [release events](/concepts/releases#follow-release-events); build pods and their logs can be pruned.
+
+## Verify the correction
+
+After changing the Stackfile or external credential/configuration, validate and deploy again. A new deployment creates a new build record:
+
+```bash
+stackdome validate
+stackdome deploy --wait -o json
+stackdome status -o json
+```
+
+Require the new deployment to exit successfully, retain its non-empty `release.id`, and require its `release.state` to be `Released`. In status, require `converged_release.id` to equal that deployed release ID, `converged_release.state` to be `Released`, and converged health to be `ok`. Do not treat an older successful build or serving release as proof that the new release used the correction.

@@ -1,8 +1,10 @@
 openapi: 3.0.0
 info:
-  description: stackdome-api-server
-  title: stackdome-api-server
-  version: 0.0.1
+  description: "Deploy, debug, and operate applications through the Stackdome REST\
+    \ API on Stackdome Cloud or a self-hosted installation. This API is in alpha and\
+    \ may change before general availability."
+  title: Stackdome API
+  version: 0.0.1-alpha
 servers:
 - url: /
 paths:

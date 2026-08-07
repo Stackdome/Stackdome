@@ -3,9 +3,11 @@ title: "Install Stackdome"
 description: "Installer flags, prerequisites, DNS, and what a fresh install creates."
 ---
 
-`stackdome-install` takes one bare Linux server to a complete Stackdome install: a Kubernetes cluster, the platform's own database and API server, an image registry, and an admin account you can sign in with. It runs unattended in numbered phases and waits for each piece to become ready before moving on.
+Self-host Stackdome when you need direct infrastructure control, capacity that persists independently of Cloud alpha availability, or a platform your organization can adopt incrementally while keeping the same Stackfile and deployment workflow.
 
-This page is the reference for the flags, what has to be true of the server before you start, and exactly what the installer puts on it.
+`stackdome-install` takes one bare Linux server to a working dashboard and API, with local compute already connected. It also creates the platform database, an image registry, and an admin account you can sign in with. The installer runs unattended in numbered phases and waits for each component to become ready before moving on.
+
+This page covers the user-visible installation outcome first, then the infrastructure it creates and the exact installer controls.
 
 ## Prerequisites
 
@@ -36,18 +38,25 @@ With the binary on the server, give it the execute bit and run it as root:
 
 ```bash
 chmod +x ./stackdome-install
-sudo ./stackdome-install --email you@company.com
+sudo ./stackdome-install install --email you@company.com
 ```
 
-The `sudo` is not optional. Without root the installer exits during preflight and tells you to re-run it with `sudo`.
+The `install` subcommand is optional for backward compatibility, but using it makes the operation explicit. The `sudo` is not optional. Without root the installer exits during preflight and tells you to re-run it with `sudo`.
 
 | Flag | Required | Default | What it sets |
 | --- | --- | --- | --- |
 | `--email` | Yes | — | The admin user's email address. It is also the contact address registered with Let's Encrypt when you install on a custom domain, so use a real one. Omitting it prints usage and exits with status 1. |
 | `--domain` | No | `stackdome.<PUBLIC_IP>.nip.io` | The dashboard domain, and the domain your applications' generated hostnames are built under. |
 | `--image` | No | `quay.io/stackdome/stackdome:latest` | The API server container image. Override it to pin a specific version. |
+| `--chart-version` | No | `0.6.11-alpha-rc5` | Version of the `stackdome-agent` OCI Helm chart to install. |
+| `--github-client-id` | No | — | Client ID for the GitHub OAuth app used by **Sign in with GitHub**. Set it with `--github-client-secret`; GitHub sign-in stays disabled unless both values are present. |
+| `--github-client-secret` | No | — | Client secret paired with `--github-client-id`. |
+| `--github-app-id` | No | — | Numeric ID of the platform-wide GitHub App. The four `--github-app-*` flags must be supplied together. |
+| `--github-app-slug` | No | — | URL slug of the platform-wide GitHub App. |
+| `--github-app-key-file` | No | — | Path to the GitHub App private key in PEM format. The installer reads the file and stores its contents. |
+| `--github-app-webhook-secret` | No | — | Webhook secret for the platform-wide GitHub App. |
 
-Those three flags are the whole surface. Everything else the installer needs — the database password, the JWT signing secret, the encryption key, and your admin password — it generates for itself; there is no flag or config file to supply them.
+The GitHub flags are optional. Values you provide are stored in `stackdome-bootstrap-secrets` and reused by later upgrades; a later non-empty flag replaces its stored value. Everything else the installer needs — the database password, JWT signing secret, encryption key, and your admin password — it generates for itself.
 
 <Warning>
 The final summary prints your admin password once and tells you it will not be shown again. Copy it into your password manager before you close the terminal.
@@ -77,8 +86,8 @@ That one name carries two things. It is the dashboard URL you sign in at, and it
 
 ### On the server
 
-- **An inotify sysctl drop-in** at `/etc/sysctl.d/90-stackdome-inotify.conf`, raising `fs.inotify.max_user_instances` and `fs.inotify.max_user_watches`. The kernel defaults run out after a few dozen pods.
-- **k3s**, installed if the `k3s` binary is not already present, with its kubeconfig at `/etc/rancher/k3s/k3s.yaml` (mode `0600`). If k3s is already installed, this step is skipped. The installer then waits up to two minutes for the node to report `Ready`.
+- **A k3s pod limit**, written as `max-pods=250` in `/etc/rancher/k3s/config.yaml` when that file does not exist. If the file already contains a `max-pods` setting, the installer keeps it. If the file exists without one, the installer warns and does not overwrite it.
+- **k3s**, installed if the `k3s` binary is not already present, with Traefik disabled in the k3s installer because the Stackdome chart supplies routing. Its kubeconfig is `/etc/rancher/k3s/k3s.yaml` (mode `0600`). If k3s is already installed, the binary installation is skipped; when the installer has just created the config above, it restarts k3s. It then waits up to two minutes for the node to report `Ready`.
 - **Helm**, installed if `helm` is not already on the `PATH`.
 
 ```bash
@@ -87,11 +96,11 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 ### In the cluster
 
-Everything lands in the `stackdome-control-plane` namespace.
+Namespaced installation resources land in `stackdome-control-plane`: the chart workloads, ServiceAccount and token Secret, bootstrap Secret, Volume, Stack, and StackResources. The installer also applies cluster-scoped resources: the chart's CRDs, `stackdome-api-server-role` ClusterRole, `stackdome-api-server-role-binding` ClusterRoleBinding, and, for a real domain, the `letsencrypt-prod` ClusterIssuer. Those cluster-scoped resources do not belong to any namespace.
 
-- **The `stackdome-agent` chart**, installed with `helm upgrade --install`. This is the operator that turns Stackdome's custom resources into Kubernetes workloads. The installer waits for its pods to be ready.
+- **The `stackdome-agent` chart**, installed from `oci://quay.io/stackdome/charts/stackdome-agent` at the version selected by `--chart-version`. Before upgrading, the installer server-side applies every CRD shipped by the chart. It then runs `helm upgrade --install` and waits for the chart and operator pods to be ready. If that exact chart version is already deployed, it skips the chart upgrade.
 - **A bootstrap Secret**, `stackdome-bootstrap-secrets`, holding the credentials the installer generated: the database password, the JWT signing secret, the encryption key, your admin password, plus your admin email and the domain.
-- **RBAC for the API server**: a `stackdome-api-server-account` ServiceAccount, a ClusterRole and binding, and a service-account token Secret. The API server authenticates to the cluster with that token. Be aware that the ClusterRole is currently unrestricted — it grants all verbs on all resources in all API groups, so this account has full control of the cluster.
+- **RBAC for the API server**: a `stackdome-api-server-account` ServiceAccount, the `stackdome-api-server-role` ClusterRole and binding, and the long-lived `stackdome-api-server-account-secret` token Secret. The role can manage Stackdome stacks, resources, volumes, users, registries, and Postgres addons; observe build and cluster status; create a cluster issuer and CNPG image catalogs; manage the namespaces and Secrets those workloads need; and read pods, logs, Services, nodes, and pod metrics.
 - **A `Volume`**, `stackdome-db-data` — 10Gi, `ReadWriteOnce`, storage class `local-path` — backing the platform database.
 - **A `Stack`**, `stackdome-platform`, grouping the two resources below.
 - **A `db` `StackResource`** running `postgres:16-alpine` on port 5432, not exposed publicly, with the volume mounted at `/var/lib/postgresql/data`.
@@ -99,6 +108,10 @@ Everything lands in the `stackdome-control-plane` namespace.
 - **A `ClusterIssuer`** — only when you install on a real domain. See [TLS](#tls) below.
 
 The installer then polls the API server's `/health` endpoint for up to five minutes before continuing.
+
+<Warning>
+The API-server role is narrower than `cluster-admin`, but it is still a cluster-scoped credential with access across namespaces, including read and write access to workload Secrets. The service-account token is long-lived. Anyone who obtains it can exercise every permission in `stackdome-api-server-role`; protect `stackdome-api-server-account-secret` and restrict access to the control-plane namespace.
+</Warning>
 
 ### In Stackdome
 
@@ -113,13 +126,27 @@ With the API server up, the installer finishes the setup through Stackdome's own
 The in-cluster registry belongs to the cluster and is created with it. It is not one of the entries on the **Image registries** page — that page is for credentials you add for external registries, and it is empty on a fresh install.
 </Note>
 
+<Visibility for="humans">
+
+## Sign in and confirm the dashboard
+
+Open the dashboard URL from the installer summary. Sign in with the email passed to `--email` and the generated admin password that you saved from the summary.
+
+![The Stackdome sign-in form, headed "Welcome back.", with empty Email and Password fields and a Continue button](/images/quickstart-sign-in.png)
+
+Choose **Continue →**. A successful sign-in opens **Stacks**, where you can confirm the dashboard is available and the installed organization is ready for applications.
+
+![The Stacks list, with a "Filter stacks" box above stack cards showing resource and volume counts, an OK status, and when each stack last changed](/images/quickstart-dashboard.png)
+
+</Visibility>
+
 ## TLS
 
 What the installer does about certificates depends on the shape of your domain. A domain ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` is classified as a non-TLS domain; any other non-empty domain is classified as a real one.
 
 ### On a `nip.io` or other local-style domain
 
-No `ClusterIssuer` is applied and no Let's Encrypt certificate is requested. The `api-server` resource is created with `tls: false` on its public port and without a cluster-issuer annotation, so no part of the install asks for a certificate for that hostname.
+No `ClusterIssuer` is applied and no Let's Encrypt certificate is requested. The `api-server` resource is created with `tls: false` on its public port and without a cluster-issuer annotation. The chart's Traefik ingress therefore serves its default self-signed certificate.
 
 The final summary still prints an `https://` URL for the dashboard. Because the install configured no certificate for that name, treat a browser certificate warning on a trial install as the expected outcome rather than a sign that something went wrong.
 
@@ -133,14 +160,26 @@ The installer applies a `ClusterIssuer` named `letsencrypt-prod`, and annotates 
 - An HTTP-01 solver, so validation happens over port **80** on your hostname
 
 <Warning>
-That manifest is a `cert-manager.io/v1` resource, so **cert-manager must already be installed in the cluster** for this step to succeed. The installer does not install cert-manager itself, and it treats a failure to apply the issuer as fatal — a `--domain` install stops there if the CRD is not present. Confirm cert-manager is available on the cluster before you install on a real domain.
+The issuer is a `cert-manager.io/v1` resource supplied after the `stackdome-agent` chart is ready. The installer treats a failure to apply it as fatal, so a custom-domain install stops if the cert-manager API is unavailable.
 </Warning>
 
 <Note>
 Even once the issuer is applied, the installer does not wait for, or verify, that a certificate was actually issued. If HTTPS on your domain still shows a certificate error after the install finishes, inspect the `ClusterIssuer` and `Certificate` resources in the cluster rather than re-running the installer.
 </Note>
 
-## Re-running the installer
+## Upgrade an existing install
+
+Use the dedicated upgrade command for a version change:
+
+```bash
+sudo ./stackdome-install upgrade \
+  --image quay.io/stackdome/stackdome:VERSION \
+  --chart-version 0.6.11-alpha-rc5
+```
+
+`upgrade` requires root, a running local k3s service, a usable `/etc/rancher/k3s/k3s.yaml`, Helm, the `stackdome-agent` release in `stackdome-control-plane`, the bootstrap Secret, and the existing `api-server` resource. It reads the email, domain, database workload type, and secrets from the existing install. If you omit `--image`, it keeps the deployed API-server image. GitHub flags are also accepted and update the stored credentials; values you omit are reused.
+
+## Re-running installation
 
 Re-running with the same flags is handled at every step, and the installer says so as it goes:
 
@@ -148,7 +187,7 @@ Re-running with the same flags is handled at every step, and the installer says 
 | --- | --- |
 | Port checks | Skipped for 80, 443, and 6443 once k3s is running. |
 | k3s, Helm | Skipped if the binaries exist. |
-| `stackdome-agent` chart | Re-applied with `helm upgrade --install`. |
+| `stackdome-agent` chart | Skipped when the deployed chart is already at `--chart-version`; otherwise its CRDs are applied and Helm upgrades the release. |
 | Generated secrets | Reused. The installer reads `stackdome-bootstrap-secrets` and, if all four values are present, keeps them — so your admin password does not change. |
 | Manifests (RBAC, volume, stack, resources, issuer) | Re-applied declaratively with `kubectl apply`. |
 | Admin user | Login is tried first. Signup only runs if login fails, and if signup fails too the installer waits two seconds and tries login once more. |

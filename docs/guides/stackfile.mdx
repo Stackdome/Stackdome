@@ -1,0 +1,134 @@
+---
+title: "Create a Stackfile"
+description: "Generate a Stackfile from repository evidence, review Compose conversion warnings, and validate it before deployment."
+keywords: ["create Stackfile", "stackdome init", "stackdome validate", "stackfile.yaml", "Docker Compose conversion"]
+---
+
+This guide uses the public [Stackdome demo repository](https://github.com/Stackdome/stackdome-demo), a three-service application with a Next.js web resource, a background worker, Redis, and persistent data.
+
+Clone it and run `stackdome init` beside its Compose file:
+
+```bash
+git clone https://github.com/Stackdome/stackdome-demo.git
+cd stackdome-demo/hello-stack
+stackdome init --name hello-stack
+```
+
+The initializer creates `stackfile.yaml`; use that generated file as your starting point instead of writing one from memory. When a Compose file is present, treat it as architectural evidence for the Stackfile: service topology, images and builds, ports, environment, commands, dependencies, and volumes. The initializer attempts an experimental conversion; when there is no Compose file, it creates a starter Stackfile named after the current directory.
+
+## Convert a Compose file
+
+`stackdome init` checks the repository root for these files, in order:
+
+```text
+docker-compose.yaml
+docker-compose.yml
+compose.yaml
+compose.yml
+```
+
+Specify a different Compose file with:
+
+```bash
+stackdome init --file deploy/compose.yaml
+```
+
+The conversion writes `stackfile.yaml`, lists the resources and volumes it found, and validates the result. Read every warning before continuing. In particular:
+
+- A local Compose build does not identify a Git repository. Set `build.repo` to the repository URL.
+- A service without an image or build configuration needs one before it can deploy.
+- A Compose `env_file` is reported as a warning. Add its path as `env_file` under the converted resource if the deployment should load it.
+
+The converter may write the file even when the generated configuration does not pass validation. Treat the generated file as a draft and correct every reported problem.
+
+<Warning>
+  Docker Compose conversion is experimental. Use the Compose file as a reference for creating the Stackfile and treat converted output only as scaffolding, not a deployment-ready translation. Compose build contexts such as `./web` are relative to the local Compose file and do not identify a Git repository. Stackdome builds from a cloned repository, so every converted build needs a `build.repo`, and its `context` must be rewritten relative to that repository's root. Other Compose behavior may also require manual translation; inspect the source files and validate the result before deploying.
+</Warning>
+
+For agent workflows, the Compose file is input evidence rather than the final contract. Cross-check each service against its Dockerfile and application configuration, create or correct the corresponding Stackfile resource, then run `stackdome validate`. The validated Stackfile is the deployment contract.
+
+<Note>
+  `stackdome init` refuses to replace an existing `stackfile.yaml`. Review the file before using `--force`, which overwrites it.
+</Note>
+
+## Complete the demo Stackfile
+
+The demo's Compose file gives the initializer the three resources, Redis command, environment values, dependencies, port `3000`, and `/data` volume mount. Its `./web` and `./worker` build contexts are local paths, so the generated file warns that both resources need `build.repo`. Because the Git clone starts at the repository root, those contexts also need to become `hello-stack/web` and `hello-stack/worker`.
+
+Use the repository as the build source and change the contexts from local `./web` and `./worker` paths to paths relative to the Git repository root. Replace Compose substitutions with the application's documented defaults, declare Redis's private TCP port, and use Stackdome output references for the public URL and Redis hostname:
+
+```yaml
+name: hello-stack
+
+resources:
+  web:
+    build:
+      repo: https://github.com/Stackdome/stackdome-demo.git
+      branch: main
+      context: hello-stack/web
+    ports:
+      - name: http
+        port: 3000
+        protocol: HTTP
+        public: true
+    env:
+      CELEBRATION: confetti
+      HAT: party
+      HEADLINE: Your stack is now live.
+      PUBLIC_URL: "{{ self.public_url }}"
+      REDIS_URL: "redis://{{ redis.host }}:6379"
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      repo: https://github.com/Stackdome/stackdome-demo.git
+      branch: main
+      context: hello-stack/worker
+    env:
+      CELEBRATION: confetti
+      REDIS_URL: "redis://{{ redis.host }}:6379"
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+    ports:
+      - name: redis
+        port: 6379
+        protocol: TCP
+        public: false
+    volumes:
+      - name: redis
+        path: /data
+    workload_type: StatefulService
+
+volumes:
+  redis:
+    size: 1Gi
+    access_mode: ReadWriteOnce
+```
+
+`web` and `worker` build different contexts from the same repository. `redis` uses a published image and stays private. Both application resources receive Redis's deployment hostname through `{{ redis.host }}` rather than assuming that a Compose service name will resolve. The named volume preserves Redis's append-only data under `/data`.
+
+Use the [Stackfile reference](/reference/stackfile) when you add build settings, environment variables, secrets, addons, dependencies, or storage.
+
+## Validate before deploying
+
+Run validation after every edit:
+
+```bash
+stackdome validate
+```
+
+To validate a file at another path, use the flag reported by the installed CLI:
+
+```bash
+stackdome validate --file deploy/stackfile.yaml
+```
+
+Do not deploy until validation succeeds. If this guide and the installed release candidate disagree, `stackdome validate` is the authority for that CLI version.

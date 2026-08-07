@@ -1,0 +1,73 @@
+---
+title: "Authentication and API tokens"
+description: "Authenticate agents and CI with API tokens, control scope with environment variables, and keep passwords out of automation."
+keywords: ["Stackdome API token", "CLI authentication", "CI authentication", "agent authentication", "STACKDOME_TOKEN"]
+---
+
+Use an API token for agents, CI, and other automation. The user creates and revokes the token; automation receives only the token needed for the task.
+
+## Log in with an API token
+
+```bash
+stackdome login --url https://<your-stackdome-host> --token <api-token>
+stackdome whoami -o json
+```
+
+The login verifies the token against the server, records the server and signup-created organization, resolves its default project, and stores the credential in the CLI config. Organization and project selection are not part of the alpha workflow. The config defaults to `~/.stackdome/config.json` and is created with user-only permissions.
+
+Check the `whoami` result before deploying. It reports the server URL, organization ID, default project, authentication method, token source, and current stack when one is selected.
+
+<Warning>
+  Treat the config file and API token as secrets. Do not print the token, commit it, include it in a Stackfile, or place it in command output captured by logs.
+</Warning>
+
+## Use environment authentication
+
+For an ephemeral CI or agent session, supply credentials without writing a token to the default config:
+
+```bash
+export STACKDOME_URL="https://<your-stackdome-host>"
+export STACKDOME_TOKEN="<api-token>"
+stackdome whoami -o json
+```
+
+`STACKDOME_URL` and `STACKDOME_TOKEN` override saved values for the current process. An environment token has no refresh token and ordinary commands do not persist it.
+
+A narrowly scoped token may be unable to discover its organization and default project. Supply both internal scope values to skip discovery:
+
+```bash
+export STACKDOME_ORG="<organization-id>"
+export STACKDOME_PROJECT="default"
+stackdome whoami -o json
+```
+
+| Variable | Value | Effect |
+| --- | --- | --- |
+| `STACKDOME_TOKEN` | API token | Authenticates the process without a saved access token. |
+| `STACKDOME_URL` | Server URL | Selects Stackdome Cloud or a self-hosted installation. |
+| `STACKDOME_ORG` | Organization ID | Supplies organization scope. |
+| `STACKDOME_PROJECT` | `default` during alpha | Supplies the internal default-project scope. |
+
+Environment values take precedence over the saved config. If you use the explicit `stackdome login` command, that login is intentionally persisted even when matching environment values are present.
+
+## Human-only email and password login
+
+A person working in an interactive terminal can run:
+
+```bash
+stackdome login --url https://<your-stackdome-host>
+```
+
+The CLI prompts for email and password. Non-interactive login requires either `--token` or both credential flags.
+
+<Warning>
+  Agents must not solicit, accept, or store a user's account password. Ask the user for a revocable API token created for automation instead.
+</Warning>
+
+## Clear stored credentials
+
+```bash
+stackdome logout
+```
+
+This clears the saved CLI configuration. It does not revoke an API token on the server; use the token management commands to list or delete tokens.
