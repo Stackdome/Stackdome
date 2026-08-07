@@ -36,7 +36,7 @@ The architecture can address multiple clusters, which is why the diagram shows m
 3. controller-runtime watchers in the hub observe status changes and update PostgreSQL.
 4. The API, CLI, and dashboard return the recorded release and resource state.
 
-This is an eventually consistent loop. An accepted deploy means the desired state was recorded; a terminal release state such as `ready` or `failed` tells you how reconciliation finished.
+This is an eventually consistent loop. An accepted deploy means the desired state was recorded; a terminal release state such as `Released` or `Failed` tells you how reconciliation finished.
 
 ## Implementation mapping
 
