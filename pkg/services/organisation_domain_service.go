@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -89,7 +90,7 @@ func (s *organisationDomainService) InternalDeleteWithTx(ctx context.Context, id
 	if err != nil {
 		return err
 	}
-	if len(domainsInUse) > 0 {
+	if stackDomainUsesOrganisationDomain(domainsInUse, domain.Domain) {
 		return errors.Conflict("cannot delete domain '%s' as it is in use by stacks", domain.Domain)
 	}
 	return s.organisationDomainStore.DeleteWithTx(ctx, id)
@@ -134,11 +135,23 @@ func (s *organisationDomainService) Delete(ctx context.Context, id string) *erro
 	if err != nil {
 		return err
 	}
-	if len(domainsInUse) > 0 {
+	if stackDomainUsesOrganisationDomain(domainsInUse, domain.Domain) {
 		return errors.Conflict("cannot delete domain '%s' as it is in use by stacks", domain.Domain)
 	}
 
 	return s.organisationDomainStore.Delete(ctx, id)
+}
+
+func stackDomainUsesOrganisationDomain(stackDomains models.StackDomainList, organisationDomain string) bool {
+	for _, stackDomain := range stackDomains {
+		if stackDomain == nil {
+			continue
+		}
+		if stackDomain.Fqdn == organisationDomain || strings.HasSuffix(stackDomain.Fqdn, "."+organisationDomain) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *organisationDomainService) Update(ctx context.Context, id string, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
