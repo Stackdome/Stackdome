@@ -110,11 +110,40 @@ resources:
 | --- | --- | --- | --- |
 | `name` | string | Required and non-empty; no default. | `http` |
 | `port` | integer | Required; no default. Must be from `1` through `65535`. | `8080` |
-| `protocol` | string enum | Optional; schema default is `HTTP`. Allowed values are `HTTP` and `TCP`. | `TCP` |
+| `protocol` | string enum | Optional. The declared schema defaults to `HTTP`, but the current server applies that default only to public ports. Set it explicitly. Allowed values are `HTTP` and `TCP`. | `TCP` |
 | `public` | boolean | Optional; defaults to `false`. | `true` |
 | `subdomain` | string | Optional and non-empty when present; no default. Applies to a public port. | `api` |
 
-A port name is also used in output accessors. With one port, use outputs such as `port`, `url`, `public_host`, and `public_url`. With multiple ports, append the port name, such as `url.http`.
+Set `protocol` explicitly in agent-authored Stackfiles, especially for private ports. In the current release, an omitted protocol becomes HTTP only when `public: true`; an omitted private-port protocol remains unset and does not receive HTTP URL behavior.
+
+### Resource output accessors
+
+The declared schema and current validator use different output-accessor grammar:
+
+| Contract | Single-port resource | Multi-port resource |
+| --- | --- | --- |
+| Declared schema | `host`; the schema describes named `port.<port-name>` and `url.<port-name>` outputs | `host`, `port.<port-name>`, `url.<port-name>`, `public.<port-name>.host`, `public.<port-name>.url` |
+| Current validator | `host`, `port`, `url`, and, for a public port, `public_host`, `public_url` | `host`, `port.<name>`, `url.<name>`, and, for each public port, `public_host.<name>`, `public_url.<name>` |
+
+The declared public spellings `public.<port-name>.host` and `public.<port-name>.url` are **not accepted** by the current validator. For a single-port resource, the current validator also drops the port-name suffix from `port` and `url`.
+
+In compact form, the effective public grammar is `public_host[.<name>]` and `public_url[.<name>]`: omit the bracketed suffix for one port and include it for multiple ports.
+
+Use these effective single-port accessors with the current release:
+
+```yaml
+env:
+  SELF_URL: "{{ self.public_url }}"
+  API_HOST: "{{ api.public_host }}"
+```
+
+For a resource with ports named `http` and `metrics`, use the effective multi-port forms:
+
+```yaml
+env:
+  API_URL: "{{ api.public_url.http }}"
+  METRICS_URL: "{{ api.url.metrics }}"
+```
 
 ## Environment properties
 

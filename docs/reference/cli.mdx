@@ -93,4 +93,4 @@ Set both `STACKDOME_ORG` and `STACKDOME_PROJECT` for a narrowly scoped token tha
 | `5` | Conflict |
 | `130` | Canceled |
 
-Cancellation includes an interrupt and declining a confirmation. A bad flag or wrong argument count exits with code `4`.
+Exit code `130` applies to canceled command paths that return the CLI's cancellation error, including a declined confirmation. It is not a universal interrupt result in the current release: interrupting `stackdome status --watch` exits `0`, while other paths that return a raw cancellation may fall back to the general-error behavior and exit `1`. A bad flag or wrong argument count exits with code `4`.
