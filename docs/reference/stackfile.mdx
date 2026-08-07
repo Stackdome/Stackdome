@@ -1,0 +1,247 @@
+---
+title: "stackfile.yaml"
+description: "Reference for the stackfile.yaml format: every field, its type, and its rules."
+sidebarTitle: "stackfile.yaml"
+---
+
+A **stackfile** is a YAML file, committed to a git repository, that describes a whole Stackdome **stack**: its name, its **resources**, their **sources**, **ports**, **environment**, **volumes**, and **addons**. Stackdome reads it at a specific commit and materialises a stack from it.
+
+Today the stackfile is consumed by **Previews** — see [Preview environments](/guides/preview-environments) for how a pull request turns into a running environment. The file itself is described here.
+
+The default path is `stackfile.yaml` at the repository root. Previews configuration can point at a different path.
+
+## Minimal example
+
+```yaml stackfile.yaml
+name: hello-stack
+
+resources:
+  web:
+    image: nginx:latest
+    ports:
+      - name: http
+        port: 80
+        public: true
+```
+
+This names a stack, declares one resource, gives it an image source, and exposes one public port. That is the smallest file that produces a working environment.
+
+## Top-level fields
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | Yes | The stack name. Lowercase letters, digits, and hyphens. Must be unique in the organization outside of Previews; Previews derives per-environment names from it. |
+| `resources` | map | Yes | At least one entry. Keys are resource names, values are [resource objects](#resource). |
+| `addons` | list | No | [Addon references](#addons) to link into the stack. |
+
+## Resource
+
+Each key under `resources` is the resource name and each value is an object with these fields:
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `build` | object | One of `build` or `image` | Build the image from a git repository. See [build](#build). |
+| `image` | object | One of `build` or `image` | Run a prebuilt container image. See [image](#image). |
+| `ports` | list | No | Ports the resource exposes. See [ports](#ports). |
+| `env` | map | No | Environment variables. See [env](#env). |
+| `command` | list of strings | No | Overrides the container's entrypoint. |
+| `args` | list of strings | No | Overrides the container's command arguments. |
+| `replicas` | integer | No | Number of replicas. Defaults to `1`. |
+| `depends_on` | list of strings | No | Names of other resources in the same stack that must start first. |
+| `volumes` | list | No | Volume mounts. See [volumes](#volumes). |
+
+Resource names are lowercase, unique within the stack, and cannot contain spaces.
+
+A resource must have exactly one source. Setting both `build` and `image` is rejected with `source_conflict`; setting neither is rejected with `source_required`.
+
+### build
+
+Build the image from a git repository. Stackdome clones the repository, builds the `Dockerfile`, and pushes the result to the image registry inside your cluster.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `repo` | string | Yes | The git repository URL, for example `https://github.com/acme/web`. |
+| `branch` | string | No | Branch to build. |
+| `tag` | string | No | Tag to build. |
+| `commit` | string | No | Commit SHA to build. |
+| `dockerfile` | string | No | Path to the Dockerfile relative to the build context. Defaults to `Dockerfile`. |
+| `context` | string | No | Build context path. Defaults to `.`. |
+
+At most one of `branch`, `tag`, or `commit` may be set. Setting none uses the repository's default branch.
+
+<Note>
+  In a preview, Stackdome rewrites the branch of any resource whose `build.repo` matches the configuration's repository, pinning it to the pull request's head commit. So `branch: main` becomes the pull request's head commit inside a preview.
+</Note>
+
+### image
+
+Run a prebuilt container image.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `image` | string | Yes | The image reference, for example `postgres:16` or `ghcr.io/acme/api:v2`. |
+| `registry_credential` | string | No | Name of an **Image Registry** credential to pull the image with. Required for private images. |
+
+Shorthand: a resource may set `image:` to a plain string instead of an object when no credential is needed.
+
+```yaml
+resources:
+  cache:
+    image: redis:7
+```
+
+## Ports
+
+`ports` is a list of port objects.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | Yes | 1–15 characters, lowercase letters, digits, and hyphens, with at least one letter, and no leading, trailing, or consecutive hyphens. Invalid names return `port_name_invalid`. |
+| `port` | integer | Yes | Port number the container listens on. |
+| `protocol` | string | No | `http` or `tcp`. Defaults to `http`. |
+| `public` | boolean | No | When `true`, Stackdome publishes the port at a hostname on your domain. Defaults to `false`. |
+| `subdomain` | string | No | Only for public ports. Chooses the hostname prefix. A preview prefixes this again with `pr-<number>-`. |
+
+A port without `public: true` is reachable only by other resources in the same stack.
+
+## env
+
+`env` is a map of environment variable names to values. Each value is either a string, for a plain literal, or an object that references another source.
+
+```yaml
+resources:
+  web:
+    env:
+      LOG_LEVEL: info
+      DATABASE_URL:
+        addon: main-db
+        output: url
+      API_KEY:
+        secret: acme-api
+        key: token
+      QUEUE_HOST:
+        resource: worker
+        output: host
+```
+
+| Source | Fields | Description |
+| --- | --- | --- |
+| **Plain** | a string value | Stored on the resource as-is. |
+| **Secret** | `secret`, `key` | Reads `key` from the named organization secret. Only Generic secrets. |
+| **Addon** | `addon`, `output`, optionally `database` | Reads a field like `host`, `port`, or `url` from a linked addon. `database` selects one when the addon has multiple. |
+| **Resource** | `resource`, `output`, optionally `port` | Reads an output from another resource in the same stack, such as `host`, `port`, or `url` of one of its ports. |
+
+Secret and addon references resolve at deploy time. The secret or addon must exist in the organization before the deploy runs.
+
+See [Environment variables and secrets](/guides/environment-variables) for how these sources behave at runtime.
+
+## Volumes
+
+A resource declares its mounts inline under `volumes`. Stackdome creates the underlying volume on the stack from these entries.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | Yes | Volume name. Unique within the stack. |
+| `mount` | string | Yes | Absolute path inside the container, for example `/var/lib/data`. |
+| `size` | string | Yes on first declaration | Kubernetes size string, for example `1Gi` or `10Gi`. |
+
+A volume with the same `name` mounted into multiple resources is one shared volume. Only the first declaration needs `size`.
+
+```yaml
+resources:
+  db:
+    image: postgres:16
+    volumes:
+      - name: pgdata
+        mount: /var/lib/postgresql/data
+        size: 10Gi
+```
+
+## Addons
+
+`addons` at the top level lists managed addons to link into the stack. Linking makes the addon available to `env` entries with source `addon`.
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | Yes | Name of an existing addon in the organization. |
+
+```yaml
+addons:
+  - name: main-db
+
+resources:
+  api:
+    image: ghcr.io/acme/api:v2
+    env:
+      DATABASE_URL:
+        addon: main-db
+        output: url
+```
+
+An addon has to exist and be linkable before a deploy; a missing addon fails the deploy.
+
+## Validation rules
+
+Stackdome rejects a stackfile at deploy time when:
+
+- `name` is missing or empty.
+- `resources` is missing or empty.
+- A resource sets both `build` and `image` (`source_conflict`).
+- A resource sets neither `build` nor `image` (`source_required`).
+- A `build` sets more than one of `branch`, `tag`, `commit`.
+- A port name violates the naming rules (`port_name_invalid`).
+- `depends_on` references a resource that does not exist in the stack.
+- An `env` entry references a secret, addon, or resource that cannot be resolved.
+
+Inside Previews, a failure at any of these steps surfaces as a **Failed** environment with the reason recorded on the sticky comment and the environment card.
+
+## Full example
+
+```yaml stackfile.yaml
+name: example-stack
+
+addons:
+  - name: main-db
+
+resources:
+  web:
+    build:
+      repo: https://github.com/example/example-app
+      branch: main
+      dockerfile: Dockerfile
+      context: .
+    replicas: 2
+    depends_on:
+      - worker
+    ports:
+      - name: http
+        port: 3000
+        protocol: http
+        public: true
+        subdomain: app
+    env:
+      LOG_LEVEL: info
+      DATABASE_URL:
+        addon: main-db
+        output: url
+      API_KEY:
+        secret: example-api
+        key: token
+
+  worker:
+    build:
+      repo: https://github.com/example/example-app
+      branch: main
+    command: ["node", "worker.js"]
+    env:
+      DATABASE_URL:
+        addon: main-db
+        output: url
+
+  cache:
+    image: redis:7
+    ports:
+      - name: redis
+        port: 6379
+        protocol: tcp
+```

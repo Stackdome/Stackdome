@@ -31,6 +31,12 @@
               "guides/volumes-and-object-stores",
               "guides/preview-environments"
             ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/stackfile"
+            ]
           }
         ]
       },
