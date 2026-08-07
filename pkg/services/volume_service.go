@@ -21,7 +21,6 @@ type VolumeService interface {
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError)
-	Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
 	CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError
@@ -228,33 +227,6 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 		return nil, updateErr
 	}
 	return updatedVolume, nil
-}
-
-func (s *volumeService) Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	if permErr := s.permissions.Check(ctx, spec.ProjectID, auth.ResourceVolumes, "", auth.ActionCreate); permErr != nil {
-		return nil, permErr
-	}
-
-	var createdVolume *models.Volume
-	var err *errors.ServiceError
-	createErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
-		if err != nil {
-			s.logger.Error(ctx, "failed to create volume: %v", err)
-			return err
-		}
-		cerr := s.clusterResourceService.CreateVolumeInCluster(ctx, createdVolume)
-		if cerr != nil {
-			s.logger.Error(ctx, "failed to create volume in cluster: %v", cerr)
-			return errors.GeneralError("failed to create volume in cluster: %s", cerr.Error())
-		}
-		return nil
-	})
-	if createErr != nil {
-		return nil, createErr
-	}
-
-	return createdVolume, nil
 }
 
 // Assume ctx already has a transaction

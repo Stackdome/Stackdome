@@ -74,8 +74,8 @@ func (w *volumeClusterService) CreateVolumeInCluster(ctx context.Context, volume
 	}
 
 	if err := clusterClient.Create(ctx, volumeCR); err != nil {
-		w.logger.Error(ctx, "failed to create volume  in cluster: %v", err)
-		return newError("failed to create volume  in cluster", err)
+		w.logger.Error(ctx, "failed to create volume in cluster: %v", err)
+		return newError("failed to create volume in cluster", err)
 	}
 
 	return nil

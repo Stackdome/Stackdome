@@ -2859,35 +2859,6 @@ paths:
           description: Internal server error
 
   # Project-scoped volume routes
-  /api/v1/organizations/{org_id}/projects/{project_name}/volumes:
-    post:
-      summary: Create a new volume
-      security:
-        - Bearer: []
-      parameters:
-        - $ref: '#/components/parameters/org_id'
-        - $ref: '#/components/parameters/project_name'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Volume'
-      responses:
-        '201':
-          description: Volume created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Volume'
-        '400':
-          description: Invalid request payload
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal server error
   /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}:
     get:
       summary: Get a specific volume

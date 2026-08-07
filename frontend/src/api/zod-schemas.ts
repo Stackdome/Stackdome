@@ -6769,52 +6769,6 @@ whether the stack already exists.
     ],
   },
   {
-    method: "post",
-    path: "/api/v1/organizations/:org_id/projects/:project_name/volumes",
-    alias: "postApiv1organizationsOrg_idprojectsProject_namevolumes",
-    requestFormat: "json",
-    parameters: [
-      {
-        name: "body",
-        type: "Body",
-        schema: Volume,
-      },
-      {
-        name: "org_id",
-        type: "Path",
-        schema: z.string(),
-      },
-      {
-        name: "project_name",
-        type: "Path",
-        schema: z.string(),
-      },
-    ],
-    response: Volume,
-    errors: [
-      {
-        status: 400,
-        description: `Invalid request payload`,
-        schema: z.void(),
-      },
-      {
-        status: 401,
-        description: `Unauthorized`,
-        schema: z.void(),
-      },
-      {
-        status: 403,
-        description: `Forbidden`,
-        schema: z.void(),
-      },
-      {
-        status: 500,
-        description: `Internal server error`,
-        schema: z.void(),
-      },
-    ],
-  },
-  {
     method: "get",
     path: "/api/v1/organizations/:org_id/projects/:project_name/volumes/:id",
     alias: "getApiv1organizationsOrg_idprojectsProject_namevolumesId",

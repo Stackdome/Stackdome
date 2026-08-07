@@ -43,21 +43,6 @@ func (m *MockVolumeService) EXPECT() *MockVolumeServiceMockRecorder {
 	return m.recorder
 }
 
-// Create mocks base method.
-func (m *MockVolumeService) Create(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, spec)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// Create indicates an expected call of Create.
-func (mr *MockVolumeServiceMockRecorder) Create(ctx, spec any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockVolumeService)(nil).Create), ctx, spec)
-}
-
 // CreateInCluster mocks base method.
 func (m *MockVolumeService) CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError {
 	m.ctrl.T.Helper()
