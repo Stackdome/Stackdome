@@ -219,10 +219,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                 </FieldShell>
               </div>
 
-              <div className="space-y-2">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
-                  Access
-                </span>
+              <FieldShell label="Access" required>
                 {scopesError && <p className="text-xs text-danger">{scopesError}</p>}
                 {!scopesError && !scopes && (
                   <p className="text-xs text-muted-foreground">Loading available scopes…</p>
@@ -253,7 +250,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                     })}
                   </RadioGroup>
                 )}
-              </div>
+              </FieldShell>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
