@@ -86,6 +86,15 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "API reference",
+        "groups": [
+          {
+            "group": "API reference",
+            "openapi": "openapi.yaml"
+          }
+        ]
       }
     ]
   },

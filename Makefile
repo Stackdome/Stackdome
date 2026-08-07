@@ -15,6 +15,14 @@ generate:
 	rm pkg/api/openapi/go.sum
 .PHONY: generate
 
+docs-openapi:
+	cp pkg/api/openapi/api/openapi.yaml docs/openapi.yaml
+.PHONY: docs-openapi
+
+docs-openapi-check:
+	cmp -s pkg/api/openapi/api/openapi.yaml docs/openapi.yaml || (echo "docs/openapi.yaml is stale; run make docs-openapi" && exit 1)
+.PHONY: docs-openapi-check
+
 frontend:
 	corepack enable pnpm
 	corepack prepare pnpm@10.33.2 --activate
