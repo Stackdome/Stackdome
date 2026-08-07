@@ -205,8 +205,7 @@ func domainExists(token, orgID, domain string) bool {
 func extractClusterCredentials() (clusterURL, caData, saToken string, err error) {
 	// Use the kubernetes service ClusterIP instead of the kubeconfig URL (127.0.0.1:6443),
 	// because the API server runs inside the cluster and needs an in-cluster address.
-	k8sSvcIP, err := output("kubectl", "get", "svc", "kubernetes",
-		"-o", "jsonpath={.spec.clusterIP}")
+	k8sSvcIP, err := output("kubectl", kubernetesServiceQueryArgs()...)
 	if err != nil {
 		return "", "", "", fmt.Errorf("getting kubernetes service IP: %w", err)
 	}
@@ -234,6 +233,14 @@ func extractClusterCredentials() (clusterURL, caData, saToken string, err error)
 	}
 
 	return clusterURL, caData, string(decoded), nil
+}
+
+func kubernetesServiceQueryArgs() []string {
+	return []string{
+		"get", "svc", "kubernetes",
+		"-n", "default",
+		"-o", "jsonpath={.spec.clusterIP}",
+	}
 }
 
 func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, error) {
