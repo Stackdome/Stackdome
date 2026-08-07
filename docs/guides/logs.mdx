@@ -1,0 +1,88 @@
+---
+title: "Inspect runtime logs"
+description: "Read and follow stack or resource runtime logs, select time windows, and distinguish runtime logs from build logs."
+---
+
+`stackdome logs` streams output from running application resources. Use it after a resource starts; use `stackdome build logs` when the image has not finished building.
+
+## Choose the log source
+
+Read logs across the current stack's ready resources:
+
+```bash
+stackdome logs
+```
+
+Pass a resource name to isolate one service or job:
+
+```bash
+stackdome logs web
+```
+
+To inspect the same resource in a stack outside the current context:
+
+```bash
+stackdome logs web --stack storefront
+```
+
+Stack-wide logging includes resources that currently have a ready pod. If none are ready, the command returns an error. Selecting the resource directly is the clearest choice when status already identifies the failing component.
+
+## Select a window
+
+`--tail` controls how many existing lines the stream starts with. The default is `100`:
+
+```bash
+stackdome logs web --tail 250
+```
+
+`--since` asks for logs newer than a duration such as `5m` or `1h`:
+
+```bash
+stackdome logs web --since 30m
+```
+
+You can combine both flags. The server applies the requested filters to the available runtime log stream.
+
+## Follow new lines
+
+Use `--follow` to keep the stream open:
+
+```bash
+stackdome logs web --since 5m --tail 100 --follow
+```
+
+The short form is `-f`. Stop the stream with an interrupt after you have captured the failure or recovery evidence you need.
+
+<Visibility for="agents">
+  Start with a bounded request such as `--tail 100 --since 15m`. Use `--follow` only while actively observing a rollout or restart, and retain the exact resource name with the captured evidence.
+</Visibility>
+
+The command writes log lines to `stdout`. Although the global `-o` flag is accepted, it does not convert application log payloads into a Stackdome JSON or YAML schema.
+
+## Runtime logs versus build logs
+
+| Log type | Command | Use it for |
+| --- | --- | --- |
+| Runtime | `stackdome logs [resource]` | Startup, requests, crashes, readiness behavior, and application output from running resources. |
+| Build | `stackdome build logs <build-id>` | Source checkout, Dockerfile processing, image build steps, and registry push output. |
+
+If a deploy fails before a resource runs, runtime logs may be empty or unavailable. Find the build ID and follow the [build-failure decision guide](/guides/build-failures) instead.
+
+## Pair logs with status
+
+Logs explain behavior; status identifies whether Stackdome considers the release and resources healthy. Use both:
+
+```bash
+stackdome status --conditions
+stackdome logs web --since 15m --tail 200
+```
+
+After a restart, begin following logs before checking whether the resource returned to a ready state:
+
+```bash
+stackdome logs web --tail 100 --follow
+stackdome status --watch
+```
+
+Run those commands in separate terminals. See [restart a resource](/guides/restart) for the full verification sequence.
+

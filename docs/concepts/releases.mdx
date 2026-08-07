@@ -1,13 +1,77 @@
 ---
 title: "Releases"
-description: "How a deploy becomes a release, how status is reported, and how to roll back."
+description: "Identify, verify, inspect, cancel, and roll back Stackdome releases."
 ---
 
-A stack is what you edit. A **release** is what you shipped. Every deploy creates one, and the **Deployments** tab of a stack is the list of them, newest first.
+A stack is what you edit. A **release** is the fixed, identifiable result of one deployment attempt. Use its ID to follow events and its state plus stack health to decide whether that attempt is serving successfully.
+
+## Identify and verify a release
+
+List the releases for the current stack, newest first:
+
+```bash
+stackdome release list
+```
+
+Use structured output to retain full IDs for later commands:
+
+```bash
+stackdome release list -o json
+stackdome release info <release-id> -o json
+```
+
+`release list` returns release summaries. `release info` returns the detailed release, including its state, message, cause, validation errors, pins, outcome, snapshot, and live status when the release is active or currently serving.
+
+A release is terminal when `state` is `Released`, `Failed`, `Superseded`, or `Cancelled`. `Released` proves that release converged at some point; it does not by itself prove the release is still serving or healthy. For the current deployment, also run:
+
+```bash
+stackdome status -o json
+```
+
+Require `converged_release.id` to match the release ID, `converged_release.state` to be `Released`, and `converged_release.health` to be `ok`. See [inspect stack status](/guides/status#prove-convergence-and-health) for the full latest-versus-converged check.
+
+Every release subcommand accepts `--stack <name>` to override the current stack context.
+
+<Visibility for="agents">
+  Preserve the full release ID returned by `stackdome deploy -o json`. Use it for `release info` and `release events`, and do not claim the newest attempt succeeded unless it matches the healthy converged release in structured status.
+</Visibility>
+
+## Follow release events
+
+Read the recorded events once:
+
+```bash
+stackdome release events <release-id>
+```
+
+Or follow new events while a deployment progresses:
+
+```bash
+stackdome release events <release-id> --follow
+```
+
+Without `--follow`, structured output is an array of release events. With `--follow -o json`, the CLI emits newline-delimited envelopes containing `event` and `data`; process one line at a time.
+
+Events include timestamped stack or resource messages, levels, and links such as a build ID. Use a build ID with the [build-failure guide](/guides/build-failures) instead of searching runtime logs for build output.
+
+## Cancel a pending release
+
+Cancellation is available only while a release is `Pending`:
+
+```bash
+stackdome release cancel <release-id>
+stackdome release info <release-id> -o json
+```
+
+The cancel command exits after the API accepts the request and prints confirmation to `stderr`; it does not return a structured result. Verify the terminal state with `release info`.
+
+<Warning>
+Cancellation exit codes are not uniform in the current CLI. A successful `release cancel` request exits `0`, while `deploy --wait` exits with general-error code `1` if the release ends as `Cancelled`. Exit code `130` is reserved for local user-cancel paths such as interrupting a deployment wait; do not use it as the only test for a cancelled release.
+</Warning>
 
 ## What a release is
 
-A release is one deploy of one stack, numbered per stack — `#1`, `#2`, `#3` — and it carries a complete copy of the stack as it was at the moment you pressed deploy: every resource, its source, its ports, its environment, every volume and every mount, and the connections between nodes on the canvas.
+A release is one deploy of one stack. It has an API ID and a human sequence number scoped to that stack — `#1`, `#2`, `#3`. It carries a complete copy of the stack as it was at deploy time: every resource, its source, its ports, its environment, every volume and every mount, and the connections between nodes on the canvas.
 
 It also carries the artifacts those resources resolved to:
 
@@ -16,7 +80,7 @@ It also carries the artifacts those resources resolved to:
 
 That pinning is the point. A release is a fixed thing you can identify, compare, and return to. Editing the stack afterwards never quietly changes what is running — your edits collect as **a draft** and take effect on the next deploy. So the release timeline is an honest record: `#4` is what `#4` was.
 
-## Deploying
+## Deploying from the dashboard
 
 You deploy from the canvas, on the **Architecture** tab. Once you have unshipped edits, a pill appears above the canvas:
 
@@ -74,7 +138,7 @@ Expanding a release opens its card:
 
 A release that is still in flight streams its activity into that console as it happens. A finished one shows the same console, replayed from what was recorded.
 
-You can also stop a deploy: the release's **⋮** menu offers **Cancel release** while it is `Pending`. Once it is `InProgress` the rollout has already been handed to the cluster, so cancelling is no longer offered — deploy again, or roll back.
+You can also stop a deploy: the release's **⋮** menu offers **Cancel release** while it is `Pending`. Once it is `InProgress` the rollout has already been handed to the cluster, so cancelling is no longer offered — deploy again, or roll back through the dashboard.
 
 A stack keeps its recent releases and prunes the rest: 10 by default, always keeping at least 5 successful ones. Both are per-stack settings. So is the deploy timeout, 15 minutes by default.
 
@@ -104,6 +168,10 @@ The **Metrics** tab shows live usage for the running stack, refreshed continuous
 ## Rolling back
 
 A release you can name is a release you can return to.
+
+<Warning>
+Rollback is dashboard-only in the current CLI. There is no `stackdome release rollback` command. Use the dashboard steps below.
+</Warning>
 
 1. Open the stack and go to **Deployments**.
 2. Find the release you want to be running again.

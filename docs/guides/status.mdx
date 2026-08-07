@@ -1,0 +1,100 @@
+---
+title: "Inspect stack status"
+description: "Check release convergence, runtime health, resource state, and condition history with the Stackdome CLI."
+---
+
+`stackdome status` answers two different questions: which release is serving, and whether that release is healthy now. Use structured output for automation and the table view for resource-level investigation.
+
+## Check the current stack
+
+```bash
+stackdome status
+```
+
+The table shows the serving release state followed by every resource, its runtime state, declared ports, and public URL. When the API reports a failure, the CLI also prints its captured details and the three most recent resource conditions.
+
+To inspect a stack other than the current context, pass its name:
+
+```bash
+stackdome status --stack storefront
+```
+
+<Note>
+The current CLI declares an optional `[resource]` argument, but status output remains stack-wide. Use `stackdome logs <resource>` when you need to focus on one resource.
+</Note>
+
+## Prove convergence and health
+
+For an agent or CI job, request JSON:
+
+```bash
+stackdome status -o json
+```
+
+The result is the Stack object. Its two embedded release summaries have different meanings:
+
+| Field | Meaning |
+| --- | --- |
+| `converged_release` | The release currently serving. It can remain on an older successful release while a newer attempt progresses or fails. |
+| `latest_release` | The newest release attempt, whether or not it became live. |
+
+A stack is serving a healthy release when all of these are true:
+
+- `converged_release` is present.
+- `converged_release.state` is `Released`.
+- `converged_release.health` is `ok`.
+
+To prove that the **newest attempt** is the healthy serving release, also require:
+
+- `latest_release.id` equals `converged_release.id`.
+- `latest_release.state` is `Released`.
+
+Do not require `latest_release.health` to be `ok`. That field is used for a newest attempt that is still `progressing` or has `failed`; once the attempt has settled successfully, runtime health belongs to `converged_release.health`.
+
+<Visibility for="agents">
+  Do not claim that the latest deployment succeeded from `converged_release.health == "ok"` alone. An older release can still be healthy after the latest attempt fails. Match the two release IDs as well.
+</Visibility>
+
+The possible runtime health values are `ok`, `progressing`, `degraded`, `unavailable`, and `failed`. `ok` is the only value that proves the serving release is healthy.
+
+## Watch a rollout
+
+```bash
+stackdome status --watch
+```
+
+The CLI refreshes every three seconds until interrupted. In table mode it redraws an interactive terminal. In structured mode it emits one complete Stack object per refresh:
+
+```bash
+stackdome status --watch -o json
+```
+
+This is a stream of JSON values, not one JSON array. Parse each value independently and stop only after the latest and converged release IDs match, both states are `Released`, and converged health is `ok`.
+
+<Warning>
+Interrupting `stackdome status --watch` currently exits with code `0`. Treat that as the watch ending, not proof that the stack converged; inspect the last object yourself.
+</Warning>
+
+## Read condition history
+
+Use the human-readable table to see every condition reported for each resource:
+
+```bash
+stackdome status --conditions
+```
+
+Each condition includes its status, type, reason, message, and transition age. Start with the newest false or failing condition, then compare its reason and message with [runtime logs](/guides/logs).
+
+<Warning>
+`--conditions` affects table rendering only in the current CLI. `stackdome status --conditions -o json` and `-o yaml` return the same Stack object as ordinary structured status; they do not add condition history.
+</Warning>
+
+## Choose the next diagnostic
+
+| Status evidence | Next step |
+| --- | --- |
+| `latest_release.state` is `Pending` or `InProgress` | Follow its [release events](/concepts/releases#follow-release-events). |
+| `latest_release.state` is `Failed` | Inspect release info and events; if a build failed, use the [build-failure guide](/guides/build-failures). |
+| A resource is not ready or reports a captured failure | Run `stackdome status --conditions`, then inspect that resource's [runtime logs](/guides/logs). |
+| The newest release is serving and healthy, but the application misbehaves | Inspect application logs; status proves platform health, not application semantics. |
+
