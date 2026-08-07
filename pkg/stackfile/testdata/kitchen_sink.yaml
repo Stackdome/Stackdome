@@ -25,6 +25,8 @@ resources:
         database: api_production
         env:
           DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+          URL: "{{url}}"
+          PASSWORD: "{{ca_certificate}}"
     depends_on:
       - redis
 
@@ -37,7 +39,7 @@ resources:
     volumes:
       - name: redis-data
         path: /data
-    stateful: true
+    workload_type: StatefulService
 
   worker:
     image: api:latest

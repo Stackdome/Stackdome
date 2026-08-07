@@ -1,6 +1,7 @@
 package stackfile
 
 import (
+	"bytes"
 	"fmt"
 	"sort"
 	"strings"
@@ -18,7 +19,10 @@ func Load(content []byte) (*Stackfile, error) {
 		return nil, fmt.Errorf("stackfile too large (%d bytes, max %d)", len(content), MaxStackfileSize)
 	}
 	var sf Stackfile
-	if err := yaml.Unmarshal(content, &sf); err != nil {
+	dec := yaml.NewDecoder(bytes.NewReader(content))
+	// Reject unknown keys: a typo'd field silently vanishing is worse than an error.
+	dec.KnownFields(true)
+	if err := dec.Decode(&sf); err != nil {
 		return nil, fmt.Errorf("failed to parse stackfile: %w", err)
 	}
 
@@ -50,18 +54,12 @@ func Validate(sf *Stackfile) error {
 			if res.Build.Repo == "" {
 				return fmt.Errorf("resource '%s' build config missing 'repo'", name)
 			}
-			set := 0
-			if res.Build.Branch != "" {
-				set++
+			if res.Build.Branch != "" && res.Build.Tag != "" {
+				return fmt.Errorf("resource '%s' build config: 'branch' and 'tag' are mutually exclusive", name)
 			}
-			if res.Build.Tag != "" {
-				set++
-			}
-			if res.Build.Commit != "" {
-				set++
-			}
-			if set > 1 {
-				return fmt.Errorf("resource '%s' build config: only one of 'branch', 'tag', or 'commit' can be set", name)
+			// Matches the API's git_commit_requires_ref rule.
+			if res.Build.Commit != "" && res.Build.Branch == "" && res.Build.Tag == "" {
+				return fmt.Errorf("resource '%s' build config: 'commit' requires 'branch' or 'tag'", name)
 			}
 			if res.Build.Dockerfile != "" && !strings.HasSuffix(res.Build.Dockerfile, "Dockerfile") && !strings.Contains(res.Build.Dockerfile, "Dockerfile.") && !strings.Contains(res.Build.Dockerfile, "dockerfile") {
 				return fmt.Errorf("resource '%s' build config: 'dockerfile' should be a path to a Dockerfile", name)
@@ -206,6 +204,9 @@ func validateAddonEnv(resourceName, addonName string, addon AddonConnectionConfi
 	}
 
 	for envKey, envVal := range addon.Env {
+		if dotted := embeddedRefPattern.FindString(envVal); dotted != "" {
+			return fmt.Errorf("resource '%s' addon '%s' env var '%s': addon outputs are bare names — use '{{ host }}', not '%s'", resourceName, addonName, envKey, dotted)
+		}
 		refs := findAddonRefs(envVal)
 		if len(refs) == 0 {
 			return fmt.Errorf("resource '%s' addon '%s' env var '%s': value must use {{ output }} references (e.g., '{{ host }}'), got bare string '%s'", resourceName, addonName, envKey, envVal)
