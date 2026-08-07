@@ -103,7 +103,7 @@ export default function ApiTokensPage() {
         <PageHeader
           eyebrow="Platform"
           title="API Tokens"
-          subtitle="Issue tokens for scripts, CI, and agents to authenticate as you"
+          subtitle="Issue tokens for scripts, CI, and agents"
           actions={
             <Button onClick={() => setShowCreateDialog(true)}>
               <PlusCircle className="h-4 w-4" />
@@ -116,7 +116,7 @@ export default function ApiTokensPage() {
           <EmptyState
             icon={<KeyRound className="h-8 w-8" />}
             title="No API tokens yet"
-            description="Create a token to let scripts, CI, or agents authenticate as you."
+            description="Create a token to let scripts, CI, or agents call the API."
             action={
               <Button onClick={() => setShowCreateDialog(true)}>
                 <PlusCircle className="h-4 w-4" />

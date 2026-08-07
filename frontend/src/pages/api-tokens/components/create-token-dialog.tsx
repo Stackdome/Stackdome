@@ -12,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { badgeVariants } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { FieldShell } from "@/components/branded";
+import { cn } from "@/lib/utils";
 import {
   createApiToken,
   getApiTokenScopes,
@@ -36,6 +38,23 @@ function scopeKey(resource: string, action: string): string {
   return `${resource}:${action}`;
 }
 
+function ScopeChip({ label, selected, onToggle }: { label: string; selected: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onToggle}
+      className={cn(
+        badgeVariants({ variant: selected ? "default" : "outline" }),
+        "cursor-pointer font-mono",
+        !selected && "text-muted-foreground hover:bg-accent hover:text-foreground",
+      )}
+    >
+      {label}
+    </button>
+  );
+}
+
 // Native <input type="date"> only carries a calendar day — treat it as the
 // end of that day in the user's local time so "expires on this date" reads
 // naturally, then hand the API an RFC3339 timestamp.
@@ -53,7 +72,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
-  const [fullAccess, setFullAccess] = useState(true);
+  const [fullAccess, setFullAccess] = useState(false);
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
   const [scopes, setScopes] = useState<ScopeList | null>(null);
   const [scopesError, setScopesError] = useState<string | null>(null);
@@ -69,7 +88,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     if (!open) return;
     setName("");
     setExpiry("");
-    setFullAccess(true);
+    setFullAccess(false);
     setSelectedScopes(new Set());
     setError(null);
     setScopesError(null);
@@ -99,6 +118,10 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     setError(null);
     if (!name.trim()) {
       setError("Name is required.");
+      return;
+    }
+    if (expiry && new Date(endOfDayRFC3339(expiry)) <= new Date()) {
+      setError("Expiry must be in the future.");
       return;
     }
     // Scopes come from the server contract — never guess a full-access scope
@@ -154,7 +177,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && handleClose()}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-[560px]">
         {created ? (
           <>
             <DialogHeader>
@@ -199,7 +222,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
             <DialogHeader>
               <DialogTitle>Create token</DialogTitle>
               <DialogDescription>
-                Issue an API token for scripts, CI, or agents to authenticate as you.
+                Tokens act on your behalf — scope them to only what the caller needs.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5 py-2">
@@ -218,45 +241,71 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                 <Input
                   id="token-expiry"
                   type="date"
+                  min={new Date().toISOString().slice(0, 10)}
                   value={expiry}
                   onChange={(e) => setExpiry(e.target.value)}
                 />
               </FieldShell>
 
               <FieldShell label="Scopes" required>
-                <div className="space-y-3 rounded-md border border-border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor="full-access" className="font-normal">
-                      Full access
-                    </Label>
-                    <Switch id="full-access" checked={fullAccess} onCheckedChange={setFullAccess} />
-                  </div>
-                  {scopesError && <p className="text-xs text-danger">{scopesError}</p>}
-                  {!scopesError && !scopes && (
-                    <p className="text-xs text-muted-foreground">Loading available scopes…</p>
-                  )}
-                  {!fullAccess && (
-                    <div className="space-y-2 border-t border-border pt-3">
-                      {scopes?.items?.map((resource) =>
-                        resource.resource
-                          ? resource.actions?.map((action) => {
-                            const key = scopeKey(resource.resource!, action);
-                            return (
-                              <div key={key} className="flex items-center justify-between gap-2">
-                                <Label htmlFor={key} className="font-mono text-xs font-normal">
-                                  {key}
-                                </Label>
-                                <Switch
-                                  id={key}
-                                  checked={selectedScopes.has(key)}
-                                  onCheckedChange={() => toggleScope(resource.resource!, action)}
-                                />
-                              </div>
-                            );
-                          })
-                          : null,
+                <div className="rounded-md border border-border">
+                  <div className="flex items-center justify-between gap-2 p-3">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="full-access" className="font-normal">
+                        Full access
+                      </Label>
+                      {fullAccess && (
+                        <p className="text-xs text-danger">This token can do anything you can.</p>
                       )}
                     </div>
+                    <Switch id="full-access" checked={fullAccess} onCheckedChange={setFullAccess} />
+                  </div>
+                  {scopesError && <p className="px-3 pb-3 text-xs text-danger">{scopesError}</p>}
+                  {!scopesError && !scopes && (
+                    <p className="px-3 pb-3 text-xs text-muted-foreground">Loading available scopes…</p>
+                  )}
+                  {!fullAccess && scopes && (
+                    <>
+                      <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
+                        <span className="text-xs text-muted-foreground">
+                          {selectedScopes.size} selected
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto px-2 py-1 text-xs"
+                          disabled={selectedScopes.size === 0}
+                          onClick={() => setSelectedScopes(new Set())}
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                      <div className="max-h-[280px] divide-y divide-border overflow-y-auto border-t border-border">
+                        {scopes.items?.map((resource) =>
+                          resource.resource ? (
+                            <div key={resource.resource} className="flex items-start gap-3 px-3 py-2">
+                              <span className="w-36 shrink-0 pt-1 font-mono text-xs break-all text-muted-foreground">
+                                {resource.resource}
+                              </span>
+                              <div className="flex flex-1 flex-wrap gap-1.5">
+                                {resource.actions?.map((action) => {
+                                  const key = scopeKey(resource.resource!, action);
+                                  return (
+                                    <ScopeChip
+                                      key={key}
+                                      label={action}
+                                      selected={selectedScopes.has(key)}
+                                      onToggle={() => toggleScope(resource.resource!, action)}
+                                    />
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : null,
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
               </FieldShell>

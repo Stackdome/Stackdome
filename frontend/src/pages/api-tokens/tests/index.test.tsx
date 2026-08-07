@@ -35,6 +35,11 @@ function renderPage() {
   );
 }
 
+// The dialog opens with Full access off, so a create needs at least one scope.
+async function pickScope(action: string) {
+  await userEvent.click(await screen.findByRole("button", { name: action }));
+}
+
 describe("ApiTokensPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -56,6 +61,7 @@ describe("ApiTokensPage", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await pickScope("read");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
     expect(await screen.findByText(/sd_raw_secret/)).toBeInTheDocument();
@@ -77,6 +83,7 @@ describe("ApiTokensPage", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await pickScope("read");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
     await screen.findByText(/sd_raw_secret/);
@@ -94,6 +101,7 @@ describe("ApiTokensPage", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await pickScope("read");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
     await screen.findByText(/sd_raw_secret/);
@@ -114,6 +122,7 @@ describe("ApiTokensPage", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await pickScope("read");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
     await screen.findByText(/sd_raw_secret/);
@@ -150,13 +159,39 @@ describe("ApiTokensPage", () => {
     renderPage();
     await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
-    fireEvent.change(screen.getByLabelText(/expires/i), { target: { value: "2026-12-31" } });
+    fireEvent.change(screen.getByLabelText(/expires/i), { target: { value: "2036-12-31" } });
+    await pickScope("read");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
 
     await waitFor(() => expect(tokensApi.createApiToken).toHaveBeenCalled());
     const { expires_at } = vi.mocked(tokensApi.createApiToken).mock.calls[0][0];
-    expect(new Date(expires_at as string)).toEqual(new Date(2026, 11, 31, 23, 59, 59));
+    expect(new Date(expires_at as string)).toEqual(new Date(2036, 11, 31, 23, 59, 59));
+  });
+
+  it("opens with full access off and refuses to create with no scope selected", async () => {
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    expect(screen.getByRole("switch", { name: /full access/i })).not.toBeChecked();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    expect(await screen.findByText(/select at least one scope/i)).toBeInTheDocument();
+    expect(tokensApi.createApiToken).not.toHaveBeenCalled();
+  });
+
+  it("rejects an expiry date in the past", async () => {
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    fireEvent.change(screen.getByLabelText(/expires/i), { target: { value: "2020-01-01" } });
+    await pickScope("read");
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    expect(await screen.findByText(/expiry must be in the future/i)).toBeInTheDocument();
+    expect(tokensApi.createApiToken).not.toHaveBeenCalled();
   });
 
   it("revokes a token via the confirm dialog", async () => {
