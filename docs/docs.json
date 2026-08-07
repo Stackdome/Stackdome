@@ -89,10 +89,206 @@
       },
       {
         "tab": "API reference",
+        "openapi": "openapi.yaml",
         "groups": [
           {
-            "group": "API reference",
-            "openapi": "openapi.yaml"
+            "group": "Authentication and users",
+            "expanded": false,
+            "pages": [
+              "POST /api/v1/user-signup",
+              "GET /api/v1/config",
+              "GET /api/v1/users/{id}",
+              "GET /api/v1/users/current",
+              "GET /api/v1/users/current/projects",
+              "POST /api/v1/auth/login",
+              "POST /api/v1/auth/refresh",
+              "GET /api/v1/auth/github",
+              "GET /api/v1/auth/github/callback",
+              "POST /api/v1/api-tokens",
+              "GET /api/v1/api-tokens",
+              "GET /api/v1/api-tokens/scopes",
+              "GET /api/v1/api-tokens/{id}",
+              "DELETE /api/v1/api-tokens/{id}"
+            ]
+          },
+          {
+            "group": "Organizations, projects, and access",
+            "expanded": false,
+            "pages": [
+              "GET /api/v1/organizations/{id}",
+              "PUT /api/v1/organizations/{id}",
+              "GET /api/v1/organizations/{org_id}/users",
+              "POST /api/v1/organizations/{org_id}/projects",
+              "GET /api/v1/organizations/{org_id}/projects",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/members",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/members",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/members/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/members/{id}",
+              "GET /api/v1/project-roles",
+              "POST /api/v1/organizations/{org_id}/admins",
+              "GET /api/v1/organizations/{org_id}/admins",
+              "POST /api/v1/organizations/{org_id}/admins/{user_id}/demote",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/current",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id}",
+              "POST /api/v1/organizations/{org_id}/invites",
+              "GET /api/v1/organizations/{org_id}/invites",
+              "GET /api/v1/organizations/{org_id}/invites/{id}",
+              "DELETE /api/v1/organizations/{org_id}/invites/{id}",
+              "POST /api/v1/organizations/{org_id}/invites/{id}/resend",
+              "GET /api/v1/invites/{token}/info"
+            ]
+          },
+          {
+            "group": "Source and registry integrations",
+            "expanded": false,
+            "pages": [
+              "POST /api/v1/organizations/{org_id}/registry-credentials",
+              "GET /api/v1/organizations/{org_id}/registry-credentials",
+              "GET /api/v1/organizations/{org_id}/registry-credentials/{id}",
+              "PUT /api/v1/organizations/{org_id}/registry-credentials/{id}",
+              "DELETE /api/v1/organizations/{org_id}/registry-credentials/{id}",
+              "POST /api/v1/organizations/{org_id}/registry-credentials/{id}/verify",
+              "POST /api/v1/organizations/{org_id}/git-integrations/github/manifest",
+              "GET /api/v1/git-integrations/github/manifest/callback",
+              "GET /api/v1/git-integrations/github/setup",
+              "POST /api/v1/webhooks/github",
+              "GET /api/v1/organizations/{org_id}/git-integrations/{id}/installations",
+              "GET /api/v1/organizations/{org_id}/git-integrations/{id}/repositories",
+              "GET /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}",
+              "GET /api/v1/organizations/{org_id}/git-integrations/{id}/repositories/{owner}/{repo}/branches",
+              "POST /api/v1/organizations/{org_id}/git-integrations",
+              "GET /api/v1/organizations/{org_id}/git-integrations",
+              "GET /api/v1/organizations/{org_id}/git-integrations/{id}",
+              "PUT /api/v1/organizations/{org_id}/git-integrations/{id}",
+              "DELETE /api/v1/organizations/{org_id}/git-integrations/{id}",
+              "POST /api/v1/organizations/{org_id}/git-integrations/{id}/verify",
+              "GET /api/v1/organizations/{org_id}/image_registries"
+            ]
+          },
+          {
+            "group": "Stacks and resources",
+            "expanded": false,
+            "pages": [
+              "GET /api/v1/organizations/{org_id}/stacks",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/stacks/apply",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/apply",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/actions/restart",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/connections/{connection_id}"
+            ]
+          },
+          {
+            "group": "Releases",
+            "expanded": false,
+            "pages": [
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/cancel",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/releases/{release_id}/events/stream"
+            ]
+          },
+          {
+            "group": "Builds, logs, and metrics",
+            "expanded": false,
+            "pages": [
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/logs",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/metrics",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/logs",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/metrics",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/builds",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/builds/{build_id}/logs"
+            ]
+          },
+          {
+            "group": "Secrets, volumes, and object stores",
+            "expanded": false,
+            "pages": [
+              "GET /api/v1/organizations/{org_id}/secrets",
+              "GET /api/v1/organizations/{org_id}/object-stores",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/secrets",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/secrets",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/secrets/{id}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/volumes",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/object-stores",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/object-stores",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/object-stores/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/object-stores/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/object-stores/{id}"
+            ]
+          },
+          {
+            "group": "PostgreSQL addons",
+            "expanded": false,
+            "pages": [
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/backup",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/fence",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/actions/hibernate",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/backups",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres/{id}/credentials/{database}"
+            ]
+          },
+          {
+            "group": "Preview environments",
+            "expanded": false,
+            "pages": [
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}",
+              "PUT /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/stack-preview-configs/{id}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks",
+              "GET /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}",
+              "DELETE /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}",
+              "POST /api/v1/organizations/{org_id}/projects/{project_name}/preview-stacks/{id}/sync"
+            ]
+          },
+          {
+            "group": "Compute administration",
+            "expanded": false,
+            "pages": [
+              "POST /api/v1/organizations/{org_id}/clusters",
+              "GET /api/v1/organizations/{org_id}/clusters",
+              "GET /api/v1/organizations/{org_id}/clusters/{id}",
+              "DELETE /api/v1/organizations/{org_id}/clusters/{id}",
+              "POST /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries",
+              "GET /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries",
+              "GET /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}",
+              "DELETE /api/v1/organizations/{org_id}/clusters/{cluster_id}/image_registries/{id}"
+            ]
           }
         ]
       }

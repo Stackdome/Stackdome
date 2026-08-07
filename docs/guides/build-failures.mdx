@@ -1,6 +1,7 @@
 ---
 title: "Diagnose build failures"
 description: "Trace a failed image build from its structured status to condition evidence and build logs."
+keywords: ["build failure", "stackdome build logs", "image build diagnostics", "Dockerfile error", "registry failure"]
 ---
 
 Diagnose a build in three passes: find its ID, inspect the structured failure evidence, then read the build log for the failing step.
@@ -88,4 +89,4 @@ stackdome deploy --wait -o json
 stackdome status -o json
 ```
 
-Require the deployment's release state to be `Released`, then apply the [status convergence and health checks](/guides/status#prove-convergence-and-health). Do not treat an older successful build as proof that the newest release used it.
+Require the new deployment to exit successfully, retain its non-empty `release.id`, and require its `release.state` to be `Released`. In status, require `converged_release.id` to equal that deployed release ID, `converged_release.state` to be `Released`, and converged health to be `ok`. Do not treat an older successful build or serving release as proof that the new release used the correction.

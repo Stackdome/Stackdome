@@ -12,7 +12,7 @@ Deploy an existing container image as a Stackdome resource and wait until the re
 - The image reference, including its registry host and a tag or digest. Prefer a digest when the deployed bits must not drift.
 - Evidence about the container's listening ports, command, environment requirements, dependencies, and storage paths.
 - The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- A registry reachable from both the Stackdome hub, which probes the image before release, and the target cluster, which performs the pull.
+- A registry reachable from both the Stackdome hub, which probes the image before release, and the deployment destination, which performs the pull.
 - For a private image, a registry credential already configured through the dashboard or API. The current public CLI cannot create, update, or verify registry credentials.
 
 If you need a managed Postgres database, use [Postgres](/guides/postgres) instead of running `postgres:16` as an ordinary resource.
@@ -20,7 +20,7 @@ If you need a managed Postgres database, use [Postgres](/guides/postgres) instea
 ## Agent prompt
 
 ```text
-Deploy this container image to Stackdome: <image-reference>. Use the supplied requirements and repository evidence for its command, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, set the generated resource's image reference, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, verify status and health, and return the public URL. Do not claim success unless the release state is Released and current health is ok. If the image is private and no registry credential is configured, stop and tell me that credential setup currently requires the Stackdome dashboard or API.
+Deploy this container image to Stackdome: <image-reference>. Use the supplied requirements and repository evidence for its command, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, set the generated resource's image reference, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, retain the returned release ID, verify that the converged release ID matches it and converged health is ok, and return the public URL. If the image is private and no registry credential is configured, stop and tell me that credential setup currently requires the Stackdome dashboard or API.
 ```
 
 ## Agent actions
@@ -39,15 +39,15 @@ Deploy this container image to Stackdome: <image-reference>. Use the supplied re
     Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
   </Step>
   <Step title="Deploy and verify">
-    Run `stackdome deploy --wait -o json`, followed by `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
+    Run `stackdome deploy --wait -o json`, retain its non-empty `release.id` as the deployed release ID, then run `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
   </Step>
 </Steps>
 
 ## Success criteria
 
 - `stackdome validate` exits successfully for the generated `stackfile.yaml`.
-- `stackdome deploy --wait -o json` exits successfully and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
 - A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
 - No registry password or token appears in the Stackfile, shell history captured for support, screenshots, tickets, or chat messages.
 
@@ -282,7 +282,7 @@ Three failures are specific to pulling an image, and the distinction between the
 
 Successful probes are remembered, so redeploying an unchanged reference with unchanged credentials does not re-probe the registry. Change either and it is checked again.
 
-One reference is deliberately skipped: an image whose host ends in `.svc.cluster.local` lives inside the cluster, where the hub cannot reach it. Those go straight through to the cluster's own pull.
+On self-hosted Kubernetes compute, one reference is deliberately skipped: an image whose host ends in `.svc.cluster.local` lives inside that cluster, where the hub cannot reach it. Those go straight through to the destination's own pull.
 
 ### Registry rate limits
 
@@ -291,7 +291,7 @@ Unauthenticated pulls from Docker Hub are throttled. When the registry answers t
 The observable symptom is an absence. The deploy runs normally, but **Release checks passed** never appears in that release's timeline. That line asserts every check genuinely passed, so a single skipped check withholds it for the whole release — the other resources in the stack may well have been verified, and you cannot tell from the timeline which were which. Two things follow:
 
 - **Early failure detection is gone for the image that was skipped.** A typo in that reference is no longer caught before the deploy; it surfaces later as the resource failing to start.
-- **The cluster still has to pull.** The hub's probe is not the pull. A cluster whose own unauthenticated pulls are being throttled will stall on the image no matter what the hub concluded, and the deploy runs to its timeout.
+- **The destination still has to pull.** The hub's probe is not the pull. A destination whose own unauthenticated pulls are being throttled will stall on the image no matter what the hub concluded, and the deploy runs to its timeout.
 
 The fix in both cases is to stop pulling anonymously: add a Docker Hub credential with a purpose that covers pulling. It attaches by host, so nothing in the drawer needs editing.
 
@@ -307,7 +307,7 @@ Reach for an image source when you did not write the thing you are running, or w
     Configure image sources, ports, environment values, dependencies, and storage.
   </Card>
   <Card title="Deploy from git" icon="code-branch" href="/guides/deploy-from-git">
-    Let the target cluster build a repository and pin its resolved revision per release.
+    Let Stackdome build a repository and pin its resolved revision per release.
   </Card>
   <Card title="Authentication" icon="key" href="/reference/authentication">
     Create and handle API tokens safely for agent and CLI sessions.

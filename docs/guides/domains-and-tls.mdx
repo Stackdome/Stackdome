@@ -33,7 +33,7 @@ Expose this service at a public Stackdome URL. Confirm the application port from
     Set the port's `protocol` to `HTTP` and `public` to `true` in `stackfile.yaml`. Omit `subdomain` to let Stackdome generate the prefix, or set it only when the user requested a stable custom prefix and the installed validator accepts it.
   </Step>
   <Step title="Validate and deploy">
-    Run `stackdome validate`, confirm scope with `stackdome whoami -o json`, then run `stackdome deploy --wait -o json` and `stackdome status -o json`.
+    Run `stackdome validate`, confirm scope with `stackdome whoami -o json`, then run `stackdome deploy --wait -o json`, retain its non-empty `release.id` as the deployed release ID, and run `stackdome status -o json`.
   </Step>
   <Step title="Return and test the URL">
     Run `stackdome open -o json`, select an entry from `urls`, and test it without disabling certificate verification. On a self-hosted failure, check DNS and ports before inspecting certificate infrastructure.
@@ -43,8 +43,8 @@ Expose this service at a public Stackdome URL. Confirm the application port from
 ## Success criteria
 
 - `stackdome validate` exits successfully with an HTTP port whose `public` field is `true`.
-- `stackdome deploy --wait -o json` returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
 - `stackdome open -o json` returns at least one entry in `urls` for the public resource.
 - `curl --head --max-time 15 <url>` completes without `--insecure`; for a TLS-eligible domain, this verifies the served certificate is trusted by that client.
 
@@ -76,7 +76,7 @@ Do not construct the generated hostname yourself. Use the current value from `st
 
 <Visibility for="agents">
   - Exact Stackfile fields: `resources.<resource>.ports[]` requires `name` and `port`; set `protocol: HTTP` and `public: true`. `subdomain` is optional.
-  - Require `release.state == "Released"`, `converged_release.state == "Released"`, `converged_release.health == "ok"`, and at least one `urls` entry before returning a public endpoint.
+  - Retain `release.id` as the deployed release ID. Require a successful deploy exit, `release.state == "Released"`, `converged_release.id` equal to that ID, `converged_release.state == "Released"`, `converged_release.health == "ok"`, and at least one `urls` entry before returning a public endpoint.
   - Recovery: rerun `stackdome open -o json`, resolve the returned host with `dig +short <hostname>`, and test `curl --head --max-time 15 <url>` without `--insecure`. Use `stackdome status --conditions` and `stackdome release events <release-id> --follow` for deployment failures.
   - There is no supported public CLI command for adding or removing domains, configuring DNS, or managing certificate issuers. Do not guess one. For self-hosted installations, route unresolved DNS or certificate issuance to the human dashboard and self-hosted notes below.
 </Visibility>

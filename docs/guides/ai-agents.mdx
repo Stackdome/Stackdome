@@ -1,6 +1,7 @@
 ---
 title: "Deploy with a coding agent"
 description: "The canonical Stackdome workflow for coding agents, including verification and failure recovery."
+keywords: ["coding agent deployment", "AI agent workflow", "agent operating contract", "release verification", "failure recovery"]
 ---
 
 Stackdome is an application-delivery platform for coding agents and developers. An agent uses the `stackdome` CLI to turn repository evidence into a Stackfile, deploy to Stackdome Cloud or a self-hosted installation, verify runtime health, and return the public URL.
@@ -38,10 +39,10 @@ The agent needs the repository, the destination URL, and an API token. The user 
     Use `stackdome login --url https://<your-stackdome-host> --token <api-token>`, then run `stackdome whoami -o json` to verify the active host and scope.
   </Step>
   <Step title="Deploy and wait">
-    Run `stackdome deploy --wait -o json`. Structured result data stays on `stdout`; release events and progress go to `stderr`. A non-zero exit or any final state other than `Released` is a failed deployment.
+    Run `stackdome deploy --wait -o json`. Structured result data stays on `stdout`; release events and progress go to `stderr`. Retain the non-empty `release.id` as the deployed release ID. A non-zero exit or `release.state` other than `Released` is a failed deployment.
   </Step>
   <Step title="Verify current status">
-    Run `stackdome status -o json`. Require `converged_release.state` to be `Released` and `converged_release.health` to be `ok` before reporting success.
+    Run `stackdome status -o json`. Require `converged_release.id` to equal the deployed release ID, `converged_release.state` to be `Released`, and `converged_release.health` to be `ok`. Before calling this the newest release, also require `latest_release.id` to equal the deployed release ID and `latest_release.state` to be `Released`.
   </Step>
   <Step title="Return the public URL">
     For a public service, run `stackdome open -o json` and return at least one entry from `urls`. If no URL is returned, check that the Stackfile declares a public port before claiming the application is reachable.
@@ -51,7 +52,7 @@ The agent needs the repository, the destination URL, and an API token. The user 
 <Visibility for="agents">
   - Use `stackdome --help` and `stackdome <command> --help` to verify commands and flags. Do not guess flags.
   - Never request the user's Stackdome password. Authenticate only with an API token supplied for this purpose.
-  - Never claim success before the release state is `Released`, current health is `ok`, and a public service has returned at least one public URL.
+  - Never claim success before `release.state` is `Released`, `converged_release.id` matches the retained deployed release ID, converged health is `ok`, and a public service has returned at least one public URL. If claiming the deployed release is still newest, require `latest_release.id` to match it too.
 </Visibility>
 
 ## Failure routes
@@ -66,7 +67,7 @@ Start with the command for the stage that failed. Read its result before changin
 | Runtime readiness | `stackdome status -o json`; for human-readable condition history, `stackdome status --conditions` |
 | Application runtime | `stackdome logs <resource> --tail 100` |
 
-Use the release ID returned by `stackdome deploy -o json` when inspecting release events. Use the build ID returned by `stackdome build list` for build information and logs.
+Use the retained release ID returned by `stackdome deploy -o json` for status equality checks and release events. Use the build ID returned by `stackdome build list` for build information and logs.
 
 `stackdome status -o json` returns structured release state and health for automation. Run `stackdome status --conditions` separately when a person needs full condition history.
 

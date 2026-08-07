@@ -32,10 +32,10 @@ Add persistent storage for the data directory used by this service. Declare the 
     Add a named entry under top-level `volumes`, then mount that name under the resource's `volumes` array at an absolute container path. Choose the size and access mode before deployment.
   </Step>
   <Step title="Validate and deploy">
-    Run `stackdome validate`, confirm the active scope with `stackdome whoami -o json`, and run `stackdome deploy --wait -o json`.
+    Run `stackdome validate`, confirm the active scope with `stackdome whoami -o json`, run `stackdome deploy --wait -o json`, and retain its non-empty `release.id` as the deployed release ID.
   </Step>
   <Step title="Verify persistence resources">
-    Poll `stackdome volume list --stack <stack-name> -o json` for at most five minutes. Select the volume by name and require `status.phase` to equal `Ready`; `Pending` is not success. Then run `stackdome status -o json` and require the converged release to be healthy.
+    Poll `stackdome volume list --stack <stack-name> -o json` for at most five minutes. Select the volume by name and require `status.phase` to equal `Ready`; `Pending` is not success. Then run `stackdome status -o json` and require the converged release ID to equal the deployed release ID, its state to be `Released`, and its health to be `ok`.
   </Step>
   <Step title="Test the application behavior">
     Use an application-specific, reversible write/read check when available. Restart only the affected resource with `stackdome restart <resource>` if the command is appropriate for the service, then confirm the data remains.
@@ -45,8 +45,8 @@ Add persistent storage for the data directory used by this service. Declare the 
 ## Success criteria
 
 - `stackdome validate` exits successfully with the top-level volume and resource mount present.
-- `stackdome deploy --wait -o json` returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
 - `stackdome volume list --stack <stack-name> -o json` contains the expected `name`, `spec.size`, and `spec.access_mode`, and that selected volume has `status.phase` equal to `Ready`.
 - An application-specific read after restart returns the data written before restart, when a safe persistence check is available.
 
@@ -110,7 +110,7 @@ Object-store registration and editing remain dashboard/API-only. Once an object 
 <Visibility for="agents">
   - Exact Stackfile fields: `volumes.<name>.size` and optional `volumes.<name>.access_mode` define storage; `resources.<resource>.volumes[]` requires `name` and absolute `path`.
   - Parse each successful `volume list` response as a JSON array and locate exactly one volume by `name`; do not rely on array order. A nonzero CLI exit, invalid JSON/non-array response, missing selected volume, spec mismatch, or missing/unexpected phase is an immediate diagnostic error and must not consume the polling window.
-  - Retry only when a successful, valid response contains the exact selected volume with `status.phase == "Pending"`. Within at most 30 attempts over five minutes, require the declared `spec.size`, `spec.access_mode`, and `status.phase == "Ready"`, then require the release and health checks before reporting success. `Pending` never satisfies the gate.
+  - Retry only when a successful, valid response contains the exact selected volume with `status.phase == "Pending"`. Within at most 30 attempts over five minutes, require the declared `spec.size`, `spec.access_mode`, and `status.phase == "Ready"`, then require `converged_release.id` to equal the retained deployed release ID, its state to be `Released`, and its health to be `ok`. `Pending` never satisfies the gate.
   - Recovery: after a timeout made only of confirmed `Pending` results, run `stackdome volume list --stack <stack-name> -o json`, `stackdome status --stack <stack-name> -o json`, and `stackdome status --stack <stack-name> --conditions`. Inspect the selected volume's conditions and stack conditions, stop the success path, and route the storage-class or capacity problem to the destination administrator or Cloud support.
   - Never delete an existing volume automatically. After explicit approval and after its mounts have been removed and deployed, `stackdome volume delete <name> --stack <stack-name> --yes` permanently destroys the data and cannot be undone.
 </Visibility>

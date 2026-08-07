@@ -23,8 +23,8 @@ Use the [AI-agent workflow](/guides/ai-agents) for the complete operating contra
 2. Run `stackdome init`; edit the generated `stackfile.yaml` from repository evidence.
 3. Run `stackdome validate` after every edit and correct all reported errors.
 4. Authenticate only with an API token: run `stackdome login --url https://<your-stackdome-host> --token <api-token>`, then confirm the active host and scope with `stackdome whoami -o json`.
-5. Deploy with `stackdome deploy --wait -o json`. Treat any non-zero exit or final state other than `Released` as a failed deployment.
-6. Run `stackdome status -o json`. Report success only when `converged_release.state` is `Released` and `converged_release.health` is `ok`. For a public service, run `stackdome open -o json` and return a URL from `urls`.
+5. Deploy with `stackdome deploy --wait -o json`. Retain the non-empty `release.id` as the deployed release ID. Treat any non-zero exit or `release.state` other than `Released` as a failed deployment.
+6. Run `stackdome status -o json`. Report that deployed release as serving only when `converged_release.id` equals the deployed release ID, `converged_release.state` is `Released`, and `converged_release.health` is `ok`. Claim it is still the newest release only when `latest_release.id` also equals the deployed release ID and `latest_release.state` is `Released`. For a public service, run `stackdome open -o json` and return a URL from `urls`.
 
 Use `stackdome --help` and `stackdome <command> --help` to verify commands and flags. Use `-o json` for automation. Never request the user's account password.
 
@@ -38,4 +38,4 @@ Use `stackdome --help` and `stackdome <command> --help` to verify commands and f
 | Runtime readiness | `stackdome status -o json`; use `stackdome status --conditions` for condition history |
 | Application runtime | `stackdome logs <resource> --tail 100` |
 
-Use the release ID from `stackdome deploy -o json` for release events and the build ID from `stackdome build list` for build inspection.
+Use the retained deployed release ID for status equality checks and release events, and use the build ID from `stackdome build list` for build inspection.

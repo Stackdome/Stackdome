@@ -33,7 +33,7 @@ A resource cannot have both a git source and an image source. If a request sets 
 
 The **Build from** toggle offers two:
 
-**Git repository.** You pick a repository from a connected provider under **Git Providers** and a revision — a branch, a tag, or a commit. Stackdome builds the image itself: it clones the repository at that revision, builds the `Dockerfile` (path and build context are adjustable, defaulting to `Dockerfile` and `.`), and pushes the result to the image registry inside your cluster — leave **Push registry**, under **Advanced**, blank for that, or set it to send the image to a registry of your own. On the canvas a resource built this way reads `git build` where an image reference would be.
+**Git repository.** You pick a repository from a connected provider under **Git Providers** and a revision — a branch, a tag, or a commit. Stackdome builds the image itself: it clones the repository at that revision, builds the `Dockerfile` (path and build context are adjustable, defaulting to `Dockerfile` and `.`), and pushes the result to the deployment destination's default build registry. Leave **Push registry**, under **Advanced**, blank to use that destination, or set it to send the image to a registry of your own. On the canvas a resource built this way reads `git build` where an image reference would be.
 
 **Container image.** You give an image reference such as `postgres:16` or `ghcr.io/acme/api:v2`. Stackdome pulls it as-is, with no build step. Public images need nothing else; a private one uses a credential you saved under **Image Registries**.
 

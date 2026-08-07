@@ -1,6 +1,7 @@
 ---
 title: "Quickstart with a coding agent"
 description: "Ask a coding agent to deploy your repository and return its live Stackdome URL."
+keywords: ["coding agent quickstart", "AI deployment", "deploy repository", "Stackdome Cloud", "live URL"]
 ---
 
 Use the Stackdome agent plugin to turn a repository into a validated Stackfile, deploy it, and return the public URL. The same workflow targets Stackdome Cloud or a self-hosted installation.
@@ -45,11 +46,12 @@ If you already have a self-hosted installation, give the agent its URL instead. 
 
 ## Verify the release
 
-Successful completion requires all three checks:
+Successful completion requires all four checks:
 
-1. The deploy result has a terminal release state of `Released`.
-2. The current status is healthy: `converged_release.state` is `Released` and `converged_release.health` is `ok` in `stackdome status -o json`.
-3. For a public service, the agent returns at least one public URL. `stackdome open -o json` returns the URL list without opening a browser.
+1. `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id`, and returns `release.state` as `Released`. The agent retains that ID as the deployed release ID.
+2. `stackdome status -o json` reports `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+3. Before claiming this is still the newest release, the agent also requires `latest_release.id` to equal the deployed release ID and `latest_release.state` to be `Released`. A different latest ID means another deployment raced with this one.
+4. For a public service, the agent returns at least one public URL. `stackdome open -o json` returns the URL list without opening a browser.
 
 Do not treat a submitted release, an in-progress release, or a process that is only listening locally as a completed deployment.
 

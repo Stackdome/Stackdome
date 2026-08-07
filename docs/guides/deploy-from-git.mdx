@@ -1,24 +1,25 @@
 ---
 title: "Deploy from git"
 description: "Connect a git provider and build your repository into a running resource."
+keywords: ["deploy from git", "repository deployment", "Dockerfile build", "private repository", "git provider"]
 ---
 
 ## Outcome
 
-Deploy a repository as a Stackdome resource. Stackdome clones the selected revision, builds its Dockerfile, pushes the resulting image to the cluster registry, and waits until the release is healthy. A public port produces a URL you can return to the user.
+Deploy a repository as a Stackdome resource. Stackdome clones the selected revision, builds its Dockerfile, stores the resulting image in the deployment destination's build registry, and waits until the release is healthy. A public port produces a URL you can return to the user.
 
 ## Prerequisites
 
 - The repository and evidence about how it runs: its Dockerfile, Compose file, build context, listening ports, required environment variables, and startup command.
 - The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- A cluster with an image registry. Git builds need somewhere to push the image they produce. See [add a cluster](/self-host/add-a-cluster).
+- Stackdome Cloud supplies the registry used for git builds. On self-hosted Stackdome, git builds require [connected compute with an image registry](/self-host/connect-compute).
 - For a private repository, a git provider already connected by an organization admin. The current public CLI cannot create or manage git-provider credentials; use the dashboard flow below or the API before deploying.
 - For the GitHub App flow on a self-hosted installation, an externally reachable `SERVER_EXTERNAL_URL` and a GitHub account allowed to install the app for the repository owner.
 
 ## Agent prompt
 
 ```text
-Inspect this repository and deploy it to Stackdome from git. Use repository evidence for the Dockerfile, build context, revision, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, verify status and health, and return the public URL. Do not claim success unless the release state is Released and current health is ok. If the repository is private and no git provider is configured, stop and tell me that provider setup currently requires the Stackdome dashboard or API.
+Inspect this repository and deploy it to Stackdome from git. Use repository evidence for the Dockerfile, build context, revision, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, retain the returned release ID, verify that the converged release ID matches it and converged health is ok, and return the public URL. If the repository is private and no git provider is configured, stop and tell me that provider setup currently requires the Stackdome dashboard or API.
 ```
 
 ## Agent actions
@@ -37,7 +38,7 @@ Inspect this repository and deploy it to Stackdome from git. Use repository evid
     Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
   </Step>
   <Step title="Deploy and verify">
-    Run `stackdome deploy --wait -o json`, followed by `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
+    Run `stackdome deploy --wait -o json`, retain its non-empty `release.id` as the deployed release ID, then run `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
   </Step>
 </Steps>
 
@@ -46,8 +47,8 @@ Pushing a commit does not deploy an ordinary stack automatically. Run the deploy
 ## Success criteria
 
 - `stackdome validate` exits successfully for the generated `stackfile.yaml`.
-- `stackdome deploy --wait -o json` exits successfully and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
 - A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
 - The committed Stackfile records the repository, revision policy, build context, ports, and other runtime requirements found in the repository.
 
@@ -254,9 +255,9 @@ The drawer's **Advanced** disclosure — labelled *"build & push"* — holds the
 
 ### The build
 
-When you deploy, Stackdome does not build anything itself. It writes the build request onto the resource's custom resource on the target cluster, and the `stackdome-agent` there clones the repository, builds the image, and pushes it. The resource's node on the canvas is badged `git build` while this is how it gets its image.
+When you deploy, Stackdome sends the build request to the deployment destination. Its build service clones the repository, builds the image, and pushes it. The resource's node on the canvas is badged `git build` while this is how it gets its image.
 
-The push destination is the point that catches people out. By default it is the **cluster's own image registry**, under a path derived from the organization, the stack, and the resource. That is why a cluster needs a registry, and why a cluster registered without one can only run resources that reference an image you host somewhere else. If you left **Enable Image Registry** off, see [Add a cluster](/self-host/add-a-cluster).
+By default, Stackdome uses the deployment destination's build registry, under a path derived from the organization, stack, and resource. Stackdome Cloud supplies this registry. On self-hosted Stackdome, connected compute must have **Enable Image Registry** selected; otherwise it can run only resources that reference an image hosted elsewhere. See [Connect compute](/self-host/connect-compute).
 
 You can watch it on the stack's **Deployments** tab. Each release in the deploy timeline shows **Build**, **Deploy** and **Ready** as separate phases, and records the revision it actually resolved — a release built from a branch names the commit it landed on, so you always know what is running even when the source said `main`.
 
@@ -293,7 +294,7 @@ stackdome status -o json
 stackdome logs <resource> --tail 100
 ```
 
-Check the build definition before retrying: a private repository needs a configured provider, the selected revision must exist, `dockerfile` is relative to `context`, and the target cluster needs an image registry. A failed `stackdome deploy --wait -o json` is not a successful deployment even if the stack document was applied.
+Check the build definition before retrying: a private repository needs a configured provider, the selected revision must exist, and `dockerfile` is relative to `context`. On self-hosted Stackdome, also confirm that connected compute has an image registry. A failed `stackdome deploy --wait -o json` is not a successful deployment even if the stack document was applied.
 
 <Visibility for="humans">
 
@@ -314,7 +315,7 @@ Common causes, in the order worth checking:
 - **The provider lost access.** Check the row on **Git Providers**. **Needs attention** means no stored credentials. **Needs setup** means an app that was never installed. For a GitHub App, an installation that was removed or suspended on GitHub shows up as a token-minting failure on the build rather than on the row — **Check again** or **Manage on GitHub** will tell you which installations are actually live.
 - **The revision does not exist.** A **Branch name**, **Tag name** or **Commit hash** that was renamed, deleted or force-pushed away fails at clone time.
 - **No `Dockerfile` where the build looked.** **Dockerfile path** is relative to **Build context**, not to the repository root. In a monorepo, get the context right first.
-- **The cluster has no registry.** The build has nowhere to push. See [Add a cluster](/self-host/add-a-cluster).
+- **Self-hosted compute has no registry.** The build has nowhere to push. See [Connect compute](/self-host/connect-compute).
 
 <Warning>
 **Builds are not capped.** Stackdome does not limit how many builds run at once — every resource that needs one gets one, immediately. Image builds are CPU-hungry, so on a single-node cluster a handful of simultaneous builds can saturate the node and push every one of them toward its timeout, including builds for stacks you were not touching. Stagger large deploys.

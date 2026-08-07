@@ -35,7 +35,7 @@ You are going to create one stack with one resource, point it at a public git re
 - **A connected git provider — only for private repositories.** A public repository needs no credentials: you paste its URL and Stackdome clones it anonymously. To build from a private repository, connect a provider under **Git providers** first, then pick the repository from the list instead of pasting a URL. See [Deploy from git](/guides/deploy-from-git).
 
 <Note>
-You are never asked which cluster to deploy to. A stack runs on the cluster registered for your organization, so the create flow has no cluster picker — there is nothing to choose.
+You are never asked which compute target to deploy to. A stack runs on the connected compute configured for your organization, so the create flow has no target picker — there is nothing to choose.
 </Note>
 
 <Steps>
@@ -80,7 +80,7 @@ The **Repository** field reads *Select repository or enter URL*. Click it, paste
 
 Two things confirm it took: the **Source** section is now summarised as `git repository`, and the node on the canvas reads `git build` where an image reference would otherwise sit — visible on the node in the next two steps.
 
-That is the whole source configuration. The **Advanced** row underneath holds the `build & push` settings — the Dockerfile path, the build context, and where to push the finished image — and their defaults are `Dockerfile`, `.`, and the image registry inside your cluster. You only open it if your Dockerfile is not at the repository root.
+That is the whole source configuration. The **Advanced** row underneath holds the `build & push` settings — the Dockerfile path, the build context, and where to push the finished image — and their defaults are `Dockerfile`, `.`, and the deployment destination's default build registry. You only open it if your Dockerfile is not at the repository root.
 
 </Step>
 

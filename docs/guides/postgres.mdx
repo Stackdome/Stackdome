@@ -36,7 +36,7 @@ Add managed PostgreSQL to this application, connect it through environment varia
     Add an `addons` mapping to the application resource. Map `DATABASE_URL` to `{{ url }}`, or map only the individual outputs the application needs. Do not call the credentials command merely to copy a password into the Stackfile.
   </Step>
   <Step title="Validate, deploy, and verify">
-    Run `stackdome validate`, `stackdome deploy --wait -o json`, and `stackdome status -o json`. Run migrations through the application's normal release or startup mechanism, then check application logs for connection failures.
+    Run `stackdome validate` and `stackdome deploy --wait -o json`; retain the non-empty `release.id` as the deployed release ID, then run `stackdome status -o json`. Run migrations through the application's normal release or startup mechanism, then check application logs for connection failures.
   </Step>
 </Steps>
 
@@ -44,8 +44,8 @@ Add managed PostgreSQL to this application, connect it through environment varia
 
 - `stackdome addon postgres info <name> -o json` returns the expected addon and `status.state` as `Ready`.
 - `stackdome validate` exits successfully with the addon mapping in place.
-- `stackdome deploy --wait -o json` returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
 - The application completes its database readiness check or migrations without authentication or connection errors, and no credential value appears in the Stackfile or agent response.
 
 ## CLI and Stackfile workflow
@@ -95,7 +95,7 @@ stackdome addon postgres backups storefront-db -o json
 <Visibility for="agents">
   - Exact Stackfile fields: `resources.<resource>.addons.<addon-name>.type` must be `postgres`; `database` selects the database; `env.<ENV_NAME>` contains an addon output reference such as `"{{ url }}"`.
   - Treat `stackdome addon postgres credentials` output as secret material. Use it only when a user-authorized migration tool needs direct credentials, keep structured output out of logs, and never copy it into `stackfile.yaml`.
-  - Parse `status.state` from `addon postgres info`, then require `release.state == "Released"`, `converged_release.state == "Released"`, and `converged_release.health == "ok"` from deployment checks.
+  - Parse `status.state` from `addon postgres info`, retain `release.id` as the deployed release ID, then require a successful deploy exit, `release.state == "Released"`, `converged_release.id` equal to that ID, `converged_release.state == "Released"`, and `converged_release.health == "ok"`.
   - Recovery: inspect `stackdome addon postgres info <name> -o json`, `stackdome release events <release-id> --follow`, and `stackdome logs <resource> --tail 100`. Correct the addon/database name or output mapping, validate, and redeploy. Do not delete the addon as a retry strategy; `stackdome addon postgres delete <name> --yes` permanently destroys its database and storage.
 </Visibility>
 
@@ -109,7 +109,7 @@ This is not the same thing as the **Postgres** tile in a stack's **+ Add resourc
 
 ### Dashboard prerequisites
 
-- **A registered cluster on self-hosted Stackdome.** An addon is placed on your organization's cluster automatically — the create form has no cluster field, and the API rejects one (`cluster_id` is read-only). See [Add a cluster](/self-host/add-a-cluster).
+- **Connected compute on self-hosted Stackdome.** An addon is placed on your organization's compute automatically — the create form has no destination field, and the API rejects `cluster_id` because it is read-only. See [Connect compute](/self-host/connect-compute).
 - **A compatible storage class on self-hosted Stackdome.** The form initially asks for `standard`, and the choice cannot be changed after creation. If your cluster uses another name, use the self-hosted note below.
 - **An Object Store, if you want backups.** Scheduled backups cannot be enabled without one. See [Volumes and object stores](/guides/volumes-and-object-stores).
 - **An account that can create addons.** If yours cannot, the **Add Addon** button is not rendered at all.

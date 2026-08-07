@@ -178,21 +178,40 @@ Work through these in order.
 - **Reachability from the hub, not from you.** The URL has to resolve and connect *from the machine running Stackdome*. Test it there rather than from your laptop:
 
   ```bash
-  curl -sk -o /dev/null -w '%{http_code}\n' https://203.0.113.10:6443/version
+  curl --silent --show-error --insecure \
+    --output /dev/null --write-out '%{http_code}\n' \
+    https://203.0.113.10:6443/version
   ```
 
-  A `401` is a good result — it means you reached a Kubernetes API server and it declined an unauthenticated request. A hang or a connection refusal points at a firewall or cloud security group that does not allow the hub's IP on that port. A `127.0.0.1` or private address copied straight out of a kubeconfig is the single most common cause.
+  A `401` is a good result — it means you reached a Kubernetes API server and it declined an unauthenticated request. This probe sends no credential; `--insecure` is used only to separate network reachability from certificate and authentication checks. Never add an authorization header to it. A hang or a connection refusal points at a firewall or cloud security group that does not allow the hub's IP on that port. A `127.0.0.1` or private address copied straight out of a kubeconfig is the single most common cause.
 
-- **Token validity.** Confirm the Secret was populated and still authenticates, from a machine that can reach the cluster:
+- **CA and token validity.** Confirm the Secret was populated and still authenticates from a protected temporary directory on a machine that can reach the cluster. This request verifies the server against the collected CA and gives `curl` the bearer header through a mode-`0600` config file, so the token does not appear in the process argument list:
 
   ```bash
+  umask 077
+  diagnostic_dir="$(mktemp -d)"
+  trap 'find "$diagnostic_dir" -type f -delete; rmdir "$diagnostic_dir"' EXIT
+  trap 'exit 1' HUP INT TERM
+
   kubectl -n kube-system get secret stackdome-admin-token \
-    -o jsonpath='{.data.token}' | base64 -d | \
-    xargs -I{} curl -sk -o /dev/null -w '%{http_code}\n' \
-    -H 'Authorization: Bearer {}' https://203.0.113.10:6443/api
+    -o jsonpath='{.data.ca\.crt}' | base64 --decode \
+    > "$diagnostic_dir/cluster-ca.crt"
+
+  {
+    printf 'url = "https://203.0.113.10:6443/api"\n'
+    printf 'cacert = "%s"\n' "$diagnostic_dir/cluster-ca.crt"
+    printf 'header = "Authorization: Bearer '
+    kubectl -n kube-system get secret stackdome-admin-token \
+      -o jsonpath='{.data.token}' | base64 --decode | tr -d '\r\n'
+    printf '"\n'
+    printf 'silent = true\nshow-error = true\n'
+    printf 'output = "/dev/null"\nwrite-out = "%%{http_code}\\n"\n'
+  } > "$diagnostic_dir/curl.conf"
+
+  curl --config "$diagnostic_dir/curl.conf"
   ```
 
-  `200` means the credential is good. `401` means the token is wrong, was pasted still base64-encoded, or has expired because it came from `kubectl create token` instead of the Secret. `403` means the token authenticates but the ClusterRoleBinding did not apply.
+  `200` means the CA and credential are good. A certificate error means the endpoint does not present a certificate trusted by the collected CA; stop rather than bypassing verification. `401` means the token is wrong, was pasted still base64-encoded, or has expired because it came from `kubectl create token` instead of the Secret. `403` means the token authenticates but the ClusterRoleBinding did not apply. The shell trap deletes the CA and credential-bearing config when the diagnostic exits.
 
 - **The agent is actually running.** Credentials and reachability can both be fine while nothing reconciles. Check the operator on the target cluster:
 

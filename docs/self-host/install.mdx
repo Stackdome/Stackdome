@@ -126,6 +126,20 @@ With the API server up, the installer finishes the setup through Stackdome's own
 The in-cluster registry belongs to the cluster and is created with it. It is not one of the entries on the **Image registries** page — that page is for credentials you add for external registries, and it is empty on a fresh install.
 </Note>
 
+<Visibility for="humans">
+
+## Sign in and confirm the dashboard
+
+Open the dashboard URL from the installer summary. Sign in with the email passed to `--email` and the generated admin password that you saved from the summary.
+
+![The Stackdome sign-in form, headed "Welcome back.", with empty Email and Password fields and a Continue button](/images/quickstart-sign-in.png)
+
+Choose **Continue →**. A successful sign-in opens **Stacks**, where you can confirm the dashboard is available and the installed organization is ready for applications.
+
+![The Stacks list, with a "Filter stacks" box above stack cards showing resource and volume counts, an OK status, and when each stack last changed](/images/quickstart-dashboard.png)
+
+</Visibility>
+
 ## TLS
 
 What the installer does about certificates depends on the shape of your domain. A domain ending in `.nip.io`, `.sslip.io`, `.local`, or `.localhost` is classified as a non-TLS domain; any other non-empty domain is classified as a real one.

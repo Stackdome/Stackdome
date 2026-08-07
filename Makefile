@@ -1,4 +1,5 @@
 DOCKER ?= docker
+OPENAPI_GENERATOR_IMAGE ?= openapitools/openapi-generator-cli:v6.0.1
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
@@ -9,7 +10,7 @@ IMAGE_TAG ?= $(IMAGE_REPO):$(VERSION)
 
 generate:
 	rm -rf pkg/api/openapi
-	$(DOCKER) run -v ${PWD}:/local:rw openapitools/openapi-generator-cli:v6.0.1 generate -i /local/config/openapi/stackdome_api.yaml -g go -o /local/pkg/api/openapi
+	$(DOCKER) run -v ${PWD}:/local:rw $(OPENAPI_GENERATOR_IMAGE) generate -i /local/config/openapi/stackdome_api.yaml -g go -o /local/pkg/api/openapi
 	gofmt -w pkg/api/openapi
 	rm pkg/api/openapi/go.mod
 	rm pkg/api/openapi/go.sum
@@ -19,7 +20,14 @@ docs-openapi:
 	cp pkg/api/openapi/api/openapi.yaml docs/openapi.yaml
 .PHONY: docs-openapi
 
-docs-openapi-check:
+docs-openapi-source-check:
+	@$(DOCKER) run --rm -v ${PWD}:/local:ro --entrypoint /bin/sh $(OPENAPI_GENERATOR_IMAGE) -c '\
+		docker-entrypoint.sh generate -i /local/config/openapi/stackdome_api.yaml -g go -o /tmp/stackdome-openapi >/dev/null && \
+		cmp -s /tmp/stackdome-openapi/api/openapi.yaml /local/pkg/api/openapi/api/openapi.yaml' || \
+		(echo "pkg/api/openapi is stale; run make generate" && exit 1)
+.PHONY: docs-openapi-source-check
+
+docs-openapi-check: docs-openapi-source-check
 	cmp -s pkg/api/openapi/api/openapi.yaml docs/openapi.yaml || (echo "docs/openapi.yaml is stale; run make docs-openapi" && exit 1)
 .PHONY: docs-openapi-check
 
