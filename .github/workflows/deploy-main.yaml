@@ -193,13 +193,61 @@ jobs:
             IMAGE="$BUILT_IMAGE"
           fi
           echo "deploying $IMAGE"
-          ssh $SSH_OPTS "$BOX_SSH_USER@$BOX_SSH_HOST" bash -s <<EOF
+
+          PLATFORM_CONFIGURED=false
+          REMOTE_TOKEN_FILE=""
+          cleanup_remote_token() {
+            if [ -n "$REMOTE_TOKEN_FILE" ]; then
+              ssh $SSH_OPTS "$BOX_SSH_USER@$BOX_SSH_HOST" \
+                "rm -f -- '$REMOTE_TOKEN_FILE'" || true
+            fi
+          }
+          trap cleanup_remote_token EXIT
+          if [ -n "$PLATFORM_BASE_DOMAIN" ] || [ -n "$PLATFORM_CLOUDFLARE_TOKEN" ]; then
+            if [ -z "$PLATFORM_BASE_DOMAIN" ] || [ -z "$PLATFORM_CLOUDFLARE_TOKEN" ]; then
+              echo "PLATFORM_BASE_DOMAIN and PLATFORM_DNS_CLOUDFLARE_API_TOKEN must be configured together" >&2
+              exit 1
+            fi
+            PLATFORM_CONFIGURED=true
+            CREATED_TOKEN_FILE=$(ssh $SSH_OPTS "$BOX_SSH_USER@$BOX_SSH_HOST" \
+              'umask 077; mktemp /tmp/stackdome-platform-cloudflare-token.XXXXXX')
+            if [[ ! "$CREATED_TOKEN_FILE" =~ ^/tmp/stackdome-platform-cloudflare-token\.[A-Za-z0-9]+$ ]]; then
+              echo "failed to create a safe remote token file" >&2
+              exit 1
+            fi
+            REMOTE_TOKEN_FILE=$CREATED_TOKEN_FILE
+            printf '%s' "$PLATFORM_CLOUDFLARE_TOKEN" | \
+              ssh $SSH_OPTS "$BOX_SSH_USER@$BOX_SSH_HOST" "cat > '$REMOTE_TOKEN_FILE'"
+          fi
+
+          IMAGE_B64=$(printf '%s' "$IMAGE" | base64 -w0)
+          BASE_DOMAIN_B64=$(printf '%s' "$PLATFORM_BASE_DOMAIN" | base64 -w0)
+          ACME_ENVIRONMENT_B64=$(printf '%s' "$PLATFORM_ACME_ENVIRONMENT" | base64 -w0)
+          TOKEN_FILE_B64=$(printf '%s' "$REMOTE_TOKEN_FILE" | base64 -w0)
+          ssh $SSH_OPTS "$BOX_SSH_USER@$BOX_SSH_HOST" bash -s -- \
+            "$IMAGE_B64" "$PLATFORM_CONFIGURED" "$BASE_DOMAIN_B64" "$ACME_ENVIRONMENT_B64" \
+            "$TOKEN_FILE_B64" <<'EOF'
           set -euo pipefail
           export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+          IMAGE=$(printf '%s' "$1" | base64 -d)
+          PLATFORM_CONFIGURED=$2
+          PLATFORM_BASE_DOMAIN=$(printf '%s' "$3" | base64 -d)
+          PLATFORM_ACME_ENVIRONMENT=$(printf '%s' "$4" | base64 -d)
+          PLATFORM_TOKEN_FILE=$(printf '%s' "$5" | base64 -d)
+
           chmod +x /usr/local/bin/stackdome-install /usr/local/bin/wait-for-stackresource.sh
-          stackdome-install upgrade --image "$IMAGE"
-          GEN=\$(kubectl get stackresource api-server -n stackdome-control-plane -o jsonpath='{.metadata.generation}')
-          wait-for-stackresource.sh api-server stackdome-control-plane "\$GEN" 600
+          INSTALLER_ARGS=(upgrade --image "$IMAGE")
+          if [ "$PLATFORM_CONFIGURED" = true ]; then
+            trap 'rm -f -- "$PLATFORM_TOKEN_FILE"' EXIT
+            INSTALLER_ARGS+=(
+              --platform-base-domain "$PLATFORM_BASE_DOMAIN"
+              --platform-cloudflare-token-file "$PLATFORM_TOKEN_FILE"
+              --platform-acme-environment "$PLATFORM_ACME_ENVIRONMENT"
+            )
+          fi
+          stackdome-install "${INSTALLER_ARGS[@]}"
+          GEN=$(kubectl get stackresource api-server -n stackdome-control-plane -o jsonpath='{.metadata.generation}')
+          wait-for-stackresource.sh api-server stackdome-control-plane "$GEN" 600
           EOF
         env:
           BOX_SSH_HOST: ${{ secrets.BOX_SSH_HOST }}
@@ -207,3 +255,6 @@ jobs:
           BUILT_IMAGE: ${{ needs.build.outputs.image }}
           INPUT_TAG: ${{ inputs.image_tag }}
           IMAGE_REPO: ${{ vars.IMAGE_REPO || 'quay.io/stackdome/stackdome' }}
+          PLATFORM_BASE_DOMAIN: ${{ vars.PLATFORM_BASE_DOMAIN }}
+          PLATFORM_ACME_ENVIRONMENT: ${{ vars.PLATFORM_ACME_ENVIRONMENT || 'staging' }}
+          PLATFORM_CLOUDFLARE_TOKEN: ${{ secrets.PLATFORM_DNS_CLOUDFLARE_API_TOKEN }}

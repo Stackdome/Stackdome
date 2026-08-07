@@ -49,18 +49,42 @@ var _ = Describe("RenderManifest", func() {
 	})
 
 	Describe("api-server-resource-cr.yaml", func() {
-		It("renders the image and public port", func() {
+		It("renders the image, public port and platform configuration", func() {
+			platformConfig := install.PlatformConfig{
+				BaseDomain:         "apps.example.com",
+				CloudflareAPIToken: "cloudflare-token",
+				ACMEEnvironment:    "staging",
+				ClusterAPIURL:      "https://10.0.0.1:443",
+				ClusterCAData:      "ca-data",
+				ClusterToken:       "cluster-token",
+			}
 			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
 				APIServerImage: "quay.io/stackdome/stackdome:main-abc1234",
 				Domain:         "stackdome.example.com",
 				StackUID:       "5a3a3a1e-0000-4000-8000-000000000001",
 				TLSEnabled:     true,
+				Platform:       platformConfig,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			Expect(yaml.Unmarshal(out, &map[string]any{})).To(Succeed())
 			Expect(string(out)).To(ContainSubstring("uid: \"5a3a3a1e-0000-4000-8000-000000000001\""))
 			Expect(string(out)).To(ContainSubstring("image: \"quay.io/stackdome/stackdome:main-abc1234\""))
 			Expect(string(out)).To(ContainSubstring("fqdn: \"stackdome.example.com\""))
 			Expect(string(out)).To(ContainSubstring("tls: true"))
+			Expect(string(out)).To(ContainSubstring("name: PLATFORM_BASE_DOMAIN"))
+			Expect(string(out)).To(ContainSubstring("key: platform-base-domain"))
+			Expect(string(out)).To(ContainSubstring("name: PLATFORM_DNS_CLOUDFLARE_API_TOKEN"))
+			Expect(string(out)).To(ContainSubstring("key: platform-cloudflare-api-token"))
+			Expect(string(out)).NotTo(ContainSubstring("cloudflare-token"))
+
+			secret, err := install.RenderManifest("bootstrap-secret.yaml", install.TemplateValues{
+				AdminEmail: "admin@example.com",
+				Platform:   platformConfig,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(yaml.Unmarshal(secret, &map[string]any{})).To(Succeed())
+			Expect(string(secret)).To(ContainSubstring("platform-base-domain: \"apps.example.com\""))
+			Expect(string(secret)).To(ContainSubstring("platform-cloudflare-api-token: \"cloudflare-token\""))
 		})
 
 		It("derives SERVER_EXTERNAL_URL from the domain and TLS mode", func() {
@@ -125,13 +149,14 @@ var _ = Describe("RenderManifest", func() {
 			Expect(env["GITHUB_APP_ID"]).To(Equal("4242"))
 		})
 
-		It("omits the cluster-issuer annotation without TLS", func() {
+		It("omits optional TLS and platform configuration when disabled", func() {
 			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
 				Domain:     "stackdome.10.0.0.1.nip.io",
 				TLSEnabled: false,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(out)).NotTo(ContainSubstring("cluster-issuer"))
+			Expect(string(out)).NotTo(ContainSubstring("PLATFORM_BASE_DOMAIN"))
 		})
 	})
 })

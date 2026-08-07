@@ -34,14 +34,21 @@ func usage() {
 	fmt.Println("Usage:")
 	fmt.Println("  stackdome-install install --email you@company.com [--domain stackdome.example.com]")
 	fmt.Println("                            [--image IMAGE] [--chart-version VERSION]")
-	fmt.Println("                            [GitHub flags]")
-	fmt.Println("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION] [GitHub flags]")
+	fmt.Println("                            [GitHub flags] [platform flags]")
+	fmt.Println("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION]")
+	fmt.Println("                              [GitHub flags] [platform flags]")
 	fmt.Println()
 	fmt.Println("GitHub flags (all optional, stored in the bootstrap secret and reused by")
 	fmt.Println("later upgrades unless given again):")
 	fmt.Println("  --github-client-id ID --github-client-secret SECRET   'Sign in with GitHub'")
 	fmt.Println("  --github-app-id ID --github-app-slug SLUG             platform GitHub App")
 	fmt.Println("  --github-app-key-file PATH --github-app-webhook-secret SECRET")
+	fmt.Println()
+	fmt.Println("Platform flags (optional; configure wildcard hostnames and TLS):")
+	fmt.Println("  --platform-base-domain DOMAIN")
+	fmt.Println("  --platform-cloudflare-token-file PATH")
+	fmt.Println("  --platform-acme-environment production|staging")
+	fmt.Println("Only the Cloudflare token may be changed after initial configuration.")
 	fmt.Println()
 	fmt.Println("upgrade reuses the email, domain and secrets of the existing install,")
 	fmt.Println("and keeps the deployed image unless --image is given.")
@@ -54,6 +61,7 @@ func runInstall(args []string) {
 	image := fs.String("image", defaultAPIServerImage, "API server container image")
 	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
 	github := registerGitHubFlags(fs)
+	platform := registerPlatformFlags(fs)
 	_ = fs.Parse(args)
 
 	if *email == "" {
@@ -77,6 +85,9 @@ func runInstall(args []string) {
 	if err := installStackdomeAgent(*chartVersion); err != nil {
 		exitErr("stackdome-agent installation failed", err)
 	}
+	if err := applyAPIServerRBAC(); err != nil {
+		exitErr("API server RBAC installation failed", err)
+	}
 
 	vals := install.TemplateValues{
 		AdminEmail:     *email,
@@ -84,6 +95,17 @@ func runInstall(args []string) {
 		APIServerImage: *image,
 		DBWorkloadType: string(models.WorkloadTypeStatefulService),
 		TLSEnabled:     isTLSDomain(preflight.Domain),
+	}
+	storedPlatform := install.PlatformConfig{}
+	if existingSecrets, readErr := readExistingSecrets(); readErr == nil {
+		storedPlatform = existingSecrets.Platform
+	}
+	vals.Platform, err = platform.resolvePlatformConfig(storedPlatform)
+	if err != nil {
+		exitErr("Reading platform configuration failed", err)
+	}
+	if err := ensurePlatformClusterCredentials(&vals.Platform); err != nil {
+		exitErr("Reading platform cluster credentials failed", err)
 	}
 	if err := github.applyTo(&vals); err != nil {
 		exitErr("Reading GitHub credentials failed", err)
