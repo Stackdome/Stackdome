@@ -35,7 +35,7 @@ Add persistent storage for the data directory used by this service. Declare the 
     Run `stackdome validate`, confirm the active scope with `stackdome whoami -o json`, and run `stackdome deploy --wait -o json`.
   </Step>
   <Step title="Verify persistence resources">
-    Run `stackdome volume list --stack <stack-name> -o json` and `stackdome status -o json`. Confirm the named volume has the expected spec and a non-failed phase, and the converged release is healthy.
+    Poll `stackdome volume list --stack <stack-name> -o json` for at most five minutes. Select the volume by name and require `status.phase` to equal `Ready`; `Pending` is not success. Then run `stackdome status -o json` and require the converged release to be healthy.
   </Step>
   <Step title="Test the application behavior">
     Use an application-specific, reversible write/read check when available. Restart only the affected resource with `stackdome restart <resource>` if the command is appropriate for the service, then confirm the data remains.
@@ -47,7 +47,7 @@ Add persistent storage for the data directory used by this service. Declare the 
 - `stackdome validate` exits successfully with the top-level volume and resource mount present.
 - `stackdome deploy --wait -o json` returns `release.state` as `Released`.
 - `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
-- `stackdome volume list --stack <stack-name> -o json` contains the expected `name`, `spec.size`, `spec.access_mode`, and a phase that is not failed.
+- `stackdome volume list --stack <stack-name> -o json` contains the expected `name`, `spec.size`, and `spec.access_mode`, and that selected volume has `status.phase` equal to `Ready`.
 - An application-specific read after restart returns the data written before restart, when a safe persistence check is available.
 
 ## CLI and Stackfile workflow
@@ -80,14 +80,40 @@ stackdome volume list --stack storefront -o json
 stackdome status -o json
 ```
 
+Wait for the selected volume, not merely the first array entry. This bounded check polls every ten seconds for at most five minutes and exits unsuccessfully unless the phase becomes `Ready`:
+
+```bash
+stack_name=storefront
+volume_name=app-data
+volume_ready=false
+
+for attempt in $(seq 1 30); do
+  phase=$(stackdome volume list --stack "$stack_name" -o json \
+    | jq -r --arg name "$volume_name" \
+      '.[] | select(.name == $name) | .status.phase // empty')
+  if [ "$phase" = "Ready" ]; then
+    volume_ready=true
+    break
+  fi
+  sleep 10
+done
+
+if [ "$volume_ready" != "true" ]; then
+  stackdome volume list --stack "$stack_name" -o json
+  exit 1
+fi
+```
+
+If the volume does not become `Ready`, do not report success and do not delete it automatically. Inspect the selected object's `status.conditions` for its `reason` and `message`. On self-hosted Stackdome, have an administrator correct the default storage class or available capacity; on Stackdome Cloud, route the unresolved provisioning condition to support. If the new mount is blocking the application release, remove only that mount from the Stackfile, validate, and redeploy while the storage issue is investigated. Delete and recreate a newly created empty volume only after explicit approval and after the provisioning cause is corrected.
+
 The CLI also exposes `stackdome volume create`, `list`, and `delete`. `volume create` provisions a volume but does not declare the application mount; for a reproducible application change, keep the definition and mount in `stackfile.yaml` and deploy them together.
 
 Object-store registration and editing remain dashboard/API-only. Once an object store is configured on a PostgreSQL addon, the CLI can trigger and list addon backups as described in [Postgres](/guides/postgres#cli-and-stackfile-workflow).
 
 <Visibility for="agents">
   - Exact Stackfile fields: `volumes.<name>.size` and optional `volumes.<name>.access_mode` define storage; `resources.<resource>.volumes[]` requires `name` and absolute `path`.
-  - Parse `volume list` as an array and locate the volume by `name`; do not rely on array order. Require the declared `spec.size` and `spec.access_mode`, then require the release and health checks before reporting success.
-  - Recovery: if the new mount prevents startup, remove only that mount from the Stackfile, validate, and redeploy. Inspect `stackdome release events <release-id> --follow`, `stackdome status --conditions`, and `stackdome logs <resource> --tail 100` before changing storage.
+  - Parse `volume list` as an array and locate the volume by `name`; do not rely on array order. Within a bounded five-minute wait, require the declared `spec.size`, `spec.access_mode`, and `status.phase == "Ready"`, then require the release and health checks before reporting success. `Pending` never satisfies the gate.
+  - Recovery: if the volume is not `Ready` after the bounded wait, inspect that selected volume's `status.conditions[].reason` and `.message`, stop the success path, and route the storage-class or capacity problem to the destination administrator or Cloud support. If the new mount prevents startup, remove only that mount from the Stackfile, validate, and redeploy. Inspect `stackdome release events <release-id> --follow`, `stackdome status --conditions`, and `stackdome logs <resource> --tail 100` before changing storage.
   - Never delete an existing volume automatically. After explicit approval and after its mounts have been removed and deployed, `stackdome volume delete <name> --stack <stack-name> --yes` permanently destroys the data and cannot be undone.
 </Visibility>
 

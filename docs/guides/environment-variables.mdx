@@ -27,7 +27,7 @@ Configure this application's required environment variables in its Stackfile. Ke
     Read the repository's example environment file, configuration schema, startup code, and deployment notes. Classify every required value as literal, secret, resource output, or addon output; do not invent defaults for required credentials.
   </Step>
   <Step title="Create a secret when needed">
-    Put the required `KEY=VALUE` pairs in a local file that is excluded from version control, then run `stackdome secret create <secret-name> --from-file <path> -o json`. Use `stackdome secret set` when that named secret already exists.
+    Put the required `KEY=VALUE` pairs in a local file that is excluded from version control, then run `stackdome secret create <secret-name> --from-file <path> -o json`. Prefer a new application-specific secret. `stackdome secret set` replaces the named secret's complete data set, so use it only with a complete user-supplied replacement file containing every key that must remain.
   </Step>
   <Step title="Edit the Stackfile">
     Put literal and resource-derived values under the resource's `env`. Put secret-key mappings under `secrets`, and Postgres connection mappings under `addons`. The Stackfile contains secret names and keys, never secret values.
@@ -44,6 +44,7 @@ Configure this application's required environment variables in its Stackfile. Ke
 
 - `stackdome validate` exits successfully.
 - `stackdome secret info <name> -o json` identifies the expected secret name and key names without revealing their values.
+- If `stackdome secret set` was used, its input was a complete user-supplied replacement file and `secret info` still lists every key that must remain.
 - `stackdome deploy --wait -o json` exits successfully and returns `release.state` as `Released`.
 - `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
 - The application starts without a missing-variable or connection error, and neither the committed Stackfile nor the agent response contains a secret value.
@@ -58,6 +59,10 @@ stackdome secret create storefront-secrets \
   -o json
 stackdome secret info storefront-secrets -o json
 ```
+
+<Warning>
+  `stackdome secret set` is replacement, not merge. The submitted `--data` values or `--from-file` contents become the secret's complete data set, and any existing key omitted from that input is removed. For a rotation, either create a new application-specific secret or require the user to supply a complete replacement file containing the new value and every other key that must remain. Stackdome does not reveal existing values, so an agent cannot safely reconstruct or partially patch a shared secret from `secret info`.
+</Warning>
 
 Connect values in the Stackfile. This example combines a literal, another resource's generated host, and a secret key:
 
@@ -93,7 +98,8 @@ stackdome status -o json
   - Exact Stackfile fields: literals and resource output templates belong in `resources.<resource>.env`; secret references belong in `resources.<resource>.secrets.<secret-name>.<ENV_NAME>`.
   - Parse only structured `stdout`. Confirm `release.state == "Released"`, `converged_release.state == "Released"`, and `converged_release.health == "ok"`.
   - Never run an environment dump to test a secret. Use `stackdome secret info <name> -o json` to check metadata and key names, then use application-specific readiness or logs.
-  - Recovery: correct the mapping and rerun `stackdome validate`; use `stackdome secret set <name> --from-file <path> -o json` to rotate values; use `stackdome release events <release-id> --follow` and `stackdome logs <resource> --tail 100` for a failed release. Delete a secret with `stackdome secret delete <name> --yes` only after every Stackfile reference has been removed and deployed.
+  - Never use `stackdome secret set` for a partial key rotation. It replaces the complete data set. Prefer a new application-specific secret, or use `stackdome secret set <name> --from-file <path> -o json` only when the user supplied a complete replacement file containing every key that must remain; verify the full key-name set afterwards with `secret info`.
+  - Recovery: correct the mapping and rerun `stackdome validate`; use `stackdome release events <release-id> --follow` and `stackdome logs <resource> --tail 100` for a failed release. Delete a secret with `stackdome secret delete <name> --yes` only after every Stackfile reference has been removed and deployed.
 </Visibility>
 
 <Visibility for="humans">
