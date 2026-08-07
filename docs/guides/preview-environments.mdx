@@ -119,7 +119,7 @@ That is enough to get an environment. The rules those five keys follow:
 
 - `name` and at least one entry under `resources` are required.
 - Each resource needs exactly one source — `build`, to build from git, or `image`, to run a prebuilt one. Never both.
-- A `build` needs `repo`, plus at most one of `branch`, `tag` or `commit`. Setting none of the three is fine — the repository's default branch is used.
+- A `build` needs `repo`. `branch` and `tag` are mutually exclusive; `commit` is an optional pin and requires one of them. Setting no revision fields uses the repository's default branch.
 - Each port needs a `name` and a valid port number. `public: true` is what earns it a URL; a port without it stays internal to the stack.
 
 One thing to expect: on a preview, Stackdome rewrites the branch of any resource whose `build.repo` matches the configuration's repository, pinning it to the pull request's head commit. So `branch: main` above does not mean previews build `main` — it is only what that resource does outside a preview.

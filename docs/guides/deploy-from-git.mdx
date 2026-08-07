@@ -116,7 +116,7 @@ resources:
     volumes:
       - name: redis
         path: /data
-    stateful: true
+    workload_type: StatefulService
 
 volumes:
   redis:
@@ -124,7 +124,7 @@ volumes:
     access_mode: ReadWriteOnce
 ```
 
-The two build contexts are relative to the repository root, not to the directory where you ran the CLI. `{{ redis.host }}` creates the resource connection and supplies the destination hostname to both Node.js processes. Omit `branch` to let the server resolve the repository's default branch, or use exactly one of `tag` or `commit`. A commit is the reproducible choice. See the [Stackfile guide](/guides/stackfile) for the Compose conversion details and the [Stackfile reference](/reference/stackfile) for every field.
+The two build contexts are relative to the repository root, not to the directory where you ran the CLI. `{{ redis.host }}` creates the resource connection and supplies the destination hostname to both Node.js processes. Omit `branch` and `tag` to let the server resolve the repository's default branch. To pin a commit, set `commit` together with the branch or tag from which Stackdome can fetch it. See the [Stackfile guide](/guides/stackfile) for the Compose conversion details and the [Stackfile reference](/reference/stackfile) for every field.
 
 Validate before authentication or deployment:
 

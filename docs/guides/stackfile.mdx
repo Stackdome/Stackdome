@@ -105,7 +105,7 @@ resources:
     volumes:
       - name: redis
         path: /data
-    stateful: true
+    workload_type: StatefulService
 
 volumes:
   redis:
