@@ -96,7 +96,7 @@ export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
 
 ### In the cluster
 
-Everything lands in the `stackdome-control-plane` namespace.
+Namespaced installation resources land in `stackdome-control-plane`: the chart workloads, ServiceAccount and token Secret, bootstrap Secret, Volume, Stack, and StackResources. The installer also applies cluster-scoped resources: the chart's CRDs, `stackdome-api-server-role` ClusterRole, `stackdome-api-server-role-binding` ClusterRoleBinding, and, for a real domain, the `letsencrypt-prod` ClusterIssuer. Those cluster-scoped resources do not belong to any namespace.
 
 - **The `stackdome-agent` chart**, installed from `oci://quay.io/stackdome/charts/stackdome-agent` at the version selected by `--chart-version`. Before upgrading, the installer server-side applies every CRD shipped by the chart. It then runs `helm upgrade --install` and waits for the chart and operator pods to be ready. If that exact chart version is already deployed, it skips the chart upgrade.
 - **A bootstrap Secret**, `stackdome-bootstrap-secrets`, holding the credentials the installer generated: the database password, the JWT signing secret, the encryption key, your admin password, plus your admin email and the domain.

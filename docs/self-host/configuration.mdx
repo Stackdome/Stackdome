@@ -84,7 +84,7 @@ Rotating `JWT_SECRET` is safe by comparison: it only invalidates tokens that are
 | --- | --- | --- | --- |
 | `GITHUB_CLIENT_ID` | No | — | GitHub OAuth app client ID |
 | `GITHUB_CLIENT_SECRET` | No | — | GitHub OAuth app client secret |
-| `GITHUB_REDIRECT_URI` | No | `<SERVER_EXTERNAL_URL>/auth/github/callback` | Where GitHub sends the browser after the user authorizes. Set it explicitly only when that derived browser callback is not correct for your deployment. |
+| `GITHUB_REDIRECT_URI` | No | Conditionally derived | Where GitHub sends the browser after the user authorizes. When this variable is empty and `SERVER_EXTERNAL_URL` is non-empty, the server derives `<SERVER_EXTERNAL_URL>/auth/github/callback`. If both are empty, the redirect URI stays empty. |
 | `GITHUB_API_BASE_URL` | No | `https://api.github.com` | GitHub API endpoint. Point this at your GitHub Enterprise Server instance if you do not use github.com. |
 
 GitHub sign-in is off until **both** the client ID and the client secret are set. Only then does the server register the `/api/v1/auth/github` routes, and only then does the web UI show the "Continue with GitHub" button — the UI reads that state from `GET /api/v1/config`, so setting one of the two without the other leaves sign-in exactly as it was.
@@ -92,6 +92,8 @@ GitHub sign-in is off until **both** the client ID and the client secret are set
 ### Setting the redirect URI
 
 `GITHUB_REDIRECT_URI` must equal your frontend origin plus `/auth/github/callback`, and it must match the **Authorization callback URL** registered on the GitHub OAuth app exactly. GitHub rejects the sign-in attempt if the two differ.
+
+Set either `SERVER_EXTERNAL_URL` so the server can derive this value, or set `GITHUB_REDIRECT_URI` explicitly. Without either value, the GitHub browser flow has no redirect URI.
 
 ```bash
 # Frontend origin is https://stackdome.example.com
