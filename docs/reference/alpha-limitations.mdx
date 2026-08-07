@@ -1,0 +1,17 @@
+---
+title: "Alpha limitations"
+description: "Current Stackdome Cloud availability, lifecycle, connected-compute, and multi-cluster limits."
+---
+
+Stackdome is in alpha. Plan around these current limits:
+
+| Area | Alpha behavior | User continuation |
+| --- | --- | --- |
+| Cloud availability | Open while capacity is available | Join the availability list or self-host |
+| Cloud lifecycle | Ephemeral | Use self-hosted Stackdome for infrastructure you control |
+| Connected compute | One cluster per organization | Replace the connected cluster if necessary |
+| Multi-cluster | Not selectable during alpha | No user-facing multi-cluster workflow yet |
+
+Cloud and self-hosted installations use the same Stackfile and CLI workflow. If Cloud capacity or ephemerality does not fit the task, follow the [self-hosted installation guide](/self-host/install).
+
+There is no user-facing cluster selector during alpha. Do not present multi-cluster placement as an available deployment choice.

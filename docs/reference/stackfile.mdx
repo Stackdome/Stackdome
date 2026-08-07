@@ -1,19 +1,18 @@
 ---
-title: "stackfile.yaml"
-description: "Reference for the stackfile.yaml format: every field, its type, and its rules."
-sidebarTitle: "stackfile.yaml"
+title: "Stackfile reference"
+description: "The declared Stackfile schema for resources, builds, ports, environment values, secrets, addons, dependencies, and volumes."
 ---
 
-A **stackfile** is a YAML file, committed to a git repository, that describes a whole Stackdome **stack**: its name, its **resources**, their **sources**, **ports**, **environment**, **volumes**, and **addons**. Stackdome reads it at a specific commit and materialises a stack from it.
+A Stackfile is a YAML deployment definition consumed by `stackdome deploy`. Generate it with `stackdome init`, then run `stackdome validate` after every edit.
 
-Today the stackfile is consumed by **Previews** — see [Preview environments](/guides/preview-environments) for how a pull request turns into a running environment. The file itself is described here.
+<Warning>
+  The installed CLI is the execution authority. If this reference, the declared schema, and a release candidate differ, follow `stackdome validate` and the behavior of that release. The current release candidate does not map the schema's `stateful` key into the generated stack; do not rely on that key to change workload behavior.
+</Warning>
 
-The default path is `stackfile.yaml` at the repository root. Previews configuration can point at a different path.
+## Complete example
 
-## Minimal example
-
-```yaml stackfile.yaml
-name: hello-stack
+```yaml
+name: storefront
 
 resources:
   web:
@@ -21,227 +20,202 @@ resources:
     ports:
       - name: http
         port: 80
+        protocol: HTTP
         public: true
-```
-
-This names a stack, declares one resource, gives it an image source, and exposes one public port. That is the smallest file that produces a working environment.
-
-## Top-level fields
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `name` | string | Yes | The stack name. Lowercase letters, digits, and hyphens. Must be unique in the organization outside of Previews; Previews derives per-environment names from it. |
-| `resources` | map | Yes | At least one entry. Keys are resource names, values are [resource objects](#resource). |
-| `addons` | list | No | [Addon references](#addons) to link into the stack. |
-
-## Resource
-
-Each key under `resources` is the resource name and each value is an object with these fields:
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `build` | object | One of `build` or `image` | Build the image from a git repository. See [build](#build). |
-| `image` | object | One of `build` or `image` | Run a prebuilt container image. See [image](#image). |
-| `ports` | list | No | Ports the resource exposes. See [ports](#ports). |
-| `env` | map | No | Environment variables. See [env](#env). |
-| `command` | list of strings | No | Overrides the container's entrypoint. |
-| `args` | list of strings | No | Overrides the container's command arguments. |
-| `replicas` | integer | No | Number of replicas. Defaults to `1`. |
-| `depends_on` | list of strings | No | Names of other resources in the same stack that must start first. |
-| `volumes` | list | No | Volume mounts. See [volumes](#volumes). |
-
-Resource names are lowercase, unique within the stack, and cannot contain spaces.
-
-A resource must have exactly one source. Setting both `build` and `image` is rejected with `source_conflict`; setting neither is rejected with `source_required`.
-
-### build
-
-Build the image from a git repository. Stackdome clones the repository, builds the `Dockerfile`, and pushes the result to the image registry inside your cluster.
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `repo` | string | Yes | The git repository URL, for example `https://github.com/acme/web`. |
-| `branch` | string | No | Branch to build. |
-| `tag` | string | No | Tag to build. |
-| `commit` | string | No | Commit SHA to build. |
-| `dockerfile` | string | No | Path to the Dockerfile relative to the build context. Defaults to `Dockerfile`. |
-| `context` | string | No | Build context path. Defaults to `.`. |
-
-At most one of `branch`, `tag`, or `commit` may be set. Setting none uses the repository's default branch.
-
-<Note>
-  In a preview, Stackdome rewrites the branch of any resource whose `build.repo` matches the configuration's repository, pinning it to the pull request's head commit. So `branch: main` becomes the pull request's head commit inside a preview.
-</Note>
-
-### image
-
-Run a prebuilt container image.
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `image` | string | Yes | The image reference, for example `postgres:16` or `ghcr.io/acme/api:v2`. |
-| `registry_credential` | string | No | Name of an **Image Registry** credential to pull the image with. Required for private images. |
-
-Shorthand: a resource may set `image:` to a plain string instead of an object when no credential is needed.
-
-```yaml
-resources:
-  cache:
-    image: redis:7
-```
-
-## Ports
-
-`ports` is a list of port objects.
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `name` | string | Yes | 1–15 characters, lowercase letters, digits, and hyphens, with at least one letter, and no leading, trailing, or consecutive hyphens. Invalid names return `port_name_invalid`. |
-| `port` | integer | Yes | Port number the container listens on. |
-| `protocol` | string | No | `http` or `tcp`. Defaults to `http`. |
-| `public` | boolean | No | When `true`, Stackdome publishes the port at a hostname on your domain. Defaults to `false`. |
-| `subdomain` | string | No | Only for public ports. Chooses the hostname prefix. A preview prefixes this again with `pr-<number>-`. |
-
-A port without `public: true` is reachable only by other resources in the same stack.
-
-## env
-
-`env` is a map of environment variable names to values. Each value is either a string, for a plain literal, or an object that references another source.
-
-```yaml
-resources:
-  web:
+        subdomain: storefront
     env:
-      LOG_LEVEL: info
-      DATABASE_URL:
-        addon: main-db
-        output: url
-      API_KEY:
-        secret: acme-api
-        key: token
-      QUEUE_HOST:
-        resource: worker
-        output: host
-```
-
-| Source | Fields | Description |
-| --- | --- | --- |
-| **Plain** | a string value | Stored on the resource as-is. |
-| **Secret** | `secret`, `key` | Reads `key` from the named organization secret. Only Generic secrets. |
-| **Addon** | `addon`, `output`, optionally `database` | Reads a field like `host`, `port`, or `url` from a linked addon. `database` selects one when the addon has multiple. |
-| **Resource** | `resource`, `output`, optionally `port` | Reads an output from another resource in the same stack, such as `host`, `port`, or `url` of one of its ports. |
-
-Secret and addon references resolve at deploy time. The secret or addon must exist in the organization before the deploy runs.
-
-See [Environment variables and secrets](/guides/environment-variables) for how these sources behave at runtime.
-
-## Volumes
-
-A resource declares its mounts inline under `volumes`. Stackdome creates the underlying volume on the stack from these entries.
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `name` | string | Yes | Volume name. Unique within the stack. |
-| `mount` | string | Yes | Absolute path inside the container, for example `/var/lib/data`. |
-| `size` | string | Yes on first declaration | Kubernetes size string, for example `1Gi` or `10Gi`. |
-
-A volume with the same `name` mounted into multiple resources is one shared volume. Only the first declaration needs `size`.
-
-```yaml
-resources:
-  db:
-    image: postgres:16
+      APP_ENV: production
+      CACHE_HOST: "{{ cache.host }}"
+    secrets:
+      storefront-api:
+        API_KEY: api_key
+    addons:
+      storefront-db:
+        type: postgres
+        database: storefront
+        superuser: false
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
     volumes:
-      - name: pgdata
-        mount: /var/lib/postgresql/data
-        size: 10Gi
-```
-
-## Addons
-
-`addons` at the top level lists managed addons to link into the stack. Linking makes the addon available to `env` entries with source `addon`.
-
-| Field | Type | Required | Notes |
-| --- | --- | --- | --- |
-| `name` | string | Yes | Name of an existing addon in the organization. |
-
-```yaml
-addons:
-  - name: main-db
-
-resources:
-  api:
-    image: ghcr.io/acme/api:v2
-    env:
-      DATABASE_URL:
-        addon: main-db
-        output: url
-```
-
-An addon has to exist and be linkable before a deploy; a missing addon fails the deploy.
-
-## Validation rules
-
-Stackdome rejects a stackfile at deploy time when:
-
-- `name` is missing or empty.
-- `resources` is missing or empty.
-- A resource sets both `build` and `image` (`source_conflict`).
-- A resource sets neither `build` nor `image` (`source_required`).
-- A `build` sets more than one of `branch`, `tag`, `commit`.
-- A port name violates the naming rules (`port_name_invalid`).
-- `depends_on` references a resource that does not exist in the stack.
-- An `env` entry references a secret, addon, or resource that cannot be resolved.
-
-Inside Previews, a failure at any of these steps surfaces as a **Failed** environment with the reason recorded on the sticky comment and the environment card.
-
-## Full example
-
-```yaml stackfile.yaml
-name: example-stack
-
-addons:
-  - name: main-db
-
-resources:
-  web:
-    build:
-      repo: https://github.com/example/example-app
-      branch: main
-      dockerfile: Dockerfile
-      context: .
-    replicas: 2
+      - name: web-data
+        path: /usr/share/nginx/html
     depends_on:
-      - worker
-    ports:
-      - name: http
-        port: 3000
-        protocol: http
-        public: true
-        subdomain: app
-    env:
-      LOG_LEVEL: info
-      DATABASE_URL:
-        addon: main-db
-        output: url
-      API_KEY:
-        secret: example-api
-        key: token
-
-  worker:
-    build:
-      repo: https://github.com/example/example-app
-      branch: main
-    command: ["node", "worker.js"]
-    env:
-      DATABASE_URL:
-        addon: main-db
-        output: url
+      - cache
 
   cache:
-    image: redis:7
+    image: redis:7-alpine
     ports:
       - name: redis
         port: 6379
-        protocol: tcp
+        protocol: TCP
+
+volumes:
+  web-data:
+    size: 1Gi
+    access_mode: ReadWriteOnce
 ```
+
+## Top-level properties
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `name` | string | Required, non-empty; no default. Must be unique within the project. | `storefront` |
+| `resources` | map of resource name to resource object | Required with at least one entry; no default. | `web: { image: nginx:latest }` |
+| `volumes` | map of volume name to volume definition | Optional; no volumes by default. | `web-data: { size: 1Gi }` |
+
+Only the listed top-level keys are part of the declared schema.
+
+## Resource properties
+
+Each key under `resources` is the resource name. A resource must contain exactly one of `image` or `build`.
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `image` | string | Required when `build` is absent; no default. Mutually exclusive with `build`. | `nginx:latest` |
+| `build` | build object | Required when `image` is absent; no default. Mutually exclusive with `image`. | `{ repo: https://github.com/acme/storefront.git }` |
+| `ports` | array of port objects | Optional; no ports by default. | `[{ name: http, port: 8080, public: true }]` |
+| `env` | map of string to string | Optional; no environment entries by default. | `{ APP_ENV: production }` |
+| `secrets` | map of secret name to secret mapping | Optional; no secret connections by default. | `storefront-api: { API_KEY: api_key }` |
+| `addons` | map of addon name to addon connection object | Optional; no addon connections by default. | `storefront-db: { type: postgres, env: { DB_HOST: "{{ host }}" } }` |
+| `volumes` | array of volume mount objects | Optional; no mounts by default. Every name must exist in top-level `volumes`. | `[{ name: web-data, path: /data }]` |
+| `depends_on` | array of strings | Optional; no dependencies by default. Every value must name another resource. | `[cache]` |
+| `stateful` | boolean | Optional; schema default is `false`. The current release candidate does not map this key into the generated stack. | `true` |
+
+## Build properties
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `repo` | string | Required and non-empty; no default. | `https://github.com/acme/storefront.git` |
+| `branch` | string | Optional. Mutually exclusive with `tag` and `commit`. Although the schema describes `main`, the current CLI leaves an omitted revision unset so the server resolves the repository's default branch. | `main` |
+| `tag` | string | Optional; no default. Mutually exclusive with `branch` and `commit`. | `v1.4.0` |
+| `commit` | string | Optional; no default. Mutually exclusive with `branch` and `tag`. | `4b1c97a8f1d0c04366f8906c5bfa6f6fffe32a19` |
+| `dockerfile` | string | Optional; defaults to `Dockerfile`. | `docker/Dockerfile.prod` |
+| `context` | string | Optional; defaults to `.`. | `services/web` |
+
+Specify at most one revision selector. When none is set, the release candidate asks the server to resolve the repository's default branch.
+
+```yaml
+resources:
+  api:
+    build:
+      repo: https://github.com/acme/storefront.git
+      branch: main
+      dockerfile: services/api/Dockerfile
+      context: services/api
+```
+
+## Port properties
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `name` | string | Required and non-empty; no default. | `http` |
+| `port` | integer | Required; no default. Must be from `1` through `65535`. | `8080` |
+| `protocol` | string enum | Optional; schema default is `HTTP`. Allowed values are `HTTP` and `TCP`. | `TCP` |
+| `public` | boolean | Optional; defaults to `false`. | `true` |
+| `subdomain` | string | Optional and non-empty when present; no default. Applies to a public port. | `api` |
+
+A port name is also used in output accessors. With one port, use outputs such as `port`, `url`, `public_host`, and `public_url`. With multiple ports, append the port name, such as `url.http`.
+
+## Environment properties
+
+`env` is a map whose keys are environment variable names and whose values are strings. It is optional and has no entries by default.
+
+```yaml
+env:
+  APP_ENV: production
+  SELF_URL: "{{ self.public_url }}"
+  CACHE_HOST: "{{ cache.host }}"
+  CACHE_URL: "redis://{{ cache.host }}:6379"
+```
+
+Values can be:
+
+| Form | Type and requirement | Example |
+| --- | --- | --- |
+| Literal | String; no default. | `APP_ENV: production` |
+| Self output | String containing only one self reference. | `SELF_URL: "{{ self.public_url }}"` |
+| Resource output | String containing one resource reference. | `CACHE_HOST: "{{ cache.host }}"` |
+| Embedded resource template | String whose references all come from the same resource. | `CACHE_URL: "redis://{{ cache.host }}:6379"` |
+
+Available resource outputs are `host`; port and URL outputs; and public host and URL outputs for public ports. `stackdome validate` checks output names against the referenced resource's ports.
+
+## Secret mappings
+
+`secrets` maps a Stackdome secret name to one or more environment-variable mappings. Each mapping value is the key inside the secret.
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| Secret name | map key | Required for each mapping; no default. Resolved to a secret ID during deploy. | `storefront-api` |
+| Environment mapping | map of environment variable name to non-empty secret key | At least one entry is required; no default. | `API_KEY: api_key` |
+
+```yaml
+secrets:
+  storefront-api:
+    API_KEY: api_key
+    API_SECRET: api_secret
+```
+
+The Stackfile names secret keys; it does not contain secret values.
+
+## Addon connections
+
+`addons` maps an addon name to a connection object. Addon names are resolved to IDs during deploy.
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `type` | string enum | Required; no default. The declared schema supports `postgres`. | `postgres` |
+| `env` | map of string to string | Required with at least one entry; no default. Values use addon output references. | `DB_HOST: "{{ host }}"` |
+| `database` | string | Optional and non-empty when present; no default. Selects a database in the Postgres addon. | `storefront` |
+| `superuser` | boolean | Optional; defaults to `false`. | `false` |
+
+Postgres outputs are `host`, `port`, `database`, `username`, `password`, `sslmode`, `ca_certificate`, and `url`. Values may be direct references or templates:
+
+```yaml
+addons:
+  storefront-db:
+    type: postgres
+    database: storefront
+    env:
+      DB_HOST: "{{ host }}"
+      DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+```
+
+## Volume definitions and mounts
+
+Top-level `volumes` defines storage. A resource's `volumes` array mounts that storage.
+
+### Volume definition
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `size` | string | Required and non-empty; no default. Uses a quantity such as `500Mi` or `10Gi`. | `5Gi` |
+| `access_mode` | string enum | Optional; defaults to `ReadWriteOnce`. Allowed values are `ReadWriteOnce`, `ReadWriteMany`, and `ReadOnlyMany`. | `ReadWriteMany` |
+
+### Volume mount
+
+| Field | Type | Required and default | Example |
+| --- | --- | --- | --- |
+| `name` | string | Required and non-empty; no default. Must match a top-level volume name. | `web-data` |
+| `path` | string | Required and non-empty; no default. Must be an absolute container path. | `/var/lib/storefront` |
+
+## Dependencies
+
+`depends_on` is an optional array of resource names with no default entries. Each value must identify another resource in the same Stackfile; a resource cannot depend on itself.
+
+```yaml
+resources:
+  api:
+    image: ghcr.io/acme/storefront-api:1.4.0
+    depends_on:
+      - cache
+  cache:
+    image: redis:7-alpine
+```
+
+## Validate the file
+
+```bash
+stackdome validate --file stackfile.yaml
+```
+
+Validation checks the file available to the installed release candidate. Run it again whenever you change a field or upgrade the CLI.

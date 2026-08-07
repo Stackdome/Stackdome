@@ -1,0 +1,77 @@
+---
+title: "Create a Stackfile"
+description: "Generate a Stackfile from repository evidence, review Compose conversion warnings, and validate it before deployment."
+---
+
+Start by running `stackdome init` from the repository root. The initializer creates `stackfile.yaml`; use that generated file as your starting point instead of writing one from memory.
+
+```bash
+stackdome init
+```
+
+If a Compose file is present, the initializer converts it automatically. Otherwise, it creates a starter Stackfile named after the current directory.
+
+## Convert a Compose file
+
+`stackdome init` checks the repository root for these files, in order:
+
+```text
+docker-compose.yaml
+docker-compose.yml
+compose.yaml
+compose.yml
+```
+
+Specify a different Compose file with:
+
+```bash
+stackdome init --file deploy/compose.yaml
+```
+
+The conversion writes `stackfile.yaml`, lists the resources and volumes it found, and validates the result. Read every warning before continuing. In particular:
+
+- A local Compose build does not identify a Git repository. Set `build.repo` to the repository URL.
+- A service without an image or build configuration needs one before it can deploy.
+- A Compose `env_file` is reported as a warning. Add its path as `env_file` under the converted resource if the deployment should load it.
+
+The converter may write the file even when the generated configuration does not pass validation. Treat the generated file as a draft and correct every reported problem.
+
+<Note>
+  `stackdome init` refuses to replace an existing `stackfile.yaml`. Review the file before using `--force`, which overwrites it.
+</Note>
+
+## Start with one resource
+
+This minimal Stackfile runs the published `nginx:latest` image and exposes the port nginx listens on:
+
+```yaml
+name: nginx-demo
+
+resources:
+  web:
+    image: nginx:latest
+    ports:
+      - name: http
+        port: 80
+        public: true
+```
+
+`name` identifies the stack. Each key under `resources` identifies one containerized resource. A resource must select exactly one source: `image` for a pre-built image or `build` for a Git build.
+
+Use the [Stackfile reference](/reference/stackfile) when you add build settings, environment variables, secrets, addons, dependencies, or storage.
+
+## Validate before deploying
+
+Run validation after every edit:
+
+```bash
+stackdome validate
+```
+
+To validate a file at another path, use the flag reported by the installed CLI:
+
+```bash
+stackdome validate --file deploy/stackfile.yaml
+```
+
+Do not deploy until validation succeeds. If this guide and the installed release candidate disagree, `stackdome validate` is the authority for that CLI version.
