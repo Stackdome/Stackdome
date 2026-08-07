@@ -2,50 +2,87 @@
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "Stackdome",
+  "description": "Deploy, debug, and operate applications with coding agents, the Stackdome CLI, or the dashboard. Start on Stackdome Cloud or connect a self-hosted installation.",
   "colors": {
     "primary": "#0F172A",
     "light": "#7C93B8",
     "dark": "#0F172A"
   },
+  "markdown": {
+    "instructions": [
+      "Treat Stackdome as an application-delivery platform for coding agents and developers, not as a Kubernetes dashboard.",
+      "Prefer the Stackdome agent plugin as the user entry point and the stackdome CLI as the execution interface.",
+      "Verify commands and flags with stackdome --help. Run stackdome init before authoring stackfile.yaml and stackdome validate before deploying.",
+      "Use -o json for automation and verify documented terminal states before claiming success.",
+      "Never request a user's account password. Use API-token authentication.",
+      "During alpha, Stackdome Cloud is ephemeral and capacity-limited, and each organization can connect one cluster.",
+      "Do not expose Kubernetes as a user concern unless the task is self-hosting or infrastructure architecture."
+    ]
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Guides",
         "groups": [
           {
             "group": "Get started",
-            "pages": ["index", "quickstart", "deploy-first-app"]
+            "pages": ["index", "quickstart", "get-started/cli", "get-started/cloud-alpha"]
           },
           {
-            "group": "Concepts",
-            "pages": ["concepts/stacks-and-resources", "concepts/releases"]
-          },
-          {
-            "group": "Guides",
+            "group": "Build and ship",
             "pages": [
+              "guides/ai-agents",
+              "guides/stackfile",
               "guides/deploy-from-git",
               "guides/deploy-from-image",
               "guides/environment-variables",
-              "guides/domains-and-tls",
               "guides/postgres",
               "guides/volumes-and-object-stores",
+              "guides/domains-and-tls",
               "guides/preview-environments"
             ]
           },
           {
-            "group": "Reference",
+            "group": "Debug and operate",
             "pages": [
-              "reference/stackfile"
+              "guides/status",
+              "guides/logs",
+              "guides/build-failures",
+              "guides/restart",
+              "concepts/releases"
+            ]
+          },
+          {
+            "group": "Dashboard walkthroughs",
+            "pages": ["deploy-first-app", "concepts/stacks-and-resources"]
+          }
+        ]
+      },
+      {
+        "tab": "Self-host",
+        "groups": [
+          {
+            "group": "Run Stackdome",
+            "pages": [
+              "self-host/install",
+              "self-host/connect-compute",
+              "self-host/configuration",
+              "self-host/architecture"
             ]
           }
         ]
       },
       {
-        "tab": "Self-hosting",
+        "tab": "Reference",
         "groups": [
           {
-            "group": "Run Stackdome",
-            "pages": ["self-host/install", "self-host/add-a-cluster", "self-host/configuration"]
+            "group": "CLI and configuration",
+            "pages": [
+              "reference/cli",
+              "reference/authentication",
+              "reference/stackfile",
+              "reference/alpha-limitations"
+            ]
           }
         ]
       }
@@ -55,5 +92,11 @@
     "socials": {
       "github": "https://github.com/Stackdome/stackdome"
     }
-  }
+  },
+  "redirects": [
+    {
+      "source": "/self-host/add-a-cluster",
+      "destination": "/self-host/connect-compute"
+    }
+  ]
 }
