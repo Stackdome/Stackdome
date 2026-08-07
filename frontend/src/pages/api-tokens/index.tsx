@@ -18,7 +18,10 @@ import { listApiTokens, revokeApiToken, type APIToken } from "@/api/api-tokens";
 import { getErrorMessage } from "@/api/client";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
 import { CreateTokenDialog } from "./components/create-token-dialog";
+import { accessLabel } from "./access";
 import { cn } from "@/lib/utils";
+
+const COLUMN_HEAD_CLASS = "text-[11px] uppercase tracking-widest text-muted-foreground font-mono";
 
 function formatDate(value?: string): string {
   if (!value) return "Never";
@@ -41,7 +44,7 @@ export default function ApiTokensPage() {
       const data = await listApiTokens();
       setTokens(data.items || []);
     } catch (e) {
-      console.error("Failed to fetch API tokens:", e);
+      console.error("Failed to fetch API tokens:", getErrorMessage(e));
       setError(getErrorMessage(e));
     } finally {
       setLoading(false);
@@ -72,12 +75,14 @@ export default function ApiTokensPage() {
       fetchTokens();
       toast({ title: "Token revoked", description: "The API token has been revoked.", variant: "success" });
     } catch (e) {
-      console.error("Failed to revoke API token:", e);
+      console.error("Failed to revoke API token:", getErrorMessage(e));
       toast({ title: "Failed to revoke token", description: getErrorMessage(e), variant: "destructive" });
     }
   }
 
-  if (loading) {
+  // Only the first load takes over the page — a refetch after revoke keeps
+  // the table on screen instead of flashing back to a spinner.
+  if (loading && tokens.length === 0 && !error) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -92,7 +97,7 @@ export default function ApiTokensPage() {
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
         <h2 className="text-xl font-semibold mb-2">Error Loading API Tokens</h2>
         <p className="text-muted-foreground mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>Try Again</Button>
+        <Button onClick={fetchTokens}>Try Again</Button>
       </div>
     );
   }
@@ -128,35 +133,47 @@ export default function ApiTokensPage() {
           <Panel title="API Tokens" count={tokens.length} bodyClassName="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Prefix</TableHead>
-                  <TableHead>Scopes</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead>Last used</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead className={COLUMN_HEAD_CLASS}>Token</TableHead>
+                  <TableHead className={COLUMN_HEAD_CLASS}>Access</TableHead>
+                  <TableHead className={COLUMN_HEAD_CLASS}>Created</TableHead>
+                  <TableHead className={COLUMN_HEAD_CLASS}>Expires</TableHead>
+                  <TableHead className={COLUMN_HEAD_CLASS}>Last used</TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {tokens.map((token) => {
                   const revoked = !!token.revoked_at;
+                  const expired = !revoked && !!token.expires_at && new Date(token.expires_at) < new Date();
+                  const dead = revoked || expired;
                   return (
-                    <TableRow key={token.id} className={cn(revoked && "opacity-50")}>
-                      <TableCell className="font-medium">
+                    <TableRow
+                      key={token.id}
+                      className={cn("border-b border-border hover:bg-muted/50", dead && "opacity-50")}
+                    >
+                      <TableCell className="py-3.5">
                         <div className="flex items-center gap-2">
-                          {token.name}
+                          <div className="min-w-0">
+                            <div className="truncate text-sm font-medium text-foreground">{token.name}</div>
+                            <div className="font-mono text-xs text-muted-foreground">{token.token_prefix}</div>
+                          </div>
                           {revoked && <Badge variant="secondary">Revoked</Badge>}
+                          {expired && <Badge variant="secondary">Expired</Badge>}
                         </div>
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{token.token_prefix}</TableCell>
-                      <TableCell className="max-w-[220px] truncate text-xs text-muted-foreground" title={token.scopes?.join(", ")}>
-                        {token.scopes?.join(", ") || "—"}
+                      <TableCell className="py-3.5">
+                        <span
+                          className="inline-flex items-center rounded border border-border bg-muted px-2 py-px font-mono text-[11px] text-muted-foreground"
+                          title={token.scopes?.join(", ")}
+                        >
+                          {accessLabel(token.scopes)}
+                        </span>
                       </TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(token.created_at)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(token.expires_at)}</TableCell>
-                      <TableCell className="text-muted-foreground">{formatDate(token.last_used_at)}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.created_at)}</TableCell>
+                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.expires_at)}</TableCell>
+                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.last_used_at)}</TableCell>
+                      <TableCell className="py-3.5 text-right">
                         {!revoked && (
                           <Button variant="outline" size="sm" onClick={() => requestRevoke(token)}>
                             Revoke

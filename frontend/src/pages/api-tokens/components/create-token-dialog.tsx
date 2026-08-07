@@ -11,8 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
-import { badgeVariants } from "@/components/ui/badge";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
@@ -23,36 +22,21 @@ import {
   type ScopeList,
 } from "@/api/api-tokens";
 import { getErrorMessage } from "@/api/client";
+import { API_BASE_URL } from "@/api/base-url";
 import { copyText } from "@/lib/clipboard";
+import { FULL_ACCESS, READ_ONLY, readOnlyScopes } from "../access";
 
 const COPY_FLASH_MS = 1400;
+
+// The CLI needs the server origin, which is the UI's own only when the API is
+// same-origin or dev-proxied. An absolute VITE_API_BASE_URL carries its own.
+const SERVER_URL = new URL(API_BASE_URL, window.location.origin).origin;
 
 interface CreateTokenDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Called once the show-once token view is dismissed, so the list can refresh. */
   onCreated: () => void;
-}
-
-function scopeKey(resource: string, action: string): string {
-  return `${resource}:${action}`;
-}
-
-function ScopeChip({ label, selected, onToggle }: { label: string; selected: boolean; onToggle: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onToggle}
-      className={cn(
-        badgeVariants({ variant: selected ? "default" : "outline" }),
-        "cursor-pointer font-mono",
-        !selected && "text-muted-foreground hover:bg-accent hover:text-foreground",
-      )}
-    >
-      {label}
-    </button>
-  );
 }
 
 // Native <input type="date"> only carries a calendar day — treat it as the
@@ -72,8 +56,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
   const { toast } = useToast();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
-  const [fullAccess, setFullAccess] = useState(false);
-  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
+  const [preset, setPreset] = useState(READ_ONLY);
   const [scopes, setScopes] = useState<ScopeList | null>(null);
   const [scopesError, setScopesError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -88,8 +71,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     if (!open) return;
     setName("");
     setExpiry("");
-    setFullAccess(false);
-    setSelectedScopes(new Set());
+    setPreset(READ_ONLY);
     setError(null);
     setScopesError(null);
     setCopied(false);
@@ -101,18 +83,11 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
       .catch((e) => setScopesError(getErrorMessage(e)));
   }, [open]);
 
-  function toggleScope(resource: string, action: string) {
-    const key = scopeKey(resource, action);
-    setSelectedScopes((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
-  }
+  const grantedScopes = !scopes
+    ? []
+    : preset === FULL_ACCESS
+      ? [scopes.full_access_scope].filter((s): s is string => !!s)
+      : readOnlyScopes(scopes);
 
   async function handleCreate() {
     setError(null);
@@ -130,13 +105,8 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
       setError("Scopes haven't loaded yet.");
       return;
     }
-    if (fullAccess && !scopes.full_access_scope) {
-      setError("The server didn't provide a full-access scope.");
-      return;
-    }
-    const requestedScopes = fullAccess ? [scopes.full_access_scope as string] : [...selectedScopes];
-    if (requestedScopes.length === 0) {
-      setError("Select at least one scope.");
+    if (grantedScopes.length === 0) {
+      setError("The server didn't provide any scopes for this access level.");
       return;
     }
 
@@ -144,7 +114,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     try {
       const res = await createApiToken({
         name: name.trim(),
-        scopes: requestedScopes,
+        scopes: grantedScopes,
         expires_at: expiry ? endOfDayRFC3339(expiry) : undefined,
       });
       setCreated(res);
@@ -184,11 +154,11 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
               <DialogTitle>Token created</DialogTitle>
               <DialogDescription>You won&apos;t see this again — copy it now.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="space-y-1.5">
+            <div className="min-w-0 space-y-4 py-2">
+              <div className="min-w-0 space-y-1.5">
                 <Label>Token</Label>
                 <div className="flex items-center gap-2">
-                  <pre className="flex-1 overflow-x-auto rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs">
+                  <pre className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs">
                     {created.token}
                   </pre>
                   <Button
@@ -207,7 +177,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                 <Input
                   id="token-quickstart"
                   readOnly
-                  value={`stackdome login --url ${window.location.origin} --token ${created.token}`}
+                  value={`stackdome login --url ${SERVER_URL} --token ${created.token}`}
                   onFocus={(e) => e.currentTarget.select()}
                   className="font-mono text-xs"
                 />
@@ -222,93 +192,82 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
             <DialogHeader>
               <DialogTitle>Create token</DialogTitle>
               <DialogDescription>
-                Tokens act on your behalf — scope them to only what the caller needs.
+                Tokens act on your behalf. Pick what the caller is for.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-5 py-2">
               {error && <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">{error}</div>}
 
-              <FieldShell label="Name" htmlFor="token-name" required>
-                <Input
-                  id="token-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. ci, agent"
-                />
-              </FieldShell>
+              <div className="grid grid-cols-2 gap-4">
+                <FieldShell label="Name" htmlFor="token-name" required>
+                  <Input
+                    id="token-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. ci, agent"
+                  />
+                </FieldShell>
 
-              <FieldShell label="Expires" htmlFor="token-expiry" hint="Leave blank for a token that never expires.">
-                <Input
-                  id="token-expiry"
-                  type="date"
-                  min={new Date().toISOString().slice(0, 10)}
-                  value={expiry}
-                  onChange={(e) => setExpiry(e.target.value)}
-                />
-              </FieldShell>
+                <FieldShell label="Expires" htmlFor="token-expiry" hint="Blank never expires.">
+                  <Input
+                    id="token-expiry"
+                    type="date"
+                    min={new Date().toISOString().slice(0, 10)}
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                  />
+                </FieldShell>
+              </div>
 
-              <FieldShell label="Scopes" required>
-                <div className="rounded-md border border-border">
-                  <div className="flex items-center justify-between gap-2 p-3">
-                    <div className="space-y-0.5">
-                      <Label htmlFor="full-access" className="font-normal">
-                        Full access
-                      </Label>
-                      {fullAccess && (
-                        <p className="text-xs text-danger">This token can do anything you can.</p>
-                      )}
-                    </div>
-                    <Switch id="full-access" checked={fullAccess} onCheckedChange={setFullAccess} />
-                  </div>
-                  {scopesError && <p className="px-3 pb-3 text-xs text-danger">{scopesError}</p>}
-                  {!scopesError && !scopes && (
-                    <p className="px-3 pb-3 text-xs text-muted-foreground">Loading available scopes…</p>
-                  )}
-                  {!fullAccess && scopes && (
-                    <>
-                      <div className="flex items-center justify-between gap-2 border-t border-border px-3 py-2">
-                        <span className="text-xs text-muted-foreground">
-                          {selectedScopes.size} selected
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-auto px-2 py-1 text-xs"
-                          disabled={selectedScopes.size === 0}
-                          onClick={() => setSelectedScopes(new Set())}
+              <div className="space-y-2">
+                <span className="font-mono text-[11px] uppercase tracking-widest text-muted-foreground">
+                  Access
+                </span>
+                {scopesError && <p className="text-xs text-danger">{scopesError}</p>}
+                {!scopesError && !scopes && (
+                  <p className="text-xs text-muted-foreground">Loading available scopes…</p>
+                )}
+                {scopes && (
+                  <RadioGroup value={preset} onValueChange={setPreset} className="grid grid-cols-2 gap-3">
+                    {[
+                      {
+                        id: READ_ONLY,
+                        title: "Read-only",
+                        description: "Observe everything, change nothing.",
+                        grants: `${readOnlyScopes(scopes).length} scopes`,
+                      },
+                      {
+                        id: FULL_ACCESS,
+                        title: "Full access",
+                        description: "Everything you can do, including deploys.",
+                        grants: "all scopes",
+                      },
+                    ].map((option, index) => {
+                      const active = preset === option.id;
+                      return (
+                        <Label
+                          key={option.id}
+                          htmlFor={`preset-${option.id}`}
+                          className={cn(
+                            "flex cursor-pointer flex-col items-start gap-1 rounded-md border p-3 font-normal",
+                            active ? "border-brand-border bg-brand-bg" : "border-border hover:bg-muted/50",
+                          )}
                         >
-                          Clear
-                        </Button>
-                      </div>
-                      <div className="max-h-[280px] divide-y divide-border overflow-y-auto border-t border-border">
-                        {scopes.items?.map((resource) =>
-                          resource.resource ? (
-                            <div key={resource.resource} className="flex items-start gap-3 px-3 py-2">
-                              <span className="w-36 shrink-0 pt-1 font-mono text-xs break-all text-muted-foreground">
-                                {resource.resource}
-                              </span>
-                              <div className="flex flex-1 flex-wrap gap-1.5">
-                                {resource.actions?.map((action) => {
-                                  const key = scopeKey(resource.resource!, action);
-                                  return (
-                                    <ScopeChip
-                                      key={key}
-                                      label={action}
-                                      selected={selectedScopes.has(key)}
-                                      onToggle={() => toggleScope(resource.resource!, action)}
-                                    />
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          ) : null,
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              </FieldShell>
+                          <div className="flex w-full items-center justify-between">
+                            <span className={cn("font-mono text-[11px]", active ? "text-brand" : "text-muted-foreground")}>
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                            <RadioGroupItem id={`preset-${option.id}`} value={option.id} />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{option.title}</span>
+                          <span className="text-xs text-muted-foreground">{option.description}</span>
+                          <span className="font-mono text-[11px] text-muted-foreground">{option.grants}</span>
+                        </Label>
+                      );
+                    })}
+                  </RadioGroup>
+                )}
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
