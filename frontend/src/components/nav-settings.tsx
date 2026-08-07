@@ -1,7 +1,7 @@
 "use client"
 
 import { Link, useLocation } from "react-router-dom"
-import { Users, FolderKanban, KeyRound } from "lucide-react"
+import { Users, FolderKanban } from "lucide-react"
 
 import {
   SidebarMenu,
@@ -26,14 +26,6 @@ export function NavSettings() {
           <Link to="/settings/projects">
             <FolderKanban />
             <span>Projects</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-      <SidebarMenuItem>
-        <SidebarMenuButton tooltip="API Tokens" asChild isActive={location.pathname.startsWith("/settings/api-tokens")}>
-          <Link to="/settings/api-tokens">
-            <KeyRound />
-            <span>API Tokens</span>
           </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
