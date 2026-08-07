@@ -3,7 +3,7 @@ title: "Configuration"
 description: "Environment variables that configure the Stackdome API server."
 ---
 
-The API server takes all of its configuration from environment variables. If you installed Stackdome with the installer, the secrets it needs were already generated and wired in for you — see [Install](/self-host/install). This page is the reference for changing those values afterwards, or for running the API server yourself.
+Use these environment variables when you need to change how a self-hosted Stackdome hub connects to PostgreSQL, protects stored credentials, publishes its external URL, or integrates with GitHub. If you used the single-server installer, it already generated and wired the required values — see [Install](/self-host/install).
 
 ## How values are read
 
@@ -84,7 +84,7 @@ Rotating `JWT_SECRET` is safe by comparison: it only invalidates tokens that are
 | --- | --- | --- | --- |
 | `GITHUB_CLIENT_ID` | No | — | GitHub OAuth app client ID |
 | `GITHUB_CLIENT_SECRET` | No | — | GitHub OAuth app client secret |
-| `GITHUB_REDIRECT_URI` | No | derived from `SERVER_EXTERNAL_URL` | Where GitHub sends the browser after the user authorizes |
+| `GITHUB_REDIRECT_URI` | No | `<SERVER_EXTERNAL_URL>/auth/github/callback` | Where GitHub sends the browser after the user authorizes. Set it explicitly only when that derived browser callback is not correct for your deployment. |
 | `GITHUB_API_BASE_URL` | No | `https://api.github.com` | GitHub API endpoint. Point this at your GitHub Enterprise Server instance if you do not use github.com. |
 
 GitHub sign-in is off until **both** the client ID and the client secret are set. Only then does the server register the `/api/v1/auth/github` routes, and only then does the web UI show the "Continue with GitHub" button — the UI reads that state from `GET /api/v1/config`, so setting one of the two without the other leaves sign-in exactly as it was.
@@ -98,13 +98,20 @@ GitHub sign-in is off until **both** the client ID and the client secret are set
 GITHUB_REDIRECT_URI=https://stackdome.example.com/auth/github/callback
 ```
 
-<Warning>
-Set this one explicitly. When `GITHUB_REDIRECT_URI` is unset, the server derives it from `SERVER_EXTERNAL_URL` as `<SERVER_EXTERNAL_URL>/api/v1/auth/github/callback` — that points at the API endpoint rather than the UI page that completes the sign-in, so the derived default is not the value you want in a browser flow.
-</Warning>
+### Platform-wide GitHub App
+
+These variables configure one GitHub App that organizations install for repository access and webhooks. If they are not all set, the platform-wide app is treated as unconfigured and organizations use the per-organization manifest flow instead.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `GITHUB_APP_ID` | No | — | Numeric GitHub App ID |
+| `GITHUB_APP_SLUG` | No | — | GitHub App URL slug |
+| `GITHUB_APP_PRIVATE_KEY` | No | — | GitHub App private key in PEM form |
+| `GITHUB_APP_WEBHOOK_SECRET` | No | — | Secret used to verify GitHub webhook signatures |
 
 ## Platform cluster
 
-These seed a cluster and its base domain into the database the first time the server boots, so an install can come up with a cluster already registered instead of you adding one by hand. Leave them unset if you would rather register clusters through the UI.
+These variables bootstrap an infrastructure-only platform organization, its compute cluster, wildcard domain, TLS resources, and the default image-registry settings for organizations created on the platform. This is separate from the single-server installer's `Default` organization and `local` cluster, which the installer creates through the API.
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
@@ -113,6 +120,9 @@ These seed a cluster and its base domain into the database the first time the se
 | `PLATFORM_CLUSTER_TOKEN` | No | — | Service-account token for that cluster |
 | `PLATFORM_BASE_DOMAIN` | No | — | Base domain for the platform organization and per-organization subdomains |
 | `PLATFORM_EMAIL` | No | — | Operator contact email, also used as the ACME contact for the platform cluster's certificate issuer |
+| `PLATFORM_DNS_CLOUDFLARE_API_TOKEN` | When a platform cluster is configured | — | Cloudflare API token used by the DNS-01 issuer for the platform wildcard certificate |
+| `PLATFORM_ACME_ENVIRONMENT` | No | `production` | Let's Encrypt environment. Accepted values are `production` and `staging`. |
+| `PLATFORM_TLS_NAMESPACE` | No | `stackdome-control-plane` | Namespace for the Cloudflare token Secret, DNS Issuer, and wildcard Certificate |
 | `PLATFORM_ORG_REGISTRY_STORAGE_SIZE` | No | `10Gi` | Storage size for the image registry seeded for each new organization |
 | `PLATFORM_ORG_REGISTRY_STORAGE_CLASS` | No | — | Storage class for that registry. Leave unset to use the cluster's default. |
 
@@ -121,25 +131,34 @@ The server validates this group as a unit at startup and refuses to boot on a pa
 - the three `PLATFORM_CLUSTER_*` variables must all be set, or all be unset
 - `PLATFORM_CLUSTER_*` and `PLATFORM_BASE_DOMAIN` must be set together — one without the other is an error
 - `PLATFORM_EMAIL` is required once a platform cluster is configured
+- `PLATFORM_DNS_CLOUDFLARE_API_TOKEN` is required once a platform cluster is configured
+- `PLATFORM_ACME_ENVIRONMENT` must be `production` or `staging`
+- `PLATFORM_TLS_NAMESPACE` cannot be empty once a platform cluster is configured
+
+<Warning>
+The Cloudflare token is written to a Secret named `cloudflare-api-token` in `PLATFORM_TLS_NAMESPACE`. Give it only the DNS permissions required for the platform domain and protect it as a production credential.
+</Warning>
 
 ## Runtime environment
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `STACKDOME_ENV` | No | `DEVELOPMENT` | Which runtime environment the server initializes as. `DEVELOPMENT` is the only value the server accepts. |
+| `STACKDOME_ENV` | No | `DEVELOPMENT` | Runtime environment. Accepted values are uppercase `DEVELOPMENT` and `PRODUCTION`. The installer sets `PRODUCTION`. |
 
 <Warning>
-Leave `STACKDOME_ENV` unset, or set it to `DEVELOPMENT`. Any other value — including `PRODUCTION` — makes the server panic at startup with `env: <value> not defined`, before it reaches configuration validation. A self-hosted production install runs with this variable unset.
+Values are case-sensitive. Anything other than `DEVELOPMENT` or `PRODUCTION` makes the server panic at startup with `env: <value> not defined` before configuration validation.
 </Warning>
 
 ## What the installer already set
 
-The installer generates the three secret values on first run, keeps them in a Kubernetes secret named `stackdome-bootstrap-secrets` in the `stackdome-control-plane` namespace, and reuses them on every later run so a re-install does not invalidate your data:
+The installer generates these secret values on first run, keeps them in a Kubernetes Secret named `stackdome-bootstrap-secrets` in the `stackdome-control-plane` namespace, and reuses them on later installs and upgrades:
 
 - `DB_PASSWORD` — a random 24-character alphanumeric password
 - `JWT_SECRET` — 48 random bytes, base64-encoded
 - `ENCRYPTION_KEY` — 32 random bytes, hex-encoded, which is the 64 characters the validator requires
+- the generated admin password, plus the admin email and domain needed by installer bootstrap
+- any GitHub OAuth or platform GitHub App values supplied with installer flags
 
-It also sets `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, and `LOG_LEVEL=info` to point the server at the PostgreSQL instance it deployed alongside it. Everything else on this page is unset and falls back to the defaults above.
+It sets `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `LOG_LEVEL=info`, `STACKDOME_ENV=PRODUCTION`, and `SERVER_EXTERNAL_URL` for the PostgreSQL instance and public URL it deployed. GitHub environment variables are added only when their installer flags were supplied. The single-server installer does not set the `PLATFORM_*` bootstrap group.
 
 To change a value afterwards, edit the environment variables on the `api-server` resource and let it redeploy. Read the warning about `ENCRYPTION_KEY` before you touch that one.

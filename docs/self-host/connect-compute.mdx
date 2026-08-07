@@ -1,11 +1,23 @@
 ---
-title: "Add a cluster"
-description: "Register an additional Kubernetes cluster with your Stackdome install."
+title: "Connect compute"
+description: "Connect the single Kubernetes compute target an organization can use during alpha."
 ---
 
-Registering a cluster gives an organization its own compute target. Stackdome's hub — the API server you sign in to — keeps no workloads of its own on the clusters it manages: it writes custom resources, and the `stackdome-agent` running on the cluster turns them into Deployments, Services, and Ingresses. Registering a cluster is therefore two things: telling the hub how to reach the cluster's API server, and giving it credentials with enough authority to write there.
+Compute is where Stackdome runs your stacks. A self-hosted organization connects a Kubernetes cluster by giving the Stackdome hub a reachable API URL and service-account credentials; the `stackdome-agent` on that cluster then carries out deployments.
 
-The [installer](/self-host/install) registers the server it runs on, so a fresh install already has one cluster. This page is for the next one: a separate Kubernetes cluster you want an organization to deploy onto.
+The [single-server installer](/self-host/install) already connects its local k3s cluster as compute named `local`. A fresh install therefore needs no work on this page. Use this procedure only when an organization currently has no connected cluster, including after deleting an unused cluster as described below.
+
+<Warning>
+During alpha, an organization can connect **one cluster**. The dashboard disables **Add Cluster** after one is listed and shows *"Currently only one cluster is supported."* The API independently rejects another with `409 cluster already exists for org`. The hub-and-spoke implementation can address multiple clusters, but that is architecture, not an available alpha workflow.
+</Warning>
+
+## Replacement behavior
+
+There is no in-place replace or migrate action. The dashboard exposes **Delete Cluster**, and the API deletes the cluster's in-cluster registry before removing the cluster record. Only after that deletion succeeds does **Add Cluster** become available again.
+
+<Warning>
+Treat delete-then-connect as recovery for an unused organization, not as workload migration. Stacks, workspace users, or Postgres addons that still reference the cluster can prevent its database record from being deleted. The operation does not move workloads or data, and deleting the in-cluster registry removes that registry from the old cluster. Remove dependent resources and back up anything you need before deleting the current cluster.
+</Warning>
 
 ## Prerequisites
 
@@ -14,10 +26,6 @@ The [installer](/self-host/install) registers the server it runs on, so a fresh 
 - **The cluster's API server is reachable from the hub.** The hub opens outbound connections to the URL you register. For a cluster on another machine that means its API port — commonly `6443` — has to be open to the machine running Stackdome, not just to your laptop.
 - **`kubectl` access to the target cluster**, to create the service account in the next section.
 - **An `https://` URL.** Registration rejects any other scheme.
-
-<Note>
-**An organization can own one cluster.** The dashboard disables **Add Cluster** once a cluster is listed, with the message *"Currently only one cluster is supported."*, and the API rejects a second one with `409 cluster already exists for org`. To move an organization to a different cluster today you delete the existing one first. An organization with no cluster of its own falls back to the platform cluster the installer created.
-</Note>
 
 ## Get the credentials
 
@@ -90,20 +98,20 @@ That token is long-lived and bound to `cluster-admin`. Anyone holding it has ful
 Do not substitute `kubectl create token stackdome-admin`. That mints a short-lived, expiring token; the cluster works for an hour and then quietly stops accepting the hub's calls. The Secret above is what keeps the credential durable.
 </Note>
 
-## Register it in the dashboard
+## Connect it in the dashboard
 
 <Steps>
   <Step title="Open Clusters">
     In the sidebar, under **PLATFORM**, choose **Clusters**. The page lists the organization's clusters under **ALL CLUSTERS**.
   </Step>
   <Step title="Start the form">
-    Choose **Add Cluster**. The **Add New Cluster** dialog opens. If the control is greyed out, the organization already has a cluster — see the note above.
+    Choose **Add Cluster**. The **Add New Cluster** dialog opens. If the control is greyed out, the organization already has its one alpha compute target; you cannot connect another.
   </Step>
   <Step title="Fill in the four required fields">
     Every field marked with an asterisk is required, and **Add Cluster** stays disabled until all four have a value.
   </Step>
   <Step title="Submit">
-    Choose **Add Cluster**. On success the dialog closes, a *"Cluster added"* toast appears, and the new cluster shows up in the list.
+    Choose **Add Cluster**. On success the dialog closes, a *"Cluster added"* toast appears, and the connected compute shows up in the list.
   </Step>
 </Steps>
 
@@ -118,7 +126,7 @@ Do not substitute `kubectl create token stackdome-admin`. That mints a short-liv
 | **Enable Image Registry** | On by default. See below. |
 | **Backend Storage Size** | Only shown when the toggle is on. Defaults to `20Gi`. |
 
-Both credentials are encrypted before they are stored, and neither is ever displayed again — the detail page shows dots. There is no rotate action: to change a cluster's credentials you delete the cluster and register it again.
+Both credentials are encrypted before they are stored, and neither is ever displayed again — the detail page shows dots. There is no rotate action: changing them requires the delete-then-connect path and its constraints under [Replacement behavior](#replacement-behavior).
 
 ## Image registry
 
@@ -126,7 +134,7 @@ Leave **Enable Image Registry** on unless you have a specific reason not to.
 
 Stackdome builds container images from your git repositories, and a build has to push what it produces somewhere the cluster can pull it back from. It resolves that destination on **the cluster the stack runs on**, so a cluster without a registry cannot run git-based deploys — only resources that reference an image you already host elsewhere.
 
-Turning the toggle on provisions a private registry inside the new cluster, backed by a persistent volume of the size you enter. `20Gi` is the form's default; the installer gives the cluster it registers `50Gi`. Pick according to how many image versions you expect to accumulate.
+Turning the toggle on provisions a private registry inside the connected cluster, backed by a persistent volume of the size you enter. `20Gi` is the form's default; the installer gives the cluster it registers `50Gi`. Pick according to how many image versions you expect to accumulate.
 
 **The dashboard does not ask you to name the registry.** It always sends the same fixed name, `default-registry`, so there is nothing to get wrong and the length limit described next never comes into play when you register through the UI.
 
