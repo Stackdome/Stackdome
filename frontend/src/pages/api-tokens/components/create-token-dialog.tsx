@@ -230,19 +230,9 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                 {scopes && (
                   <RadioGroup value={preset} onValueChange={setPreset} className="grid grid-cols-2 gap-3">
                     {[
-                      {
-                        id: READ_ONLY,
-                        title: "Read-only",
-                        description: "Observe everything, change nothing.",
-                        grants: `${readOnlyScopes(scopes).length} scopes`,
-                      },
-                      {
-                        id: FULL_ACCESS,
-                        title: "Full access",
-                        description: "Everything you can do, including deploys.",
-                        grants: "all scopes",
-                      },
-                    ].map((option, index) => {
+                      { id: READ_ONLY, title: "Read-only", description: "Observe everything, change nothing." },
+                      { id: FULL_ACCESS, title: "Full access", description: "Everything you can do, including deploys." },
+                    ].map((option) => {
                       const active = preset === option.id;
                       return (
                         <Label
@@ -253,15 +243,11 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                             active ? "border-brand-border bg-brand-bg" : "border-border hover:bg-muted/50",
                           )}
                         >
-                          <div className="flex w-full items-center justify-between">
-                            <span className={cn("font-mono text-[11px]", active ? "text-brand" : "text-muted-foreground")}>
-                              {String(index + 1).padStart(2, "0")}
-                            </span>
+                          <div className="flex w-full items-center justify-between gap-2">
+                            <span className="text-sm font-medium text-foreground">{option.title}</span>
                             <RadioGroupItem id={`preset-${option.id}`} value={option.id} />
                           </div>
-                          <span className="text-sm font-medium text-foreground">{option.title}</span>
                           <span className="text-xs text-muted-foreground">{option.description}</span>
-                          <span className="font-mono text-[11px] text-muted-foreground">{option.grants}</span>
                         </Label>
                       );
                     })}
