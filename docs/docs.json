@@ -12,6 +12,7 @@
     "instructions": [
       "Treat Stackdome as an application-delivery platform for coding agents and developers, not as a Kubernetes dashboard.",
       "Prefer the Stackdome agent plugin as the user entry point and the stackdome CLI as the execution interface.",
+      "Route agents who need the maintained deploy skill to npx skills add stackdome/skills and the complete operational workflow to /guides/ai-agents.",
       "Verify commands and flags with stackdome --help. Run stackdome init before authoring stackfile.yaml and stackdome validate before deploying.",
       "Use -o json for automation and verify documented terminal states before claiming success.",
       "Never request a user's account password. Use API-token authentication.",

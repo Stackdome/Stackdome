@@ -15,11 +15,9 @@ Inspect repository -> stackdome init -> edit generated Stackfile -> stackdome va
 
 The agent needs the repository, the destination URL, and an API token. The user creates and revokes tokens; the agent never requests or handles an account password. See [authentication and API tokens](/reference/authentication).
 
-Install the current public deploy skill with:
-
-```bash
-npx skills add stackdome/skills
-```
+<Prompt description="Install the Stackdome deploy skill." actions={["copy", "cursor"]}>
+  npx skills add stackdome/skills
+</Prompt>
 
 ## Operational flow
 
