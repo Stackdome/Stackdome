@@ -3,20 +3,99 @@ title: "Deploy from an image"
 description: "Run an existing container image, including images from private registries."
 ---
 
-Not every **resource** needs building. A workflow automation tool, an open-source dashboard, a monitoring stack, something you build in your own CI — the image already exists somewhere, and all you want is for the **cluster** to pull it and run it. This is the shortest path Stackdome has: name the image, deploy, done. No repository, no build, no registry to push to.
+## Outcome
 
-If what you need is Postgres, take the managed path instead — see [Postgres](/guides/postgres). An **addon** is provisioned and looked after for you, which running the `postgres:16` image as an ordinary resource is not.
-
-This page is about *pulling*. Setting an image **source** tells Stackdome where to fetch an image someone else published. It is not the same thing as the **Push registry** option on a git resource, which is about where a build *puts* the image it produces.
+Deploy an existing container image as a Stackdome resource and wait until the release is healthy. This path pulls an image that was built elsewhere; it does not clone a repository or run an image build. A public port produces a URL you can return to the user.
 
 ## Prerequisites
 
-- **A stack with a resource to point at an image.** If you have not built one yet, start with [Deploy your first app](/deploy-first-app).
-- **The image reference you want to run**, including the tag or digest.
-- **For a private image, a login for its registry** — a username plus a token or password. Stackdome keeps it as a registry credential; see [Private registries](#private-registries) below.
-- **The registry has to be reachable twice.** Stackdome's hub probes the image before the deploy starts, and the cluster performs the real pull. A registry only one of them can reach will bite you in one place or the other.
+- The image reference, including its registry host and a tag or digest. Prefer a digest when the deployed bits must not drift.
+- Evidence about the container's listening ports, command, environment requirements, dependencies, and storage paths.
+- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
+- A registry reachable from both the Stackdome hub, which probes the image before release, and the target cluster, which performs the pull.
+- For a private image, a registry credential already configured through the dashboard or API. The current public CLI cannot create, update, or verify registry credentials.
 
-## Set an image source
+If you need a managed Postgres database, use [Postgres](/guides/postgres) instead of running `postgres:16` as an ordinary resource.
+
+## Agent prompt
+
+```text
+Deploy this container image to Stackdome: <image-reference>. Use the supplied requirements and repository evidence for its command, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, set the generated resource's image reference, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, verify status and health, and return the public URL. Do not claim success unless the release state is Released and current health is ok. If the image is private and no registry credential is configured, stop and tell me that credential setup currently requires the Stackdome dashboard or API.
+```
+
+## Agent actions
+
+<Steps>
+  <Step title="Inspect the runtime requirements">
+    Confirm the exact image reference, listening ports, command, environment values, dependencies, and storage. Do not assume that a container exposes a public HTTP port.
+  </Step>
+  <Step title="Initialize the Stackfile">
+    Run `stackdome init` before editing. It creates `stackfile.yaml` or converts a supported Compose file in the current directory.
+  </Step>
+  <Step title="Set the image source">
+    Edit the generated resource so `image` contains the full reference. Remove any `build` key from that resource because a resource accepts exactly one source. Add only the ports and runtime configuration supported by evidence.
+  </Step>
+  <Step title="Validate and authenticate">
+    Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
+  </Step>
+  <Step title="Deploy and verify">
+    Run `stackdome deploy --wait -o json`, followed by `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
+  </Step>
+</Steps>
+
+## Success criteria
+
+- `stackdome validate` exits successfully for the generated `stackfile.yaml`.
+- `stackdome deploy --wait -o json` exits successfully and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
+- No registry password or token appears in the Stackfile, shell history captured for support, screenshots, tickets, or chat messages.
+
+## CLI workflow
+
+Initialize from the working directory, then edit the generated file:
+
+```bash
+stackdome init
+```
+
+Replace the generated resource with an image-backed definition based on the container's requirements:
+
+```yaml
+name: postgrest
+
+resources:
+  api:
+    image: postgrest/postgrest:v12.2.0
+    ports:
+      - name: http
+        port: 3000
+        protocol: HTTP
+        public: true
+```
+
+Use a fully qualified reference such as `ghcr.io/acme/api:1.4.2` for another registry. A resource must contain exactly one of `image` or `build`. See the [Stackfile reference](/reference/stackfile) for runtime fields and current release gaps.
+
+Validate, authenticate, deploy, and inspect the terminal state:
+
+```bash
+stackdome validate
+stackdome login --url https://<your-stackdome-host> --token <api-token>
+stackdome whoami -o json
+stackdome deploy --wait -o json
+stackdome status -o json
+stackdome open -o json
+```
+
+For a private image, configure its registry credential through the dashboard or API first. The public CLI has no image-registry management command, and the Stackfile has no field for registry passwords or tokens.
+
+<Visibility for="humans">
+
+## Dashboard workflow
+
+Use the dashboard when you need to configure private-registry credentials or prefer the visual stack editor. For a complete first-deploy walkthrough, see [Deploy using the dashboard](/deploy-first-app).
+
+### Set an image source
 
 Open the stack, go to the **Architecture** tab, and click the resource's node on **the canvas** to open **the drawer**. Everything below is in the drawer's **SOURCE** section.
 
@@ -39,7 +118,7 @@ Open the stack, go to the **Architecture** tab, and click the resource's node on
   </Step>
 </Steps>
 
-### What the reference field accepts
+#### What the reference field accepts
 
 A reference is a registry host, a repository path, and a tag or digest. All of these are valid:
 
@@ -64,7 +143,7 @@ The reference is parsed when you save. An unparseable one is refused on `source.
 **One source per resource.** A resource carries either a build source or an image source, never both — the API refuses the combination with `source_conflict`: *"a resource cannot have both a build source and an image source"*. Leaving out both is refused too: *"exactly one of a git/volume build source or an image source is required"*. The **Build from** toggle is what keeps you on the right side of this, which is why it stashes the values from the branch you switched away from instead of sending them.
 </Note>
 
-## Private registries
+### Private registries
 
 Registry credentials live under **INTEGRATIONS → `Image Registries`** in the sidebar. The page is headed **Image registries** — *"Store registry credentials so builds can pull private images and push artifacts."*
 
@@ -72,7 +151,7 @@ Registry credentials live under **INTEGRATIONS → `Image Registries`** in the s
 
 This page lists only credentials your organization has added for registries elsewhere. A cluster's own image registry is not shown here and does not need a credential — an empty page does not mean your install has no registry.
 
-### Add a credential
+#### Add a credential
 
 Choose **Add registry**. The dialog is two steps.
 
@@ -118,7 +197,7 @@ Two rules constrain what you can store:
 - **One credential per host, per purpose.** A duplicate is refused with `409` and the form says *"Credentials for this registry and purpose already exist."* **Pull & push** collides with everything on that host, so a host holds either one **Pull & push** credential, or a **Pull only** and a **Push only** pair — never a mix of the two arrangements.
 - **Adding a credential does not test it.** Creation stores and encrypts it, and that is all. Nothing has talked to the registry yet.
 
-### Verify access
+#### Verify access
 
 Because creation proves nothing, verify before a deploy depends on it. Each row's **⋯** menu holds **Verify registry access**, **Update credentials** and **Remove registry**.
 
@@ -143,7 +222,7 @@ Success is a **Registry access verified** toast. Failure is **Couldn't verify re
 | `push verification failed for '<repo>': …` | Pull may well be fine; the credential just cannot push there. |
 | `repository host 'quay.io' does not match credential host 'ghcr.io'` | You typed a fully-qualified reference for a different registry. |
 
-### How a resource picks up a credential
+#### How a resource picks up a credential
 
 There is no "attach credential to resource" step. Resolution runs at deploy time in a fixed order:
 
@@ -171,7 +250,19 @@ Consequences worth knowing:
 
 Just before the stack is applied, the hub writes the resolved credential into the target cluster's namespace as a pull secret, so the cluster can pull without ever being handed your organization's credential store.
 
-## What happens when you deploy
+</Visibility>
+
+## Troubleshooting
+
+Start with the release and resource data returned by the CLI:
+
+```bash
+stackdome status -o json
+stackdome release events <release-id> --follow
+stackdome logs <resource> --tail 100
+```
+
+Use the release ID returned by `stackdome deploy -o json`. An image release validates its source against the registry before rendering the workload.
 
 A release validates every image source against its registry before it renders anything, and the **Deployments** tab narrates it:
 
@@ -193,7 +284,7 @@ Successful probes are remembered, so redeploying an unchanged reference with unc
 
 One reference is deliberately skipped: an image whose host ends in `.svc.cluster.local` lives inside the cluster, where the hub cannot reach it. Those go straight through to the cluster's own pull.
 
-## Rate limits
+### Registry rate limits
 
 Unauthenticated pulls from Docker Hub are throttled. When the registry answers the hub's probe with a rate-limit signal instead of an answer, Stackdome does **not** fail the release — a limit can persist for hours, and the image would most likely have pulled fine. It logs a warning, skips that check, and lets the deploy continue.
 
@@ -204,10 +295,21 @@ The observable symptom is an absence. The deploy runs normally, but **Release ch
 
 The fix in both cases is to stop pulling anonymously: add a Docker Hub credential with a purpose that covers pulling. It attaches by host, so nothing in the drawer needs editing.
 
-## When to prefer git
+## Related tasks
 
 Reach for an image source when you did not write the thing you are running, or when your build already happens somewhere else and publishes to a registry. Reach for a git source when the code is yours and you want the deploy to start from a commit rather than from an image you have to remember to build and push — that path pins revisions per release, so a rollback is exact.
 
-<Card title="Deploy from git" icon="code-branch" href="/guides/deploy-from-git">
-  Connect a git provider and let the cluster build your repository into a running resource.
-</Card>
+<CardGroup cols={2}>
+  <Card title="Deploy with a coding agent" icon="sparkles" href="/guides/ai-agents">
+    Follow the complete agent operating contract, verification rules, and failure routes.
+  </Card>
+  <Card title="Stackfile reference" icon="file-code" href="/reference/stackfile">
+    Configure image sources, ports, environment values, dependencies, and storage.
+  </Card>
+  <Card title="Deploy from git" icon="code-branch" href="/guides/deploy-from-git">
+    Let the target cluster build a repository and pin its resolved revision per release.
+  </Card>
+  <Card title="Authentication" icon="key" href="/reference/authentication">
+    Create and handle API tokens safely for agent and CLI sessions.
+  </Card>
+</CardGroup>

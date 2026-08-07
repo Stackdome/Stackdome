@@ -3,18 +3,103 @@ title: "Deploy from git"
 description: "Connect a git provider and build your repository into a running resource."
 ---
 
-A **resource** gets its container image one of two ways: you point it at an image someone else already published, or you point it at a repository and let Stackdome build one. This page is about the second path — connecting a git provider once, then telling a resource which repository and which revision to build.
+## Outcome
 
-Two things have to be true before a git build can work. Stackdome needs credentials that can clone your repository, and the **cluster** the **stack** runs on needs somewhere to put the image it produces. The first half of this page sets up the credentials; the second half wires them into a resource's **source**.
+Deploy a repository as a Stackdome resource. Stackdome clones the selected revision, builds its Dockerfile, pushes the resulting image to the cluster registry, and waits until the release is healthy. A public port produces a URL you can return to the user.
 
 ## Prerequisites
 
-- **You are an organization admin.** Creating a git provider requires create permission on git integrations. Members can select repositories that are already connected, but cannot connect a new provider.
-- **A GitHub account that can install an app** on the organization or user that owns the repository. GitHub asks for this at install time, not at app-creation time — you can create the app and still be unable to install it where the code lives.
-- **`SERVER_EXTERNAL_URL` is set on the hub.** GitHub has to reach your install with a browser redirect and with webhook deliveries, so the GitHub App flow refuses to start without it: `SERVER_EXTERNAL_URL is not configured; the GitHub App flow requires an externally reachable hub URL`. See [Configuration](/self-host/configuration).
-- **The cluster has an image registry.** A build has to push what it produces. See [The build](#the-build) below and [Add a cluster](/self-host/add-a-cluster).
+- The repository and evidence about how it runs: its Dockerfile, Compose file, build context, listening ports, required environment variables, and startup command.
+- The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
+- A cluster with an image registry. Git builds need somewhere to push the image they produce. See [add a cluster](/self-host/add-a-cluster).
+- For a private repository, a git provider already connected by an organization admin. The current public CLI cannot create or manage git-provider credentials; use the dashboard flow below or the API before deploying.
+- For the GitHub App flow on a self-hosted installation, an externally reachable `SERVER_EXTERNAL_URL` and a GitHub account allowed to install the app for the repository owner.
 
-## Connect a provider
+## Agent prompt
+
+```text
+Inspect this repository and deploy it to Stackdome from git. Use repository evidence for the Dockerfile, build context, revision, ports, environment, dependencies, and storage. Run stackdome init before editing stackfile.yaml, validate every edit, authenticate only with an API token, deploy with stackdome deploy --wait -o json, verify status and health, and return the public URL. Do not claim success unless the release state is Released and current health is ok. If the repository is private and no git provider is configured, stop and tell me that provider setup currently requires the Stackdome dashboard or API.
+```
+
+## Agent actions
+
+<Steps>
+  <Step title="Inspect the repository">
+    Read the Dockerfile, Compose file, package or build configuration, documented startup command, ports, environment requirements, dependencies, and storage paths. Do not infer a runtime when the repository provides evidence.
+  </Step>
+  <Step title="Initialize the Stackfile">
+    Run `stackdome init` from the repository root. It converts a supported Compose file when present or creates a starter `stackfile.yaml`.
+  </Step>
+  <Step title="Set the git build source">
+    Edit the generated resource so `build.repo` points to the repository. Set at most one of `branch`, `tag`, or `commit`, and set `dockerfile` and `context` only when repository evidence differs from the defaults.
+  </Step>
+  <Step title="Validate and authenticate">
+    Run `stackdome validate`, then authenticate with `stackdome login --url https://<your-stackdome-host> --token <api-token>` and confirm the active scope with `stackdome whoami -o json`.
+  </Step>
+  <Step title="Deploy and verify">
+    Run `stackdome deploy --wait -o json`, followed by `stackdome status -o json`. For a public service, run `stackdome open -o json` and return an entry from `urls`.
+  </Step>
+</Steps>
+
+Pushing a commit does not deploy an ordinary stack automatically. Run the deploy command again to build the current branch, tag, or commit. Preview environments are the exception described in [preview environments](/guides/preview-environments).
+
+## Success criteria
+
+- `stackdome validate` exits successfully for the generated `stackfile.yaml`.
+- `stackdome deploy --wait -o json` exits successfully and returns `release.state` as `Released`.
+- `stackdome status -o json` returns `converged_release.state` as `Released` and `converged_release.health` as `ok`.
+- A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
+- The committed Stackfile records the repository, revision policy, build context, ports, and other runtime requirements found in the repository.
+
+## CLI workflow
+
+Run the initializer from the repository root, then edit the file it creates:
+
+```bash
+stackdome init
+```
+
+Replace the generated resource source with a build definition based on repository evidence. This example pins a branch and uses a Dockerfile in a service directory:
+
+```yaml
+name: storefront
+
+resources:
+  web:
+    build:
+      repo: https://github.com/acme/storefront.git
+      branch: main
+      dockerfile: services/web/Dockerfile
+      context: services/web
+    ports:
+      - name: http
+        port: 8080
+        protocol: HTTP
+        public: true
+```
+
+Omit `branch` to let the server resolve the repository's default branch, or use exactly one of `tag` or `commit`. A commit is the reproducible choice. The Dockerfile path is relative to the build context. See the [Stackfile reference](/reference/stackfile) for all fields and the current release gaps.
+
+Validate before authentication or deployment:
+
+```bash
+stackdome validate
+stackdome login --url https://<your-stackdome-host> --token <api-token>
+stackdome whoami -o json
+stackdome deploy --wait -o json
+stackdome status -o json
+stackdome open -o json
+```
+
+For a private repository, configure its provider through the dashboard or API first. The public CLI has no git-provider management command. Do not put provider tokens in `stackfile.yaml`.
+
+<Visibility for="humans">
+
+## Dashboard workflow
+
+Use the dashboard when you need to connect a provider or prefer the visual stack editor. For a complete first-deploy walkthrough, see [Deploy using the dashboard](/deploy-first-app).
+
+### Connect a provider
 
 The sidebar lists this under **INTEGRATIONS → Git Providers**. The page itself is headed **Git providers**, and the panel of what you have already connected is **CONNECTED PROVIDERS**.
 
@@ -48,7 +133,7 @@ Choose **Connect provider** to start. The dialog runs a three-step stepper — *
   </Step>
 </Steps>
 
-### The GitHub App path
+#### The GitHub App path
 
 Prefer this one. It gives per-repository access you manage on GitHub, it delivers webhooks, and there is no token to rotate.
 
@@ -77,7 +162,7 @@ While it waits, the wizard shows a checklist — *"Opening GitHub authorization�
 **One GitHub App per organization.** A second attempt is rejected with `409 a GitHub App is already installed for this organisation`, and the wizard greys the option out with *"Already connected. Manage installations from the integration card."* To reach more repositories, add another **installation** of the existing app from the row's **Manage on GitHub** rather than creating a second app.
 </Note>
 
-### The access-token path
+#### The access-token path
 
 Use this for GitLab, Bitbucket, Gitea, anything self-hosted, or GitHub when you would rather not install an app. The form is the same for every provider, and the dialog is explicit about what happens to what you paste: *"Stackdome stores the credentials encrypted and uses them only for clones."*
 
@@ -103,7 +188,7 @@ Choose **Connect**. If the credentials are refused you stay on the form with **C
 Never paste a token anywhere it will be captured — a screenshot, a ticket, a chat message. Stackdome encrypts it at rest and never displays it again; the only way to change it is to replace it wholesale through **Update credentials**.
 </Warning>
 
-## Verify and maintain a provider
+### Verify and maintain a provider
 
 Each row's **⋯** menu holds the actions available for that kind of provider.
 
@@ -123,7 +208,7 @@ Each row's **⋯** menu holds the actions available for that kind of provider.
 
 There is no verify action for a GitHub App, and the API rejects one with `only git_credentials integrations can be verified directly`. That is deliberate rather than missing: an app's access runs through short-lived per-installation tokens instead of stored credentials, so there is nothing static to test. Its equivalent check is the repository picker in the next section — if your repository appears in that list, the app can reach it.
 
-## Point a resource at a repository
+### Point a resource at a repository
 
 Open the stack, go to the **Architecture** tab, and click the resource's node on **the canvas** to open **the drawer**. Everything below lives in the drawer's **SOURCE** section.
 
@@ -157,7 +242,7 @@ Which revision kind to use:
 
 The trade-off is only about drift. **Branch** and **Default branch** let a redeploy pick up code you did not intend to ship; **Commit** cannot, but you have to change the value to ship anything new.
 
-### Build options
+#### Build options
 
 The drawer's **Advanced** disclosure — labelled *"build & push"* — holds the three fields most repositories never need to touch.
 
@@ -167,7 +252,7 @@ The drawer's **Advanced** disclosure — labelled *"build & push"* — holds the
 | **Build context** | `.` | *"Directory passed to the image build."* Set this for a monorepo, so the build sees only the subdirectory it needs. |
 | **Push registry** | blank | *"Blank uses the internal cluster registry."* Set it only to push somewhere else you have credentials for. |
 
-## The build
+### The build
 
 When you deploy, Stackdome does not build anything itself. It writes the build request onto the resource's custom resource on the target cluster, and the `stackdome-agent` there clones the repository, builds the image, and pushes it. The resource's node on the canvas is badged `git build` while this is how it gets its image.
 
@@ -175,7 +260,7 @@ The push destination is the point that catches people out. By default it is the 
 
 You can watch it on the stack's **Deployments** tab. Each release in the deploy timeline shows **Build**, **Deploy** and **Ready** as separate phases, and records the revision it actually resolved — a release built from a branch names the commit it landed on, so you always know what is running even when the source said `main`.
 
-## Pushing to git does not deploy
+### Pushing to git does not deploy
 
 **There is no auto-deploy on push, and no setting to turn one on.** Deploying a stack is something you ask for: the timeline labels a release you started **Manual deploy**, and a rollback **Rollback to #2**. The one release Stackdome starts without being asked is a preview environment's — see the end of this section.
 
@@ -193,7 +278,24 @@ So a commit to the branch a resource tracks changes nothing on its own. The next
 
 Every webhook delivery is HMAC-verified against that provider's webhook secret before anything happens, and a bad signature is refused.
 
+</Visibility>
+
 ## Troubleshooting
+
+Start with structured CLI output. Use the release ID returned by `stackdome deploy -o json` and the build ID returned by `stackdome build list`:
+
+```bash
+stackdome build list
+stackdome build info <build-id>
+stackdome build logs <build-id>
+stackdome release events <release-id> --follow
+stackdome status -o json
+stackdome logs <resource> --tail 100
+```
+
+Check the build definition before retrying: a private repository needs a configured provider, the selected revision must exist, `dockerfile` is relative to `context`, and the target cluster needs an image registry. A failed `stackdome deploy --wait -o json` is not a successful deployment even if the stack document was applied.
+
+<Visibility for="humans">
 
 **Build progress and failures are release events.** Open the stack's **Deployments** tab and read the activity stream for the release. The wording is predictable:
 
@@ -219,3 +321,22 @@ Common causes, in the order worth checking:
 
 Do not confuse this with the limit that does exist. [Preview environments](/guides/preview-environments) cap how many previews may be **active at one time**, and a pull request that would exceed it is skipped rather than queued. That bounds how many previews you accumulate; it does not bound how many builds run concurrently, and nothing bounds the builds your own deploys start.
 </Warning>
+
+</Visibility>
+
+## Related tasks
+
+<CardGroup cols={2}>
+  <Card title="Deploy with a coding agent" icon="sparkles" href="/guides/ai-agents">
+    Follow the complete agent operating contract, verification rules, and failure routes.
+  </Card>
+  <Card title="Stackfile reference" icon="file-code" href="/reference/stackfile">
+    Configure build revisions, contexts, ports, environment values, dependencies, and storage.
+  </Card>
+  <Card title="Deploy from an image" icon="container" href="/guides/deploy-from-image">
+    Run an image that was already built and published elsewhere.
+  </Card>
+  <Card title="Preview environments" icon="git-pull-request" href="/guides/preview-environments">
+    Build isolated releases for supported pull-request events.
+  </Card>
+</CardGroup>
