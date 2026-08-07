@@ -36,7 +36,7 @@ resources:
     volumes:
       - name: pg-data
         path: /var/lib/postgresql/data
-    stateful: true
+    workload_type: StatefulService
 
   redis:
     image: redis:latest

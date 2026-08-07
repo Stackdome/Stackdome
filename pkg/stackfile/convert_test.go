@@ -163,7 +163,7 @@ func TestToStack_BuildWithCommit(t *testing.T) {
 	sf := &Stackfile{
 		Name: "commit-build",
 		Resources: map[string]Resource{
-			"app": {Build: &BuildConfig{Repo: "https://github.com/x/y.git", Commit: "abc123"}},
+			"app": {Build: &BuildConfig{Repo: "https://github.com/x/y.git", Branch: "main", Commit: "abc123"}},
 		},
 	}
 
@@ -174,6 +174,9 @@ func TestToStack_BuildWithCommit(t *testing.T) {
 	rev := stack.Spec.StackResources[0].Source.Git
 	if rev.Commit == nil || *rev.Commit != "abc123" {
 		t.Errorf("expected commit 'abc123', got %v", rev.Commit)
+	}
+	if rev.Branch == nil || *rev.Branch != "main" {
+		t.Errorf("expected branch 'main', got %v", rev.Branch)
 	}
 }
 

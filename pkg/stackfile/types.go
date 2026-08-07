@@ -1,6 +1,8 @@
 package stackfile
 
 import (
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -10,6 +12,8 @@ const (
 	PostgresAddonType = "postgres"
 
 	sourceSelf = "self"
+
+	defaultAccessMode = string(models.READ_WRITE_ONCE)
 
 	connectionKindEnv         = string(models.ConnectionKindEnv)
 	connectionKindVolumeMount = string(models.ConnectionKindVolumeMount)
@@ -78,10 +82,11 @@ type SecretMapping map[string]string
 
 type AddonConnectionConfig struct {
 	Type string `yaml:"type"`
-	// Env vars to inject into the resource, with values templated from the addon outputs. E.g. for a postgres addon we might have:
+	// Env vars templated from the addon's outputs. Output names are bare —
+	// no addon prefix (the block already names the addon):
 	// env:
-	//   POSTGRES_HOST: {{ postgres.host }}
-	//   POSTGRES_URI: postgres://{{ postgres.host }}:{{ postgres.port }}
+	//   POSTGRES_HOST: "{{ host }}"
+	//   POSTGRES_URI: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
 	Env      map[string]string    `yaml:"env"`
 	Postgres *PostgresAddonConfig `yaml:"-"`
 
@@ -93,8 +98,24 @@ type PostgresAddonConfig struct {
 	Superuser bool   `yaml:"superuser,omitempty"`
 }
 
+// addonConfigFields are the keys allowed in an addon block. The custom
+// unmarshaler bypasses the decoder's KnownFields check, so unknown keys
+// are rejected here instead.
+var addonConfigFields = map[string]bool{
+	"type": true, "env": true, "database": true, "superuser": true, //nolint:goconst // yaml field names, not a shared constant
+
+}
+
 func (a *AddonConnectionConfig) UnmarshalYAML(node *yaml.Node) error {
 	a.rawNode = *node
+
+	if node.Kind == yaml.MappingNode {
+		for i := 0; i < len(node.Content)-1; i += 2 {
+			if key := node.Content[i].Value; !addonConfigFields[key] {
+				return fmt.Errorf("unknown field %q in addon config", key)
+			}
+		}
+	}
 
 	var base struct {
 		Type string            `yaml:"type"`

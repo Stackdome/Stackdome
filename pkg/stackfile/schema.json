@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://stackdome.com/schemas/stackfile.schema.json",
+  "title": "Stackdome Stackfile",
+  "type": "object",
+  "required": ["name", "resources"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stack name, unique within the project."
+    },
+    "resources": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 50,
+      "description": "Workloads keyed by resource name.",
+      "additionalProperties": { "$ref": "#/definitions/resource" }
+    },
+    "volumes": {
+      "type": "object",
+      "maxProperties": 50,
+      "description": "Persistent volumes keyed by volume name.",
+      "additionalProperties": { "$ref": "#/definitions/volume" }
+    }
+  },
+  "definitions": {
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        { "required": ["image"], "not": { "required": ["build"] } },
+        { "required": ["build"], "not": { "required": ["image"] } }
+      ],
+      "properties": {
+        "image": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Container image reference. Mutually exclusive with build."
+        },
+        "build": { "$ref": "#/definitions/build" },
+        "command": { "type": "array", "items": { "type": "string" } },
+        "args": { "type": "array", "items": { "type": "string" } },
+        "ports": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "$ref": "#/definitions/port" }
+        },
+        "env": {
+          "type": "object",
+          "description": "Env vars. Values may reference outputs: {{ self.port }}, {{ other-resource.host }}, or templates like redis://{{ redis.host }}:{{ redis.port }}. All refs in one value must use the same source resource.",
+          "additionalProperties": { "type": "string" }
+        },
+        "secrets": {
+          "type": "object",
+          "description": "Secret name -> { ENV_VAR: secret_key }. Secrets must already exist in the project.",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        },
+        "addons": {
+          "type": "object",
+          "description": "Addon name -> connection config. Addons must already exist in the project.",
+          "additionalProperties": { "$ref": "#/definitions/addon" }
+        },
+        "volumes": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/volumeMount" }
+        },
+        "depends_on": { "type": "array", "items": { "type": "string" } },
+        "workload_type": {
+          "type": "string",
+          "enum": ["Service", "StatefulService", "Worker", "Job", "CronJob"],
+          "description": "Defaults to Service."
+        },
+        "schedule": {
+          "type": "string",
+          "description": "Cron expression. Only for workload_type CronJob."
+        },
+        "replicas": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "build": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repo"],
+      "not": { "required": ["branch", "tag"] },
+      "dependencies": {
+        "commit": { "anyOf": [{ "required": ["branch"] }, { "required": ["tag"] }] }
+      },
+      "properties": {
+        "repo": { "type": "string", "minLength": 1, "description": "Git repository URL." },
+        "branch": { "type": "string" },
+        "tag": { "type": "string" },
+        "commit": { "type": "string", "description": "Commit SHA pin; requires branch or tag." },
+        "dockerfile": { "type": "string", "description": "Path to the Dockerfile." },
+        "context": { "type": "string", "description": "Build context directory." }
+      }
+    },
+    "port": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "port"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "protocol": { "type": "string" },
+        "public": { "type": "boolean", "description": "Expose publicly via ingress." },
+        "subdomain": { "type": "string", "description": "Subdomain prefix for the public URL." }
+      }
+    },
+    "volume": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["size"],
+      "properties": {
+        "size": {
+          "type": "string",
+          "pattern": "^[0-9]+[KMGTP]i?$",
+          "description": "Volume size, e.g. 5Gi."
+        },
+        "access_mode": {
+          "type": "string",
+          "enum": ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany"],
+          "description": "Defaults to ReadWriteOnce."
+        }
+      }
+    },
+    "volumeMount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "path"],
+      "properties": {
+        "name": { "type": "string", "description": "Name of a volume declared in top-level volumes." },
+        "path": { "type": "string", "description": "Absolute mount path in the container." }
+      }
+    },
+    "addon": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string", "enum": ["postgres"] },
+        "database": { "type": "string", "description": "Database to connect to (postgres)." },
+        "superuser": { "type": "boolean", "description": "Use superuser credentials (postgres)." },
+        "env": {
+          "type": "object",
+          "description": "Env vars templated from addon outputs, e.g. postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}. Bare output names, no prefix.",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    }
+  }
+}

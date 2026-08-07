@@ -1,0 +1,30 @@
+name: superuser-migration
+
+resources:
+  app:
+    image: myorg/api:latest
+    ports:
+      - name: http
+        port: 3000
+        public: true
+        subdomain: api
+    addons:
+      main-db:
+        type: postgres
+        database: app_production
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+
+  migrate:
+    image: myorg/api:latest
+    workload_type: Job
+    command: ["/app/migrate"]
+    addons:
+      main-db:
+        type: postgres
+        database: app_production
+        superuser: true
+        env:
+          DATABASE_URL: "postgres://{{ username }}:{{ password }}@{{ host }}:{{ port }}/{{ database }}"
+    depends_on:
+      - app

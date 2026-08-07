@@ -2,25 +2,15 @@ package stackfile
 
 import (
 	"fmt"
-	"regexp"
 	"sort"
-	"strings"
 
 	openapi "github.com/Stackdome/stackdome/pkg/api/openapi"
-	"github.com/samber/lo"
 	"k8s.io/utils/ptr"
 )
 
-var (
-	// Matches a full-value ref: the entire string is {{ source.output }}
-	exactRefPattern = regexp.MustCompile(`^\{\{\s*([\w-]+(?:\.[\w-]+)+)\s*\}\}$`)
-	// Matches embedded refs within a larger string
-	embeddedRefPattern = regexp.MustCompile(`\{\{\s*([\w-]+(?:\.[\w-]+)+)\s*\}\}`)
-	// addonVarPattern matches {{ varname }} in addon env templates.
-	// Addon vars are plain output names (host, port, username) — no source prefix.
-	addonVarPattern = regexp.MustCompile(`\{\{\s*([\w-]+)\s*\}\}`)
-)
-
+// ToStack converts a validated Stackfile into an API Stack document,
+// ready for the stack apply endpoint. Output is deterministic: resources,
+// volumes, connections, and mappings are emitted in sorted order.
 func (sf *Stackfile) ToStack() (openapi.Stack, error) {
 	resources, err := sf.buildResources()
 	if err != nil {
@@ -39,12 +29,7 @@ func (sf *Stackfile) ToStack() (openapi.Stack, error) {
 
 func (sf *Stackfile) buildResources() ([]openapi.StackResource, error) {
 	resources := make([]openapi.StackResource, 0, len(sf.Resources))
-	names := make([]string, 0, len(sf.Resources))
-	for name := range sf.Resources {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range sortedKeys(sf.Resources) {
 		res := sf.Resources[name]
 		sr := openapi.StackResource{
 			Name:      name,
@@ -92,18 +77,15 @@ func buildGitSource(b *BuildConfig) (*openapi.GitSource, error) {
 	if b.Dockerfile != "" {
 		source.SetDockerfilePath(b.Dockerfile)
 	}
-	switch {
-	case b.Branch != "":
+	// Validate guarantees: branch and tag are exclusive, commit requires one
+	// of them (matching the API's git_commit_requires_ref rule).
+	if b.Branch != "" {
 		source.SetBranch(b.Branch)
-		if b.Commit != "" {
-			source.SetCommit(b.Commit)
-		}
-	case b.Tag != "":
+	}
+	if b.Tag != "" {
 		source.SetTag(b.Tag)
-		if b.Commit != "" {
-			source.SetCommit(b.Commit)
-		}
-	case b.Commit != "":
+	}
+	if b.Commit != "" {
 		source.SetCommit(b.Commit)
 	}
 	// No branch or tag: the server resolves the repository's default branch.
@@ -151,9 +133,9 @@ func buildExecutionConfig(env map[string]string, command, args []string) *openap
 		ev := openapi.EnvVar{Name: name}
 		switch {
 		case isSelfRef(value):
-			output := extractSelfOutput(value)
-			ev.SelfOutput = ptr.To(output)
+			ev.SelfOutput = ptr.To(extractSelfOutput(value))
 		case hasResourceRef(value):
+			// Becomes an env connection; see buildEnvRefConnections.
 			continue
 		default:
 			ev.Value = ptr.To(value)
@@ -169,62 +151,6 @@ func buildExecutionConfig(env map[string]string, command, args []string) *openap
 	}
 
 	return cfg
-}
-
-type envRef struct {
-	Source   string
-	Output   string
-	RawMatch string // the exact substring matched, e.g. "{{ redis.host }}"
-}
-
-func findRefs(value string) []envRef {
-	matches := embeddedRefPattern.FindAllStringSubmatch(value, -1)
-	var refs []envRef
-	for _, m := range matches {
-		parts := strings.SplitN(m[1], ".", 2)
-		if len(parts) == 2 {
-			refs = append(refs, envRef{Source: parts[0], Output: parts[1], RawMatch: m[0]})
-		}
-	}
-	return refs
-}
-
-func isExactRef(value string) bool {
-	return exactRefPattern.MatchString(value)
-}
-
-func isSelfRef(value string) bool {
-	refs := findRefs(value)
-	for _, r := range refs {
-		if r.Source == sourceSelf {
-			return true
-		}
-	}
-	return false
-}
-
-func extractSelfOutput(value string) string {
-	refs := findRefs(value)
-	for _, r := range refs {
-		if r.Source == sourceSelf {
-			return r.Output
-		}
-	}
-	return ""
-}
-
-func hasResourceRef(value string) bool {
-	refs := findRefs(value)
-	for _, r := range refs {
-		if r.Source != sourceSelf {
-			return true
-		}
-	}
-	return false
-}
-
-func outputToVarName(output string) string {
-	return strings.ReplaceAll(output, ".", "_")
 }
 
 func buildVolumeMounts(mounts []VolumeMountDef) []openapi.VolumeMount {
@@ -246,252 +172,20 @@ func (sf *Stackfile) buildVolumes() []openapi.Volume {
 		return nil
 	}
 	volumes := make([]openapi.Volume, 0, len(sf.Volumes))
-	names := make([]string, 0, len(sf.Volumes))
-	for name := range sf.Volumes {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range names {
+	for _, name := range sortedKeys(sf.Volumes) {
 		v := sf.Volumes[name]
-		accessMode := openapi.VolumeAccessMode("ReadWriteOnce")
+		accessMode := openapi.VolumeAccessMode(defaultAccessMode)
 		if v.AccessMode != "" {
 			accessMode = openapi.VolumeAccessMode(v.AccessMode)
 		}
-		vol := openapi.Volume{
+		volumes = append(volumes, openapi.Volume{
 			Name: name,
 			Spec: openapi.VolumeSpec{
 				Size:               v.Size,
 				AccessMode:         accessMode,
 				NeedsSyncBeforeUse: false,
 			},
-		}
-		volumes = append(volumes, vol)
-	}
-	return volumes
-}
-
-func (sf *Stackfile) buildConnections() []openapi.StackConnection {
-	var connections []openapi.StackConnection
-
-	names := make([]string, 0, len(sf.Resources))
-	for name := range sf.Resources {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, resourceName := range names {
-		res := sf.Resources[resourceName]
-		connections = append(connections, buildEnvRefConnections(resourceName, res.Env)...)
-		connections = append(connections, buildSecretConnections(resourceName, res.Secrets)...)
-		connections = append(connections, buildAddonConnections(resourceName, res.Addons)...)
-		connections = append(connections, buildVolumeMountConnections(resourceName, res.Volumes)...)
-	}
-
-	return connections
-}
-
-func buildEnvRefConnections(targetResource string, env map[string]string) []openapi.StackConnection {
-	grouped := make(map[string][]openapi.ConnectionMapping)
-
-	for envName, value := range env {
-		refsInCurrentEnv := findRefs(value)
-		if len(refsInCurrentEnv) == 0 {
-			continue
-		}
-
-		_, currentEnvIsSelfRef := lo.Find(refsInCurrentEnv, func(r envRef) bool { return r.Source == sourceSelf })
-		if currentEnvIsSelfRef {
-			// skip self refs, they will be handled in execution config
-			continue
-		}
-
-		source := refsInCurrentEnv[0].Source
-
-		var vr openapi.ValueRef
-		if isExactRef(value) && len(refsInCurrentEnv) == 1 {
-			vr.Output = ptr.To(refsInCurrentEnv[0].Output)
-		} else {
-			tmpl := value
-			values := make(map[string]openapi.OutputValueRef)
-			for _, r := range refsInCurrentEnv {
-				varName := outputToVarName(r.Output)
-				tmpl = strings.Replace(tmpl, r.RawMatch, "{{ "+varName+" }}", 1)
-				values[varName] = openapi.OutputValueRef{Output: r.Output}
-			}
-			vr.Template = ptr.To(tmpl)
-			vr.Values = &values
-		}
-
-		mapping := openapi.ConnectionMapping{
-			Target: openapi.ConnectionTarget{
-				Type: targetTypeEnv,
-				Name: ptr.To(envName),
-			},
-			Value: vr,
-		}
-		grouped[source] = append(grouped[source], mapping)
-	}
-
-	var connections []openapi.StackConnection
-	for source, mappings := range grouped {
-		conn := openapi.StackConnection{
-			Kind: connectionKindEnv,
-			From: openapi.TopologyNodeRef{
-				Type: nodeTypeStackResource,
-				Name: ptr.To(source),
-			},
-			To: openapi.TopologyNodeRef{
-				Type: nodeTypeStackResource,
-				Name: ptr.To(targetResource),
-			},
-			Mappings: mappings,
-		}
-		connections = append(connections, conn)
-	}
-	return connections
-}
-
-func buildSecretConnections(targetResource string, secrets map[string]SecretMapping) []openapi.StackConnection {
-	var connections []openapi.StackConnection
-
-	for secretName, mapping := range secrets {
-		var mappings []openapi.ConnectionMapping
-		for envName, secretKey := range mapping {
-			mappings = append(mappings, openapi.ConnectionMapping{
-				Target: openapi.ConnectionTarget{
-					Type: targetTypeEnv,
-					Name: ptr.To(envName),
-				},
-				Value: openapi.ValueRef{
-					Output: ptr.To(secretKey),
-				},
-			})
-		}
-
-		conn := openapi.StackConnection{
-			Kind: connectionKindEnv,
-			From: openapi.TopologyNodeRef{
-				Type: nodeTypeSecret,
-				Name: ptr.To(secretName),
-			},
-			To: openapi.TopologyNodeRef{
-				Type: nodeTypeStackResource,
-				Name: ptr.To(targetResource),
-			},
-			Mappings: mappings,
-		}
-		connections = append(connections, conn)
-	}
-	return connections
-}
-
-func buildAddonConnections(targetResource string, addons map[string]AddonConnectionConfig) []openapi.StackConnection {
-	var connections []openapi.StackConnection
-
-	for addonName, addon := range addons {
-		mappings := buildAddonMappings(addon.Env)
-
-		conn := openapi.StackConnection{
-			Kind: connectionKindEnv,
-			From: openapi.TopologyNodeRef{
-				Type: "addon/" + addon.Type,
-				Name: ptr.To(addonName),
-			},
-			To: openapi.TopologyNodeRef{
-				Type: nodeTypeStackResource,
-				Name: ptr.To(targetResource),
-			},
-			Mappings: mappings,
-			Config:   buildAddonConfig(addon),
-		}
-
-		connections = append(connections, conn)
-	}
-	return connections
-}
-
-type addonRef struct {
-	Output   string
-	RawMatch string
-}
-
-func findAddonRefs(value string) []addonRef {
-	matches := addonVarPattern.FindAllStringSubmatch(value, -1)
-	var refs []addonRef
-	for _, m := range matches {
-		refs = append(refs, addonRef{Output: m[1], RawMatch: m[0]})
-	}
-	return refs
-}
-
-func buildAddonMappings(env map[string]string) []openapi.ConnectionMapping {
-	var mappings []openapi.ConnectionMapping
-	for envName, envValue := range env {
-		refs := findAddonRefs(envValue)
-
-		var vr openapi.ValueRef
-		switch {
-		case len(refs) == 1 && refs[0].RawMatch == envValue:
-			vr.Output = ptr.To(refs[0].Output)
-		default:
-			values := make(map[string]openapi.OutputValueRef)
-			for _, r := range refs {
-				values[r.Output] = openapi.OutputValueRef{Output: r.Output}
-			}
-			vr.Template = ptr.To(envValue)
-			vr.Values = &values
-		}
-
-		mappings = append(mappings, openapi.ConnectionMapping{
-			Target: openapi.ConnectionTarget{
-				Type: targetTypeEnv,
-				Name: ptr.To(envName),
-			},
-			Value: vr,
 		})
 	}
-	return mappings
-}
-
-func buildAddonConfig(addon AddonConnectionConfig) *openapi.StackConnectionConfig {
-	if addon.Postgres == nil {
-		return nil
-	}
-	pg := addon.Postgres
-	if pg.Database == "" && !pg.Superuser {
-		return nil
-	}
-	pgConfig := &openapi.PostgresEnvConfig{}
-	if pg.Database != "" {
-		pgConfig.Database = ptr.To(pg.Database)
-	}
-	if pg.Superuser {
-		pgConfig.Superuser = ptr.To(true)
-	}
-	return &openapi.StackConnectionConfig{
-		PostgresEnvConfig: pgConfig,
-	}
-}
-
-func buildVolumeMountConnections(targetResource string, mounts []VolumeMountDef) []openapi.StackConnection {
-	var connections []openapi.StackConnection
-	for _, m := range mounts {
-		conn := openapi.StackConnection{
-			Kind: connectionKindVolumeMount,
-			From: openapi.TopologyNodeRef{
-				Type: nodeTypeVolume,
-				Name: ptr.To(m.Name),
-			},
-			To: openapi.TopologyNodeRef{
-				Type: nodeTypeStackResource,
-				Name: ptr.To(targetResource),
-			},
-			Config: &openapi.StackConnectionConfig{
-				VolumeMountConfig: &openapi.VolumeMountConfig{
-					MountPath: m.Path,
-				},
-			},
-		}
-		connections = append(connections, conn)
-	}
-	return connections
+	return volumes
 }

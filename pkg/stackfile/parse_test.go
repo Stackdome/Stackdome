@@ -43,3 +43,76 @@ var _ = Describe("output validation (human-readable scheme)", func() {
 		Entry("bare url (ambiguous) rejected", models.OutputNameURL, false),
 	)
 })
+
+var _ = Describe("Load strictness", func() {
+	It("rejects unknown fields", func() {
+		_, err := Load([]byte(`
+name: bad
+resources:
+  web:
+    image: nginx:latest
+    stateful: true
+`))
+		Expect(err).To(MatchError(ContainSubstring("stateful")))
+	})
+
+	It("rejects unknown fields in addon blocks", func() {
+		_, err := Load([]byte(`
+name: bad
+resources:
+  web:
+    image: nginx:latest
+    addons:
+      db:
+        type: postgres
+        size: 10Gi
+        env:
+          DB_HOST: "{{ host }}"
+`))
+		Expect(err).To(MatchError(ContainSubstring(`unknown field "size" in addon config`)))
+	})
+
+	It("rejects dotted refs in addon env", func() {
+		_, err := Load([]byte(`
+name: bad
+resources:
+  web:
+    image: nginx:latest
+    addons:
+      db:
+        type: postgres
+        env:
+          DB_HOST: "{{ postgres.host }}"
+`))
+		Expect(err).To(MatchError(ContainSubstring("bare names")))
+	})
+})
+
+var _ = Describe("build ref validation", func() {
+	load := func(build string) error {
+		_, err := Load([]byte(`
+name: refs
+resources:
+  app:
+    build:
+      repo: https://example.com/repo.git
+` + build))
+		return err
+	}
+
+	It("rejects branch with tag", func() {
+		Expect(load("      branch: main\n      tag: v1.0.0\n")).To(MatchError(ContainSubstring("mutually exclusive")))
+	})
+
+	It("rejects a bare commit", func() {
+		Expect(load("      commit: abc123\n")).To(MatchError(ContainSubstring("requires 'branch' or 'tag'")))
+	})
+
+	It("accepts commit pinned to a branch", func() {
+		Expect(load("      branch: main\n      commit: abc123\n")).To(Succeed())
+	})
+
+	It("accepts commit pinned to a tag", func() {
+		Expect(load("      tag: v1.0.0\n      commit: abc123\n")).To(Succeed())
+	})
+})
