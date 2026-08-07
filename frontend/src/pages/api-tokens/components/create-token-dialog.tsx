@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Copy, Check, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
 import { FieldShell } from "@/components/branded";
 import {
   createApiToken,
@@ -20,6 +21,9 @@ import {
   type ScopeList,
 } from "@/api/api-tokens";
 import { getErrorMessage } from "@/api/client";
+import { copyText } from "@/lib/clipboard";
+
+const COPY_FLASH_MS = 1400;
 
 interface CreateTokenDialogProps {
   open: boolean;
@@ -40,6 +44,7 @@ function endOfDayRFC3339(date: string): string {
 }
 
 export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateTokenDialogProps) {
+  const { toast } = useToast();
   const [name, setName] = useState("");
   const [expiry, setExpiry] = useState("");
   const [fullAccess, setFullAccess] = useState(true);
@@ -50,6 +55,9 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<APITokenCreateResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -59,7 +67,6 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     setSelectedScopes(new Set());
     setError(null);
     setScopesError(null);
-    setCreated(null);
     setCopied(false);
     getApiTokenScopes()
       .then((res) => {
@@ -88,9 +95,17 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
       setError("Name is required.");
       return;
     }
-    const requestedScopes = fullAccess
-      ? [scopes?.full_access_scope ?? "*"]
-      : [...selectedScopes];
+    // Scopes come from the server contract — never guess a full-access scope
+    // when that contract couldn't be read.
+    if (!scopes) {
+      setError("Scopes haven't loaded yet.");
+      return;
+    }
+    if (fullAccess && !scopes.full_access_scope) {
+      setError("The server didn't provide a full-access scope.");
+      return;
+    }
+    const requestedScopes = fullAccess ? [scopes.full_access_scope as string] : [...selectedScopes];
     if (requestedScopes.length === 0) {
       setError("Select at least one scope.");
       return;
@@ -113,13 +128,21 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
 
   async function handleCopy() {
     if (!created?.token) return;
-    await navigator.clipboard.writeText(created.token);
+    try {
+      await copyText(created.token);
+    } catch (e) {
+      toast({ title: "Copy failed", description: getErrorMessage(e), variant: "destructive" });
+      return;
+    }
     setCopied(true);
+    if (copyTimer.current) clearTimeout(copyTimer.current);
+    copyTimer.current = setTimeout(() => setCopied(false), COPY_FLASH_MS);
   }
 
   function handleClose() {
     const wasCreated = created !== null;
     onOpenChange(false);
+    setCreated(null);
     if (wasCreated) onCreated();
   }
 
@@ -139,7 +162,13 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                   <pre className="flex-1 overflow-x-auto rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs">
                     {created.token}
                   </pre>
-                  <Button type="button" variant="outline" size="icon" onClick={handleCopy} title="Copy token">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={handleCopy}
+                    aria-label={copied ? "Copied" : "Copy token"}
+                  >
                     {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                   </Button>
                 </div>
@@ -197,6 +226,9 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                     <Switch id="full-access" checked={fullAccess} onCheckedChange={setFullAccess} />
                   </div>
                   {scopesError && <p className="text-xs text-danger">{scopesError}</p>}
+                  {!scopesError && !scopes && (
+                    <p className="text-xs text-muted-foreground">Loading available scopes…</p>
+                  )}
                   {!fullAccess && (
                     <div className="space-y-2 border-t border-border pt-3">
                       {scopes?.items?.map((resource) =>
@@ -227,7 +259,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={creating}>
+              <Button onClick={handleCreate} disabled={creating || !scopes}>
                 {creating && <Loader2 className="h-4 w-4 animate-spin" />}
                 Create
               </Button>
