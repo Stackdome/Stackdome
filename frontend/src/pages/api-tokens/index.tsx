@@ -33,6 +33,7 @@ export default function ApiTokensPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showRevoked, setShowRevoked] = useState(false);
   const { toast } = useToast();
   const confirm = useConfirm();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
@@ -60,6 +61,11 @@ export default function ApiTokensPage() {
     setCustomLabel(currentPath, "API Tokens");
     setPathLoading(currentPath, loading);
   }, [setCustomLabel, setPathLoading, loading]);
+
+  // Revoked tokens are never deleted server-side, so they would pile up in the
+  // list forever. Keep them one click away instead of on screen.
+  const revokedCount = tokens.filter((token) => token.revoked_at).length;
+  const visible = showRevoked ? tokens : tokens.filter((token) => !token.revoked_at);
 
   async function requestRevoke(token: APIToken) {
     if (!token.id) return;
@@ -117,11 +123,15 @@ export default function ApiTokensPage() {
           }
         />
 
-        {tokens.length === 0 ? (
+        {visible.length === 0 ? (
           <EmptyState
             icon={<KeyRound className="h-8 w-8" />}
-            title="No API tokens yet"
-            description="Create a token to let scripts, CI, or agents call the API."
+            title={revokedCount > 0 ? "No active API tokens" : "No API tokens yet"}
+            description={
+              revokedCount > 0
+                ? "Every token here has been revoked. Create one to let scripts, CI, or agents call the API."
+                : "Create a token to let scripts, CI, or agents call the API."
+            }
             action={
               <Button onClick={() => setShowCreateDialog(true)}>
                 <PlusCircle className="h-4 w-4" />
@@ -130,7 +140,22 @@ export default function ApiTokensPage() {
             }
           />
         ) : (
-          <Panel title="API Tokens" count={tokens.length} bodyClassName="p-0">
+          <Panel
+            title="API Tokens"
+            count={visible.length}
+            bodyClassName="p-0"
+            action={
+              revokedCount > 0 && (
+                <button
+                  type="button"
+                  className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
+                  onClick={() => setShowRevoked((prev) => !prev)}
+                >
+                  {showRevoked ? "Hide revoked" : `Show revoked (${revokedCount})`}
+                </button>
+              )
+            }
+          >
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -143,7 +168,7 @@ export default function ApiTokensPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tokens.map((token) => {
+                {visible.map((token) => {
                   const revoked = !!token.revoked_at;
                   const expired = !revoked && !!token.expires_at && new Date(token.expires_at) < new Date();
                   const dead = revoked || expired;
