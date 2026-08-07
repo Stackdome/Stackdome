@@ -39,8 +39,14 @@ function scopeKey(resource: string, action: string): string {
 // Native <input type="date"> only carries a calendar day — treat it as the
 // end of that day in the user's local time so "expires on this date" reads
 // naturally, then hand the API an RFC3339 timestamp.
+//
+// Built from numeric y/m/d rather than parsing a "YYYY-MM-DDTHH:mm:ss" string:
+// a date-time string with no timezone offset is local time in every current
+// engine, but some older engines read it as UTC — the numeric constructor
+// can't be ambiguous either way.
 function endOfDayRFC3339(date: string): string {
-  return new Date(`${date}T23:59:59`).toISOString();
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59).toISOString();
 }
 
 export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateTokenDialogProps) {

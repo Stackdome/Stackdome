@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import ApiTokensPage from "../index";
@@ -143,6 +143,20 @@ describe("ApiTokensPage", () => {
 
     resolveScopes({ full_access_scope: "*", items: [] });
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+  });
+
+  it("sends an expires_at that is end-of-day local time for the chosen date", async () => {
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    fireEvent.change(screen.getByLabelText(/expires/i), { target: { value: "2026-12-31" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    await waitFor(() => expect(tokensApi.createApiToken).toHaveBeenCalled());
+    const { expires_at } = vi.mocked(tokensApi.createApiToken).mock.calls[0][0];
+    expect(new Date(expires_at as string)).toEqual(new Date(2026, 11, 31, 23, 59, 59));
   });
 
   it("revokes a token via the confirm dialog", async () => {
