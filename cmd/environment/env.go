@@ -153,7 +153,7 @@ func (e *environmentImpl) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig.BaseDomain, e.BootstrapConfig.Email); err != nil {
+	if err := config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig); err != nil {
 		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
@@ -391,8 +391,9 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	}
 	e.EncryptionService = encryptionService
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
-		SessionFactory: e.DBSession,
-		Logger:         e.Logger,
+		SessionFactory:     e.DBSession,
+		Logger:             e.Logger,
+		PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
 	})
 
 	organisationDomainService := services.NewOrganisationDomainsService(services.OrganisationDomainsServiceSpec{
@@ -530,9 +531,10 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Secrets: pgstore.NewSecretStore(pgstore.SecretStoreSpec{
 			SessionFactory: e.DBSession,
 		}),
-		Domains:         organisationDomainService,
-		Credentials:     credentialResolver,
-		GitIntegrations: gitIntegrationService,
+		Domains:            organisationDomainService,
+		Credentials:        credentialResolver,
+		GitIntegrations:    gitIntegrationService,
+		PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
 	})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
@@ -610,6 +612,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ReferenceService:      referenceService,
 		CredentialResolver:    credentialResolver,
 		GitIntegrationService: gitIntegrationService,
+		PlatformBaseDomain:    e.BootstrapConfig.BaseDomain,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -786,6 +789,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:        e.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			CredentialResolver: e.Services.CredentialResolver,
+			PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
 		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
@@ -970,12 +974,11 @@ func (e *environmentImpl) startManagers(ctx context.Context) error {
 
 func (e *environmentImpl) bootstrapPlatformDefaults(ctx context.Context) error {
 	svc := bootstrap.NewService(bootstrap.Spec{
-		OrganisationService:       e.Services.OrganisationService,
-		ClusterService:            e.Services.ClusterService,
-		OrganisationDomainService: e.Services.OrganisationDomainService,
-		BootstrapConfig:           e.BootstrapConfig,
-		ClusterConfig:             e.Config.PlatformCluster,
-		Logger:                    e.Logger,
+		OrganisationService: e.Services.OrganisationService,
+		ClusterService:      e.Services.ClusterService,
+		BootstrapConfig:     e.BootstrapConfig,
+		ClusterConfig:       e.Config.PlatformCluster,
+		Logger:              e.Logger,
 	})
 	if err := svc.Run(ctx); err != nil {
 		return fmt.Errorf("platform bootstrap failed: %w", err)

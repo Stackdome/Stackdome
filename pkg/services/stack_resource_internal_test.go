@@ -85,7 +85,7 @@ func TestStackResourceService_InternalCreateWithTx(t *testing.T) {
 		assert.Equal(t, "abc.web.example.com", result.Ports[0].ExposedFqdn)
 	})
 
-	t.Run("skips port update when resource has no exposed ports", func(t *testing.T) {
+	t.Run("persists ports when resource has no exposed ports", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
@@ -109,6 +109,9 @@ func TestStackResourceService_InternalCreateWithTx(t *testing.T) {
 		mockDomains.EXPECT().
 			PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, created).
 			Return(nil)
+		mockResourceStore.EXPECT().
+			UpdatePortsWithTx(ctx, created.ID, created).
+			Return(nil)
 
 		result, err := svc.InternalCreateWithTx(ctx, stack, input)
 
@@ -116,12 +119,16 @@ func TestStackResourceService_InternalCreateWithTx(t *testing.T) {
 		assert.Equal(t, created.ID, result.ID)
 	})
 
-	t.Run("works without domain service configured", func(t *testing.T) {
+	t.Run("finalizes resources without exposed ports", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
 		mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
-		svc := &stackResourceService{stackResourceStore: mockResourceStore}
+		mockDomains := mocks.NewMockStackDomainsService(ctrl)
+		svc := &stackResourceService{
+			stackResourceStore: mockResourceStore,
+			domainNameService:  mockDomains,
+		}
 
 		ctx := context.Background()
 		stack := &models.Stack{ID: "stack-1", UserID: "user-1", Namespace: "ns-1"}
@@ -131,6 +138,12 @@ func TestStackResourceService_InternalCreateWithTx(t *testing.T) {
 		mockResourceStore.EXPECT().
 			CreateWithTx(ctx, gomock.Any(), stack).
 			Return(created, nil)
+		mockDomains.EXPECT().
+			PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, created).
+			Return(nil)
+		mockResourceStore.EXPECT().
+			UpdatePortsWithTx(ctx, created.ID, created).
+			Return(nil)
 
 		result, err := svc.InternalCreateWithTx(ctx, stack, input)
 
@@ -144,7 +157,11 @@ func TestStackResourceService_InternalSyncResourcesWithTx(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
-	svc := &stackResourceService{stackResourceStore: mockResourceStore}
+	mockDomains := mocks.NewMockStackDomainsService(ctrl)
+	svc := &stackResourceService{
+		stackResourceStore: mockResourceStore,
+		domainNameService:  mockDomains,
+	}
 
 	ctx := context.Background()
 	stack := &models.Stack{ID: "stack-1", UserID: "user-1", Namespace: "ns-1"}
@@ -167,7 +184,18 @@ func TestStackResourceService_InternalSyncResourcesWithTx(t *testing.T) {
 	mockResourceStore.EXPECT().
 		CreateWithTx(ctx, gomock.Any(), stack).
 		Return(&models.StackResource{ID: "res-new", Name: "web"}, nil)
+	mockDomains.EXPECT().
+		PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, gomock.Any()).
+		Return(nil).
+		Times(2)
+	mockResourceStore.EXPECT().
+		UpdatePortsWithTx(ctx, gomock.Any(), gomock.Any()).
+		Return(nil).
+		Times(2)
 
+	mockDomains.EXPECT().
+		InternalDeleteDomainsForResourceWithTx(ctx, "res-drop").
+		Return(nil)
 	mockResourceStore.EXPECT().
 		DeleteWithTx(ctx, "res-drop").
 		Return(nil)

@@ -69,6 +69,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
 		mockValidator := mocks.NewMockValidator(ctrl)
 		mockReferenceService := mocks.NewMockReferenceService(ctrl)
+		mockDomains := mocks.NewMockStackDomainsService(ctrl)
 
 		svc := &stackResourceService{
 			stackStore:         mockStackStore,
@@ -76,6 +77,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
 			referenceService:   mockReferenceService,
+			domainNameService:  mockDomains,
 		}
 
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
@@ -92,6 +94,10 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 
 		created := &models.StackResource{ID: "resource-1", StackID: stackID, Name: "web"}
 		mockResourceStore.EXPECT().CreateWithTx(ctx, resource, stack).Return(created, nil)
+		mockDomains.EXPECT().
+			PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, created).
+			Return(nil)
+		mockResourceStore.EXPECT().UpdatePortsWithTx(ctx, created.ID, created).Return(nil)
 		mockReferenceService.EXPECT().ReprojectSpec(ctx, stackID).Return(nil)
 		mockResourceStore.EXPECT().GetByID(ctx, created.ID).Return(created, nil)
 
@@ -152,6 +158,7 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
 		mockValidator := mocks.NewMockValidator(ctrl)
 		mockReferenceService := mocks.NewMockReferenceService(ctrl)
+		mockDomains := mocks.NewMockStackDomainsService(ctrl)
 
 		svc := &stackResourceService{
 			stackStore:         mockStackStore,
@@ -159,6 +166,7 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
 			referenceService:   mockReferenceService,
+			domainNameService:  mockDomains,
 		}
 
 		existing := &models.StackResource{ID: "resource-1", StackID: stackID, Name: resourceName}
@@ -188,6 +196,10 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 
 		updated := &models.StackResource{ID: existing.ID, StackID: stackID, Name: resourceName}
 		mockResourceStore.EXPECT().UpdateWithTx(ctx, existing.ID, update, stack).Return(updated, nil)
+		mockDomains.EXPECT().
+			PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, updated).
+			Return(nil)
+		mockResourceStore.EXPECT().UpdatePortsWithTx(ctx, updated.ID, updated).Return(nil)
 		mockReferenceService.EXPECT().ReprojectSpec(ctx, stackID).Return(nil)
 		mockResourceStore.EXPECT().GetByID(ctx, updated.ID).Return(updated, nil)
 

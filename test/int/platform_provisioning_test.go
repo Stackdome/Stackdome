@@ -5,17 +5,22 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
+	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/slug"
 	"github.com/Stackdome/stackdome/test/int/bootstrap"
 	"github.com/Stackdome/stackdome/test/int/shared"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 )
 
@@ -51,9 +56,10 @@ func basicProvisioningStack(name string) *openapi.Stack {
 }
 
 var _ = Describe("Platform provisioning", func() {
-	It("seeds a Platform=true cluster and the platform base domain at boot", func() {
+	It("seeds a Platform=true cluster and wildcard TLS at boot", func() {
 		ctx := context.Background()
-		db := GetEnvironment().Database.GetSessionFactory().New(ctx)
+		env := GetEnvironment()
+		db := env.Database.GetSessionFactory().New(ctx)
 
 		By("finding the platform organisation")
 		var platformOrg models.Organisation
@@ -64,12 +70,39 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&platformCluster).Error).To(Succeed())
 		Expect(platformCluster.Platform).To(BeTrue())
 
-		By("verifying the platform org has the base domain")
-		var platformDomain models.OrganisationDomain
-		Expect(db.Where(&models.OrganisationDomain{
-			OrganisationID: platformOrg.ID,
-			Domain:         bootstrap.PlatformProvisioningBaseDomain,
-		}).First(&platformDomain).Error).To(Succeed())
+		By("verifying organisation domains remain custom-only")
+		var domainCount int64
+		Expect(db.Model(&models.OrganisationDomain{}).
+			Where(&models.OrganisationDomain{OrganisationID: platformOrg.ID}).
+			Count(&domainCount).Error).To(Succeed())
+		Expect(domainCount).To(BeZero())
+
+		By("verifying wildcard TLS resources were created without waiting for issuance")
+		clusterClient := env.Cluster.GetClient()
+		tlsNamespace := config.DefaultPlatformTLSNamespace
+
+		cloudflareSecret := &corev1.Secret{}
+		Expect(clusterClient.Get(ctx, types.NamespacedName{
+			Namespace: tlsNamespace,
+			Name:      models.CloudflareAPITokenSecretName,
+		}, cloudflareSecret)).To(Succeed())
+		Expect(cloudflareSecret.Data).To(HaveKey(models.CloudflareAPITokenSecretKey))
+
+		issuer := &cmv1.Issuer{}
+		Expect(clusterClient.Get(ctx, types.NamespacedName{
+			Namespace: tlsNamespace,
+			Name:      models.DNSIssuerName,
+		}, issuer)).To(Succeed())
+
+		certificate := &cmv1.Certificate{}
+		Expect(clusterClient.Get(ctx, types.NamespacedName{
+			Namespace: tlsNamespace,
+			Name:      models.PlatformWildcardTLSName,
+		}, certificate)).To(Succeed())
+		Expect(certificate.Spec.SecretName).To(Equal(models.PlatformWildcardTLSName))
+		Expect(certificate.Spec.DNSNames).To(Equal([]string{"*." + bootstrap.PlatformProvisioningBaseDomain}))
+		Expect(certificate.Spec.IssuerRef.Name).To(Equal(models.DNSIssuerName))
+		Expect(certificate.Spec.IssuerRef.Kind).To(Equal(cmv1.IssuerKind))
 
 		By("verifying the platform org is infrastructure-only: no users, no projects, no registries")
 		var userCount int64
@@ -83,7 +116,7 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(registryCount).To(BeZero())
 	})
 
-	It("seeds <slug>.<base> domain and <slug>-<shortid> registry on fresh signup, and stacks fall back to the platform cluster", func() {
+	It("keeps organisation domains custom-only, seeds the registry, and falls back to the platform cluster", func() {
 		ctx := context.Background()
 		db := GetEnvironment().Database.GetSessionFactory().New(ctx)
 		projectName := models.DefaultProjectName
@@ -105,12 +138,13 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(newToken).NotTo(BeEmpty())
 
 		orgSlug := slug.FromOrgName(orgName)
-		expectedDomain := fmt.Sprintf("%s.%s", orgSlug, bootstrap.PlatformProvisioningBaseDomain)
 
-		By("verifying the org was seeded a <slug>.<base> domain")
-		var orgDomain models.OrganisationDomain
-		Expect(db.Where(&models.OrganisationDomain{OrganisationID: newOrgID}).First(&orgDomain).Error).To(Succeed())
-		Expect(orgDomain.Domain).To(Equal(expectedDomain))
+		By("verifying signup did not seed an organisation domain")
+		var domainCount int64
+		Expect(db.Model(&models.OrganisationDomain{}).
+			Where(&models.OrganisationDomain{OrganisationID: newOrgID}).
+			Count(&domainCount).Error).To(Succeed())
+		Expect(domainCount).To(BeZero())
 
 		By("verifying the org was seeded a <slug>-<shortOrgID>-<shortClusterID> registry on the platform cluster")
 		expectedRegistry := fmt.Sprintf("%s-%s-%s", orgSlug, shortTestID(newOrgID), shortTestID(platformCluster.ID))
@@ -144,11 +178,13 @@ var _ = Describe("Platform provisioning", func() {
 		By("waiting for the stack to become Ready on the platform cluster")
 		shared.WaitForStackReady(newClient, newOrgID, projectName, stackID, 5*time.Minute)
 
-		By("verifying the exposed-port stack domain uses <slug>.<base>")
+		By("verifying the exposed port received a deterministic platform hostname")
 		Eventually(func(g Gomega) {
 			var stackDomain models.StackDomain
 			g.Expect(db.Where(&models.StackDomain{StackID: stackID}).First(&stackDomain).Error).To(Succeed())
-			g.Expect(stackDomain.Fqdn).To(HaveSuffix("." + expectedDomain))
+			g.Expect(stackDomain.Fqdn).To(MatchRegexp(
+				"^web-[a-f0-9]{8}\\." + regexp.QuoteMeta(bootstrap.PlatformProvisioningBaseDomain) + "$",
+			))
 		}, 2*time.Minute, 5*time.Second).Should(Succeed())
 	})
 

@@ -30,6 +30,7 @@ type BootstrapSecrets struct {
 	GitHubAppSlug          string
 	GitHubAppPrivateKey    string
 	GitHubAppWebhookSecret string
+	Platform               install.PlatformConfig
 }
 
 // githubFlags are the GitHub credentials install and upgrade both accept.
@@ -92,7 +93,7 @@ func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error
 		vals.JWTSecret = existing.JWTSecret
 		vals.EncryptionKey = existing.EncryptionKey
 		vals.AdminPassword = existing.AdminPassword
-		if err := mergeGitHubConfig(vals, existing); err != nil {
+		if err := mergeBootstrapConfig(vals, existing); err != nil {
 			return nil, err
 		}
 		return existing, nil
@@ -104,6 +105,15 @@ func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error
 		JWTSecret:     generateBase64(48),
 		EncryptionKey: generateHex(32),
 		AdminPassword: generateAlphanumeric(16),
+		AdminEmail:    vals.AdminEmail,
+		Platform:      vals.Platform,
+
+		GitHubClientID:         vals.GitHubClientID,
+		GitHubClientSecret:     vals.GitHubClientSecret,
+		GitHubAppID:            vals.GitHubAppID,
+		GitHubAppSlug:          vals.GitHubAppSlug,
+		GitHubAppPrivateKey:    vals.GitHubAppPrivateKey,
+		GitHubAppWebhookSecret: vals.GitHubAppWebhookSecret,
 	}
 
 	vals.DBPassword = secrets.DBPassword
@@ -123,11 +133,10 @@ func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error
 	return secrets, nil
 }
 
-// mergeGitHubConfig reconciles the --github-* flags already on vals with what
-// the bootstrap secret holds: flags win, stored values fill the gaps, and the
-// secret is rewritten only when something actually changed. This is what keeps
-// GitHub credentials alive across upgrades, which re-render every manifest.
-func mergeGitHubConfig(vals *install.TemplateValues, existing *BootstrapSecrets) error {
+// mergeBootstrapConfig preserves installer-owned configuration across upgrades.
+// Explicitly supplied values have already been applied to vals; stored values
+// fill any gaps, and the Secret is rewritten only when something changed.
+func mergeBootstrapConfig(vals *install.TemplateValues, existing *BootstrapSecrets) error {
 	fields := []struct{ flag, stored *string }{
 		{&vals.GitHubClientID, &existing.GitHubClientID},
 		{&vals.GitHubClientSecret, &existing.GitHubClientSecret},
@@ -135,6 +144,12 @@ func mergeGitHubConfig(vals *install.TemplateValues, existing *BootstrapSecrets)
 		{&vals.GitHubAppSlug, &existing.GitHubAppSlug},
 		{&vals.GitHubAppPrivateKey, &existing.GitHubAppPrivateKey},
 		{&vals.GitHubAppWebhookSecret, &existing.GitHubAppWebhookSecret},
+		{&vals.Platform.BaseDomain, &existing.Platform.BaseDomain},
+		{&vals.Platform.CloudflareAPIToken, &existing.Platform.CloudflareAPIToken},
+		{&vals.Platform.ACMEEnvironment, &existing.Platform.ACMEEnvironment},
+		{&vals.Platform.ClusterAPIURL, &existing.Platform.ClusterAPIURL},
+		{&vals.Platform.ClusterCAData, &existing.Platform.ClusterCAData},
+		{&vals.Platform.ClusterToken, &existing.Platform.ClusterToken},
 	}
 	changed := false
 	for _, f := range fields {
@@ -162,7 +177,7 @@ func mergeGitHubConfig(vals *install.TemplateValues, existing *BootstrapSecrets)
 	if err := kubectlApply(manifest); err != nil {
 		return fmt.Errorf("updating bootstrap secret: %w", err)
 	}
-	stepLog("GitHub credentials stored")
+	stepLog("Bootstrap configuration stored")
 	return nil
 }
 
@@ -206,6 +221,14 @@ func readExistingSecrets() (*BootstrapSecrets, error) {
 		GitHubAppSlug:          decode("github-app-slug"),
 		GitHubAppPrivateKey:    decode("github-app-private-key"),
 		GitHubAppWebhookSecret: decode("github-app-webhook-secret"),
+		Platform: install.PlatformConfig{
+			BaseDomain:         decode("platform-base-domain"),
+			CloudflareAPIToken: decode("platform-cloudflare-api-token"),
+			ACMEEnvironment:    decode("platform-acme-environment"),
+			ClusterAPIURL:      decode("platform-cluster-api-url"),
+			ClusterCAData:      decode("platform-cluster-ca-data"),
+			ClusterToken:       decode("platform-cluster-token"),
+		},
 	}
 
 	if s.DBPassword == "" || s.JWTSecret == "" || s.EncryptionKey == "" || s.AdminPassword == "" {

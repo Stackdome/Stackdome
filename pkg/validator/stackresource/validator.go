@@ -48,19 +48,21 @@ type gitIntegrationGetter interface {
 }
 
 type ValidatorSpec struct {
-	Volumes         volumeGetter
-	Secrets         secretGetter
-	Domains         domainLister
-	Credentials     credentials.Resolver
-	GitIntegrations gitIntegrationGetter
+	Volumes            volumeGetter
+	Secrets            secretGetter
+	Domains            domainLister
+	Credentials        credentials.Resolver
+	GitIntegrations    gitIntegrationGetter
+	PlatformBaseDomain string
 }
 
 type validator struct {
-	volumes         volumeGetter
-	secrets         secretGetter
-	domains         domainLister
-	credentials     credentials.Resolver
-	gitIntegrations gitIntegrationGetter
+	volumes            volumeGetter
+	secrets            secretGetter
+	domains            domainLister
+	credentials        credentials.Resolver
+	gitIntegrations    gitIntegrationGetter
+	platformBaseDomain string
 }
 
 // NewValidator wires the shared per-resource validator. Every seam is
@@ -87,11 +89,12 @@ func NewValidator(spec ValidatorSpec) Validator {
 		panic("stackresource.NewValidator: GitIntegrations is required")
 	}
 	return &validator{
-		volumes:         spec.Volumes,
-		secrets:         spec.Secrets,
-		domains:         spec.Domains,
-		credentials:     spec.Credentials,
-		gitIntegrations: spec.GitIntegrations,
+		volumes:            spec.Volumes,
+		secrets:            spec.Secrets,
+		domains:            spec.Domains,
+		credentials:        spec.Credentials,
+		gitIntegrations:    spec.GitIntegrations,
+		platformBaseDomain: spec.PlatformBaseDomain,
 	}
 }
 

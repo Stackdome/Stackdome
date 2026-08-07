@@ -17,11 +17,17 @@ var (
 	fallbackSlug = "org"
 )
 
+// Make normalizes a value into a DNS-safe slug without applying a length cap
+// or fallback value.
+func Make(value string) string {
+	value = goslug.Make(value)
+	value = strings.ReplaceAll(value, "_", "-")
+	value = hyphenRuns.ReplaceAllString(value, "-")
+	return strings.Trim(value, "-")
+}
+
 func FromOrgName(name string) string {
-	s := goslug.Make(name)
-	s = strings.ReplaceAll(s, "_", "-")
-	s = hyphenRuns.ReplaceAllString(s, "-")
-	s = strings.Trim(s, "-")
+	s := Make(name)
 	if len(s) > MaxSlugLength {
 		s = strings.Trim(s[:MaxSlugLength], "-")
 	}

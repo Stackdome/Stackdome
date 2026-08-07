@@ -12,6 +12,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/validator"
 	"github.com/glebarez/sqlite"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	"gorm.io/gorm"
 )
@@ -21,7 +23,14 @@ import (
 // NewStackService wires them in production.
 type sqliteSessionFactory struct{ db *gorm.DB }
 
-func newSQLiteSessionFactory(t *testing.T, ddlStatements ...string) *sqliteSessionFactory {
+type testContext interface {
+	Cleanup(func())
+	Errorf(string, ...any)
+	Fatalf(string, ...any)
+	Helper()
+}
+
+func newSQLiteSessionFactory(t testContext, ddlStatements ...string) *sqliteSessionFactory {
 	t.Helper()
 	gdb, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {
@@ -69,7 +78,7 @@ const secretsTableDDL = `
 // accepts. If the wiring ever regresses to routing the check through
 // SecretService, construction (or the check itself) fails loudly instead of
 // silently reintroducing a secrets:read requirement.
-func newProductionWiredStackValidator(t *testing.T, sf db.SessionFactory) validator.StackValidator {
+func newProductionWiredStackValidator(t testContext, sf db.SessionFactory, platformBaseDomain string) validator.StackValidator {
 	t.Helper()
 	ctrl := gomock.NewController(t)
 	t.Cleanup(ctrl.Finish)
@@ -78,6 +87,7 @@ func newProductionWiredStackValidator(t *testing.T, sf db.SessionFactory) valida
 		SessionFactory:        sf,
 		CredentialResolver:    mocks.NewMockCredentialResolver(ctrl),
 		GitIntegrationService: mocks.NewMockGitIntegrationService(ctrl),
+		PlatformBaseDomain:    platformBaseDomain,
 	}).(*stackService)
 	return svc.stackValidator
 }
@@ -100,7 +110,20 @@ func envSecretStack(orgID, secretName string) *models.Stack {
 	}
 }
 
-func seedSecret(t *testing.T, sf *sqliteSessionFactory, id, orgID, name string) {
+func publicPortStack(orgID string) *models.Stack {
+	return &models.Stack{
+		Name:           "test-stack",
+		OrganisationID: orgID,
+		UserID:         "user-1",
+		StackResources: []*models.StackResource{{
+			Name:        "web",
+			ImageConfig: &models.ImageConfigSpec{Image: "nginx:latest"},
+			Ports:       models.Ports{{Name: "http", Number: 8080, Protocol: "http", ExposedToPublic: true}},
+		}},
+	}
+}
+
+func seedSecret(t testContext, sf *sqliteSessionFactory, id, orgID, name string) {
 	t.Helper()
 	secret := &models.Secret{
 		ID:             id,
@@ -126,7 +149,7 @@ func TestFatPathEnvSecretValidation_NoSecretsReadRequired(t *testing.T) {
 	sf := newSQLiteSessionFactory(t, secretsTableDDL)
 	seedSecret(t, sf, "sec-1", "org-1", "db-creds")
 
-	v := newProductionWiredStackValidator(t, sf)
+	v := newProductionWiredStackValidator(t, sf, "")
 
 	if err := v.ValidateForCreate(context.Background(), envSecretStack("org-1", "db-creds")); err != nil {
 		t.Fatalf("expected env secret_key_ref to validate without secrets:read, got %v", err)
@@ -140,7 +163,7 @@ func TestFatPathEnvSecretValidation_CrossOrgSecretNotFound(t *testing.T) {
 	sf := newSQLiteSessionFactory(t, secretsTableDDL)
 	seedSecret(t, sf, "sec-1", "org-other", "db-creds")
 
-	v := newProductionWiredStackValidator(t, sf)
+	v := newProductionWiredStackValidator(t, sf, "")
 
 	err := v.ValidateForCreate(context.Background(), envSecretStack("org-1", "db-creds"))
 	if err == nil {
@@ -161,3 +184,13 @@ func TestFatPathEnvSecretValidation_CrossOrgSecretNotFound(t *testing.T) {
 		t.Fatalf("unexpected field: got %q want %q", got, want)
 	}
 }
+
+var _ = Describe("Fat-path platform domain wiring", func() {
+	It("validates a public port without looking up custom domains", func() {
+		t := GinkgoT()
+		sf := newSQLiteSessionFactory(t)
+		v := newProductionWiredStackValidator(t, sf, "platform.example")
+
+		Expect(v.ValidateForCreate(context.Background(), publicPortStack("org-1"))).To(BeNil())
+	})
+})

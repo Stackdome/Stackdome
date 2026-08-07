@@ -265,14 +265,8 @@ func (s *stackResourceService) InternalSyncResourcesWithTx(ctx context.Context, 
 }
 
 func (s *stackResourceService) finalizeExposedPortsForResourceWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
-	if s.domainNameService == nil {
-		return resource, nil
-	}
 	if err := s.domainNameService.PopulateAndSaveExposedPortDomainsForResourceWithTx(ctx, stack, resource); err != nil {
 		return nil, err
-	}
-	if !stackResourceHasExposedPorts(resource.Ports) {
-		return resource, nil
 	}
 	if err := s.stackResourceStore.UpdatePortsWithTx(ctx, resource.ID, resource); err != nil {
 		return nil, err

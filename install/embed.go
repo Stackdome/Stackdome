@@ -2,6 +2,7 @@ package install
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"embed"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,27 @@ import (
 
 //go:embed manifests/*.yaml
 var manifestsFS embed.FS
+
+type PlatformConfig struct {
+	BaseDomain         string
+	CloudflareAPIToken string
+	ACMEEnvironment    string
+	ClusterAPIURL      string
+	ClusterCAData      string
+	ClusterToken       string
+}
+
+func (c PlatformConfig) Enabled() bool {
+	return c.BaseDomain != ""
+}
+
+// Revision changes when a pod restart is required to load updated Secret-backed
+// platform configuration. It reveals none of the stored credentials.
+func (c PlatformConfig) Revision() string {
+	data := c.BaseDomain + "\x00" + c.CloudflareAPIToken + "\x00" + c.ACMEEnvironment + "\x00" +
+		c.ClusterAPIURL + "\x00" + c.ClusterCAData + "\x00" + c.ClusterToken
+	return fmt.Sprintf("%x", sha256.Sum256([]byte(data)))[:16]
+}
 
 type TemplateValues struct {
 	DBPassword     string
@@ -22,6 +44,7 @@ type TemplateValues struct {
 	DBWorkloadType string
 	StackUID       string
 	TLSEnabled     bool
+	Platform       PlatformConfig
 	// GitHub OAuth login credentials; empty leaves login disabled.
 	GitHubClientID     string
 	GitHubClientSecret string

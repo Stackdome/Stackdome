@@ -46,6 +46,9 @@ var (
 	// Platform Provisioning
 	EnvPlatformEmail                   = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform cluster issuer", nil, false)
 	EnvPlatformBaseDomain              = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
+	EnvPlatformDNSCloudflareAPIToken   = StringVar("PLATFORM_DNS_CLOUDFLARE_API_TOKEN", "Cloudflare API token used for platform wildcard DNS challenges", nil, false)
+	EnvPlatformACMEEnvironment         = StringVar("PLATFORM_ACME_ENVIRONMENT", "Let's Encrypt ACME environment (production or staging)", ptr(ACMEEnvironmentProduction), false)
+	EnvPlatformTLSNamespace            = StringVar("PLATFORM_TLS_NAMESPACE", "Namespace for platform TLS resources", ptr(DefaultPlatformTLSNamespace), false)
 	EnvPlatformOrgRegistryStorageSize  = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_SIZE", "Default storage size for each org's registry seeded at signup", ptr(models.DefaultPlatformOrgRegistryStorageSize), false)
 	EnvPlatformOrgRegistryStorageClass = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_CLASS", "Default storage class for each org's registry seeded at signup", nil, false)
 

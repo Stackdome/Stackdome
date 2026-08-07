@@ -73,10 +73,10 @@ func (cm *ClientManager) Bootstrap(ctx context.Context, platformClusterID string
 	bootstrapCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	// The server, on boot, provisioned the infrastructure-only platform org,
-	// cluster and base domain from the PLATFORM_* env. Sign up a tenant org for
-	// the suite; signup seeds its <slug>.<base> domain and registry on the
-	// platform cluster, which stacks resolve via the read-time fallback.
+	// The server, on boot, provisioned the infrastructure-only platform org and
+	// cluster from the PLATFORM_* env. Sign up a tenant org for the suite; signup
+	// seeds its registry on the platform cluster, which stacks resolve via the
+	// read-time fallback.
 	if err := cm.signupSuiteUser(bootstrapCtx); err != nil {
 		return fmt.Errorf("failed to sign up suite user: %w", err)
 	}

@@ -13,35 +13,32 @@ import (
 )
 
 type Spec struct {
-	OrganisationService       services.OrganisationService
-	ClusterService            services.ClusterService
-	OrganisationDomainService services.OrganisationDomainsService
-	BootstrapConfig           *config.BootstrapConfig
-	ClusterConfig             *config.ClusterConfig
-	Logger                    logger.Logger
+	OrganisationService services.OrganisationService
+	ClusterService      services.ClusterService
+	BootstrapConfig     *config.BootstrapConfig
+	ClusterConfig       *config.ClusterConfig
+	Logger              logger.Logger
 }
 
 type Service struct {
-	organisationService       services.OrganisationService
-	clusterService            services.ClusterService
-	organisationDomainService services.OrganisationDomainsService
-	bootstrapCfg              *config.BootstrapConfig
-	clusterCfg                *config.ClusterConfig
-	logger                    logger.Logger
+	organisationService services.OrganisationService
+	clusterService      services.ClusterService
+	bootstrapCfg        *config.BootstrapConfig
+	clusterCfg          *config.ClusterConfig
+	logger              logger.Logger
 }
 
 func NewService(spec Spec) *Service {
 	return &Service{
-		organisationService:       spec.OrganisationService,
-		clusterService:            spec.ClusterService,
-		organisationDomainService: spec.OrganisationDomainService,
-		bootstrapCfg:              spec.BootstrapConfig,
-		clusterCfg:                spec.ClusterConfig,
-		logger:                    spec.Logger,
+		organisationService: spec.OrganisationService,
+		clusterService:      spec.ClusterService,
+		bootstrapCfg:        spec.BootstrapConfig,
+		clusterCfg:          spec.ClusterConfig,
+		logger:              spec.Logger,
 	}
 }
 
-// Run provisions the platform org, cluster and base domain.
+// Run provisions the platform org, cluster, and wildcard TLS.
 // The platform org is infrastructure-only: no users, no projects.
 func (s *Service) Run(ctx context.Context) error {
 	if !s.clusterCfg.IsSet() {
@@ -60,18 +57,23 @@ func (s *Service) Run(ctx context.Context) error {
 		ContactEmail: s.bootstrapCfg.Email,
 	})
 
-	if _, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
+	cluster, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
 		Name:           models.PlatformClusterName,
 		OrganisationID: org.ID,
 		Platform:       true,
 		ClusterURL:     s.clusterCfg.ClusterURL,
 		ClusterCAData:  s.clusterCfg.ClusterCAData,
 		Token:          s.clusterCfg.Token,
-	}); cErr != nil {
+	})
+	if cErr != nil {
 		return fmt.Errorf("failed to upsert platform cluster: %w", cErr)
 	}
 
-	return s.ensurePlatformDomain(sysCtx, org.ID)
+	if err := s.clusterService.InternalEnsurePlatformWildcardTLS(sysCtx, cluster, s.bootstrapCfg); err != nil {
+		return fmt.Errorf("failed to create or update platform wildcard TLS: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) ensurePlatformOrg(ctx context.Context) (*models.Organisation, error) {
@@ -91,21 +93,4 @@ func (s *Service) ensurePlatformOrg(ctx context.Context) (*models.Organisation, 
 		return nil, fmt.Errorf("failed to create platform org: %w", cErr)
 	}
 	return created, nil
-}
-
-func (s *Service) ensurePlatformDomain(ctx context.Context, orgID string) error {
-	existing, err := s.organisationDomainService.GetDefaultDomainForOrganisation(ctx, orgID)
-	if err == nil && existing.Domain == s.bootstrapCfg.BaseDomain {
-		return nil
-	}
-	if err != nil && err.Code != errors.ErrorNotFound {
-		return fmt.Errorf("failed to check platform domain: %w", err)
-	}
-	if _, cErr := s.organisationDomainService.Create(ctx, &models.OrganisationDomain{
-		OrganisationID: orgID,
-		Domain:         s.bootstrapCfg.BaseDomain,
-	}); cErr != nil && cErr.Code != errors.ErrorConflict {
-		return fmt.Errorf("failed to create platform domain: %w", cErr)
-	}
-	return nil
 }

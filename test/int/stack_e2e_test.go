@@ -708,9 +708,12 @@ var _ = Describe("Stack E2E", Ordered, func() {
 			Expect(portFound).To(BeTrue(), "Service should have port %d", shared.BuildSourcePort)
 
 			By("Verifying Ingress was created for exposed port")
-			ingress, err := shared.GetIngressForStackResource(ctx, clusterClient, namespace, shared.BuildSourceResourceName)
-			Expect(err).NotTo(HaveOccurred(), "Ingress should exist for exposed port")
-			Expect(ingress.Spec.Rules).NotTo(BeEmpty(), "Ingress should have at least one rule")
+			ingresses, err := shared.GetIngressesForStackResource(ctx, clusterClient, srCR)
+			Expect(err).NotTo(HaveOccurred(), "listing Ingresses for exposed port should succeed")
+			Expect(ingresses).NotTo(BeEmpty(), "an Ingress should exist for exposed port")
+			for _, ingress := range ingresses {
+				Expect(ingress.Spec.Rules).NotTo(BeEmpty(), "Ingress %s should have at least one rule", ingress.Name)
+			}
 
 			By("Port-forwarding to the app and verifying HTTP response")
 			localPort, stopChan := shared.PortForwardStackResource(ctx, testEnv.Cluster.GetRESTConfig(), clientset, namespace, shared.BuildSourceResourceName, shared.BuildSourcePort)

@@ -7,6 +7,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
@@ -39,7 +41,7 @@ func TestShouldEnableTLS(t *testing.T) {
 	}
 }
 
-func TestHasTLSPorts(t *testing.T) {
+func TestHasCertManagerTLSPorts(t *testing.T) {
 	tests := []struct {
 		name string
 		spec *corev1alpha1.StackResourceSpec
@@ -61,7 +63,7 @@ func TestHasTLSPorts(t *testing.T) {
 			false,
 		},
 		{
-			"single TLS port",
+			"TLS port without a referenced Secret",
 			&corev1alpha1.StackResourceSpec{
 				Ports: []corev1alpha1.Port{
 					{Number: 443, TLS: true},
@@ -70,10 +72,19 @@ func TestHasTLSPorts(t *testing.T) {
 			true,
 		},
 		{
-			"mixed ports",
+			"TLS port with a referenced Secret",
 			&corev1alpha1.StackResourceSpec{
 				Ports: []corev1alpha1.Port{
-					{Number: 8080, TLS: false},
+					{Number: 443, TLS: true, TLSSecretRef: models.PlatformWildcardTLSName},
+				},
+			},
+			false,
+		},
+		{
+			"referenced and cert-manager TLS ports",
+			&corev1alpha1.StackResourceSpec{
+				Ports: []corev1alpha1.Port{
+					{Number: 8080, TLS: true, TLSSecretRef: models.PlatformWildcardTLSName},
 					{Number: 443, TLS: true},
 				},
 			},
@@ -83,13 +94,84 @@ func TestHasTLSPorts(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := hasTLSPorts(tt.spec)
+			got := hasCertManagerTLSPorts(tt.spec)
 			if got != tt.want {
-				t.Errorf("hasTLSPorts() = %v, want %v", got, tt.want)
+				t.Errorf("hasCertManagerTLSPorts() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
+
+var _ = Describe("clusterResourceBuilder platform wildcard TLS", func() {
+	DescribeTable("builds the port TLS reference",
+		func(fqdn, baseDomain string, wantTLS, wantWildcardRef, wantCertManagerIssuer bool) {
+			builder := NewClusterResourceBuilder(ClusterResourceBuilderSpec{
+				PlatformBaseDomain: baseDomain,
+			})
+			resource := &models.StackResource{
+				Name:      "api",
+				Namespace: "workload",
+				StackID:   "stack-1",
+				Ports: []models.Port{{
+					Name:            "http",
+					Number:          8080,
+					Protocol:        "http",
+					ExposedToPublic: true,
+					ExposedFqdn:     fqdn,
+				}},
+			}
+
+			cr, err := builder.BuildStackResourceCR(resource, "stack", "org")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cr.Spec.Ports).To(HaveLen(1))
+			Expect(cr.Spec.Ports[0].TLS).To(Equal(wantTLS))
+
+			wantRef := ""
+			if wantWildcardRef {
+				wantRef = models.PlatformWildcardTLSName
+			}
+			Expect(cr.Spec.Ports[0].TLSSecretRef).To(Equal(wantRef))
+			if wantWildcardRef {
+				Expect(cr.Labels).To(HaveKeyWithValue(corev1alpha1.LabelUsesPlatformWildcardTLS, "true"))
+			} else {
+				Expect(cr.Labels).NotTo(HaveKey(corev1alpha1.LabelUsesPlatformWildcardTLS))
+			}
+			_, hasCertManagerIssuer := cr.Annotations[corev1alpha1.ClusterIssuerAnnotation]
+			Expect(hasCertManagerIssuer).To(Equal(wantCertManagerIssuer))
+		},
+		Entry("direct platform hostname", "api-1234abcd.cloud.stackdome.com", "cloud.stackdome.com", true, true, false),
+		Entry("nested platform hostname", "hash.org.cloud.stackdome.com", "cloud.stackdome.com", true, false, true),
+		Entry("custom hostname", "api.customer.example.com", "cloud.stackdome.com", true, false, true),
+		Entry("case and trailing dot equivalent direct child", "API-1234ABCD.Cloud.Stackdome.Com.", "CLOUD.STACKDOME.COM.", true, true, false),
+		Entry("nip io hostname", "api.127-0-0-1.nip.io", "nip.io", false, false, false),
+		Entry("sslip io hostname", "api.127-0-0-1.sslip.io", "sslip.io", false, false, false),
+		Entry("local hostname", "api.local", "local", false, false, false),
+		Entry("empty base domain", "api-1234abcd.cloud.stackdome.com", "", true, false, true),
+	)
+
+	It("keeps the cert-manager Issuer for a resource with platform and custom TLS ports", func() {
+		builder := NewClusterResourceBuilder(ClusterResourceBuilderSpec{
+			PlatformBaseDomain: "cloud.stackdome.com",
+		})
+		resource := &models.StackResource{
+			Name:      "api",
+			Namespace: "workload",
+			StackID:   "stack-1",
+			Ports: []models.Port{
+				{Name: "platform", Number: 8080, Protocol: "http", ExposedToPublic: true, ExposedFqdn: "api-1234abcd.cloud.stackdome.com"},
+				{Name: "custom", Number: 9090, Protocol: "http", ExposedToPublic: true, ExposedFqdn: "api.customer.example.com"},
+			},
+		}
+
+		cr, err := builder.BuildStackResourceCR(resource, "stack", "org")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(cr.Spec.Ports).To(HaveLen(2))
+		Expect(cr.Spec.Ports[0].TLSSecretRef).To(Equal(models.PlatformWildcardTLSName))
+		Expect(cr.Spec.Ports[1].TLSSecretRef).To(BeEmpty())
+		Expect(cr.Labels).To(HaveKeyWithValue(corev1alpha1.LabelUsesPlatformWildcardTLS, "true"))
+		Expect(cr.Annotations).To(HaveKeyWithValue(corev1alpha1.ClusterIssuerAnnotation, models.DefaultClusterIssuerName))
+	})
+})
 
 func TestBuildImageRepositorySpec(t *testing.T) {
 	t.Run("in-cluster registry", func(t *testing.T) {

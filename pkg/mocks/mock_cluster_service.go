@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	config "github.com/Stackdome/stackdome/config"
 	clustermanager "github.com/Stackdome/stackdome/pkg/clustermanager"
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
@@ -142,6 +143,20 @@ func (m *MockClusterService) InjectClusterManager(clusterManager clustermanager.
 func (mr *MockClusterServiceMockRecorder) InjectClusterManager(clusterManager any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectClusterManager", reflect.TypeOf((*MockClusterService)(nil).InjectClusterManager), clusterManager)
+}
+
+// InternalEnsurePlatformWildcardTLS mocks base method.
+func (m *MockClusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalEnsurePlatformWildcardTLS", ctx, cluster, cfg)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// InternalEnsurePlatformWildcardTLS indicates an expected call of InternalEnsurePlatformWildcardTLS.
+func (mr *MockClusterServiceMockRecorder) InternalEnsurePlatformWildcardTLS(ctx, cluster, cfg any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalEnsurePlatformWildcardTLS", reflect.TypeOf((*MockClusterService)(nil).InternalEnsurePlatformWildcardTLS), ctx, cluster, cfg)
 }
 
 // InternalGet mocks base method.

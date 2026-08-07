@@ -674,13 +674,19 @@ func VerifyGitCredentialsSecretExists(ctx context.Context, clusterClient client.
 	Expect(found).To(BeTrue(), "expected a git-integration credential secret with stack ID label in namespace %s", namespace)
 }
 
-func GetIngressForStackResource(ctx context.Context, clusterClient client.Client, namespace, resourceName string) (*networkingv1.Ingress, error) {
-	ingressName := fmt.Sprintf("%s-http-proxy", resourceName)
-	var ingress networkingv1.Ingress
-	if err := clusterClient.Get(ctx, client.ObjectKey{Name: ingressName, Namespace: namespace}, &ingress); err != nil {
+func GetIngressesForStackResource(ctx context.Context, clusterClient client.Client, resource *corev1alpha1.StackResource) ([]networkingv1.Ingress, error) {
+	var ingressList networkingv1.IngressList
+	if err := clusterClient.List(ctx, &ingressList, client.InNamespace(resource.Namespace)); err != nil {
 		return nil, err
 	}
-	return &ingress, nil
+
+	ingresses := make([]networkingv1.Ingress, 0, len(ingressList.Items))
+	for _, ingress := range ingressList.Items {
+		if metav1.IsControlledBy(&ingress, resource) {
+			ingresses = append(ingresses, ingress)
+		}
+	}
+	return ingresses, nil
 }
 
 // getStackResourceLiveStatus resolves the named resource's live status by fetching

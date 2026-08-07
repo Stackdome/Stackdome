@@ -39,17 +39,6 @@ func runAPIBootstrap(vals install.TemplateValues, secrets *BootstrapSecrets) (*b
 	}
 	stepLog(fmt.Sprintf("Domain configured: %s", vals.Domain))
 
-	stepLog("Deploying RBAC resources...")
-	rbacManifest, err := install.ReadManifest("rbac.yaml")
-	if err != nil {
-		return nil, fmt.Errorf("reading RBAC manifest: %w", err)
-	}
-	if err := kubectlApply(rbacManifest); err != nil {
-		return nil, fmt.Errorf("applying RBAC: %w", err)
-	}
-
-	time.Sleep(5 * time.Second)
-
 	clusterURL, caData, saToken, err := extractClusterCredentials()
 	if err != nil {
 		return nil, fmt.Errorf("extracting cluster credentials: %w", err)
@@ -224,7 +213,7 @@ func extractClusterCredentials() (clusterURL, caData, saToken string, err error)
 	clusterURL = fmt.Sprintf("https://%s:443", k8sSvcIP)
 
 	caData, err = output("kubectl", "get", "secret",
-		"stackdome-api-server-account-secret",
+		apiServerServiceAccountSecret,
 		"-n", chartNamespace,
 		"-o", "jsonpath={.data.ca\\.crt}")
 	if err != nil {
@@ -232,7 +221,7 @@ func extractClusterCredentials() (clusterURL, caData, saToken string, err error)
 	}
 
 	saTokenB64, err := output("kubectl", "get", "secret",
-		"stackdome-api-server-account-secret",
+		apiServerServiceAccountSecret,
 		"-n", chartNamespace,
 		"-o", "jsonpath={.data.token}")
 	if err != nil {

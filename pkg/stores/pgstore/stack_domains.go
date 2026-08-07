@@ -139,6 +139,9 @@ func (d dbStackDomainsStore) CreateWithTx(ctx context.Context, domain *models.St
 		return nil, errors.InternalServerError("transaction not found in context")
 	}
 	if err := tx.Create(&domain).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("domain '%s' is already in use", domain.Fqdn)
+		}
 		return nil, errors.InternalServerError("failed to create stack domain: %s", err.Error())
 	}
 	return d.Get(ctx, domain.ID)

@@ -45,6 +45,10 @@ rules:
   - apiGroups: ["cert-manager.io"]
     resources: ["clusterissuers"]
     verbs: ["get", "create"]
+  # Platform wildcard TLS resources reconciled in the configured control-plane namespace.
+  - apiGroups: ["cert-manager.io"]
+    resources: ["issuers", "certificates"]
+    verbs: ["get", "create", "update"]
   # Postgres addon dependencies.
   - apiGroups: ["postgresql.cnpg.io"]
     resources: ["imagecatalogs"]

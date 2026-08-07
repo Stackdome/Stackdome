@@ -13,6 +13,7 @@ func runUpgrade(args []string) {
 	image := fs.String("image", "", "API server container image (default: keep the currently deployed one)")
 	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
 	github := registerGitHubFlags(fs)
+	platform := registerPlatformFlags(fs)
 	_ = fs.Parse(args)
 
 	totalPhases = 4
@@ -72,16 +73,25 @@ func runUpgrade(args []string) {
 		EncryptionKey:  secrets.EncryptionKey,
 		AdminPassword:  secrets.AdminPassword,
 	}
+	vals.Platform, err = platform.resolvePlatformConfig(secrets.Platform)
+	if err != nil {
+		exitErr("Reading platform configuration failed", err)
+	}
 	if err := github.applyTo(&vals); err != nil {
 		exitErr("Reading GitHub credentials failed", err)
 	}
 
-	if err := mergeGitHubConfig(&vals, secrets); err != nil {
-		exitErr("Storing GitHub credentials failed", err)
-	}
-
 	if err := installStackdomeAgent(*chartVersion); err != nil {
 		exitErr("stackdome-agent upgrade failed", err)
+	}
+	if err := applyAPIServerRBAC(); err != nil {
+		exitErr("API server RBAC upgrade failed", err)
+	}
+	if err := ensurePlatformClusterCredentials(&vals.Platform); err != nil {
+		exitErr("Reading platform cluster credentials failed", err)
+	}
+	if err := mergeBootstrapConfig(&vals, secrets); err != nil {
+		exitErr("Storing bootstrap configuration failed", err)
 	}
 
 	if err := applyCRs(vals, domain); err != nil {

@@ -13,6 +13,16 @@ func fullCluster() *ClusterConfig {
 	}
 }
 
+func validBootstrapConfig() *BootstrapConfig {
+	return &BootstrapConfig{
+		Email:                 "ops@example.com",
+		BaseDomain:            "example.com",
+		DNSCloudflareAPIToken: "cloudflare-token",
+		ACMEEnvironment:       ACMEEnvironmentProduction,
+		TLSNamespace:          DefaultPlatformTLSNamespace,
+	}
+}
+
 var _ = Describe("ClusterConfig set predicates", func() {
 	Describe("IsSet", func() {
 		It("is true only when all three fields are set", func() {
@@ -52,7 +62,7 @@ var _ = Describe("ClusterConfig set predicates", func() {
 
 var _ = Describe("ValidatePlatformProvisioning", func() {
 	It("returns nil when nothing is configured", func() {
-		Expect(ValidatePlatformProvisioning(&ClusterConfig{}, "", "")).To(Succeed())
+		Expect(ValidatePlatformProvisioning(&ClusterConfig{}, &BootstrapConfig{})).To(Succeed())
 	})
 
 	It("rejects a partially-set cluster config", func() {
@@ -60,27 +70,31 @@ var _ = Describe("ValidatePlatformProvisioning", func() {
 			ClusterURL: "https://cluster.example.com",
 			Token:      "token",
 		}
-		Expect(ValidatePlatformProvisioning(partial, "example.com", "ops@example.com")).
+		Expect(ValidatePlatformProvisioning(partial, validBootstrapConfig())).
 			To(MatchError(ErrIncompleteClusterConfig))
 	})
 
 	It("rejects a full cluster with no base domain", func() {
-		Expect(ValidatePlatformProvisioning(fullCluster(), "", "ops@example.com")).
+		cfg := validBootstrapConfig()
+		cfg.BaseDomain = ""
+		Expect(ValidatePlatformProvisioning(fullCluster(), cfg)).
 			To(MatchError(ErrClusterDomainMismatch))
 	})
 
 	It("rejects a base domain with no cluster", func() {
-		Expect(ValidatePlatformProvisioning(&ClusterConfig{}, "example.com", "")).
+		Expect(ValidatePlatformProvisioning(&ClusterConfig{}, validBootstrapConfig())).
 			To(MatchError(ErrClusterDomainMismatch))
 	})
 
 	It("requires a platform email when a cluster is configured", func() {
-		Expect(ValidatePlatformProvisioning(fullCluster(), "example.com", "")).
+		cfg := validBootstrapConfig()
+		cfg.Email = ""
+		Expect(ValidatePlatformProvisioning(fullCluster(), cfg)).
 			To(MatchError(ErrPlatformEmailRequired))
 	})
 
 	It("accepts a fully valid configuration", func() {
-		Expect(ValidatePlatformProvisioning(fullCluster(), "example.com", "ops@example.com")).To(Succeed())
+		Expect(ValidatePlatformProvisioning(fullCluster(), validBootstrapConfig())).To(Succeed())
 	})
 
 	It("surfaces a cluster validation error", func() {
