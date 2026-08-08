@@ -49,6 +49,30 @@ var _ = Describe("RenderManifest", func() {
 	})
 
 	Describe("api-server-resource-cr.yaml", func() {
+		It("exposes metrics only through the internal service", func() {
+			type renderedPort struct {
+				Name           string `yaml:"name"`
+				Number         int    `yaml:"number"`
+				Protocol       string `yaml:"protocol"`
+				ExposeToPublic bool   `yaml:"exposeToPublic"`
+			}
+			var manifest struct {
+				Spec struct {
+					Ports []renderedPort `yaml:"ports"`
+				} `yaml:"spec"`
+			}
+
+			out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+				Domain: "stackdome.example.com",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(yaml.Unmarshal(out, &manifest)).To(Succeed())
+			Expect(manifest.Spec.Ports).To(ConsistOf(
+				renderedPort{Name: "http", Number: 8000, Protocol: "http", ExposeToPublic: true},
+				renderedPort{Name: "metrics", Number: 9090, Protocol: "http", ExposeToPublic: false},
+			))
+		})
+
 		It("renders the image, public port and platform configuration", func() {
 			platformConfig := install.PlatformConfig{
 				BaseDomain:         "apps.example.com",

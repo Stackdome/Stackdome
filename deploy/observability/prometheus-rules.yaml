@@ -78,7 +78,7 @@ spec:
             description: Worker {{ $labels.worker }} has failed more than 10% of recent executions.
 
         - alert: StackdomeStacksFailed
-          expr: sum(stackdome_stacks{state=~"Failed|Error"}) > 0
+          expr: max(stackdome_stacks{state=~"Failed|Error"}) > 0
           for: 5m
           labels:
             severity: critical
@@ -87,7 +87,7 @@ spec:
             description: A stack has remained in Failed or Error state for five minutes.
 
         - alert: StackdomeStacksDegraded
-          expr: sum(stackdome_stacks{state="Degraded"}) > 0
+          expr: max(stackdome_stacks{state="Degraded"}) > 0
           for: 15m
           labels:
             severity: warning

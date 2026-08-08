@@ -12,10 +12,10 @@
     {"type":"stat","title":"In-flight requests","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum(stackdome_http_server_in_flight_requests)","refId":"A"}],"gridPos":{"h":8,"w":6,"x":18,"y":9}},
 
     {"type":"row","title":"Stacks","gridPos":{"h":1,"w":24,"x":0,"y":17},"collapsed":false,"panels":[]},
-    {"type":"bargauge","title":"Current stacks by state","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (state) (stackdome_stacks)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":0,"y":18}},
-    {"type":"timeseries","title":"Stack state history","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (state) (stackdome_stacks)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":8,"y":18}},
-    {"type":"bargauge","title":"Current failures by type","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (type) (stackdome_stack_failures)","legendFormat":"{{type}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":16,"y":18}},
-    {"type":"timeseries","title":"Stack resources by state","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (state) (stackdome_stack_resources)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":18,"x":0,"y":26}},
+    {"type":"bargauge","title":"Current stacks by state","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (state) (stackdome_stacks)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":0,"y":18}},
+    {"type":"timeseries","title":"Stack state history","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (state) (stackdome_stacks)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":8,"y":18}},
+    {"type":"bargauge","title":"Current failures by type","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (type) (stackdome_stack_failures)","legendFormat":"{{type}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":16,"y":18}},
+    {"type":"timeseries","title":"Stack resources by state","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (state) (stackdome_stack_resources)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":18,"x":0,"y":26}},
     {"type":"stat","title":"Snapshot collection","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"min(stackdome_stack_snapshot_collection_success)","refId":"A"}],"fieldConfig":{"defaults":{"mappings":[{"options":{"0":{"color":"red","text":"Failed"},"1":{"color":"green","text":"Healthy"}},"type":"value"}]},"overrides":[]},"gridPos":{"h":8,"w":6,"x":18,"y":26}},
 
     {"type":"row","title":"Workers","gridPos":{"h":1,"w":24,"x":0,"y":34},"collapsed":false,"panels":[]},
