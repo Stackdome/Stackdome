@@ -5,12 +5,12 @@ import * as clusterApi from "@/api/clusters";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Trash2, Loader2 } from "lucide-react";
+import { Trash2, Loader2, Boxes } from "lucide-react";
 import { getCurrentOrganizationId } from "@/lib/common";
 import { getErrorMessage } from "@/api/client";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Switch } from "@/components/ui/switch";
-import { PageHeader, Panel, FieldShell, StatusPill } from "@/components/branded";
+import { PageHeader, Panel, FieldShell, StatusPill, EmptyState } from "@/components/branded";
 import { useConfirm } from "@/components/branded/confirm";
 import { statusVariant } from "@/components/branded/status-variant";
 import { useBreadcrumb } from "@/hooks/use-breadcrumb";
@@ -84,12 +84,13 @@ export default function ClusterDetailPage() {
   );
 
   if (!cluster) return (
-    <div className="flex flex-col items-center justify-center h-screen">
-      <div className="text-xl font-medium mb-2">Cluster not found</div>
-      <p className="text-muted-foreground mb-4">The cluster you're looking for doesn't exist or you don't have access.</p>
-      <Button onClick={() => navigate("/clusters")}>
-        Back to Clusters
-      </Button>
+    <div className="flex flex-1 flex-col items-center justify-center min-h-[calc(100vh-4rem)] p-8">
+      <EmptyState
+        icon={<Boxes className="h-8 w-8" />}
+        title="Cluster not found"
+        description="The cluster you're looking for doesn't exist or you don't have access."
+        action={<Button onClick={() => navigate("/clusters")}>Back to Clusters</Button>}
+      />
     </div>
   );
 

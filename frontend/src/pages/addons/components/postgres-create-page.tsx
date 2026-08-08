@@ -396,9 +396,9 @@ export default function PostgresFormPage() {
                       key={preset.id}
                       className={cn(
                         "border-t border-border cursor-pointer transition-colors",
-                        selected ? "bg-brand-bg" : "hover:bg-muted/30",
+                        selected ? "bg-foreground/[0.05]" : "hover:bg-muted/30",
                       )}
-                      style={selected ? { boxShadow: "inset 3px 0 0 var(--brand)" } : undefined}
+                      style={selected ? { boxShadow: "inset 3px 0 0 var(--foreground)" } : undefined}
                       onClick={() => update("plan", preset.id as PlanId)}
                     >
                       <td className="px-4 py-2.5">
@@ -540,7 +540,7 @@ export default function PostgresFormPage() {
             <CollapsibleTrigger asChild>
               <button
                 type="button"
-                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
+                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2 transition-colors"
               >
                 <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                   Backups
@@ -573,13 +573,13 @@ export default function PostgresFormPage() {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex-1 text-left group focus:outline-none px-5 py-3"
+                  className="flex-1 text-left group focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2 px-5 py-3"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                     <span className="text-sm font-semibold text-foreground">Advanced</span>
                     {isEdit && advancedDirty && (
-                      <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
+                      <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-foreground bg-foreground/10 px-1.5 py-0.5 rounded">
                           Modified
                       </span>
                     )}
@@ -590,7 +590,7 @@ export default function PostgresFormPage() {
                 href={ADVANCED_DOCS_URL}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
+                className="text-[12.5px] text-muted-foreground hover:text-foreground hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
                 onClick={(e) => e.stopPropagation()}
               >
                   Read the documentation
@@ -604,7 +604,7 @@ export default function PostgresFormPage() {
                     <span className="inline-flex items-center gap-1.5">
                       {advancedCleared && (
                         <>
-                          <AlertCircle className="h-3.5 w-3.5 text-brand" />
+                          <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
                           <span>
                             These advanced fields will be removed on save.
                           </span>
@@ -614,7 +614,7 @@ export default function PostgresFormPage() {
                     <button
                       type="button"
                       onClick={handleResetAdvanced}
-                      className="text-brand hover:text-brand-press hover:underline font-medium"
+                      className="text-foreground hover:underline font-medium focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2"
                     >
                       Reset to current
                     </button>

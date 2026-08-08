@@ -103,7 +103,7 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
           Store pull/push credentials so builds can use private registries.
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-brand">
+          <span className="flex h-6 w-6 items-center justify-center text-muted-foreground">
             <Package className="h-5 w-5" />
           </span>
           <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
@@ -133,7 +133,7 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
                       onClick={() => pickProvider(p)}
                       className={cn(
                         "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
-                        "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                        "hover:border-primary focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2",
                       )}
                     >
                       <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">

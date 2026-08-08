@@ -65,7 +65,7 @@ export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListPr
             {rowCanWrite ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Secret actions">
+                  <Button variant="ghost" size="icon" aria-label="Secret actions">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -87,7 +87,7 @@ export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListPr
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <span className="h-8 w-8" />
+              <span className="h-10 w-10" />
             )}
           </div>
         );

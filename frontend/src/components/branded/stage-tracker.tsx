@@ -20,7 +20,7 @@ const ORDER: Array<{ key: keyof Stages; label: string }> = [
 const RING: Record<StageStatus, string> = {
   done: "border-success bg-success",
   failed: "border-danger bg-danger",
-  active: "border-brand",
+  active: "border-warn",
   skipped: "border-fg-muted bg-fg-muted",
   todo: "border-fg-muted",
 };
@@ -28,7 +28,7 @@ const RING: Record<StageStatus, string> = {
 function glyph(status: StageStatus): ReactNode {
   if (status === "done") return <span className="text-[9px] leading-none text-white">✓</span>;
   if (status === "failed") return <span className="text-[9px] leading-none text-white">✕</span>;
-  if (status === "active") return <span className="h-[7px] w-[7px] animate-spin rounded-full border-2 border-brand border-t-transparent" />;
+  if (status === "active") return <span className="h-[7px] w-[7px] animate-spin rounded-full border-2 border-warn border-t-transparent" />;
   return null;
 }
 

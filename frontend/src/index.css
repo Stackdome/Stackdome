@@ -1,160 +1,210 @@
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource-variable/fraunces";
+@import "@fontsource/redaction/400.css";
+@import "@fontsource/redaction/700.css";
+@import "@fontsource/redaction-35/400.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* ── Light mode: Bright — strict 6-swatch palette ──
-     bg #fdfcf9 · card #ffffff · fg #0d0d0d · border #e8e4d6 · muted #9c9c9c · amber #f97316 */
-  --background: oklch(0.992 0.004 85);     /* bg #fdfcf9 */
-  --foreground: oklch(0.137 0 0);          /* fg #0d0d0d */
-  --card: oklch(1 0 0);                    /* card #ffffff */
-  --card-foreground: oklch(0.137 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.137 0 0);
-  --primary: oklch(0.72 0.20 40);          /* amber #f97316 */
-  --primary-foreground: oklch(0.137 0 0);
-  --secondary: oklch(0.920 0.018 85);      /* border #e8e4d6 */
-  --secondary-foreground: oklch(0.137 0 0);
-  --muted: oklch(0.920 0.018 85);          /* border #e8e4d6 */
-  --muted-foreground: oklch(0.668 0 0);    /* muted #9c9c9c */
-  --accent: oklch(0.920 0.018 85);         /* border #e8e4d6 */
-  --accent-foreground: oklch(0.137 0 0);
-  --destructive: oklch(0.55 0.20 23);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.920 0.018 85);         /* border #e8e4d6 */
-  --border-strong: oklch(0.668 0 0);       /* muted #9c9c9c */
-  --input: oklch(1 0 0);                   /* card #ffffff */
-  --ring: oklch(0.72 0.20 40);
+  /* ── Graphite light — warm neutrals mixed toward ink #191714 ── */
+  --background: #F5F4F1;
+  --foreground: #191714;
+  --card: #FFFFFF;
+  --card-foreground: #191714;
+  --popover: #FFFFFF;
+  --popover-foreground: #191714;
+  --primary: #191714;                    /* black is the only action colour */
+  --primary-hover: #33302A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FAF9F6;                  /* surface-2 */
+  --secondary-foreground: #191714;
+  --muted: #F0EEE9;                      /* hover wash */
+  --muted-foreground: #5C574E;           /* ink-dim — readable secondary (AA 6.5:1) */
+  --accent: #F0EEE9;
+  --accent-foreground: #191714;
+  --destructive: #BE3B2D;
+  --destructive-foreground: #FFFFFF;
+  --border: rgba(25, 23, 20, 0.11);      /* hairline */
+  --border-strong: rgba(25, 23, 20, 0.18);
+  --input: #FFFFFF;
+  --ring: rgba(25, 23, 20, 0.5);         /* focus — ink, never orange */
 
-  /* ── Brand tokens (light) — design system: amber #f97316, hover #ea6a0e, press #c25809 ── */
-  --brand: oklch(0.72 0.20 40);
-  --brand-hover: oklch(0.67 0.20 40);
-  --brand-press: oklch(0.55 0.16 40);
-  --brand-darker: var(--brand-hover); /* legacy alias */
-  --brand-bg: oklch(0.72 0.20 40 / 0.10);
-  --brand-bg-hover: oklch(0.72 0.20 40 / 0.16);
-  --brand-border: oklch(0.72 0.20 40 / 0.30);
+  /* ── Brand orange — a voice (eyebrows, wires, mark), never an action ── */
+  --brand: #FF6007;
+  --brand-hover: #E0530A;
+  --brand-press: #C74A09;
+  --brand-darker: var(--brand-hover);
+  --brand-bg: rgba(255, 96, 7, 0.09);
+  --brand-bg-hover: rgba(255, 96, 7, 0.16);
+  --brand-border: rgba(255, 96, 7, 0.30);
 
-  /* ── Foreground hierarchy (light) — palette only has 2 ink tones (fg, muted) ── */
-  --fg-2: oklch(0.668 0 0);                /* muted #9c9c9c */
-  --fg-muted: oklch(0.668 0 0);            /* muted #9c9c9c */
+  /* ── Ink tiers ── */
+  --fg-2: #5C574E;                       /* ink-dim — body/supporting copy */
+  --fg-muted: #8B8579;                   /* ink-mute — metadata only, fails AA */
+  --fg-ghost: #BEB9AF;                   /* disabled / placeholder */
 
-  /* ── Status semantic tokens (light) — design system: ok #15803d, warn #a16207, err #b91c1c, info #1d4ed8 ── */
-  --success: oklch(0.51 0.16 145);
-  --success-bg: oklch(0.51 0.16 145 / 0.10);
-  --success-border: oklch(0.51 0.16 145 / 0.40);
-  --warn: oklch(0.50 0.13 75);
-  --warn-bg: oklch(0.50 0.13 75 / 0.12);
-  --warn-border: oklch(0.50 0.13 75 / 0.45);
-  --danger: oklch(0.51 0.20 27);
-  --danger-bg: oklch(0.51 0.20 27 / 0.10);
-  --danger-border: oklch(0.51 0.20 27 / 0.50);
-  --info: oklch(0.48 0.20 264);
-  --info-bg: oklch(0.48 0.20 264 / 0.10);
-  --info-border: oklch(0.48 0.20 264 / 0.45);
+  /* ── Status — hue reports state ── */
+  --success: #15804B;
+  --success-bg: rgba(21, 128, 75, 0.10);
+  --success-border: rgba(21, 128, 75, 0.40);
+  --warn: #A8680C;
+  --warn-bg: rgba(168, 104, 12, 0.12);
+  --warn-border: rgba(168, 104, 12, 0.45);
+  --danger: #BE3B2D;
+  --danger-bg: rgba(190, 59, 45, 0.10);
+  --danger-border: rgba(190, 59, 45, 0.50);
+  --info: #3B6FE0;
+  --info-bg: rgba(59, 111, 224, 0.10);
+  --info-border: rgba(59, 111, 224, 0.45);
 
-  --chart-1: oklch(0.72 0.20 40);
-  --chart-2: oklch(0.55 0.22 264);
-  --chart-3: oklch(0.65 0.18 145);
-  --chart-4: oklch(0.74 0.16 85);
-  --chart-5: oklch(0.55 0.20 25);
+  /* ── Diagram palette (vc) — inside product visuals only ── */
+  --chart-1: #3B6FE0;
+  --chart-2: #1B8A54;
+  --chart-3: #7C5CE6;
+  --chart-4: #B4770D;
+  --chart-5: #C4392B;
 
-  --sidebar: oklch(1 0 0);                 /* card #ffffff */
-  --sidebar-foreground: oklch(0.137 0 0);
-  --sidebar-primary: oklch(0.137 0 0);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.72 0.20 40 / 0.10);
-  --sidebar-accent-foreground: oklch(0.65 0.22 35);
-  --sidebar-border: oklch(0.920 0.018 85); /* border #e8e4d6 */
-  --sidebar-ring: oklch(0.72 0.20 40);
+  --sidebar: #F5F4F1;                    /* chrome sits on the field */
+  --sidebar-foreground: #191714;
+  --sidebar-primary: #191714;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: rgba(25, 23, 20, 0.06);  /* ink tint, D12 */
+  --sidebar-accent-foreground: #191714;
+  --sidebar-border: rgba(25, 23, 20, 0.11);
+  --sidebar-ring: rgba(25, 23, 20, 0.5);
 
-  --font-sans: Geist, sans-serif;
-  --font-serif: Georgia, serif;
-  --font-mono: Geist Mono, monospace;
-  --radius: 0.5rem;
+  /* ── Graphite material ── */
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.7);       /* raised at rest (D14) */
+  --press: inset 0 2px 5px rgba(25, 23, 20, 0.16), inset 0 1px 2px rgba(25, 23, 20, 0.10);
+  --control: #F7F6F3;                    /* raised-control fill (D5) */
+  --control-hover: #FAF9F6;
+  --ctl-h-l: 40px;
+  --ctl-px-l: 15px;
 
-  --shadow-2xs: 0px 1px 2px 0px hsl(220 20% 4% / 0.08);
-  --shadow-xs: 0px 1px 2px 0px hsl(220 20% 4% / 0.10);
-  --shadow-sm: 0px 1px 2px 0px hsl(220 20% 4% / 0.14), 0px 1px 2px -1px hsl(220 20% 4% / 0.14);
-  --shadow: 0px 1px 2px 0px hsl(220 20% 4% / 0.14), 0px 1px 2px -1px hsl(220 20% 4% / 0.14);
-  --shadow-md: 0px 1px 2px 0px hsl(220 20% 4% / 0.14), 0px 2px 4px -1px hsl(220 20% 4% / 0.14);
-  --shadow-lg: 0px 1px 2px 0px hsl(220 20% 4% / 0.14), 0px 4px 6px -1px hsl(220 20% 4% / 0.14);
-  --shadow-xl: 0px 1px 2px 0px hsl(220 20% 4% / 0.14), 0px 8px 10px -1px hsl(220 20% 4% / 0.14);
-  --shadow-2xl: 0px 1px 2px 0px hsl(220 20% 4% / 0.40);
+  /* ── Canvas ── */
+  --wire: #FF6007;
+  --surface-node: #FFFFFF;
+  /* Dot-grid tokens: dots need far firmer alpha than hairlines — a 1-1.5px
+     disc at hairline alpha is invisible (see website design-system gotchas). */
+  --grid: rgba(25, 23, 20, 0.16);
+  --grid-bold: rgba(25, 23, 20, 0.24);
+
+  /* ── Terminal / code surfaces — dark in both themes ── */
+  --code-bg: #181611;
+  --code-fg: #A9A399;
+
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces Variable", Georgia, serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 14px;
+
+  /* Shadows: content is flat; keep the scale for overlays (dialogs, popovers, toasts) */
+  --shadow-2xs: 0 1px 2px rgba(16, 20, 26, 0.035);
+  --shadow-xs: 0 1px 2px rgba(16, 20, 26, 0.035);
+  --shadow-sm: 0 1px 2px rgba(16, 20, 26, 0.035);
+  --shadow: 0 4px 16px -5px rgba(16, 20, 26, 0.06), 0 2px 6px -3px rgba(16, 20, 26, 0.035);
+  --shadow-md: 0 4px 16px -5px rgba(16, 20, 26, 0.06), 0 2px 6px -3px rgba(16, 20, 26, 0.035);
+  --shadow-lg: 0 20px 50px -22px rgba(16, 20, 26, 0.11), 0 8px 22px -12px rgba(16, 20, 26, 0.06);
+  --shadow-xl: 0 20px 50px -22px rgba(16, 20, 26, 0.11), 0 8px 22px -12px rgba(16, 20, 26, 0.06);
+  --shadow-2xl: 0 28px 64px -20px rgba(16, 20, 26, 0.14);
 }
 
 .dark {
-  /* ── Dark mode: design-system navy charcoal (Stackdome DS dark surfaces) ── */
-  --background: oklch(0.162 0.014 258);       /* bg #0a0e14 */
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.199 0.018 260);             /* card #11161e */
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.225 0.022 260);          /* elev #161c26 */
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.72 0.20 40);
-  --primary-foreground: oklch(0.14 0 0);
-  --secondary: oklch(0.225 0.022 260);        /* elev #161c26 */
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.225 0.022 260);            /* elev #161c26 (hover/fill) */
-  --muted-foreground: oklch(0.711 0.035 257); /* fg3 #94a3b8 */
-  --accent: oklch(0.252 0.026 258);           /* between elev and border */
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.55 0.20 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.278 0.030 257);           /* border #1f2937 */
-  --border-strong: oklch(0.36 0.035 257);     /* lighter divider */
-  --input: oklch(0.205 0.018 260);            /* input fill, just under card */
-  --ring: oklch(0.72 0.20 40);
+  /* ── Graphite dark — warm near-black, depth collapses to rings ──
+     bg/card/secondary/hover match the direction's surface/surface2/hover
+     ladder verbatim (#131210/#1C1B19/#232220/#2A2825) — was one shade too
+     dark across all four (a void, not the "dim room" the direction specs). */
+  --background: #131210;
+  --foreground: #F1EEE8;
+  --card: #1C1B19;
+  --card-foreground: #F1EEE8;
+  --popover: #201D18;
+  --popover-foreground: #F1EEE8;
+  --primary: #F1EEE8;
+  --primary-hover: #FFFFFF;
+  --primary-foreground: #0D0C0A;
+  --secondary: #232220;
+  --secondary-foreground: #F1EEE8;
+  --muted: #2A2825;
+  --muted-foreground: #A9A399;
+  --accent: #26221C;
+  --accent-foreground: #F1EEE8;
+  --destructive: #F27F6F;
+  --destructive-foreground: #0D0C0A;
+  --border: rgba(255, 253, 247, 0.11);
+  --border-strong: rgba(255, 253, 247, 0.19);
+  --input: #1D1A15;
+  --ring: rgba(255, 253, 247, 0.6);
 
-  --brand: oklch(0.72 0.20 40);
-  --brand-hover: oklch(0.67 0.20 40);
-  --brand-press: oklch(0.55 0.16 40);
+  /* Brand stays orange in dark — the app's brand marks/eyebrows must not go near-white */
+  --brand: #FF7A2E;
+  --brand-hover: #FF6007;
+  --brand-press: #E0530A;
   --brand-darker: var(--brand-hover);
-  --brand-bg: oklch(0.72 0.20 40 / 0.10);
-  --brand-bg-hover: oklch(0.72 0.20 40 / 0.18);
-  --brand-border: oklch(0.72 0.20 40 / 0.30);
+  --brand-bg: rgba(255, 122, 46, 0.10);
+  --brand-bg-hover: rgba(255, 122, 46, 0.18);
+  --brand-border: rgba(255, 122, 46, 0.30);
 
-  --fg-2: oklch(0.869 0.020 253);   /* fg2 #cbd5e1 */
-  --fg-muted: oklch(0.554 0.041 257); /* fg-muted #64748b */
+  --fg-2: #A9A399;
+  --fg-muted: #7A746A;
+  --fg-ghost: #4E4A43;
 
-  /* ── Status (dark) — design system: ok #22c55e, warn #eab308, err #dc2626, info #3b82f6 ── */
-  --success: oklch(0.71 0.20 145);
-  --success-bg: oklch(0.71 0.20 145 / 0.12);
-  --success-border: oklch(0.71 0.20 145 / 0.40);
-  --warn: oklch(0.79 0.16 85);
-  --warn-bg: oklch(0.79 0.16 85 / 0.12);
-  --warn-border: oklch(0.79 0.16 85 / 0.40);
-  --danger: oklch(0.59 0.22 27);
-  --danger-bg: oklch(0.59 0.22 27 / 0.15);
-  --danger-border: oklch(0.59 0.22 27 / 0.50);
-  --info: oklch(0.62 0.20 252);
-  --info-bg: oklch(0.62 0.20 252 / 0.12);
-  --info-border: oklch(0.62 0.20 252 / 0.40);
+  --success: #46C98A;
+  --success-bg: rgba(70, 201, 138, 0.12);
+  --success-border: rgba(70, 201, 138, 0.40);
+  --warn: #E3A94A;
+  --warn-bg: rgba(227, 169, 74, 0.12);
+  --warn-border: rgba(227, 169, 74, 0.40);
+  --danger: #F27F6F;
+  --danger-bg: rgba(242, 127, 111, 0.15);
+  --danger-border: rgba(242, 127, 111, 0.50);
+  --info: #6E9BFF;
+  --info-bg: rgba(110, 155, 255, 0.12);
+  --info-border: rgba(110, 155, 255, 0.40);
 
-  --chart-1: oklch(0.72 0.20 40);
-  --chart-2: oklch(0.58 0.21 260);
-  --chart-3: oklch(0.72 0.18 145);
-  --chart-4: oklch(0.78 0.16 85);
-  --chart-5: oklch(0.62 0.22 25);
+  --chart-1: #6E9BFF;
+  --chart-2: #46C98A;
+  --chart-3: #AC91FF;
+  --chart-4: #E3A94A;
+  --chart-5: #F27F6F;
 
-  --sidebar: oklch(0.162 0.014 258);          /* bg #0a0e14 — chrome matches page */
-  --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.98 0 0);
-  --sidebar-primary-foreground: oklch(0.162 0.014 258);
-  --sidebar-accent: oklch(0.72 0.20 40 / 0.10);
-  --sidebar-accent-foreground: oklch(0.72 0.20 40);
-  --sidebar-border: oklch(0.278 0.030 257);   /* border #1f2937 */
-  --sidebar-ring: oklch(0.72 0.20 40);
+  --sidebar: #131210;
+  --sidebar-foreground: #F1EEE8;
+  --sidebar-primary: #F1EEE8;
+  --sidebar-primary-foreground: #0D0C0A;
+  --sidebar-accent: rgba(255, 253, 247, 0.07);
+  --sidebar-accent-foreground: #F1EEE8;
+  --sidebar-border: rgba(255, 253, 247, 0.11);
+  --sidebar-ring: rgba(255, 253, 247, 0.6);
 
-  --shadow-2xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.24);
-  --shadow-xs: 0px 1px 2px 0px hsl(0 0% 0% / 0.24);
-  --shadow-sm: 0px 1px 2px 0px hsl(0 0% 0% / 0.32), 0px 1px 2px -1px hsl(0 0% 0% / 0.32);
-  --shadow: 0px 1px 2px 0px hsl(0 0% 0% / 0.32), 0px 1px 2px -1px hsl(0 0% 0% / 0.32);
-  --shadow-md: 0px 1px 2px 0px hsl(0 0% 0% / 0.32), 0px 2px 4px -1px hsl(0 0% 0% / 0.32);
-  --shadow-lg: 0px 1px 2px 0px hsl(0 0% 0% / 0.32), 0px 4px 6px -1px hsl(0 0% 0% / 0.32);
-  --shadow-xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.32), 0px 8px 10px -1px hsl(0 0% 0% / 0.32);
-  --shadow-2xl: 0px 1px 2px 0px hsl(0 0% 0% / 0.56);
+  --edge: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --press: inset 0 2px 5px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(0, 0, 0, 0.35);
+  --control: #1D1A15;
+  --control-hover: #26221C;
+
+  --wire: #FF7A2E;
+  --surface-node: #1D1A15;
+  /* Dark is not the light alpha flipped: white dots on the near-black field
+     separate less, so they run firmer than the light values. */
+  --grid: rgba(255, 253, 247, 0.2);
+  --grid-bold: rgba(255, 253, 247, 0.3);
+
+  /* ── Terminal / code surfaces — dark in both themes ── */
+  --code-bg: #181611;
+  --code-fg: #A9A399;
+
+  --shadow-2xs: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --shadow: 0 6px 18px -5px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 18px -5px rgba(0, 0, 0, 0.55), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 28px 64px -20px rgba(0, 0, 0, 0.7), 0 10px 24px -10px rgba(0, 0, 0, 0.55);
+  --shadow-xl: 0 28px 64px -20px rgba(0, 0, 0, 0.7), 0 10px 24px -10px rgba(0, 0, 0, 0.55);
+  --shadow-2xl: 0 28px 64px -20px rgba(0, 0, 0, 0.7);
 }
 
 @theme inline {
@@ -165,6 +215,7 @@
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -189,6 +240,7 @@
 
   --color-fg-2: var(--fg-2);
   --color-fg-muted: var(--fg-muted);
+  --color-fg-ghost: var(--fg-ghost);
 
   --color-success: var(--success);
   --color-success-bg: var(--success-bg);
@@ -218,16 +270,21 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
+  --color-control: var(--control);
+  --color-control-hover: var(--control-hover);
+  --color-surface-node: var(--surface-node);
+
+  --color-code-bg: var(--code-bg);
+  --color-code-fg: var(--code-fg);
+
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
 
-  /* Brand-tight radii (per design system r-1..r-4):
-     buttons & inputs use 'sm' = 2px, controls 'md' = 4px, cards 'lg' = 8px */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-sm: 9px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-xl: 22px;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -274,10 +331,9 @@ body {
 
   .eyebrow {
     font-family: var(--font-mono);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
+    letter-spacing: 0.01em;
     color: var(--brand);
   }
   .eyebrow-muted {
@@ -356,6 +412,76 @@ body {
   @media (prefers-reduced-motion: reduce) {
     .auth-cloud { animation: none; }
   }
+
+  /* ── auth "room" ground — open sky in light, near-black + cool lift in dark ──
+     Mirrors the marketing site's `.auth` override of its own peach --sky-grad:
+     the sign-in screen is the one place a visitor stands still and looks up. */
+  .auth-shell {
+    position: relative;
+    isolation: isolate;
+    background: linear-gradient(
+      180deg,
+      #c5d9ee 0%,
+      #d6e3f0 26%,
+      #e6e9ea 52%,
+      #f1efea 74%,
+      var(--background) 100%
+    );
+  }
+  .dark .auth-shell {
+    background: var(--background);
+  }
+  .dark .auth-shell::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -34%;
+    width: 120%;
+    height: 96%;
+    transform: translateX(-50%);
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at center 40%,
+      color-mix(in srgb, #5a7ea0 12%, transparent),
+      transparent 62%
+    );
+  }
+
+  /* ── the header — same box as the marketing nav's `.nav-inner`/`.wrap`:
+     --nav-h (58px) + the 0.5px hairline the nav's frosted bar adds on scroll. */
+  .auth-header {
+    height: 59px;
+    padding: 0 32px;
+    border: 0.5px solid transparent;
+  }
+  @media (max-width: 560px) {
+    .auth-header { padding: 0 20px; }
+  }
+
+  /* ── THE PLATE — inset product-panel material (§6), not a card on a shadow ── */
+  .auth-plate {
+    border-radius: 36px;
+    padding: 22px;
+    background: color-mix(in srgb, var(--card) 76%, var(--secondary));
+    border: 0.5px solid color-mix(in srgb, var(--foreground) 11%, transparent);
+    box-shadow: var(--edge);
+  }
+  @media (max-width: 560px) {
+    .auth-plate { padding: 18px; }
+  }
+
+  /* ── the headline — Redaction serif + hairline stroke, same voice as the
+     marketing site's section titles ── */
+  .auth-title {
+    font-family: "Redaction", var(--font-serif), Georgia, serif;
+    font-weight: 500;
+    -webkit-text-stroke: 0.25px currentColor;
+    font-size: clamp(23px, 3.4vw, 26px);
+    line-height: 1.16;
+    letter-spacing: -0.015em;
+    color: var(--foreground);
+  }
 }
 
 @layer base {
@@ -365,4 +491,15 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Canvas nodes/edges render fully custom (ResourceNode/AttachmentNode/
+   ConnectionEdge), so xyflow's built-in node/edge/handle default colors never
+   apply — only the drag-select marquee is generic chrome outside that custom
+   rendering, and it ships blue (#0059dc) by default. Set the non-"-default"
+   variable so it wins regardless of stylesheet load order (see
+   @xyflow/react/dist/style.css var(--xy-x, var(--xy-x-default)) pattern). */
+.react-flow {
+  --xy-selection-background-color: color-mix(in srgb, var(--foreground) 8%, transparent);
+  --xy-selection-border: 1px dotted var(--border-strong);
 }

@@ -288,7 +288,7 @@ export function CanvasEditorShell({
                     className={cn(
                       "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
                       activeTab === id
-                        ? "border-brand bg-brand-bg text-brand"
+                        ? "border-border-strong bg-foreground/[0.06] text-foreground"
                         : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -328,10 +328,10 @@ export function CanvasEditorShell({
                       onChange={(e) => onNameChange?.(e.target.value)}
                       placeholder="name-your-stack"
                       className={cn(
-                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0 md:text-[29px]",
+                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none md:text-[29px]",
                         nameError
                           ? "border-danger"
-                          : "border-border/60 hover:border-border focus-visible:border-brand",
+                          : "border-border/60 hover:border-border focus-visible:border-foreground",
                       )}
                     />
                     <Pencil className="size-4 flex-none text-muted-foreground/60 transition-opacity group-focus-within:opacity-0" />
@@ -380,7 +380,7 @@ export function CanvasEditorShell({
                     className={cn(
                       "flex items-center gap-2 rounded-md border px-[15px] py-2 text-sm font-medium transition-colors",
                       active
-                        ? "border-brand bg-brand-bg text-brand"
+                        ? "border-border-strong bg-foreground/[0.06] text-foreground"
                         : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >

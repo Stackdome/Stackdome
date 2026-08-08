@@ -87,7 +87,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                 onClick={() => setSelected(vm.name)}
                 className={cn(
                   "mt-0.5 flex w-full items-center gap-2 rounded border px-2.5 py-[7px] text-left hover:bg-muted",
-                  selected === vm.name ? "border-brand bg-background" : "border-transparent",
+                  selected === vm.name ? "border-border-strong bg-foreground/[0.06]" : "border-transparent",
                 )}
               >
                 <span className={cn("h-[7px] w-[7px] flex-none rounded-full", toneDotClass(tone))} />
@@ -155,7 +155,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                         <button
                           key={`${l.kind}-${i}`}
                           type="button"
-                          className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-fg-muted transition-colors hover:text-brand"
+                          className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-fg-muted transition-colors hover:text-foreground"
                           onClick={() => setBuildLogs({
                             buildId,
                             resourceName: l.target?.[BuildLogsLinkTarget.ResourceName] ?? e.resource_name ?? "",

@@ -24,10 +24,11 @@ const DOT_CLASS: Record<StatusVariant, string> = {
 function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
   const dirty = data.dirtyState;
   // Unsaved changes read as a left accent stripe + tinted border; removal is
-  // crimson + dimmed. Selection (amber border + halo) wins the border colour.
+  // crimson + dimmed. Selection wins the border colour with an ink wash, not
+  // an orange ring — brand orange stays reserved for wires/eyebrows/mark.
   const stripeColor = dirty === "removed" ? "bg-danger" : dirty ? "bg-brand" : null;
   const borderClass = selected
-    ? "border-brand"
+    ? "border-border-strong"
     : dirty === "removed"
       ? "border-danger/50"
       : dirty
@@ -37,13 +38,17 @@ function ResourceNodeImpl({ data, selected }: NodeProps<ResourceFlowNode>) {
   return (
     <div
       className={cn(
-        "relative w-[216px] cursor-grab overflow-hidden rounded-lg border bg-card shadow-xs transition-colors",
+        "relative w-[216px] cursor-grab overflow-hidden rounded-lg border bg-surface-node shadow-[var(--edge)] transition-colors",
         borderClass,
-        selected && "ring-[3px] ring-brand/20",
+        // Deliberate exception to "orange = wires only": a drop is about to
+        // create a connection edge, so the transient drag-affordance borrows
+        // the wire colour. Distinct from the steady-state ink-wash `selected`
+        // treatment above — orange reads as "act now", ink reads as "at rest".
         data.dropTarget && "border-brand ring-[3px] ring-brand/30",
         dirty === "removed" && "opacity-60",
       )}
     >
+      {selected && <span className="pointer-events-none absolute inset-0 bg-foreground/[0.06]" aria-hidden />}
       {stripeColor && <span className={cn("absolute inset-y-0 left-0 w-[3px]", stripeColor)} aria-hidden />}
       <Handle type="target" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
       <Handle type="source" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />

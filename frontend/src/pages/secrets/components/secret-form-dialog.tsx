@@ -561,7 +561,7 @@ export function SecretFormDialog({
               <Label className="text-[13px] font-medium text-foreground">
                 <span>
                   Secret Data
-                  <span className="ml-0.5 text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
+                  <span className="ml-0.5 text-[15px] font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
                 </span>
               </Label>
               <Button

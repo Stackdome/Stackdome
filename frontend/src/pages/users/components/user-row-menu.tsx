@@ -129,7 +129,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
             <div className="flex gap-1.5 pt-0.5">
               <Button
                 size="sm"
-                className="flex-1 h-7 text-xs"
+                className="flex-1 text-xs"
                 onClick={handleDemoteConfirm}
                 disabled={!demoteProject || busy}
               >
@@ -138,7 +138,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="flex-1 h-7 text-xs"
+                className="flex-1 text-xs"
                 onClick={() => setDemoteOpen(false)}
               >
                 Cancel

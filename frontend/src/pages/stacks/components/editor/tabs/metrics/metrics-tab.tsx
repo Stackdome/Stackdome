@@ -35,7 +35,7 @@ function toNumber(v: string | number | undefined): number {
 const HISTORY = 16;
 
 /** A tiny end-aligned bar sparkline. Heights scale to the window max. */
-function Sparkline({ data, className }: { data: number[]; className?: string }) {
+export function Sparkline({ data, className }: { data: number[]; className?: string }) {
   const max = Math.max(1, ...data);
   const bars = [...Array(HISTORY)].map((_, i) => data[data.length - HISTORY + i] ?? null);
   return (
@@ -43,7 +43,7 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
       {bars.map((v, i) => (
         <span
           key={i}
-          className={cn("w-[5px] rounded-[1px]", v == null ? "bg-border/40" : className)}
+          className={cn("w-[5px] rounded-none", v == null ? "bg-border/40" : className)}
           style={{ height: v == null ? "10%" : `${Math.max(6, Math.round((v / max) * 100))}%` }}
         />
       ))}
@@ -52,15 +52,16 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
 }
 
 /** A labelled usage bar (fill width is relative to the peer max for that metric). */
-function MetricBar({ label, value, pct, fill }: { label: string; value: string; pct: number; fill: string }) {
+export function MetricBar({ label, value, pct, fill }: { label: string; value: string; pct: number; fill: string }) {
   return (
     <div>
       <div className="flex items-center justify-between">
         <span className="text-[11.5px] text-fg-2">{label}</span>
         <span className="font-mono text-[12px] text-foreground">{value}</span>
       </div>
-      <div className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-muted">
-        <span className={cn("block h-full rounded-[3px]", fill)} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
+      {/* deliberate off-scale: 5px-tall usage bar, rounded-sm (9px) would read as a full pill here */}
+      <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-muted">
+        <span className={cn("block h-full rounded-full", fill)} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
       </div>
     </div>
   );
@@ -154,7 +155,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
       <div className="mb-[18px] grid grid-cols-1 gap-3.5 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-[18px]">
           <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-muted-foreground">
-            <Cpu className="size-4 text-brand" />
+            <Cpu className="size-4 text-[var(--chart-1)]" />
             Stack CPU
           </div>
           <div className="mt-3 flex items-end justify-between gap-4">
@@ -164,13 +165,13 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
               </div>
               <div className="mt-1 font-mono text-[11px] text-fg-muted">millicores</div>
             </div>
-            <Sparkline data={cpuHist} className="bg-brand" />
+            <Sparkline data={cpuHist} className="bg-[var(--chart-1)]" />
           </div>
         </div>
 
         <div className="rounded-lg border border-border bg-card p-[18px]">
           <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-muted-foreground">
-            <MemoryStick className="size-4 text-brand" />
+            <MemoryStick className="size-4 text-fg-2" />
             Stack memory
           </div>
           <div className="mt-3 flex items-end justify-between gap-4">
@@ -220,7 +221,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
                     label="CPU"
                     value={r.displayMetrics.cpu}
                     pct={(toNumber(r.metrics.cpu_usage) / cpuMax) * 100}
-                    fill="bg-brand"
+                    fill="bg-[var(--chart-1)]"
                   />
                   <MetricBar
                     label="Memory"

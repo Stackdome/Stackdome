@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
 import { getCurrentOrganizationId } from "@/lib/common";
 import { listOrganizationUsers } from "@/api/organizations";
@@ -97,8 +98,7 @@ export function AddMemberDialog({
 
         <div className="space-y-4">
           {/* User combobox */}
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">User</p>
+          <FieldShell label="User">
             <div className="rounded-md border border-border overflow-hidden">
               <Command>
                 <CommandInput placeholder="Search users…" />
@@ -146,11 +146,10 @@ export function AddMemberDialog({
                 Selected: {selectedUser.name ?? selectedUser.email}
               </p>
             )}
-          </div>
+          </FieldShell>
 
           {/* Role radio group */}
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">Project role</p>
+          <FieldShell label="Project role">
             <RadioGroup
               value={role}
               onValueChange={(v) => setRole(v as Role)}
@@ -165,7 +164,7 @@ export function AddMemberDialog({
                 <span className="text-sm">Viewer</span>
               </label>
             </RadioGroup>
-          </div>
+          </FieldShell>
 
           {error && (
             <p className="text-sm text-destructive">{error}</p>

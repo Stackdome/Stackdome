@@ -68,15 +68,15 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
           : undefined
       }
       className={cn(
-        "group flex h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40",
-        clickable && "cursor-pointer hover:border-brand-border hover:bg-muted/20",
+        "group flex h-[210px] w-full flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2",
+        clickable && "cursor-pointer hover:bg-foreground/[0.04]",
       )}
     >
       <StatusRail tone={tone} />
       <div className="flex flex-1 flex-col gap-3.5 p-5">
         <div className="flex items-center gap-[11px]">
-          <GitPullRequest className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
-          <span className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand">
+          <GitPullRequest className="h-[18px] w-[18px] flex-none text-fg-2" strokeWidth={1.6} />
+          <span className="mr-auto truncate text-base font-medium tracking-[-0.01em]">
             PR #{env.pr_number}
           </span>
           <DropdownMenu>
@@ -85,7 +85,7 @@ export function PreviewEnvCard({ env, onSync, onDelete }: PreviewEnvCardProps) {
                 variant="ghost"
                 size="icon"
                 aria-label={`Actions for PR #${env.pr_number}`}
-                className="h-7 w-7 flex-none"
+                className="flex-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 <Ellipsis className="h-4 w-4" />

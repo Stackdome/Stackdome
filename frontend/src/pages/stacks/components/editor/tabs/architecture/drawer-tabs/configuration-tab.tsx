@@ -685,7 +685,7 @@ function StackResourceConfigurationTabImpl({
                   onClick={() => removePort(pidx)}
                   title="Remove port"
                   aria-label="Remove port"
-                  className="h-7 w-7 shrink-0 text-fg-muted hover:bg-danger-bg hover:text-danger"
+                  className="shrink-0 text-fg-muted hover:bg-danger-bg hover:text-danger"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -697,7 +697,7 @@ function StackResourceConfigurationTabImpl({
           variant="outline"
           size="sm"
           onClick={addPort}
-          className="ml-1.5 mt-3 h-8 gap-1.5 rounded-md border-border font-mono text-[12px] font-normal text-muted-foreground hover:border-brand/50 hover:text-brand"
+          className="ml-1.5 mt-3 h-8 gap-1.5 rounded-md border-border font-mono text-[12px] font-normal text-muted-foreground hover:border-border-strong hover:text-foreground"
         >
           <PlusCircle className="h-3.5 w-3.5" />
           add port
@@ -730,6 +730,7 @@ function StackResourceConfigurationTabImpl({
                     <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
                     <span className="truncate">{vm.source_volume_name}</span>
                   </div>
+                  {/* deliberate off-scale: ~22px-tall code chip, rounded-sm reads too round */}
                   <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
                     {vm.target_path}
                   </code>
@@ -741,7 +742,7 @@ function StackResourceConfigurationTabImpl({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-7 shrink-0 text-fg-muted hover:text-brand"
+                      className="size-7 shrink-0 text-fg-muted hover:text-foreground"
                       aria-label={`Open volume ${vm.source_volume_name}`}
                       title="Open volume settings"
                       onClick={() => onOpenVolume(vm.source_volume_name!)}
@@ -817,7 +818,7 @@ function StackResourceConfigurationTabImpl({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="size-7 shrink-0 self-end text-fg-muted hover:text-brand"
+                        className="size-7 shrink-0 self-end text-fg-muted hover:text-foreground"
                         aria-label={`Open volume ${vm.source_volume_name}`}
                         title="Open volume settings"
                         onClick={() => onOpenVolume(vm.source_volume_name!)}

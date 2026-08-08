@@ -37,8 +37,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Stories run as tests in a real browser, so the runner needs the binary.
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install chromium --with-deps
+
       - name: Lint
         run: pnpm lint
 
+      # Runs both projects: the jsdom unit suite, then every story rendered and
+      # play-tested in Chromium.
       - name: Test
         run: pnpm test:run
