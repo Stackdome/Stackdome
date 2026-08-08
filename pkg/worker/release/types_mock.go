@@ -12,6 +12,7 @@ package release
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
@@ -242,6 +243,20 @@ func (m_2 *MockreleaseService) SaveManifest(ctx context.Context, id string, m *m
 func (mr *MockreleaseServiceMockRecorder) SaveManifest(ctx, id, m, rev, pins, rendererVersion any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveManifest", reflect.TypeOf((*MockreleaseService)(nil).SaveManifest), ctx, id, m, rev, pins, rendererVersion)
+}
+
+// SetConvergeClockStartedAt mocks base method.
+func (m *MockreleaseService) SetConvergeClockStartedAt(ctx context.Context, id string, startedAt *time.Time) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetConvergeClockStartedAt", ctx, id, startedAt)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// SetConvergeClockStartedAt indicates an expected call of SetConvergeClockStartedAt.
+func (mr *MockreleaseServiceMockRecorder) SetConvergeClockStartedAt(ctx, id, startedAt any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetConvergeClockStartedAt", reflect.TypeOf((*MockreleaseService)(nil).SetConvergeClockStartedAt), ctx, id, startedAt)
 }
 
 // MockeventRecorder is a mock of eventRecorder interface.

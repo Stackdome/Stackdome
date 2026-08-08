@@ -19,10 +19,16 @@ import (
 const (
 	ReleaseWorkerName       = "release-worker"
 	convergencePollInterval = 15 * time.Second
-	// A release that hasn't reached a terminal state within this window is
-	// failed by the deadline reconciler — bounds background load from
-	// workloads that will never become ready (e.g. crashlooping apps).
+	// A release whose deploy/converge phase runs longer than this is failed
+	// by the deadline reconciler — bounds background load from workloads
+	// that will never become ready (e.g. crashlooping apps). The clock
+	// starts after builds finish, not at release creation; see
+	// deadlineReconciler.
 	convergenceTimeout = 45 * time.Minute
+	// Absolute ceiling on a release's lifetime, measured from creation.
+	// Catches releases the converge clock never sees: a build stuck Pending
+	// forever, a build CR that never appears, a dead agent.
+	releaseLifetimeCap = 6 * time.Hour
 )
 
 type ReleaseWorkerSpec struct {

@@ -41,6 +41,7 @@ type releaseService interface {
 	MarkFailed(ctx context.Context, id string, message string, outcome *models.ReleaseOutcome) (bool, *errors.ServiceError)
 	MarkFailedWithValidationErrors(ctx context.Context, id, message string, verrs models.ReleaseValidationErrors) (bool, *errors.ServiceError)
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
+	SetConvergeClockStartedAt(ctx context.Context, id string, startedAt *time.Time) *errors.ServiceError
 }
 
 type eventRecorder interface {
