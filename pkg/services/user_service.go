@@ -56,6 +56,7 @@ func NewUserService(spec UserServiceSpec) UserService {
 		permissions:             spec.Permissions,
 		projectService:          spec.ProjectService,
 		refreshTokenStore:       spec.RefreshTokenStore,
+		atomicExecutor:          spec.AtomicExecutor,
 	}
 }
 
@@ -69,6 +70,7 @@ type UserServiceSpec struct {
 	Permissions                 auth.PermissionService
 	ProjectService              ProjectService
 	RefreshTokenStore           stores.RefreshTokenStore
+	AtomicExecutor              stores.AtomicExecutor
 }
 
 type usersService struct {
@@ -81,6 +83,7 @@ type usersService struct {
 	permissions             auth.PermissionService
 	projectService          ProjectService
 	refreshTokenStore       stores.RefreshTokenStore
+	atomicExecutor          stores.AtomicExecutor
 }
 
 func (u usersService) Get(ctx context.Context, ID string) (*models.User, *errors.ServiceError) {
@@ -143,45 +146,49 @@ func (u usersService) InternalCreate(ctx context.Context, user *models.User) (*m
 }
 
 func (u usersService) InternalCreateOAuthUser(ctx context.Context, email, name, githubID, avatarURL string) (*models.User, error) {
-	org := &models.Organisation{Name: models.UserOrgNameFromOauth(name)}
-	createdOrg, serr := u.organisationService.InternalCreate(ctx, org)
-	if serr != nil {
-		return nil, fmt.Errorf("failed to create organisation for oauth user: %w", serr)
+	orgName := models.UserOrgNameFromOauth(name)
+	if nameErr := validateOrganisationName(orgName); nameErr != nil {
+		return nil, fmt.Errorf("invalid organisation name for oauth user: %w", nameErr)
 	}
 
-	if _, projectErr := u.projectService.InternalCreateDefaultProject(ctx, createdOrg.ID); projectErr != nil {
-		return nil, fmt.Errorf("failed to create default project for oauth user: %w", projectErr)
-	}
+	var createdUser *models.User
+	var granted bool
 
-	user := &models.User{
-		Email:          email,
-		Name:           name,
-		Role:           models.OrgAdminRole,
-		OrganisationID: createdOrg.ID,
-		GithubID:       &githubID,
-		AvatarURL:      &avatarURL,
-	}
+	txErr := u.atomicExecutor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		createdOrg, serr := u.organisationService.InternalCreate(txCtx, &models.Organisation{Name: orgName})
+		if serr != nil {
+			return serr
+		}
 
-	createdUser, serr := u.userStore.Create(ctx, user)
-	if serr != nil {
-		return nil, fmt.Errorf("failed to create oauth user: %w", serr)
-	}
+		if _, projectErr := u.projectService.InternalCreateDefaultProject(txCtx, createdOrg.ID); projectErr != nil {
+			return projectErr
+		}
 
-	if policyErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
-		createdUser.ID,
-		string(models.OrgAdminRole),
-		createdUser.OrganisationID,
-	); policyErr != nil {
-		u.logger.Error(ctx, "failed to add OrgAdmin policy for oauth user: %s", policyErr.Error())
-		return nil, fmt.Errorf("failed to add access policy: %w", policyErr)
-	}
+		newUser, serr := u.userStore.Create(txCtx, &models.User{
+			Email:          email,
+			Name:           name,
+			Role:           models.OrgAdminRole,
+			OrganisationID: createdOrg.ID,
+			GithubID:       &githubID,
+			AvatarURL:      &avatarURL,
+		})
+		if serr != nil {
+			return serr
+		}
+		createdUser = newUser
 
-	if policyErr := u.resourceAccessPolicyMgr.AddGroupingPolicy(
-		createdUser.ID,
-		string(models.OrgMemberRole),
-		createdUser.OrganisationID,
-	); policyErr != nil {
-		u.logger.Error(ctx, "failed to add OrgMember policy for oauth user: %s", policyErr.Error())
+		granted = true
+		if policyErr := grantOrgAdminRoles(u.resourceAccessPolicyMgr, createdUser.ID, createdUser.OrganisationID); policyErr != nil {
+			u.logger.Error(ctx, "failed to add org role policies for oauth user: %s", policyErr.Error())
+			return errors.GeneralError("failed to add access policy")
+		}
+		return nil
+	})
+	if txErr != nil {
+		if granted {
+			revokeOrgAdminRoles(u.resourceAccessPolicyMgr, createdUser.ID, createdUser.OrganisationID)
+		}
+		return nil, fmt.Errorf("failed to create oauth user: %w", txErr)
 	}
 
 	return createdUser, nil

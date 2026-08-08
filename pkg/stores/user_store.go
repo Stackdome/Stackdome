@@ -7,6 +7,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -source=user_store.go -destination=../mocks/mock_user_store.go -package=mocks
+
 type UserStore interface {
 	Create(ctx context.Context, user *models.User) (*models.User, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.User, *errors.ServiceError)

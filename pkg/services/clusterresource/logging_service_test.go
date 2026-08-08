@@ -7,10 +7,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
+	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -134,5 +137,133 @@ var _ = Describe("ClusterLoggingService.GetLogsForBuildPod", func() {
 		streamer, err := svc.GetLogsForBuildPod(ctx, orgID, ns, buildName, opts)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(streamer).NotTo(BeNil())
+	})
+})
+
+var _ = Describe("ClusterLoggingService.GetLogsForResources", func() {
+	const (
+		orgID = "org-1"
+		ns    = "stack-ns"
+	)
+	var (
+		ctrl    *gomock.Controller
+		mockDB  *MockDBClusterService
+		mockCM  *MockClusterManager
+		mockK8s *MockKubernetesClient
+		svc     ClusterLoggingService
+		ctx     context.Context
+		opts    LoggingParams
+	)
+
+	resource := func(state models.StackResourceState, serviceName *string) *models.StackResource {
+		return &models.StackResource{
+			Name:      "web",
+			Namespace: ns,
+			Status: &models.StackResourceStatus{
+				State:               state,
+				InternalServiceName: serviceName,
+			},
+		}
+	}
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockDB = NewMockDBClusterService(ctrl)
+		mockCM = NewMockClusterManager(ctrl)
+		mockK8s = NewMockKubernetesClient(ctrl)
+		svc = NewLoggingService(LoggingServiceSpec{
+			ClusterService: mockDB,
+			ClusterManager: mockCM,
+			Logger:         logger.NewLogger(),
+			NewK8sClient: func(clients.KubernetesClientSpec) (clients.KubernetesClient, error) {
+				return mockK8s, nil
+			},
+		})
+		ctx = context.Background()
+		opts = stubLogParams{}
+
+		mockDB.EXPECT().GetClusterForOrg(ctx, orgID).Return(&models.Cluster{ID: "c1"}, nil)
+		mockCM.EXPECT().GetRestConfig("c1").Return(&rest.Config{}, nil)
+		mockCM.EXPECT().GetClient("c1").Return(nil, nil)
+	})
+
+	AfterEach(func() { ctrl.Finish() })
+
+	It("serves logs for a crash-looping resource that is not Ready", func() {
+		crashing := resource(models.StackResourcePhaseFailed, ptr.To("web-svc"))
+		mockK8s.EXPECT().
+			AttachablePodFromService(ctx, types.NamespacedName{Name: "web-svc", Namespace: ns}).
+			Return(&corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "web-1", Namespace: ns}}, nil)
+
+		streamer, err := svc.GetLogsForResources(ctx, orgID, []*models.StackResource{crashing}, opts)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(streamer).NotTo(BeNil())
+	})
+
+	It("returns ErrNoWorkload when the resource has no internal service yet", func() {
+		pending := resource(models.StackResourcePhasePending, nil)
+		_, err := svc.GetLogsForResources(ctx, orgID, []*models.StackResource{pending}, opts)
+		Expect(stderrors.Is(err, ErrNoWorkload)).To(BeTrue())
+	})
+
+	It("returns ErrNoWorkload when the pod is gone", func() {
+		crashing := resource(models.StackResourcePhaseFailed, ptr.To("web-svc"))
+		mockK8s.EXPECT().AttachablePodFromService(ctx, gomock.Any()).Return(nil, nil)
+
+		_, err := svc.GetLogsForResources(ctx, orgID, []*models.StackResource{crashing}, opts)
+		Expect(stderrors.Is(err, ErrNoWorkload)).To(BeTrue())
+	})
+})
+
+var _ = Describe("LogStreamer previous-container fallback", func() {
+	var (
+		ctrl     *gomock.Controller
+		mockK8s  *MockKubernetesClient
+		streamer *LogStreamer
+		pod      *corev1.Pod
+		ctx      context.Context
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockK8s = NewMockKubernetesClient(ctrl)
+		pod = &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "web-1", Namespace: "stack-ns"}}
+		streamer = &LogStreamer{
+			k8sclient:      mockK8s,
+			resourcePodMap: map[string]*corev1.Pod{"web": pod},
+			Logger:         logger.NewLogger(),
+			streamConfig: LogStreamConfig{
+				logStreamBufferSize:   DefaultLogStreamBufferSize,
+				streamTimeoutDuration: DefaultStreamTimeoutDuration,
+				rateLimiter:           rate.NewLimiter(rate.Every(DefaultLogStreamRateLimit), DefaultLogStreamRateLimitBurst),
+				logOptions:            stubLogParams{},
+				maxLogStreamErrors:    MaxLogStreamErrors,
+			},
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() { ctrl.Finish() })
+
+	It("retries with the previous container when the current one has no logs", func() {
+		restarting := stderrors.New("container is waiting to start")
+		mockK8s.EXPECT().
+			StreamPodLogs(gomock.Any(), pod, gomock.Cond(func(o clients.PodLogStreamOptions) bool { return !o.Previous() })).
+			Return(nil, restarting)
+		mockK8s.EXPECT().
+			StreamPodLogs(gomock.Any(), pod, gomock.Cond(func(o clients.PodLogStreamOptions) bool { return o.Previous() })).
+			Return(make(chan *clients.LogStreamObject), nil)
+
+		out, err := streamer.Stream(ctx)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(out).NotTo(BeNil())
+	})
+
+	It("reports the original error when the previous container has no logs either", func() {
+		boom := stderrors.New("container is waiting to start")
+		mockK8s.EXPECT().StreamPodLogs(gomock.Any(), pod, gomock.Any()).Return(nil, boom).Times(2)
+
+		_, err := streamer.Stream(ctx)
+		Expect(stderrors.Is(err, boom)).To(BeTrue())
 	})
 })

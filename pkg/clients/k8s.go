@@ -38,6 +38,9 @@ type PodLogStreamOptions interface {
 	Follow() bool
 	TailLines() int
 	Since() string
+	// Previous asks for the logs of the previously terminated container, which
+	// is where a crash-looping workload's real error lives.
+	Previous() bool
 	// MaxErrors returns the maximum number of errors to log before stopping the stream.
 	MaxErrors() int
 }
@@ -112,6 +115,11 @@ func (k *kubernetesClient) StreamPodLogs(ctx context.Context, pod *corev1.Pod, l
 	}
 	logOptions.Follow = logOpts.Follow()
 	logOptions.TailLines = ptr.To(int64(logOpts.TailLines()))
+	logOptions.Previous = logOpts.Previous()
+	if logOptions.Previous {
+		// The API server rejects follow on a terminated container.
+		logOptions.Follow = false
+	}
 
 	req := k.clientSet.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, logOptions)
 	stream, err := req.Stream(ctx)

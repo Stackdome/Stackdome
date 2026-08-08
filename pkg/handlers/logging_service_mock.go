@@ -72,11 +72,11 @@ func (mr *MockLoggingServiceMockRecorder) StreamLogsForBuild(ctx, orgID, buildID
 }
 
 // StreamLogsForStack mocks base method.
-func (m *MockLoggingService) StreamLogsForStack(ctx context.Context, orgID, stackID string, options *services.LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (m *MockLoggingService) StreamLogsForStack(ctx context.Context, orgID, stackID string, options *services.LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StreamLogsForStack", ctx, orgID, stackID, options)
 	ret0, _ := ret[0].(interfaces.ServerSideStreamable)
-	ret1, _ := ret[1].(error)
+	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
@@ -87,11 +87,11 @@ func (mr *MockLoggingServiceMockRecorder) StreamLogsForStack(ctx, orgID, stackID
 }
 
 // StreamLogsForStackResource mocks base method.
-func (m *MockLoggingService) StreamLogsForStackResource(ctx context.Context, orgID, stackID, stackResourceName string, options *services.LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (m *MockLoggingService) StreamLogsForStackResource(ctx context.Context, orgID, stackID, stackResourceName string, options *services.LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "StreamLogsForStackResource", ctx, orgID, stackID, stackResourceName, options)
 	ret0, _ := ret[0].(interfaces.ServerSideStreamable)
-	ret1, _ := ret[1].(error)
+	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 

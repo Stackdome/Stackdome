@@ -35,7 +35,6 @@ export default function ApiTokensPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showRevoked, setShowRevoked] = useState(false);
   const { toast } = useToast();
   const confirm = useConfirm();
   const { setCustomLabel, setPathLoading } = useBreadcrumb();
@@ -62,11 +61,6 @@ export default function ApiTokensPage() {
     setCustomLabel(API_TOKENS_PATH, "API Tokens");
     setPathLoading(API_TOKENS_PATH, loading);
   }, [setCustomLabel, setPathLoading, loading]);
-
-  // Revoked tokens are never deleted server-side, so they would pile up in the
-  // list forever. Keep them one click away instead of on screen.
-  const revokedCount = tokens.filter((token) => token.revoked_at).length;
-  const visible = showRevoked ? tokens : tokens.filter((token) => !token.revoked_at);
 
   async function requestRevoke(token: APIToken) {
     if (!token.id) return;
@@ -136,86 +130,58 @@ export default function ApiTokensPage() {
           }
         />
       ) : (
-        <Panel
-          title="API Tokens"
-          count={visible.length}
-          bodyClassName="p-0"
-          action={
-            revokedCount > 0 && (
-              <button
-                type="button"
-                className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
-                onClick={() => setShowRevoked((prev) => !prev)}
-              >
-                {showRevoked ? "Hide revoked" : `Show revoked (${revokedCount})`}
-              </button>
-            )
-          }
-        >
-          {visible.length === 0 ? (
-            <EmptyState
-              icon={<KeyRound className="h-8 w-8" />}
-              title="No active API tokens"
-              description="Every token here has been revoked."
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="hover:bg-transparent">
-                  <TableHead className={COLUMN_HEAD_CLASS}>Token</TableHead>
-                  <TableHead className={COLUMN_HEAD_CLASS}>Access</TableHead>
-                  <TableHead className={COLUMN_HEAD_CLASS}>Created</TableHead>
-                  <TableHead className={COLUMN_HEAD_CLASS}>Expires</TableHead>
-                  <TableHead className={COLUMN_HEAD_CLASS}>Last used</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visible.map((token) => {
-                  const revoked = !!token.revoked_at;
-                  const expired = !revoked && !!token.expires_at && new Date(token.expires_at) < new Date();
-                  const dead = revoked || expired;
-                  return (
-                    <TableRow
-                      key={token.id}
-                      className={cn("border-b border-border hover:bg-muted/50", dead && "opacity-50")}
-                    >
-                      <TableCell className="py-3.5">
-                        <div className="flex items-center gap-2">
-                          <div className="min-w-0">
-                            <div className="truncate text-sm font-medium text-foreground">{token.name}</div>
-                            <div className="font-mono text-xs text-muted-foreground">{token.token_prefix}</div>
-                          </div>
-                          {revoked && <Badge variant="secondary">Revoked</Badge>}
-                          {expired && <Badge variant="secondary">Expired</Badge>}
+        <Panel title="API Tokens" count={tokens.length} bodyClassName="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className={COLUMN_HEAD_CLASS}>Token</TableHead>
+                <TableHead className={COLUMN_HEAD_CLASS}>Access</TableHead>
+                <TableHead className={COLUMN_HEAD_CLASS}>Created</TableHead>
+                <TableHead className={COLUMN_HEAD_CLASS}>Expires</TableHead>
+                <TableHead className={COLUMN_HEAD_CLASS}>Last used</TableHead>
+                <TableHead>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tokens.map((token) => {
+                const expired = !!token.expires_at && new Date(token.expires_at) < new Date();
+                return (
+                  <TableRow
+                    key={token.id}
+                    className={cn("border-b border-border hover:bg-muted/50", expired && "opacity-50")}
+                  >
+                    <TableCell className="py-3.5">
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0">
+                          <div className="truncate text-sm font-medium text-foreground">{token.name}</div>
+                          <div className="font-mono text-xs text-muted-foreground">{token.token_prefix}</div>
                         </div>
-                      </TableCell>
-                      <TableCell className="py-3.5">
-                        <span
-                          className="inline-flex items-center rounded border border-border bg-muted px-2 py-px font-mono text-[11px] text-muted-foreground"
-                          title={token.scopes?.join(", ")}
-                        >
-                          {accessLabel(token.scopes)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.created_at, "—")}</TableCell>
-                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.expires_at, "Never")}</TableCell>
-                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.last_used_at, "Never")}</TableCell>
-                      <TableCell className="py-3.5 text-right">
-                        {!revoked && (
-                          <Button variant="outline" size="sm" onClick={() => requestRevoke(token)}>
-                            Revoke
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          )}
+                        {expired && <Badge variant="secondary">Expired</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3.5">
+                      <span
+                        className="inline-flex items-center rounded border border-border bg-muted px-2 py-px font-mono text-[11px] text-muted-foreground"
+                        title={token.scopes?.join(", ")}
+                      >
+                        {accessLabel(token.scopes)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.created_at, "—")}</TableCell>
+                    <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.expires_at, "Never")}</TableCell>
+                    <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.last_used_at, "Never")}</TableCell>
+                    <TableCell className="py-3.5 text-right">
+                      <Button variant="outline" size="sm" onClick={() => requestRevoke(token)}>
+                        Revoke
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </Panel>
       )}
 

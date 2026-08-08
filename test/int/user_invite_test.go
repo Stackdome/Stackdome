@@ -267,7 +267,10 @@ var _ = Describe("User Invites", func() {
 	})
 
 	Context("Cross-Project Invite Flow", func() {
-		It("should invite a user to a custom project with correct role and access", func() {
+		// Skipped for alpha: organizations are limited to the single default
+		// project, so creating a custom project returns 409. Unskip when
+		// multi-project support ships after alpha.
+		PIt("should invite a user to a custom project with correct role and access", func() {
 			customProjectName := fmt.Sprintf("backend-project-%d", time.Now().UnixNano())
 
 			By("Org admin creates a new project")
@@ -322,7 +325,10 @@ var _ = Describe("User Invites", func() {
 	})
 
 	Context("Invited Viewer Access", func() {
-		It("should invite a user as Viewer to a custom project with correct role", func() {
+		// Skipped for alpha: organizations are limited to the single default
+		// project, so creating a custom project returns 409. Unskip when
+		// multi-project support ships after alpha.
+		PIt("should invite a user as Viewer to a custom project with correct role", func() {
 			viewerProjectName := fmt.Sprintf("viewer-project-%d", time.Now().UnixNano())
 
 			By("Org admin creates a project")

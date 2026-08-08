@@ -90,3 +90,90 @@ var _ = Describe("ProjectService name resolution", func() {
 		Expect(project.ID).To(Equal(projectID))
 	})
 })
+
+var _ = Describe("ProjectService launch tenancy invariant", func() {
+	const (
+		orgID     = "org-1"
+		userID    = "user-1"
+		projectID = "proj-1"
+	)
+
+	var (
+		ctrl            *gomock.Controller
+		projectStore    *mocks.MockProjectStore
+		membershipStore *mocks.MockProjectMembershipStore
+		userStore       *mocks.MockUserStore
+		permissions     *mocks.MockPermissionService
+		svc             *projectService
+		ctx             context.Context
+	)
+
+	defaultProject := &models.Project{ID: projectID, OrganisationID: orgID, Name: models.DefaultProjectName, DefaultProject: true}
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		projectStore = mocks.NewMockProjectStore(ctrl)
+		membershipStore = mocks.NewMockProjectMembershipStore(ctrl)
+		userStore = mocks.NewMockUserStore(ctrl)
+		permissions = mocks.NewMockPermissionService(ctrl)
+		permissions.EXPECT().Check(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
+
+		logMock := mocks.NewMockLogger(ctrl)
+		logMock.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
+
+		svc = &projectService{
+			projectStore:    projectStore,
+			membershipStore: membershipStore,
+			userStore:       userStore,
+			permissions:     permissions,
+			logger:          logMock,
+		}
+		ctx = context.Background()
+	})
+
+	AfterEach(func() { ctrl.Finish() })
+
+	It("refuses a second project and writes nothing", func() {
+		projectStore.EXPECT().ListByOrgID(gomock.Any(), orgID).Return([]*models.Project{defaultProject}, nil)
+
+		created, serr := svc.CreateProject(ctx, orgID, &models.Project{Name: "staging"})
+		Expect(created).To(BeNil())
+		Expect(serr).ToNot(BeNil())
+		Expect(serr.Code).To(Equal(errors.ErrorConflict))
+	})
+
+	It("creates the first project of an organisation", func() {
+		projectStore.EXPECT().ListByOrgID(gomock.Any(), orgID).Return(nil, nil)
+		projectStore.EXPECT().Create(gomock.Any(), gomock.Any()).Return(defaultProject, nil)
+
+		created, serr := svc.CreateProject(ctx, orgID, &models.Project{Name: "staging"})
+		Expect(serr).To(BeNil())
+		Expect(created).To(Equal(defaultProject))
+	})
+
+	It("lists the org's projects for an org admin with no membership rows", func() {
+		userStore.EXPECT().GetByID(gomock.Any(), userID).
+			Return(&models.User{ID: userID, OrganisationID: orgID, Role: models.OrgAdminRole}, nil)
+		projectStore.EXPECT().ListByOrgID(gomock.Any(), orgID).Return([]*models.Project{defaultProject}, nil)
+
+		memberships, serr := svc.ListUserProjects(ctx, userID)
+		Expect(serr).To(BeNil())
+		Expect(memberships).To(HaveLen(1))
+		Expect(memberships[0].ProjectID).To(Equal(projectID))
+		Expect(memberships[0].UserID).To(Equal(userID))
+		Expect(memberships[0].Role).To(Equal(models.DeveloperRole))
+		Expect(memberships[0].Project.Name).To(Equal(models.DefaultProjectName))
+	})
+
+	It("keeps the membership-backed list for non-admins", func() {
+		member := &models.ProjectMembership{ID: "m-1", ProjectID: projectID, UserID: userID, Role: models.DeveloperRole}
+		userStore.EXPECT().GetByID(gomock.Any(), userID).
+			Return(&models.User{ID: userID, OrganisationID: orgID, Role: models.NoRole}, nil)
+		membershipStore.EXPECT().ListByUserIDAndOrgID(gomock.Any(), userID, orgID).
+			Return([]*models.ProjectMembership{member}, nil)
+
+		memberships, serr := svc.ListUserProjects(ctx, userID)
+		Expect(serr).To(BeNil())
+		Expect(memberships).To(Equal([]*models.ProjectMembership{member}))
+	})
+})

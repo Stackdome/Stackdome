@@ -103,6 +103,15 @@ func (s *projectService) CreateProject(ctx context.Context, orgID string, projec
 		return nil, err
 	}
 
+	// Alpha ships one project per organisation: the default one made at signup.
+	existing, serr := s.projectStore.ListByOrgID(ctx, orgID)
+	if serr != nil {
+		return nil, serr
+	}
+	if len(existing) > 0 {
+		return nil, errors.Conflict("alpha organisations use the %q project; additional projects are not available yet", models.DefaultProjectName)
+	}
+
 	project.OrganisationID = orgID
 	created, serr := s.projectStore.Create(ctx, project)
 	if serr != nil {
@@ -473,11 +482,39 @@ func (s *projectService) ListUserProjects(ctx context.Context, userID string) ([
 	if permErr := s.permissions.Check(ctx, user.OrganisationID, auth.ResourceProjects, "", auth.ActionList); permErr != nil {
 		return nil, permErr
 	}
-	return s.membershipStore.ListByUserIDAndOrgID(ctx, userID, user.OrganisationID)
+	return s.listUserProjects(ctx, user)
 }
 
 func (s *projectService) InternalListUserProjects(ctx context.Context, userID, orgID string) ([]*models.ProjectMembership, *errors.ServiceError) {
-	return s.membershipStore.ListByUserIDAndOrgID(ctx, userID, orgID)
+	user, serr := s.userStore.GetByID(ctx, userID)
+	if serr != nil {
+		return nil, serr
+	}
+	return s.listUserProjects(ctx, user)
+}
+
+// Org admins have org-wide access without any membership row, so their list is
+// projected from the org's projects at read time. The API contract only knows
+// Developer and Viewer, so the projected role is Developer.
+func (s *projectService) listUserProjects(ctx context.Context, user *models.User) ([]*models.ProjectMembership, *errors.ServiceError) {
+	if !user.IsOrgAdmin() {
+		return s.membershipStore.ListByUserIDAndOrgID(ctx, user.ID, user.OrganisationID)
+	}
+
+	projects, serr := s.projectStore.ListByOrgID(ctx, user.OrganisationID)
+	if serr != nil {
+		return nil, serr
+	}
+	memberships := make([]*models.ProjectMembership, len(projects))
+	for i, project := range projects {
+		memberships[i] = &models.ProjectMembership{
+			ProjectID: project.ID,
+			UserID:    user.ID,
+			Role:      models.DeveloperRole,
+			Project:   project,
+		}
+	}
+	return memberships, nil
 }
 
 func (s *projectService) ensureOrgMemberGrouping(ctx context.Context, userID, orgID string) *errors.ServiceError {

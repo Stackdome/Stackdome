@@ -7,6 +7,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -source=project_membership_store.go -destination=../mocks/mock_project_membership_store.go -package=mocks
+
 type ProjectMembershipStore interface {
 	Create(ctx context.Context, membership *models.ProjectMembership) (*models.ProjectMembership, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.ProjectMembership, *errors.ServiceError)

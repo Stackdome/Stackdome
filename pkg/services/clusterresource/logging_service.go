@@ -28,6 +28,10 @@ var ErrBuildPodNotFound = stderrors.New("no build pod found")
 // exists but has not started yet — logs are not available until it runs.
 var ErrBuildPodNotReady = stderrors.New("build pod not ready")
 
+// ErrNoWorkload is returned when none of the requested resources has a pod to
+// read logs from — never scheduled, or already gone. Callers map it to a 404.
+var ErrNoWorkload = stderrors.New("no workload found")
+
 // KubernetesClientFactory constructs a Kubernetes client from a spec. Tests
 // inject a factory returning a mock; production uses clients.NewKubernetesClient.
 type KubernetesClientFactory func(clients.KubernetesClientSpec) (clients.KubernetesClient, error)
@@ -123,23 +127,24 @@ func (s *loggingService) GetLogsForResources(ctx context.Context, orgID string, 
 		return nil, fmt.Errorf("failed to create Kubernetes client: %w", cerr)
 	}
 
-	readyResources := lo.Filter(resources, func(resource *models.StackResource, _ int) bool {
-		return resource.Status.State == models.StackResourcePhaseReady && resource.Status.InternalServiceName != nil
+	// Logs are best-effort diagnostics: serve them whenever we know which
+	// workload to read, whatever state the resource is in. A crash-looping app
+	// is exactly when its logs matter most.
+	addressableResources := lo.Filter(resources, func(resource *models.StackResource, _ int) bool {
+		return resource.Status.InternalServiceName != nil
 	})
-
-	unreadyResources, _ := lo.Difference(resources, readyResources)
-	if len(unreadyResources) == len(resources) {
-		unreadyResourceNames := lo.Map(unreadyResources, func(r *models.StackResource, _ int) string { return r.Name })
-		return nil, fmt.Errorf("no resources are ready for logging: %v", unreadyResourceNames)
+	if len(addressableResources) == 0 {
+		names := lo.Map(resources, func(r *models.StackResource, _ int) string { return r.Name })
+		return nil, fmt.Errorf("%w: no workload has been created yet for %v", ErrNoWorkload, names)
 	}
 
-	resourcePodMap, errors := s.resolveResourcePods(ctx, k8sclient, readyResources)
+	resourcePodMap, errors := s.resolveResourcePods(ctx, k8sclient, addressableResources)
 	if len(errors) > 0 {
 		s.logger.Warn(ctx, "resource pod resolution failures: %v", errors)
 	}
 
 	if len(resourcePodMap) == 0 {
-		return nil, fmt.Errorf("no attachable pods found for ready resources")
+		return nil, fmt.Errorf("%w: no attachable pods found", ErrNoWorkload)
 	}
 
 	return &LogStreamer{
@@ -257,6 +262,7 @@ type LogStreamConfig struct {
 	rateLimiter           *rate.Limiter
 	logOptions            LoggingParams
 	maxLogStreamErrors    int
+	previous              bool
 }
 
 var _ clients.PodLogStreamOptions = &LogStreamConfig{}
@@ -270,6 +276,9 @@ func (s *LogStreamConfig) TailLines() int {
 func (s *LogStreamConfig) Since() string {
 	return s.logOptions.Since()
 }
+func (s *LogStreamConfig) Previous() bool {
+	return s.previous
+}
 func (s *LogStreamConfig) MaxErrors() int {
 	return s.maxLogStreamErrors
 }
@@ -281,7 +290,7 @@ func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObjec
 
 	podResourceStreamMap := make(map[string]<-chan *clients.LogStreamObject)
 	for resourceName, pod := range s.resourcePodMap {
-		podLogChan, err := s.k8sclient.StreamPodLogs(ctxWithTimeout, pod, &s.streamConfig)
+		podLogChan, err := s.streamPodLogsWithPreviousFallback(ctxWithTimeout, pod)
 		if err != nil {
 			cancel()
 			return nil, fmt.Errorf("failed to stream logs for resource '%s': %w", resourceName, err)
@@ -317,6 +326,25 @@ func (s *LogStreamer) Stream(ctx context.Context) (<-chan interfaces.StreamObjec
 		close(streamerChan)
 	}()
 	return streamerChan, nil
+}
+
+// A crash-looping container is usually restarting when we ask for its logs, and
+// the API server refuses the current container. Retry once for the previous
+// terminated container — that is the one holding the crash output.
+func (s *LogStreamer) streamPodLogsWithPreviousFallback(ctx context.Context, pod *corev1.Pod) (<-chan *clients.LogStreamObject, error) {
+	podLogChan, err := s.k8sclient.StreamPodLogs(ctx, pod, &s.streamConfig)
+	if err == nil {
+		return podLogChan, nil
+	}
+
+	previousConfig := s.streamConfig
+	previousConfig.previous = true
+	podLogChan, previousErr := s.k8sclient.StreamPodLogs(ctx, pod, &previousConfig)
+	if previousErr != nil {
+		return nil, err
+	}
+	s.Logger.Info(ctx, "serving previous container logs for pod %s/%s", pod.Namespace, pod.Name)
+	return podLogChan, nil
 }
 
 func resourceNamePrefixedLogLine(prefix string, line string) string {

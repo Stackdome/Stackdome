@@ -498,6 +498,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:                 e.PermissionService,
 		ProjectService:              projectService,
 		RefreshTokenStore:           e.RefreshTokenStore,
+		AtomicExecutor:              pgstore.NewAtomicExecutor(e.DBSession),
 	})
 
 	clusterService := services.NewClusterService(services.ClusterServiceSpec{
@@ -648,6 +649,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ProjectService:      projectService,
 		PolicyManager:       e.ResourceAccessPolicyManager,
 		RefreshTokenStore:   e.RefreshTokenStore,
+		AtomicExecutor:      pgstore.NewAtomicExecutor(e.DBSession),
 		JWTSecretKey:        e.Config.JwtSecret,
 		JWTClaimsBuilder:    auth.NewJWTClaimsBuilder(),
 		Logger:              e.Logger,

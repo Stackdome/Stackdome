@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
@@ -24,7 +25,26 @@ const (
 	// limits on the cluster: the StatefulSet's controller-revision-hash pod
 	// label appends "-<10 char hash>" and must fit a 63-character label.
 	maxRegistryNameLength = 50
+	maxOrgNameLength      = 100
 )
+
+// Anything that is not a letter or a digit, so "!!!" is rejected but
+// "Acme Labs" is not.
+var orgNameFillerOnly = regexp.MustCompile(`^[^\p{L}\p{N}]+$`)
+
+func validateOrganisationName(name string) *errors.ServiceError {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.BadRequest("organisation name is required")
+	}
+	if len([]rune(name)) > maxOrgNameLength {
+		return errors.BadRequest("organisation name must be at most %d characters", maxOrgNameLength)
+	}
+	if orgNameFillerOnly.MatchString(name) {
+		return errors.BadRequest("organisation name must contain at least one letter or number")
+	}
+	return nil
+}
 
 type OrganisationService interface {
 	InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
@@ -89,9 +109,10 @@ type OrganisationServiceSpec struct {
 }
 
 func (s *organisationService) InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
-	if len(spec.Name) == 0 {
-		return nil, errors.BadRequest("organisation name is required")
+	if nameErr := validateOrganisationName(spec.Name); nameErr != nil {
+		return nil, nameErr
 	}
+	spec.Name = strings.TrimSpace(spec.Name)
 
 	org, err := s.organisationStore.Create(ctx, spec)
 	if err != nil {

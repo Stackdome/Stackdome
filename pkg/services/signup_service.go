@@ -29,6 +29,7 @@ type SignupServiceSpec struct {
 	ProjectService      ProjectService
 	PolicyManager       resourceaccess.ResourceAccessPolicyManager
 	RefreshTokenStore   stores.RefreshTokenStore
+	AtomicExecutor      stores.AtomicExecutor
 	JWTSecretKey        string
 	JWTClaimsBuilder    jwtClaimsBuilder
 	Logger              logger.Logger
@@ -41,6 +42,7 @@ type signupService struct {
 	projectService      ProjectService
 	policyManager       resourceaccess.ResourceAccessPolicyManager
 	refreshTokenStore   stores.RefreshTokenStore
+	atomicExecutor      stores.AtomicExecutor
 	jwtSecretKey        string
 	jwtClaimsBuilder    jwtClaimsBuilder
 	logger              logger.Logger
@@ -54,6 +56,7 @@ func NewSignupService(spec SignupServiceSpec) SignupService {
 		projectService:      spec.ProjectService,
 		policyManager:       spec.PolicyManager,
 		refreshTokenStore:   spec.RefreshTokenStore,
+		atomicExecutor:      spec.AtomicExecutor,
 		jwtSecretKey:        spec.JWTSecretKey,
 		jwtClaimsBuilder:    spec.JWTClaimsBuilder,
 		logger:              spec.Logger,
@@ -100,42 +103,63 @@ func (s *signupService) Signup(ctx context.Context, user *models.User, inviteTok
 	if user.Organisation == nil {
 		return nil, errors.BadRequest("organisation is required")
 	}
-	createdOrganisation, orgErr := s.organisationService.InternalCreate(ctx, user.Organisation)
-	if orgErr != nil {
-		s.logger.Error(ctx, "failed to create organisation, %s", orgErr.Error())
-		return nil, errors.GeneralError("failed to create user")
-	}
-	user.OrganisationID = createdOrganisation.ID
-	user.Role = models.OrgAdminRole
-
-	if _, projectErr := s.projectService.InternalCreateDefaultProject(ctx, createdOrganisation.ID); projectErr != nil {
-		s.logger.Error(ctx, "failed to create default project: %s", projectErr.Error())
-		return nil, errors.GeneralError("failed to create default project")
+	if nameErr := validateOrganisationName(user.Organisation.Name); nameErr != nil {
+		return nil, nameErr
 	}
 
-	createdUser, serr := s.userService.InternalCreate(ctx, user)
-	if serr != nil {
-		return nil, serr
-	}
+	var createdUser *models.User
+	var granted bool
 
-	if policyAddErr := s.policyManager.AddGroupingPolicy(
-		createdUser.ID,
-		string(models.OrgAdminRole),
-		createdUser.OrganisationID,
-	); policyAddErr != nil {
-		s.logger.Error(ctx, "failed to add OrgAdmin policy for user: %s", policyAddErr.Error())
-		return nil, errors.GeneralError("failed to create user")
-	}
+	txErr := s.atomicExecutor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		createdOrganisation, orgErr := s.organisationService.InternalCreate(txCtx, user.Organisation)
+		if orgErr != nil {
+			s.logger.Error(ctx, "failed to create organisation, %s", orgErr.Error())
+			return errors.GeneralError("failed to create user")
+		}
+		user.OrganisationID = createdOrganisation.ID
+		user.Role = models.OrgAdminRole
 
-	if policyAddErr := s.policyManager.AddGroupingPolicy(
-		createdUser.ID,
-		string(models.OrgMemberRole),
-		createdUser.OrganisationID,
-	); policyAddErr != nil {
-		s.logger.Error(ctx, "failed to add OrgMember policy for user: %s", policyAddErr.Error())
+		if _, projectErr := s.projectService.InternalCreateDefaultProject(txCtx, createdOrganisation.ID); projectErr != nil {
+			s.logger.Error(ctx, "failed to create default project: %s", projectErr.Error())
+			return errors.GeneralError("failed to create default project")
+		}
+
+		newUser, serr := s.userService.InternalCreate(txCtx, user)
+		if serr != nil {
+			return serr
+		}
+		createdUser = newUser
+
+		granted = true
+		if policyErr := grantOrgAdminRoles(s.policyManager, createdUser.ID, createdUser.OrganisationID); policyErr != nil {
+			s.logger.Error(ctx, "failed to add org role policies for user: %s", policyErr.Error())
+			return errors.GeneralError("failed to create user")
+		}
+		return nil
+	})
+	if txErr != nil {
+		if granted {
+			revokeOrgAdminRoles(s.policyManager, createdUser.ID, createdUser.OrganisationID)
+		}
+		return nil, txErr
 	}
 
 	return s.buildSignupResponse(ctx, createdUser)
+}
+
+// Casbin writes cannot join the DB transaction: the enforcer owns its own
+// connection and its API takes no context. So the grants are made inside the
+// transaction and undone by hand when it fails, leaving no orphan grouping.
+func grantOrgAdminRoles(policyManager resourceaccess.ResourceAccessPolicyManager, userID, orgID string) error {
+	if err := policyManager.AddGroupingPolicy(userID, string(models.OrgAdminRole), orgID); err != nil {
+		return err
+	}
+	return policyManager.AddGroupingPolicy(userID, string(models.OrgMemberRole), orgID)
+}
+
+func revokeOrgAdminRoles(policyManager resourceaccess.ResourceAccessPolicyManager, userID, orgID string) {
+	_ = policyManager.RemoveGroupingPolicy(userID, string(models.OrgAdminRole), orgID)
+	_ = policyManager.RemoveGroupingPolicy(userID, string(models.OrgMemberRole), orgID)
 }
 
 func (s *signupService) buildSignupResponse(ctx context.Context, createdUser *models.User) (*openapi.UserSignupResponse, *errors.ServiceError) {

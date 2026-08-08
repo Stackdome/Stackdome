@@ -6,6 +6,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -237,5 +238,81 @@ var _ = Describe("PresentStack release-centric fields", func() {
 		Expect(*out.ConvergedRelease.Health).To(Equal(openapi.RELEASE_HEALTH_OK))
 		Expect(*out.LatestRelease.Id).To(Equal("r2"))
 		Expect(*out.LatestRelease.Health).To(Equal(openapi.RELEASE_HEALTH_PROGRESSING))
+	})
+})
+
+// The shape a client needs to answer "is my deploy live, and where is it?".
+var _ = Describe("released stack API contract", func() {
+	const publicURL = "https://app.example.com"
+
+	released := &models.StackRelease{ID: "r1", Sequence: 1, State: models.ReleaseStateReleased}
+
+	stackWith := func(resources ...*models.StackResource) *models.Stack {
+		return &models.Stack{
+			ID: "s1",
+			Status: &models.StackStatus{
+				LastConverged: &models.StackConvergenceRecord{ReleaseID: released.ID},
+				Conditions: []models.Condition{
+					{Type: string(models.StackConditionConverged), Status: string(models.ConditionTrue)},
+					{Type: string(models.StackConditionAvailable), Status: string(models.ConditionTrue)},
+				},
+			},
+			StackResources: resources,
+		}
+	}
+
+	webResource := func() *models.StackResource {
+		return &models.StackResource{
+			Name: "web",
+			Status: &models.StackResourceStatus{
+				State:               models.StackResourcePhaseReady,
+				PublicIngresses:     []models.Ingress{{URL: publicURL, TargetPort: 8080}},
+				InternalServiceName: ptr.To("web-svc"),
+			},
+		}
+	}
+
+	workerResource := func() *models.StackResource {
+		return &models.StackResource{
+			Name:   "worker",
+			Status: &models.StackResourceStatus{State: models.StackResourcePhaseReady},
+		}
+	}
+
+	liveStatusFor := func(resources ...*models.StackResource) *models.ReleaseLiveStatus {
+		byName := map[string]*models.StackResourceStatus{}
+		for _, r := range resources {
+			byName[r.Name] = r.Status
+		}
+		return &models.ReleaseLiveStatus{Health: models.ReleaseHealthOK, Resources: byName}
+	}
+
+	It("reports the released and converged release with runtime health", func() {
+		out := presenters.PresentStack(stackWith(webResource()), models.StackReleaseRefs{
+			Converged: released,
+			Latest:    released,
+		})
+
+		Expect(*out.LatestRelease.Id).To(Equal(released.ID))
+		Expect(*out.LatestRelease.State).To(Equal(openapi.StackReleaseState(models.ReleaseStateReleased)))
+		Expect(*out.ConvergedRelease.Id).To(Equal(released.ID))
+		Expect(*out.ConvergedRelease.Health).To(Equal(openapi.RELEASE_HEALTH_OK))
+	})
+
+	It("reports the release id, Released state and health on the release itself", func() {
+		out := presenters.PresentStackRelease(released, liveStatusFor(webResource()))
+
+		Expect(*out.Id).To(Equal(released.ID))
+		Expect(*out.State).To(Equal(openapi.StackReleaseState(models.ReleaseStateReleased)))
+		Expect(*out.LiveStatus.Health).To(Equal(openapi.RELEASE_HEALTH_OK))
+	})
+
+	It("exposes the public ingress URL only for the resource with an exposed port", func() {
+		out := presenters.PresentStackRelease(released, liveStatusFor(webResource(), workerResource()))
+
+		resources := *out.LiveStatus.Resources
+		Expect(resources["web"].PublicIngress).To(HaveLen(1))
+		Expect(*resources["web"].PublicIngress[0].Url).To(Equal(publicURL))
+		Expect(resources["worker"].PublicIngress).To(BeEmpty())
 	})
 })
