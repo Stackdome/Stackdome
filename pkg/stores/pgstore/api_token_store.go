@@ -35,7 +35,7 @@ func (s *apiTokenStore) Create(ctx context.Context, token *models.APIToken) (*mo
 func (s *apiTokenStore) GetByID(ctx context.Context, id string) (*models.APIToken, *errors.ServiceError) {
 	session := s.sessionFactory.New(ctx)
 	token := &models.APIToken{}
-	if err := session.Where("id = ?", id).First(token).Error; err != nil {
+	if err := session.Where("id = ? AND revoked_at IS NULL", id).First(token).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("api token not found")
 		}

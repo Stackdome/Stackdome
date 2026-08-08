@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
@@ -65,5 +66,20 @@ var _ = Describe("APITokenStore", func() {
 		Expect(err).To(BeNil())
 		Expect(tokens).To(HaveLen(1))
 		Expect(tokens[0].ID).To(Equal("token-live"))
+	})
+
+	It("stops returning a token by ID once it is revoked", func() {
+		_, err := store.Create(ctx, newToken("token-live", "live"))
+		Expect(err).To(BeNil())
+
+		found, err := store.GetByID(ctx, "token-live")
+		Expect(err).To(BeNil())
+		Expect(found.ID).To(Equal("token-live"))
+
+		Expect(store.Revoke(ctx, "token-live")).To(BeNil())
+
+		_, err = store.GetByID(ctx, "token-live")
+		Expect(err).ToNot(BeNil())
+		Expect(err.Code).To(Equal(errors.ErrorNotFound))
 	})
 })
