@@ -48,6 +48,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdInvitesIdResendPost**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesIdResendPost) | **Post** /api/v1/organizations/{org_id}/invites/{id}/resend | Re-queue invite email for delivery
 [**ApiV1OrganizationsOrgIdInvitesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdInvitesPost) | **Post** /api/v1/organizations/{org_id}/invites | Create an invite to the organization
 [**ApiV1OrganizationsOrgIdObjectStoresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdObjectStoresGet) | **Get** /api/v1/organizations/{org_id}/object-stores | List all object stores the user has access to across all projects
+[**ApiV1OrganizationsOrgIdPostgresAddonsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdPostgresAddonsGet) | **Get** /api/v1/organizations/{org_id}/postgres-addons | List all PostgresAddons the user has access to across all projects
 [**ApiV1OrganizationsOrgIdProjectsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsGet) | **Get** /api/v1/organizations/{org_id}/projects | List all projects in an organization
 [**ApiV1OrganizationsOrgIdProjectsPost**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsPost) | **Post** /api/v1/organizations/{org_id}/projects | Create a new project
 [**ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/addons/postgres | List all PostgresAddons for a project
@@ -97,6 +98,7 @@ Method | HTTP request | Description
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdResourcesResourceNameLogsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdResourcesResourceNameLogsGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/logs | Get logs for a stack resource
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdResourcesResourceNameMetricsGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdResourcesResourceNameMetricsGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/resources/{resource_name}/metrics | Get metrics for a stack resource
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdTopologyGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdTopologyGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/topology | Get stack topology
+[**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes | List volumes used by the stack
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesPost**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesPost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stacks/{id}/volumes | Create a volume and associate it with the stack
 [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stacks | Create a new stack
 [**ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdDelete**](DefaultApi.md#ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdDelete) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id} | Delete a volume
@@ -3142,6 +3144,74 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**ObjectStoreList**](ObjectStoreList.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdPostgresAddonsGet
+
+> PostgresAddonList ApiV1OrganizationsOrgIdPostgresAddonsGet(ctx, orgId).Execute()
+
+List all PostgresAddons the user has access to across all projects
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdPostgresAddonsGet(context.Background(), orgId).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdPostgresAddonsGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdPostgresAddonsGet`: PostgresAddonList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdPostgresAddonsGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdPostgresAddonsGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+### Return type
+
+[**PostgresAddonList**](PostgresAddonList.md)
 
 ### Authorization
 
@@ -6818,6 +6888,80 @@ Name | Type | Description  | Notes
 ### Return type
 
 [**StackTopology**](StackTopology.md)
+
+### Authorization
+
+[Bearer](../README.md#Bearer)
+
+### HTTP request headers
+
+- **Content-Type**: Not defined
+- **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints)
+[[Back to Model list]](../README.md#documentation-for-models)
+[[Back to README]](../README.md)
+
+
+## ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet
+
+> VolumeList ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet(ctx, orgId, projectName, id).Execute()
+
+List volumes used by the stack
+
+### Example
+
+```go
+package main
+
+import (
+    "context"
+    "fmt"
+    "os"
+    openapiclient "./openapi"
+)
+
+func main() {
+    orgId := "orgId_example" // string | The ID of the organization
+    projectName := "projectName_example" // string | The name of the project
+    id := "id_example" // string | The id of record
+
+    configuration := openapiclient.NewConfiguration()
+    apiClient := openapiclient.NewAPIClient(configuration)
+    resp, r, err := apiClient.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet(context.Background(), orgId, projectName, id).Execute()
+    if err != nil {
+        fmt.Fprintf(os.Stderr, "Error when calling `DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet``: %v\n", err)
+        fmt.Fprintf(os.Stderr, "Full HTTP response: %v\n", r)
+    }
+    // response from `ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet`: VolumeList
+    fmt.Fprintf(os.Stdout, "Response from `DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGet`: %v\n", resp)
+}
+```
+
+### Path Parameters
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+**ctx** | **context.Context** | context for authentication, logging, cancellation, deadlines, tracing, etc.
+**orgId** | **string** | The ID of the organization | 
+**projectName** | **string** | The name of the project | 
+**id** | **string** | The id of record | 
+
+### Other Parameters
+
+Other parameters are passed through a pointer to a apiApiV1OrganizationsOrgIdProjectsProjectNameStacksIdVolumesGetRequest struct via the builder pattern
+
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+
+
+
+
+### Return type
+
+[**VolumeList**](VolumeList.md)
 
 ### Authorization
 
