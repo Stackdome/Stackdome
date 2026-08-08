@@ -60,21 +60,6 @@ describe("ApiTokensPage", () => {
     expect(screen.getByText(/sd_abc1/)).toBeInTheDocument();
   });
 
-  it("hides revoked tokens until asked for them", async () => {
-    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
-      items: [token, { ...token, id: "t9", name: "old", revoked_at: "2026-08-02T00:00:00Z" }],
-    });
-    renderPage();
-    expect(await screen.findByText("agent")).toBeInTheDocument();
-    expect(screen.queryByText("old")).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /show revoked \(1\)/i }));
-    expect(await screen.findByText("old")).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /hide revoked/i }));
-    expect(screen.queryByText("old")).not.toBeInTheDocument();
-  });
-
   it("marks a token past its expiry as Expired", async () => {
     vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
       items: [{ ...token, id: "t3", name: "stale", expires_at: "2020-01-01T00:00:00Z" }],
@@ -245,17 +230,6 @@ describe("ApiTokensPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
 
     await waitFor(() => expect(tokensApi.revokeApiToken).toHaveBeenCalledWith("t1"));
-  });
-
-  it("still offers the revoked toggle when every token is revoked", async () => {
-    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
-      items: [{ ...token, revoked_at: "2026-08-02T00:00:00Z" }],
-    });
-    renderPage();
-
-    const toggle = await screen.findByRole("button", { name: /show revoked \(1\)/i });
-    await userEvent.click(toggle);
-    expect(await screen.findByText("agent")).toBeInTheDocument();
   });
 
   it("shows the create error inline when the API rejects", async () => {

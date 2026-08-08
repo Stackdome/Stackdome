@@ -16,6 +16,8 @@ const (
 )
 
 // TokenLookup validates a raw token and returns the stored token record.
+//
+//go:generate mockgen -source=api_token_authn_handler.go -destination=api_token_authn_handler_mock.go -package=auth
 type TokenLookup interface {
 	ValidateToken(ctx context.Context, rawToken string) (*models.APIToken, *errors.ServiceError)
 }

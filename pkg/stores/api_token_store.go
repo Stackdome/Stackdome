@@ -7,6 +7,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
+//go:generate mockgen -source=api_token_store.go -destination=../mocks/mock_api_token_store.go -package=mocks
 type APITokenStore interface {
 	Create(ctx context.Context, token *models.APIToken) (*models.APIToken, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.APIToken, *errors.ServiceError)
