@@ -9,6 +9,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/db"
 	emailpkg "github.com/Stackdome/stackdome/pkg/email"
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/observability"
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/stores"
@@ -41,6 +42,7 @@ type Env struct {
 	LeadershipFlag              *leadership.Flag
 	EncryptionService           services.EncryptionService
 	Logger                      applogger.Logger
+	Observability               *observability.Metrics
 }
 
 type Clients struct {

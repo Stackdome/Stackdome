@@ -25,6 +25,7 @@ import (
 	emailpkg "github.com/Stackdome/stackdome/pkg/email"
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/observability"
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
@@ -113,6 +114,7 @@ func (e *environmentImpl) Init(ctx context.Context) error {
 		e.loadEnvAndConfigs,
 		e.setupLogger,
 		e.setupDatabase,
+		e.setupObservability,
 		e.initializeResourceAccessPolicyManager,
 		e.initializePermissionService,
 		e.loadServices,
@@ -221,6 +223,12 @@ func (e *environmentImpl) setupDatabase(ctx context.Context) error {
 		return fmt.Errorf("invalid database config: %w", err)
 	}
 	e.DBSession = db.NewSessionFactory(e.Config.Database)
+	return nil
+}
+
+func (e *environmentImpl) setupObservability(context.Context) error {
+	e.Observability = observability.NewMetrics()
+	e.Observability.RegisterStackCollector(observability.NewDatabaseStackSnapshotSource(e.DBSession))
 	return nil
 }
 
@@ -766,6 +774,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 	e.Logger.Debugf("Initializing worker manager")
 	e.WorkerManager = workermanager.NewWorkerManager(workermanager.WorkerManagerSpec{
 		Environment: e.Name,
+		Metrics:     e.Observability,
 	})
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{

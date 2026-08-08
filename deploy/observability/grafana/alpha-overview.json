@@ -1,0 +1,38 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {"type":"row","title":"API","gridPos":{"h":1,"w":24,"x":0,"y":0},"collapsed":false,"panels":[]},
+    {"type":"timeseries","title":"Requests / second by route","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (method, route) (rate(stackdome_http_server_requests_total[5m]))","legendFormat":"{{method}} {{route}}","refId":"A"}],"gridPos":{"h":8,"w":12,"x":0,"y":1}},
+    {"type":"timeseries","title":"Response codes by route","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (route, status) (rate(stackdome_http_server_requests_total[5m]))","legendFormat":"{{status}} {{route}}","refId":"A"}],"gridPos":{"h":8,"w":12,"x":12,"y":1}},
+    {"type":"timeseries","title":"Request latency percentiles","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"histogram_quantile(0.50, sum by (route, le) (rate(stackdome_http_server_request_duration_seconds_bucket{route!~\".*stream.*\"}[5m])))","legendFormat":"p50 {{route}}","refId":"A"},{"expr":"histogram_quantile(0.95, sum by (route, le) (rate(stackdome_http_server_request_duration_seconds_bucket{route!~\".*stream.*\"}[5m])))","legendFormat":"p95 {{route}}","refId":"B"},{"expr":"histogram_quantile(0.99, sum by (route, le) (rate(stackdome_http_server_request_duration_seconds_bucket{route!~\".*stream.*\"}[5m])))","legendFormat":"p99 {{route}}","refId":"C"}],"fieldConfig":{"defaults":{"unit":"s"},"overrides":[]},"gridPos":{"h":8,"w":18,"x":0,"y":9}},
+    {"type":"stat","title":"In-flight requests","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum(stackdome_http_server_in_flight_requests)","refId":"A"}],"gridPos":{"h":8,"w":6,"x":18,"y":9}},
+
+    {"type":"row","title":"Stacks","gridPos":{"h":1,"w":24,"x":0,"y":17},"collapsed":false,"panels":[]},
+    {"type":"bargauge","title":"Current stacks by state","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (state) (stackdome_stacks)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":0,"y":18}},
+    {"type":"timeseries","title":"Stack state history","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (state) (stackdome_stacks)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":8,"y":18}},
+    {"type":"bargauge","title":"Current failures by type","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (type) (stackdome_stack_failures)","legendFormat":"{{type}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":16,"y":18}},
+    {"type":"timeseries","title":"Stack resources by state","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"max by (state) (stackdome_stack_resources)","legendFormat":"{{state}}","refId":"A"}],"gridPos":{"h":8,"w":18,"x":0,"y":26}},
+    {"type":"stat","title":"Snapshot collection","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"min(stackdome_stack_snapshot_collection_success)","refId":"A"}],"fieldConfig":{"defaults":{"mappings":[{"options":{"0":{"color":"red","text":"Failed"},"1":{"color":"green","text":"Healthy"}},"type":"value"}]},"overrides":[]},"gridPos":{"h":8,"w":6,"x":18,"y":26}},
+
+    {"type":"row","title":"Workers","gridPos":{"h":1,"w":24,"x":0,"y":34},"collapsed":false,"panels":[]},
+    {"type":"timeseries","title":"Queue depth","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"workqueue_depth","legendFormat":"{{name}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":0,"y":35}},
+    {"type":"timeseries","title":"p95 queue wait","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"histogram_quantile(0.95, sum by (name, le) (rate(workqueue_queue_duration_seconds_bucket[5m])))","legendFormat":"{{name}}","refId":"A"}],"fieldConfig":{"defaults":{"unit":"s"},"overrides":[]},"gridPos":{"h":8,"w":8,"x":8,"y":35}},
+    {"type":"timeseries","title":"p95 execution duration","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"histogram_quantile(0.95, sum by (name, le) (rate(workqueue_work_duration_seconds_bucket[5m])))","legendFormat":"{{name}}","refId":"A"}],"fieldConfig":{"defaults":{"unit":"s"},"overrides":[]},"gridPos":{"h":8,"w":8,"x":16,"y":35}},
+    {"type":"timeseries","title":"Execution outcomes","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (worker, result) (rate(stackdome_worker_executions_total[5m]))","legendFormat":"{{worker}} {{result}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":0,"y":43}},
+    {"type":"timeseries","title":"Retries","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"sum by (name) (rate(workqueue_retries_total[5m]))","legendFormat":"{{name}}","refId":"A"}],"gridPos":{"h":8,"w":8,"x":8,"y":43}},
+    {"type":"timeseries","title":"Longest running work","datasource":{"type":"prometheus","uid":"${DS_PROMETHEUS}"},"targets":[{"expr":"workqueue_longest_running_processor_seconds","legendFormat":"{{name}}","refId":"A"}],"fieldConfig":{"defaults":{"unit":"s"},"overrides":[]},"gridPos":{"h":8,"w":8,"x":16,"y":43}}
+  ],
+  "refresh": "15s",
+  "schemaVersion": 39,
+  "tags": ["stackdome", "alpha", "observability"],
+  "templating": {"list": [{"name":"DS_PROMETHEUS","type":"datasource","query":"prometheus","label":"Prometheus","current":{}}]},
+  "time": {"from":"now-6h","to":"now"},
+  "timezone": "browser",
+  "title": "Stackdome Alpha Overview",
+  "uid": "stackdome-alpha-overview",
+  "version": 1
+}

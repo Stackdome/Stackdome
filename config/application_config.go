@@ -283,8 +283,9 @@ func (c *GitHubOAuthConfig) LoadEnvVariables() {
 }
 
 type ServerConfig struct {
-	Hostname    string `json:"hostname"`
-	BindAddress string `json:"bind_address"`
+	Hostname           string `json:"hostname"`
+	BindAddress        string `json:"bind_address"`
+	MetricsBindAddress string `json:"metrics_bind_address"`
 }
 
 func (c *ServerConfig) Validate() error {
@@ -304,6 +305,9 @@ func (c *ServerConfig) LoadEnvVariables() {
 
 	if val, ok := EnvServerBindAddress.Lookup(); ok {
 		c.BindAddress = val
+	}
+	if val, ok := EnvMetricsBindAddress.Lookup(); ok {
+		c.MetricsBindAddress = val
 	}
 }
 

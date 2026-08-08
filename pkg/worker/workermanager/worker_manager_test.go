@@ -2,15 +2,16 @@ package workermanager
 
 import (
 	"context"
+	stderrors "errors"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/observability"
+	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-
-	"github.com/Stackdome/stackdome/pkg/errors"
-	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 )
 
 type testOperand struct{ ID string }
@@ -42,14 +43,14 @@ var _ = Describe("serviceWorkerManager", func() {
 	var mgr *serviceWorkerManager
 
 	startManager := func(w workerlib.Worker) {
-		mgr = NewWorkerManager(WorkerManagerSpec{Environment: "test"})
+		mgr = NewWorkerManager(WorkerManagerSpec{Environment: "test", Metrics: observability.NewMetrics()})
 		mgr.RegisterWorker(w, testOperand{})
 		Expect(mgr.Start(context.Background())).To(Succeed())
 	}
 
 	It("rejects pointer and non-comparable operand prototypes at registration", func() {
 		w := newTestWorker(nil)
-		mgr := NewWorkerManager(WorkerManagerSpec{Environment: "test"})
+		mgr := NewWorkerManager(WorkerManagerSpec{Environment: "test", Metrics: observability.NewMetrics()})
 
 		Expect(func() { mgr.RegisterWorker(w, &testOperand{}) }).To(PanicWith(ContainSubstring("comparable value type")))
 		Expect(func() { mgr.RegisterWorker(w, struct{ IDs []string }{}) }).To(PanicWith(ContainSubstring("comparable value type")))
@@ -129,4 +130,17 @@ var _ = Describe("serviceWorkerManager", func() {
 		Expect(overlap).To(BeFalse(), "same operand ran concurrently with itself")
 		Expect(peak).To(BeNumerically(">", 1), "expected concurrent processing of distinct operands")
 	})
+})
+
+var _ = Describe("worker execution result metrics", func() {
+	DescribeTable("maps worker results to bounded labels",
+		func(result workerlib.Result, err error, expected string) {
+			Expect(workerResultLabel(result, err)).To(Equal(expected))
+		},
+		Entry("success", workerlib.Result{}, nil, observability.WorkerResultSuccess),
+		Entry("error", workerlib.Result{}, stderrors.New("failed"), observability.WorkerResultError),
+		Entry("immediate requeue", workerlib.Result{Requeue: true}, nil, observability.WorkerResultRequeue),
+		Entry("delayed requeue", workerlib.Result{RequeueAfter: time.Second}, nil, observability.WorkerResultRequeue),
+		Entry("panic", workerlib.Result{}, workerPanicError{value: "boom"}, observability.WorkerResultPanic),
+	)
 })

@@ -34,6 +34,10 @@ spec:
       exposeToPublic: true
       fqdn: "{{.Domain}}"
       tls: {{.TLSEnabled}}
+    - name: metrics
+      number: 9090
+      protocol: http
+      exposeToPublic: false
   environmentVariables:
     - name: STACKDOME_ENV
       value: PRODUCTION

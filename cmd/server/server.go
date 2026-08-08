@@ -15,8 +15,10 @@ import (
 	"github.com/Stackdome/stackdome/config/openapi"
 	"github.com/Stackdome/stackdome/pkg/auth"
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/observability"
 	"github.com/google/uuid"
 	gorillahandlers "github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
 )
 
 type Server interface {
@@ -27,8 +29,9 @@ type Server interface {
 }
 
 type apiServer struct {
-	httpServer  *http.Server
-	environment environment.EnvImpl
+	httpServer    *http.Server
+	metricsServer *http.Server
+	environment   environment.EnvImpl
 }
 
 var _ Server = &apiServer{}
@@ -43,6 +46,7 @@ func (a *apiServer) env() environment.EnvImpl {
 
 func NewAPIServer(env environment.EnvImpl) Server {
 	s := &apiServer{environment: env}
+	metrics := env.Environment().Observability
 
 	mainRouter := s.routes()
 
@@ -79,15 +83,26 @@ func NewAPIServer(env environment.EnvImpl) Server {
 	)(mainHandler)
 
 	mainHandler = removeTrailingSlash(mainHandler)
-	mainHandler = injectLoggerMiddleware(mainHandler, env.Environment().Logger)
+	mainHandler = injectLoggerMiddleware(mainHandler, mainRouter, env.Environment().Logger, metrics)
 
 	s.httpServer = &http.Server{
 		Addr:        env.Environment().Config.Server.BindAddress,
 		Handler:     WithRequestTimeoutMiddleware(mainHandler, 180*time.Second),
 		ReadTimeout: 120 * time.Second,
 	}
+	s.metricsServer = newMetricsServer(env.Environment().Config.Server.MetricsBindAddress, metrics.Handler())
 
 	return s
+}
+
+func newMetricsServer(bindAddress string, metricsHandler http.Handler) *http.Server {
+	router := http.NewServeMux()
+	router.Handle("/metrics", metricsHandler)
+	return &http.Server{
+		Addr:              bindAddress,
+		Handler:           router,
+		ReadHeaderTimeout: 5 * time.Second,
+	}
 }
 
 const requestIDHeader = "X-Request-Id"
@@ -129,7 +144,7 @@ func (r *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 // injectLoggerMiddleware assigns a request ID (honouring an inbound
 // X-Request-Id), binds a per-request logger carrying that ID into the context,
 // and emits a single structured completion line with status and duration.
-func injectLoggerMiddleware(next http.Handler, baseLogger applogger.Logger) http.Handler {
+func injectLoggerMiddleware(next http.Handler, router *mux.Router, baseLogger applogger.Logger, metrics *observability.Metrics) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestID := r.Header.Get(requestIDHeader)
 		if requestID == "" {
@@ -144,10 +159,14 @@ func injectLoggerMiddleware(next http.Handler, baseLogger applogger.Logger) http
 
 		rec := &statusRecorder{ResponseWriter: w}
 		start := time.Now()
+		metrics.IncHTTPInFlight(r.Method)
+		defer metrics.DecHTTPInFlight(r.Method)
 		next.ServeHTTP(rec, r)
 		if rec.status == 0 {
 			rec.status = http.StatusOK
 		}
+		route := matchedRouteTemplate(router, r)
+		metrics.ObserveHTTPRequest(r.Method, route, rec.status, time.Since(start))
 
 		reqLogger.WithFields(map[string]interface{}{
 			"method":      r.Method,
@@ -156,6 +175,18 @@ func injectLoggerMiddleware(next http.Handler, baseLogger applogger.Logger) http
 			"duration_ms": time.Since(start).Milliseconds(),
 		}).Info(ctx, "request completed")
 	})
+}
+
+func matchedRouteTemplate(router *mux.Router, r *http.Request) string {
+	match := &mux.RouteMatch{}
+	if !router.Match(r, match) || match.Route == nil {
+		return observability.UnmatchedRoute
+	}
+	template, err := match.Route.GetPathTemplate()
+	if err != nil || template == "" {
+		return observability.UnmatchedRoute
+	}
+	return template
 }
 
 // publicAPIPaths are the routes that skip authentication: signup/login,
@@ -223,6 +254,12 @@ func (s apiServer) Listen() (listener net.Listener, err error) {
 
 // Start listening on the configured port and start the server. This is a convenience wrapper for Listen() and Serve(listener Listener)
 func (s apiServer) Start() {
+	if s.metricsServer.Addr != "" {
+		go func() {
+			bootstrapLog.Infof("Serving internal metrics at %s/metrics", s.metricsServer.Addr)
+			check(s.metricsServer.ListenAndServe(), "Metrics server terminated with errors")
+		}()
+	}
 	listener, err := s.Listen()
 	if err != nil {
 		bootstrapLog.Fatalf("Unable to start API server: %s", err)
@@ -236,7 +273,9 @@ func (s apiServer) Start() {
 }
 
 func (s apiServer) Stop() error {
-	return s.httpServer.Shutdown(context.Background())
+	apiErr := s.httpServer.Shutdown(context.Background())
+	metricsErr := s.metricsServer.Shutdown(context.Background())
+	return errors.Join(apiErr, metricsErr)
 }
 
 func removeTrailingSlash(next http.Handler) http.Handler {
