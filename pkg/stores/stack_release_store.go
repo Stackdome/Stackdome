@@ -2,6 +2,7 @@ package stores
 
 import (
 	"context"
+	"time"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -48,6 +49,10 @@ type StackReleaseStore interface {
 
 	// AppendImageDigests merges image digests into the release pins.
 	AppendImageDigests(ctx context.Context, id string, digests map[string]string) *errors.ServiceError
+
+	// SetConvergeClockStartedAt stamps (nil: clears) the convergence timeout
+	// clock on an InProgress release. See models.ReleaseWorkerStatus.
+	SetConvergeClockStartedAt(ctx context.Context, id string, startedAt *time.Time) *errors.ServiceError
 
 	// ListTerminalSummariesByStackID returns lightweight release summaries for GC decisions.
 	// Only terminal-state releases are returned — active releases are never GC candidates.

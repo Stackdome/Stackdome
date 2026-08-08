@@ -81,4 +81,5 @@ var MigrationList = []*gormigrate.Migration{
 	deleteOrphanPlatformOrg(),
 	addClusterInfo(),
 	deleteSeededPlatformDomains(),
+	addReleaseWorkerStatus(),
 }
