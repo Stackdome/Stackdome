@@ -10,7 +10,9 @@ IMAGE_TAG ?= $(IMAGE_REPO):$(VERSION)
 
 generate:
 	rm -rf pkg/api/openapi
-	$(DOCKER) run -v ${PWD}:/local:rw $(OPENAPI_GENERATOR_IMAGE) generate -i /local/config/openapi/stackdome_api.yaml -g go -o /local/pkg/api/openapi
+	# Run as the invoking user so generated files are not root-owned on Linux
+	# (root-owned output breaks the gofmt step and the CI regen check).
+	$(DOCKER) run --user $(shell id -u):$(shell id -g) -v ${PWD}:/local:rw $(OPENAPI_GENERATOR_IMAGE) generate -i /local/config/openapi/stackdome_api.yaml -g go -o /local/pkg/api/openapi
 	gofmt -w pkg/api/openapi
 	rm pkg/api/openapi/go.mod
 	rm pkg/api/openapi/go.sum
