@@ -12,6 +12,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/logger"
+	"github.com/Stackdome/stackdome/pkg/observability"
 	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 )
 
@@ -36,6 +37,7 @@ type BackgroundJobEnqueuer interface {
 
 type WorkerManagerSpec struct {
 	Environment string
+	Metrics     *observability.Metrics
 }
 
 var _ WorkerManager = (*serviceWorkerManager)(nil)
@@ -45,6 +47,7 @@ type serviceWorkerManager struct {
 	registeredWorkers map[reflect.Type]workerlib.Worker
 	stopChan          chan struct{}
 	log               logger.Logger
+	metrics           *observability.Metrics
 }
 
 func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
@@ -53,6 +56,7 @@ func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
 		registeredWorkers: make(map[reflect.Type]workerlib.Worker),
 		stopChan:          make(chan struct{}),
 		log:               logger.NewLoggerWithPrefix(context.Background(), "worker-manager"),
+		metrics:           spec.Metrics,
 	}
 	return workerMgr
 }
@@ -169,6 +173,7 @@ func (s *serviceWorkerManager) processNextWorkItemForWorker(ctx context.Context,
 		return false
 	}
 	result, err := s.workerExecute(ctx, worker, operand)
+	s.metrics.ObserveWorkerExecution(worker.Name(), workerResultLabel(result, err))
 	defer worker.WorkQueue().Done(operand)
 	switch {
 	case err != nil:
@@ -189,6 +194,28 @@ func (s *serviceWorkerManager) processNextWorkItemForWorker(ctx context.Context,
 		worker.WorkQueue().Forget(operand)
 	}
 	return true
+}
+
+type workerPanicError struct {
+	value interface{}
+}
+
+func (e workerPanicError) Error() string {
+	return fmt.Sprintf("worker panicked: %v", e.value)
+}
+
+func workerResultLabel(result workerlib.Result, err error) string {
+	var panicErr workerPanicError
+	switch {
+	case errors.As(err, &panicErr):
+		return observability.WorkerResultPanic
+	case err != nil:
+		return observability.WorkerResultError
+	case result.Requeue || result.RequeueAfter > 0:
+		return observability.WorkerResultRequeue
+	default:
+		return observability.WorkerResultSuccess
+	}
 }
 
 // startPeriodicReconciler periodically runs the worker's GetInput method
@@ -245,7 +272,7 @@ func (s *serviceWorkerManager) workerExecute(
 		if panicErr := recover(); panicErr != nil {
 			{
 				worker.Logger().Error(ctx, "worker %s panicked: %v", worker.Name(), panicErr)
-				err = fmt.Errorf("worker %s panicked: %v", worker.Name(), panicErr)
+				err = workerPanicError{value: panicErr}
 			}
 		}
 	}()

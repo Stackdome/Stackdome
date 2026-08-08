@@ -1,0 +1,105 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: stackdome-alpha-observability
+spec:
+  groups:
+    - name: stackdome-alpha
+      rules:
+        - alert: StackdomeMetricsTargetDown
+          expr: absent(up{job="stackdome-api-metrics"}) or up{job="stackdome-api-metrics"} == 0
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            summary: Stackdome metrics target is unavailable
+            description: Prometheus has not scraped the Stackdome API metrics target for two minutes.
+
+        - alert: StackdomeAPIHighErrorRate
+          expr: |
+            (
+              sum(rate(stackdome_http_server_requests_total{status=~"5.."}[5m]))
+              /
+              sum(rate(stackdome_http_server_requests_total[5m]))
+            ) > 0.05
+            and
+            sum(increase(stackdome_http_server_requests_total[5m])) >= 20
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Stackdome API 5xx rate is above 5%
+            description: At least 20 requests were observed and more than 5% failed over the last five minutes.
+
+        - alert: StackdomeAPIHighLatency
+          expr: |
+            histogram_quantile(
+              0.95,
+              sum by (le) (
+                rate(stackdome_http_server_request_duration_seconds_bucket{route!~".*stream.*"}[10m])
+              )
+            ) > 2
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: Stackdome API p95 latency is above two seconds
+            description: Non-streaming API requests have remained slow for ten minutes.
+
+        - alert: StackdomeWorkerBacklog
+          expr: |
+            max by (name) (workqueue_depth) > 25
+            or
+            histogram_quantile(
+              0.95,
+              sum by (name, le) (rate(workqueue_queue_duration_seconds_bucket[10m]))
+            ) > 60
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Stackdome worker queue is backed up
+            description: Worker {{ $labels.name }} has excessive queue depth or queue-wait latency.
+
+        - alert: StackdomeWorkerHighErrorRate
+          expr: |
+            (
+              sum by (worker) (rate(stackdome_worker_executions_total{result=~"error|panic"}[10m]))
+              /
+              sum by (worker) (rate(stackdome_worker_executions_total[10m]))
+            ) > 0.10
+            and
+            sum by (worker) (increase(stackdome_worker_executions_total[10m])) >= 5
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: Stackdome worker error rate is above 10%
+            description: Worker {{ $labels.worker }} has failed more than 10% of recent executions.
+
+        - alert: StackdomeStacksFailed
+          expr: sum(stackdome_stacks{state=~"Failed|Error"}) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: One or more Stackdome stacks are failed
+            description: A stack has remained in Failed or Error state for five minutes.
+
+        - alert: StackdomeStacksDegraded
+          expr: sum(stackdome_stacks{state="Degraded"}) > 0
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: One or more Stackdome stacks are degraded
+            description: A stack has remained degraded for fifteen minutes.
+
+        - alert: StackdomeStackSnapshotUnavailable
+          expr: stackdome_stack_snapshot_collection_success == 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Stack state metrics cannot read PostgreSQL
+            description: Stackdome has failed to collect its stack status snapshot for five minutes.

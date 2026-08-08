@@ -68,6 +68,7 @@ Rotating `JWT_SECRET` is safe by comparison: it only invalidates tokens that are
 | `SERVER_BIND_ADDRESS` | No | `0.0.0.0:8000` | Address and port the HTTP server listens on |
 | `SERVER_HOSTNAME` | No | — | Hostname or domain the server identifies itself as |
 | `SERVER_EXTERNAL_URL` | No | — | The externally reachable base URL of the hub, for example `https://stackdome.example.com`. GitHub sends browser redirects and webhook deliveries here, so set it if you use the GitHub App flow. |
+| `METRICS_BIND_ADDRESS` | No | `0.0.0.0:9090` | Internal Prometheus listener. Expose this port only to your in-cluster metrics collector; never publish it through the application ingress. Set it to an empty value to disable metrics serving. |
 
 ## Logging
 
