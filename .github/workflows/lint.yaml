@@ -39,3 +39,44 @@ jobs:
           # Stale analysis cache corrupts staticcheck's noreturn facts,
           # producing false SA5011 on `if x == nil { t.Fatal }` patterns.
           skip-cache: true
+
+  # The Go client and the frontend types are generated from the OpenAPI spec.
+  # Regenerate them here and fail if the checked-in copies differ.
+  generated-clients:
+    name: generated clients match the spec
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Regenerate the Go client
+        run: make generate
+
+      - name: Regenerate the frontend types
+        run: |
+          pnpm --prefix frontend install --frozen-lockfile
+          pnpm --prefix frontend generate:openapi-types
+          pnpm --prefix frontend generate:openapi-zod
+
+      - name: Fail if anything changed
+        run: |
+          git diff --exit-code -- \
+            pkg/api/openapi \
+            frontend/src/api/types/openapi.d.ts \
+            frontend/src/api/zod-schemas.ts \
+          || (echo "Generated clients are stale. Run 'make generate' and the frontend generate:openapi-* scripts." && exit 1)

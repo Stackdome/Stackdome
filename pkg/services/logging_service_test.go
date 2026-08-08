@@ -8,9 +8,11 @@ import (
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	buildsv1alpha1 "stackdome.io/cluster-agent/api/builds/v1alpha1"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 )
@@ -29,6 +31,73 @@ func startedBuild() *models.ImageBuild {
 		},
 	}
 }
+
+var _ = Describe("LoggingService.StreamLogsForStackResource", func() {
+	var (
+		ctrl      *gomock.Controller
+		mockRes   *mocks.MockStackResourceService
+		mockCLS   *MockClusterLoggingService
+		svc       LoggingService
+		ctx       context.Context
+		crashing  *models.StackResource
+		noWorkloa *models.StackResource
+	)
+
+	BeforeEach(func() {
+		ctrl = gomock.NewController(GinkgoT())
+		mockRes = mocks.NewMockStackResourceService(ctrl)
+		mockCLS = NewMockClusterLoggingService(ctrl)
+		svc = NewLoggingService(LoggingServiceSpec{StackResourceService: mockRes})
+		svc.InjectClusterResourceServiceDeps(clusterresource.ClusterResourceServiceDeps{
+			ClusterLoggingService: mockCLS,
+		})
+		ctx = context.Background()
+
+		crashing = &models.StackResource{
+			Name: "web",
+			Status: &models.StackResourceStatus{
+				State:               models.StackResourcePhaseFailed,
+				InternalServiceName: ptr.To("web-svc"),
+			},
+		}
+		noWorkloa = &models.StackResource{
+			Name:   "web",
+			Status: &models.StackResourceStatus{State: models.StackResourcePhasePending},
+		}
+	})
+
+	AfterEach(func() { ctrl.Finish() })
+
+	It("serves logs for a crash-looping resource", func() {
+		mockRes.EXPECT().GetByStackIDAndResourceName(ctx, "stack-1", "web").Return(crashing, nil)
+		mockCLS.EXPECT().
+			GetLogsForResources(ctx, "org-1", []*models.StackResource{crashing}, gomock.Any()).
+			Return(nil, nil)
+
+		_, err := svc.StreamLogsForStackResource(ctx, "org-1", "stack-1", "web", &LoggingParams{})
+		Expect(err).To(BeNil())
+	})
+
+	It("returns not-found when there is no workload to read", func() {
+		mockRes.EXPECT().GetByStackIDAndResourceName(ctx, "stack-1", "web").Return(noWorkloa, nil)
+		mockCLS.EXPECT().
+			GetLogsForResources(ctx, "org-1", []*models.StackResource{noWorkloa}, gomock.Any()).
+			Return(nil, fmt.Errorf("wrap: %w", clusterresource.ErrNoWorkload))
+
+		_, err := svc.StreamLogsForStackResource(ctx, "org-1", "stack-1", "web", &LoggingParams{})
+		Expect(err.Code).To(Equal(errors.ErrorNotFound))
+	})
+
+	It("keeps a genuine cluster failure a 500", func() {
+		mockRes.EXPECT().GetByStackIDAndResourceName(ctx, "stack-1", "web").Return(crashing, nil)
+		mockCLS.EXPECT().
+			GetLogsForResources(ctx, "org-1", []*models.StackResource{crashing}, gomock.Any()).
+			Return(nil, fmt.Errorf("cluster unreachable"))
+
+		_, err := svc.StreamLogsForStackResource(ctx, "org-1", "stack-1", "web", &LoggingParams{})
+		Expect(err.Code).To(Equal(errors.ErrorGeneral))
+	})
+})
 
 var _ = Describe("LoggingService.StreamLogsForBuild", func() {
 	var (

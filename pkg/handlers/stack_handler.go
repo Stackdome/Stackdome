@@ -195,7 +195,7 @@ func (h *stackHandler) StreamLogs(w http.ResponseWriter, r *http.Request) {
 
 			logStreamer, err := h.loggingService.StreamLogsForStack(ctx, orgID, stackID, loggingParams)
 			if err != nil {
-				return nil, errors.GeneralError("failed to get logs: %s", err.Error())
+				return nil, err
 			}
 			return logStreamer, nil
 		},

@@ -63,8 +63,8 @@ func NewLoggingParams(queryValues url.Values) (*LoggingParams, error) {
 //go:generate mockgen -destination=cluster_logging_service_mock.go -package=services github.com/Stackdome/stackdome/pkg/services/clusterresource ClusterLoggingService
 
 type LoggingService interface {
-	StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
-	StreamLogsForStack(ctx context.Context, orgID string, stackID string, options *LoggingParams) (interfaces.ServerSideStreamable, error)
+	StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceName string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError)
+	StreamLogsForStack(ctx context.Context, orgID string, stackID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError)
 	StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError)
 	ClusterResourceServiceInjectable
 }
@@ -93,50 +93,46 @@ func NewLoggingService(spec LoggingServiceSpec) LoggingService {
 	}
 }
 
-func (s *loggingService) StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceID string, options *LoggingParams) (interfaces.ServerSideStreamable, error) {
+// Logs are best-effort: we stream them whenever the workload is known, whatever
+// state the resource is in. The durable diagnostics live in the status API.
+func (s *loggingService) StreamLogsForStackResource(ctx context.Context, orgID string, stackID string, stackResourceID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
 	stackResource, err := s.stackResourceService.GetByStackIDAndResourceName(ctx, stackID, stackResourceID)
 	if err != nil {
 		return nil, err
 	}
 
-	if stackResource.Status.State != models.StackResourcePhaseReady || stackResource.Status.InternalServiceName == nil {
-		return nil, fmt.Errorf("resource %s is not ready for logging", stackResource.Name)
-	}
-
-	logStreamer, serr := s.ClusterLoggingService.GetLogsForResources(ctx, orgID, []*models.StackResource{stackResource}, options)
-	if serr != nil {
-		return nil, serr
+	logStreamer, cerr := s.ClusterLoggingService.GetLogsForResources(ctx, orgID, []*models.StackResource{stackResource}, options)
+	if cerr != nil {
+		return nil, logStreamError(stackResource.Name, cerr)
 	}
 
 	return logStreamer, nil
 }
 
-func (s *loggingService) StreamLogsForStack(ctx context.Context, orgID string, stackID string, options *LoggingParams) (interfaces.ServerSideStreamable, error) {
+func (s *loggingService) StreamLogsForStack(ctx context.Context, orgID string, stackID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
 	stackResources, err := s.stackResourceService.GetByStackID(ctx, stackID)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(stackResources) == 0 {
-		return nil, fmt.Errorf("no resources found for stack %s", stackID)
+		return nil, errors.NotFound("no resources found for stack %s", stackID)
 	}
 
-	filteredResources := make([]*models.StackResource, 0, len(stackResources))
-	for _, resource := range stackResources {
-		if resource.Status.State == models.StackResourcePhaseReady && resource.Status.InternalServiceName != nil {
-			filteredResources = append(filteredResources, resource)
-		}
-	}
-	if len(filteredResources) == 0 {
-		return nil, fmt.Errorf("no ready resources found for stack %s", stackID)
-	}
-
-	logStreamer, serr := s.ClusterLoggingService.GetLogsForResources(ctx, orgID, filteredResources, options)
-	if serr != nil {
-		return nil, serr
+	logStreamer, cerr := s.ClusterLoggingService.GetLogsForResources(ctx, orgID, stackResources, options)
+	if cerr != nil {
+		return nil, logStreamError(stackID, cerr)
 	}
 
 	return logStreamer, nil
+}
+
+// A missing pod or workload is a 404; anything else is a real failure.
+func logStreamError(target string, err error) *errors.ServiceError {
+	if stderrors.Is(err, clusterresource.ErrNoWorkload) {
+		return errors.NotFound("no logs available for %s: %s", target, err.Error())
+	}
+	return errors.GeneralError("failed to get logs for %s: %s", target, err.Error())
 }
 
 func (s *loggingService) StreamLogsForBuild(ctx context.Context, orgID string, buildID string, options *LoggingParams) (interfaces.ServerSideStreamable, *errors.ServiceError) {
