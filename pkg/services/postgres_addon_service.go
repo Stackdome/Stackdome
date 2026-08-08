@@ -258,9 +258,7 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, err
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: createdPostgresAddon.ID,
-	}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: createdPostgresAddon.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", createdPostgresAddon.Name, err.Error())
 	}
 
@@ -347,9 +345,7 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 		return nil, err
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: updatedPostgresAddon.ID,
-	}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: updatedPostgresAddon.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", updatedPostgresAddon.Name, err.Error())
 	}
 
@@ -454,9 +450,7 @@ func (s *postgresAddonService) DeletePostgresAddon(ctx context.Context, id strin
 		return nil, errors.GeneralError("failed to update PostgreSQL addon status for deletion: %s", err.Error())
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: id,
-	}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
 	}
 
@@ -555,9 +549,7 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 		return err
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{
-		ID: id,
-	}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {
 		return errors.GeneralError("failed to enqueue backup job for postgres addon '%s': %s", id, err.Error())
 	}
 	return nil
@@ -582,7 +574,7 @@ func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, 
 		return err
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{ID: id}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {
 		return errors.GeneralError("failed to enqueue hibernation job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
 	}
 	return nil
@@ -607,7 +599,7 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 		return err
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PostgresAddon{ID: id}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {
 		return errors.GeneralError("failed to enqueue fencing job for postgres addon '%s': %s", postgresAddon.Name, err.Error())
 	}
 	return nil

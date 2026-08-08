@@ -49,7 +49,7 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
 		created := &models.Volume{ID: "v-1", Name: "web-data"}
 		mockVolumeService.EXPECT().InternalCreateWithTx(ctx, stack, newVolume).Return(created, nil)
-		mockEnqueuer.EXPECT().Enqueue(&models.Volume{ID: "v-1"}).Return(nil)
+		mockEnqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "v-1"}).Return(nil)
 
 		got, serr := svc.CreateStackVolume(ctx, stackID, newVolume)
 		assert.Nil(t, serr)

@@ -42,8 +42,8 @@ var _ = Describe("VolumeWorker", func() {
 			operands, err := w.GetInput(ctx)
 			Expect(err).To(BeNil())
 			Expect(operands).To(HaveLen(2))
-			Expect(operands[0]).To(Equal(worker.Operand(&models.Volume{ID: "vol-1"})))
-			Expect(operands[1]).To(Equal(worker.Operand(&models.Volume{ID: "vol-2"})))
+			Expect(operands[0]).To(Equal(worker.Operand(models.VolumeOperand{ID: "vol-1"})))
+			Expect(operands[1]).To(Equal(worker.Operand(models.VolumeOperand{ID: "vol-2"})))
 		})
 	})
 

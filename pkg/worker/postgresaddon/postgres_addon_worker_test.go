@@ -49,7 +49,7 @@ var _ = Describe("PostgresAddonWorker", func() {
 			operands, err := w.GetInput(ctx)
 			Expect(err).To(BeNil())
 			Expect(operands).To(HaveLen(1))
-			Expect(operands[0]).To(Equal(worker.Operand(&models.PostgresAddon{ID: "addon-1"})))
+			Expect(operands[0]).To(Equal(worker.Operand(models.PostgresAddonOperand{ID: "addon-1"})))
 		})
 	})
 })

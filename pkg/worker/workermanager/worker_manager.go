@@ -18,6 +18,11 @@ import (
 // TODO: set a reasonable value for this based on metrics and testing.
 const MaxOperandRequeue = math.MaxInt32
 
+// Goroutines draining each worker's queue. The workqueue never hands the
+// same key to two goroutines (in-flight keys re-queue as dirty), so this
+// only requires operands to be comparable values — see models.StackOperand.
+const maxConcurrentReconciles = 6
+
 type WorkerManager interface {
 	Start(ctx context.Context) error
 	Find(operand interface{}) workerlib.Worker
@@ -57,8 +62,17 @@ func NewWorkerManager(spec WorkerManagerSpec) *serviceWorkerManager {
 	return workerMgr
 }
 
+// The operand prototype must be a comparable value type: the workqueue
+// dedups and rate-limits by map-key equality, and a pointer's key is its
+// address, so pointer operands silently break dedup (and non-comparable
+// values panic inside the queue). Enqueue routes by the same type, so
+// rejecting the prototype here covers every enqueue path.
 func (s *serviceWorkerManager) RegisterWorker(worker workerlib.Worker, operand interface{}) {
-	s.registeredWorkers[reflect.TypeOf(operand)] = worker
+	t := reflect.TypeOf(operand)
+	if t.Kind() == reflect.Pointer || !t.Comparable() {
+		panic(fmt.Sprintf("worker %q operand prototype must be a comparable value type, got %s", worker.Name(), t))
+	}
+	s.registeredWorkers[t] = worker
 }
 func (s *serviceWorkerManager) Start(ctx context.Context) error {
 	if len(s.registeredWorkers) == 0 {
@@ -146,8 +160,16 @@ func (s *serviceWorkerManager) startWorker(ctx context.Context, worker workerlib
 	// Populate worker queue once before starting the worker loop.
 	s.populateWorkerQueue(ctx, worker)
 
-	for s.processNextWorkItemForWorker(ctx, worker) {
+	var wg sync.WaitGroup
+	for range maxConcurrentReconciles {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for s.processNextWorkItemForWorker(ctx, worker) {
+			}
+		}()
 	}
+	wg.Wait()
 }
 
 func (s *serviceWorkerManager) populateWorkerQueue(ctx context.Context, worker workerlib.Worker) {

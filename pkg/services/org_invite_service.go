@@ -149,7 +149,7 @@ func (s *orgInviteService) Create(ctx context.Context, email, projectName string
 	}
 
 	if s.BackgroundJobEnqueuer != nil {
-		if err := s.BackgroundJobEnqueuer.Enqueue(&models.OrgInvite{ID: created.ID}); err != nil {
+		if err := s.BackgroundJobEnqueuer.Enqueue(models.OrgInviteOperand{ID: created.ID}); err != nil {
 			s.logger.Error(ctx, "failed to enqueue invite email job: %s", err.Error())
 		}
 	}
@@ -217,7 +217,7 @@ func (s *orgInviteService) Resend(ctx context.Context, orgID, id string) *errors
 	}
 
 	if s.BackgroundJobEnqueuer != nil {
-		if err := s.BackgroundJobEnqueuer.Enqueue(&models.OrgInvite{ID: id}); err != nil {
+		if err := s.BackgroundJobEnqueuer.Enqueue(models.OrgInviteOperand{ID: id}); err != nil {
 			s.logger.Error(ctx, "failed to enqueue invite email job for resend: %s", err.Error())
 		}
 	}

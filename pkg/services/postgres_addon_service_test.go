@@ -63,7 +63,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 				Expect(status.State).To(Equal(models.PostgresAddonStateDeleting))
 				return nil
 			})
-		enqueuer.EXPECT().Enqueue(&models.PostgresAddon{ID: "pg-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "pg-1"}).Return(nil)
 
 		deleted, err := svc.DeletePostgresAddon(ctx, "pg-1")
 		Expect(err).To(BeNil())
@@ -131,7 +131,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 				return capturedAddon, nil
 			})
 		permissions.EXPECT().Check(gomock.Any(), projectID, auth.ResourceAddonsPostgres, addonID, auth.ActionRead).Return(nil)
-		enqueuer.EXPECT().Enqueue(&models.PostgresAddon{ID: addonID}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: addonID}).Return(nil)
 	}
 
 	BeforeEach(func() {
@@ -283,7 +283,7 @@ var _ = Describe("UpdatePostgresAddon storage class carry-forward", func() {
 				Expect(addon.Storage.StorageClass).To(Equal(existingStorageClass))
 				return addon, nil
 			})
-		enqueuer.EXPECT().Enqueue(&models.PostgresAddon{ID: addonID}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: addonID}).Return(nil)
 
 		update := newUpdateFixture()
 		update.Storage.StorageClass = ""
