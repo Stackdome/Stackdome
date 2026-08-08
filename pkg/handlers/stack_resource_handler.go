@@ -121,7 +121,7 @@ func (h *stackResourceHandler) StreamLogs(w http.ResponseWriter, r *http.Request
 
 			logStreamer, err := h.loggingService.StreamLogsForStackResource(ctx, orgID, stackID, resourceName, loggingParams)
 			if err != nil {
-				return nil, errors.GeneralError("failed to get logs for resource '%s': %s", resourceName, err.Error())
+				return nil, err
 			}
 			return logStreamer, nil
 		},
