@@ -59,7 +59,7 @@ var _ = Describe("previewStackService InternalCreateFromWebhook", func() {
 				return preview, nil
 			},
 		)
-		enqueuer.EXPECT().Enqueue(&models.PreviewStack{ID: "preview-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PreviewStackOperand{ID: "preview-1"}).Return(nil)
 
 		created, sErr := svc.InternalCreateFromWebhook(ctx, config, "7", "feature", "abc123")
 		Expect(sErr).To(BeNil())

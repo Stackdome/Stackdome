@@ -235,11 +235,11 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	if err != nil {
 		return nil, err
 	}
-	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.Stack{ID: createdStack.ID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.StackOperand{ID: createdStack.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
 	}
 	for _, v := range createdStack.Volumes {
-		_ = s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, &models.Volume{ID: v.ID})
+		_ = s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.VolumeOperand{ID: v.ID})
 	}
 	s.logger.WithFields(map[string]interface{}{
 		logger.FieldStackID:   createdStack.ID,
@@ -343,7 +343,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	}
 	for _, v := range updatedStack.Volumes {
 		if _, existed := existingVolumeIDs[v.ID]; !existed {
-			if enqErr := s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: v.ID}); enqErr != nil {
+			if enqErr := s.BackgroundJobEnqueuer.Enqueue(models.VolumeOperand{ID: v.ID}); enqErr != nil {
 				return nil, errors.GeneralError("failed to enqueue volume '%s': %s", v.ID, enqErr.Error())
 			}
 		}
@@ -504,7 +504,7 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 		return nil, txErr
 	}
 
-	if enqErr := s.BackgroundJobEnqueuer.Enqueue(&models.Volume{ID: created.ID}); enqErr != nil {
+	if enqErr := s.BackgroundJobEnqueuer.Enqueue(models.VolumeOperand{ID: created.ID}); enqErr != nil {
 		return nil, errors.GeneralError("failed to enqueue volume '%s': %s", created.ID, enqErr.Error())
 	}
 	return created, nil
@@ -746,9 +746,7 @@ func (s *stackService) InternalDeleteStack(ctx context.Context, stack *models.St
 	if err != nil {
 		return nil, errors.GeneralError("failed to update stack '%s' for deletion: %s", stack.Name, err.Error())
 	}
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.Stack{
-		ID: stack.ID,
-	}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.StackOperand{ID: stack.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", stack.Name, err.Error())
 	}
 	s.logger.WithField(logger.FieldStackID, stack.ID).Info(ctx, "marked stack for deletion")

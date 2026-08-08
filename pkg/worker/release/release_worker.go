@@ -19,6 +19,10 @@ import (
 const (
 	ReleaseWorkerName       = "release-worker"
 	convergencePollInterval = 15 * time.Second
+	// A release that hasn't reached a terminal state within this window is
+	// failed by the deadline reconciler — bounds background load from
+	// workloads that will never become ready (e.g. crashlooping apps).
+	convergenceTimeout = 45 * time.Minute
 )
 
 type ReleaseWorkerSpec struct {
@@ -55,6 +59,7 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 		releaseWorkerEnqueuer: spec.ReleaseWorkerEnqueuer,
 		subReconcilers: []subReconciler{
 			newGatekeeperReconciler(spec),
+			newDeadlineReconciler(spec),
 			newSimulatorReconciler(spec),
 			newValidationReconciler(spec),
 			newRenderReconciler(spec),
@@ -70,9 +75,9 @@ func (w *releaseWorker) Interval() time.Duration {
 }
 
 func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	releaseRef, ok := operand.(*models.StackRelease)
+	releaseRef, ok := operand.(models.StackReleaseOperand)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.StackRelease")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.StackReleaseOperand")
 	}
 
 	release, serr := w.releaseService.InternalGet(ctx, releaseRef.ID)
@@ -99,7 +104,7 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 	if w.releaseWorkerEnqueuer != nil {
 		updated, _ := w.releaseService.InternalGet(ctx, releaseRef.ID)
 		if updated != nil && updated.State.Terminal() {
-			if err := w.releaseWorkerEnqueuer.Enqueue(&releasegc.ReleaseGCRequest{StackID: updated.StackID}); err != nil {
+			if err := w.releaseWorkerEnqueuer.Enqueue(releasegc.ReleaseGCRequest{StackID: updated.StackID}); err != nil {
 				w.Logger().Error(ctx, "failed to enqueue release GC for stack %s: %v", updated.StackID, err)
 			}
 		}
@@ -134,7 +139,7 @@ func (w *releaseWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors
 	}
 	operands := make([]worker.Operand, 0, len(releases))
 	for _, r := range releases {
-		operands = append(operands, &models.StackRelease{ID: r.ID})
+		operands = append(operands, models.StackReleaseOperand{ID: r.ID})
 	}
 	return operands, nil
 }

@@ -56,9 +56,9 @@ func (w *releaseGCWorker) Interval() time.Duration {
 }
 
 func (w *releaseGCWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	req, ok := operand.(*ReleaseGCRequest)
+	req, ok := operand.(ReleaseGCRequest)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *ReleaseGCRequest")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected ReleaseGCRequest")
 	}
 
 	stack, stackErr := w.stackStore.GetByID(ctx, req.StackID)
@@ -95,7 +95,7 @@ func (w *releaseGCWorker) GetInput(ctx context.Context) ([]worker.Operand, *erro
 	}
 	operands := make([]worker.Operand, 0, len(stackIDs))
 	for _, id := range stackIDs {
-		operands = append(operands, &ReleaseGCRequest{StackID: id})
+		operands = append(operands, ReleaseGCRequest{StackID: id})
 	}
 	return operands, nil
 }

@@ -55,9 +55,9 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 }
 
 func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	stackID, ok := operand.(*models.Stack)
+	stackID, ok := operand.(models.StackOperand)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.Stack")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.StackOperand")
 	}
 
 	log := w.Logger().WithField(logger.FieldStackID, stackID.ID)
@@ -119,9 +119,7 @@ func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.S
 
 	operands := make([]worker.Operand, 0)
 	for _, stack := range res {
-		operands = append(operands, &models.Stack{
-			ID: stack.ID,
-		})
+		operands = append(operands, models.StackOperand{ID: stack.ID})
 	}
 	return operands, nil
 }

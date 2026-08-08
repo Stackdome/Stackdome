@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
-	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker"
@@ -14,9 +13,9 @@ import (
 
 const InviteCleanupWorkerName = "invite-cleanup-worker"
 
-type InviteCleanupBatch struct {
-	Items []*models.OrgInvite
-}
+// InviteCleanupRequest is a comparable singleton operand: successive ticks
+// dedup to one queue entry, and Execute queries the expired set itself.
+type InviteCleanupRequest struct{}
 
 type inviteCleanupWorker struct {
 	inviteService  services.OrgInviteService
@@ -48,25 +47,23 @@ func (w *inviteCleanupWorker) GetInput(ctx context.Context) ([]worker.Operand, *
 		return nil, nil
 	}
 
-	params := stores.ListParams{Page: 1, PageSize: stores.MaxPageSize}
-	result, serr := w.inviteService.InternalListExpiredOrPastDue(ctx, time.Now().UTC(), params)
-	if serr != nil {
-		return nil, w.WorkerError.NewError("failed to list expired invites: %v", serr)
-	}
-
-	if len(result.Items) == 0 {
-		return nil, nil
-	}
-
-	return []worker.Operand{&InviteCleanupBatch{Items: result.Items}}, nil
+	return []worker.Operand{InviteCleanupRequest{}}, nil
 }
 
 func (w *inviteCleanupWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	batch, ok := operand.(*InviteCleanupBatch)
-	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *InviteCleanupBatch")
+	if _, ok := operand.(InviteCleanupRequest); !ok {
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected InviteCleanupRequest")
 	}
-	invites := batch.Items
+
+	params := stores.ListParams{Page: 1, PageSize: stores.MaxPageSize}
+	result, serr := w.inviteService.InternalListExpiredOrPastDue(ctx, time.Now().UTC(), params)
+	if serr != nil {
+		return worker.Result{}, w.WorkerError.NewError("failed to list expired invites: %v", serr)
+	}
+	invites := result.Items
+	if len(invites) == 0 {
+		return worker.Result{}, nil
+	}
 
 	w.Logger().Info(ctx, "Cleaning up %d expired invites", len(invites))
 

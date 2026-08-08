@@ -71,9 +71,8 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 		return resultStop, nil
 	}
 
-	// No deploy timeout: the agent reconciles level-triggered, so convergence
-	// can arrive at any time. Poll until converged, superseded, or a real
-	// failure signal (build failed, apply error) terminates the release.
+	// Poll until converged, superseded, a failure signal (build failed,
+	// apply error), or the deadline reconciler times the release out.
 	return resultRequeueAfter(convergencePollInterval), nil
 }
 

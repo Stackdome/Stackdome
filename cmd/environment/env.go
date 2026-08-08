@@ -775,7 +775,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Env:              e.Name,
 	})
 
-	e.WorkerManager.RegisterWorker(stackWorker, &models.Stack{})
+	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
 
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       e.Services.StackReleaseService,
@@ -803,14 +803,14 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		ReleaseWorkerEnqueuer: e.WorkerManager,
 		Env:                   e.Name,
 	})
-	e.WorkerManager.RegisterWorker(releaseWorker, &models.StackRelease{})
+	e.WorkerManager.RegisterWorker(releaseWorker, models.StackReleaseOperand{})
 
 	releaseGCWorker := releasegcworker.NewReleaseGCWorker(releasegcworker.ReleaseGCWorkerSpec{
 		ReleaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{SessionFactory: e.DBSession}),
 		StackStore:   pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: e.DBSession}),
 		Env:          e.Name,
 	})
-	e.WorkerManager.RegisterWorker(releaseGCWorker, &releasegcworker.ReleaseGCRequest{})
+	e.WorkerManager.RegisterWorker(releaseGCWorker, releasegcworker.ReleaseGCRequest{})
 
 	volumeWorker := volumeworker.NewVolumeWorker(volumeworker.VolumeWorkerSpec{
 		VolumeService:  e.Services.VolumeService,
@@ -822,7 +822,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
 		Env:             e.Name,
 	})
-	e.WorkerManager.RegisterWorker(volumeWorker, &models.Volume{})
+	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
 		PostgresAddonService: e.Services.PostgresAddonService,
@@ -834,7 +834,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
 		Env:                  e.Name,
 	})
-	e.WorkerManager.RegisterWorker(pgAddonWorker, &models.PostgresAddon{})
+	e.WorkerManager.RegisterWorker(pgAddonWorker, models.PostgresAddonOperand{})
 
 	inviteEmailWorker := inviteworker.NewInviteWorker(inviteworker.InviteWorkerSpec{
 		InviteService:  e.Services.OrgInviteService,
@@ -842,14 +842,14 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		LeadershipFlag: e.LeadershipFlag,
 		Env:            e.Name,
 	})
-	e.WorkerManager.RegisterWorker(inviteEmailWorker, &models.OrgInvite{})
+	e.WorkerManager.RegisterWorker(inviteEmailWorker, models.OrgInviteOperand{})
 
 	inviteCleanupWorker := inviteworker.NewInviteCleanupWorker(inviteworker.InviteCleanupWorkerSpec{
 		InviteService:  e.Services.OrgInviteService,
 		LeadershipFlag: e.LeadershipFlag,
 		Env:            e.Name,
 	})
-	e.WorkerManager.RegisterWorker(inviteCleanupWorker, &inviteworker.InviteCleanupBatch{})
+	e.WorkerManager.RegisterWorker(inviteCleanupWorker, inviteworker.InviteCleanupRequest{})
 
 	previewStackStore := pgstore.NewPreviewStackStore(pgstore.PreviewStackStoreSpec{
 		SessionFactory: e.DBSession,
@@ -872,7 +872,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		CommentService:      previewCommentService,
 		Env:                 e.Name,
 	})
-	e.WorkerManager.RegisterWorker(previewWorker, &models.PreviewStack{})
+	e.WorkerManager.RegisterWorker(previewWorker, models.PreviewStackOperand{})
 
 	return nil
 }
