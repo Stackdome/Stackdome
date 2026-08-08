@@ -81,6 +81,7 @@ type StackRelease struct {
 	RendererVersion  string
 	Outcome          *ReleaseOutcome         `gorm:"type:jsonb"`
 	ValidationErrors ReleaseValidationErrors `gorm:"type:jsonb"`
+	WorkerStatus     *ReleaseWorkerStatus    `gorm:"type:jsonb"`
 	CreatedBy        string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -122,6 +123,43 @@ func (c *ReleaseCause) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte failed for ReleaseCause")
 	}
 	return json.Unmarshal(b, c)
+}
+
+// --- ReleaseWorkerStatus ---
+
+// ReleaseWorkerStatus is bookkeeping the release worker persists while a
+// release is in flight. It is not part of the user-facing release contract.
+type ReleaseWorkerStatus struct {
+	// ConvergeClockStartedAt is when the convergence timeout clock started.
+	// The deadline reconciler stamps it once the release has no builds left
+	// to wait for, and clears it again if a build shows up running. Nil means
+	// the clock has not started and the release cannot converge-timeout.
+	ConvergeClockStartedAt *time.Time `json:"converge_clock_started_at,omitempty"`
+}
+
+func (w ReleaseWorkerStatus) Value() (driver.Value, error) {
+	return json.Marshal(w)
+}
+
+func (w *ReleaseWorkerStatus) Scan(value interface{}) error {
+	if value == nil {
+		*w = ReleaseWorkerStatus{}
+		return nil
+	}
+	b, ok := value.([]byte)
+	if !ok {
+		return errors.New("type assertion to []byte failed for ReleaseWorkerStatus")
+	}
+	return json.Unmarshal(b, w)
+}
+
+// ConvergeClockStartedAt returns the stamped clock start, or nil when the
+// worker status block is absent entirely.
+func (r *StackRelease) ConvergeClockStartedAt() *time.Time {
+	if r.WorkerStatus == nil {
+		return nil
+	}
+	return r.WorkerStatus.ConvergeClockStartedAt
 }
 
 // --- StackSnapshot ---

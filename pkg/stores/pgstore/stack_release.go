@@ -179,6 +179,27 @@ func (s *stackReleaseStore) SaveManifest(ctx context.Context, id string, m *mode
 	return result.RowsAffected > 0, nil
 }
 
+// SetConvergeClockStartedAt stamps (or, with nil, clears) the convergence
+// timeout clock in worker_status. Only InProgress releases are touched — the
+// clock is meaningless on a terminal release.
+func (s *stackReleaseStore) SetConvergeClockStartedAt(ctx context.Context, id string, startedAt *time.Time) *errors.ServiceError {
+	var status *models.ReleaseWorkerStatus
+	if startedAt != nil {
+		status = &models.ReleaseWorkerStatus{ConvergeClockStartedAt: startedAt}
+	}
+	result := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Where("id = ? AND state = ?", id, models.ReleaseStateInProgress).
+		Updates(map[string]interface{}{
+			"worker_status": status,
+			colUpdatedAt:    time.Now().UTC(),
+		})
+	if result.Error != nil {
+		return errors.GeneralError("failed to set converge clock: %s", result.Error.Error())
+	}
+	return nil
+}
+
 func (s *stackReleaseStore) MarkCancelled(ctx context.Context, id string, reason string) (bool, *errors.ServiceError) {
 	result := s.sessionFactory.New(ctx).
 		Model(&models.StackRelease{}).
