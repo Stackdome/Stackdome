@@ -14,6 +14,9 @@ resources:
         port: 8000
         public: true
         subdomain: stackdome
+      - name: metrics
+        port: 9090
+        public: false
     env:
       DB_HOST: "{{ db.host }}"
       DB_PORT: "5432"
@@ -23,6 +26,7 @@ resources:
       JWT_SECRET: preview-jwt-secret-not-for-production
       ENCRYPTION_KEY: preview-encryption-key-not-for-prod
       LOG_LEVEL: info
+      METRICS_BIND_ADDRESS: 0.0.0.0:9090
     depends_on: [db]
 
   db:
