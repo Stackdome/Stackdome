@@ -12,6 +12,9 @@ import (
 )
 
 const (
+	metricsNamespace    = "stackdome"
+	httpServerSubsystem = "http_server"
+
 	HTTPRequestsMetricName = "stackdome_http_server_requests_total"
 	HTTPDurationMetricName = "stackdome_http_server_request_duration_seconds"
 	HTTPInFlightMetricName = "stackdome_http_server_in_flight_requests"
@@ -46,26 +49,26 @@ func NewMetrics() *Metrics {
 	m := &Metrics{
 		registry: prometheus.NewRegistry(),
 		httpRequests: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace: "stackdome",
-			Subsystem: "http_server",
+			Namespace: metricsNamespace,
+			Subsystem: httpServerSubsystem,
 			Name:      "requests_total",
 			Help:      "Total HTTP requests completed by the API server.",
 		}, []string{LabelMethod, LabelRoute, LabelStatus}),
 		httpDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
-			Namespace: "stackdome",
-			Subsystem: "http_server",
+			Namespace: metricsNamespace,
+			Subsystem: httpServerSubsystem,
 			Name:      "request_duration_seconds",
 			Help:      "API request duration in seconds.",
 			Buckets:   requestDurationBuckets,
 		}, []string{LabelMethod, LabelRoute, LabelStatusClass}),
 		httpInFlight: prometheus.NewGaugeVec(prometheus.GaugeOpts{
-			Namespace: "stackdome",
-			Subsystem: "http_server",
+			Namespace: metricsNamespace,
+			Subsystem: httpServerSubsystem,
 			Name:      "in_flight_requests",
 			Help:      "Current API requests being processed.",
 		}, []string{LabelMethod}),
 		workerOutcomes: prometheus.NewCounterVec(prometheus.CounterOpts{
-			Namespace: "stackdome",
+			Namespace: metricsNamespace,
 			Subsystem: "worker",
 			Name:      "executions_total",
 			Help:      "Total worker executions by outcome.",

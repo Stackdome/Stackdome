@@ -56,15 +56,15 @@ func (w *inviteWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.
 
 	operands := make([]worker.Operand, len(result.Items))
 	for i, invite := range result.Items {
-		operands[i] = invite
+		operands[i] = models.OrgInviteOperand{ID: invite.ID}
 	}
 	return operands, nil
 }
 
 func (w *inviteWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	id, ok := operand.(*models.OrgInvite)
+	id, ok := operand.(models.OrgInviteOperand)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.OrgInvite")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.OrgInviteOperand")
 	}
 
 	invite, serr := w.inviteService.InternalGetByID(ctx, id.ID)

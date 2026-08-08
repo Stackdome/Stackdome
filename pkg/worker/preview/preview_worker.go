@@ -49,9 +49,9 @@ func NewPreviewWorker(spec PreviewWorkerSpec) worker.Worker {
 }
 
 func (w *previewWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	previewRef, ok := operand.(*models.PreviewStack)
+	previewRef, ok := operand.(models.PreviewStackOperand)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.PreviewStack")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.PreviewStackOperand")
 	}
 
 	preview, serr := w.previewStackStore.GetByID(ctx, previewRef.ID)
@@ -110,7 +110,7 @@ func (w *previewWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors
 			return nil, w.WorkerError.NewError("failed to list active previews: %v", sErr)
 		}
 		for _, p := range previews {
-			operands = append(operands, &models.PreviewStack{ID: p.ID})
+			operands = append(operands, models.PreviewStackOperand{ID: p.ID})
 		}
 		if len(previews) < activePreviewPageSize {
 			break

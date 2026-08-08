@@ -52,9 +52,9 @@ func (w *postgresAddonWorker) Interval() time.Duration {
 }
 
 func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	addonRef, ok := operand.(*models.PostgresAddon)
+	addonRef, ok := operand.(models.PostgresAddonOperand)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.PostgresAddon")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.PostgresAddonOperand")
 	}
 
 	addon, err := w.postgresAddonService.InternalGetPostgresAddon(ctx, addonRef.ID)
@@ -109,7 +109,7 @@ func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *
 
 	operands := make([]worker.Operand, len(addons))
 	for i, addon := range addons {
-		operands[i] = &models.PostgresAddon{ID: addon.ID}
+		operands[i] = models.PostgresAddonOperand{ID: addon.ID}
 	}
 	return operands, nil
 }

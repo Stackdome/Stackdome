@@ -150,7 +150,7 @@ func (w *stackReconciler) enqueueActiveRelease(ctx context.Context, stackID stri
 	if active == nil {
 		return
 	}
-	if err := w.enqueuer.Enqueue(&models.StackRelease{ID: active.ID}); err != nil {
+	if err := w.enqueuer.Enqueue(models.StackReleaseOperand{ID: active.ID}); err != nil {
 		w.Log.Error(ctx, "Failed to enqueue release '%s': %v", active.ID, err)
 	}
 }

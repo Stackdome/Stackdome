@@ -51,9 +51,9 @@ func NewVolumeWorker(spec VolumeWorkerSpec) worker.Worker {
 }
 
 func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	volumeRef, ok := operand.(*models.Volume)
+	volumeRef, ok := operand.(models.VolumeOperand)
 	if !ok {
-		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected *models.Volume")
+		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.VolumeOperand")
 	}
 
 	vol, serr := w.volumeService.InternalGet(ctx, volumeRef.ID)
@@ -138,7 +138,7 @@ func (w *volumeWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.
 
 	operands := make([]worker.Operand, len(volumes))
 	for i, vol := range volumes {
-		operands[i] = &models.Volume{ID: vol.ID}
+		operands[i] = models.VolumeOperand{ID: vol.ID}
 	}
 	return operands, nil
 }

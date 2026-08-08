@@ -173,7 +173,7 @@ func (s *previewStackService) provisionPreview(ctx context.Context, config *mode
 		return nil, sErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: created.ID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PreviewStackOperand{ID: created.ID}); err != nil {
 		return nil, errors.GeneralError("failed to enqueue preview stack processing: %v", err)
 	}
 
@@ -241,7 +241,7 @@ func (s *previewStackService) syncPreview(ctx context.Context, preview *models.P
 		return sErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: preview.ID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PreviewStackOperand{ID: preview.ID}); err != nil {
 		return errors.GeneralError("failed to enqueue preview stack sync: %v", err)
 	}
 
@@ -323,7 +323,7 @@ func (s *previewStackService) deletePreview(ctx context.Context, preview *models
 		return sErr
 	}
 
-	if err := s.BackgroundJobEnqueuer.Enqueue(&models.PreviewStack{ID: preview.ID}); err != nil {
+	if err := s.BackgroundJobEnqueuer.Enqueue(models.PreviewStackOperand{ID: preview.ID}); err != nil {
 		return errors.GeneralError("failed to enqueue preview stack deletion: %v", err)
 	}
 
