@@ -294,6 +294,44 @@ var _ = Describe("ConvergeReconciler", func() {
 		Expect(result.resultStop).To(BeTrue())
 	})
 
+	It("marks failed and stops when this release's build is cancelled", func() {
+		release := &models.StackRelease{
+			ID:               "rel-1",
+			StackID:          "stack-1",
+			ManifestRevision: "rev-1",
+			Manifest:         &models.ReleaseManifest{},
+		}
+
+		stackSvc := NewMockstackService(ctrl)
+		stackSvc.EXPECT().InternalGetStack(gomock.Any(), "stack-1").
+			Return(&models.Stack{ID: "stack-1"}, nil)
+
+		buildSvc := NewMockimageBuildService(ctrl)
+		buildSvc.EXPECT().ListByStackID(gomock.Any(), "stack-1").Return([]*models.ImageBuild{{
+			StackResourceName: "web",
+			Status: &models.ImageBuildStatus{
+				State:     string(buildsv1alpha1.BuildPhaseCancelled),
+				ReleaseID: "rel-1",
+			},
+		}}, nil)
+
+		relSvc := NewMockreleaseService(ctrl)
+		relSvc.EXPECT().
+			MarkFailed(gomock.Any(), "rel-1", "build cancelled for web", gomock.Any()).
+			Return(true, nil)
+
+		r := &convergeReconciler{
+			releaseService:    relSvc,
+			stackService:      stackSvc,
+			imageBuildService: buildSvc,
+			logger:            testLogger(),
+		}
+
+		result, err := r.Reconcile(context.Background(), release)
+		Expect(err).ToNot(HaveOccurred())
+		Expect(result.resultStop).To(BeTrue())
+	})
+
 	// Another release's failed build — or one from an agent that predates the
 	// release-id annotation — says nothing about this release: keep polling.
 	DescribeTable("keeps polling on a failed build that is not this release's",

@@ -76,11 +76,12 @@ func (r *convergeReconciler) Reconcile(ctx context.Context, release *models.Stac
 	return resultRequeueAfter(convergencePollInterval), nil
 }
 
-// failedReleaseBuild returns a terminally failed build that this release
-// triggered — Status.ReleaseID carries the release-id annotation the agent
-// copies onto the ImageBuild at creation. Such a release can never converge:
-// this is the fail-fast that replaced the deploy timeout. A prior release's
-// failed build carries that release's ID, so it can never kill this one.
+// failedReleaseBuild returns a terminally failed or cancelled build that this
+// release triggered — Status.ReleaseID carries the release-id annotation the
+// agent copies onto the ImageBuild at creation. Such a release can never
+// converge: this is the fail-fast that replaced the deploy timeout. A prior
+// release's failed build carries that release's ID, so it can never kill
+// this one.
 //
 // ponytail: a release that reuses a prior release's already-failed build
 // (identical revision and build config) matches nothing here and polls
@@ -91,7 +92,12 @@ func (r *convergeReconciler) failedReleaseBuild(ctx context.Context, release *mo
 		return nil, serr
 	}
 	for _, b := range builds {
-		if b.Status == nil || b.Status.State != string(buildsv1alpha1.BuildPhaseFailed) {
+		if b.Status == nil {
+			continue
+		}
+		switch b.Status.State {
+		case string(buildsv1alpha1.BuildPhaseFailed), string(buildsv1alpha1.BuildPhaseCancelled):
+		default:
 			continue
 		}
 		if b.Status.ReleaseID != "" && b.Status.ReleaseID == release.ID {
@@ -102,6 +108,9 @@ func (r *convergeReconciler) failedReleaseBuild(ctx context.Context, release *mo
 }
 
 func buildFailedMessage(b *models.ImageBuild) string {
+	if b.Status.State == string(buildsv1alpha1.BuildPhaseCancelled) {
+		return fmt.Sprintf("build cancelled for %s", b.StackResourceName)
+	}
 	msg := fmt.Sprintf("build failed for %s", b.StackResourceName)
 	if f := b.Status.LastBuildFailureDetail; f != nil {
 		detail := f.Message
