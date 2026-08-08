@@ -277,7 +277,7 @@ func resolveProjectID(r *http.Request, projectService services.ProjectService) (
 	if projectName == "" {
 		return "", errors.BadRequest("project_name is required")
 	}
-	project, serr := projectService.GetProjectByOrgAndName(r.Context(), orgID, projectName)
+	project, serr := projectService.InternalGetProjectByOrgAndName(r.Context(), orgID, projectName)
 	if serr != nil {
 		return "", serr
 	}

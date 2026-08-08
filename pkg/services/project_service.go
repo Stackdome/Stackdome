@@ -26,6 +26,7 @@ type ProjectService interface {
 	UpdateProject(ctx context.Context, id string, project *models.Project) (*models.Project, *errors.ServiceError)
 	DeleteProject(ctx context.Context, id string) *errors.ServiceError
 	InternalCreateDefaultProject(ctx context.Context, orgID string) (*models.Project, *errors.ServiceError)
+	InternalGetProjectByOrgAndName(ctx context.Context, orgID, name string) (*models.Project, *errors.ServiceError)
 	InternalAddMember(ctx context.Context, projectID, userID string, role models.ProjectRole) (*models.ProjectMembership, *errors.ServiceError)
 
 	AddMember(ctx context.Context, projectID, userID string, role models.ProjectRole) (*models.ProjectMembership, *errors.ServiceError)
@@ -136,6 +137,13 @@ func (s *projectService) GetProjectByOrgAndName(ctx context.Context, orgID, name
 		return nil, permErr
 	}
 	return res, nil
+}
+
+// Name -> ID lookup with no permission check. Callers use it to resolve a URL
+// path segment before authorizing the resource actually being requested; an
+// API token scoped to that resource must not need projects:read to get there.
+func (s *projectService) InternalGetProjectByOrgAndName(ctx context.Context, orgID, name string) (*models.Project, *errors.ServiceError) {
+	return s.projectStore.GetByOrgAndName(ctx, orgID, name)
 }
 
 func (s *projectService) ListProjects(ctx context.Context, orgID string) ([]*models.Project, *errors.ServiceError) {

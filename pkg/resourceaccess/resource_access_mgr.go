@@ -57,9 +57,6 @@ func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig)
 		return nil, fmt.Errorf("failed to create casbin enforcer: %w", err)
 	}
 
-	// Reload the policies from the DB every cfg.PolicyAutoLoadInterval.
-	enforcer.StartAutoLoadPolicy(cfg.PolicyAutoLoadInterval)
-
 	// Load policies from database
 	if err := enforcer.LoadPolicy(); err != nil {
 		return nil, fmt.Errorf("failed to load casbin policies: %w", err)
@@ -69,11 +66,25 @@ func NewResourceAccessPolicyManager(cfg CasbinResourceAccessPolicyManagerConfig)
 	enforcer.SetLogger(casbinLogger)
 
 	logger := logger.NewLoggerWithPrefix(context.Background(), "casbin")
-	return &casbinResourceAccessPolicyManager{
+	mgr := &casbinResourceAccessPolicyManager{
 		enforcer: enforcer,
 		logger:   logger,
 		debug:    cfg.EnableDebugLog,
-	}, nil
+	}
+
+	// Reload the policies from the DB every cfg.PolicyAutoLoadInterval.
+	// StartAutoLoadPolicy is off-limits: it reloads via the embedded SyncedEnforcer,
+	// which skips the cache purge, so stale decisions would survive the reload.
+	ticker := time.NewTicker(cfg.PolicyAutoLoadInterval)
+	go func() {
+		for range ticker.C {
+			if err := mgr.RefreshPolicies(); err != nil {
+				logger.Errorf("casbin policy auto-reload failed: %s", err.Error())
+			}
+		}
+	}()
+
+	return mgr, nil
 }
 
 func (r *casbinResourceAccessPolicyManager) AddPolicy(subject, domain, resource, action string) error {
@@ -87,8 +98,10 @@ func (r *casbinResourceAccessPolicyManager) RemovePolicy(subject, domain, resour
 }
 
 func (r *casbinResourceAccessPolicyManager) RemoveFilteredPolicy(fieldIndex int, fieldValues ...string) error {
-	_, err := r.enforcer.RemoveFilteredPolicy(fieldIndex, fieldValues...)
-	return err
+	if _, err := r.enforcer.RemoveFilteredPolicy(fieldIndex, fieldValues...); err != nil {
+		return err
+	}
+	return r.enforcer.InvalidateCache()
 }
 
 func (r *casbinResourceAccessPolicyManager) CheckPermission(subject, domain, resource, action string) (bool, error) {
@@ -118,14 +131,21 @@ func (r *casbinResourceAccessPolicyManager) RefreshPolicies() error {
 	return nil
 }
 
+// SyncedCachedEnforcer only purges its decision cache on AddPolicy/RemovePolicy.
+// Grouping changes go straight to the embedded SyncedEnforcer, so a cached deny
+// from before the role was granted would stick around: invalidate it by hand.
 func (r *casbinResourceAccessPolicyManager) AddGroupingPolicy(subject, role, domain string) error {
-	_, err := r.enforcer.AddGroupingPolicy(subject, role, domain)
-	return err
+	if _, err := r.enforcer.AddGroupingPolicy(subject, role, domain); err != nil {
+		return err
+	}
+	return r.enforcer.InvalidateCache()
 }
 
 func (r *casbinResourceAccessPolicyManager) RemoveGroupingPolicy(subject, role, domain string) error {
-	_, err := r.enforcer.RemoveGroupingPolicy(subject, role, domain)
-	return err
+	if _, err := r.enforcer.RemoveGroupingPolicy(subject, role, domain); err != nil {
+		return err
+	}
+	return r.enforcer.InvalidateCache()
 }
 
 func (r *casbinResourceAccessPolicyManager) HasGroupingPolicy(subject, role, domain string) (bool, error) {
