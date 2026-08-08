@@ -10,7 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageHeader, Panel, EmptyState } from "@/components/branded";
 import { useConfirm } from "@/components/branded/confirm";
 import { useToast } from "@/components/ui/use-toast";
@@ -23,8 +22,11 @@ import { cn } from "@/lib/utils";
 
 const COLUMN_HEAD_CLASS = "text-[11px] uppercase tracking-widest text-muted-foreground font-mono";
 
-function formatDate(value?: string): string {
-  if (!value) return "Never";
+// The breadcrumb key must match the router path exactly or the label never applies.
+export const API_TOKENS_PATH = "/settings/api-tokens";
+
+function formatDate(value: string | undefined, fallback: string): string {
+  if (!value) return fallback;
   return new Date(value).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
 }
 
@@ -57,9 +59,8 @@ export default function ApiTokensPage() {
   }, [fetchTokens]);
 
   useEffect(() => {
-    const currentPath = "/settings/api-tokens";
-    setCustomLabel(currentPath, "API Tokens");
-    setPathLoading(currentPath, loading);
+    setCustomLabel(API_TOKENS_PATH, "API Tokens");
+    setPathLoading(API_TOKENS_PATH, loading);
   }, [setCustomLabel, setPathLoading, loading]);
 
   // Revoked tokens are never deleted server-side, so they would pile up in the
@@ -109,53 +110,55 @@ export default function ApiTokensPage() {
   }
 
   return (
-    <TooltipProvider>
-      <div className="p-8 space-y-8">
-        <PageHeader
-          eyebrow="Platform"
-          title="API Tokens"
-          subtitle="Issue tokens for scripts, CI, and agents"
-          actions={
+    <div className="p-8 space-y-8">
+      <PageHeader
+        eyebrow="Platform"
+        title="API Tokens"
+        subtitle="Issue tokens for scripts, CI, and agents"
+        actions={
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <PlusCircle className="h-4 w-4" />
+            Create token
+          </Button>
+        }
+      />
+
+      {tokens.length === 0 ? (
+        <EmptyState
+          icon={<KeyRound className="h-8 w-8" />}
+          title="No API tokens yet"
+          description="Create a token to let scripts, CI, or agents call the API."
+          action={
             <Button onClick={() => setShowCreateDialog(true)}>
               <PlusCircle className="h-4 w-4" />
               Create token
             </Button>
           }
         />
-
-        {visible.length === 0 ? (
-          <EmptyState
-            icon={<KeyRound className="h-8 w-8" />}
-            title={revokedCount > 0 ? "No active API tokens" : "No API tokens yet"}
-            description={
-              revokedCount > 0
-                ? "Every token here has been revoked. Create one to let scripts, CI, or agents call the API."
-                : "Create a token to let scripts, CI, or agents call the API."
-            }
-            action={
-              <Button onClick={() => setShowCreateDialog(true)}>
-                <PlusCircle className="h-4 w-4" />
-                Create token
-              </Button>
-            }
-          />
-        ) : (
-          <Panel
-            title="API Tokens"
-            count={visible.length}
-            bodyClassName="p-0"
-            action={
-              revokedCount > 0 && (
-                <button
-                  type="button"
-                  className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
-                  onClick={() => setShowRevoked((prev) => !prev)}
-                >
-                  {showRevoked ? "Hide revoked" : `Show revoked (${revokedCount})`}
-                </button>
-              )
-            }
-          >
+      ) : (
+        <Panel
+          title="API Tokens"
+          count={visible.length}
+          bodyClassName="p-0"
+          action={
+            revokedCount > 0 && (
+              <button
+                type="button"
+                className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
+                onClick={() => setShowRevoked((prev) => !prev)}
+              >
+                {showRevoked ? "Hide revoked" : `Show revoked (${revokedCount})`}
+              </button>
+            )
+          }
+        >
+          {visible.length === 0 ? (
+            <EmptyState
+              icon={<KeyRound className="h-8 w-8" />}
+              title="No active API tokens"
+              description="Every token here has been revoked."
+            />
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
@@ -164,7 +167,9 @@ export default function ApiTokensPage() {
                   <TableHead className={COLUMN_HEAD_CLASS}>Created</TableHead>
                   <TableHead className={COLUMN_HEAD_CLASS}>Expires</TableHead>
                   <TableHead className={COLUMN_HEAD_CLASS}>Last used</TableHead>
-                  <TableHead />
+                  <TableHead>
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -195,9 +200,9 @@ export default function ApiTokensPage() {
                           {accessLabel(token.scopes)}
                         </span>
                       </TableCell>
-                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.created_at)}</TableCell>
-                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.expires_at)}</TableCell>
-                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.last_used_at)}</TableCell>
+                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.created_at, "—")}</TableCell>
+                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.expires_at, "Never")}</TableCell>
+                      <TableCell className="py-3.5 text-sm text-muted-foreground">{formatDate(token.last_used_at, "Never")}</TableCell>
                       <TableCell className="py-3.5 text-right">
                         {!revoked && (
                           <Button variant="outline" size="sm" onClick={() => requestRevoke(token)}>
@@ -210,15 +215,15 @@ export default function ApiTokensPage() {
                 })}
               </TableBody>
             </Table>
-          </Panel>
-        )}
+          )}
+        </Panel>
+      )}
 
-        <CreateTokenDialog
-          open={showCreateDialog}
-          onOpenChange={setShowCreateDialog}
-          onCreated={fetchTokens}
-        />
-      </div>
-    </TooltipProvider>
+      <CreateTokenDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+        onCreated={fetchTokens}
+      />
+    </div>
   );
 }

@@ -10,7 +10,16 @@ import { ConfirmProvider } from "@/components/branded/confirm";
 
 const toastMock = vi.fn();
 
-afterEach(cleanup);
+// The clipboard tests clobber these globals; without a restore every later
+// test in the file inherits whatever the last one left behind.
+const realClipboard = navigator.clipboard;
+const realExecCommand = document.execCommand;
+
+afterEach(() => {
+  cleanup();
+  Object.assign(navigator, { clipboard: realClipboard });
+  document.execCommand = realExecCommand;
+});
 
 vi.mock("@/api/api-tokens");
 vi.mock("@/components/ui/use-toast", () => ({
@@ -236,5 +245,53 @@ describe("ApiTokensPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
 
     await waitFor(() => expect(tokensApi.revokeApiToken).toHaveBeenCalledWith("t1"));
+  });
+
+  it("still offers the revoked toggle when every token is revoked", async () => {
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
+      items: [{ ...token, revoked_at: "2026-08-02T00:00:00Z" }],
+    });
+    renderPage();
+
+    const toggle = await screen.findByRole("button", { name: /show revoked \(1\)/i });
+    await userEvent.click(toggle);
+    expect(await screen.findByText("agent")).toBeInTheDocument();
+  });
+
+  it("shows the create error inline when the API rejects", async () => {
+    vi.mocked(tokensApi.createApiToken).mockRejectedValue(new Error("name already taken"));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    expect(await screen.findByText(/name already taken/i)).toBeInTheDocument();
+  });
+
+  it("toasts when a revoke fails", async () => {
+    vi.mocked(tokensApi.revokeApiToken).mockRejectedValue(new Error("revoke exploded"));
+    renderPage();
+    await screen.findByText("agent");
+
+    await userEvent.click(screen.getByRole("button", { name: /revoke/i }));
+    await screen.findByRole("alertdialog");
+    await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Failed to revoke token", variant: "destructive" }),
+      ),
+    );
+  });
+
+  it("labels each row by what its scopes actually grant", async () => {
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
+      items: [token, { ...token, id: "t4", name: "reader", scopes: ["stacks:read", "stacks:list"] }],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Full access")).toBeInTheDocument();
+    expect(screen.getByText("Read-only")).toBeInTheDocument();
   });
 });

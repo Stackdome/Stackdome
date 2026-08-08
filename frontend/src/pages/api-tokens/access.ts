@@ -17,9 +17,8 @@ export function readOnlyScopes(scopes: ScopeList): string[] {
   );
 }
 
-// ponytail: the UI mints only these two levels, so "not all read/list" means
-// full access. A token scoped by hand through the API would read as Full
-// access too — the row's tooltip carries the exact scopes either way.
+// Hand-scoped tokens from the API also read as "Full access"; the row title
+// carries the exact scopes.
 export function accessLabel(scopes?: string[]): string {
   if (!scopes?.length) return "—";
   const readOnly = scopes.every((scope) => READ_ONLY_ACTIONS.has(scope.split(":")[1]));

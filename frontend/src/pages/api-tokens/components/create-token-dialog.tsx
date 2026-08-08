@@ -52,6 +52,15 @@ function endOfDayRFC3339(date: string): string {
   return new Date(year, month - 1, day, 23, 59, 59).toISOString();
 }
 
+// Local, not toISOString(): the picker's floor has to agree with the local
+// end-of-day above, or today is greyed out for anyone west of UTC.
+function todayLocal(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateTokenDialogProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -73,6 +82,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     setExpiry("");
     setPreset(READ_ONLY);
     setError(null);
+    setScopes(null);
     setScopesError(null);
     setCopied(false);
     getApiTokenScopes()
@@ -156,7 +166,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
             </DialogHeader>
             <div className="min-w-0 space-y-4 py-2">
               <div className="min-w-0 space-y-1.5">
-                <Label>Token</Label>
+                <span className="flex items-center gap-2 text-sm leading-none font-medium select-none">Token</span>
                 <div className="flex items-center gap-2">
                   <pre className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs">
                     {created.token}
@@ -212,7 +222,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
                   <Input
                     id="token-expiry"
                     type="date"
-                    min={new Date().toISOString().slice(0, 10)}
+                    min={todayLocal()}
                     value={expiry}
                     onChange={(e) => setExpiry(e.target.value)}
                   />
@@ -253,7 +263,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
               </FieldShell>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>
+              <Button variant="outline" onClick={handleClose} disabled={creating}>
                 Cancel
               </Button>
               <Button onClick={handleCreate} disabled={creating || !scopes}>
