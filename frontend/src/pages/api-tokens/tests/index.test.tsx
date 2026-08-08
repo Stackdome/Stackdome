@@ -1,0 +1,297 @@
+// @vitest-environment jsdom
+import "@testing-library/jest-dom/vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import ApiTokensPage from "../index";
+import * as tokensApi from "@/api/api-tokens";
+import { ConfirmProvider } from "@/components/branded/confirm";
+
+const toastMock = vi.fn();
+
+// The clipboard tests clobber these globals; without a restore every later
+// test in the file inherits whatever the last one left behind.
+const realClipboard = navigator.clipboard;
+const realExecCommand = document.execCommand;
+
+afterEach(() => {
+  cleanup();
+  Object.assign(navigator, { clipboard: realClipboard });
+  document.execCommand = realExecCommand;
+});
+
+vi.mock("@/api/api-tokens");
+vi.mock("@/components/ui/use-toast", () => ({
+  useToast: () => ({ toast: toastMock, dismiss: vi.fn(), toasts: [] }),
+}));
+
+const token = {
+  id: "t1",
+  name: "agent",
+  token_prefix: "sd_abc1",
+  scopes: ["*"],
+  created_at: "2026-08-01T00:00:00Z",
+};
+
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <ConfirmProvider>
+        <ApiTokensPage />
+      </ConfirmProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe("ApiTokensPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({ items: [token] });
+    vi.mocked(tokensApi.getApiTokenScopes).mockResolvedValue({
+      full_access_scope: "*",
+      items: [{ resource: "stacks", actions: ["read", "write"] }],
+    });
+  });
+
+  it("lists tokens with their prefix", async () => {
+    renderPage();
+    expect(await screen.findByText("agent")).toBeInTheDocument();
+    expect(screen.getByText(/sd_abc1/)).toBeInTheDocument();
+  });
+
+  it("hides revoked tokens until asked for them", async () => {
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
+      items: [token, { ...token, id: "t9", name: "old", revoked_at: "2026-08-02T00:00:00Z" }],
+    });
+    renderPage();
+    expect(await screen.findByText("agent")).toBeInTheDocument();
+    expect(screen.queryByText("old")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /show revoked \(1\)/i }));
+    expect(await screen.findByText("old")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /hide revoked/i }));
+    expect(screen.queryByText("old")).not.toBeInTheDocument();
+  });
+
+  it("marks a token past its expiry as Expired", async () => {
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
+      items: [{ ...token, id: "t3", name: "stale", expires_at: "2020-01-01T00:00:00Z" }],
+    });
+    renderPage();
+    expect(await screen.findByText("stale")).toBeInTheDocument();
+    expect(screen.getByText("Expired")).toBeInTheDocument();
+  });
+
+  it("shows the raw token exactly once after create, and never again once dismissed", async () => {
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    expect(await screen.findByText(/sd_raw_secret/)).toBeInTheDocument();
+    expect(screen.getByText(/won't see this again/i)).toBeInTheDocument();
+
+    // Dismissing the show-once view must drop the secret from state entirely.
+    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
+    expect(screen.queryByText(/sd_raw_secret/)).not.toBeInTheDocument();
+
+    // Reopening the create dialog must not resurface the previous secret.
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    expect(await screen.findByLabelText(/name/i)).toBeInTheDocument();
+    expect(screen.queryByText(/sd_raw_secret/)).not.toBeInTheDocument();
+  });
+
+  it("copies the token via the Clipboard API when available", async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    await screen.findByText(/sd_raw_secret/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy token" }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("sd_raw_secret");
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it("falls back to a textarea copy when the Clipboard API is unavailable (insecure context)", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    document.execCommand = vi.fn().mockReturnValue(true);
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    await screen.findByText(/sd_raw_secret/);
+
+    // No throw / unhandled rejection from the missing Clipboard API.
+    await userEvent.click(screen.getByRole("button", { name: "Copy token" }));
+    expect(document.execCommand).toHaveBeenCalledWith("copy");
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
+    expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a destructive toast when copying fails entirely", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    document.execCommand = vi.fn(() => {
+      throw new Error("copy blocked");
+    });
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    await screen.findByText(/sd_raw_secret/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy token" }));
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Copy failed", variant: "destructive" }),
+      ),
+    );
+    expect(screen.queryByRole("button", { name: "Copied" })).not.toBeInTheDocument();
+  });
+
+  it("disables Create and explains why while scopes haven't loaded", async () => {
+    let resolveScopes: (value: tokensApi.ScopeList) => void = () => {};
+    vi.mocked(tokensApi.getApiTokenScopes).mockReturnValue(
+      new Promise((resolve) => {
+        resolveScopes = resolve;
+      }),
+    );
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+
+    expect(screen.getByText(/loading available scopes/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^create$/i })).toBeDisabled();
+
+    resolveScopes({ full_access_scope: "*", items: [] });
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+  });
+
+  it("sends an expires_at that is end-of-day local time for the chosen date", async () => {
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    fireEvent.change(screen.getByLabelText(/expires/i), { target: { value: "2036-12-31" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    await waitFor(() => expect(tokensApi.createApiToken).toHaveBeenCalled());
+    const { expires_at } = vi.mocked(tokensApi.createApiToken).mock.calls[0][0];
+    expect(new Date(expires_at as string)).toEqual(new Date(2036, 11, 31, 23, 59, 59));
+  });
+
+  it("defaults to read-only and never sends a mutating scope", async () => {
+    vi.mocked(tokensApi.getApiTokenScopes).mockResolvedValue({
+      full_access_scope: "*:*",
+      items: [{ resource: "stacks", actions: ["read", "list", "write", "delete", "exec"] }],
+    });
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    expect(await screen.findByRole("radio", { name: /read-only/i })).toBeChecked();
+
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    await waitFor(() => expect(tokensApi.createApiToken).toHaveBeenCalled());
+    const { scopes } = vi.mocked(tokensApi.createApiToken).mock.calls[0][0];
+    expect(scopes).toEqual(["stacks:read", "stacks:list"]);
+  });
+
+  it("sends the server's full-access scope when Full access is picked", async () => {
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await userEvent.click(await screen.findByRole("radio", { name: /full access/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    await waitFor(() => expect(tokensApi.createApiToken).toHaveBeenCalled());
+    expect(vi.mocked(tokensApi.createApiToken).mock.calls[0][0].scopes).toEqual(["*"]);
+  });
+
+  it("rejects an expiry date in the past", async () => {
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    fireEvent.change(screen.getByLabelText(/expires/i), { target: { value: "2020-01-01" } });
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    expect(await screen.findByText(/expiry must be in the future/i)).toBeInTheDocument();
+    expect(tokensApi.createApiToken).not.toHaveBeenCalled();
+  });
+
+  it("revokes a token via the confirm dialog", async () => {
+    vi.mocked(tokensApi.revokeApiToken).mockResolvedValue(undefined);
+    renderPage();
+    await screen.findByText("agent");
+
+    await userEvent.click(screen.getByRole("button", { name: /revoke/i }));
+    const dialog = await screen.findByRole("alertdialog");
+    expect(dialog).toHaveTextContent(/revoke token\?/i);
+    await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() => expect(tokensApi.revokeApiToken).toHaveBeenCalledWith("t1"));
+  });
+
+  it("still offers the revoked toggle when every token is revoked", async () => {
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
+      items: [{ ...token, revoked_at: "2026-08-02T00:00:00Z" }],
+    });
+    renderPage();
+
+    const toggle = await screen.findByRole("button", { name: /show revoked \(1\)/i });
+    await userEvent.click(toggle);
+    expect(await screen.findByText("agent")).toBeInTheDocument();
+  });
+
+  it("shows the create error inline when the API rejects", async () => {
+    vi.mocked(tokensApi.createApiToken).mockRejectedValue(new Error("name already taken"));
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+
+    expect(await screen.findByText(/name already taken/i)).toBeInTheDocument();
+  });
+
+  it("toasts when a revoke fails", async () => {
+    vi.mocked(tokensApi.revokeApiToken).mockRejectedValue(new Error("revoke exploded"));
+    renderPage();
+    await screen.findByText("agent");
+
+    await userEvent.click(screen.getByRole("button", { name: /revoke/i }));
+    await screen.findByRole("alertdialog");
+    await userEvent.click(screen.getByRole("button", { name: "Revoke" }));
+
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Failed to revoke token", variant: "destructive" }),
+      ),
+    );
+  });
+
+  it("labels each row by what its scopes actually grant", async () => {
+    vi.mocked(tokensApi.listApiTokens).mockResolvedValue({
+      items: [token, { ...token, id: "t4", name: "reader", scopes: ["stacks:read", "stacks:list"] }],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Full access")).toBeInTheDocument();
+    expect(screen.getByText("Read-only")).toBeInTheDocument();
+  });
+});

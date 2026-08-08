@@ -3,6 +3,7 @@ import { ExternalLink, Copy, Check } from "lucide-react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { StatusVariant } from "@/components/branded/status-variant";
+import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
 
 const COPY_FLASH_MS = 1400;
@@ -39,20 +40,6 @@ function hostOf(url: string): string {
   } catch {
     return url;
   }
-}
-
-async function copyText(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
-  }
-  // Clipboard API unavailable (insecure context): textarea fallback.
-  const ta = document.createElement("textarea");
-  ta.value = text;
-  document.body.appendChild(ta);
-  ta.select();
-  document.execCommand("copy");
-  ta.remove();
 }
 
 function useCopyFlash() {
