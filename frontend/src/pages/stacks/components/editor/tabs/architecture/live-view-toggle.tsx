@@ -10,8 +10,9 @@ interface LiveViewToggleProps {
   draftDirty: boolean;
 }
 
+// deliberate off-scale: rounded-sm (9px) reads too round on this ~22px segment
 const SEGMENT_BASE =
-  "flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-[12px] font-medium transition-colors";
+  "flex items-center gap-1.5 rounded-[5px] px-2.5 py-1 text-meta font-medium transition-colors";
 
 /**
  * Draft/Live segmented control overlaid on the canvas. "Live" switches the
@@ -25,7 +26,7 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
       aria-pressed={mode === value}
       onClick={() => onModeChange(value)}
       className={`${SEGMENT_BASE} ${
-        mode === value ? "bg-brand-bg text-brand" : "text-fg-muted hover:text-foreground"
+        mode === value ? "bg-foreground/[0.06] text-foreground" : "text-fg-muted hover:text-foreground"
       }`}
     >
       {label}
@@ -36,7 +37,7 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
     <div
       role="group"
       aria-label="Canvas view"
-      className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5 shadow-sm"
+      className="flex items-center gap-0.5 rounded-md border border-border bg-background p-0.5"
     >
       {segment(
         "draft",
@@ -46,7 +47,7 @@ export function LiveViewToggle({ mode, onModeChange, draftDirty }: LiveViewToggl
             <span
               aria-hidden
               data-testid="draft-dirty-dot"
-              className="inline-block size-1.5 rounded-full bg-brand"
+              className="inline-block size-1.5 rounded-full bg-foreground"
             />
           )}
         </>,

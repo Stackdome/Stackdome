@@ -62,11 +62,11 @@ function Stepper({ phase }: { phase: Phase }) {
         const isPast = STEPS.findIndex((s) => s.phase === currentStep) > i;
         return (
           <div key={step.phase} className="flex flex-1 flex-col gap-1.5">
-            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-brand" : "bg-border")} />
+            <div className={cn("h-[3px] rounded-full", isCurrent || isPast ? "bg-foreground" : "bg-border")} />
             <span
               data-current={isCurrent}
               className={cn(
-                "font-mono text-[11px] uppercase tracking-[1.5px]",
+                "font-mono text-label",
                 isCurrent && "text-foreground",
                 !isCurrent && isPast && "text-muted-foreground",
                 !isCurrent && !isPast && "text-muted-foreground/60",
@@ -180,10 +180,10 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
           Connect a git provider so Stackdome can clone repositories and trigger preview environments
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-brand">
+          <span className="flex h-6 w-6 items-center justify-center text-muted-foreground">
             <GitBranch className="h-5 w-5" />
           </span>
-          <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+          <span className="font-mono text-label text-muted-foreground">
             Connect provider
           </span>
         </div>
@@ -195,10 +195,10 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
             <div className="flex flex-1 items-center justify-center overflow-y-auto p-8">
               <div className="w-full">
                 <div className="mb-7 text-center">
-                  <h2 className="mb-2 text-2xl font-medium tracking-tight">
+                  <h2 className="mb-2 text-head font-medium">
                     Where does your code live?
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-body text-muted-foreground">
                     Pick a provider. You can add more later.
                   </p>
                 </div>
@@ -210,15 +210,15 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                       onClick={() => pickProvider(p)}
                       className={cn(
                         "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
-                        "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                        "hover:border-primary focus-ring-edge",
                       )}
                     >
                       <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
                         <ProviderLogo providerId={p.id} className="h-[18px] w-[18px]" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="mb-0.5 block text-sm font-medium text-foreground">{p.label}</span>
-                        <span className="block text-xs text-muted-foreground">
+                        <span className="mb-0.5 block text-body font-medium text-foreground">{p.label}</span>
+                        <span className="block text-meta text-muted-foreground">
                           {p.id === "github" ? "App install or access token" : "Access token"}
                         </span>
                       </span>
@@ -233,8 +233,8 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
             <>
               <div className="flex flex-1 flex-col justify-center gap-3 overflow-y-auto p-8">
                 <div className="mb-4 text-center">
-                  <h2 className="mb-2 text-2xl font-medium tracking-tight">Connect GitHub</h2>
-                  <p className="text-sm text-muted-foreground">
+                  <h2 className="mb-2 text-head font-medium">Connect GitHub</h2>
+                  <p className="text-body text-muted-foreground">
                     Install the GitHub App, or paste an access token.
                   </p>
                 </div>
@@ -244,18 +244,18 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   onClick={startAppInstall}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
-                    "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                    "hover:border-primary focus-ring-edge",
                     "disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-border",
                   )}
                 >
-                  <span className="flex items-center gap-2 text-sm font-medium">
+                  <span className="flex items-center gap-2 text-body font-medium">
                     <Github className="h-4 w-4" />
                     Install GitHub App
-                    <span className="rounded-sm bg-brand-bg px-1.5 py-0.5 font-mono text-[11px] uppercase tracking-[1.5px] text-brand">
+                    <span className="rounded-sm bg-foreground/10 px-1.5 py-0.5 font-mono text-label text-foreground">
                       Recommended
                     </span>
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-meta text-muted-foreground">
                     {hasGithubApp
                       ? "Already connected. Manage installations from the integration card."
                       : "Fine-grained access you manage on GitHub. Webhooks keep previews in sync. No tokens to rotate."}
@@ -270,14 +270,14 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   }}
                   className={cn(
                     "flex flex-col items-start gap-1.5 rounded-md border bg-card p-4 text-left",
-                    "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                    "hover:border-primary focus-ring-edge",
                   )}
                 >
-                  <span className="flex items-center gap-2 text-sm font-medium">
+                  <span className="flex items-center gap-2 text-body font-medium">
                     <KeyRound className="h-4 w-4" />
                     Use an access token
                   </span>
-                  <span className="text-xs text-muted-foreground">{provider.hint}</span>
+                  <span className="text-meta text-muted-foreground">{provider.hint}</span>
                 </button>
               </div>
               <WizardFooter
@@ -290,20 +290,20 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
           {phase === "connecting" && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-brand">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border bg-card text-foreground">
                 <Github className="h-6 w-6" />
               </span>
               <div className="space-y-1">
-                <h3 className="text-sm font-medium">Installing the GitHub App</h3>
-                <p className="text-xs text-muted-foreground">
+                <h3 className="text-body font-medium">Installing the GitHub App</h3>
+                <p className="text-meta text-muted-foreground">
                   Finish the installation in the GitHub popup. We&apos;ll pick it up here.
                 </p>
               </div>
 
               {github.error ? (
-                <div className="w-full space-y-2 rounded-md border border-destructive/40 bg-destructive/10 p-4 text-left">
-                  <p className="text-sm font-medium text-destructive">Couldn&apos;t connect to GitHub</p>
-                  <p className="text-xs text-muted-foreground">{github.error}</p>
+                <div className="w-full space-y-2 rounded-md border border-danger-border bg-danger-bg p-4 text-left">
+                  <p className="text-body font-medium text-danger">Couldn&apos;t connect to GitHub</p>
+                  <p className="text-meta text-muted-foreground">{github.error}</p>
                   <Button type="button" variant="outline" size="sm" onClick={() => void github.connect()}>
                     Retry
                   </Button>
@@ -320,7 +320,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                         <li
                           key={step}
                           className={cn(
-                            "flex items-center gap-2.5 text-xs",
+                            "flex items-center gap-2.5 text-meta",
                             status === "done" && "text-muted-foreground",
                             status === "active" && "text-foreground",
                             status === "pending" && "text-muted-foreground/50",
@@ -329,7 +329,7 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                           {status === "done" && <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-success" />}
                           {status === "active" && (
                             <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center motion-safe:animate-pulse">
-                              <span className="h-2 w-2 rounded-full bg-brand" />
+                              <span className="h-2 w-2 rounded-full bg-warn" />
                             </span>
                           )}
                           {status === "pending" && <Circle className="h-3.5 w-3.5 shrink-0 text-border" />}
@@ -355,10 +355,10 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
             <>
               <div className="flex flex-1 flex-col justify-center gap-4 overflow-y-auto p-8">
                 <div className="mb-2 text-center">
-                  <h2 className="mb-2 text-2xl font-medium tracking-tight">
+                  <h2 className="mb-2 text-head font-medium">
                     Connect {provider.id === "other" ? "your git host" : provider.label}
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-body text-muted-foreground">
                     Stackdome stores the credentials encrypted and uses them only for clones.
                   </p>
                 </div>
@@ -411,9 +411,9 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
                   />
                 </FieldShell>
                 {submitError && (
-                  <div className="space-y-1 rounded-md border border-destructive/40 bg-destructive/10 p-3">
-                    <p className="text-sm font-medium text-destructive">Couldn&apos;t verify the token</p>
-                    <p className="text-xs text-muted-foreground">{submitError}</p>
+                  <div className="space-y-1 rounded-md border border-danger-border bg-danger-bg p-3">
+                    <p className="text-body font-medium text-danger">Couldn&apos;t verify the token</p>
+                    <p className="text-meta text-muted-foreground">{submitError}</p>
                   </div>
                 )}
               </div>
@@ -428,14 +428,14 @@ export function AddIntegrationWizard({ open, onOpenChange, hasGithubApp, onCreat
 
           {phase === "done" && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 overflow-y-auto p-5 text-center">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success/10 text-success">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-success-bg text-success">
                 <CheckCircle2 className="h-8 w-8" />
               </span>
               <div className="space-y-1">
-                <h3 className="text-sm font-medium">
+                <h3 className="text-body font-medium">
                   {provider.id === "github" ? "GitHub App installed" : `${provider.label} connected`}
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-meta text-muted-foreground">
                   {provider.id === "github"
                     ? "Stackdome can now clone repositories from your installed accounts. Webhooks will keep preview environments in sync."
                     : `Stackdome can now clone repositories on ${host} using your access token.`}

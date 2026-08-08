@@ -31,6 +31,7 @@ type Stack struct {
 	Lifecycle        *StackLifecycle `json:"lifecycle,omitempty"`
 	ConvergedRelease *ReleaseSummary `json:"converged_release,omitempty"`
 	LatestRelease    *ReleaseSummary `json:"latest_release,omitempty"`
+	DeployHistory    []int32         `json:"deploy_history,omitempty"`
 	CreatedAt        *time.Time      `json:"created_at,omitempty"`
 	UpdatedAt        *time.Time      `json:"updated_at,omitempty"`
 }
@@ -486,6 +487,38 @@ func (o *Stack) SetLatestRelease(v ReleaseSummary) {
 	o.LatestRelease = &v
 }
 
+// GetDeployHistory returns the DeployHistory field value if set, zero value otherwise.
+func (o *Stack) GetDeployHistory() []int32 {
+	if o == nil || o.DeployHistory == nil {
+		var ret []int32
+		return ret
+	}
+	return o.DeployHistory
+}
+
+// GetDeployHistoryOk returns a tuple with the DeployHistory field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *Stack) GetDeployHistoryOk() ([]int32, bool) {
+	if o == nil || o.DeployHistory == nil {
+		return nil, false
+	}
+	return o.DeployHistory, true
+}
+
+// HasDeployHistory returns a boolean if a field has been set.
+func (o *Stack) HasDeployHistory() bool {
+	if o != nil && o.DeployHistory != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetDeployHistory gets a reference to the given []int32 and assigns it to the DeployHistory field.
+func (o *Stack) SetDeployHistory(v []int32) {
+	o.DeployHistory = v
+}
+
 // GetCreatedAt returns the CreatedAt field value if set, zero value otherwise.
 func (o *Stack) GetCreatedAt() time.Time {
 	if o == nil || o.CreatedAt == nil {
@@ -593,6 +626,9 @@ func (o Stack) MarshalJSON() ([]byte, error) {
 	}
 	if o.LatestRelease != nil {
 		toSerialize["latest_release"] = o.LatestRelease
+	}
+	if o.DeployHistory != nil {
+		toSerialize["deploy_history"] = o.DeployHistory
 	}
 	if o.CreatedAt != nil {
 		toSerialize["created_at"] = o.CreatedAt

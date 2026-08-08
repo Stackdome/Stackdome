@@ -7,8 +7,8 @@ interface GitHubSignInButtonProps {
   inviteToken?: string;
 }
 
-// GitHub is the filled primary; the email submit below it is a ghost of the
-// same geometry, so the screen keeps exactly one primary action.
+// Outline, not filled — the email/password submit below is the screen's one
+// filled control (it works with no OAuth provider configured; this doesn't).
 export function GitHubSignInButton({ inviteToken }: GitHubSignInButtonProps) {
   const { githubOAuth } = useAppConfig();
   if (!githubOAuth) return null;
@@ -17,7 +17,7 @@ export function GitHubSignInButton({ inviteToken }: GitHubSignInButtonProps) {
     <div>
       <Button
         type="button"
-        variant="inverse"
+        variant="outline"
         className="w-full"
         onClick={() => window.location.assign(githubOAuthUrl(inviteToken))}
       >
@@ -26,7 +26,7 @@ export function GitHubSignInButton({ inviteToken }: GitHubSignInButtonProps) {
       </Button>
       <div className="my-4 flex items-center gap-3">
         <div className="flex-1 border-t border-border" />
-        <span className="text-xs text-muted-foreground">or</span>
+        <span className="text-meta text-muted-foreground">or</span>
         <div className="flex-1 border-t border-border" />
       </div>
     </div>

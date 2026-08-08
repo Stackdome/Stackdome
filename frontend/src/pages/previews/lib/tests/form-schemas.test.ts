@@ -143,7 +143,7 @@ describe("syncEnvSchema", () => {
     expect(syncEnvSchema.safeParse({ commit: "a".repeat(40), overridesText: "" }).success).toBe(true);
   });
 
-  it("accepts uppercase hex", () => {
+  it("accepts hex", () => {
     expect(syncEnvSchema.safeParse({ commit: "ABC1234", overridesText: "" }).success).toBe(true);
   });
 

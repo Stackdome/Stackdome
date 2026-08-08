@@ -38,3 +38,6 @@ pkg/web/dist/*
 
 # Integration test output (Makefile tees here)
 test/int/last-run.log
+
+# generated from prototype.source.html by its build.mjs
+docs/design/prototypes/**/prototype.html

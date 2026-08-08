@@ -19,8 +19,8 @@ export { BuildPhase };
 const REVISION_LENGTH = 7;
 
 const LOG_STYLE = {
-  backgroundColor: "#070a0f",
-  color: "#94a3b8",
+  backgroundColor: "var(--code-bg)",
+  color: "var(--code-fg)",
   fontSize: "12px",
   lineHeight: "1.7",
   fontFamily: "var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace",
@@ -124,19 +124,19 @@ function BuildLogsBody({
   return (
     <>
       <DialogHeader className="flex-row items-center gap-3 space-y-0 border-b border-border px-4 py-3">
-        <DialogTitle className="text-sm font-semibold">Build logs — {resourceName}</DialogTitle>
+        <DialogTitle className="text-body font-semibold">Build logs — {resourceName}</DialogTitle>
         <DialogDescription className="sr-only">
           Streamed output from the image build for {resourceName}.
         </DialogDescription>
         {revision && (
-          <span className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[11px] text-fg-muted">
+          <span className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-label text-fg-muted">
             {revision}
           </span>
         )}
         {state && <StatusPill variant={statusVariant("build", state)}>{state}</StatusPill>}
       </DialogHeader>
 
-      <div className="relative min-h-0 flex-1 bg-[#070a0f]">
+      <div className="relative min-h-0 flex-1 bg-code-bg">
         {view === "log" ? (
           <div className="h-full">
             <LazyLog
@@ -227,8 +227,8 @@ function OutcomeBanner({ state }: { state: string }) {
     <div
       className={
         ok
-          ? "border-t border-border bg-success/10 px-4 py-2 font-mono text-xs text-success"
-          : "border-t border-border bg-danger/10 px-4 py-2 font-mono text-xs text-danger"
+          ? "border-t border-border bg-success/10 px-4 py-2 font-mono text-meta text-success"
+          : "border-t border-border bg-danger/10 px-4 py-2 font-mono text-meta text-danger"
       }
     >
       {ok ? "✓ Build succeeded — log stream complete" : "✕ Build failed — log stream complete"}
@@ -241,8 +241,8 @@ function CenterState({ icon, title, body, action }: CenterStateProps) {
     <div className="absolute inset-0 grid place-items-center p-6 text-center">
       <div className="max-w-sm">
         <div className="flex justify-center">{icon}</div>
-        <h3 className="mt-3 text-sm font-semibold text-foreground">{title}</h3>
-        <p className="mt-1 text-xs text-fg-muted">{body}</p>
+        <h3 className="mt-3 text-body font-semibold text-foreground">{title}</h3>
+        <p className="mt-1 text-meta text-fg-muted">{body}</p>
         {action && <div className="mt-3 flex justify-center">{action}</div>}
       </div>
     </div>

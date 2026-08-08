@@ -53,7 +53,7 @@ export function VolumeDrawer({ volumeName, session, onClose, onRequestRemove, pe
         <HardDrive className="size-[19px] shrink-0 text-brand" />
         <div className="min-w-0 flex-1 leading-tight">
           <div className="truncate text-base font-medium text-foreground">{volume.name || volumeName}</div>
-          <div className="truncate font-mono text-[11px] text-fg-muted">
+          <div className="truncate font-mono text-label text-fg-muted">
             {volume.spec?.size || "size unset"} · {volume.spec?.access_mode || "ReadWriteOnce"}
           </div>
         </div>

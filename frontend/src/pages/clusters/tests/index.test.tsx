@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { SheetHost } from "@/test-support/sheet-host";
 
 // Radix popper content reads ResizeObserver on mount, which jsdom doesn't implement.
 beforeAll(() => {
@@ -42,10 +43,12 @@ function renderPage() {
   return render(
     <ConfirmProvider>
       <MemoryRouter initialEntries={["/clusters"]}>
-        <Routes>
-          <Route path="/clusters" element={<ClustersPage />} />
-          <Route path="/clusters/:id" element={<div>cluster detail</div>} />
-        </Routes>
+        <SheetHost>
+          <Routes>
+            <Route path="/clusters" element={<ClustersPage />} />
+            <Route path="/clusters/:id" element={<div>cluster detail</div>} />
+          </Routes>
+        </SheetHost>
       </MemoryRouter>
     </ConfirmProvider>,
   );

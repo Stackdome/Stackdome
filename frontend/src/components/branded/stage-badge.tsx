@@ -19,7 +19,7 @@ export function StageBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded border px-2 py-px font-mono text-[10px] font-semibold uppercase tracking-wider",
+        "inline-flex items-center rounded border px-2 py-px font-mono text-label font-semibold",
         STAGE_CLASSES[stage],
         className,
       )}

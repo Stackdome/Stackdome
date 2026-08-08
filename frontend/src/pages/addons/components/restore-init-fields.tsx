@@ -142,7 +142,7 @@ export function RestoreInitFields({
             error={errors["initialization.sourceAddonId"]}
           >
             {restoreSources.length === 0 ? (
-              <p className="text-[12px] text-muted-foreground">
+              <p className="text-meta text-muted-foreground">
                 No addon has backups in an object store to restore from.
               </p>
             ) : (
@@ -165,7 +165,7 @@ export function RestoreInitFields({
           </FieldShell>
 
           <FieldShell label="Object store">
-            <div className="text-sm text-muted-foreground h-9 flex items-center">
+            <div className="text-body text-muted-foreground h-10 flex items-center">
               {resolvedStoreName || "—"}
             </div>
           </FieldShell>
@@ -238,11 +238,11 @@ export function RestoreInitFields({
               error={errors["initialization.backupId"]}
             >
               {backupsLoading ? (
-                <p className="text-[12px] text-muted-foreground">Loading…</p>
+                <p className="text-meta text-muted-foreground">Loading…</p>
               ) : backupsError ? (
-                <p className="text-[12px] text-danger">{backupsError}</p>
+                <p className="text-meta text-danger">{backupsError}</p>
               ) : sourceBackups.length === 0 ? (
-                <p className="text-[12px] text-muted-foreground">
+                <p className="text-meta text-muted-foreground">
                   This addon has no completed backups to restore from.
                 </p>
               ) : (

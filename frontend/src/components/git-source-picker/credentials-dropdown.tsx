@@ -49,14 +49,14 @@ export function CredentialsDropdown({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-9 gap-2" aria-label="Credentials">
+        <Button shape="flat" variant="outline" className="h-9 gap-2" aria-label="Credentials">
           {selected ? (
             <>
               <ProviderLogo providerId={providerIdFor(selected)} className="h-4 w-4" />
-              <span className="font-mono text-xs">{selected.host}</span>
+              <span className="font-mono text-meta">{selected.host}</span>
             </>
           ) : (
-            <span className="text-xs text-muted-foreground">Credentials</span>
+            <span className="text-meta text-muted-foreground">Credentials</span>
           )}
           <ChevronDown className="h-3 w-3 text-muted-foreground" />
         </Button>
@@ -66,11 +66,11 @@ export function CredentialsDropdown({
           <DropdownMenuItem
             key={integration.id}
             onSelect={() => onSelect(integration)}
-            className={cn(integration.id === selectedId && "text-brand")}
+            className={cn(integration.id === selectedId && "bg-foreground/5 font-medium text-foreground")}
           >
             <ProviderLogo providerId={providerIdFor(integration)} className="h-4 w-4" />
-            <span className="flex-1 text-sm">{PROVIDER_DISPLAY_NAMES[providerIdFor(integration)]}</span>
-            <span className="font-mono text-[11px] text-fg-muted">{integration.host}</span>
+            <span className="flex-1 text-body">{PROVIDER_DISPLAY_NAMES[providerIdFor(integration)]}</span>
+            <span className="font-mono text-label text-fg-muted">{integration.host}</span>
           </DropdownMenuItem>
         ))}
         {integrations.length > 0 && <DropdownMenuSeparator />}

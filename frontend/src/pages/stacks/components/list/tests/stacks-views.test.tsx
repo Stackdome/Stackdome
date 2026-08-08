@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { SheetHost } from "@/test-support/sheet-host";
 
 vi.mock("@/api/stacks", () => ({
   getStacksByOrg: vi.fn(),
@@ -14,9 +15,6 @@ vi.mock("@/lib/common", () => ({
 }));
 vi.mock("@/hooks/use-current-user", () => ({
   useCurrentUser: () => ({ canWriteAnyProject: true, canWrite: () => true, isOrgAdmin: true }),
-}));
-vi.mock("@/pages/stacks/components/wizard/stack-create-wizard", () => ({
-  StackCreateWizard: ({ open }: { open: boolean }) => (open ? <div data-testid="stack-wizard" /> : null),
 }));
 
 import { getStacksByOrg } from "@/api/stacks";
@@ -54,10 +52,12 @@ function renderPage(path = "/stacks") {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <StackProvider>
-        <Routes>
-          <Route path="/stacks" element={<StacksPage />} />
-          <Route path="/previews" element={<div data-testid="previews-page" />} />
-        </Routes>
+        <SheetHost>
+          <Routes>
+            <Route path="/stacks" element={<StacksPage />} />
+            <Route path="/previews" element={<div data-testid="previews-page" />} />
+          </Routes>
+        </SheetHost>
       </StackProvider>
     </MemoryRouter>,
   );

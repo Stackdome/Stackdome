@@ -50,22 +50,22 @@ export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListPr
                 <KeyRound className="h-5 w-5 shrink-0 text-muted-foreground" />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[15px] font-medium text-foreground">{secret.name}</p>
-                <p className="truncate font-mono text-[11.5px] text-fg-muted">
+                <p className="truncate text-name font-medium text-foreground">{secret.name}</p>
+                <p className="truncate font-mono text-label text-fg-muted">
                   {secret.description || "No description"}
                 </p>
               </div>
             </div>
-            <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+            <span className="inline-flex items-center rounded-full border border-border px-2 py-0.5 text-meta text-muted-foreground">
               {formatSecretType(secret.type)}
             </span>
-            <span className="w-[90px] text-right font-mono text-[11px] text-muted-foreground tabular-nums">
+            <span className="w-[90px] text-right font-mono text-label text-muted-foreground tabular-nums">
               {secret.created_at ? new Date(secret.created_at).toLocaleDateString() : "—"}
             </span>
             {rowCanWrite ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Secret actions">
+                  <Button shape="flat" variant="ghost" size="icon" aria-label="Secret actions">
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -87,7 +87,7 @@ export function SecretList({ secrets, onEdit, onDelete, canWrite }: SecretListPr
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <span className="h-8 w-8" />
+              <span className="h-10 w-10" />
             )}
           </div>
         );

@@ -204,15 +204,16 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
           <Separator className="my-3" />
 
           <div className="space-y-2">
-            <h3 className="text-sm font-semibold text-danger">Danger zone</h3>
-            <p className="text-sm text-muted-foreground">
+            <h3 className="text-body font-semibold text-danger">Danger zone</h3>
+            <p className="text-body text-muted-foreground">
               Deleting the configuration stops new previews for this repository.
             </p>
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
               disabled={deleting}
               onClick={() => void requestDelete()}
+              className="border-danger-border text-danger hover:bg-danger-bg hover:text-danger"
             >
               Delete configuration
             </Button>

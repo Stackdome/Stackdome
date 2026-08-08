@@ -103,10 +103,10 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
           Store pull/push credentials so builds can use private registries.
         </DialogDescription>
         <div className="flex items-center gap-3 border-b py-3.5 pl-5 pr-12">
-          <span className="flex h-6 w-6 items-center justify-center text-brand">
+          <span className="flex h-6 w-6 items-center justify-center text-muted-foreground">
             <Package className="h-5 w-5" />
           </span>
-          <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+          <span className="font-mono text-label text-muted-foreground">
             Add image registry
           </span>
         </div>
@@ -120,10 +120,10 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
                   top-aligns (instead of clipping) once it overflows. */}
               <div className="my-auto w-full">
                 <div className="mb-7 text-center">
-                  <h2 className="mb-2 text-2xl font-medium tracking-tight">
+                  <h2 className="mb-2 text-head font-medium">
                     Where do your images live?
                   </h2>
-                  <p className="text-sm text-muted-foreground">Pick a registry.</p>
+                  <p className="text-body text-muted-foreground">Pick a registry.</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2.5">
                   {REGISTRY_PROVIDERS.map((p) => (
@@ -133,15 +133,15 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
                       onClick={() => pickProvider(p)}
                       className={cn(
                         "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
-                        "hover:border-brand focus-visible:border-brand focus-visible:outline-none",
+                        "hover:border-primary focus-ring-edge",
                       )}
                     >
                       <span className="flex h-9 w-9 flex-none items-center justify-center rounded bg-muted text-muted-foreground">
                         <ProviderLogo providerId={p.id} className="h-[18px] w-[18px]" />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="mb-0.5 block text-sm font-medium text-foreground">{p.label}</span>
-                        <span className="block text-xs text-muted-foreground">
+                        <span className="mb-0.5 block text-body font-medium text-foreground">{p.label}</span>
+                        <span className="block text-meta text-muted-foreground">
                           {p.hostPrefill || "Custom host"}
                         </span>
                       </span>
@@ -154,10 +154,10 @@ export function AddRegistryDialog({ open, onOpenChange, onCreated }: AddRegistry
             <>
               <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-8 [&>*]:shrink-0">
                 <div className="mb-1 text-center">
-                  <h2 className="mb-2 text-2xl font-medium tracking-tight">
+                  <h2 className="mb-2 text-head font-medium">
                     Connect {provider.id === "other" ? "your registry" : provider.label}
                   </h2>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-body text-muted-foreground">
                     Stackdome stores the credentials encrypted and uses them only for image pulls and pushes.
                   </p>
                 </div>

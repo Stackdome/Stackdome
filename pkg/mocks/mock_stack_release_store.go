@@ -161,6 +161,21 @@ func (mr *MockStackReleaseStoreMockRecorder) GetLatestByStackID(ctx, stackID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByStackID", reflect.TypeOf((*MockStackReleaseStore)(nil).GetLatestByStackID), ctx, stackID)
 }
 
+// GetDeployHistory mocks base method.
+func (m *MockStackReleaseStore) GetDeployHistory(ctx context.Context, stackIDs []string, days int) (map[string][]int, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetDeployHistory", ctx, stackIDs, days)
+	ret0, _ := ret[0].(map[string][]int)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetDeployHistory indicates an expected call of GetDeployHistory.
+func (mr *MockStackReleaseStoreMockRecorder) GetDeployHistory(ctx, stackIDs, days any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetDeployHistory", reflect.TypeOf((*MockStackReleaseStore)(nil).GetDeployHistory), ctx, stackIDs, days)
+}
+
 // GetLatestByStackIDs mocks base method.
 func (m *MockStackReleaseStore) GetLatestByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError) {
 	m.ctrl.T.Helper()

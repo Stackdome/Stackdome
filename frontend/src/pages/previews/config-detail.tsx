@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   AlertTriangle, ChevronDown, GitPullRequest, Loader2, Plus, Search, Settings,
 } from "lucide-react";
@@ -191,9 +191,6 @@ export default function PreviewConfigDetailPage() {
   return (
     <div className="flex flex-1 flex-col p-8 space-y-6 h-full">
       <PageHeader
-        eyebrow={<Link to="/previews">← Previews</Link>}
-        title={config.name}
-        subtitle={config.git_repository?.repo_url}
         actions={
           canWriteAnyProject ? (
             <>
@@ -210,6 +207,22 @@ export default function PreviewConfigDetailPage() {
         }
       />
 
+      {/* Which repository these previews come from. Reference, not
+          orientation — §8 keeps entity metadata out of the sheet header, so it
+          lives here with the content it describes. It is a machine string, so
+          it is the one thing on the page that earns mono (§7a). */}
+      {config.git_repository?.repo_url && (
+        <p className="text-meta text-fg-muted">
+          <span className="font-mono">{config.git_repository.repo_url}</span>
+          {config.git_repository.base_branch && (
+            <>
+              {" · "}
+              <span className="font-mono">{config.git_repository.base_branch}</span>
+            </>
+          )}
+        </p>
+      )}
+
       {/* Filter / sort toolbar */}
       <div className="flex flex-wrap items-center gap-3">
         {showToolbar && (
@@ -220,19 +233,16 @@ export default function PreviewConfigDetailPage() {
                 placeholder="Search PR #, branch, commit…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="pl-9 h-9"
+                className="pl-9"
               />
             </div>
             <div className="ml-auto flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                  >
-                    Status: <span className="text-foreground">{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
-                    <ChevronDown className="h-3 w-3 flex-none" />
-                  </button>
+                  <Button shape="flat" variant="outline" size="sm">
+                    <span className="text-fg-2">Status:</span> <span>{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
+                    <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -242,37 +252,34 @@ export default function PreviewConfigDetailPage() {
                   <DropdownMenuItem
                     onSelect={() => setStatusFilter(ALL_STATUSES)}
                     className={cn(
-                      "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                      statusFilter === ALL_STATUSES && "text-brand"
+                      "justify-between text-body",
+                      statusFilter === ALL_STATUSES && "font-semibold text-foreground"
                     )}
                   >
                     <span>All</span>
-                    <span className="tabular-nums opacity-80">{envs.length}</span>
+                    <span className="tabular-nums text-fg-2">{envs.length}</span>
                   </DropdownMenuItem>
                   {statusOptions.map((o) => (
                     <DropdownMenuItem
                       key={o.word}
                       onSelect={() => setStatusFilter(o.word)}
                       className={cn(
-                        "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                        statusFilter === o.word && "text-brand"
+                        "justify-between text-body",
+                        statusFilter === o.word && "font-semibold text-foreground"
                       )}
                     >
                       <span>{o.word}</span>
-                      <span className="tabular-nums opacity-80">{o.count}</span>
+                      <span className="tabular-nums text-fg-2">{o.count}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                  >
-                    Sort: <span className="text-foreground">{sortLabel}</span>
-                    <ChevronDown className="h-3 w-3 flex-none" />
-                  </button>
+                  <Button shape="flat" variant="outline" size="sm">
+                    <span className="text-fg-2">Sort:</span> <span>{sortLabel}</span>
+                    <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -284,8 +291,8 @@ export default function PreviewConfigDetailPage() {
                       key={o.key}
                       onSelect={() => setSortKey(o.key)}
                       className={cn(
-                        "font-mono text-[11px] uppercase tracking-[1.5px]",
-                        sortKey === o.key && "text-brand"
+                        "text-body",
+                        sortKey === o.key && "font-semibold text-foreground"
                       )}
                     >
                       {o.label}
@@ -298,10 +305,10 @@ export default function PreviewConfigDetailPage() {
         )}
       </div>
 
-      {envsError && <p className="text-sm text-destructive">{envsError}</p>}
+      {envsError && <p className="text-body text-destructive">{envsError}</p>}
 
       {envsLoading ? (
-        <p className="text-sm text-muted-foreground">Loading environments…</p>
+        <p className="text-body text-muted-foreground">Loading environments…</p>
       ) : envs.length === 0 ? (
         <EmptyState
           icon={<GitPullRequest className="h-8 w-8" />}

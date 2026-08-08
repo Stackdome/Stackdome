@@ -201,9 +201,9 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
             aria-selected={tab === t.key}
             onClick={() => switchTab(t.key)}
             className={cn(
-              "-mb-px border-b-2 px-0.5 py-2 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
+              "-mb-px border-b-2 px-0.5 py-2 font-mono text-label transition-colors",
               tab === t.key
-                ? "border-brand text-foreground"
+                ? "border-foreground text-foreground"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
@@ -214,7 +214,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
 
       {tab === "provider" && loaded && integrations.length === 0 && (
         <div className="flex flex-col items-center gap-3 rounded-md border border-dashed py-10 text-center">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-body text-muted-foreground">
             Connect a git provider to pick from your repositories.
           </p>
           <Button onClick={() => setConnectOpen(true)}>
@@ -245,25 +245,25 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
             />
           </div>
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-body text-destructive">{error}</p>}
 
           {selected?.type === GIT_INTEGRATION_TYPE_GITHUB_APP && (
             <>
-              {searching && <p className="text-sm text-muted-foreground">Searching…</p>}
+              {searching && <p className="text-body text-muted-foreground">Searching…</p>}
               <ul className="divide-y rounded-md border">
                 {filteredRepos.map((r) => (
                   <li key={r.full_name}>
                     <button
                       type="button"
                       className={cn(
-                        "flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-accent",
-                        value?.cloneUrl && value.cloneUrl === (r.clone_url ?? "") && "bg-brand-bg",
+                        "flex w-full items-center gap-2 px-3 py-2.5 text-left text-body hover:bg-accent",
+                        value?.cloneUrl && value.cloneUrl === (r.clone_url ?? "") && "bg-foreground/5",
                       )}
                       onClick={() => void pickRepo(r)}
                     >
-                      <span className="flex-1 truncate font-mono text-xs">{r.full_name}</span>
+                      <span className="flex-1 truncate font-mono text-meta">{r.full_name}</span>
                       {r.private && (
-                        <Badge variant="outline" className="gap-1 text-[10px]">
+                        <Badge variant="outline" className="gap-1 text-label">
                           <Lock className="h-3 w-3" />
                           private
                         </Badge>
@@ -272,14 +272,14 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
                   </li>
                 ))}
                 {!searching && filteredRepos.length === 0 && (
-                  <li className="space-y-2 px-3 py-6 text-center text-sm text-muted-foreground">
+                  <li className="space-y-2 px-3 py-6 text-center text-body text-muted-foreground">
                     <p>No repositories found.</p>
                     {configureUrl && (
                       <a
                         href={configureUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-brand hover:underline"
+                        className="text-foreground hover:underline"
                       >
                         Don&apos;t see your repository? Configure in GitHub →
                       </a>
@@ -292,7 +292,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
 
           {selected?.type === GIT_INTEGRATION_TYPE_CREDENTIALS && (
             <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-body text-muted-foreground">
                 Repository listing isn&apos;t available for token connections. Paste the
                 repository URL on {selected.host}; clones use the stored credentials.
               </p>
@@ -302,7 +302,7 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
                 onChange={(e) => emitHostUrl(e.target.value, selected)}
               />
               {hostMismatch && (
-                <p className="text-sm text-destructive">
+                <p className="text-body text-destructive">
                   URL must be on {selected.host} to use this connection.
                 </p>
               )}
@@ -322,11 +322,11 @@ export function GitSourcePicker({ value, onChange, publicUrlHint }: GitSourcePic
               onChange={(e) => emitPublicUrl(e.target.value)}
             />
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-meta text-muted-foreground">
             Public repositories work without a connection; private ones need a matching
             git integration.
           </p>
-          {publicUrlHint && <p className="text-xs text-warn">{publicUrlHint}</p>}
+          {publicUrlHint && <p className="text-meta text-warn">{publicUrlHint}</p>}
         </div>
       )}
 

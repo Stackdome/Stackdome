@@ -209,6 +209,26 @@ var _ = Describe("PresentStack release-centric fields", func() {
 		Expect(out.LatestRelease).To(BeNil())
 	})
 
+	It("presents deploy history as counts, oldest first", func() {
+		s := &models.Stack{ID: "s1", Name: "app"}
+		out := presenters.PresentStack(s, models.StackReleaseRefs{DeployHistory: []int{0, 3, 1}})
+		Expect(out.DeployHistory).To(Equal([]int32{0, 3, 1}))
+	})
+
+	It("omits deploy history entirely for a stack that has never deployed", func() {
+		s := &models.Stack{ID: "s1", Name: "app"}
+		out := presenters.PresentStack(s, models.StackReleaseRefs{})
+		// Nil, not []int32{} — the card reads absence as "No deploys yet" and
+		// would draw an empty slice as a flat line of zeroes instead.
+		Expect(out.DeployHistory).To(BeNil())
+	})
+
+	It("keeps a run of zeroes, which is not the same as no history", func() {
+		s := &models.Stack{ID: "s1", Name: "app"}
+		out := presenters.PresentStack(s, models.StackReleaseRefs{DeployHistory: []int{0, 0, 0}})
+		Expect(out.DeployHistory).To(Equal([]int32{0, 0, 0}))
+	})
+
 	It("presents lifecycle deleting when deletion timestamp set", func() {
 		now := time.Now()
 		s := &models.Stack{ID: "s1", DeletionTimestamp: &now}

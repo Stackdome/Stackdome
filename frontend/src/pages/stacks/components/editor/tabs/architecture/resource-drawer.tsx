@@ -193,7 +193,7 @@ export function ResourceDrawer({
   const changeCount = [dirtyTabs.configuration, dirtyTabs.deployment, dirtyTabs.environment].filter(Boolean).length;
 
   const tabTriggerClass =
-    "flex-none rounded-none border-0 border-b-[1.5px] border-transparent bg-transparent px-[13px] py-3 text-sm font-medium text-fg-muted hover:text-fg-2 data-[state=active]:border-b-brand data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
+    "flex-none rounded-none border-0 border-b-[1.5px] border-transparent bg-transparent px-[13px] py-3 text-body font-medium text-fg-muted hover:text-fg-2 data-[state=active]:border-b-brand data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none";
 
   return (
     <div
@@ -208,18 +208,18 @@ export function ResourceDrawer({
           <div className="truncate text-base font-medium text-foreground">
             {resource.name || `Resource ${resourceIndex + 1}`}
           </div>
-          <div className="truncate font-mono text-[11px] text-fg-muted">{pres.summary}</div>
+          <div className="truncate font-mono text-label text-fg-muted">{pres.summary}</div>
           {publicUrls && publicUrls.length > 0 && (
             <EndpointInlineList service={resource.name || "resource"} urls={publicUrls} />
           )}
         </div>
         {readOnly && (
-          <span className="shrink-0 rounded-md border border-border px-2 py-0.5 font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-fg-muted">
+          <span className="shrink-0 rounded-md border border-border px-2 py-0.5 font-mono text-[9px] font-medium text-fg-muted">
             Live · read-only
           </span>
         )}
         {isDirty ? (
-          <span className="flex shrink-0 items-center gap-1 rounded-md border border-brand pl-2 pr-1 py-0.5 text-[11px] font-medium text-brand">
+          <span className="flex shrink-0 items-center gap-1 rounded-md border border-brand pl-2 pr-1 py-0.5 text-label font-medium text-brand">
             {changeCount === 1 ? "1 change" : `${changeCount} changes`}
             <button
               type="button"
@@ -232,7 +232,7 @@ export function ResourceDrawer({
             </button>
           </span>
         ) : (
-          <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-muted">
+          <span className="shrink-0 font-mono text-[9px] text-fg-muted">
             {pres.kindLabel}
           </span>
         )}
@@ -283,7 +283,7 @@ export function ResourceDrawer({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 text-[12.5px] text-fg-muted hover:bg-brand-bg hover:text-brand"
+          className="h-7 gap-1.5 px-2 text-meta text-fg-muted hover:bg-foreground/5 hover:text-foreground"
           disabled={!onViewLogs}
           onClick={() => onViewLogs?.(resource.name)}
         >
@@ -295,7 +295,7 @@ export function ResourceDrawer({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 gap-1.5 px-2 text-[12.5px] text-danger hover:bg-danger-bg hover:text-danger"
+            className="h-7 gap-1.5 px-2 text-meta text-danger hover:bg-danger-bg hover:text-danger"
             onClick={() => onRemove(resourceIndex)}
           >
             <Trash2 className="size-3.5" />

@@ -119,7 +119,7 @@ export default function GitIntegrationsPage() {
 
       {integrations.length > 0 && (
         <>
-          {error && <p className="text-sm text-destructive">Couldn&apos;t refresh integrations: {error}</p>}
+          {error && <p className="text-body text-destructive">Couldn&apos;t refresh integrations: {error}</p>}
           <Panel title="Connected providers" count={integrations.length}>
             <div className="divide-y divide-border">
               {integrations.map((integration) => (

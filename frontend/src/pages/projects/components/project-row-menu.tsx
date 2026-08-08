@@ -29,7 +29,7 @@ export function ProjectRowMenu({ project, onRename, onDelete }: ProjectRowMenuPr
     // (radix-ui/primitives#1836).
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Project actions">
+        <Button shape="flat" variant="ghost" size="icon" aria-label="Project actions">
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
@@ -47,8 +47,8 @@ export function ProjectRowMenu({ project, onRename, onDelete }: ProjectRowMenuPr
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          variant="destructive"
           disabled={project.default_project}
-          className="text-destructive focus:text-destructive"
           onSelect={() => {
             if (!project.default_project && onDelete) onDelete(project);
           }}

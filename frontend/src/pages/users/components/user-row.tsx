@@ -1,5 +1,6 @@
 import type React from "react";
-import { TableCell, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow, TableRowActions } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ProjectChip } from "./project-chip";
 import type { ActiveRow } from "../hooks/use-users";
 import { formatRelative } from "../lib/format-relative";
@@ -29,12 +30,12 @@ export function UserRow({ row, actions, defaultProjectName }: UserRowProps) {
       {/* User */}
       <TableCell className="py-3.5">
         <div className="flex items-center gap-3">
-          <div className="h-7 w-7 rounded shrink-0 flex items-center justify-center bg-muted text-foreground text-[10px] font-mono uppercase select-none">
+          <div className="h-7 w-7 rounded shrink-0 flex items-center justify-center bg-muted text-foreground text-label font-mono select-none">
             {monogram(row.name)}
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-medium text-foreground truncate">{row.name}</div>
-            <div className="font-mono text-xs text-muted-foreground truncate">{row.email}</div>
+            <div className="text-body font-medium text-foreground truncate">{row.name}</div>
+            <div className="font-mono text-meta text-muted-foreground truncate">{row.email}</div>
           </div>
         </div>
       </TableCell>
@@ -42,14 +43,9 @@ export function UserRow({ row, actions, defaultProjectName }: UserRowProps) {
       {/* Org role */}
       <TableCell className="py-3.5">
         {isAdmin ? (
-          <span className="inline-flex items-center gap-1 px-2 py-px rounded border border-brand-border bg-brand-bg text-brand text-[11px] font-mono">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand inline-block shrink-0" />
-            {row.role}
-          </span>
+          <Badge variant="secondary">{row.role}</Badge>
         ) : (
-          <span className="inline-flex items-center px-2 py-px rounded border border-border bg-muted text-muted-foreground text-[11px] font-mono">
-            {row.role ?? "—"}
-          </span>
+          <Badge variant="outline">{row.role ?? "—"}</Badge>
         )}
       </TableCell>
 
@@ -64,17 +60,19 @@ export function UserRow({ row, actions, defaultProjectName }: UserRowProps) {
                 isDefault={defaultProjectName ? t.project_name === defaultProjectName : undefined}
               />
             ))
-            : <span className="text-muted-foreground text-xs">—</span>
+            : <span className="text-muted-foreground text-meta">—</span>
           }
         </div>
       </TableCell>
 
       {/* Last active */}
       <TableCell className="py-3.5">
-        <span className="font-mono text-[11px] text-muted-foreground">{lastActive}</span>
+        <span className="text-meta text-fg-muted">{lastActive}</span>
       </TableCell>
 
-      <TableCell className="py-3.5 text-right">{actions}</TableCell>
+      <TableCell className="py-3.5 text-right">
+        <TableRowActions>{actions}</TableRowActions>
+      </TableCell>
     </TableRow>
   );
 }

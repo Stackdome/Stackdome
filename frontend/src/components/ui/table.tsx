@@ -2,6 +2,11 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
+/**
+ * §7 — the list is not boxed. A border drawn around the whole table is the card
+ * mistake at a larger scale: it says "this is a card", and §1 reserves that for
+ * nothing. The rows and the sheet edge are the only boundaries there are.
+ */
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
     <div
@@ -10,7 +15,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
     >
       <table
         data-slot="table"
-        className={cn("w-full caption-bottom text-sm", className)}
+        className={cn("w-full caption-bottom text-body", className)}
         {...props}
       />
     </div>
@@ -21,7 +26,7 @@ function TableHeader({ className, ...props }: React.ComponentProps<"thead">) {
   return (
     <thead
       data-slot="table-header"
-      className={cn("[&_tr]:border-b", className)}
+      className={cn("[&_tr]:border-b [&_tr]:border-border", className)}
       {...props}
     />
   )
@@ -55,7 +60,7 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
     <tr
       data-slot="table-row"
       className={cn(
-        "hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors",
+        "group/row hover:bg-muted/50 data-[state=selected]:bg-muted border-b border-border transition-colors",
         className
       )}
       {...props}
@@ -68,7 +73,10 @@ function TableHead({ className, ...props }: React.ComponentProps<"th">) {
     <th
       data-slot="table-head"
       className={cn(
-        "text-foreground h-10 px-2 text-left align-middle font-medium whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        // §7 — sentence case, `text-label`, `fg-muted`. Size and colour already
+        // say "this is a header"; uppercase would be a third signal doing a job
+        // that is already done, and it costs the word-shape the eye reads by.
+        "text-fg-muted h-8 px-2 text-left align-middle text-label font-medium whitespace-nowrap normal-case [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
         className
       )}
       {...props}
@@ -81,7 +89,31 @@ function TableCell({ className, ...props }: React.ComponentProps<"td">) {
     <td
       data-slot="table-cell"
       className={cn(
-        "p-2 align-middle whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        "px-2 py-2.5 align-middle text-body whitespace-nowrap [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+        className
+      )}
+      {...props}
+    />
+  )
+}
+
+/**
+ * §7 — row actions appear on hover. A kebab on every row at rest is chrome
+ * competing with content.
+ *
+ * Hidden by opacity rather than by mounting, so the control keeps its place in
+ * the tab order and the row does not reflow when the pointer arrives. Keyboard
+ * users get it via focus-within; an open menu holds it visible so the trigger
+ * does not vanish from under its own popover.
+ */
+function TableRowActions({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="table-row-actions"
+      className={cn(
+        "flex items-center justify-end gap-1 opacity-0 transition-opacity",
+        "group-hover/row:opacity-100 group-focus-within/row:opacity-100",
+        "has-[[data-state=open]]:opacity-100",
         className
       )}
       {...props}
@@ -96,7 +128,7 @@ function TableCaption({
   return (
     <caption
       data-slot="table-caption"
-      className={cn("text-muted-foreground mt-4 text-sm", className)}
+      className={cn("text-muted-foreground mt-4 text-body", className)}
       {...props}
     />
   )
@@ -109,6 +141,7 @@ export {
   TableFooter,
   TableHead,
   TableRow,
+  TableRowActions,
   TableCell,
   TableCaption,
 }

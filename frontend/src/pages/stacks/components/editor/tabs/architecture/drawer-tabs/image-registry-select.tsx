@@ -85,7 +85,7 @@ export function ImageRegistrySelect({ id, imageRef, registryCredentialsId, onCha
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "h-9 w-full justify-between font-mono text-[12.5px] font-normal",
+            "h-9 w-full justify-between font-mono text-meta font-normal",
             !host && !matched && "text-muted-foreground",
           )}
         >
@@ -100,13 +100,13 @@ export function ImageRegistrySelect({ id, imageRef, registryCredentialsId, onCha
             <CommandGroup>
               <CommandItem value="public" onSelect={pickPublic}>
                 <Globe className="h-3.5 w-3.5 text-muted-foreground" />
-                <span className="text-[12.5px]">{PUBLIC_LABEL}</span>
+                <span className="text-meta">{PUBLIC_LABEL}</span>
               </CommandItem>
               {credentials.map((cred) => (
                 <CommandItem key={cred.id} value={cred.id!} onSelect={() => pickCredential(cred)}>
                   <Package className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="flex-1 truncate font-mono text-[12.5px]">{cred.host}</span>
-                  <span className="text-[11px] text-muted-foreground">{cred.username}</span>
+                  <span className="flex-1 truncate font-mono text-meta">{cred.host}</span>
+                  <span className="text-label text-muted-foreground">{cred.username}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -115,7 +115,7 @@ export function ImageRegistrySelect({ id, imageRef, registryCredentialsId, onCha
                 <CommandSeparator />
                 <CommandGroup>
                   <CommandItem value={`custom-${query}`} onSelect={pickCustom}>
-                    <span className="truncate text-[12.5px]">Use &quot;{query.trim()}&quot; as registry host</span>
+                    <span className="truncate text-meta">Use &quot;{query.trim()}&quot; as registry host</span>
                   </CommandItem>
                 </CommandGroup>
               </>

@@ -305,7 +305,7 @@ export default function PostgresFormPage() {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Failed to load addon</h2>
+        <h2 className="text-head font-semibold mb-2">Failed to load addon</h2>
         <p className="text-muted-foreground mb-4">{loadError}</p>
         <Button onClick={() => navigate("/addons")}>Back to Addons</Button>
       </div>
@@ -317,10 +317,10 @@ export default function PostgresFormPage() {
       <header className="mb-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold mb-1">
+            <h1 className="text-head font-semibold mb-1">
               {isEdit ? `Edit ${values.name}` : "Create Postgres addon"}
             </h1>
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-body">
               {isEdit
                 ? "Update configuration for this Postgres addon."
                 : "Provision a managed PostgreSQL database for your stacks."}
@@ -331,7 +331,7 @@ export default function PostgresFormPage() {
       </header>
 
       {submitError && (
-        <div className="text-sm text-danger bg-danger-bg border border-danger-border p-3 rounded-md mb-6">
+        <div className="text-body text-danger bg-danger-bg border border-danger-border p-3 rounded-md mb-6">
           {submitError}
         </div>
       )}
@@ -373,18 +373,18 @@ export default function PostgresFormPage() {
         </Panel>
 
         <Panel title="Configuration">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Plan</h3>
+          <h3 className="text-body font-semibold text-foreground mb-3">Plan</h3>
           <RadioGroup
             value={values.plan}
             onValueChange={(v) => update("plan", v as PlanId)}
             className="rounded-md border border-border overflow-hidden max-w-3xl gap-0"
           >
-            <table className="w-full text-sm">
+            <table className="w-full text-body">
               <thead className="bg-muted/30">
                 <tr>
-                  <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Plan</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">CPU</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-[12.5px] text-muted-foreground">Memory</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-meta text-muted-foreground">Plan</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-meta text-muted-foreground">CPU</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-meta text-muted-foreground">Memory</th>
                 </tr>
               </thead>
               <tbody>
@@ -396,9 +396,9 @@ export default function PostgresFormPage() {
                       key={preset.id}
                       className={cn(
                         "border-t border-border cursor-pointer transition-colors",
-                        selected ? "bg-brand-bg" : "hover:bg-muted/30",
+                        selected ? "bg-foreground/[0.05]" : "hover:bg-muted/30",
                       )}
-                      style={selected ? { boxShadow: "inset 3px 0 0 var(--brand)" } : undefined}
+                      style={selected ? { boxShadow: "inset 3px 0 0 var(--foreground)" } : undefined}
                       onClick={() => update("plan", preset.id as PlanId)}
                     >
                       <td className="px-4 py-2.5">
@@ -409,8 +409,8 @@ export default function PostgresFormPage() {
                           </span>
                         </label>
                       </td>
-                      <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.cpu}</td>
-                      <td className="px-4 py-2.5 font-mono text-[12.5px] text-muted-foreground">{preset.memory}</td>
+                      <td className="px-4 py-2.5 font-mono text-meta text-muted-foreground">{preset.cpu}</td>
+                      <td className="px-4 py-2.5 font-mono text-meta text-muted-foreground">{preset.memory}</td>
                     </tr>
                   );
                 })}
@@ -420,7 +420,7 @@ export default function PostgresFormPage() {
 
           {showCustomCompute && (
             <div className="mt-4 max-w-3xl space-y-3">
-              <h4 className="text-[12.5px] font-medium text-muted-foreground">Custom resources</h4>
+              <h4 className="text-meta font-medium text-muted-foreground">Custom resources</h4>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <FieldShell label="CPU request" htmlFor="cpu-req">
                   <Input
@@ -460,7 +460,7 @@ export default function PostgresFormPage() {
                 </FieldShell>
               </div>
               {errors.customCpuRequest && (
-                <p className="text-[11.5px] text-danger">{errors.customCpuRequest}</p>
+                <p className="text-label text-danger">{errors.customCpuRequest}</p>
               )}
             </div>
           )}
@@ -482,7 +482,7 @@ export default function PostgresFormPage() {
                   className={cn("font-mono w-32", errors.storageGB ? "border-danger" : "")}
                   aria-invalid={!!errors.storageGB}
                 />
-                <span className="font-mono text-[12.5px] text-muted-foreground">GB</span>
+                <span className="font-mono text-meta text-muted-foreground">GB</span>
               </div>
             </FieldShell>
 
@@ -540,11 +540,11 @@ export default function PostgresFormPage() {
             <CollapsibleTrigger asChild>
               <button
                 type="button"
-                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-sm font-semibold text-foreground hover:bg-muted/30 focus:outline-none transition-colors"
+                className="group flex w-full items-center gap-2 px-5 py-3 text-left text-body font-semibold text-foreground hover:bg-muted/30 focus-ring-edge transition-colors"
               >
                 <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
                   Backups
-                <span className="font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
+                <span className="font-mono text-label text-muted-foreground">
                   {values.backup.enabled ? "on" : "off"}
                 </span>
               </button>
@@ -573,13 +573,13 @@ export default function PostgresFormPage() {
               <CollapsibleTrigger asChild>
                 <button
                   type="button"
-                  className="flex-1 text-left group focus:outline-none px-5 py-3"
+                  className="flex-1 text-left group focus-ring-edge px-5 py-3"
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-                    <span className="text-sm font-semibold text-foreground">Advanced</span>
+                    <span className="text-body font-semibold text-foreground">Advanced</span>
                     {isEdit && advancedDirty && (
-                      <span className="font-mono text-[10.5px] uppercase tracking-[1px] font-bold text-brand bg-brand-bg px-1.5 py-0.5 rounded">
+                      <span className="font-mono text-label font-semibold text-foreground bg-foreground/10 px-1.5 py-0.5 rounded">
                           Modified
                       </span>
                     )}
@@ -590,7 +590,7 @@ export default function PostgresFormPage() {
                 href={ADVANCED_DOCS_URL}
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-[12.5px] text-brand hover:text-brand-press hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
+                className="text-meta text-muted-foreground hover:text-foreground hover:underline inline-flex items-center gap-1 whitespace-nowrap pr-5"
                 onClick={(e) => e.stopPropagation()}
               >
                   Read the documentation
@@ -600,11 +600,11 @@ export default function PostgresFormPage() {
             <CollapsibleContent>
               <div className="px-5 pb-5 pt-3 space-y-2">
                 {isEdit && advancedDirty && (
-                  <div className="flex items-center justify-between text-xs text-muted-foreground max-w-3xl">
+                  <div className="flex items-center justify-between text-meta text-muted-foreground max-w-3xl">
                     <span className="inline-flex items-center gap-1.5">
                       {advancedCleared && (
                         <>
-                          <AlertCircle className="h-3.5 w-3.5 text-brand" />
+                          <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
                           <span>
                             These advanced fields will be removed on save.
                           </span>
@@ -614,7 +614,7 @@ export default function PostgresFormPage() {
                     <button
                       type="button"
                       onClick={handleResetAdvanced}
-                      className="text-brand hover:text-brand-press hover:underline font-medium"
+                      className="text-foreground hover:underline font-medium focus-ring-edge"
                     >
                       Reset to current
                     </button>
@@ -627,13 +627,13 @@ export default function PostgresFormPage() {
                   onChange={(e) => update("advancedJson", e.target.value)}
                   placeholder={'{\n  "configuration": {\n    "parameters": { "max_connections": "200" }\n  }\n}'}
                   className={cn(
-                    "font-mono text-xs [field-sizing:fixed] max-w-3xl",
+                    "font-mono text-meta [field-sizing:fixed] max-w-3xl",
                     errors.advancedJson ? "border-danger" : "",
                   )}
                   spellCheck={false}
                 />
                 {errors.advancedJson && (
-                  <p className="text-[11.5px] text-danger mt-2 whitespace-pre-wrap">
+                  <p className="text-label text-danger mt-2 whitespace-pre-wrap">
                     {errors.advancedJson}
                   </p>
                 )}
@@ -657,7 +657,7 @@ export default function PostgresFormPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
+            <Button shape="flat"
               variant="outline"
               onClick={() => !submitting && setConfirmAdvancedOpen(false)}
               disabled={submitting}

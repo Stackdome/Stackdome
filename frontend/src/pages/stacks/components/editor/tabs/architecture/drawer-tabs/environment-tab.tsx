@@ -51,7 +51,7 @@ function AddRowButton({ label, onClick }: { label: string; onClick: () => void }
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong px-3 py-2 text-[12.5px] font-medium text-foreground/80 transition-colors hover:bg-muted/30"
+      className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong px-3 py-2 text-meta font-medium text-foreground/80 transition-colors hover:bg-muted/30"
     >
       <Plus className="size-3.5" />
       {label}
@@ -202,13 +202,13 @@ function StackResourceEnvironmentTabImpl({
 
   // Design ghost chip: mono 11px bordered pill, hover swings to brand.
   const ghostChip =
-    "inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-brand hover:text-brand disabled:pointer-events-none disabled:opacity-50";
+    "inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-label text-muted-foreground transition-colors hover:border-brand hover:text-brand disabled:pointer-events-none disabled:opacity-50";
 
   return (
     <TabsContent value="environment" className="pt-4">
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <span className="text-[12.5px] text-muted-foreground">
+          <span className="text-meta text-muted-foreground">
           Environment{" "}
             <span className="font-mono text-muted-foreground/70">
             · {(envVars || []).length} variables
@@ -217,7 +217,7 @@ function StackResourceEnvironmentTabImpl({
           <div className="flex gap-2">
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-[11px] text-muted-foreground transition-colors hover:border-danger hover:text-danger disabled:pointer-events-none disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2 py-1 font-mono text-label text-muted-foreground transition-colors hover:border-danger hover:text-danger disabled:pointer-events-none disabled:opacity-50"
               onClick={() => {
                 if (envVars?.length) {
                   onChangeEnvVars([]);
@@ -244,13 +244,13 @@ function StackResourceEnvironmentTabImpl({
               <DialogContent className="w-[95vw] max-w-4xl p-0 overflow-auto">
                 <div className="p-6">
                   <DialogHeader>
-                    <DialogTitle className="text-lg font-medium">
+                    <DialogTitle className="text-title font-medium">
                     Paste Environment Variables
                     </DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`env-paste-${index}`} className="text-sm font-medium">
+                      <Label htmlFor={`env-paste-${index}`} className="text-body font-medium">
                       Paste in KEY=VALUE format (one per line)
                       </Label>
                       <div className="relative">
@@ -261,10 +261,10 @@ function StackResourceEnvironmentTabImpl({
                           "API_KEY=your_api_key\n" +
                           "# NODE_ENV=development"
                           }
-                          className="font-mono text-sm min-h-[180px] w-full"
+                          className="font-mono text-body min-h-[180px] w-full"
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-meta text-muted-foreground">
                       Lines starting with # will be ignored as comments
                       </p>
                     </div>
@@ -301,7 +301,7 @@ function StackResourceEnvironmentTabImpl({
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor={`env-file-upload-${index}`} className="text-sm font-medium">
+                    <Label htmlFor={`env-file-upload-${index}`} className="text-body font-medium">
                     Upload .env File
                     </Label>
                     <div className="flex items-center justify-center w-full">
@@ -311,8 +311,8 @@ function StackResourceEnvironmentTabImpl({
                       >
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           <FileText className="w-8 h-8 mb-2 text-muted-foreground" />
-                          <p className="mb-2 text-sm text-muted-foreground">Click to upload or drag and drop</p>
-                          <p className="text-xs text-muted-foreground">Supports .env files</p>
+                          <p className="mb-2 text-body text-muted-foreground">Click to upload or drag and drop</p>
+                          <p className="text-meta text-muted-foreground">Supports .env files</p>
                         </div>
                         <input
                           id={`env-file-upload-${index}`}
@@ -517,14 +517,14 @@ function StackResourceEnvironmentTabImpl({
                     data-testid="env-addon-group"
                   >
                     <div className="absolute -top-3.5 left-3 inline-flex items-center gap-2 rounded-md bg-background px-1.5 py-0.5">
-                      <span className="inline-flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.15em] text-foreground/80">
+                      <span className="inline-flex items-center gap-1.5 font-mono text-[9.5px] font-semibold text-foreground/80">
                         <Plug className="size-3" />
                         Addon
                       </span>
                       <Select value={aid || undefined} onValueChange={handleAddonChange}>
                         <SelectTrigger
                           size="sm"
-                          className="w-[180px] gap-2 text-xs"
+                          className="w-[180px] gap-2 text-meta"
                           data-testid="addon-picker-trigger"
                         >
                           <span className="flex items-center gap-2 min-w-0">
@@ -536,7 +536,7 @@ function StackResourceEnvironmentTabImpl({
                         </SelectTrigger>
                         <SelectContent>
                           {addons.length === 0 ? (
-                            <div className="px-3 py-2 text-xs text-muted-foreground">
+                            <div className="px-3 py-2 text-meta text-muted-foreground">
                               No add-ons on this stack. Add one from the canvas with Add resource.
                             </div>
                           ) : (
@@ -550,7 +550,7 @@ function StackResourceEnvironmentTabImpl({
                                   <AddonTypeIcon type="postgres" size={14} />
                                   <span>{a.name}</span>
                                   {a.id !== aid && addonBlocked(a.id!) && (
-                                    <span className="ml-1 text-[10px] text-muted-foreground">
+                                    <span className="ml-1 text-label text-muted-foreground">
                                   in use
                                     </span>
                                   )}
@@ -567,7 +567,7 @@ function StackResourceEnvironmentTabImpl({
                             <Select value={db || undefined} onValueChange={handleDbChange}>
                               <SelectTrigger
                                 size="sm"
-                                className="w-[140px] text-xs"
+                                className="w-[140px] text-meta"
                                 data-testid="database-picker-trigger"
                               >
                                 <SelectValue placeholder="Pick database" />
@@ -582,7 +582,7 @@ function StackResourceEnvironmentTabImpl({
                                     >
                                       {d.name}
                                       {d.name !== db && dbBlocked(d.name) && (
-                                        <span className="ml-2 text-[10px] text-muted-foreground">
+                                        <span className="ml-2 text-label text-muted-foreground">
                                       in use
                                         </span>
                                       )}
@@ -592,7 +592,7 @@ function StackResourceEnvironmentTabImpl({
                               </SelectContent>
                             </Select>
                           ) : (
-                            <span className="font-mono text-[11px] text-muted-foreground">
+                            <span className="font-mono text-label text-muted-foreground">
                           db: {db || databases[0]?.name || "—"}
                             </span>
                           )}

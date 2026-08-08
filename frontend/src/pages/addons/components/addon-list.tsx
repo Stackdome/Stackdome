@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search, ChevronDown, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,39 +62,36 @@ export function AddonList({
             placeholder="Filter addons…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="pl-9"
           />
         </div>
         <div className="flex items-center gap-1.5">
           {STATUS_FILTERS.map((f) => {
             const active = status === f.key;
             return (
-              <button
+              <Button
                 key={f.key}
                 type="button"
+                variant={active ? "outline" : "ghost"}
+                size="sm"
                 onClick={() => setStatus(f.key)}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] transition-colors",
-                  active
-                    ? "border-brand-border bg-brand-bg text-brand"
-                    : "border-border text-muted-foreground hover:bg-muted/50",
+                  "gap-1.5",
+                  active && "border-border-strong bg-foreground/[0.06] font-medium text-foreground",
                 )}
               >
                 <span>{f.label}</span>
-                <span className="tabular-nums opacity-80">{counts[f.key]}</span>
-              </button>
+                <span className="tabular-nums text-fg-2">{counts[f.key]}</span>
+              </Button>
             );
           })}
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-            >
-              Sort: <span className="text-foreground">{sortLabel}</span>
-              <ChevronDown className="h-3 w-3" />
-            </button>
+            <Button shape="flat" variant="outline" size="sm">
+              <span className="text-fg-2">Sort:</span> <span>{sortLabel}</span>
+              <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+            </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent
             align="end"
@@ -104,10 +102,7 @@ export function AddonList({
               <DropdownMenuItem
                 key={o.key}
                 onClick={() => setSortKey(o.key)}
-                className={cn(
-                  "font-mono text-[11px] uppercase tracking-[1.5px]",
-                  sortKey === o.key && "text-brand",
-                )}
+                className={cn("text-body", sortKey === o.key && "font-semibold text-foreground")}
               >
                 {o.label}
               </DropdownMenuItem>
@@ -136,12 +131,12 @@ export function AddonList({
             >
               <div className="flex items-center gap-3 min-w-0">
                 <AddonTypeIcon type="postgres" size={20} className="shrink-0" />
-                <span className="font-medium group-hover:text-brand transition-colors break-words">
+                <span className="font-medium break-words">
                   {a.name}
                 </span>
-                <span className="text-xs text-muted-foreground">postgres</span>
+                <span className="text-meta text-muted-foreground">postgres</span>
               </div>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground whitespace-nowrap">
+              <div className="flex items-center gap-3 text-meta text-muted-foreground whitespace-nowrap">
                 <StatusPill state={a.status?.state} />
                 <span className="font-mono">PG {a.spec.version.major}</span>
                 <span className="font-mono">{a.spec.storage.size ?? "—"}</span>

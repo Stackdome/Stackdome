@@ -26,6 +26,11 @@ type ReleaseLiveStatus struct {
 type StackReleaseRefs struct {
 	Converged *StackRelease
 	Latest    *StackRelease
+	// DeployHistory is DeployHistoryDays of deploy counts, oldest first, with
+	// zero-filled gaps. Nil for a stack that has never deployed — which is the
+	// distinction the card needs: no bars at all reads "No deploys yet", where
+	// fourteen zeroes would draw a flat line and claim the stack went quiet.
+	DeployHistory []int
 }
 
 // BuildReleaseLiveStatus overlays current stack/resource status onto a release.

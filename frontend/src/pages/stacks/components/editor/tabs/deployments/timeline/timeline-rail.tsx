@@ -116,7 +116,7 @@ export function TimelineRail(props: TimelineRailProps) {
 
       {hidden > 0 && (
         <div className="ml-12 pt-2">
-          <button onClick={() => setWindowN(releases.length)} className="font-sans text-[12.5px] font-medium text-primary">
+          <button onClick={() => setWindowN(releases.length)} className="font-sans text-meta font-medium text-primary">
             Show more ({hidden})
           </button>
         </div>

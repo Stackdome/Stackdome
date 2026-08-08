@@ -74,7 +74,7 @@ export function RenameProjectDialog({ open, onOpenChange, currentName, onRename 
         </DialogHeader>
 
         {error && (
-          <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-body text-danger">
             {error}
           </div>
         )}
@@ -97,14 +97,14 @@ export function RenameProjectDialog({ open, onOpenChange, currentName, onRename 
           </FieldShell>
 
           {slug && (
-            <p className="font-mono text-xs text-muted-foreground">
+            <p className="font-mono text-meta text-muted-foreground">
               Slug: <span className="text-foreground">{slug}</span>
             </p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
+          <Button shape="flat" variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
           <Button onClick={() => void handleSubmit()} disabled={!canSubmit}>

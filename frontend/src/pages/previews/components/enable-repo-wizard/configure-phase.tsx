@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
-import { FieldShell } from "@/components/branded";
+import { FieldShell, AlertBanner } from "@/components/branded";
 import { BranchField } from "@/components/git-source-picker/branch-field";
 import { WizardFooter } from "@/components/wizard-footer";
 import { createPreviewConfig } from "@/api/preview-configs";
@@ -76,8 +76,8 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-5 overflow-y-auto p-6">
         <div>
-          <h3 className="font-mono text-xs">{repo.fullName}</h3>
-          <p className="text-sm text-muted-foreground">
+          <h3 className="font-mono text-meta">{repo.fullName}</h3>
+          <p className="text-body text-muted-foreground">
             Every pull request on this repository can get its own preview
             environment.
           </p>
@@ -166,7 +166,7 @@ export function ConfigurePhase({ repo, onCreated, onBack }: ConfigurePhaseProps)
           />
         </FieldShell>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <AlertBanner>{error}</AlertBanner>}
       </div>
       <WizardFooter
         onBack={onBack}

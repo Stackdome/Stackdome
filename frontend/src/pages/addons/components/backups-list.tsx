@@ -90,7 +90,7 @@ export function BackupsList({ backups }: { backups: PostgresBackup[] }) {
                         </StatusPill>
                       </span>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-sm font-mono text-xs">
+                    <TooltipContent className="max-w-sm font-mono text-meta">
                       {b.error}
                     </TooltipContent>
                   </Tooltip>

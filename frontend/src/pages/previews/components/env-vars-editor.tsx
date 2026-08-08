@@ -55,19 +55,19 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
               onChange={(e) => updateRow(index, { name: e.target.value })}
               placeholder="NAME"
               aria-label="Variable name"
-              className="w-[36%] font-mono text-xs"
+              className="w-[36%] font-mono text-meta"
             />
             {fromSecret ? (
               <Select
                 value={refMatch[1] || ""}
                 onValueChange={(name) => updateRow(index, { value: secretRef(name) })}
               >
-                <SelectTrigger aria-label="Secret" className="flex-1 text-xs">
+                <SelectTrigger aria-label="Secret" className="flex-1 text-meta">
                   <SelectValue placeholder="Select secret…" />
                 </SelectTrigger>
                 <SelectContent>
                   {genericSecrets.length === 0 && refMatch[1] === "" && (
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                    <div className="px-2 py-1.5 text-meta text-muted-foreground">
                       No secrets yet. Create one on the Secrets page.
                     </div>
                   )}
@@ -89,7 +89,7 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
                 onChange={(e) => updateRow(index, { value: e.target.value })}
                 placeholder="value"
                 aria-label="Variable value"
-                className="flex-1 font-mono text-xs"
+                className="flex-1 font-mono text-meta"
               />
             )}
             <Select
@@ -100,7 +100,7 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
                 })
               }
             >
-              <SelectTrigger aria-label="Value source" className="w-[110px] flex-none text-xs">
+              <SelectTrigger aria-label="Value source" className="w-[110px] flex-none text-meta">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -112,7 +112,7 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 flex-none hover:bg-danger-bg hover:text-danger"
+              className="flex-none hover:bg-danger-bg hover:text-danger"
               onClick={() => removeRow(index)}
               aria-label="Remove variable"
             >
@@ -124,7 +124,7 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
       <button
         type="button"
         onClick={addRow}
-        className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong px-3 py-2 text-[12.5px] font-medium text-foreground/80 transition-colors hover:bg-muted/30"
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-border-strong px-3 py-2 text-meta font-medium text-foreground/80 transition-colors hover:bg-muted/30"
       >
         <Plus className="size-3.5" />
         Add variable

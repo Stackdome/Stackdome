@@ -69,6 +69,18 @@ func (s *stackReleaseStore) Create(ctx context.Context, release *models.StackRel
 			return errors.GeneralError("failed to create release: %s", err.Error())
 		}
 
+		// Same transaction as the insert: the tally the stacks list draws from
+		// cannot drift from the releases that produced it. It outlives the
+		// release GC, which is the whole reason it is not a COUNT(*).
+		if err := tx.Exec(`
+INSERT INTO stack_deploy_daily (stack_id, day, deploy_count)
+VALUES (?, (? AT TIME ZONE 'UTC')::date, 1)
+ON CONFLICT (stack_id, day) DO UPDATE
+SET deploy_count = stack_deploy_daily.deploy_count + 1
+`, release.StackID, release.CreatedAt).Error; err != nil {
+			return errors.GeneralError("failed to record deploy tally: %s", err.Error())
+		}
+
 		result = release
 		return nil
 	}); err != nil {
@@ -425,4 +437,51 @@ func (s *stackReleaseStore) AppendImageDigests(ctx context.Context, id string, d
 		return errors.GeneralError("failed to append image digests: %s", result.Error.Error())
 	}
 	return nil
+}
+
+// GetDeployHistory returns `days` days of deploy counts per stack, oldest
+// first, with zero-filled gaps.
+//
+// The zero-filling happens here rather than in the caller because the shape the
+// UI needs is a fixed-length series: a sparse map would make every consumer
+// rebuild the same calendar, and one of them would get the timezone wrong.
+func (s *stackReleaseStore) GetDeployHistory(ctx context.Context, stackIDs []string, days int) (map[string][]int, *errors.ServiceError) {
+	if len(stackIDs) == 0 || days <= 0 {
+		return map[string][]int{}, nil
+	}
+
+	// UTC throughout: the tally is written against a UTC date, so the window
+	// has to be measured the same way or the newest bar lands in the wrong slot
+	// for anyone east of Greenwich.
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	from := today.AddDate(0, 0, -(days - 1))
+
+	var rows []models.StackDeployDaily
+	if err := s.sessionFactory.New(ctx).
+		Model(&models.StackDeployDaily{}).
+		Where("stack_id IN ? AND day >= ?", stackIDs, from).
+		Find(&rows).Error; err != nil {
+		return nil, errors.GeneralError("failed to list deploy history: %s", err.Error())
+	}
+
+	history := make(map[string][]int, len(rows))
+	for _, row := range rows {
+		// Rebuild the day from its calendar components rather than converting
+		// the scanned value's zone. A DATE comes back as midnight in whatever
+		// zone the driver picked, and `.UTC()` on midnight+0530 lands on the
+		// PREVIOUS day — every bar would be off by one east of Greenwich.
+		day := time.Date(row.Day.Year(), row.Day.Month(), row.Day.Day(), 0, 0, 0, 0, time.UTC)
+		offset := int(day.Sub(from).Hours() / 24)
+		if offset < 0 || offset >= days {
+			continue
+		}
+		series, ok := history[row.StackID]
+		if !ok {
+			series = make([]int, days)
+			history[row.StackID] = series
+		}
+		series[offset] = row.DeployCount
+	}
+
+	return history, nil
 }

@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { SheetHost } from "@/test-support/sheet-host";
 
 vi.mock("@/api/preview-configs", () => ({
   getPreviewConfig: vi.fn(),
@@ -76,9 +77,11 @@ function mockEnvs(envs: PreviewStack[], overrides: Partial<ReturnType<typeof use
 function renderPage() {
   return render(
     <MemoryRouter initialEntries={["/previews/c1"]}>
-      <Routes>
-        <Route path="/previews/:configId" element={<PreviewConfigDetailPage />} />
-      </Routes>
+      <SheetHost>
+        <Routes>
+          <Route path="/previews/:configId" element={<PreviewConfigDetailPage />} />
+        </Routes>
+      </SheetHost>
     </MemoryRouter>,
   );
 }

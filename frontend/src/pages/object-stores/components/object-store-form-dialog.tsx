@@ -212,14 +212,14 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
         </DialogHeader>
 
         {unsupportedEdit ? (
-          <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
+          <div className="rounded-md border border-danger-border bg-danger-bg px-3 py-2 text-body text-danger">
             Editing Azure/GCS stores is not yet supported in the UI. Please delete and re-create the store.
           </div>
         ) : (
           <div className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="os-name">
-                Name <span className="text-danger">*</span>
+                Name <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
               </Label>
               <Input
                 id="os-name"
@@ -231,12 +231,12 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 placeholder="minio-local"
                 disabled={!!editing}
               />
-              {errors.name && <p className="text-xs text-danger">{errors.name}</p>}
+              {errors.name && <p className="text-meta text-danger">{errors.name}</p>}
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="os-destination">
-                Destination path <span className="text-danger">*</span>
+                Destination path <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
               </Label>
               <Input
                 id="os-destination"
@@ -249,13 +249,13 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 className="font-mono"
               />
               {errors.destinationPath && (
-                <p className="text-xs text-danger">{errors.destinationPath}</p>
+                <p className="text-meta text-danger">{errors.destinationPath}</p>
               )}
             </div>
 
             <div className="grid gap-2">
               <Label htmlFor="os-retention">
-                Retention <span className="text-danger">*</span>
+                Retention <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
               </Label>
               <Input
                 id="os-retention"
@@ -267,7 +267,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 placeholder="7d"
               />
               {errors.retentionPolicy && (
-                <p className="text-xs text-danger">{errors.retentionPolicy}</p>
+                <p className="text-meta text-danger">{errors.retentionPolicy}</p>
               )}
             </div>
 
@@ -287,7 +287,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-2">
                     <Label htmlFor="os-region">
-                      Region <span className="text-danger">*</span>
+                      Region <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
                     </Label>
                     <Input
                       id="os-region"
@@ -321,7 +321,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 </div>
 
                 <SecretKeyPicker
-                  label={<>Access Key ID <span className="text-danger">*</span></>}
+                  label={<>Access Key ID <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the access key id."
                   value={values.s3?.accessKeyId ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -337,7 +337,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 />
 
                 <SecretKeyPicker
-                  label={<>Secret Access Key <span className="text-danger">*</span></>}
+                  label={<>Secret Access Key <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the secret access key."
                   value={values.s3?.secretAccessKey ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -379,7 +379,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
                 </div>
 
                 <SecretKeyPicker
-                  label={<>Connection string <span className="text-danger">*</span></>}
+                  label={<>Connection string <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the Azure connection string."
                   value={values.azure?.connectionString ?? { secret_id: "", key: "" }}
                   onChange={(next) => {
@@ -400,7 +400,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
 
               <TabsContent value="gcs" className="flex flex-col gap-4">
                 <SecretKeyPicker
-                  label={<>Service account credentials <span className="text-danger">*</span></>}
+                  label={<>Service account credentials <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></>}
                   helpText="A Generic secret and the key inside it that holds the GCS service account JSON."
                   value={
                     values.gcs?.serviceAccountCredentials ?? { secret_id: "", key: "" }
@@ -428,7 +428,7 @@ export function ObjectStoreFormDialog({ open, onOpenChange, editing, onSaved }: 
         )}
 
         <DialogFooter>
-          <Button
+          <Button shape="flat"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={submitting}

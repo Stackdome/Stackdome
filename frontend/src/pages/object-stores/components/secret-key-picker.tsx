@@ -79,7 +79,7 @@ export function SecretKeyPicker({
   return (
     <div className="flex flex-col gap-2">
       <Label>{label}</Label>
-      {helpText && <p className="text-xs text-muted-foreground">{helpText}</p>}
+      {helpText && <p className="text-meta text-muted-foreground">{helpText}</p>}
 
       <div className="grid grid-cols-2 gap-2">
         <Select
@@ -97,7 +97,7 @@ export function SecretKeyPicker({
               </SelectItem>
             ))}
             {!loading && secrets.length === 0 && (
-              <div className="px-3 py-2 text-xs text-muted-foreground">
+              <div className="px-3 py-2 text-meta text-muted-foreground">
                 No Generic secrets — create one on the Secrets page.
               </div>
             )}
@@ -119,7 +119,7 @@ export function SecretKeyPicker({
               </SelectItem>
             ))}
             {selectedSecret && availableKeys.length === 0 && (
-              <div className="px-3 py-2 text-xs text-muted-foreground">
+              <div className="px-3 py-2 text-meta text-muted-foreground">
                 Selected secret has no keys.
               </div>
             )}
@@ -128,15 +128,15 @@ export function SecretKeyPicker({
       </div>
 
       {fetchError ? (
-        <p className="text-xs text-danger">{fetchError}</p>
+        <p className="text-meta text-danger">{fetchError}</p>
       ) : error ? (
-        <p className="text-xs text-danger">{error}</p>
+        <p className="text-meta text-danger">{error}</p>
       ) : keyMissing ? (
-        <p className="text-xs text-danger">
+        <p className="text-meta text-danger">
           The selected key is no longer present in the chosen secret.
         </p>
       ) : expectedKeyHint && selectedSecret && !availableKeys.includes(expectedKeyHint) ? (
-        <p className="text-xs text-warn">
+        <p className="text-meta text-warn">
           Tip: typically named <code className="font-mono">{expectedKeyHint}</code>. The selected secret doesn't have that key.
         </p>
       ) : null}

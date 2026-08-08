@@ -146,7 +146,7 @@ export function BackupConfigFields({
                 to="/object-stores"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-brand hover:underline"
+                className="font-medium text-foreground underline-offset-2 hover:underline"
               >
                 Create one
               </Link>{" "}
@@ -222,7 +222,7 @@ export function BackupConfigFields({
           </Select>
 
           {parts.frequency === "hourly" && (
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <label className="flex items-center gap-2 text-body text-muted-foreground">
               at minute
               <Input
                 type="number"
@@ -263,7 +263,7 @@ export function BackupConfigFields({
                 </Select>
               )}
               {parts.frequency === "monthly" && (
-                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                <label className="flex items-center gap-2 text-body text-muted-foreground">
                   day
                   <Input
                     type="number"
@@ -281,7 +281,7 @@ export function BackupConfigFields({
                   />
                 </label>
               )}
-              <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <label className="flex items-center gap-2 text-body text-muted-foreground">
                 at
                 <Input
                   type="time"

@@ -37,7 +37,7 @@ function ReadField({
 }) {
   return (
     <FieldShell label={label}>
-      <div className="text-sm text-foreground">{children}</div>
+      <div className="text-body text-foreground">{children}</div>
     </FieldShell>
   );
 }
@@ -112,7 +112,7 @@ export default function PostgresDetailPage() {
   if (error) {
     return (
       <div className="p-6">
-        <p className="text-sm text-danger">{error}</p>
+        <p className="text-body text-danger">{error}</p>
       </div>
     );
   }
@@ -226,7 +226,7 @@ export default function PostgresDetailPage() {
               <ReadField label="Plan">
                 {planLabel}
                 {resourcesLine && (
-                  <span className="block font-mono text-xs text-muted-foreground">
+                  <span className="block font-mono text-meta text-muted-foreground">
                     {resourcesLine}
                   </span>
                 )}
@@ -250,7 +250,7 @@ export default function PostgresDetailPage() {
             </div>
 
             <div className="border-t border-border pt-5">
-              <h3 className="text-sm font-semibold text-foreground mb-3">
+              <h3 className="text-body font-semibold text-foreground mb-3">
                 Backups
               </h3>
               <div className="flex flex-col gap-5">
@@ -269,7 +269,7 @@ export default function PostgresDetailPage() {
                             · UTC
                           </span>
                         </span>
-                        <code className="select-all font-mono text-xs text-muted-foreground/70">
+                        <code className="select-all font-mono text-meta text-muted-foreground/70">
                           {b.schedule}
                         </code>
                       </span>
@@ -296,9 +296,9 @@ export default function PostgresDetailPage() {
                 )}
 
                 {backupsError ? (
-                  <div className="text-sm text-danger">{backupsError}</div>
+                  <div className="text-body text-danger">{backupsError}</div>
                 ) : backupsLoading && backups.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Loading…</div>
+                  <div className="text-body text-muted-foreground">Loading…</div>
                 ) : backups.length === 0 ? (
                   hasDestination ? (
                     <EmptyState
@@ -310,7 +310,7 @@ export default function PostgresDetailPage() {
                   <>
                     <BackupsList backups={backups} />
                     {backupsPageCount > 1 && (
-                      <div className="flex items-center justify-between border-t border-border pt-3 text-sm text-muted-foreground">
+                      <div className="flex items-center justify-between border-t border-border pt-3 text-body text-muted-foreground">
                         <span className="tabular-nums">
                           {backupsPage * backupsPageSize + 1}–
                           {Math.min(

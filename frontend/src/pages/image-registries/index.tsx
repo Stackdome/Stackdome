@@ -118,7 +118,7 @@ export default function ImageRegistriesPage() {
 
       {credentials.length > 0 && (
         <>
-          {error && <p className="text-sm text-destructive">Couldn&apos;t refresh registries: {error}</p>}
+          {error && <p className="text-body text-destructive">Couldn&apos;t refresh registries: {error}</p>}
           <Panel title="Connected registries" count={credentials.length}>
             <div className="divide-y divide-border">
               {credentials.map((credential) => (

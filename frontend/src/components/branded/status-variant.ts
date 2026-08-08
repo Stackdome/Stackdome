@@ -17,11 +17,11 @@ export type StatusVariant = "ready" | "pending" | "error" | "info" | "neutral";
  * than hardcoding words per component.
  */
 export const statusVariantLabel: Record<StatusVariant, string> = {
-  ready: "ready",
-  pending: "pending",
-  error: "failed",
-  info: "unknown",
-  neutral: "unknown",
+  ready: "Ready",
+  pending: "Pending",
+  error: "Failed",
+  info: "Unknown",
+  neutral: "Unknown",
 };
 
 /**
@@ -50,6 +50,7 @@ export function previewStatusVariant(phase?: string | null): StatusVariant {
 
 export type StatusDomain =
   | "stack"
+  | "stack_rollup"
   | "resource"
   | "release"
   | "health"
@@ -80,6 +81,30 @@ export function statusVariant(domain: StatusDomain, state?: string | null): Stat
         case "degraded":
         case "error":
           return "error";
+        default:
+          return "info";
+      }
+
+    // The stacks list rolls lifecycle and release health into ONE word per
+    // stack, so the word it shows is not any single backend enum. That rollup
+    // is still a closed vocabulary, and it gets a domain of its own rather than
+    // being smuggled through `health` — which has no word for "never deployed"
+    // and would colour it blue-for-unknown.
+    //
+    // Produced by stackRollupState() in pages/stacks/components/list/status.ts.
+    case "stack_rollup":
+      switch (s) {
+        case "deleting":
+        case "deploying":
+          return "pending";
+        case "healthy":
+          return "ready";
+        case "degraded":
+        case "unavailable":
+        case "failed":
+          return "error";
+        case "notdeployed":
+          return "neutral";
         default:
           return "info";
       }

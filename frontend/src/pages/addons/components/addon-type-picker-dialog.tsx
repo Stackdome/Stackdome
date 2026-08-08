@@ -66,9 +66,9 @@ export function AddonTypePickerDialog({
               disabled={!option.available}
               onClick={() => option.available && onSelect(option.id as AddonType)}
               className={cn(
-                "text-left rounded-md border border-border bg-card p-4 transition-colors",
+                "text-left rounded-md border border-border bg-card p-4 transition-colors focus-ring-edge",
                 option.available
-                  ? "hover:bg-muted/40 hover:border-brand-border cursor-pointer"
+                  ? "hover:bg-muted/40 hover:border-border-strong cursor-pointer"
                   : "opacity-60 cursor-not-allowed",
               )}
             >
@@ -76,12 +76,12 @@ export function AddonTypePickerDialog({
                 <AddonTypeIcon type={option.id} size={20} />
                 <span className="font-medium text-foreground">{option.name}</span>
                 {!option.available && (
-                  <span className="ml-auto font-mono text-[10.5px] uppercase tracking-[1px] text-muted-foreground">
+                  <span className="ml-auto font-mono text-label text-muted-foreground">
                     Soon
                   </span>
                 )}
               </div>
-              <p className="text-[12.5px] text-muted-foreground leading-relaxed">
+              <p className="text-meta text-muted-foreground leading-relaxed">
                 {option.description}
               </p>
             </button>

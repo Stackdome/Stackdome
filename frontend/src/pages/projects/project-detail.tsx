@@ -95,7 +95,7 @@ export default function ProjectDetailPage() {
       <StackdomeMark size={28} />
       {project.name}
       {project.default_project && (
-        <Badge variant="secondary" className="text-xs">default</Badge>
+        <Badge variant="secondary" className="text-meta">default</Badge>
       )}
     </span>
   ) : (
@@ -107,7 +107,7 @@ export default function ProjectDetailPage() {
       {/* Back nav */}
       <Link
         to="/settings/projects"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex items-center gap-1 text-body text-muted-foreground hover:text-foreground transition-colors"
       >
         <ChevronLeft className="size-4" />
         Projects
@@ -135,7 +135,7 @@ export default function ProjectDetailPage() {
       />
 
       {projectError && (
-        <p className="text-sm text-destructive">{projectError}</p>
+        <p className="text-body text-destructive">{projectError}</p>
       )}
 
       {/* Search input — only shown when there are members to search */}
@@ -208,7 +208,6 @@ export default function ProjectDetailPage() {
           icon={<Users className="h-8 w-8" />}
           title="No members match"
           description={`No members found for "${search}".`}
-          dashed={false}
         />
       ) : (
         <div className="rounded-md border">
@@ -233,16 +232,16 @@ export default function ProjectDetailPage() {
                     <TableCell className="p-2">
                       <div className="flex items-center gap-3">
                         <Avatar className="size-7 shrink-0">
-                          <AvatarFallback className="text-[10px]">
+                          <AvatarFallback className="text-label">
                             {getInitials(name, email)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="text-sm font-medium leading-tight">
+                          <p className="text-body font-medium leading-tight">
                             {name ?? email ?? m.user_id}
                           </p>
                           {name && email && (
-                            <p className="text-xs text-muted-foreground">{email}</p>
+                            <p className="text-meta text-muted-foreground">{email}</p>
                           )}
                         </div>
                       </div>
@@ -251,17 +250,17 @@ export default function ProjectDetailPage() {
                       {orgRole ? (
                         <Badge variant="outline">{orgRole}</Badge>
                       ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
+                        <span className="text-muted-foreground text-body">—</span>
                       )}
                     </TableCell>
                     <TableCell className="p-2">
                       {projectRole ? (
                         <Badge variant="secondary">{projectRole}</Badge>
                       ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
+                        <span className="text-muted-foreground text-body">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="p-2 text-sm text-muted-foreground">
+                    <TableCell className="p-2 text-body text-muted-foreground">
                       {m.created_at
                         ? format(new Date(m.created_at), "MMM d, yyyy")
                         : "—"}

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Loader2 } from "lucide-react";
 import { useSignup } from "../hooks/use-signup";
 import { inviteAcceptSchema } from "../types";
@@ -11,6 +12,8 @@ import { setAuthSession } from "@/lib/common";
 import { isErrorStatus, getErrorMessage } from "@/api/client";
 import { FieldLabel } from "@/pages/auth/components/auth-shell";
 import { GitHubSignInButton } from "@/components/auth/github-sign-in-button";
+import { AlertBanner } from "@/components/branded/alert-banner";
+import { FieldError } from "@/components/branded/field-error";
 
 type Phase = "form" | "accepting" | "accepted" | "existing-user";
 
@@ -88,8 +91,8 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
   if (phase === "accepted") {
     return (
       <div className="space-y-4 text-center py-8">
-        <p className="text-2xl font-semibold">You&apos;re in!</p>
-        <p className="text-sm text-muted-foreground">Taking you to Stackdome…</p>
+        <p className="text-head font-semibold">You&apos;re in.</p>
+        <p className="text-body text-muted-foreground">Taking you to Stackdome…</p>
       </div>
     );
   }
@@ -97,9 +100,9 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
   if (phase === "existing-user") {
     return (
       <div className="space-y-4 py-8">
-        <p className="text-sm text-muted-foreground">
+        <p className="text-body text-muted-foreground">
           You already have an account with this email address.{" "}
-          <Link to="/sign-in" className="text-foreground underline underline-offset-4 decoration-[1.5px] decoration-brand/80">
+          <Link to="/sign-in" className="text-foreground underline underline-offset-4">
             Log in
           </Link>{" "}
           to accept this invite.
@@ -113,11 +116,7 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
       <GitHubSignInButton inviteToken={token} />
 
       <form onSubmit={handleSubmit} className="space-y-3">
-        {serverError && (
-          <div className="rounded-2xl border border-danger-border bg-danger-bg px-4 py-2 text-sm text-danger">
-            {serverError}
-          </div>
-        )}
+        {serverError && <AlertBanner>{serverError}</AlertBanner>}
 
         <div className="space-y-2">
           <FieldLabel htmlFor="invite-name">Full name</FieldLabel>
@@ -128,9 +127,10 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
             placeholder="Your name"
             value={formData.name}
             onChange={handleChange}
+            disabled={phase === "accepting"}
             aria-invalid={!!errors.name}
           />
-          {errors.name && <p className="text-xs text-danger">{errors.name}</p>}
+          <FieldError>{errors.name}</FieldError>
         </div>
 
         <div className="space-y-2">
@@ -145,31 +145,32 @@ export function InviteAcceptForm({ token }: InviteAcceptFormProps) {
             placeholder="you@company.com"
             value={formData.email}
             onChange={handleChange}
+            disabled={phase === "accepting"}
             aria-invalid={!!errors.email}
           />
-          {errors.email && <p className="text-xs text-danger">{errors.email}</p>}
+          <FieldError>{errors.email}</FieldError>
         </div>
 
         <div className="space-y-2">
           <FieldLabel htmlFor="invite-password" hint="min. 8 characters">
             Password
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="invite-password"
             name="password"
-            type="password"
             autoComplete="new-password"
             placeholder="••••••••••••"
             value={formData.password}
             onChange={handleChange}
+            disabled={phase === "accepting"}
             aria-invalid={!!errors.password}
           />
-          {errors.password && <p className="text-xs text-danger">{errors.password}</p>}
+          <FieldError>{errors.password}</FieldError>
         </div>
 
         <Button
           type="submit"
-          variant="outline"
+          variant="default"
           className="w-full"
           disabled={phase === "accepting"}
         >

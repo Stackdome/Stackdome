@@ -111,21 +111,21 @@ export default function ProjectsPage() {
                     <TableCell className="p-2">
                       <div className="flex items-center gap-2">
                         <StackdomeMark size={18} />
-                        <span className="font-medium text-sm">{project.name}</span>
+                        <span className="font-medium text-body">{project.name}</span>
                         {project.default_project && (
-                          <Badge variant="secondary" className="text-[10px]">default</Badge>
+                          <Badge variant="secondary" className="text-label">default</Badge>
                         )}
                       </div>
                     </TableCell>
                     <TableCell className="p-2">
                       <Link
                         to={`/settings/projects/${encodeURIComponent(project.name)}`}
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-body text-muted-foreground hover:text-foreground transition-colors"
                       >
                         Manage members
                       </Link>
                     </TableCell>
-                    <TableCell className="p-2 text-sm text-muted-foreground">
+                    <TableCell className="p-2 text-body text-muted-foreground">
                       {project.created_at
                         ? format(new Date(project.created_at), "MMM d, yyyy")
                         : "—"}

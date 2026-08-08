@@ -82,7 +82,7 @@ export function LiveReleaseBody({ release, stack, logContext, detail, prevReleas
     phase: s.state ?? "",
     replicas: replicaLabel(s.available_replicas, s.replicas),
     msg: s.message,
-    tag: recoveredNames.has(name) ? "RECOVERED" : undefined,
+    tag: recoveredNames.has(name) ? "Recovered" : undefined,
     failure: failingByName.get(name),
     source: resourceSource(sourceByName.get(name)),
   }));
@@ -111,7 +111,7 @@ export function LiveReleaseBody({ release, stack, logContext, detail, prevReleas
       </ReleaseBodyTabs>
 
       {recovered.length > 0 && (
-        <div className="mt-4 rounded-md border border-warn-border bg-warn-bg px-3.5 py-2.5 text-[12.5px] text-fg-muted">
+        <div className="mt-4 rounded-md border border-warn-border bg-warn-bg px-3.5 py-2.5 text-meta text-fg-muted">
           {recovered.map((r) => (
             <div key={r.name}>
               <span className="font-medium text-foreground">{r.name}</span> recovered

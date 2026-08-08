@@ -24,17 +24,17 @@ export function RegistryRow({
           <ProviderLogo providerId={providerId} className="h-6 w-6" />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-medium text-foreground">{providerLabel}</p>
-          <p className="truncate font-mono text-[11.5px] text-fg-muted">{credential.host}</p>
+          <p className="truncate text-name font-medium text-foreground">{providerLabel}</p>
+          <p className="truncate font-mono text-label text-fg-muted">{credential.host}</p>
         </div>
       </div>
 
       <div className="flex-1 min-w-0">
-        <span className="truncate text-[11.5px] text-muted-foreground">{credential.username}</span>
+        <span className="truncate text-label text-muted-foreground">{credential.username}</span>
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="inline-flex rounded-full border border-border bg-card px-2 py-1 text-xs text-fg-muted">
+        <span className="inline-flex rounded-full border border-border bg-card px-2 py-1 text-meta text-fg-muted">
           {PURPOSE_LABELS[credential.purpose ?? PURPOSE_BOTH]}
         </span>
       </div>

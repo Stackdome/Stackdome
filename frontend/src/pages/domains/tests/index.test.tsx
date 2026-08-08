@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { SheetHost } from "@/test-support/sheet-host";
 
 import DomainsPage from "../index";
 import type { Organization } from "@/api/organizations";
@@ -34,8 +35,10 @@ describe("DomainsPage", () => {
       domains: [{ fqdn: "apps.acme.dev" }],
     });
     render(
-      <MemoryRouter>
-        <DomainsPage />
+      <MemoryRouter initialEntries={["/domains"]}>
+        <SheetHost>
+          <DomainsPage />
+        </SheetHost>
       </MemoryRouter>,
     );
     expect(await screen.findByText("All Domains")).toBeInTheDocument();
@@ -46,8 +49,10 @@ describe("DomainsPage", () => {
   it("keeps Add Domain enabled when no domains exist", async () => {
     getOrganizationMock.mockResolvedValue({ ...baseOrganization, domains: [] });
     render(
-      <MemoryRouter>
-        <DomainsPage />
+      <MemoryRouter initialEntries={["/domains"]}>
+        <SheetHost>
+          <DomainsPage />
+        </SheetHost>
       </MemoryRouter>,
     );
     expect(await screen.findByText("No domain configured")).toBeInTheDocument();

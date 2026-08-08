@@ -838,6 +838,8 @@ var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
 			Return(map[string]*models.StackRelease{"s1": latest}, nil)
 		releaseStore.EXPECT().GetByIDs(ctx, []string{"r-live"}).
 			Return(map[string]*models.StackRelease{"r-live": liveRel}, nil)
+		releaseStore.EXPECT().GetDeployHistory(ctx, []string{"s1", "s2"}, models.DeployHistoryDays).
+			Return(map[string][]int{"s1": {0, 2, 1}}, nil)
 
 		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
 		Expect(serr).To(BeNil())
@@ -845,6 +847,23 @@ var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
 		Expect(refs["s1"].Converged.ID).To(Equal("r-live"))
 		Expect(refs["s2"].Latest).To(BeNil())
 		Expect(refs["s2"].Converged).To(BeNil())
+	})
+
+	It("attaches deploy history, and leaves it nil for a stack that never deployed", func() {
+		stacks := []*models.Stack{{ID: "s1"}, {ID: "s2"}}
+		releaseStore.EXPECT().GetLatestByStackIDs(ctx, []string{"s1", "s2"}).
+			Return(map[string]*models.StackRelease{}, nil)
+		releaseStore.EXPECT().GetByIDs(ctx, []string{}).
+			Return(map[string]*models.StackRelease{}, nil)
+		releaseStore.EXPECT().GetDeployHistory(ctx, []string{"s1", "s2"}, models.DeployHistoryDays).
+			Return(map[string][]int{"s1": {1, 0, 3}}, nil)
+
+		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
+		Expect(serr).To(BeNil())
+		Expect(refs["s1"].DeployHistory).To(Equal([]int{1, 0, 3}))
+		// Nil, not an empty slice: "never deployed" and "deployed, then quiet"
+		// are different facts and the card draws them differently.
+		Expect(refs["s2"].DeployHistory).To(BeNil())
 	})
 
 	It("reuses latest as converged when already converged to it", func() {
@@ -856,6 +875,8 @@ var _ = Describe("stackReleaseService.InternalGetReleaseRefs", func() {
 			Return(map[string]*models.StackRelease{"s1": latest}, nil)
 		releaseStore.EXPECT().GetByIDs(ctx, []string{}).
 			Return(map[string]*models.StackRelease{}, nil)
+		releaseStore.EXPECT().GetDeployHistory(ctx, []string{"s1"}, models.DeployHistoryDays).
+			Return(map[string][]int{}, nil)
 
 		refs, serr := svc.InternalGetReleaseRefs(ctx, stacks)
 		Expect(serr).To(BeNil())

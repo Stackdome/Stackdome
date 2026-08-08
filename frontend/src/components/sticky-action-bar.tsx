@@ -92,17 +92,17 @@ export default function StickyActionBar({
     >
       {dot}
       <span
-        className={`font-mono text-[11px] font-bold uppercase tracking-[1.5px] ${tone === "clean" ? "text-success" : "text-brand"}`}
+        className={`font-mono text-label font-semibold  ${tone === "clean" ? "text-success" : "text-brand"}`}
       >
         {leadLabel}
       </span>
       {segments.map((s, i) => (
         <span
           key={i}
-          className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground"
+          className="font-mono text-label text-muted-foreground"
         >
           <span className="mx-1.5 text-muted-foreground/60">·</span>
-          <span className="font-bold text-foreground">{s.num}</span>{" "}
+          <span className="font-semibold text-foreground">{s.num}</span>{" "}
           <span>{s.label}</span>
         </span>
       ))}
@@ -110,8 +110,7 @@ export default function StickyActionBar({
       {secondary && (
         <Button
           type="button"
-          variant="railGhost"
-          size="rail"
+          variant="ghost"
           onClick={() => void handleSecondaryClick()}
           disabled={primary?.isLoading}
         >
@@ -121,22 +120,13 @@ export default function StickyActionBar({
       {primary && (
         <Button
           type="button"
-          variant="railPrimary"
-          size="rail"
+          variant="secondary"
           onClick={primary.onClick}
-          disabled={primary.isLoading}
+          loading={primary.isLoading}
+          loadingText={primary.loadingLabel ?? primary.label}
         >
-          {primary.isLoading ? (
-            <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {primary.loadingLabel ?? primary.label}
-            </>
-          ) : (
-            <>
-              {primary.icon}
-              {primary.label}
-            </>
-          )}
+          {primary.icon}
+          {primary.label}
         </Button>
       )}
     </div>

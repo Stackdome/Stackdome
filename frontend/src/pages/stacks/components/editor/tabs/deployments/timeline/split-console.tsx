@@ -61,8 +61,8 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
       <div className="flex items-stretch">
         <div className="w-64 flex-none border-r border-border px-2.5 pb-3.5 pt-3">
           <div className="flex items-baseline px-2 pb-2.5">
-            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-fg-muted">Resources</span>
-            <span className="ml-auto font-mono text-[10px] text-fg-muted">{readyCount}/{rows.length} ready</span>
+            <span className="font-mono text-label text-fg-muted">Resources</span>
+            <span className="ml-auto font-mono text-label text-fg-muted">{readyCount}/{rows.length} ready</span>
           </div>
           <button
             type="button"
@@ -75,8 +75,8 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
             )}
           >
             <span className="h-[7px] w-[7px] flex-none rounded-full border-[1.5px] border-fg-muted" />
-            <span className="whitespace-nowrap font-mono text-[12px] text-fg-2">all resources</span>
-            <span className="ml-auto font-mono text-[10.5px] text-fg-muted">{rows.length}</span>
+            <span className="whitespace-nowrap font-mono text-meta text-fg-2">all resources</span>
+            <span className="ml-auto font-mono text-label text-fg-muted">{rows.length}</span>
           </button>
           {rows.map((vm) => {
             const tone = phaseTone(vm.phase);
@@ -87,12 +87,12 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                 onClick={() => setSelected(vm.name)}
                 className={cn(
                   "mt-0.5 flex w-full items-center gap-2 rounded border px-2.5 py-[7px] text-left hover:bg-muted",
-                  selected === vm.name ? "border-brand bg-background" : "border-transparent",
+                  selected === vm.name ? "border-border-strong bg-foreground/[0.06]" : "border-transparent",
                 )}
               >
                 <span className={cn("h-[7px] w-[7px] flex-none rounded-full", toneDotClass(tone))} />
-                <span className="min-w-0 truncate font-mono text-[12px] font-medium text-foreground">{vm.name}</span>
-                <span className={cn("ml-auto flex-none rounded-full border px-[7px] py-px font-mono text-[9px] font-medium uppercase tracking-[0.06em]", tonePillClass(tone))}>
+                <span className="min-w-0 truncate font-mono text-meta font-medium text-foreground">{vm.name}</span>
+                <span className={cn("ml-auto flex-none rounded-full border px-[7px] py-px font-mono text-[9px] font-medium", tonePillClass(tone))}>
                   {vm.phase}
                 </span>
               </button>
@@ -102,10 +102,10 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
 
         <div className="flex min-w-0 flex-1 flex-col">
           <div className="flex items-center gap-2 border-b border-border px-4 py-3">
-            <span className="font-mono text-[10px] uppercase tracking-[1.2px] text-fg-muted">Activity</span>
-            <span className="whitespace-nowrap font-mono text-[10.5px] text-fg-2">· {selectedRow ? selectedRow.name : "all resources"}</span>
+            <span className="font-mono text-label text-fg-muted">Activity</span>
+            <span className="whitespace-nowrap font-mono text-label text-fg-2">· {selectedRow ? selectedRow.name : "all resources"}</span>
             {streaming && (
-              <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-wider text-success">
+              <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-label text-success">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> live
               </span>
             )}
@@ -115,19 +115,19 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
             <div className="border-b border-border bg-muted px-4 py-3">
               <div className="flex items-center gap-2.5">
                 <span className={cn("h-[7px] w-[7px] flex-none rounded-full", toneDotClass(phaseTone(selectedRow.phase)))} />
-                <span className="font-mono text-[12.5px] font-semibold text-foreground">{selectedRow.name}</span>
-                <span className={cn("text-[12px] font-medium", toneTextClass(phaseTone(selectedRow.phase)))}>{selectedRow.phase}</span>
-                {selectedRow.replicas && <span className="font-mono text-[11px] text-fg-muted">{selectedRow.replicas}</span>}
-                {selectedRow.tag && <span className="rounded border border-warn px-1.5 py-0.5 font-mono text-[9px] uppercase text-warn">{selectedRow.tag}</span>}
-                {failure?.exitCode != null && <span className="font-mono text-[11px] text-fg-muted">exit {failure.exitCode}</span>}
+                <span className="font-mono text-meta font-semibold text-foreground">{selectedRow.name}</span>
+                <span className={cn("text-meta font-medium", toneTextClass(phaseTone(selectedRow.phase)))}>{selectedRow.phase}</span>
+                {selectedRow.replicas && <span className="font-mono text-label text-fg-muted">{selectedRow.replicas}</span>}
+                {selectedRow.tag && <span className="rounded border border-warn px-1.5 py-0.5 font-mono text-[9px] text-warn">{selectedRow.tag}</span>}
+                {failure?.exitCode != null && <span className="font-mono text-label text-fg-muted">exit {failure.exitCode}</span>}
                 {failure?.restartCount != null && (
-                  <span className="font-mono text-[11px] text-fg-muted">{failure.restartCount} {failure.restartCount === 1 ? "restart" : "restarts"}</span>
+                  <span className="font-mono text-label text-fg-muted">{failure.restartCount} {failure.restartCount === 1 ? "restart" : "restarts"}</span>
                 )}
                 {selectedRow.source && (
-                  <span className="ml-auto min-w-0 truncate font-mono text-[10.5px] text-fg-muted">▢ {selectedRow.source.label}</span>
+                  <span className="ml-auto min-w-0 truncate font-mono text-label text-fg-muted">▢ {selectedRow.source.label}</span>
                 )}
               </div>
-              {detailMsg && <div className={cn("mt-1.5 font-mono text-[11px] leading-relaxed", failure ? "text-danger" : "text-foreground")}>{detailMsg}</div>}
+              {detailMsg && <div className={cn("mt-1.5 font-mono text-label leading-relaxed", failure ? "text-danger" : "text-foreground")}>{detailMsg}</div>}
               {/* Crash-log snapshot is a one-shot follow=false read — the only log surface
                   that captures a crashing container's output (the Logs tab is live-only). */}
               {logContext && isRuntimeCrash && failure && <CrashLog ctx={logContext} name={failure.name} />}
@@ -136,18 +136,18 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
 
           <div className="py-1.5">
             {visible.length === 0 && (
-              <div className="px-4 py-2 text-[12.5px] text-fg-muted">No activity yet</div>
+              <div className="px-4 py-2 text-meta text-fg-muted">No activity yet</div>
             )}
             {visible.map((e) => {
               const lv = levelGlyph[e.level ?? DEFAULT_LEVEL] ?? levelGlyph[DEFAULT_LEVEL];
               return (
                 <div key={e.sequence} className="flex items-start gap-2.5 px-4 py-[5px] hover:bg-muted">
-                  <span className="w-14 flex-none pt-0.5 font-mono text-[10.5px] tabular-nums text-fg-muted">
+                  <span className="w-14 flex-none pt-0.5 font-mono text-label tabular-nums text-fg-muted">
                     {e.occurred_at ? new Date(e.occurred_at).toLocaleTimeString() : ""}
                   </span>
-                  <span className={cn("w-3 flex-none text-center font-mono text-[11px]", lv.text)}>{lv.glyph}</span>
-                  <span className="w-[90px] flex-none truncate pt-0.5 font-mono text-[10.5px] text-fg-muted">{e.resource_name || "release"}</span>
-                  <span className="min-w-0 flex-1 break-words text-[12.5px] leading-[1.45] text-fg-2">
+                  <span className={cn("w-3 flex-none text-center font-mono text-label", lv.text)}>{lv.glyph}</span>
+                  <span className="w-[90px] flex-none truncate pt-0.5 font-mono text-label text-fg-muted">{e.resource_name || "release"}</span>
+                  <span className="min-w-0 flex-1 break-words text-meta leading-[1.45] text-fg-2">
                     {compactEventMessage(e)}
                     {(e.links ?? []).map((l, i) => {
                       const buildId = l.target?.[BuildLogsLinkTarget.BuildID];
@@ -155,7 +155,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                         <button
                           key={`${l.kind}-${i}`}
                           type="button"
-                          className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-fg-muted transition-colors hover:text-brand"
+                          className="mt-0.5 flex items-center gap-1 text-label font-medium text-fg-muted transition-colors hover:text-foreground"
                           onClick={() => setBuildLogs({
                             buildId,
                             resourceName: l.target?.[BuildLogsLinkTarget.ResourceName] ?? e.resource_name ?? "",
@@ -166,7 +166,7 @@ export function SplitConsole({ rows, events, streaming, logContext }: SplitConso
                       ) : (
                         <span
                           key={`${l.kind ?? "link"}-${i}`}
-                          className="mt-0.5 flex items-center gap-1 text-[11.5px] font-medium text-fg-muted"
+                          className="mt-0.5 flex items-center gap-1 text-label font-medium text-fg-muted"
                         >
                           {l.label} &rarr;
                         </span>

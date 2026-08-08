@@ -34,6 +34,16 @@ type StackReleaseStore interface {
 	// GetByIDs returns releases keyed by release ID.
 	GetByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError)
 
+	// GetDeployHistory returns the last `days` days of deploy counts for each of
+	// the given stack IDs, oldest first, one entry per day including zeroes, so
+	// the caller never has to reconstruct the calendar. Stacks with no deploys
+	// at all are absent from the map.
+	//
+	// Reads the stack_deploy_daily tally rather than counting releases: the
+	// release GC prunes to the retention limit, so a busy stack would come back
+	// looking quiet.
+	GetDeployHistory(ctx context.Context, stackIDs []string, days int) (map[string][]int, *errors.ServiceError)
+
 	// CAS state transitions. The bool return indicates whether THIS caller won
 	// the compare-and-swap (i.e., the row was in the expected state).
 

@@ -19,15 +19,15 @@ interface PanelProps {
 }
 
 /**
- * Panel composes a section: optional eyebrow header (title + count + amber action link)
+ * Panel composes a section: optional eyebrow header (title + count + ink action link)
  * with a hairline divider above the body content.
  */
 export function Panel({ title, count, action, className, bodyClassName, bare, tone = "default", invalid, children }: PanelProps) {
   return (
     <section
       className={cn(
-        !bare && "rounded-lg border bg-card",
-        !bare && (invalid ? "border-danger-border" : "border-border"),
+        !bare && "rounded-[12px] border bg-secondary",
+        !bare && (invalid ? "border-danger-border" : "border-border-strong"),
         className,
       )}
     >
@@ -38,10 +38,10 @@ export function Panel({ title, count, action, className, bodyClassName, bare, to
           bare && "px-0",
         )}>
           {tone === "soft" ? (
-            <span className="text-[13px] font-semibold text-foreground">
+            <span className="text-body font-semibold text-foreground">
               {title}
               {count !== undefined && count !== null && (
-                <span className="ml-2 text-[13px] font-normal text-muted-foreground">· {count}</span>
+                <span className="ml-2 text-body font-normal text-muted-foreground">· {count}</span>
               )}
             </span>
           ) : (
@@ -54,11 +54,11 @@ export function Panel({ title, count, action, className, bodyClassName, bare, to
           )}
           {action && (
             tone === "soft" ? (
-              <span className="text-[12.5px] text-brand hover:text-brand-press transition-colors">
+              <span className="text-meta text-fg-2 hover:text-foreground transition-colors">
                 {action}
               </span>
             ) : (
-              <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-brand hover:text-brand-darker transition-colors">
+              <span className="font-mono text-label text-fg-2 hover:text-foreground transition-colors">
                 {action}
               </span>
             )

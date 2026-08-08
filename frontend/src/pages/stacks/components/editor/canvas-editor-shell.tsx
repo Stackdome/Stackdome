@@ -204,7 +204,7 @@ export function CanvasEditorShell({
   const actionsMenu = !isNewStack && (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="icon" aria-label="Stack actions">
+        <Button shape="flat" type="button" variant="ghost" size="icon" aria-label="Stack actions">
           <MoreHorizontal className="size-4" />
         </Button>
       </DropdownMenuTrigger>
@@ -256,7 +256,7 @@ export function CanvasEditorShell({
               className="flex h-11 items-center gap-3 border-b border-border px-4 transition-[margin] duration-[260ms]"
               style={{ marginRight: effectiveDrawerInset }}
             >
-              <span className="truncate text-[14px] font-medium text-foreground">{stackName}</span>
+              <span className="truncate text-name font-medium text-foreground">{stackName}</span>
               {pillLabel && (
                 <span
                   aria-label={`status ${pillLabel}`}
@@ -286,9 +286,9 @@ export function CanvasEditorShell({
                     type="button"
                     onClick={() => onTabChange(id)}
                     className={cn(
-                      "flex items-center gap-1.5 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors",
+                      "flex items-center gap-1.5 rounded-md border px-2 py-1 text-meta font-medium transition-colors",
                       activeTab === id
-                        ? "border-brand bg-brand-bg text-brand"
+                        ? "border-border-strong bg-foreground/[0.06] text-foreground"
                         : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -328,16 +328,16 @@ export function CanvasEditorShell({
                       onChange={(e) => onNameChange?.(e.target.value)}
                       placeholder="name-your-stack"
                       className={cn(
-                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-[29px] font-medium tracking-[-0.02em] shadow-none focus-visible:ring-0 md:text-[29px]",
+                        "h-auto w-[22ch] rounded-none border-0 border-b border-dashed bg-transparent px-0 text-head font-medium tracking-[-0.02em] shadow-none md:text-head",
                         nameError
                           ? "border-danger"
-                          : "border-border/60 hover:border-border focus-visible:border-brand",
+                          : "border-border/60 hover:border-border focus-visible:border-foreground",
                       )}
                     />
                     <Pencil className="size-4 flex-none text-muted-foreground/60 transition-opacity group-focus-within:opacity-0" />
                   </div>
                 ) : (
-                  <h1 className="truncate text-[29px] font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
+                  <h1 className="truncate text-head font-medium tracking-[-0.02em] text-foreground">{stackName}</h1>
                 )}
                 {pillLabel && (
                   <StatusPill variant={pillVariant} className="flex-none">
@@ -359,7 +359,7 @@ export function CanvasEditorShell({
                 <div className="flex-1" />
               </div>
               {nameEditable && nameError && (
-                <p className="mt-1 text-[12px] text-danger">{nameError}</p>
+                <p className="mt-1 text-meta text-danger">{nameError}</p>
               )}
               <PublicEndpointRow endpoints={publicEndpoints ?? []} />
               {notice}
@@ -378,9 +378,9 @@ export function CanvasEditorShell({
                     type="button"
                     onClick={() => onTabChange(id)}
                     className={cn(
-                      "flex items-center gap-2 rounded-md border px-[15px] py-2 text-sm font-medium transition-colors",
+                      "flex items-center gap-2 rounded-md border px-[15px] py-2 text-body font-medium transition-colors",
                       active
-                        ? "border-brand bg-brand-bg text-brand"
+                        ? "border-border-strong bg-foreground/[0.06] text-foreground"
                         : "border-transparent text-muted-foreground hover:text-foreground",
                     )}
                   >
@@ -411,7 +411,7 @@ export function CanvasEditorShell({
               <>
                 {/* Resource/volume tally lives on the canvas (bottom-right) rather
                     than the header, keeping the header a line shorter. */}
-                <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-[11px] text-fg-muted">
+                <span className="pointer-events-none absolute bottom-3 right-4 z-10 font-mono text-label text-fg-muted">
                   {subtitle}
                 </span>
                 <DeployPill

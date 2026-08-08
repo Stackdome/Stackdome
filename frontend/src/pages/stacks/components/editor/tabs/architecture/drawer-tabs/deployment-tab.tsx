@@ -75,7 +75,7 @@ function StackResourceDeploymentTabImpl({
               value={draft.init_spec?.command ?? ""}
               onChange={(e) => onPatchInitSpec({ command: e.target.value })}
               placeholder="e.g., sh /scripts/init.sh"
-              className="h-9 font-mono text-[12.5px]"
+              className="h-9 font-mono text-meta"
             />
           </DirtyField>
         </LedgerRow>
@@ -92,7 +92,7 @@ function StackResourceDeploymentTabImpl({
               value={draft.init_spec?.args ?? ""}
               onChange={(e) => onPatchInitSpec({ args: e.target.value })}
               placeholder="e.g., arg1 arg2 arg3"
-              className="h-9 font-mono text-[12.5px]"
+              className="h-9 font-mono text-meta"
             />
           </DirtyField>
         </LedgerRow>
@@ -117,7 +117,7 @@ function StackResourceDeploymentTabImpl({
               value={draft.execution_config?.command ?? ""}
               onChange={(e) => onPatchExecCommandArgs({ command: e.target.value })}
               placeholder="e.g., node server.js"
-              className="h-9 font-mono text-[12.5px]"
+              className="h-9 font-mono text-meta"
             />
           </DirtyField>
         </LedgerRow>
@@ -134,7 +134,7 @@ function StackResourceDeploymentTabImpl({
               value={draft.execution_config?.args ?? ""}
               onChange={(e) => onPatchExecCommandArgs({ args: e.target.value })}
               placeholder="e.g., --port=3000 --verbose"
-              className="h-9 font-mono text-[12.5px]"
+              className="h-9 font-mono text-meta"
             />
           </DirtyField>
         </LedgerRow>

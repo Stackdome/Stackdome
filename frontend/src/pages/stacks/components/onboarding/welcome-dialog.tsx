@@ -34,10 +34,10 @@ export function WelcomeDialog({ open, onTakeTour, onClose, onOptOut }: WelcomeDi
 
         <div className="px-8 pb-8 pt-10">
           <div className="mb-7 text-center">
-            <h2 className="mb-2 text-2xl font-medium tracking-tight">
+            <h2 className="mb-2 text-head font-medium">
               Deploy your first stack
             </h2>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-body text-muted-foreground">
               We put together a small demo app for you.
               <br />
               Take a short tour, press deploy, and watch it go live on your cluster.
@@ -53,8 +53,8 @@ export function WelcomeDialog({ open, onTakeTour, onClose, onOptOut }: WelcomeDi
                 <span className="flex h-9 w-9 items-center justify-center rounded border border-brand-border bg-brand-bg text-brand">
                   <p.icon className="h-[18px] w-[18px]" />
                 </span>
-                <span className="text-sm font-medium text-foreground">{p.label}</span>
-                <span className="text-xs text-muted-foreground">{p.desc}</span>
+                <span className="text-body font-medium text-foreground">{p.label}</span>
+                <span className="text-meta text-muted-foreground">{p.desc}</span>
               </div>
             ))}
           </div>

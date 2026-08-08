@@ -25,3 +25,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+*storybook.log
+storybook-static
+
+# Local visual-review scratch harnesses (Playwright against a running Storybook
+# or `dev:mock`). Named patterns, not exact files — every design session writes
+# another one-off prober and four of them had already escaped into `git status`.
+.shot*.mjs
+.measure*.mjs
+.probe*.mjs
+.preview-shot.mjs

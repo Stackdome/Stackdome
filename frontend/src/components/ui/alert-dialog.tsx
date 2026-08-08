@@ -38,7 +38,7 @@ const AlertDialogContent = React.forwardRef<
         // Mirrors DialogContent's centered fade+zoom — no slide-* classes; the
         // stale shadcn slide variant reads as entering from the side under
         // Tailwind v4. All confirm dialogs share this entrance.
-        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:max-w-lg",
+        "fixed left-[50%] top-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-md border border-border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:max-w-lg",
         className
       )}
       {...props}
@@ -81,7 +81,7 @@ const AlertDialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Title
     ref={ref}
-    className={cn("text-lg font-semibold", className)}
+    className={cn("text-title font-semibold", className)}
     {...props}
   />
 ))
@@ -93,7 +93,7 @@ const AlertDialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-muted-foreground", className)}
+    className={cn("text-body text-muted-foreground", className)}
     {...props}
   />
 ))
@@ -107,7 +107,9 @@ const AlertDialogAction = React.forwardRef<
 >(({ className, variant, ...props }, ref) => (
   <AlertDialogPrimitive.Action
     ref={ref}
-    className={cn(buttonVariants({ variant }), className)}
+    // §6, §6a — a dialog footer is a working control, so it is `flat`. A pill
+    // would make destroying something feel like an achievement.
+    className={cn(buttonVariants({ variant, shape: "flat" }), className)}
     {...props}
   />
 ))
@@ -120,7 +122,7 @@ const AlertDialogCancel = React.forwardRef<
   <AlertDialogPrimitive.Cancel
     ref={ref}
     className={cn(
-      buttonVariants({ variant: "outline" }),
+      buttonVariants({ variant: "outline", shape: "flat" }),
       "mt-2 sm:mt-0",
       className
     )}

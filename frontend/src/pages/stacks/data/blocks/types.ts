@@ -5,7 +5,7 @@ export const DATA_BLOCK_CATEGORIES: ReadonlySet<BlockCategory> = new Set(["datab
 
 export interface BlockCategoryMeta {
   id: BlockCategory;
-  label: string; // uppercase marker label
+  label: string; //  marker label
 }
 
 export const BlockId = {

@@ -7858,6 +7858,9 @@ components:
           message: message
         lifecycle: null
         organisation_id: organisation_id
+        deploy_history:
+        - 9
+        - 9
         updated_at: 2000-01-23T04:56:07.000+00:00
         project_id: project_id
         user_id: user_id
@@ -7903,6 +7906,19 @@ components:
           $ref: '#/components/schemas/ReleaseSummary'
         latest_release:
           $ref: '#/components/schemas/ReleaseSummary'
+        deploy_history:
+          description: "Deploy counts for the last 14 days, oldest first, one entry\
+            \ per day including days with none. Absent when the stack has never deployed,\
+            \ which is a different thing from fourteen zeroes: no history at all means\
+            \ \"not deployed yet\", where a run of zeroes means \"deployed once, then\
+            \ went quiet\".\nCounted from a tally written alongside each release rather\
+            \ than from the releases themselves, because release retention prunes\
+            \ old rows and a busy stack would otherwise report as a quiet one.\nSet\
+            \ on list responses only."
+          items:
+            type: integer
+          readOnly: true
+          type: array
         created_at:
           format: date-time
           readOnly: true
@@ -7937,7 +7953,7 @@ components:
       type: object
     StackList:
       example:
-        total: 9
+        total: 3
         items:
         - settings:
             deploy_timeout_minutes: 2
@@ -8347,6 +8363,9 @@ components:
             message: message
           lifecycle: null
           organisation_id: organisation_id
+          deploy_history:
+          - 9
+          - 9
           updated_at: 2000-01-23T04:56:07.000+00:00
           project_id: project_id
           user_id: user_id
@@ -8761,6 +8780,9 @@ components:
             message: message
           lifecycle: null
           organisation_id: organisation_id
+          deploy_history:
+          - 9
+          - 9
           updated_at: 2000-01-23T04:56:07.000+00:00
           project_id: project_id
           user_id: user_id

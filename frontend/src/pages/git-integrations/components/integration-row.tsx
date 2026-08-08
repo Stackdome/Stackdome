@@ -31,7 +31,7 @@ function Banner({
       : "border-warn-border bg-warn-bg text-warn";
 
   return (
-    <div className={cn("flex items-center gap-2 border-t px-4 py-2 text-xs", toneClasses)}>
+    <div className={cn("flex items-center gap-2 border-t px-4 py-2 text-meta", toneClasses)}>
       <Icon className="h-3.5 w-3.5 shrink-0" />
       <span className="flex-1 text-foreground/80">{banner.message}</span>
       {statusKey === "needs_setup" ? (
@@ -40,39 +40,24 @@ function Banner({
             href={banner.ctaHref}
             target="_blank"
             rel="noreferrer"
-            className="whitespace-nowrap rounded-md border border-brand-border px-2.5 py-1 font-medium text-brand hover:bg-brand-bg-hover"
+            className="whitespace-nowrap font-medium text-foreground underline-offset-2 hover:underline"
           >
             {banner.ctaLabel}
           </a>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand"
-            disabled
-          >
+          <Button variant="outline" size="sm" disabled>
             {banner.ctaLabel}
           </Button>
         )
       ) : statusKey === "action_needed" ? (
         // github_app rows can't be PUT-updated: message without a CTA.
         onUpdateCredentials && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-            onClick={onUpdateCredentials}
-          >
+          <Button variant="outline" size="sm" onClick={onUpdateCredentials}>
             {banner.ctaLabel}
           </Button>
         )
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-          onClick={onVerify}
-        >
+        <Button variant="outline" size="sm" onClick={onVerify}>
           {banner.ctaLabel}
         </Button>
       )}
@@ -129,15 +114,15 @@ export function IntegrationRow({
             <ProviderLogo providerId={providerIdFor(integration)} className="h-5 w-5 shrink-0" />
           </div>
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-medium text-foreground">
+            <p className="truncate text-name font-medium text-foreground">
               {PROVIDER_DISPLAY_NAMES[providerIdFor(integration)]}
             </p>
-            <p className="truncate font-mono text-[11.5px] text-fg-muted">{row.host}</p>
+            <p className="truncate font-mono text-label text-fg-muted">{row.host}</p>
           </div>
         </div>
 
         <div className="w-[130px]">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-meta text-muted-foreground">
             {isGithubApp ? <AppWindow className="h-3 w-3" /> : <KeyRound className="h-3 w-3" />}
             {row.authLabel}
           </span>
@@ -145,14 +130,14 @@ export function IntegrationRow({
 
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline justify-between gap-2">
-            <span className="truncate text-[11.5px] text-muted-foreground">{row.access.label}</span>
-            <span className="shrink-0 font-mono text-[11px] text-fg-muted">{row.access.hint}</span>
+            <span className="truncate text-label text-muted-foreground">{row.access.label}</span>
+            <span className="shrink-0 font-mono text-label text-fg-muted">{row.access.hint}</span>
           </div>
         </div>
 
         <div className="w-[130px]">
           {row.statusKey === "connected" ? (
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5 text-meta text-muted-foreground">
               <CircleCheck className="h-3.5 w-3.5 text-success" />
               Connected
             </span>

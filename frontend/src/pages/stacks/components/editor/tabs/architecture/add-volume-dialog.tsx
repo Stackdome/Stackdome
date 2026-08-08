@@ -115,7 +115,7 @@ export function AddVolumeDialog({ open, onOpenChange, resources, volumes, initia
           </FieldShell>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button shape="flat" variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button onClick={submit}>Add volume</Button>

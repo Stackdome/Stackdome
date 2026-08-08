@@ -172,7 +172,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
           aria-expanded={open}
           aria-invalid={hasError || undefined}
           className={cn(
-            "h-9 w-full justify-between font-mono text-[12.5px] font-normal",
+            "h-9 w-full justify-between font-mono text-meta font-normal",
             !display && "text-muted-foreground",
             hasError && "border-danger",
           )}
@@ -186,7 +186,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
           {integrations.length > 1 && (
             <div className="border-b p-2">
               <Select value={selectedId ?? undefined} onValueChange={setSelectedId}>
-                <SelectTrigger className="h-8 text-xs" aria-label="Integration">
+                <SelectTrigger className="text-meta" aria-label="Integration">
                   <SelectValue placeholder="Integration" />
                 </SelectTrigger>
                 <SelectContent>
@@ -205,7 +205,7 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
             onValueChange={setQuery}
           />
           <CommandList>
-            {error && <div className="px-3 py-2 text-xs text-danger">{error}</div>}
+            {error && <div className="px-3 py-2 text-meta text-danger">{error}</div>}
             {selected?.type === GIT_INTEGRATION_TYPE_GITHUB_APP && (
               <CommandGroup>
                 {filteredRepos.map((repo) => (
@@ -219,9 +219,9 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
                     ) : (
                       <Globe className="h-3.5 w-3.5 text-muted-foreground" />
                     )}
-                    <span className="flex-1 truncate font-mono text-[12.5px]">{repo.full_name}</span>
+                    <span className="flex-1 truncate font-mono text-meta">{repo.full_name}</span>
                     {repo.default_branch && (
-                      <span className="text-[11px] text-muted-foreground">{repo.default_branch}</span>
+                      <span className="text-label text-muted-foreground">{repo.default_branch}</span>
                     )}
                   </CommandItem>
                 ))}
@@ -237,13 +237,13 @@ export function RepoCombobox({ id, value, integrationId, onChange, hasError }: R
                   {looksLikeUrl && (
                     <CommandItem value={`url-${query}`} onSelect={useAsUrl}>
                       <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="truncate text-[12.5px]">Use &quot;{query}&quot; as repository URL</span>
+                      <span className="truncate text-meta">Use &quot;{query}&quot; as repository URL</span>
                     </CommandItem>
                   )}
                   {!looksLikeUrl && selected?.type === GIT_INTEGRATION_TYPE_CREDENTIALS && (
                     <CommandItem value={`host-${query}`} onSelect={useOnHost}>
                       <Link2 className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="truncate text-[12.5px]">
+                      <span className="truncate text-meta">
                         Use {selected.host}/{query}
                       </span>
                     </CommandItem>

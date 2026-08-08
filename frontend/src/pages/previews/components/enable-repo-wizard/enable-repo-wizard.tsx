@@ -43,7 +43,7 @@ export function EnableRepoWizard({ open, onOpenChange, onCreated }: EnableRepoWi
           <span className="flex h-6 w-6 items-center justify-center text-brand">
             <GitPullRequest className="h-5 w-5" />
           </span>
-          <span className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+          <span className="font-mono text-label text-muted-foreground">
             Enable repository
           </span>
         </div>

@@ -10,7 +10,7 @@ import {
 import { EyebrowLabel, FieldError } from "@/components/branded";
 
 interface LedgerSectionProps {
-  /** Mono uppercase section marker, e.g. "GENERAL". */
+  /** Section marker, sentence case — e.g. "General" (§7: no caps). */
   label: string;
   /** Right-aligned mono meta on the header rule, e.g. "1 exposed". */
   meta?: ReactNode;
@@ -36,7 +36,7 @@ export function LedgerSection({
         <EyebrowLabel tone="muted">{label}</EyebrowLabel>
         <span className="h-px flex-1 bg-border/70" aria-hidden />
         {meta && (
-          <span className="shrink-0 font-mono text-[10.5px] text-fg-muted/80">{meta}</span>
+          <span className="shrink-0 font-mono text-label text-fg-muted/80">{meta}</span>
         )}
         <ChevronDown
           className="size-[15px] shrink-0 text-fg-muted transition-transform group-data-[state=open]:rotate-180"
@@ -74,7 +74,7 @@ export function LedgerDisclosure({
     <Collapsible defaultOpen={defaultOpen} className={className}>
       <CollapsibleTrigger className="group w-full cursor-pointer border-b border-secondary/80 py-1 text-left">
         <span className="flex w-full items-center gap-4 rounded-md px-1.5 py-2 transition-colors group-hover:bg-muted/20">
-          <span className="flex w-[150px] shrink-0 items-center gap-1.5 text-[13px] text-foreground/60 dark:text-fg-muted">
+          <span className="flex w-[150px] shrink-0 items-center gap-1.5 text-body text-foreground/60 dark:text-fg-muted">
             <ChevronRight
               className="size-3.5 shrink-0 transition-transform group-data-[state=open]:rotate-90"
               aria-hidden
@@ -82,7 +82,7 @@ export function LedgerDisclosure({
             {label}
           </span>
           {meta && (
-            <span className="font-mono text-[10.5px] text-fg-muted/70">{meta}</span>
+            <span className="font-mono text-label text-fg-muted/70">{meta}</span>
           )}
         </span>
       </CollapsibleTrigger>
@@ -133,7 +133,7 @@ export function LedgerRow({
         <Label
           htmlFor={htmlFor}
           className={cn(
-            "w-[150px] shrink-0 text-[13px] font-normal text-foreground/80 dark:text-fg-2",
+            "w-[150px] shrink-0 text-body font-normal text-foreground/80 dark:text-fg-2",
             alignTop && "pt-2.5",
           )}
         >
@@ -148,13 +148,13 @@ export function LedgerRow({
         </Label>
         <div className="min-w-0 flex-1">
           {children}
-          {hint && <p className="mt-1.5 text-[12px] leading-relaxed text-muted-foreground">{hint}</p>}
+          {hint && <p className="mt-1.5 text-meta leading-relaxed text-muted-foreground">{hint}</p>}
           <FieldError>{error}</FieldError>
         </div>
         {meta && (
           <span
             className={cn(
-              "shrink-0 font-mono text-[10.5px] text-fg-muted/70",
+              "shrink-0 font-mono text-label text-fg-muted/70",
               alignTop && "pt-3",
             )}
           >
@@ -200,7 +200,7 @@ export function LedgerSegmented<T extends string>({
           aria-checked={value === option.value}
           onClick={() => onValueChange(option.value)}
           className={cn(
-            "flex flex-1 cursor-pointer items-center justify-center gap-2 border-l border-border text-[13px] transition-colors first:border-l-0",
+            "flex flex-1 cursor-pointer items-center justify-center gap-2 border-l border-border text-body transition-colors first:border-l-0",
             value === option.value
               ? "bg-brand-bg text-brand"
               : "text-fg-muted hover:text-fg-2",

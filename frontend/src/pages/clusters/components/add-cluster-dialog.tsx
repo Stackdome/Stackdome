@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { FieldShell } from "@/components/branded";
+import { FieldShell, AlertBanner } from "@/components/branded";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import {
   Dialog,
@@ -153,11 +153,7 @@ export default function AddClusterDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          {error && (
-            <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
-              {error}
-            </div>
-          )}
+          {error && <AlertBanner>{error}</AlertBanner>}
 
           <div className="space-y-4">
             <FieldShell
@@ -213,10 +209,11 @@ export default function AddClusterDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={showCAData ? "Hide CA certificate data" : "Show CA certificate data"}
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowCAData(!showCAData)}
                 >
-                  {showCAData ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showCAData ? <EyeOff aria-hidden className="h-4 w-4" /> : <Eye aria-hidden className="h-4 w-4" />}
                 </Button>
               </div>
             </FieldShell>
@@ -241,10 +238,11 @@ export default function AddClusterDialog({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  aria-label={showSAToken ? "Hide service account token" : "Show service account token"}
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowSAToken(!showSAToken)}
                 >
-                  {showSAToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showSAToken ? <EyeOff aria-hidden className="h-4 w-4" /> : <Eye aria-hidden className="h-4 w-4" />}
                 </Button>
               </div>
             </FieldShell>
@@ -258,10 +256,10 @@ export default function AddClusterDialog({
                   className="mt-0.5"
                 />
                 <div className="space-y-1">
-                  <Label htmlFor="enable-registry" className="text-[13px] font-medium text-foreground">
+                  <Label htmlFor="enable-registry" className="text-body font-medium text-foreground">
                     Enable Image Registry
                   </Label>
-                  <p className="text-[12px] text-muted-foreground leading-relaxed">
+                  <p className="text-meta text-muted-foreground leading-relaxed">
                     Provisions a private registry for build artifacts.
                   </p>
                 </div>
@@ -289,7 +287,7 @@ export default function AddClusterDialog({
 
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline" type="button">Cancel</Button>
+            <Button shape="flat" variant="outline" type="button">Cancel</Button>
           </DialogClose>
           <Button
             onClick={handleSubmit}

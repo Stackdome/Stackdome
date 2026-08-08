@@ -72,7 +72,7 @@ export function PostgresDetailHeader({
     <div className="flex flex-col gap-3">
       <Link
         to="/addons"
-        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+        className="inline-flex items-center gap-1 text-meta text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3 w-3" /> All addons
       </Link>
@@ -91,7 +91,7 @@ export function PostgresDetailHeader({
               <TooltipTrigger asChild>
                 <span className="cursor-help">{statusPill}</span>
               </TooltipTrigger>
-              <TooltipContent side="right" className="max-w-sm text-xs">
+              <TooltipContent side="right" className="max-w-sm text-meta">
                 {statusMessage}
               </TooltipContent>
             </Tooltip>
@@ -112,7 +112,7 @@ export function PostgresDetailHeader({
               </Link>
               <Button
                 variant="outline"
-                className="text-danger hover:border-danger hover:bg-danger/10 hover:text-danger"
+                className="border-danger-border text-danger hover:bg-danger-bg hover:text-danger"
                 onClick={onDelete}
               >
                 Delete

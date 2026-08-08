@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { FieldShell } from "@/components/branded";
+import { FieldShell, AlertBanner } from "@/components/branded";
 import { Textarea } from "@/components/ui/textarea";
 import { syncPreviewEnv, type PreviewStack } from "@/api/preview-envs";
 import { getErrorMessage } from "@/api/client";
@@ -105,7 +105,7 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
                 setCommit(e.target.value);
                 setFieldErrors((prev) => ({ ...prev, commit: undefined }));
               }}
-              className="font-mono text-xs"
+              className="font-mono text-meta"
               aria-invalid={!!fieldErrors.commit}
             />
           </FieldShell>
@@ -140,7 +140,7 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
                   placeholder="Paste a stackfile to use instead of the one in the repository"
                   value={stackfileContent}
                   onChange={(e) => setStackfileContent(e.target.value)}
-                  className="font-mono text-xs"
+                  className="font-mono text-meta"
                 />
               </FieldShell>
               <FieldShell
@@ -157,16 +157,16 @@ export function SyncEnvDialog({ env, onOpenChange, onSynced }: SyncEnvDialogProp
                     setOverridesText(e.target.value);
                     setFieldErrors((prev) => ({ ...prev, overridesText: undefined }));
                   }}
-                  className="font-mono text-xs"
+                  className="font-mono text-meta"
                 />
               </FieldShell>
             </div>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <AlertBanner>{error}</AlertBanner>}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button shape="flat" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={() => void submit()} disabled={saving}>

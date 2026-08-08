@@ -4,7 +4,7 @@ import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
 import { blockCatalog, BLOCK_CATEGORY_META } from "@/pages/stacks/data/blocks/registry";
-import { BlockPicker, blockMatchesQuery } from "@/pages/stacks/components/wizard/block-picker";
+import { BlockPicker, blockMatchesQuery } from "@/pages/stacks/components/blocks/block-picker";
 import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 
 const SERVICE_CATEGORIES = BLOCK_CATEGORY_META.filter((c) => c.id === "services");
@@ -66,8 +66,8 @@ export function AddResourcePanel({
         <HardDrive className="size-[18px]" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium text-foreground">Volume</span>
-        <span className="block truncate font-mono text-[11px] text-muted-foreground">persistent storage</span>
+        <span className="block text-body font-medium text-foreground">Volume</span>
+        <span className="block truncate font-mono text-label text-muted-foreground">persistent storage</span>
       </span>
       <Plus className="h-[17px] w-[17px] text-primary" />
     </button>
@@ -86,7 +86,7 @@ export function AddResourcePanel({
       </div>
       <div className="max-h-[440px] overflow-y-auto p-3">
         {nothingMatches && (
-          <p className="px-1 py-6 text-sm text-muted-foreground">No matches for "{query}"</p>
+          <p className="px-1 py-6 text-body text-muted-foreground">No matches for "{query}"</p>
         )}
         {/* Section order: services first, storage + managed add-ons next, and the
             long data-store list last so the common picks stay above the fold. */}
@@ -100,7 +100,7 @@ export function AddResourcePanel({
         />
         {showStorageSection ? (
           <div className="mt-5">
-            <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+            <div className="mb-3 font-mono text-label text-muted-foreground">
               Storage
             </div>
             {/* Same half-width card size as the block tiles. */}
@@ -133,7 +133,7 @@ export function AddResourcePanel({
         {/* Last section, matching the wizard's block composer order. */}
         {(visibleAddons.length > 0 || (addons.length === 0 && !trimmedQuery)) && (
           <div className="mt-5">
-            <div className="mb-3 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground">
+            <div className="mb-3 font-mono text-label text-muted-foreground">
               Managed add-ons
             </div>
             {addons.length === 0 ? (
@@ -149,8 +149,8 @@ export function AddResourcePanel({
                   <Plus className="h-[18px] w-[18px]" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium text-foreground">Create an add-on</span>
-                  <span className="block text-[12px] text-muted-foreground">
+                  <span className="block text-body font-medium text-foreground">Create an add-on</span>
+                  <span className="block text-meta text-muted-foreground">
                     No managed add-ons yet. Set one up in the Addons page.
                   </span>
                 </span>
@@ -171,10 +171,10 @@ export function AddResourcePanel({
                         <AddonTypeIcon type="postgres" size={18} />
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-foreground">
+                        <span className="block text-body font-medium text-foreground">
                           {a.name}
                         </span>
-                        <span className="block truncate font-mono text-[11px] text-muted-foreground">
+                        <span className="block truncate font-mono text-label text-muted-foreground">
                           managed postgres
                         </span>
                       </span>
@@ -210,7 +210,7 @@ export function AddResourcePopover(props: AddResourcePopoverProps) {
       <PopoverTrigger asChild>
         <button
           type="button"
-          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-[13px] font-medium text-foreground shadow-xs transition-colors hover:bg-muted"
+          className="flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-body font-medium text-foreground shadow-xs transition-colors hover:bg-muted"
         >
           <Plus className="size-3.5" />
           Add resource

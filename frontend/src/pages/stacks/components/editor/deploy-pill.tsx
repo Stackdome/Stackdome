@@ -78,12 +78,12 @@ export function DeployPill({
     <div
       data-testid="deploy-pill"
       className={cn(
-        "absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2.5 rounded-[10px] border border-brand-border bg-background/90 py-2 shadow-xl shadow-background/60 ring-1 ring-brand/10 backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-[260ms]",
+        "absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-2.5 rounded-md border border-brand-border bg-background py-2 animate-in fade-in slide-in-from-top-2 duration-[260ms]",
         hasChanges ? "pl-4 pr-2" : "px-2",
       )}
     >
       {hasChanges && (
-        <span className="whitespace-nowrap text-[13px] font-medium tracking-[-0.01em] text-brand">
+        <span className="whitespace-nowrap text-body font-medium tracking-[-0.01em] text-brand">
           Apply {dirtyTotal} {dirtyTotal === 1 ? "change" : "changes"}
         </span>
       )}
@@ -101,6 +101,7 @@ export function DeployPill({
             aria-hidden
             // currentColor so the chip follows the button's foreground —
             // white in light mode, primary-foreground (near-black) in dark.
+            // deliberate off-scale: rounded-sm (9px) overwhelms this ~16px key chip
             className="ml-1 flex items-center gap-px rounded-[4px] border border-current/30 bg-current/10 px-1 py-0.5 text-current"
           >
             {isMac ? <Command className="size-2.5" /> : <span className="font-mono text-[9px] font-semibold leading-none">Ctrl</span>}
@@ -111,7 +112,7 @@ export function DeployPill({
       {!isDraft && canDiscardDraft && onDiscardDraft && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button type="button" variant="ghost" size="icon" className="rounded-md" aria-label="Change actions">
+            <Button shape="flat" type="button" variant="ghost" size="icon" className="rounded-md" aria-label="Change actions">
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>

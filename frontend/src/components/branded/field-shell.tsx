@@ -36,18 +36,18 @@ export function FieldShell({
     <div className={cn("space-y-1.5", className)}>
       <Label
         htmlFor={htmlFor}
-        className="text-[13px] font-medium text-foreground"
+        className="text-body font-medium text-foreground"
       >
         <span>
           {label}
           {required && (
-            <span className="ml-0.5 text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
+            <span className="ml-0.5 text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
           )}
         </span>
       </Label>
       {children}
       {hint && (
-        <p className="text-[12px] text-muted-foreground leading-relaxed">
+        <p className="text-meta text-muted-foreground leading-relaxed">
           {hint}
         </p>
       )}

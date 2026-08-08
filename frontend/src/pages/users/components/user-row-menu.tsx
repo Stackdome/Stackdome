@@ -87,7 +87,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
   return (
     <DropdownMenu onOpenChange={(open) => { if (!open) setDemoteOpen(false); }}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="User actions" disabled={busy}>
+        <Button variant="ghost" size="icon-sm" shape="flat" aria-label="User actions" disabled={busy}>
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>
@@ -104,7 +104,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
         )}
         {isOrgAdmin && demoteOpen && (
           <div className="px-2 py-1.5 space-y-2">
-            <p className="text-xs text-muted-foreground font-medium">Demote to project member</p>
+            <p className="text-meta text-muted-foreground font-medium">Demote to project member</p>
             <Select value={demoteProject} onValueChange={setDemoteProject}>
               <SelectTrigger size="sm" className="w-full">
                 <SelectValue placeholder="Select project" />
@@ -129,7 +129,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
             <div className="flex gap-1.5 pt-0.5">
               <Button
                 size="sm"
-                className="flex-1 h-7 text-xs"
+                className="flex-1 text-meta"
                 onClick={handleDemoteConfirm}
                 disabled={!demoteProject || busy}
               >
@@ -138,7 +138,7 @@ export function UserRowMenu({ row, onChanged }: UserRowMenuProps) {
               <Button
                 size="sm"
                 variant="ghost"
-                className="flex-1 h-7 text-xs"
+                className="flex-1 text-meta"
                 onClick={() => setDemoteOpen(false)}
               >
                 Cancel

@@ -62,7 +62,7 @@ export function PendingRowMenu({ row, onChanged }: PendingRowMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Invite actions" disabled={busy}>
+        <Button variant="ghost" size="icon-sm" shape="flat" aria-label="Invite actions" disabled={busy}>
           <MoreHorizontal />
         </Button>
       </DropdownMenuTrigger>

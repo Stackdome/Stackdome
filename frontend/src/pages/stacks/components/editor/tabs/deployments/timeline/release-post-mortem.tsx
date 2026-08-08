@@ -43,8 +43,8 @@ export function ReleasePostMortem({ detail, release, stack, prevReleaseId, prevS
   const cur = detail.peek(release.id);
   const prev = detail.peek(prevReleaseId);
 
-  if (cur.loading && !cur.data) return <div className="px-0.5 py-3 text-[12.5px] text-fg-muted">Loading release detail…</div>;
-  if (cur.error) return <div className="px-0.5 py-3 text-[12.5px] text-danger">Could not load detail: {cur.error}</div>;
+  if (cur.loading && !cur.data) return <div className="px-0.5 py-3 text-meta text-fg-muted">Loading release detail…</div>;
+  if (cur.error) return <div className="px-0.5 py-3 text-meta text-danger">Could not load detail: {cur.error}</div>;
 
   const data = cur.data;
   const outcomes = data?.outcome?.resources ?? {};

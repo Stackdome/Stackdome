@@ -97,7 +97,7 @@ export function VerifyRegistryDialog({ credential, onOpenChange }: VerifyRegistr
           </FieldShell>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={verifying}>
+          <Button shape="flat" variant="ghost" onClick={() => onOpenChange(false)} disabled={verifying}>
             Cancel
           </Button>
           <Button onClick={() => void submit()} disabled={verifying}>

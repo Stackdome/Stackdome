@@ -36,11 +36,11 @@ export function LiveReleaseSummary({ release, stack, prevReleaseId, prevSeq, log
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center gap-2.5 bg-success-bg px-3 py-2 text-left transition-colors"
       >
-        <StatusPill variant="ready" className="flex-none gap-1 px-2 py-0.5 text-[10px] tracking-[0.06em]">Live</StatusPill>
-        <span className="flex-none font-sans text-[13px] font-semibold text-foreground">#{release.sequence}</span>
-        <span className="flex-none text-[13px] text-fg-2">{causeLabel(release.cause)}</span>
+        <StatusPill variant="ready" className="flex-none gap-1 px-2 py-0.5 text-label tracking-[0.06em]">Live</StatusPill>
+        <span className="flex-none font-sans text-body font-semibold text-foreground">#{release.sequence}</span>
+        <span className="flex-none text-body text-fg-2">{causeLabel(release.cause)}</span>
         <span className="min-w-0 flex-1" />
-        {ts && <span className="flex-none font-mono text-[11px] text-fg-muted">{ts}</span>}
+        {ts && <span className="flex-none font-mono text-label text-fg-muted">{ts}</span>}
         <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
 

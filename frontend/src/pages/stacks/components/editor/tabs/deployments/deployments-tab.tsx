@@ -57,10 +57,10 @@ export function DeploymentsTab({ orgId, projectName, stackId, stack, onJumpToRes
           />
         )}
 
-        <div className="font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-fg-muted">Deploy timeline</div>
+        <div className="font-mono text-label font-medium text-fg-muted">Deploy timeline</div>
 
         {loading && releases.length === 0 && !draftNode ? (
-          <p className="text-[13px] text-fg-muted">Loading deployments…</p>
+          <p className="text-body text-fg-muted">Loading deployments…</p>
         ) : (
           <TimelineRail
             releases={releases}

@@ -5,7 +5,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { FieldShell } from "@/components/branded";
+import { FieldShell, AlertBanner } from "@/components/branded";
 import { Textarea } from "@/components/ui/textarea";
 import { createPreviewEnv } from "@/api/preview-envs";
 import { getErrorMessage, isErrorStatus } from "@/api/client";
@@ -150,7 +150,7 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
                   placeholder="Paste a stackfile to use instead of the one in the repository"
                   value={stackfileContent}
                   onChange={(e) => setStackfileContent(e.target.value)}
-                  className="font-mono text-xs"
+                  className="font-mono text-meta"
                 />
               </FieldShell>
               <FieldShell
@@ -167,17 +167,17 @@ export function NewPreviewEnvModal({ open, onOpenChange, config, onCreated }: Ne
                     setOverridesText(e.target.value);
                     setFieldErrors((prev) => ({ ...prev, overridesText: undefined }));
                   }}
-                  className="font-mono text-xs"
+                  className="font-mono text-meta"
                 />
               </FieldShell>
             </div>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <AlertBanner>{error}</AlertBanner>}
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
+          <Button shape="flat" variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancel
           </Button>
           <Button onClick={() => void submit()} disabled={saving}>

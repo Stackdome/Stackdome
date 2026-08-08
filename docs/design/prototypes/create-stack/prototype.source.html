@@ -1,0 +1,1429 @@
+<title>Create a stack — interactive prototype</title>
+<style>
+@font-face{font-family:"Geist";src:url("__GEIST__") format("woff2-variations");font-weight:100 900;font-style:normal;font-display:block}
+@font-face{font-family:"JBMono";src:url("__MONO__") format("woff2-variations");font-weight:100 800;font-style:normal;font-display:block}
+
+/* ══ TOKENS — straight from DESIGN-PRODUCT.md ══════════════ */
+:root{
+  --frame:#F5F4F1; --sheet:#FFFFFF; --control:#F7F6F3; --secondary:#FAF9F6;
+  --ink:#191714; --fg-2:#5C574E; --fg-muted:#726C63; --fg-ghost:#9C958B;
+  --line-subtle:rgba(53,35,0,.06); --line:rgba(53,35,0,.11); --line-strong:rgba(53,35,0,.18);
+  --wash-hover:rgba(25,23,20,.04); --wash-sel:rgba(25,23,20,.06);
+  --wash-sel-hover:rgba(25,23,20,.09); --wash-press:rgba(25,23,20,.12);
+  --ok:oklch(.52 .12 150); --ok-fill:oklch(.52 .12 150 / .11);
+  --warn:oklch(.55 .10 78); --warn-fill:oklch(.55 .10 78 / .11);
+  --inverse:#FFFFFF;
+  --shadow-md:0 2px 4px -1px rgba(53,35,0,.07), 0 4px 12px -2px rgba(53,35,0,.06);
+  --dot:rgba(53,35,0,.16); --wire:rgba(53,35,0,.34);
+  --ring:0 0 0 2px var(--sheet), 0 0 0 4px var(--ink);
+  /* artifact chrome only */
+  --surround:#E9E7E2; --surround-ink:#3A362F; --surround-line:rgba(53,35,0,.13);
+}
+@media (prefers-color-scheme:dark){:root{
+  --frame:oklch(.168 .004 85); --sheet:oklch(.205 .004 85); --control:oklch(.235 .004 85); --secondary:oklch(.222 .004 85);
+  --ink:#FFFDF7; --fg-2:rgba(255,253,247,.68); --fg-muted:rgba(255,253,247,.50); --fg-ghost:rgba(255,253,247,.32);
+  --line-subtle:rgba(255,253,247,.065); --line:rgba(255,253,247,.075); --line-strong:rgba(255,253,247,.13);
+  --wash-hover:rgba(255,253,247,.05); --wash-sel:rgba(255,253,247,.07);
+  --wash-sel-hover:rgba(255,253,247,.10); --wash-press:rgba(255,253,247,.13);
+  --ok:oklch(.76 .13 152); --ok-fill:oklch(.76 .13 152 / .13);
+  --warn:oklch(.80 .10 82); --warn-fill:oklch(.80 .10 82 / .13);
+  --inverse:#191714;
+  --shadow-md:0 2px 4px -1px rgba(0,0,0,.34), 0 4px 14px -2px rgba(0,0,0,.30);
+  --dot:rgba(255,253,247,.20); --wire:rgba(255,253,247,.30);
+  --surround:oklch(.125 .004 85); --surround-ink:rgba(255,253,247,.74); --surround-line:rgba(255,253,247,.10);
+}}
+:root[data-theme="dark"]{
+  --frame:oklch(.168 .004 85); --sheet:oklch(.205 .004 85); --control:oklch(.235 .004 85); --secondary:oklch(.222 .004 85);
+  --ink:#FFFDF7; --fg-2:rgba(255,253,247,.68); --fg-muted:rgba(255,253,247,.50); --fg-ghost:rgba(255,253,247,.32);
+  --line-subtle:rgba(255,253,247,.065); --line:rgba(255,253,247,.075); --line-strong:rgba(255,253,247,.13);
+  --wash-hover:rgba(255,253,247,.05); --wash-sel:rgba(255,253,247,.07);
+  --wash-sel-hover:rgba(255,253,247,.10); --wash-press:rgba(255,253,247,.13);
+  --ok:oklch(.76 .13 152); --ok-fill:oklch(.76 .13 152 / .13);
+  --warn:oklch(.80 .10 82); --warn-fill:oklch(.80 .10 82 / .13);
+  --inverse:#191714;
+  --shadow-md:0 2px 4px -1px rgba(0,0,0,.34), 0 4px 14px -2px rgba(0,0,0,.30);
+  --dot:rgba(255,253,247,.20); --wire:rgba(255,253,247,.30);
+  --surround:oklch(.125 .004 85); --surround-ink:rgba(255,253,247,.74); --surround-line:rgba(255,253,247,.10);
+}
+:root[data-theme="light"]{
+  --frame:#F5F4F1; --sheet:#FFFFFF; --control:#F7F6F3; --secondary:#FAF9F6;
+  --ink:#191714; --fg-2:#5C574E; --fg-muted:#726C63; --fg-ghost:#9C958B;
+  --line-subtle:rgba(53,35,0,.06); --line:rgba(53,35,0,.11); --line-strong:rgba(53,35,0,.18);
+  --wash-hover:rgba(25,23,20,.04); --wash-sel:rgba(25,23,20,.06);
+  --wash-sel-hover:rgba(25,23,20,.09); --wash-press:rgba(25,23,20,.12);
+  --ok:oklch(.52 .12 150); --ok-fill:oklch(.52 .12 150 / .11);
+  --warn:oklch(.55 .10 78); --warn-fill:oklch(.55 .10 78 / .11);
+  --inverse:#FFFFFF;
+  --shadow-md:0 2px 4px -1px rgba(53,35,0,.07), 0 4px 12px -2px rgba(53,35,0,.06);
+  --dot:rgba(53,35,0,.16); --wire:rgba(53,35,0,.34);
+  --surround:#E9E7E2; --surround-ink:#3A362F; --surround-line:rgba(53,35,0,.13);
+}
+
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--surround);color:var(--surround-ink);
+  font-family:"Geist",ui-sans-serif,system-ui,sans-serif;font-size:13px;line-height:20px;
+  -webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.mono{font-family:"JBMono",ui-monospace,"SF Mono",Menlo,monospace}
+
+/* ══ artifact chrome ══════════════════════════════════════ */
+.chrome{max-width:1330px;margin:0 auto;padding:40px 24px 0}
+.chrome h1{font-size:26px;line-height:32px;font-weight:600;letter-spacing:-.02em;margin:0}
+.chrome p{margin:10px 0 0;max-width:76ch;font-size:14px;line-height:22px;opacity:.78}
+.chrome p b{font-weight:600;opacity:1}
+.bar{margin:22px 0 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  padding-top:16px;border-top:1px solid var(--surround-line)}
+.cbtn{font:inherit;font-size:12px;font-weight:500;height:30px;padding:0 13px;border-radius:8px;
+  border:1px solid var(--surround-line);background:transparent;color:inherit;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:background .15s}
+.cbtn:hover{background:rgba(128,128,128,.12)}
+.cbtn[aria-pressed="true"]{background:var(--surround-ink);color:var(--surround);border-color:var(--surround-ink)}
+.seg{display:inline-flex;border:1px solid var(--surround-line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:12px;font-weight:500;height:30px;padding:0 12px;border:0;
+  background:transparent;color:inherit;cursor:pointer;transition:background .15s}
+.seg button+button{border-left:1px solid var(--surround-line)}
+.seg button[aria-pressed="true"]{background:var(--surround-ink);color:var(--surround)}
+.seglbl{font-size:12px;opacity:.6;margin-right:2px}
+.chint{font-size:12px;opacity:.55;margin-left:auto;max-width:42ch;text-align:right;line-height:16px}
+.stage-wrap{max-width:1330px;margin:0 auto;padding:0 24px 44px;overflow-x:auto}
+
+/* ══ THE APP ══════════════════════════════════════════════ */
+.app{width:1280px;height:860px;background:var(--frame);border-radius:14px;
+  display:grid;grid-template-columns:240px 1fr;overflow:hidden;
+  border:1px solid var(--surround-line);font-size:13px;line-height:20px;color:var(--ink)}
+.rail{width:240px;display:flex;flex-direction:column;padding-bottom:12px}
+.brandband{height:64px;display:flex;align-items:center;padding-left:16px;gap:10px}
+.mark{width:32px;height:32px;border-radius:8px;background:var(--ink);color:var(--inverse);
+  display:grid;place-items:center;flex:none}
+.brandname{font-size:14px;line-height:20px;font-weight:600;letter-spacing:-.01em}
+.navgroup{padding:0 8px;display:flex;flex-direction:column;gap:1px}
+.navlabel{font-size:11px;line-height:16px;color:var(--fg-muted);padding:16px 8px 6px}
+.nav{height:32px;border-radius:8px;display:flex;align-items:center;gap:10px;padding:0 8px;
+  color:var(--ink);cursor:default;transition:background .15s}
+.nav svg{color:var(--fg-muted);flex:none}
+.nav:hover{background:var(--wash-hover)}
+.nav[aria-current="page"]{background:var(--wash-sel)}
+.nav[aria-current="page"] svg{color:var(--ink)}
+
+.sheet{margin:12px 12px 12px 2px;background:var(--sheet);border-radius:12px;
+  outline:1px solid var(--line-subtle);box-shadow:var(--shadow-md);
+  display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.sheethead{height:64px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  gap:16px;padding:0 16px}
+.trail{display:flex;align-items:center;gap:7px;min-width:0}
+.trail a{font-size:13px;line-height:20px;color:var(--fg-muted);text-decoration:none;cursor:pointer}
+.trail a:hover{color:var(--ink)}
+.trail .sep{color:var(--fg-ghost)}
+.trail .cur{font-size:14px;line-height:20px;font-weight:500;color:var(--ink)}
+.sheetbody{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+
+/* ══ type §6 ══ */
+.h-head{font-size:20px;line-height:28px;font-weight:500;letter-spacing:-.015em;margin:0}
+.h-title{font-size:16px;line-height:24px;font-weight:600;letter-spacing:-.008em;margin:0}
+.sub{font-size:13px;line-height:20px;color:var(--fg-2);margin:6px 0 0}
+
+/* ══ controls ══ */
+.inp{height:40px;border-radius:12px;border:1px solid var(--line);background:var(--control);
+  color:var(--ink);font:inherit;font-size:13px;padding:0 13px;width:100%;
+  transition:border-color .15s,box-shadow .15s;min-width:0}
+.inp::placeholder{color:var(--fg-ghost)}
+.inp:hover{border-color:var(--line-strong)}
+.inp:focus-visible{outline:none;box-shadow:var(--ring);border-color:transparent}
+.inp.mono{font-family:"JBMono",ui-monospace,monospace;font-size:12.5px}
+select.inp{appearance:none;cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 17px) 18px,calc(100% - 12px) 18px;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+.search{position:relative}
+.search svg{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--fg-muted);pointer-events:none}
+.search .inp{padding-left:38px}
+
+.btn{font:inherit;font-size:13px;font-weight:500;height:32px;border-radius:8px;border:1px solid transparent;
+  background:transparent;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;
+  justify-content:center;gap:7px;padding:0 12px;white-space:nowrap;
+  transition:background .15s,border-color .15s,opacity .15s}
+.btn:focus-visible{outline:none;box-shadow:var(--ring)}
+.btn.ghost:hover{background:var(--wash-hover)}
+.btn.outline{background:var(--control);border-color:var(--line)}
+.btn.outline:hover{border-color:var(--line-strong)}
+.btn.primary{background:var(--ink);color:var(--inverse);padding:0 14px}
+.btn.primary:hover{opacity:.9}
+.btn.primary:active{transform:translateY(1px)}
+.btn.pill{border-radius:999px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary:disabled:hover{opacity:.45}
+.spin{animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ══ the row primitive — repos, apps, blocks all use it ══ */
+.list{display:flex;flex-direction:column;gap:2px}
+.row{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:8px;
+  cursor:pointer;background:transparent;border:0;width:100%;text-align:left;color:inherit;font:inherit;
+  transition:background .15s}
+.row:hover{background:var(--wash-hover)}
+.row[aria-selected="true"]{background:var(--wash-sel)}
+.row[aria-selected="true"]:hover{background:var(--wash-sel-hover)}
+.row:focus-visible{outline:none;box-shadow:var(--ring)}
+.rowglyph{width:32px;height:32px;border-radius:8px;background:var(--control);border:1px solid var(--line);
+  display:grid;place-items:center;flex:none;color:var(--fg-2)}
+.rowmain{min-width:0;flex:1;display:flex;flex-direction:column;gap:1px}
+.rowname{font-size:14px;line-height:20px;font-weight:500;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowsub{font-size:12px;line-height:16px;color:var(--fg-2);display:flex;gap:8px;white-space:nowrap;overflow:hidden}
+.rowsub .dot{color:var(--fg-ghost)}
+.rowsub .mono{font-family:"JBMono",ui-monospace,monospace;font-size:11.5px}
+.rowend{flex:none;color:var(--fg-muted);font-size:12px;display:flex;align-items:center;gap:10px}
+.tick{color:var(--ink);display:none}
+.row[aria-selected="true"] .tick{display:block}
+.empty{padding:32px 12px}
+.empty .t{font-size:13px;font-weight:500;color:var(--ink)}
+.empty .d{font-size:12px;line-height:16px;color:var(--fg-muted);margin-top:3px}
+
+/* ══════════════ THE PICKER — three layouts ══════════════ */
+.picker{flex:1;min-height:0;display:grid;overflow:hidden}
+.pbody{min-height:0;overflow-y:auto;padding:0 16px 16px}
+.pinner{display:grid;grid-template-columns:minmax(0,620px);gap:28px;align-items:start}
+.pinner.withside{grid-template-columns:minmax(0,620px) 300px}
+
+/* "In this stack" — the stack-so-far panel from the old wizard, kept because
+   the data display was the good part. It appears with the first selection, so
+   it never reserves a third of the width to show nothing (B-06). */
+.pside{border-left:1px solid var(--line-subtle);padding-left:24px;position:sticky;top:0}
+.psidehead{font-size:11px;line-height:16px;color:var(--fg-muted);padding:2px 0 8px}
+.pitems{display:flex;flex-direction:column;gap:1px}
+.pitem{display:flex;align-items:center;gap:9px;min-height:40px;padding:5px 8px;border-radius:8px}
+.pitem:hover{background:var(--wash-hover)}
+.pitem .pg{width:24px;height:24px;border-radius:6px;background:var(--control);border:1px solid var(--line);
+  display:grid;place-items:center;flex:none;color:var(--fg-2)}
+.pitem .pmainc{min-width:0;flex:1;display:flex;flex-direction:column}
+.pitem .pn{font-family:"JBMono",ui-monospace,monospace;font-size:12px;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .ps{font-size:11px;line-height:15px;color:var(--fg-muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pitem .px{opacity:0;background:transparent;border:0;color:var(--fg-muted);cursor:pointer;
+  border-radius:6px;width:22px;height:22px;display:grid;place-items:center;flex:none;transition:opacity .15s,color .15s}
+.pitem:hover .px{opacity:1}
+.pitem .px:hover{color:var(--ink);background:var(--wash-hover)}
+.pitem .px:focus-visible{opacity:1;outline:none;box-shadow:var(--ring)}
+.pnote{font-size:11.5px;line-height:16px;color:var(--fg-muted);padding:8px 8px 0}
+
+/* segmented control §11 — track and segment both carry a hairline, track has
+   NO padding, so the segment runs flush and you never see a doubled line */
+.segctl{display:inline-flex;background:var(--control);border:1px solid var(--line);
+  border-radius:8px;overflow:hidden;height:32px;padding:0}
+.segctl button{font:inherit;font-size:12.5px;font-weight:500;height:100%;padding:0 13px;border:0;
+  background:transparent;color:var(--fg-muted);cursor:pointer;transition:color .15s}
+.segctl button[aria-pressed="true"]{background:var(--sheet);color:var(--ink);
+  border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.segctl button:first-child[aria-pressed="true"]{border-left:0}
+.segctl button:last-child[aria-pressed="true"]{border-right:0}
+.segctl button:focus-visible{outline:none;box-shadow:var(--ring)}
+
+/* category headings inside the block catalogue — sentence case, never caps */
+.catlbl{font-size:11px;line-height:16px;color:var(--fg-muted);padding:16px 8px 6px}
+.catlbl:first-child{padding-top:4px}
+.qty{font-family:"JBMono",ui-monospace,monospace;font-size:11px;color:var(--ink);
+  background:var(--control);border:1px solid var(--line);border-radius:6px;padding:1px 6px}
+.addicon{color:var(--fg-muted)}
+.row:hover .addicon{color:var(--ink)}
+
+/* template detail — the fields the browser panel already carries */
+.tdet{padding-bottom:14px;border-bottom:1px solid var(--line-subtle);margin-bottom:12px}
+.tdet .tbadge{width:44px;height:44px;border-radius:10px;border:1px solid var(--line);
+  background:var(--control);display:grid;place-items:center;
+  font-family:"JBMono",ui-monospace,monospace;font-size:15px;font-weight:600;color:var(--ink)}
+.tdet .tname{font-size:16px;line-height:24px;font-weight:600;margin-top:10px}
+.tdet .tmeta{font-family:"JBMono",ui-monospace,monospace;font-size:11px;color:var(--fg-muted);margin-top:2px}
+.tdet .tlong{font-size:12.5px;line-height:18px;color:var(--fg-2);margin-top:9px}
+.tdet .tlinks{display:flex;gap:7px;margin-top:11px}
+.tlink{font:inherit;font-size:11.5px;font-weight:500;color:var(--fg-2);text-decoration:none;
+  border:1px solid var(--line);border-radius:6px;height:26px;padding:0 9px;
+  display:inline-flex;align-items:center;gap:5px;transition:border-color .15s,color .15s}
+.tlink:hover{border-color:var(--line-strong);color:var(--ink)}
+
+/* switch — lost when the confirm step went, needed again by the inspector */
+.sw{width:36px;height:20px;border-radius:999px;background:var(--line-strong);border:0;padding:2px;
+  cursor:pointer;flex:none;transition:background .18s}
+.sw:focus-visible{outline:none;box-shadow:var(--ring)}
+.sw i{display:block;width:16px;height:16px;border-radius:50%;background:var(--sheet);transition:transform .18s}
+.sw[aria-checked="true"]{background:var(--ink)}
+.sw[aria-checked="true"] i{transform:translateX(16px)}
+
+/* node inspector — where branch / port / Dockerfile path live now that the
+   confirm step is gone. Click a node on the canvas. */
+.inspector{position:absolute;top:0;right:0;bottom:0;width:296px;background:var(--sheet);
+  border-left:1px solid var(--line);padding:16px;overflow-y:auto;display:none;z-index:6}
+.inspector.on{display:block}
+.inshead{display:flex;align-items:center;gap:9px;padding-bottom:14px;border-bottom:1px solid var(--line-subtle)}
+.inshead .inn{font-family:"JBMono",ui-monospace,monospace;font-size:13px;font-weight:500;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.insclose{background:transparent;border:0;color:var(--fg-muted);cursor:pointer;width:24px;height:24px;
+  border-radius:6px;display:grid;place-items:center;flex:none}
+.insclose:hover{color:var(--ink);background:var(--wash-hover)}
+.insclose:focus-visible{outline:none;box-shadow:var(--ring)}
+.insfields{display:flex;flex-direction:column;gap:13px;padding-top:14px}
+.insf{display:flex;flex-direction:column;gap:5px}
+.insf label{font-size:12px;line-height:16px;font-weight:500;color:var(--ink)}
+.insf .ii{height:32px;border-radius:8px;border:1px solid var(--line);background:var(--control);
+  color:var(--ink);font:inherit;font-size:12px;padding:0 10px;width:100%}
+.insf .ii.mono{font-family:"JBMono",ui-monospace,monospace;font-size:11.5px}
+.insf .ii:focus-visible{outline:none;box-shadow:var(--ring);border-color:transparent}
+.insrow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.insrow span{font-size:12px;color:var(--ink)}
+.node{cursor:pointer}
+.node.sel{border-color:var(--ink)}
+
+/* what a blank canvas gets you — shown instead of jumping straight there */
+.explain{display:flex;flex-direction:column;gap:2px;margin-top:14px}
+.exrow{display:flex;align-items:center;gap:11px;min-height:44px;padding:6px 0}
+.exrow .exg{width:30px;height:30px;border-radius:8px;background:var(--control);border:1px solid var(--line);
+  display:grid;place-items:center;flex:none;color:var(--fg-2)}
+.exrow .ext{font-size:13px;line-height:18px;color:var(--ink);font-weight:500}
+.exrow .exd{font-size:12px;line-height:16px;color:var(--fg-muted)}
+
+/* the five starting points, as data-driven buttons */
+.sp{display:flex;gap:11px;align-items:flex-start;text-align:left;font:inherit;color:var(--ink);
+  cursor:pointer;transition:background .15s,border-color .15s}
+.spname{font-size:14px;line-height:20px;font-weight:500;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.spdesc{font-size:12px;line-height:16px;color:var(--fg-2)}
+.spglyph{width:30px;height:30px;border-radius:8px;background:var(--control);border:1px solid var(--line);
+  display:grid;place-items:center;flex:none;color:var(--fg-2)}
+.leaves{font-size:11px;line-height:14px;color:var(--fg-muted);border:1px solid var(--line);
+  border-radius:6px;padding:1px 6px;font-weight:400;white-space:nowrap}
+
+/* — layout 1: persistent left rail — */
+[data-lay="rail"] .picker{grid-template-columns:236px 1fr}
+[data-lay="rail"] .chooser{border-right:1px solid var(--line-subtle);padding:4px 8px 12px;
+  overflow-y:auto;display:flex;flex-direction:column;gap:1px}
+[data-lay="rail"] .chooserlbl{font-size:11px;line-height:16px;color:var(--fg-muted);padding:8px 8px 6px}
+[data-lay="rail"] .sp{border-radius:8px;padding:10px;background:transparent;border:1px solid transparent}
+[data-lay="rail"] .sp:hover{background:var(--wash-hover)}
+[data-lay="rail"] .sp[aria-pressed="true"]{background:var(--wash-sel)}
+[data-lay="rail"] .pbody{padding-top:4px}
+
+/* — layout 1b: cards on top, work below (the reference pattern) —
+   The rail put 476px of vertical list beside a 240px app sidebar: 37% of the
+   width was nav-shaped before any content. Options are actions, not navigation,
+   so they sit above the work instead of beside it. */
+[data-lay="cards"] .picker{grid-template-rows:auto 1fr}
+[data-lay="cards"] .chooser{padding:8px 16px 0}
+[data-lay="cards"] .pickhead{margin-bottom:16px}
+[data-lay="cards"] .cardgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;
+  padding-bottom:20px;border-bottom:1px solid var(--line-subtle)}
+[data-lay="cards"] .cardgrid .sp{flex-direction:column;align-items:flex-start;gap:11px;padding:14px;
+  background:var(--sheet);border:1px solid var(--line);border-radius:12px;min-height:124px}
+[data-lay="cards"] .cardgrid .sp:hover{border-color:var(--line-strong)}
+[data-lay="cards"] .cardgrid .sp[aria-pressed="true"]{background:var(--wash-sel);border-color:var(--ink)}
+[data-lay="cards"] .cardgrid .sp[aria-pressed="true"] .spglyph{background:var(--ink);border-color:var(--ink);color:var(--inverse)}
+/* blank is the one that behaves differently, so it looks different — a dashed
+   edge reports "nothing in it yet", which is a fact, not decoration */
+[data-lay="cards"] .cardgrid .sp[data-pt="blank"]{border-style:dashed;background:transparent}
+[data-lay="cards"] .cardgrid .sp[data-pt="blank"] .spglyph{background:transparent;border-style:dashed}
+[data-lay="cards"] .cardgrid .sp[data-pt="blank"][aria-pressed="true"]{background:var(--wash-sel);border-color:var(--ink)}
+/* the card keeps its dashed edge (that is its identity) but the chip fills, so
+   "active" reads the same on all five */
+[data-lay="cards"] .cardgrid .sp[data-pt="blank"][aria-pressed="true"] .spglyph{
+  background:var(--ink);border-color:var(--ink);border-style:solid;color:var(--inverse)}
+[data-lay="cards"] .cardgrid .spname{font-size:13px;line-height:18px}
+[data-lay="cards"] .cardgrid .spdesc{font-size:12px;line-height:16px}
+[data-lay="cards"] .cardgrid .leaves{display:none}
+[data-lay="cards"] .pbody{padding-top:18px}
+[data-lay="cards"] .chooserlbl{display:none}
+
+/* — layout 2: gallery, then a compact strip — */
+[data-lay="gallery"] .picker{grid-template-rows:auto 1fr}
+[data-lay="gallery"] .chooser{padding:0 16px 4px}
+[data-lay="gallery"] .gallery{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding-top:4px}
+[data-lay="gallery"] .gallery .sp{flex-direction:column;gap:9px;padding:16px;background:var(--sheet);
+  border:1px solid var(--line);border-radius:12px}
+[data-lay="gallery"] .gallery .sp:hover{border-color:var(--line-strong)}
+[data-lay="gallery"] .strip{display:flex;gap:2px;flex-wrap:wrap;padding:2px 0 10px;
+  border-bottom:1px solid var(--line-subtle)}
+[data-lay="gallery"] .strip .sp{padding:6px 10px;border-radius:8px;border:1px solid transparent;background:transparent}
+[data-lay="gallery"] .strip .sp .spdesc,[data-lay="gallery"] .strip .sp .spglyph{display:none}
+[data-lay="gallery"] .strip .sp:hover{background:var(--wash-hover)}
+[data-lay="gallery"] .strip .sp[aria-pressed="true"]{background:var(--wash-sel)}
+
+/* — layout 3: tabs — */
+[data-lay="tabs"] .picker{grid-template-rows:auto 1fr}
+[data-lay="tabs"] .chooser{display:flex;gap:2px;padding:0 16px;border-bottom:1px solid var(--line-subtle);flex-wrap:wrap}
+[data-lay="tabs"] .sp{flex-direction:column;gap:0;padding:9px 11px 11px;background:transparent;
+  border:0;border-bottom:2px solid transparent;margin-bottom:-1px;border-radius:8px 8px 0 0}
+[data-lay="tabs"] .sp .spglyph,[data-lay="tabs"] .sp .spdesc{display:none}
+[data-lay="tabs"] .sp:hover{background:var(--wash-hover)}
+[data-lay="tabs"] .sp[aria-pressed="true"]{border-bottom-color:var(--ink)}
+[data-lay="tabs"] .chooserlbl{display:none}
+
+.pbodyhead{padding:2px 0 0}
+.prompt{display:none}
+.prompt .t{font-size:13px;line-height:20px;font-weight:500;color:var(--ink)}
+.prompt .d{font-size:12px;line-height:17px;color:var(--fg-muted);margin-top:4px}
+
+/* compose */
+.ta{width:100%;min-height:180px;border-radius:12px;border:1px solid var(--line);background:var(--control);
+  color:var(--ink);font-family:"JBMono",ui-monospace,monospace;font-size:12px;line-height:19px;
+  padding:12px 13px;resize:vertical;transition:border-color .15s,box-shadow .15s}
+.ta::placeholder{color:var(--fg-ghost)}
+.ta:focus-visible{outline:none;box-shadow:var(--ring);border-color:transparent}
+.parse{margin-top:14px;border-top:1px solid var(--line-subtle);padding-top:14px}
+.parsehead{display:flex;gap:8px;font-size:13px;font-weight:500}
+.parsehead .n{color:var(--fg-2);font-weight:400;font-size:12px}
+.found{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{height:20px;border-radius:6px;background:var(--control);border:1px solid var(--line);
+  display:inline-flex;align-items:center;padding:0 7px;
+  font-family:"JBMono",ui-monospace,monospace;font-size:11px;color:var(--ink)}
+
+/* footer */
+.foot{flex:none;display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 16px;border-top:1px solid var(--line-subtle)}
+.blocked{font-size:12px;color:var(--fg-muted)}
+.footright{display:flex;align-items:center;gap:12px}
+
+/* ══════════════ THE CANVAS ══════════════ */
+.cv{flex:1;min-height:0;display:flex;flex-direction:column}
+.cvhead{flex:none;display:flex;align-items:center;gap:10px;padding:0 16px 14px}
+.nameinp{height:32px;border-radius:8px;border:1px solid transparent;background:transparent;
+  color:var(--ink);font:inherit;font-size:16px;font-weight:600;letter-spacing:-.008em;padding:0 8px;
+  width:220px;transition:background .15s,border-color .15s}
+.nameinp:hover{background:var(--wash-hover)}
+.nameinp:focus-visible{outline:none;box-shadow:var(--ring);background:var(--control)}
+.inword{font-size:13px;color:var(--fg-muted)}
+.projsel{height:32px;border-radius:8px;border:1px solid var(--line);background:var(--control);
+  color:var(--ink);font:inherit;font-size:13px;padding:0 30px 0 10px;cursor:pointer;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);
+  background-position:calc(100% - 15px) 14px,calc(100% - 10px) 14px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.projsel:focus-visible{outline:none;box-shadow:var(--ring)}
+.draft{font-size:11px;line-height:16px;color:var(--fg-muted);border:1px solid var(--line);
+  border-radius:6px;padding:2px 8px}
+.cvactions{margin-left:auto;display:flex;align-items:center;gap:10px}
+
+.cvstage{flex:1;min-height:0;position:relative;margin:0 16px;border-radius:12px;
+  border:1px solid var(--line-subtle);background:var(--secondary);overflow:hidden}
+.cvstage::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle, var(--dot) 1.2px, transparent 1.2px);
+  background-size:18px 18px}
+/* §4 — a wire is a long thin diagonal over a dotted ground, so it gets its own
+   alpha chosen for that shape. At the 18% hairline it was measurably present
+   and visually absent. */
+/* width/height are REQUIRED: <svg> is a replaced element, so inset:0 alone
+   leaves it at its 300x150 intrinsic size and every edge gets clipped away. */
+.edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.edges path{fill:none;stroke:var(--wire);stroke-width:1.5}
+.node{position:absolute;width:168px;border-radius:12px;border:1px solid var(--line);
+  background:var(--sheet);padding:10px 12px;display:flex;flex-direction:column;gap:2px;
+  transition:border-color .15s}
+.node:hover{border-color:var(--line-strong)}
+.node .nn{font-family:"JBMono",ui-monospace,monospace;font-size:12px;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.node .nm{font-size:11px;line-height:15px;color:var(--fg-muted);display:flex;align-items:center;gap:5px}
+.node .nm svg{flex:none}
+.addres{position:absolute;font:inherit;font-size:12px;font-weight:500;color:var(--fg-2);
+  background:transparent;border:1px dashed var(--line-strong);border-radius:12px;
+  width:168px;padding:14px 12px;cursor:pointer;transition:color .15s,border-color .15s}
+.addres:hover{color:var(--ink);border-color:var(--ink)}
+.addres:focus-visible{outline:none;box-shadow:var(--ring)}
+.cvblank{position:absolute;inset:0;display:grid;place-items:center;text-align:center;padding:24px}
+.cvblank .t{font-size:13px;font-weight:500;color:var(--ink)}
+.cvblank .d{font-size:12px;line-height:17px;color:var(--fg-muted);margin-top:4px;max-width:40ch}
+
+.alerts{flex:none;padding:12px 16px 0;display:flex;flex-direction:column;gap:6px}
+.alert{display:flex;align-items:flex-start;gap:9px;font-size:12px;line-height:17px;
+  border-radius:8px;padding:9px 11px;border:1px solid}
+.alert svg{flex:none;margin-top:1px}
+.alert.block{color:var(--warn);border-color:color-mix(in oklab, var(--warn) 42%, transparent);background:var(--warn-fill)}
+.alert.info{color:var(--fg-2);border-color:var(--line);background:transparent}
+.alert .atext{flex:1}
+.alert .fixbtn{font:inherit;font-size:11.5px;font-weight:500;color:inherit;background:transparent;
+  border:1px solid currentColor;border-radius:6px;height:22px;padding:0 8px;cursor:pointer;flex:none}
+.alert .fixbtn:hover{background:color-mix(in oklab, currentColor 12%, transparent)}
+.alert .fixbtn:focus-visible{outline:none;box-shadow:var(--ring)}
+
+/* deploy stages, shown on the canvas */
+.stages{flex:none;padding:10px 16px 0;display:flex;flex-direction:column;gap:1px}
+.stage-row{display:flex;align-items:center;gap:11px;min-height:30px;padding:2px 2px}
+.stage-row .sname{font-size:12px;flex:1;color:var(--fg-muted);transition:color .2s}
+.stage-row.run .sname,.stage-row.done .sname{color:var(--ink)}
+.stage-row .st{width:15px;height:15px;flex:none;display:grid;place-items:center;color:var(--fg-ghost)}
+.stage-row.run .st{color:var(--ink)}
+.stage-row.done .st{color:var(--ok)}
+.stage-row .dur{font-family:"JBMono",ui-monospace,monospace;font-size:11px;color:var(--fg-muted);opacity:0}
+.stage-row.done .dur{opacity:1}
+.livebar{flex:none;margin:10px 16px 0;padding:12px 14px;border:1px solid var(--line);border-radius:12px;
+  display:none;align-items:center;gap:12px}
+.livebar.on{display:flex}
+.badge{display:inline-flex;align-items:center;gap:6px;color:var(--ok);font-size:12px;font-weight:500;
+  background:var(--ok-fill);border-radius:6px;height:22px;padding:0 8px}
+.urlline{font-family:"JBMono",ui-monospace,monospace;font-size:12.5px;color:var(--ink);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* screens */
+.screen{display:none;flex:1;min-height:0;flex-direction:column}
+.screen.on{display:flex;animation:fwd .18s ease-out}
+.app[data-dir="back"] .screen.on{animation:bck .18s ease-out}
+@keyframes fwd{from{opacity:0;transform:translateX(9px)}to{opacity:1;transform:none}}
+@keyframes bck{from{opacity:0;transform:translateX(-9px)}to{opacity:1;transform:none}}
+
+/* fix markers */
+.fx{display:none;position:absolute;transform:translate(-50%,-50%);height:17px;padding:0 6px;
+  border-radius:5px;background:var(--ink);color:var(--inverse);font-family:"JBMono",ui-monospace,monospace;
+  font-size:9.5px;font-weight:600;line-height:17px;z-index:9;pointer-events:none;white-space:nowrap}
+body.fixon .fx{display:block}
+.anchor{position:relative}
+
+/* notes */
+.notes{max-width:1330px;margin:0 auto;padding:8px 24px 72px}
+.notes h2{font-size:17px;line-height:24px;font-weight:600;margin:0 0 4px}
+.notes .nsub{font-size:13px;opacity:.68;margin:0 0 18px;max-width:80ch}
+.ntable{overflow-x:auto;border:1px solid var(--surround-line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:680px;font-size:12.5px}
+th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.06em;opacity:.55;padding:11px 15px;
+  border-bottom:1px solid var(--surround-line);white-space:nowrap}
+td{padding:11px 15px;vertical-align:top;line-height:18px;opacity:.85}
+tbody tr+tr td{border-top:1px solid var(--surround-line)}
+td:first-child{white-space:nowrap;font-family:"JBMono",ui-monospace,monospace;font-size:11px;opacity:.6}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="chrome">
+  <h1>Create a stack — starting points</h1>
+  <p>Five <b>peer</b> starting points, all visible at once, so someone evaluating Stackdome can see every way
+  in without clicking. Picking one never traps you — switching is always one click. The flow ends on the
+  <b>canvas</b>, not at a deploy: you see what you got, fix what needs fixing, and deploy from there.
+  One starting point is <b>always active</b>, so the page never reads as empty, and “In this stack” shows what you have picked so far. <b>Four layouts below — “Cards on top” is the default.</b></p>
+  <div class="bar">
+    <span class="seglbl">Layout</span>
+    <span class="seg" id="layseg">
+      <button type="button" data-lay="cards" aria-pressed="true">Cards on top</button>
+      <button type="button" data-lay="rail" aria-pressed="false">Left rail</button>
+      <button type="button" data-lay="gallery" aria-pressed="false">Gallery</button>
+      <button type="button" data-lay="tabs" aria-pressed="false">Tabs</button>
+    </span>
+    <button class="cbtn" id="reset" type="button">Start over</button>
+    <button class="cbtn" id="emptytoggle" type="button" aria-pressed="false">Empty org</button>
+    <button class="cbtn" id="fixtoggle" type="button" aria-pressed="false">Show fix markers</button>
+    <span class="chint">Deploy lives on the canvas — there are errors you must see first.</span>
+  </div>
+</div>
+
+<div class="stage-wrap">
+<div class="app" id="app" data-dir="fwd" data-lay="cards">
+
+  <aside class="rail">
+    <div class="brandband">
+      <span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg></span>
+      <span class="brandname">Stackdome</span>
+    </div>
+    <div class="navgroup">
+      <span class="nav" aria-current="page"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg> Stacks</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><path d="M6 9v12"/></svg> Previews</span>
+    </div>
+    <div class="navgroup">
+      <span class="navlabel">Platform</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 2A2.5 2.5 0 0 0 13 4.5V6h-1a3 3 0 0 0-3 3v1H7.5a2.5 2.5 0 1 0 0 5H9v1a3 3 0 0 0 3 3h1v1.5a2.5 2.5 0 1 0 5 0V18h1a3 3 0 0 0 3-3v-1"/></svg> Addons</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="3.5"/><path d="m10 13 8.5-8.5"/><path d="m17 8 2 2"/></svg> Secrets</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19a4.5 4.5 0 1 0-.5-8.98A6 6 0 1 0 6.5 19Z"/></svg> Object stores</span>
+    </div>
+    <div class="navgroup">
+      <span class="navlabel">Infrastructure</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="6" r="3"/><circle cx="5.5" cy="17" r="3"/><circle cx="18.5" cy="17" r="3"/></svg> Clusters</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z"/></svg> Domains</span>
+      <span class="nav"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg> Git integrations</span>
+    </div>
+  </aside>
+
+  <main class="sheet">
+    <div class="sheethead">
+      <nav class="trail" id="trail"></nav>
+      <span class="draft" id="draftchip" hidden>Draft · not deployed</span>
+    </div>
+
+    <div class="sheetbody">
+
+      <!-- ══ SCREEN 1 — starting points ══ -->
+      <section class="screen on" id="scr-pick">
+        <div class="picker">
+          <div class="chooser anchor" id="chooser">
+            <span class="fx" style="left:50%;top:2px">all five, always</span>
+          </div>
+          <div class="pbody">
+            <div class="pinner" id="pinner">
+              <div class="pmain">
+
+
+
+              <div id="src-git" hidden>
+                <div class="pbodyhead"><p class="sub">Stackdome builds the image from a branch and gives the service a URL.</p></div>
+                <div style="margin-top:14px">
+                  <span class="segctl" id="gittabs">
+                    <button type="button" data-gt="provider" aria-pressed="true">Connected provider</button>
+                    <button type="button" data-gt="url" aria-pressed="false">Public URL</button>
+                  </span>
+                </div>
+                <div id="git-url" hidden style="margin-top:14px">
+                  <div class="insf">
+                    <label for="giturl">Repository URL</label>
+                    <input class="inp mono" id="giturl" type="text" placeholder="https://github.com/acme/webapp">
+                  </div>
+                  <p class="sub" style="font-size:12px">Any public HTTPS git URL. Private repositories need a connected provider.</p>
+                </div>
+                <div id="git-provider">
+                <div class="search" style="margin-top:14px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input class="inp" id="repoq" type="text" placeholder="Search your repositories" aria-label="Search repositories">
+                </div>
+                <div class="list" id="repolist" style="margin-top:6px"></div>
+                </div>
+              </div>
+
+              <div id="src-tpl" hidden>
+                <div class="pbodyhead"><p class="sub">Open-source apps, tuned to a sane minimal config. Each brings its own services.</p></div>
+                <div class="search" style="margin-top:16px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input class="inp" id="tplq" type="text" placeholder="Search apps" aria-label="Search apps">
+                </div>
+                <div class="list" id="tpllist" style="margin-top:6px"></div>
+              </div>
+
+              <div id="src-compose" hidden>
+                <div class="pbodyhead anchor"><span class="fx" style="left:-24px;top:32px">S-07</span>
+                <p class="sub">Paste it below. You see what was found before anything is created.</p></div>
+                <div style="margin-top:16px;display:flex;gap:8px">
+                  <button class="btn outline" type="button" id="filebtn">Choose file…</button>
+                  <button class="btn outline" type="button" id="samplebtn">Paste an example</button>
+                  <button class="btn ghost" type="button" id="clearyaml">Clear</button>
+                  <input type="file" id="fileinput" accept=".yml,.yaml" hidden>
+                </div>
+                <textarea class="ta" id="yaml" spellcheck="false" style="margin-top:12px"
+                  placeholder="services:&#10;  web:&#10;    image: nginx:1.27" aria-label="Compose file"></textarea>
+                <div class="parse" id="parse" hidden></div>
+              </div>
+
+              <div id="src-blank" hidden>
+                <div class="pbodyhead"><p class="sub">You start with an empty canvas and add everything
+                  yourself. Nothing is created until you press Create stack.</p></div>
+                <div class="explain" id="explain"></div>
+              </div>
+
+              <div id="src-blocks" hidden>
+                <div class="pbodyhead anchor"><span class="fx" style="left:-24px;top:32px">B-05</span>
+                <p class="sub">Search the catalogue, or start with one of these.</p></div>
+                <div class="search" style="margin-top:16px">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                  <input class="inp" id="blkq" type="text" placeholder="Search services, data stores and add-ons" aria-label="Search blocks">
+                </div>
+                <div class="list" id="blklist" style="margin-top:6px"></div>
+                <div class="catlbl" style="padding-top:20px">Managed add-ons</div>
+                <div class="list" id="addonlist"></div>
+              </div>
+
+              </div>
+              <aside class="pside" id="pside" hidden>
+                <div class="tdet" id="tdetail" hidden></div>
+                <div class="psidehead" id="psidehead"></div>
+                <div class="pitems" id="pitems"></div>
+                <div class="pnote" id="pnote" hidden></div>
+              </aside>
+            </div>
+          </div>
+        </div>
+        <div class="foot">
+          <span></span>
+          <div class="footright anchor">
+            <span class="fx" style="left:-30px;top:50%">B-07</span>
+            <span class="blocked" id="blocked"></span>
+            <button class="btn primary" id="createbtn" type="button" disabled>Create stack</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ══ SCREEN 2 — the canvas ══ -->
+      <section class="screen" id="scr-canvas">
+        <div class="cv">
+          <div class="cvhead anchor">
+            <span class="fx" style="left:24px;top:-4px">S-03</span>
+            <input class="nameinp" id="cvname" value="checkout-api" aria-label="Stack name">
+            <span class="inword">in</span>
+            <select class="projsel" id="cvproj">
+              <option>acme-production</option><option>acme-staging</option><option>internal-tools</option>
+            </select>
+            <div class="cvactions">
+              <button class="btn ghost" id="tostart" type="button">Change starting point</button>
+              <button class="btn primary pill" id="deploybtn" type="button">Deploy</button>
+            </div>
+          </div>
+
+          <div class="alerts anchor" id="alerts">
+            <span class="fx" style="left:-8px;top:-2px">why deploy is here</span>
+          </div>
+
+          <div class="cvstage" id="cvstage">
+            <svg class="edges" id="edges"></svg>
+            <aside class="inspector" id="inspector">
+              <div class="inshead">
+                <span class="pg" style="width:24px;height:24px;border-radius:6px;background:var(--control);border:1px solid var(--line);display:grid;place-items:center;color:var(--fg-2)" id="insglyph"></span>
+                <span class="inn" id="insname"></span>
+                <button class="insclose" id="insclose" type="button" aria-label="Close">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+                </button>
+              </div>
+              <div class="insfields" id="insfields"></div>
+            </aside>
+          </div>
+
+          <div class="stages" id="stages"></div>
+          <div class="livebar" id="livebar">
+            <span class="badge"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg> Live</span>
+            <span class="urlline" id="liveurl"></span>
+            <span style="margin-left:auto;display:flex;gap:8px">
+              <button class="btn ghost" type="button">Copy URL</button>
+              <button class="btn outline" type="button">View logs</button>
+            </span>
+          </div>
+          <div style="height:16px;flex:none"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+</div>
+
+<div class="notes">
+  <h2>What changed, and why</h2>
+  <p class="nsub">This round reverses two of my own calls. Both reversals came from you, and both were right.</p>
+  <div class="ntable">
+    <table>
+      <thead><tr><th>Change</th><th>Was</th><th>Now</th></tr></thead>
+      <tbody>
+        <tr><td>duplicates</td><td>A block could only be on or off. The real <span class="mono">addBlockToStack</span> de-duplicates with <span class="mono">uniqueName()</span>, so you can add the same one repeatedly</td><td>Clicking adds one: postgres, postgres-2, postgres-3. A ×n badge on the row, and each instance removable on its own</td></tr>
+        <tr><td>catalogue</td><td>4 blocks, ungrouped</td><td>All 12, in their 3 categories — set in sentence case, because §11 forbids the registry’s own caps</td></tr>
+        <tr><td>add-ons</td><td>Managed add-ons were missing entirely</td><td>Link an existing managed Postgres, with its own empty state</td></tr>
+        <tr><td>template detail</td><td>Name and one line</td><td>Badge, category, version, the long blurb and both links — every field the record already carries</td></tr>
+        <tr><td>public URL</td><td>Only a connected provider</td><td>Both tabs the real picker has. Paste any public HTTPS git URL</td></tr>
+        <tr><td>resource config</td><td>Dropping the confirm step left branch, port, Dockerfile path and build context <b>nowhere</b></td><td>They belong to a resource, not the stack — click a node on the canvas to open its inspector</td></tr>
+        <tr><td>always on</td><td>Nothing was selected on load, so the page opened empty below the cards</td><td>A repository is active by default — a starting position, not a hierarchy. All five stay equal weight</td></tr>
+        <tr><td>in this stack</td><td>No way to see what you had already added, especially with blocks</td><td>The old wizard’s stack-so-far panel, brought back. Appears with the first selection, removable where removing makes sense</td></tr>
+        <tr><td>blank</td><td>Jumped straight to the canvas, skipping the flow</td><td>Explains what an empty canvas gives you, then you press Create stack like every other path</td></tr>
+        <tr><td>layout</td><td>A 236px chooser rail sat beside the 240px app sidebar — <b>476px, 37% of the width</b>, nav-shaped, before any content. Two rails read as one giant nav</td><td>Cards on top, work below. Options are actions, not navigation, so they sit above the thing they act on</td></tr>
+        <tr><td>peers</td><td>I forked by job and buried three options again — the same flattening I logged as S-04</td><td>Five peers, all on screen at once. An evaluator reads every way in without clicking</td></tr>
+        <tr><td>no deploy</td><td>The flow deployed at step 3</td><td>It ends on the canvas. Deploy is there, because alerts and errors have to be seen first</td></tr>
+        <tr><td>the CTA</td><td>“Deploy”</td><td><b>Create stack</b>. It makes a draft — the chip in the header says so until it is deployed</td></tr>
+        <tr><td>going back</td><td>Once inside a path you were stuck with Back</td><td>Switching is one click, from anywhere, and the canvas has “Change starting point”</td></tr>
+        <tr><td>S-03</td><td>Project assigned silently</td><td>Name and project sit in the canvas header, where you can see and change both</td></tr>
+        <tr><td>S-07</td><td>Compose warned you after navigating away</td><td>Parse preview before Create, then the blocking alert follows you to the canvas</td></tr>
+        <tr><td>truth</td><td>“builds on every push” — push events are dropped in <span class="mono">github_webhook_service.go</span></td><td>Built from a branch. Preview environments per pull request, which are real</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const $ = (s,r) => (r||document).querySelector(s);
+  const $$ = (s,r) => [...(r||document).querySelectorAll(s)];
+
+  /* ── data ─────────────────────────────────────────── */
+  const REPOS = [
+    {n:"checkout-api",   f:"acme/checkout-api",   b:"main",        t:"2 hours ago"},
+    {n:"web-storefront", f:"acme/web-storefront", b:"main",        t:"yesterday"},
+    {n:"billing-worker", f:"acme/billing-worker", b:"main",        t:"3 days ago"},
+    {n:"notifications",  f:"acme/notifications",  b:"develop",     t:"5 days ago"},
+    {n:"image-proxy",    f:"acme/image-proxy",    b:"main",        t:"2 weeks ago"},
+    {n:"internal-docs",  f:"acme/internal-docs",  b:"release/2.4", t:"last month"}
+  ];
+  const TPLS = [
+    {n:"n8n", ini:"n8", cat:"Workflow Automation", d:"Workflow automation you self-host and fully own.", v:"2.27.4", svc:["n8n","worker","postgres","redis"], secrets:2,
+     long:"A fair-code licensed workflow automation tool that combines AI capabilities with business process automation.",
+     web:"https://n8n.io/", docs:"https://docs.n8n.io/"},
+    {n:"Grafana", ini:"Gr", cat:"Observability", d:"Dashboards and visualization for all your metrics.", v:"11.3", svc:["grafana","postgres"], secrets:1,
+     long:"Query, visualise and alert on metrics wherever they live. Ships with Postgres for dashboard storage.",
+     web:"https://grafana.com/", docs:"https://grafana.com/docs/"},
+    {n:"Immich", ini:"Im", cat:"Media", d:"Self-hosted photo and video backup.", v:"1.119", svc:["server","machine-learning","postgres","redis"], secrets:2,
+     long:"High-performance photo and video backup from your phone, with search, faces and albums. Runs entirely on your own hardware.",
+     web:"https://immich.app/", docs:"https://immich.app/docs/"},
+    {n:"Prometheus", ini:"Pr", cat:"Observability", d:"Metrics collection and alerting.", v:"2.55", svc:["prometheus","node-exporter"], secrets:0,
+     long:"Time-series metrics collection with a powerful query language, paired with node-exporter for host metrics.",
+     web:"https://prometheus.io/", docs:"https://prometheus.io/docs/"},
+    {n:"ToolJet", ini:"TJ", cat:"Dev Tools", d:"Low-code platform for internal tools.", v:"3.20.189-lts", svc:["tooljet","worker","postgres","redis","grafana","tempo"], secrets:3,
+     long:"Build enterprise apps, AI agents and workflows in minutes. Ships with workflow workers, the built-in ToolJet Database, and an observability stack.",
+     web:"https://tooljet.com/", docs:"https://docs.tooljet.com/"},
+    {n:"Gitea", ini:"Gi", cat:"Dev Tools", d:"A git server you run yourself.", v:"1.22", svc:["gitea","postgres"], secrets:1,
+     long:"A painless, self-hosted git service with issues, pull requests and a package registry. Lightweight enough for a single small node.",
+     web:"https://about.gitea.com/", docs:"https://docs.gitea.com/"}
+  ];
+  /* All 12 from data/blocks/registry.ts. The registry's own labels are
+     UPPERCASE, which §11 forbids — sentence case here. */
+  const CATS = [
+    { id:"services",  label:"Services" },
+    { id:"databases", label:"Databases" },
+    { id:"analytics", label:"Cache, search and analytics" }
+  ];
+  const BLOCKS = [
+    {id:"web",           n:"Web service",   c:"services",  d:"your image · port 80 · public"},
+    {id:"custom",        n:"Custom",        c:"services",  d:"empty container shape"},
+    {id:"postgres",      n:"Postgres",      c:"databases", d:"postgres:16 · port 5432"},
+    {id:"mysql",         n:"MySQL",         c:"databases", d:"mysql:8 · port 3306"},
+    {id:"mariadb",       n:"MariaDB",       c:"databases", d:"mariadb:11.4 · port 3306"},
+    {id:"mssql",         n:"MS SQL Server", c:"databases", d:"mssql:2022 · port 1433"},
+    {id:"mongo",         n:"MongoDB",       c:"databases", d:"mongo:7 · port 27017"},
+    {id:"couchdb",       n:"CouchDB",       c:"databases", d:"couchdb:3.3 · port 5984"},
+    {id:"redis",         n:"Redis",         c:"analytics", d:"redis:7 · port 6379"},
+    {id:"elasticsearch", n:"Elasticsearch", c:"analytics", d:"elasticsearch:8 · port 9200"},
+    {id:"influxdb",      n:"InfluxDB",      c:"analytics", d:"influxdb:2.7 · port 8086"},
+    {id:"clickhouse",    n:"ClickHouse",    c:"analytics", d:"clickhouse:24 · port 8123"}
+  ];
+  /* Managed Postgres add-ons already provisioned in the workspace */
+  const ADDONS = [
+    { id:"pg-orders",    n:"orders-db",    d:"managed postgres · 16" },
+    { id:"pg-analytics", n:"analytics-db", d:"managed postgres · 16" }
+  ];
+  const SAMPLE = ["services:","  web:","    image: nginx:1.27","    ports:",'      - "8080:80"',
+    "    environment:","      - NODE_ENV=production","  api:","    image: node:22","    depends_on:",
+    "      - db","  db:","    image: postgres:16","    environment:","      - POSTGRES_PASSWORD=hunter2",
+    "    volumes:","      - pgdata:/var/lib/postgresql/data","volumes:","  pgdata:"].join("\n");
+
+  const I = {
+    repo:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',
+    app:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>',
+    yaml:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7Z"/><path d="M14 2v5h5"/></svg>',
+    blk:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    blank:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 3"/><path d="M12 8v8"/><path d="M8 12h8"/></svg>',
+    tick:'<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 12.5 5 5L20 6.5"/></svg>',
+    spin:'<svg class="spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>',
+    check:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg>',
+    dash:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2.6 3.4"><circle cx="12" cy="12" r="9"/></svg>',
+    warn:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>',
+    info:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><path d="M12 8h.01"/></svg>',
+    svc:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h6"/></svg>',
+    db:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/></svg>',
+    ext:'<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6"/><path d="M10 14 21 3"/></svg>',
+    vol:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="m3 16 9 5 9-5"/></svg>'
+  };
+
+  /* Five peers. Blank used to jump straight to the canvas; it now explains
+     itself below like the rest, and you press Create stack the same way. */
+  const POINTS = [
+    { id:"git",     name:"A repository",     desc:"Deploy your own code",        icon:I.repo },
+    { id:"tpl",     name:"A ready-made app", desc:"n8n, Grafana, Immich and 3 more", icon:I.app },
+    { id:"compose", name:"A compose file",   desc:"Import a definition you have", icon:I.yaml },
+    { id:"blocks",  name:"Building blocks",  desc:"Assemble it from parts",      icon:I.blk },
+    { id:"blank",   name:"A blank canvas",   desc:"Start with nothing",          icon:I.blank }
+  ];
+
+  const DBRE = /postgres|mysql|maria|mongo|couch|clickhouse|mssql/i;
+  const CACHERE = /redis|memcach|elastic|influx/i;
+  const kindOf = n => (DBRE.test(n) || CACHERE.test(n)) ? "db" : "service";
+  const slug = v => String(v ?? "").toLowerCase().trim().replace(/[^a-z0-9-]+/g,"-").replace(/^-|-$/g,"") || "stack";
+
+  const S = { lay:"cards", src:"git", repo:null, tpl:null, blocks:[], addons:[], parsed:null,
+              gitTab:"provider", gitUrl:"", empty:false, inspect:null,
+              screen:"pick", deploying:false, done:false, fixed:false };
+
+  const app = $("#app");
+
+  /* ── the row primitive, reused three ways ─────────── */
+  function row(o){
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "row"; b.setAttribute("role","option");
+    b.setAttribute("aria-selected", o.sel ? "true" : "false");
+    b.innerHTML = '<span class="rowglyph">'+o.icon+'</span><span class="rowmain">'+
+      '<span class="rowname"></span><span class="rowsub"></span></span>'+
+      '<span class="rowend"><span class="et"></span><span class="tick">'+I.tick+'</span></span>';
+    $(".rowname", b).textContent = o.name;
+    const sub = $(".rowsub", b);
+    o.sub.forEach((p,i) => {
+      if (i){ const d = document.createElement("span"); d.className="dot"; d.textContent="·"; sub.appendChild(d); }
+      const s = document.createElement("span"); if (p.mono) s.className="mono";
+      s.textContent = p.t; sub.appendChild(s);
+    });
+    $(".et", b).textContent = o.end || "";
+    b.addEventListener("click", o.onClick);
+    return b;
+  }
+
+  /* ── the chooser, rendered three ways ─────────────── */
+  function pointBtn(p){
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "sp"; b.dataset.pt = p.id;
+    b.setAttribute("aria-pressed", String(S.src === p.id));
+    b.innerHTML = '<span class="spglyph">'+p.icon+'</span><span style="min-width:0">'+
+      '<span class="spname"></span><span class="spdesc"></span></span>';
+    const nm = $(".spname", b); nm.textContent = p.name;
+    if (p.leaves){
+      const t = document.createElement("span");
+      t.className = "leaves"; t.textContent = "goes straight there"; nm.appendChild(t);
+    }
+    $(".spdesc", b).textContent = p.desc;
+    b.addEventListener("click", () => choose(p.id));
+    return b;
+  }
+  function drawChooser(){
+    const c = $("#chooser");
+    $$(".sp, .chooserlbl, .gallery, .strip, .cardgrid, .pickhead", c).forEach(e => e.remove());
+    const galleryMode = S.lay === "gallery" && !S.src;
+    if (S.lay === "cards"){
+      const h = document.createElement("div");
+      h.className = "pickhead";
+      h.innerHTML = '<h2 class="h-head">Start a new stack</h2>'+
+        '<p class="sub">Pick a starting point. Each one lands you on the canvas, where you can change '+
+        'anything before deploying.</p>';
+      c.appendChild(h);
+      const grid = document.createElement("div");
+      grid.className = "cardgrid";
+      POINTS.forEach(p => grid.appendChild(pointBtn(p)));
+      c.appendChild(grid);
+      $(".pbody").hidden = false;
+      return;
+    }
+    if (S.lay === "rail"){
+      const l = document.createElement("div");
+      l.className = "chooserlbl"; l.textContent = "Start from";
+      c.appendChild(l);
+      POINTS.forEach(p => c.appendChild(pointBtn(p)));
+    } else if (S.lay === "gallery"){
+      const wrap = document.createElement("div");
+      wrap.className = galleryMode ? "gallery" : "strip";
+      POINTS.forEach(p => wrap.appendChild(pointBtn(p)));
+      c.appendChild(wrap);
+    } else {
+      POINTS.forEach(p => c.appendChild(pointBtn(p)));
+    }
+    /* gallery hides the body until something is picked — the full-width
+       "here is everything" moment a new user lands on */
+    $(".pbody").hidden = galleryMode;
+  }
+
+  /* ── lists ────────────────────────────────────────── */
+  function drawRepos(){
+    const q = $("#repoq").value.trim().toLowerCase(), L = $("#repolist");
+    L.innerHTML = "";
+    /* a brand-new org has no provider connected — the real picker's first state */
+    if (S.empty){
+      L.innerHTML = '<div class="empty"><div class="t">No git provider connected</div>'+
+        '<div class="d">Connect GitHub to pick from your repositories, or paste a public URL above.</div>'+
+        '<div style="margin-top:14px"><button class="btn outline pill" type="button">Connect provider</button></div></div>';
+      return;
+    }
+    const hits = REPOS.filter(r => !q || r.n.includes(q) || r.f.toLowerCase().includes(q));
+    if (!hits.length){ L.innerHTML = '<div class="empty"><div class="t">No repository matches that</div><div class="d">Check the spelling, or connect another git provider.</div></div>'; return; }
+    hits.forEach(r => L.appendChild(row({ icon:I.repo, name:r.n, end:r.t, sel:S.repo && S.repo.f === r.f,
+      sub:[{t:r.f,mono:true},{t:r.b,mono:true}], onClick(){ S.repo = r; drawRepos(); drawSide(); sync(); } })));
+  }
+  function drawTpls(){
+    const q = $("#tplq").value.trim().toLowerCase(), L = $("#tpllist");
+    L.innerHTML = "";
+    const hits = TPLS.filter(t => !q || t.n.toLowerCase().includes(q) || t.d.toLowerCase().includes(q));
+    if (!hits.length){ L.innerHTML = '<div class="empty"><div class="t">No app matches that</div><div class="d">Try a shorter word, or deploy your own code instead.</div></div>'; return; }
+    hits.forEach(t => L.appendChild(row({ icon:I.app, name:t.n, end:t.svc.length + " services",
+      sel:S.tpl && S.tpl.n === t.n, sub:[{t:t.d},{t:"v"+t.v,mono:true}],
+      onClick(){ S.tpl = t; drawTpls(); drawSide(); sync(); } })));
+  }
+  /* The real addBlockToStack de-duplicates with uniqueName(), so the same block
+     can be added over and over: postgres, postgres-2, postgres-3. Clicking a row
+     ADDS one; removal happens per instance in "In this stack". */
+  function uniqueName(base){
+    const taken = new Set(S.blocks.map(x => x.name));
+    if (!taken.has(base)) return base;
+    let n = 2; while (taken.has(base+"-"+n)) n++;
+    return base+"-"+n;
+  }
+  const countOf = id => S.blocks.filter(x => x.id === id).length;
+
+  function drawBlocks(){
+    const q = $("#blkq").value.trim().toLowerCase(), L = $("#blklist");
+    L.innerHTML = "";
+    const hits = BLOCKS.filter(b => !q || b.n.toLowerCase().includes(q) || b.d.includes(q));
+    if (!hits.length){
+      L.innerHTML = '<div class="empty"><div class="t">Nothing in the catalogue matches</div><div class="d">Blocks cover services, data stores and add-ons.</div></div>';
+    } else {
+      CATS.forEach(cat => {
+        const inCat = hits.filter(b => b.c === cat.id);
+        if (!inCat.length) return;
+        const lbl = document.createElement("div");
+        lbl.className = "catlbl"; lbl.textContent = cat.label;
+        L.appendChild(lbl);
+        inCat.forEach(b => {
+          const n = countOf(b.id);
+          const r = row({ icon:I.blk, name:b.n, sel:false, sub:[{t:b.d,mono:true}],
+            onClick(){ S.blocks.push({ id:b.id, name:uniqueName(b.id), label:b.n });
+                       drawBlocks(); drawSide(); sync(); } });
+          const end = r.querySelector(".rowend");
+          end.innerHTML = (n ? '<span class="qty">×'+n+'</span>' : "") +
+            '<span class="addicon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>';
+          L.appendChild(r);
+        });
+      });
+    }
+    drawAddons();
+  }
+
+  /* Managed add-ons already provisioned in the workspace, plus its empty state */
+  function drawAddons(){
+    const L = $("#addonlist"); L.innerHTML = "";
+    if (S.empty){
+      L.innerHTML = '<div class="empty"><div class="t">No managed add-ons yet</div>'+
+        '<div class="d">Set one up on the Addons page and it will show here, ready to link.</div></div>';
+      return;
+    }
+    ADDONS.forEach(a => {
+      const on = S.addons.includes(a.id);
+      L.appendChild(row({ icon:I.db, name:a.n, sel:on, sub:[{t:a.d,mono:true}],
+        onClick(){ const i = S.addons.indexOf(a.id); if (i<0) S.addons.push(a.id); else S.addons.splice(i,1);
+                   drawAddons(); drawSide(); sync(); } }));
+    });
+  }
+
+  /* ── compose parse ────────────────────────────────── */
+  function parseCompose(text){
+    if (!text.trim()) return null;
+    const services = [], volumes = [], warnings = []; let block = null;
+    text.split("\n").forEach(raw => {
+      const line = raw.replace(/\s+$/,"");
+      if (/^services:\s*$/.test(line)){ block = "s"; return; }
+      if (/^volumes:\s*$/.test(line)){ block = "v"; return; }
+      if (/^[a-z]/i.test(line)){ block = null; return; }
+      const m = line.match(/^ {2}([A-Za-z0-9_.-]+):\s*$/);
+      if (m){ if (block === "s") services.push(m[1]); if (block === "v") volumes.push(m[1]); }
+      if (/-\s*"?\d{2,5}:\d{2,5}"?/.test(line)) warnings.push("port");
+      if (/PASSWORD=\S+/.test(line)) warnings.push("secret");
+    });
+    return { services, volumes, warnings:[...new Set(warnings)] };
+  }
+  function drawParse(){
+    const p = S.parsed, el = $("#parse");
+    if (!p || (!p.services.length && !p.volumes.length)){ el.hidden = true; return; }
+    el.hidden = false;
+    const bits = [p.services.length + (p.services.length===1?" service":" services")];
+    if (p.volumes.length) bits.push(p.volumes.length + (p.volumes.length===1?" volume":" volumes"));
+    if (p.warnings.length) bits.push(p.warnings.length + (p.warnings.length===1?" thing to fix":" things to fix"));
+    el.innerHTML = '<div class="parsehead">Found in your file <span class="n">'+bits.join(" · ")+'</span></div>'+
+      '<div class="found">'+p.services.concat(p.volumes).map(s => '<span class="chip">'+s+'</span>').join("")+'</div>';
+  }
+
+  /* ── choosing a starting point ────────────────────── */
+  const PANELS = ["git","tpl","compose","blocks","blank"];
+  function choose(id){
+    S.src = id;
+    PANELS.forEach(k => { $("#src-"+k).hidden = (k !== id); });
+    if (id === "tpl") drawTpls();
+    if (id === "blocks") drawBlocks();
+    if (id === "blank") drawExplain();
+    drawChooser(); drawSide(); sync();
+  }
+
+  /* what an empty canvas actually gives you — shown instead of jumping there */
+  const EXPLAIN = [
+    { i:I.svc, t:"Services",    d:"Your own image, or any public one. Give it a port and a URL." },
+    { i:I.db,  t:"Data stores", d:"Postgres, MySQL, Redis and the rest, wired to your services." },
+    { i:I.vol, t:"Volumes",     d:"Disk that survives a redeploy." }
+  ];
+  function drawExplain(){
+    const host = $("#explain"); host.innerHTML = "";
+    EXPLAIN.forEach(e => {
+      const d = document.createElement("div");
+      d.className = "exrow";
+      d.innerHTML = '<span class="exg">'+e.i+'</span><span><span class="ext"></span>'+
+                    '<span class="exd" style="display:block"></span></span>';
+      $(".ext", d).textContent = e.t; $(".exd", d).textContent = e.d;
+      host.appendChild(d);
+    });
+  }
+
+  /* ── "In this stack" — the old wizard's stack-so-far, kept ── */
+  function selectedItems(){
+    if (S.src === "git" && S.gitTab === "url" && /^https?:\/\/\S+\/\S+/.test(S.gitUrl)){
+      const tail = S.gitUrl.replace(/\/+$/,"").split("/").slice(-1)[0].replace(/\.git$/,"");
+      return [{ n:slug(tail), s:"from a public URL", k:"service" }];
+    }
+    if (S.src === "git" && S.gitTab === "provider" && S.repo)
+      return [{ n:S.repo.n, s:S.repo.f+" · "+S.repo.b, k:"service" }];
+    if (S.src === "tpl" && S.tpl)
+      return S.tpl.svc.map(n => ({ n, s:kindOf(n)==="db"?"data store":"service", k:kindOf(n) }));
+    if (S.src === "compose" && S.parsed)
+      return S.parsed.services.map(n => ({ n, s:"service", k:kindOf(n) }))
+        .concat(S.parsed.volumes.map(n => ({ n, s:"volume", k:"vol" })));
+    if (S.src === "blocks")
+      return S.blocks.map((x,i) => ({ n:x.name, s:x.label, k:kindOf(x.id), rmIdx:i }))
+        .concat(S.addons.map(id => { const a = ADDONS.find(z=>z.id===id);
+          return { n:a.n, s:"linked add-on", k:"db", rmAddon:id }; }));
+    return [];
+  }
+  function drawSide(){
+    const items = selectedItems(), side = $("#pside"), host = $("#pitems");
+    /* only once there is something — an empty panel taking a third of the
+       width is the bug this flow already had (B-06) */
+    $("#pinner").classList.toggle("withside", items.length > 0);
+    side.hidden = items.length === 0;
+    if (!items.length) return;
+    /* templates carry a real detail record — category, version, a long blurb and
+       links. The old browser panel showed all of it; none of it was in v5. */
+    const det = $("#tdetail");
+    if (S.src === "tpl" && S.tpl){
+      const t = S.tpl;
+      det.hidden = false;
+      det.innerHTML = '<div class="tbadge"></div><div class="tname"></div>'+
+        '<div class="tmeta"></div><p class="tlong"></p>'+
+        '<div class="tlinks">'+
+          '<a class="tlink" target="_blank" rel="noopener" id="tweb">'+I.ext+'Website</a>'+
+          '<a class="tlink" target="_blank" rel="noopener" id="tdocs">'+I.ext+'Docs</a>'+
+        '</div>';
+      $(".tbadge", det).textContent = t.ini;
+      $(".tname", det).textContent = t.n;
+      $(".tmeta", det).textContent = "Self-hosted · " + t.cat + " · v" + t.v;
+      $(".tlong", det).textContent = t.long;
+      $("#tweb", det).href = t.web; $("#tdocs", det).href = t.docs;
+      $("#psidehead").textContent = "Includes · " + items.length;
+    } else {
+      det.hidden = true;
+      $("#psidehead").textContent = "In this stack · " + items.length;
+    }
+    host.innerHTML = "";
+    items.forEach(it => {
+      const d = document.createElement("div");
+      d.className = "pitem";
+      d.innerHTML = '<span class="pg">'+(it.k==="db"?I.db:it.k==="vol"?I.vol:I.svc)+'</span>'+
+        '<span class="pmainc"><span class="pn"></span><span class="ps"></span></span>';
+      $(".pn", d).textContent = it.n; $(".ps", d).textContent = it.s;
+      if (it.rmIdx !== undefined || it.rmAddon){
+        const x = document.createElement("button");
+        x.type = "button"; x.className = "px"; x.setAttribute("aria-label", "Remove " + it.n);
+        x.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+        x.addEventListener("click", () => {
+          if (it.rmAddon){ const i = S.addons.indexOf(it.rmAddon); if (i>-1) S.addons.splice(i,1); }
+          else S.blocks.splice(it.rmIdx, 1);
+          drawBlocks(); drawSide(); sync();
+        });
+        d.appendChild(x);
+      }
+      host.appendChild(d);
+    });
+    const note = $("#pnote");
+    const fixed = S.src === "tpl" || S.src === "compose";
+    note.hidden = !fixed;
+    if (fixed) note.textContent = "These come with the " + (S.src === "tpl" ? "app" : "file") +
+      ". You can change them on the canvas.";
+  }
+
+  /* what the chosen starting point produces */
+  function nodes(){
+    if (S.src === "git" && (S.repo || S.gitUrl))  return [{ n:slug($("#cvname").value) || "service", k:"service", m:S.repo ? "built from "+S.repo.b : "built from a public URL" }];
+    if (S.src === "tpl" && S.tpl)   return S.tpl.svc.map(n => ({ n, k:kindOf(n), m:kindOf(n)==="db"?"data store":"service" }));
+    if (S.src === "compose" && S.parsed)
+      return S.parsed.services.map(n => ({ n, k:kindOf(n), m:kindOf(n)==="db"?"data store":"service" }))
+        .concat(S.parsed.volumes.map(n => ({ n, k:"vol", m:"volume" })));
+    if (S.src === "blocks") return S.blocks.map(x => ({ n:x.name, k:kindOf(x.id), m:x.label }))
+      .concat(S.addons.map(id => { const a = ADDONS.find(z => z.id === id);
+        return { n:a.n, k:"db", m:"linked add-on" }; }));
+    return [];
+  }
+  function ready(){
+    if (S.src === "git") return S.gitTab === "url" ? /^https?:\/\/\S+\/\S+/.test(S.gitUrl) : !!S.repo;
+    if (S.src === "tpl") return !!S.tpl;
+    if (S.src === "blocks") return S.blocks.length + S.addons.length > 0;
+    if (S.src === "compose") return !!(S.parsed && S.parsed.services.length);
+    if (S.src === "blank") return true;
+    return false;
+  }
+  const BLOCKMSG = { git:"Choose a repository", giturl:"Paste a repository URL", tpl:"Choose an app", blocks:"Add at least one block", compose:"Paste a compose file" };
+
+  /* ── the canvas ───────────────────────────────────── */
+  function defaultName(){
+    if (S.src === "git") return S.repo ? S.repo.n : "service";
+    if (S.src === "tpl" && S.tpl)  return slug(S.tpl.n);
+    if (S.src === "compose")       return "imported-stack";
+    if (S.src === "blocks")        return "new-stack";
+    return "new-stack";
+  }
+  function drawCanvas(){
+    const stage = $("#cvstage"), svg = $("#edges");
+    $$(".node, .addres, .cvblank", stage).forEach(e => e.remove());
+    svg.innerHTML = "";
+    const list = nodes();
+    if (!list.length){
+      const d = document.createElement("div");
+      d.className = "cvblank";
+      d.innerHTML = '<div><div class="t">An empty canvas</div><div class="d">Add a service, a database or a volume. Nothing deploys until there is something here.</div>'+
+        '<div style="margin-top:14px"><button class="btn outline" type="button">Add a resource</button></div></div>';
+      stage.appendChild(d);
+      return;
+    }
+    /* Lay the graph out in its own coordinate space, then centre the whole
+       bounding box in the stage. Centring the primary against the STAGE
+       instead left it stranded far below its own dependents. */
+    /* PERCOL 5, not 3: with a second column the primary's edges ran straight
+       through the first column's nodes. One column of dependents never crosses. */
+    const NW = 168, NH = 58, GAPX = 64, GAPY = 22, PERCOL = 5;
+    const shown = list.slice(0,6), deps = shown.length - 1;
+    const rows = Math.min(PERCOL, Math.max(deps, 1));
+    const colH = rows*(NH+GAPY) - GAPY;
+    const pos = shown.map((nd,i) => {
+      if (i === 0) return { nd, x:0, y:colH/2 - NH/2 };
+      const j = i-1, col = 1 + Math.floor(j/PERCOL), r = j%PERCOL;
+      return { nd, x:col*(NW+GAPX), y:r*(NH+GAPY) };
+    });
+    /* the add-resource slot joins the layout so it is inside the bounding box */
+    const last = pos[pos.length-1];
+    const addPos = deps === 0
+      ? { x:NW+GAPX, y:pos[0].y }
+      : (deps % PERCOL === 0
+          ? { x:last.x + NW + GAPX, y:0 }
+          : { x:last.x, y:last.y + NH + GAPY });
+    const all = pos.concat([{ x:addPos.x, y:addPos.y }]);
+    const minX = Math.min(...all.map(p=>p.x)), maxX = Math.max(...all.map(p=>p.x)) + NW;
+    const minY = Math.min(...all.map(p=>p.y)), maxY = Math.max(...all.map(p=>p.y)) + NH;
+    const offX = Math.max(24, ((stage.clientWidth||900) - (maxX-minX))/2) - minX;
+    const offY = Math.max(20, ((stage.clientHeight||400) - (maxY-minY))/2) - minY;
+    pos.forEach(p => { p.x += offX; p.y += offY; });
+    addPos.x += offX; addPos.y += offY;
+    pos.forEach((p,i) => {
+      const d = document.createElement("div");
+      d.className = "node"; d.style.left = p.x+"px"; d.style.top = p.y+"px";
+      d.innerHTML = '<span class="nn"></span><span class="nm">'+
+        (p.nd.k==="db"?I.db:p.nd.k==="vol"?I.vol:I.svc)+'<span class="mtx"></span></span>';
+      $(".nn", d).textContent = p.nd.n;
+      $(".mtx", d).textContent = p.nd.m;
+      if (S.inspect === p.nd.n) d.classList.add("sel");
+      d.addEventListener("click", () => openInspector(p.nd));
+      stage.appendChild(d);
+      if (i > 0){
+        const a = pos[0], x1 = a.x+NW, y1 = a.y+NH/2, x2 = p.x, y2 = p.y+NH/2, mid = (x1+x2)/2;
+        const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+        path.setAttribute("d", `M${x1} ${y1} C${mid} ${y1} ${mid} ${y2} ${x2} ${y2}`);
+        svg.appendChild(path);
+      }
+    });
+    const over = list.length - pos.length;
+    const add = document.createElement("button");
+    add.type = "button"; add.className = "addres";
+    add.textContent = over > 0 ? "+ " + over + " more · add a resource" : "+ Add a resource";
+    add.style.left = addPos.x + "px";
+    add.style.top  = addPos.y + "px";
+    stage.appendChild(add);
+  }
+
+  /* Dropping the confirm step left branch, port, Dockerfile path and build
+     context homeless. They belong to a RESOURCE, not to the stack, so they live
+     on the node — click one. */
+  function openInspector(nd){
+    S.inspect = nd.n;
+    const ins = $("#inspector");
+    $("#insglyph").innerHTML = nd.k === "db" ? I.db : nd.k === "vol" ? I.vol : I.svc;
+    $("#insname").textContent = nd.n;
+    const F = $("#insfields"); F.innerHTML = "";
+    const field = (label, value, mono, hint) => {
+      const w = document.createElement("div"); w.className = "insf";
+      const id = "ins-" + label.toLowerCase().replace(/\W+/g,"-");
+      w.innerHTML = '<label for="'+id+'"></label><input class="ii'+(mono?" mono":"")+'" id="'+id+'">'+
+        (hint ? '<span style="font-size:11px;line-height:15px;color:var(--fg-muted)"></span>' : "");
+      $("label", w).textContent = label;
+      $("input", w).value = value;
+      if (hint) $("span", w).textContent = hint;
+      F.appendChild(w);
+    };
+    const toggle = (label, on) => {
+      const w = document.createElement("div"); w.className = "insf";
+      w.innerHTML = '<div class="insrow"><span></span><button class="sw" role="switch" aria-checked="'+
+        (on?"true":"false")+'" aria-label="'+label+'"><i></i></button></div>';
+      $("span", w).textContent = label;
+      $(".sw", w).addEventListener("click", e => {
+        const v = e.currentTarget.getAttribute("aria-checked") === "true";
+        e.currentTarget.setAttribute("aria-checked", String(!v));
+      });
+      F.appendChild(w);
+    };
+    if (nd.k === "vol"){
+      field("Size", "10Gi", true);
+      field("Mount path", "/var/lib/postgresql/data", true);
+    } else if (S.src === "git" && nd.k === "service"){
+      field("Branch", S.repo ? S.repo.b : "main", true);
+      field("Port", "3000", true);
+      toggle("Give it a public URL", true);
+      field("Dockerfile path", "Dockerfile", true, "Relative to the repository root.");
+      field("Build context", ".", true, "Directory passed to the image build.");
+    } else {
+      field("Image", nd.k === "db" ? nd.n + ":16" : "your-image:latest", true);
+      field("Port", nd.k === "db" ? "5432" : "80", true);
+      toggle("Give it a public URL", nd.k !== "db");
+    }
+    ins.classList.add("on");
+    drawCanvas();
+  }
+  function closeInspector(){ S.inspect = null; $("#inspector").classList.remove("on"); drawCanvas(); }
+
+  /* Alerts are the whole argument for deploying here and not one screen earlier. */
+  function alertsFor(){
+    const out = [];
+    if (S.src === "compose" && S.parsed){
+      if (S.parsed.warnings.includes("secret") && !S.fixed)
+        out.push({ block:true, text:"A database password is written into the file in plain text. Move it to a secret before deploying.", fix:"Move to a secret" });
+      if (S.parsed.warnings.includes("port"))
+        out.push({ block:false, text:"Host port bindings were ignored. Stackdome assigns the route itself." });
+    }
+    if (S.src === "tpl" && S.tpl && S.tpl.secrets && !S.fixed)
+      out.push({ block:true, text:S.tpl.secrets + " values still need to be set before " + S.tpl.n + " can start.", fix:"Generate them" });
+    if (S.src === "git" && S.repo)
+      out.push({ block:false, text:"Built from " + S.repo.f + " on " + S.repo.b + ". Every pull request gets its own preview environment." });
+    if (!nodes().length)
+      out.push({ block:true, text:"There is nothing to deploy yet. Add at least one resource." });
+    return out;
+  }
+  function drawAlerts(){
+    const host = $("#alerts");
+    $$(".alert", host).forEach(e => e.remove());
+    alertsFor().forEach(a => {
+      const d = document.createElement("div");
+      d.className = "alert " + (a.block ? "block" : "info");
+      d.innerHTML = (a.block ? I.warn : I.info) + '<span class="atext"></span>';
+      $(".atext", d).textContent = a.text;
+      if (a.fix){
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "fixbtn"; b.textContent = a.fix;
+        b.addEventListener("click", () => { S.fixed = true; drawAlerts(); syncCanvas(); });
+        d.appendChild(b);
+      }
+      host.appendChild(d);
+    });
+  }
+  const blocking = () => alertsFor().some(a => a.block);
+
+  /* ── deploy, from the canvas ──────────────────────── */
+  let timers = [];
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+  function stagesFor(){
+    const n = nodes().length || 1;
+    const start = ["Starting " + (n===1 ? "the service" : n + " services"), 1200];
+    if (S.src === "git") return [["Cloning the repository",800],["Building the image",2000],
+      ["Pushing to the registry",900], start, ["Checking health",800]];
+    return [["Pulling images",1500],["Creating volumes",650], start, ["Checking health",800]];
+  }
+  function deploy(){
+    clearTimers(); S.deploying = true; S.done = false;
+    const host = $("#stages"); host.innerHTML = "";
+    $("#livebar").classList.remove("on");
+    const ST = stagesFor();
+    const rows = ST.map(([label]) => {
+      const d = document.createElement("div");
+      d.className = "stage-row";
+      d.innerHTML = '<span class="st">'+I.dash+'</span><span class="sname"></span><span class="dur"></span>';
+      $(".sname", d).textContent = label; host.appendChild(d); return d;
+    });
+    let t = 0;
+    ST.forEach(([label, ms], i) => {
+      timers.push(setTimeout(() => { rows[i].className = "stage-row run"; $(".st",rows[i]).innerHTML = I.spin; }, t));
+      t += ms;
+      timers.push(setTimeout(() => { rows[i].className = "stage-row done"; $(".st",rows[i]).innerHTML = I.check;
+        $(".dur",rows[i]).textContent = (ms/1000).toFixed(1)+"s"; }, t));
+    });
+    timers.push(setTimeout(() => {
+      S.deploying = false; S.done = true;
+      $("#liveurl").textContent = slug($("#cvname").value) + "." + $("#cvproj").value.split("-")[0] + ".stackdome.app";
+      $("#livebar").classList.add("on");
+      syncCanvas();
+    }, t + 100));
+    syncCanvas();
+  }
+
+  /* ── screens ──────────────────────────────────────── */
+  function go(scr){
+    app.dataset.dir = scr === "canvas" ? "fwd" : "back";
+    S.screen = scr;
+    $$(".screen").forEach(s => s.classList.remove("on"));
+    $("#scr-" + (scr === "canvas" ? "canvas" : "pick")).classList.add("on");
+    if (scr === "canvas"){
+      clearTimers(); S.deploying = false; S.done = false; S.fixed = false; S.inspect = null;
+      $("#inspector").classList.remove("on");
+      $("#stages").innerHTML = ""; $("#livebar").classList.remove("on");
+      $("#cvname").value = defaultName();
+      requestAnimationFrame(() => { drawCanvas(); drawAlerts(); syncCanvas(); });
+    }
+    sync();
+  }
+  function syncCanvas(){
+    const b = $("#deploybtn");
+    b.disabled = S.deploying || blocking() || !nodes().length;
+    b.textContent = S.deploying ? "Deploying…" : S.done ? "Deployed" : "Deploy";
+    $("#draftchip").hidden = S.screen !== "canvas" || S.done;
+  }
+  function sync(){
+    const onCanvas = S.screen === "canvas";
+    $("#trail").innerHTML = onCanvas
+      ? '<a id="crumb">Stacks</a><span class="sep">/</span><span class="cur">New stack</span>'
+      : '<a>Stacks</a><span class="sep">/</span><span class="cur">New stack</span>';
+    $("#draftchip").hidden = !onCanvas || S.done;
+    if (!onCanvas){
+      const r = ready();
+      $("#createbtn").disabled = !r;
+      $("#blocked").textContent = r ? "" : (S.src==="git" && S.gitTab==="url" ? BLOCKMSG.giturl : (BLOCKMSG[S.src]||""));
+      $("#blocked").hidden = !$("#blocked").textContent;
+    }
+  }
+
+  /* ── events ───────────────────────────────────────── */
+  $("#repoq").addEventListener("input", drawRepos);
+  $("#tplq").addEventListener("input", drawTpls);
+  $("#blkq").addEventListener("input", drawBlocks);
+  $("#yaml").addEventListener("input", e => { S.parsed = parseCompose(e.target.value); drawParse(); drawSide(); sync(); });
+  $("#samplebtn").addEventListener("click", () => { const t = $("#yaml"); t.value = SAMPLE;
+    S.parsed = parseCompose(SAMPLE); drawParse(); drawSide(); sync(); t.focus(); });
+  $("#clearyaml").addEventListener("click", () => { $("#yaml").value = ""; S.parsed = null; drawParse(); drawSide(); sync(); });
+
+  $$("#gittabs button").forEach(t => t.addEventListener("click", () => {
+    S.gitTab = t.dataset.gt;
+    $$("#gittabs button").forEach(x => x.setAttribute("aria-pressed", String(x === t)));
+    $("#git-provider").hidden = S.gitTab !== "provider";
+    $("#git-url").hidden = S.gitTab !== "url";
+    drawSide(); sync();
+  }));
+  $("#giturl").addEventListener("input", e => { S.gitUrl = e.target.value; drawSide(); sync(); });
+  $("#filebtn").addEventListener("click", () => $("#fileinput").click());
+  $("#fileinput").addEventListener("change", e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = ev => { $("#yaml").value = String(ev.target.result);
+      S.parsed = parseCompose($("#yaml").value); drawParse(); drawSide(); sync(); };
+    rd.readAsText(f);
+  });
+  $("#insclose").addEventListener("click", closeInspector);
+  $("#emptytoggle").addEventListener("click", e => {
+    const on = e.currentTarget.getAttribute("aria-pressed") === "true";
+    e.currentTarget.setAttribute("aria-pressed", String(!on));
+    S.empty = !on;
+    S.repo = null; S.addons = [];
+    drawRepos(); drawBlocks(); drawSide(); sync();
+  });
+
+  $("#createbtn").addEventListener("click", () => go("canvas"));
+  $("#tostart").addEventListener("click", () => go("pick"));
+  $("#deploybtn").addEventListener("click", deploy);
+  $("#cvname").addEventListener("input", () => { if (S.src === "git") drawCanvas(); });
+  $("#cvproj").addEventListener("change", syncCanvas);
+
+  $$("#layseg button").forEach(b => b.addEventListener("click", () => {
+    S.lay = b.dataset.lay;
+    $$("#layseg button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    app.dataset.lay = S.lay;
+    drawChooser(); sync();
+  }));
+  $("#fixtoggle").addEventListener("click", e => {
+    const on = e.currentTarget.getAttribute("aria-pressed") === "true";
+    e.currentTarget.setAttribute("aria-pressed", String(!on));
+    document.body.classList.toggle("fixon", !on);
+  });
+  $("#reset").addEventListener("click", () => {
+    clearTimers();
+    S.src = "git"; S.repo = null; S.tpl = null; S.blocks = []; S.addons = []; S.parsed = null;
+    S.gitTab = "provider"; S.gitUrl = ""; S.inspect = null; $("#giturl").value = "";
+    $$("#gittabs button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.gt === "provider")));
+    $("#git-provider").hidden = false; $("#git-url").hidden = true;
+    S.deploying = false; S.done = false; S.fixed = false;
+    $("#repoq").value = ""; $("#tplq").value = ""; $("#blkq").value = ""; $("#yaml").value = "";
+    drawParse(); drawRepos(); drawTpls(); drawBlocks(); choose("git"); go("pick");
+  });
+
+  window.addEventListener("resize", () => { if (S.screen === "canvas") drawCanvas(); });
+
+  drawRepos(); drawTpls(); drawBlocks(); drawExplain(); choose("git");
+})();
+</script>

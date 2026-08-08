@@ -74,9 +74,9 @@ function ValueRow({
 }) {
   return (
     <div className={cn("flex min-w-0 flex-col gap-1", className)}>
-      <span className="text-[12px] text-muted-foreground">{label}</span>
+      <span className="text-meta text-muted-foreground">{label}</span>
       <div className="flex min-w-0 items-start gap-1">
-        <span className="min-w-0 break-all pt-1 font-mono text-[13px] leading-5 text-foreground">
+        <span className="min-w-0 break-all pt-1 font-mono text-body leading-5 text-foreground">
           {display}
         </span>
         {action}
@@ -117,7 +117,7 @@ function CredentialsBlock({
 }) {
   if (state.loading) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-border bg-muted/25 px-4 py-3 text-[13px] text-muted-foreground">
+      <div className="flex items-center gap-2 rounded-md border border-border bg-muted/25 px-4 py-3 text-body text-muted-foreground">
         <Loader2 className="size-3.5 animate-spin" />
         Reading credentials…
       </div>
@@ -127,7 +127,7 @@ function CredentialsBlock({
   if (state.error) {
     return (
       <div className="flex items-center justify-between gap-4 rounded-md border border-danger-border bg-danger-bg px-4 py-3">
-        <span className="text-[13px] text-danger">{state.error}</span>
+        <span className="text-body text-danger">{state.error}</span>
         <Button type="button" variant="outline" size="sm" onClick={onRetry}>
           Retry
         </Button>
@@ -145,7 +145,7 @@ function CredentialsBlock({
   return (
     <div className="flex flex-col gap-4 rounded-md border border-border bg-muted/25 px-4 py-3.5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <span className="text-[12.5px] text-muted-foreground">
+        <span className="text-meta text-muted-foreground">
           Credentials for <span className="font-mono text-foreground">{database}</span>
         </span>
         {superuserAllowed && (
@@ -228,7 +228,7 @@ function CredentialsBlock({
         )}
       </div>
 
-      <p className="text-[12px] text-muted-foreground">
+      <p className="text-meta text-muted-foreground">
         Copy always copies the real value — only the text on screen is masked.
       </p>
     </div>
@@ -320,12 +320,12 @@ export function PostgresConnectionPanel({
         copyLabel="Copy endpoint"
       />
 
-      <p className="max-w-2xl text-[12px] text-muted-foreground">
+      <p className="max-w-2xl text-meta text-muted-foreground">
         Reachable from your stacks. The database is not exposed to the internet.
       </p>
 
       <div className="flex flex-col gap-3 border-t border-border pt-5">
-        <h3 className="text-sm font-semibold text-foreground">Databases</h3>
+        <h3 className="text-body font-semibold text-foreground">Databases</h3>
         {databases.map((db) => {
           const name = db.name ?? "";
           const state = states[name];
@@ -333,8 +333,8 @@ export function PostgresConnectionPanel({
             <div key={name} className="flex flex-col gap-3 border-b border-border pb-3 last:border-b-0 last:pb-0">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
-                  <span className="font-mono text-[13px] text-foreground">{name}</span>
-                  <span className="text-[12px] text-muted-foreground">
+                  <span className="font-mono text-body text-foreground">{name}</span>
+                  <span className="text-meta text-muted-foreground">
                     Owner <span className="font-mono">{db.owner ?? "—"}</span>
                     {appUserSecrets[name] && (
                       <>

@@ -23,13 +23,13 @@ const ICON: Record<AttachmentKind, LucideIcon> = {
 function AttachmentNodeImpl({ data }: NodeProps<AttachmentFlowNode>) {
   const Icon = ICON[data.kind];
   return (
-    <div className="w-[180px] cursor-pointer rounded-lg border border-border bg-card px-[13px] py-2.5 shadow-xs transition-colors hover:border-brand/60">
+    <div className="w-[180px] cursor-pointer rounded-lg border border-border bg-surface-node px-[13px] py-2.5 transition-colors hover:border-border-strong">
       <Handle type="target" position={Position.Left} style={HIDDEN_HANDLE} isConnectable={false} />
       <Handle type="source" position={Position.Right} style={HIDDEN_HANDLE} isConnectable={false} />
       <div className="flex items-center gap-2.5">
         <Icon className="size-[15px] shrink-0 text-fg-muted" aria-hidden />
-        <span className="flex-1 truncate text-[13px] font-medium text-fg-2">{data.name}</span>
-        <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.12em] text-fg-muted">{data.kindLabel}</span>
+        <span className="flex-1 truncate text-body font-medium text-fg-2">{data.name}</span>
+        <span className="shrink-0 font-mono text-[9px] text-fg-muted">{data.kindLabel}</span>
       </div>
     </div>
   );

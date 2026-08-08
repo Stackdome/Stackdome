@@ -15,7 +15,7 @@ export function EventRow({ ok, kind, title, sub, when, duration }: EventRowProps
       <span
         aria-hidden="true"
         className={cn(
-          "flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full border text-xs",
+          "flex h-[26px] w-[26px] flex-none items-center justify-center rounded-full border text-meta",
           ok
             ? "border-success-border bg-success-bg text-success"
             : "border-danger-border bg-danger-bg text-danger",
@@ -24,15 +24,15 @@ export function EventRow({ ok, kind, title, sub, when, duration }: EventRowProps
         {ok ? "✓" : "✕"}
       </span>
       <div className="min-w-0 flex-1">
-        <div className="text-[13.5px] font-semibold">
-          <span className="mr-2 rounded border border-border px-1.5 py-px align-[2px] font-mono text-[10px] font-medium uppercase tracking-wider text-fg-muted">
+        <div className="text-body font-semibold">
+          <span className="mr-2 rounded border border-border px-1.5 py-px align-[2px] font-mono text-label font-medium text-fg-muted">
             {kind}
           </span>
           {title}
         </div>
-        {sub && <div className="mt-px text-xs text-fg-muted">{sub}</div>}
+        {sub && <div className="mt-px text-meta text-fg-muted">{sub}</div>}
       </div>
-      <div className="flex-none text-right text-xs text-fg-muted">
+      <div className="flex-none text-right text-meta text-fg-muted">
         <div className="font-mono">{when}</div>
         {duration && <div>{duration}</div>}
       </div>

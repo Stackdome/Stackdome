@@ -24,9 +24,9 @@ export default function DomainListItem({ domain, index, onRemove }: DomainListIt
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
-                size="sm"
+                size="icon"
                 onClick={() => onRemove(index)}
-                className="h-8 w-8 p-0 text-danger hover:text-danger hover:bg-danger-bg"
+                className="text-danger hover:text-danger hover:bg-danger-bg"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

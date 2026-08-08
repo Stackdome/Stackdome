@@ -42,7 +42,7 @@ export default function AddonsPage() {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Error Loading Addons</h2>
+        <h2 className="text-head font-semibold mb-2">Error Loading Addons</h2>
         <p className="text-muted-foreground mb-4">{error}</p>
         <Button onClick={() => refetch()}>Try Again</Button>
       </div>

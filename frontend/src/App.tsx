@@ -4,6 +4,7 @@ import Signup from "@/pages/signup"
 import GithubCallbackPage from "@/pages/auth/github-callback"
 import StacksPage from "@/pages/stacks/components/list"
 import CanvasEditorPage from "@/pages/stacks/components/editor"
+import CreateStackPage from "@/pages/stacks/components/create"
 import ClustersPage from "@/pages/clusters"
 import ClusterDetailPage from "@/pages/clusters/components/detail"
 import SecretsPage from "@/pages/secrets"
@@ -46,10 +47,17 @@ const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       <Route element={<RequireAuth><AppLayout /></RequireAuth>}>
-        <Route path="/" element={<StacksPage />} />
+        {/* "/" rendered StacksPage directly, which left the breadcrumb with no
+            segment to name the page. It is the same screen as /stacks, so send
+            it there — the trail then always has a title to show. */}
+        <Route path="/" element={<Navigate to="/stacks" replace />} />
         <Route path="/dashboard" element={<StacksPage />} />
         <Route path="/stacks" element={<StacksPage />} />
-        <Route path="/stacks/new" element={<CanvasEditorPage />} />
+        {/* `/stacks/new` is the New stack JOURNEY — the chooser. The canvas on
+            an unsaved draft moved to `/stacks/draft`, because a draft has no id
+            until it is saved and so cannot live at `/stacks/:id`. */}
+        <Route path="/stacks/new" element={<CreateStackPage />} />
+        <Route path="/stacks/draft" element={<CanvasEditorPage />} />
         <Route path="/stacks/create" element={<Navigate to="/stacks/new" replace />} />
         <Route path="/stacks/:id" element={<CanvasEditorPage />} />
         <Route path="/secrets" element={<SecretsPage />} />

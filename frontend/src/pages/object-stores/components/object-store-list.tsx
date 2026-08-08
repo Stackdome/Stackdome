@@ -55,8 +55,8 @@ export function ObjectStoreList({ objectStores, onEdit, onDelete, canWrite }: Ob
               <TableRow key={store.id} className="hover:bg-muted/50">
                 <TableCell className="font-medium">{store.name}</TableCell>
                 <TableCell>{providerLabel(store)}</TableCell>
-                <TableCell className="font-mono text-xs">{endpointLabel(store)}</TableCell>
-                <TableCell className="font-mono text-xs">{store.spec.destination_path}</TableCell>
+                <TableCell className="font-mono text-meta">{endpointLabel(store)}</TableCell>
+                <TableCell className="font-mono text-meta">{store.spec.destination_path}</TableCell>
                 <TableCell>{store.spec.retention_policy}</TableCell>
                 <TableCell className="text-right">
                   {rowCanWrite && (

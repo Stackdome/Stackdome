@@ -47,14 +47,14 @@ export function DraftNode({ phase, diff, vsSeq, isLast, defaultOpen = false }: D
           className="-mx-2 flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-muted"
           onClick={() => setOpen((o) => !o)}
         >
-          <span className="flex-none rounded-full border border-brand-border bg-brand-bg px-2 py-0.5 font-mono text-[10px] font-bold uppercase tracking-[0.06em] text-brand">
+          <span className="flex-none rounded-full border border-brand-border bg-brand-bg px-2 py-0.5 font-mono text-label font-semibold text-brand">
             {chipLabel}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[13px] text-fg-muted">
+          <span className="min-w-0 flex-1 truncate text-body text-fg-muted">
             <span className="font-medium text-foreground">Staged changes</span>
             {namesLabel && <span className="text-fg-muted"> {namesLabel}</span>}
           </span>
-          {vsSeq != null && <span className="flex-none font-mono text-[11px] text-fg-muted">vs #{vsSeq}</span>}
+          {vsSeq != null && <span className="flex-none font-mono text-label text-fg-muted">vs #{vsSeq}</span>}
           <ChevronDown className={`h-3.5 w-3.5 flex-none text-fg-muted transition-transform ${open ? "rotate-180" : ""}`} />
         </div>
 
@@ -63,7 +63,7 @@ export function DraftNode({ phase, diff, vsSeq, isLast, defaultOpen = false }: D
             {hasChanges && diff ? (
               <ConfigDiff diff={diff} hasPrev prevSeq={vsSeq} />
             ) : (
-              <div className="text-[12.5px] text-fg-muted">Saved changes are staged for deploy.</div>
+              <div className="text-meta text-fg-muted">Saved changes are staged for deploy.</div>
             )}
           </div>
         )}

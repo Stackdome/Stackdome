@@ -88,7 +88,7 @@ export function MountPathDialog({ volumeName, resources, resourceIdx, onCancel, 
           </FieldShell>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={onCancel}>
+          <Button shape="flat" variant="ghost" onClick={onCancel}>
             Cancel
           </Button>
           <Button onClick={submit}>Attach</Button>

@@ -477,11 +477,17 @@ func (s *stackReleaseService) InternalGetReleaseRefs(ctx context.Context, stacks
 		convergedReleasesByStackID[release.StackID] = release
 	}
 
+	deployHistory, sErr := s.store.GetDeployHistory(ctx, stackIDs, models.DeployHistoryDays)
+	if sErr != nil {
+		return nil, sErr
+	}
+
 	refs := make(map[string]models.StackReleaseRefs, len(stacks))
 	for _, stack := range stacks {
 		latestRelease := latestReleasesByStackID[stack.ID]
 		entry := models.StackReleaseRefs{
-			Latest: latestRelease,
+			Latest:        latestRelease,
+			DeployHistory: deployHistory[stack.ID],
 		}
 		// If the stack has a converged release and it is the same as the latest release,
 		// set the converged release to the latest release.

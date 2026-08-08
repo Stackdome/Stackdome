@@ -1,0 +1,28 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+import { SwatchGroup } from './token-helpers'
+
+<Meta title="Foundations/Colors" />
+
+# Colors
+
+All colors come from CSS custom properties in `src/index.css`. Components never
+use raw hex values — they reference these tokens (directly or through the
+Tailwind theme mapping). Toggle the theme in the toolbar to see both modes.
+
+<SwatchGroup title="Surface" tokens={['--background', '--card', '--popover', '--input']} />
+<SwatchGroup title="Ink" tokens={['--foreground', '--fg-2', '--fg-muted', '--muted-foreground']} />
+<SwatchGroup title="Border" tokens={['--border', '--border-strong']} />
+<SwatchGroup
+  title="Brand"
+  tokens={['--brand', '--brand-hover', '--brand-press', '--brand-bg', '--brand-bg-hover', '--brand-border']}
+/>
+<SwatchGroup
+  title="Status"
+  tokens={[
+    '--success', '--success-bg', '--success-border',
+    '--warn', '--warn-bg', '--warn-border',
+    '--danger', '--danger-bg', '--danger-border',
+    '--info', '--info-bg', '--info-border',
+  ]}
+/>
+<SwatchGroup title="Chart" tokens={['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5']} />

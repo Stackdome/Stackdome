@@ -27,7 +27,7 @@ export function ValidationBanner({ items, onJump, onDismiss }: ValidationBannerP
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <AlertTriangle className="size-4 shrink-0" />
-          <span className="text-sm font-semibold">
+          <span className="text-body font-semibold">
             {items.length} validation {items.length === 1 ? "error" : "errors"}
           </span>
         </div>
@@ -50,7 +50,7 @@ export function ValidationBanner({ items, onJump, onDismiss }: ValidationBannerP
                 disabled={!jumpable}
                 onClick={jumpable ? () => onJump!(item.resourceIndex!, item.tab ?? "configuration") : undefined}
                 className={cn(
-                  "group flex w-full items-start gap-1.5 rounded px-1.5 py-1 text-left text-sm leading-snug text-destructive/90 transition-colors",
+                  "group flex w-full items-start gap-1.5 rounded px-1.5 py-1 text-left text-body leading-snug text-destructive/90 transition-colors",
                   jumpable ? "cursor-pointer hover:bg-destructive/10 hover:text-destructive" : "cursor-default",
                 )}
               >

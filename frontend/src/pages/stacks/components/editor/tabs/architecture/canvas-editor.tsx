@@ -122,9 +122,11 @@ export function CanvasEditor({
       >
         {/* bgColor: the Background SVG paints xyflow's default (#141414 in
             dark) over the pane — pin it to the app token so the canvas
-            matches the sidebar/chrome in both modes. Dot color stays the
-            xyflow default. */}
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} bgColor="var(--background)" />
+            matches the sidebar/chrome in both modes. Two dot layers give the
+            grid a fine/bold tier from the dedicated canvas tokens instead of
+            xyflow's default dot color. */}
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--grid)" bgColor="var(--background)" />
+        <Background variant={BackgroundVariant.Dots} gap={120} size={1.5} color="var(--grid-bold)" />
         <CanvasControls
           showConnections={showConnections}
           onToggleConnections={onToggleConnections}
@@ -145,7 +147,7 @@ export function CanvasEditor({
         )}
         {nodes.length > 0 && (
           <Panel position="bottom-center" className="pointer-events-none !mb-[18px]">
-            <div className="flex items-center gap-2 text-[11.5px] text-fg-muted">
+            <div className="flex items-center gap-2 text-label text-fg-muted">
               {readOnly ? (
                 <>
                   <Lock className="size-[13px]" aria-hidden />
@@ -185,8 +187,8 @@ export function CanvasEditor({
       )}
       {nodes.length === 0 && (
         <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center text-center">
-          <p className="text-sm font-medium text-foreground">No resources yet</p>
-          <p className="mt-1 text-[13px] text-muted-foreground">
+          <p className="text-body font-medium text-foreground">No resources yet</p>
+          <p className="mt-1 text-body text-muted-foreground">
             Use <span className="font-medium text-foreground">+ Add resource</span> to start building your stack.
           </p>
         </div>

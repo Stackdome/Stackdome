@@ -75,7 +75,7 @@ export default function ClustersPage() {
     return (
       <div className="p-8 text-center">
         <AlertCircle className="mx-auto h-12 w-12 text-destructive mb-4" />
-        <h2 className="text-xl font-semibold mb-2">Error Loading Clusters</h2>
+        <h2 className="text-head font-semibold mb-2">Error Loading Clusters</h2>
         <p className="text-muted-foreground mb-4">{error}</p>
         <Button onClick={() => window.location.reload()}>
           Try Again

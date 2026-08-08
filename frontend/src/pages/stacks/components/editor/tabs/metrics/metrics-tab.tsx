@@ -35,7 +35,7 @@ function toNumber(v: string | number | undefined): number {
 const HISTORY = 16;
 
 /** A tiny end-aligned bar sparkline. Heights scale to the window max. */
-function Sparkline({ data, className }: { data: number[]; className?: string }) {
+export function Sparkline({ data, className }: { data: number[]; className?: string }) {
   const max = Math.max(1, ...data);
   const bars = [...Array(HISTORY)].map((_, i) => data[data.length - HISTORY + i] ?? null);
   return (
@@ -43,7 +43,7 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
       {bars.map((v, i) => (
         <span
           key={i}
-          className={cn("w-[5px] rounded-[1px]", v == null ? "bg-border/40" : className)}
+          className={cn("w-[5px] rounded-none", v == null ? "bg-border/40" : className)}
           style={{ height: v == null ? "10%" : `${Math.max(6, Math.round((v / max) * 100))}%` }}
         />
       ))}
@@ -52,15 +52,16 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
 }
 
 /** A labelled usage bar (fill width is relative to the peer max for that metric). */
-function MetricBar({ label, value, pct, fill }: { label: string; value: string; pct: number; fill: string }) {
+export function MetricBar({ label, value, pct, fill }: { label: string; value: string; pct: number; fill: string }) {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <span className="text-[11.5px] text-fg-2">{label}</span>
-        <span className="font-mono text-[12px] text-foreground">{value}</span>
+        <span className="text-label text-fg-2">{label}</span>
+        <span className="font-mono text-meta text-foreground">{value}</span>
       </div>
-      <div className="mt-1.5 h-[5px] overflow-hidden rounded-[3px] bg-muted">
-        <span className={cn("block h-full rounded-[3px]", fill)} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
+      {/* deliberate off-scale: 5px-tall usage bar, rounded-sm (9px) would read as a full pill here */}
+      <div className="mt-1.5 h-[5px] overflow-hidden rounded-full bg-muted">
+        <span className={cn("block h-full rounded-full", fill)} style={{ width: `${Math.max(2, Math.min(100, pct))}%` }} />
       </div>
     </div>
   );
@@ -137,10 +138,10 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
     <div className="mx-auto max-w-[1000px] px-[30px] py-[26px]">
       {/* Header */}
       <div className="mb-[18px] flex items-center gap-3">
-        <h2 className="text-[18px] font-medium tracking-[-0.01em] text-foreground">Stack metrics</h2>
+        <h2 className="text-title font-medium tracking-[-0.01em] text-foreground">Stack metrics</h2>
         <StatusPill variant={statusInfo.variant}>{statusInfo.label}</StatusPill>
         <div className="flex-1" />
-        {updatedAt && <span className="font-mono text-[11px] text-fg-muted">updated {updatedAt}</span>}
+        {updatedAt && <span className="font-mono text-label text-fg-muted">updated {updatedAt}</span>}
       </div>
 
       {error && (
@@ -153,33 +154,33 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
       {/* Summary cards */}
       <div className="mb-[18px] grid grid-cols-1 gap-3.5 md:grid-cols-2">
         <div className="rounded-lg border border-border bg-card p-[18px]">
-          <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-muted-foreground">
-            <Cpu className="size-4 text-brand" />
+          <div className="flex items-center gap-2 font-mono text-label font-medium text-muted-foreground">
+            <Cpu className="size-4 text-[var(--chart-1)]" />
             Stack CPU
           </div>
           <div className="mt-3 flex items-end justify-between gap-4">
             <div>
-              <div className="text-[30px] font-medium leading-none tracking-[-0.02em] text-foreground">
+              <div className="text-head font-medium leading-none tracking-[-0.02em] text-foreground">
                 {stackMetrics?.cpu_usage != null ? `${toNumber(stackMetrics.cpu_usage)}m` : '—'}
               </div>
-              <div className="mt-1 font-mono text-[11px] text-fg-muted">millicores</div>
+              <div className="mt-1 font-mono text-label text-fg-muted">millicores</div>
             </div>
-            <Sparkline data={cpuHist} className="bg-brand" />
+            <Sparkline data={cpuHist} className="bg-[var(--chart-1)]" />
           </div>
         </div>
 
         <div className="rounded-lg border border-border bg-card p-[18px]">
-          <div className="flex items-center gap-2 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-muted-foreground">
-            <MemoryStick className="size-4 text-brand" />
+          <div className="flex items-center gap-2 font-mono text-label font-medium text-muted-foreground">
+            <MemoryStick className="size-4 text-fg-2" />
             Stack memory
           </div>
           <div className="mt-3 flex items-end justify-between gap-4">
             <div>
-              <div className="text-[30px] font-medium leading-none tracking-[-0.02em] text-foreground">
+              <div className="text-head font-medium leading-none tracking-[-0.02em] text-foreground">
                 {stackMetrics?.memory_usage != null ? `${toNumber(stackMetrics.memory_usage)}` : '—'}
-                {stackMetrics?.memory_usage != null && <span className="ml-1 text-[15px] text-fg-muted">MiB</span>}
+                {stackMetrics?.memory_usage != null && <span className="ml-1 text-name text-fg-muted">MiB</span>}
               </div>
-              <div className="mt-1 font-mono text-[11px] text-fg-muted">mebibytes</div>
+              <div className="mt-1 font-mono text-label text-fg-muted">mebibytes</div>
             </div>
             <Sparkline data={memHist} className="bg-fg-2" />
           </div>
@@ -187,7 +188,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
       </div>
 
       {/* Per-resource */}
-      <div className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[1.5px] text-fg-muted">Per resource</div>
+      <div className="mb-3 font-mono text-label font-medium text-fg-muted">Per resource</div>
       {resourceCards.length === 0 ? (
         <EmptyState
           icon={<Box className="h-6 w-6" />}
@@ -204,10 +205,10 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
                   aria-hidden
                 />
                 <Box className="size-[15px] shrink-0 text-fg-muted" aria-hidden />
-                <span className="flex-1 truncate text-sm font-medium text-foreground">{r.resourceName}</span>
+                <span className="flex-1 truncate text-body font-medium text-foreground">{r.resourceName}</span>
                 <span
                   className={cn(
-                    "font-mono text-[9px] uppercase tracking-[0.12em]",
+                    "font-mono text-[9px]",
                     r.ready ? "text-success" : "text-fg-muted",
                   )}
                 >
@@ -220,7 +221,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
                     label="CPU"
                     value={r.displayMetrics.cpu}
                     pct={(toNumber(r.metrics.cpu_usage) / cpuMax) * 100}
-                    fill="bg-brand"
+                    fill="bg-[var(--chart-1)]"
                   />
                   <MetricBar
                     label="Memory"
@@ -230,7 +231,7 @@ export function MetricsTab({ stackId, organizationId, resources, liveStatusResou
                   />
                 </div>
               ) : (
-                <div className="flex items-center gap-2 py-3 text-[12px] text-fg-muted">
+                <div className="flex items-center gap-2 py-3 text-meta text-fg-muted">
                   <Clock className="size-3.5" aria-hidden />
                   {r.placeholder}
                 </div>

@@ -1,0 +1,39 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+import { TypeSample } from './token-helpers'
+
+<Meta title="Foundations/Typography" />
+
+# Typography
+
+Font stacks from `src/index.css`: `--font-sans` (Geist), `--font-mono`
+(Geist Mono), `--font-serif` (Georgia). The mono face carries the console /
+terminal flavor: eyebrows, pills, meta rows, and rail buttons all use
+uppercase tracked mono.
+
+<TypeSample label="Page title — text-3xl font-medium" className="text-3xl font-medium tracking-tight">
+  orders-api
+</TypeSample>
+<TypeSample label="Section heading — text-lg font-medium" className="text-lg font-medium">
+  Deployments
+</TypeSample>
+<TypeSample label="Body — text-sm" className="text-sm">
+  Deploys run through build, release, and rollout stages.
+</TypeSample>
+<TypeSample label="Muted body — text-xs text-muted-foreground" className="text-xs text-muted-foreground">
+  Last deployed 4 minutes ago on prod-cluster.
+</TypeSample>
+<TypeSample
+  label="Eyebrow — mono 11px uppercase tracked"
+  className="font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground"
+>
+  Infrastructure
+</TypeSample>
+<TypeSample
+  label="Pill / rail — mono 11px bold uppercase"
+  className="font-mono text-[11px] font-bold uppercase tracking-[0.08em]"
+>
+  Released
+</TypeSample>
+<TypeSample label="Console line — mono text-xs" className="font-mono text-xs">
+  2026-07-30T12:00:41Z web-1 | listening on :8080
+</TypeSample>

@@ -30,6 +30,7 @@ func PresentStack(s *models.Stack, refs models.StackReleaseRefs) openapi.Stack {
 		Lifecycle:        ptr.To(presentStackLifecycle(s)),
 		ConvergedRelease: presentReleaseSummary(refs.Converged, convergedReleaseHealth(refs.Converged, s)),
 		LatestRelease:    presentReleaseSummary(refs.Latest, latestReleaseHealth(refs.Latest)),
+		DeployHistory:    presentDeployHistory(refs.DeployHistory),
 		CreatedAt:        &s.CreatedAt,
 		UpdatedAt:        &s.UpdatedAt,
 	}
@@ -40,6 +41,21 @@ func presentStackLifecycle(s *models.Stack) openapi.StackLifecycle {
 		return openapi.STACK_LIFECYCLE_DELETING
 	}
 	return openapi.STACK_LIFECYCLE_ACTIVE
+}
+
+// presentDeployHistory keeps nil as nil. A stack that has never deployed has no
+// history, and that is a different statement from fourteen days of zeroes: the
+// card reads the first as "No deploys yet" and would draw the second as a flat
+// line, claiming the stack deployed once and then went quiet.
+func presentDeployHistory(history []int) []int32 {
+	if history == nil {
+		return nil
+	}
+	out := make([]int32, len(history))
+	for i, n := range history {
+		out[i] = int32(n)
+	}
+	return out
 }
 
 func presentReleaseSummary(r *models.StackRelease, health *openapi.ReleaseHealth) *openapi.ReleaseSummary {

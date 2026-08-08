@@ -34,7 +34,7 @@ export function WizardFooter({
       </Button>
       <div className="flex items-center gap-3">
         {hint && (
-          <span className="hidden text-xs text-muted-foreground sm:inline">{hint}</span>
+          <span className="hidden text-meta text-muted-foreground sm:inline">{hint}</span>
         )}
         <Button type="button" onClick={onContinue} disabled={continueDisabled || loading}>
           {loading && <Loader2 className="h-4 w-4 animate-spin" />}

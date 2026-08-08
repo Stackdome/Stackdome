@@ -112,7 +112,7 @@ export default function AddDomainDialog({
         </div>
         <DialogFooter>
           <DialogClose asChild>
-            <Button variant="outline" type="button">Cancel</Button>
+            <Button shape="flat" variant="outline" type="button">Cancel</Button>
           </DialogClose>
           <Button
             onClick={handleAddDomain}

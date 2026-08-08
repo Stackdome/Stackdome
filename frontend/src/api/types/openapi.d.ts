@@ -7876,6 +7876,10 @@ export interface components {
             lifecycle?: components["schemas"]["StackLifecycle"];
             converged_release?: components["schemas"]["ReleaseSummary"];
             latest_release?: components["schemas"]["ReleaseSummary"];
+            /** @description Deploy counts for the last 14 days, oldest first, one entry per day including days with none. Absent when the stack has never deployed, which is a different thing from fourteen zeroes: no history at all means "not deployed yet", where a run of zeroes means "deployed once, then went quiet".
+             *     Counted from a tally written alongside each release rather than from the releases themselves, because release retention prunes old rows and a busy stack would otherwise report as a quiet one.
+             *     Set on list responses only. */
+            readonly deploy_history?: number[];
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */

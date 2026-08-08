@@ -49,7 +49,9 @@ describe("InviteAcceptForm", () => {
     renderForm();
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: "Neo" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "neo@acme.io" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "longenoughpw" } });
+    // Anchored: PasswordInput's show/hide toggle has an aria-label of "Show
+    // password", which also matches an unanchored /password/i query.
+    fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: "longenoughpw" } });
     fireEvent.click(screen.getByRole("button", { name: /create account and join/i }));
     await waitFor(() => expect(signup).toHaveBeenCalledWith(
       { name: "Neo", email: "neo@acme.io", password: "longenoughpw" }, "tok_1",
@@ -62,7 +64,9 @@ describe("InviteAcceptForm", () => {
     renderForm();
     fireEvent.change(screen.getByLabelText(/full name/i), { target: { value: "Neo" } });
     fireEvent.change(screen.getByLabelText(/email/i), { target: { value: "neo@acme.io" } });
-    fireEvent.change(screen.getByLabelText(/password/i), { target: { value: "longenoughpw" } });
+    // Anchored: PasswordInput's show/hide toggle has an aria-label of "Show
+    // password", which also matches an unanchored /password/i query.
+    fireEvent.change(screen.getByLabelText(/^password/i), { target: { value: "longenoughpw" } });
     fireEvent.click(screen.getByRole("button", { name: /create account and join/i }));
     await waitFor(() => expect(screen.getByText(/already have an account/i)).toBeTruthy());
     expect(screen.getByRole("link", { name: /log in/i })).toBeTruthy();

@@ -8,6 +8,7 @@ import { Info, Eye, EyeOff } from "lucide-react";
 import { ClusterSchema } from "../../hooks/use-clusters";
 import type { ClusterData } from "../../hooks/use-clusters";
 import { Switch } from "@/components/ui/switch";
+import { AlertBanner } from "@/components/branded";
 import { extractErrorMessage } from '@/lib/utils';
 
 interface Props {
@@ -113,12 +114,12 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
       <form onSubmit={handleSubmit}>
         <Card className="w-full rounded-lg">
           <CardHeader>
-            <CardTitle className="text-xl">Cluster Details</CardTitle>
+            <CardTitle className="text-head">Cluster Details</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="name">Cluster name <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="name">Cluster name <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -136,11 +137,11 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                 placeholder="Production Cluster"
                 className={`mt-1 ${errors.name ? "border-danger" : ""}`}
               />
-              {errors.name && <p className="text-danger text-sm mt-1">{errors.name}</p>}
+              {errors.name && <p className="text-danger text-body mt-1">{errors.name}</p>}
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_url">API server URL <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="cluster_url">API server URL <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -158,11 +159,11 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                 placeholder="https://kubernetes.example.com:6443"
                 className={`mt-1 ${errors.cluster_url ? "border-danger" : ""}`}
               />
-              {errors.cluster_url && <p className="text-danger text-sm mt-1">{errors.cluster_url}</p>}
+              {errors.cluster_url && <p className="text-danger text-body mt-1">{errors.cluster_url}</p>}
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_ca_data">CA certificate <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="cluster_ca_data">CA certificate <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -184,21 +185,22 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-muted-foreground hover:text-foreground focus:outline-none"
+                  aria-label={showCAData ? "Hide CA certificate" : "Show CA certificate"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-muted-foreground hover:text-foreground focus-ring-edge"
                   onClick={() => setShowCAData(!showCAData)}
                 >
                   {showCAData ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff aria-hidden className="h-4 w-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye aria-hidden className="h-4 w-4" />
                   )}
                 </button>
               </div>
-              {errors.cluster_ca_data && <p className="text-danger text-sm mt-1">{errors.cluster_ca_data}</p>}
+              {errors.cluster_ca_data && <p className="text-danger text-body mt-1">{errors.cluster_ca_data}</p>}
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <Label htmlFor="cluster_sa_token">Service account token <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="cluster_sa_token">Service account token <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Info className="h-4 w-4 text-muted-foreground cursor-pointer" />
@@ -220,17 +222,18 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                 />
                 <button
                   type="button"
-                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-muted-foreground hover:text-foreground focus:outline-none"
+                  aria-label={showSAToken ? "Hide service account token" : "Show service account token"}
+                  className="absolute inset-y-0 right-0 flex items-center px-3 mt-1 text-muted-foreground hover:text-foreground focus-ring-edge"
                   onClick={() => setShowSAToken(!showSAToken)}
                 >
                   {showSAToken ? (
-                    <EyeOff className="h-4 w-4" />
+                    <EyeOff aria-hidden className="h-4 w-4" />
                   ) : (
-                    <Eye className="h-4 w-4" />
+                    <Eye aria-hidden className="h-4 w-4" />
                   )}
                 </button>
               </div>
-              {errors.cluster_sa_token && <p className="text-danger text-sm mt-1">{errors.cluster_sa_token}</p>}
+              {errors.cluster_sa_token && <p className="text-danger text-body mt-1">{errors.cluster_sa_token}</p>}
             </div>
             <div>
               <div className="flex items-center space-x-4">
@@ -254,7 +257,7 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
             </div>
             {formData.cluster_image_registry && (
               <div>
-                <Label htmlFor="registry-size">Registry size <span className="text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span></Label>
+                <Label htmlFor="registry-size">Registry size <span className="text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span></Label>
                 <Input
                   id="registry-size"
                   name="registry-size"
@@ -264,15 +267,11 @@ export default function ClusterCreateForm({ onSubmit, loading, error }: Props) {
                   className={`mt-1 ${errors["cluster_image_registry"] ? "border-danger" : ""}`}
                 />
                 {errors["cluster_image_registry"] && (
-                  <p className="text-danger text-sm mt-1">{errors["cluster_image_registry"]}</p>
+                  <p className="text-danger text-body mt-1">{errors["cluster_image_registry"]}</p>
                 )}
               </div>
             )}
-            {error && (
-              <div className="bg-danger-bg text-danger p-3 rounded text-sm">
-                {error}
-              </div>
-            )}
+            {error && <AlertBanner>{error}</AlertBanner>}
           </CardContent>
           <CardFooter className="flex justify-end">
             <Button type="submit" disabled={loading} className="px-8">

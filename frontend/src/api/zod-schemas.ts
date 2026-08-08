@@ -654,6 +654,7 @@ const Stack = z
     lifecycle: StackLifecycle.optional(),
     converged_release: ReleaseSummary.optional(),
     latest_release: ReleaseSummary.optional(),
+    deploy_history: z.array(z.number().int()).optional(),
     created_at: z.string().datetime({ offset: true }).optional(),
     updated_at: z.string().datetime({ offset: true }).optional(),
   })

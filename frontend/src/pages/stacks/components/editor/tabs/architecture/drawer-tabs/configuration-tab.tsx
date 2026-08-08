@@ -271,7 +271,7 @@ function StackResourceConfigurationTabImpl({
               placeholder="e.g., api, database, frontend"
               value={draft.name || ""}
               onChange={(e) => update({ name: e.target.value })}
-              className={`h-9 text-[13.5px] ${getError(errors, "name") ? "border-danger" : ""}`}
+              className={`h-9 text-body ${getError(errors, "name") ? "border-danger" : ""}`}
               required
               aria-invalid={!!getError(errors, "name")}
             />
@@ -298,7 +298,7 @@ function StackResourceConfigurationTabImpl({
                 className="w-full"
               />
             ) : (
-              <div className="text-sm text-muted-foreground">No dependency information available</div>
+              <div className="text-body text-muted-foreground">No dependency information available</div>
             )}
           </DirtyField>
         </LedgerRow>
@@ -388,7 +388,7 @@ function StackResourceConfigurationTabImpl({
                   return (
                     <div className="flex items-center gap-1">
                       {host && (
-                        <span className="rounded bg-muted px-1.5 py-1 font-mono text-[11px] text-muted-foreground">
+                        <span className="rounded bg-muted px-1.5 py-1 font-mono text-label text-muted-foreground">
                           {host}/
                         </span>
                       )}
@@ -404,7 +404,7 @@ function StackResourceConfigurationTabImpl({
                           const { host: typedHost } = splitImageRef(typed);
                           updateImageSource({ ref: typedHost ? typed : joinImageRef(host, typed) });
                         }}
-                        className={`h-9 flex-1 font-mono text-[12.5px] ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
+                        className={`h-9 flex-1 font-mono text-meta ${getError(errors, "source.image.ref") ? "border-danger" : ""}`}
                         required={draft.sourceType === "image"}
                         aria-invalid={!!getError(errors, "source.image.ref")}
                       />
@@ -467,7 +467,7 @@ function StackResourceConfigurationTabImpl({
                 >
                   <SelectTrigger
                     id={`git-revision-type-${index}`}
-                    className={`h-9 w-full text-[13px] ${getError(errors, "gitRevisionType") ? "border-danger" : ""}`}
+                    className={`h-9 w-full text-body ${getError(errors, "gitRevisionType") ? "border-danger" : ""}`}
                   >
                     <SelectValue placeholder="Default branch" />
                   </SelectTrigger>
@@ -500,7 +500,7 @@ function StackResourceConfigurationTabImpl({
                     value={draft.gitRevisionValue || ""}
                     onChange={(e) => update({ gitRevisionValue: e.target.value })}
                     placeholder={draft.gitRevisionType === "branch" ? "e.g., main, develop" : "e.g., v1.0.0"}
-                    className={`h-9 font-mono text-[12.5px] ${getError(errors, "gitRevisionValue") ? "border-danger" : ""}`}
+                    className={`h-9 font-mono text-meta ${getError(errors, "gitRevisionValue") ? "border-danger" : ""}`}
                     required={!!draft.gitRevisionType}
                     aria-invalid={!!getError(errors, "gitRevisionValue")}
                     onBlur={() => {
@@ -533,7 +533,7 @@ function StackResourceConfigurationTabImpl({
                   onChange={(e) => update({ gitCommitPin: e.target.value || undefined })}
                   placeholder="e.g., a1b2c3d4e5..."
                   disabled={!draft.gitRevisionType && !draft.gitCommitPin}
-                  className={`h-9 font-mono text-[12.5px] ${getError(errors, "gitCommitPin") ? "border-danger" : ""}`}
+                  className={`h-9 font-mono text-meta ${getError(errors, "gitCommitPin") ? "border-danger" : ""}`}
                   aria-invalid={!!getError(errors, "gitCommitPin")}
                 />
               </DirtyField>
@@ -561,7 +561,7 @@ function StackResourceConfigurationTabImpl({
                       if (!e.target.value.trim()) updateGitSource({ dockerfile_path: DEFAULT_DOCKERFILE_PATH });
                     }}
                     placeholder="Dockerfile"
-                    className="h-9 font-mono text-[12.5px]"
+                    className="h-9 font-mono text-meta"
                   />
                 </DirtyField>
               </LedgerRow>
@@ -587,7 +587,7 @@ function StackResourceConfigurationTabImpl({
                       if (!e.target.value.trim()) updateGitSource({ build_context: DEFAULT_BUILD_CONTEXT });
                     }}
                     placeholder="."
-                    className="h-9 font-mono text-[12.5px]"
+                    className="h-9 font-mono text-meta"
                   />
                 </DirtyField>
               </LedgerRow>
@@ -613,7 +613,7 @@ function StackResourceConfigurationTabImpl({
                       updateGitSource({ push: e.target.value ? { repository: e.target.value } : undefined })
                     }
                     placeholder="e.g., ghcr.io/your-org/your-image"
-                    className="h-9 font-mono text-[12.5px]"
+                    className="h-9 font-mono text-meta"
                   />
                 </DirtyField>
               </LedgerRow>
@@ -648,7 +648,7 @@ function StackResourceConfigurationTabImpl({
                     const digits = e.target.value.replace(/\D/g, "");
                     updatePort(pidx, { number: digits === "" ? undefined : parseInt(digits, 10) });
                   }}
-                  className={`h-9 w-[84px] shrink-0 font-mono text-[13px] ${getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}`}
+                  className={`h-9 w-[84px] shrink-0 font-mono text-body ${getError(errors, `ports.${pidx}.number`) ? "border-danger" : ""}`}
                   required
                 />
                 <Select
@@ -657,7 +657,7 @@ function StackResourceConfigurationTabImpl({
                 >
                   <SelectTrigger
                     aria-label="Protocol"
-                    className="h-9 w-[92px] shrink-0 text-[13px]"
+                    className="h-9 w-[92px] shrink-0 text-body"
                   >
                     <SelectValue placeholder="Protocol" />
                   </SelectTrigger>
@@ -669,7 +669,7 @@ function StackResourceConfigurationTabImpl({
                 <div className="ml-auto flex items-center gap-2">
                   <Label
                     htmlFor={`port-expose-${index}-${pidx}`}
-                    className="cursor-pointer font-mono text-[11px] text-muted-foreground"
+                    className="cursor-pointer font-mono text-label text-muted-foreground"
                   >
                     {port.exposed_to_public ? "public" : "internal"}
                   </Label>
@@ -685,7 +685,7 @@ function StackResourceConfigurationTabImpl({
                   onClick={() => removePort(pidx)}
                   title="Remove port"
                   aria-label="Remove port"
-                  className="h-7 w-7 shrink-0 text-fg-muted hover:bg-danger-bg hover:text-danger"
+                  className="shrink-0 text-fg-muted hover:bg-danger-bg hover:text-danger"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -697,7 +697,7 @@ function StackResourceConfigurationTabImpl({
           variant="outline"
           size="sm"
           onClick={addPort}
-          className="ml-1.5 mt-3 h-8 gap-1.5 rounded-md border-border font-mono text-[12px] font-normal text-muted-foreground hover:border-brand/50 hover:text-brand"
+          className="ml-1.5 mt-3 h-8 gap-1.5 rounded-md border-border font-mono text-meta font-normal text-muted-foreground hover:border-border-strong hover:text-foreground"
         >
           <PlusCircle className="h-3.5 w-3.5" />
           add port
@@ -708,7 +708,7 @@ function StackResourceConfigurationTabImpl({
         {mountsReadOnly ? (
           <div>
             {mounts.length === 0 && (
-              <p className="px-1.5 py-2.5 text-[12.5px] text-muted-foreground">
+              <p className="px-1.5 py-2.5 text-meta text-muted-foreground">
                 No volumes mounted. Add one from the canvas using “+ Add resource → Volume”.
               </p>
             )}
@@ -726,14 +726,15 @@ function StackResourceConfigurationTabImpl({
                 className="border-b border-secondary/80 py-1"
               >
                 <div className="flex items-center gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20">
-                  <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-foreground/80 dark:text-fg-2">
+                  <div className="flex w-[150px] shrink-0 items-center gap-2 text-body text-foreground/80 dark:text-fg-2">
                     <HardDrive className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
                     <span className="truncate">{vm.source_volume_name}</span>
                   </div>
-                  <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
+                  {/* deliberate off-scale: ~22px-tall code chip, rounded-sm reads too round */}
+                  <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-label text-muted-foreground">
                     {vm.target_path}
                   </code>
-                  <span className="ml-auto shrink-0 font-mono text-[10.5px] text-fg-muted/70">
+                  <span className="ml-auto shrink-0 font-mono text-label text-fg-muted/70">
                   drag a volume onto the node to attach
                   </span>
                   {onOpenVolume && vm.source_volume_name && (
@@ -741,7 +742,7 @@ function StackResourceConfigurationTabImpl({
                       type="button"
                       variant="ghost"
                       size="icon"
-                      className="size-7 shrink-0 text-fg-muted hover:text-brand"
+                      className="size-7 shrink-0 text-fg-muted hover:text-foreground"
                       aria-label={`Open volume ${vm.source_volume_name}`}
                       title="Open volume settings"
                       onClick={() => onOpenVolume(vm.source_volume_name!)}
@@ -792,19 +793,19 @@ function StackResourceConfigurationTabImpl({
                               <div className="flex items-center gap-2">
                                 <Database className="h-4 w-4" />
                                 <span>{vm.source_volume_name}</span>
-                                <span className="ml-1 text-xs text-muted-foreground">(missing)</span>
+                                <span className="ml-1 text-meta text-muted-foreground">(missing)</span>
                               </div>
                             </SelectItem>
                           )}
                           {(volumes || []).filter((vol) => !!vol.name).length === 0 ? (
-                            <div className="p-2 text-sm text-muted-foreground">No volumes available</div>
+                            <div className="p-2 text-body text-muted-foreground">No volumes available</div>
                           ) : (
                             (volumes || []).filter((vol) => !!vol.name).map((vol, vidx) => (
                               <SelectItem key={vidx} value={vol.name!}>
                                 <div className="flex items-center gap-2">
                                   <Database className="h-4 w-4" />
                                   <span>{vol.name}</span>
-                                  {vol.spec?.size && <span className="ml-1 text-xs text-muted-foreground">({vol.spec.size})</span>}
+                                  {vol.spec?.size && <span className="ml-1 text-meta text-muted-foreground">({vol.spec.size})</span>}
                                 </div>
                               </SelectItem>
                             ))
@@ -817,7 +818,7 @@ function StackResourceConfigurationTabImpl({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="size-7 shrink-0 self-end text-fg-muted hover:text-brand"
+                        className="size-7 shrink-0 self-end text-fg-muted hover:text-foreground"
                         aria-label={`Open volume ${vm.source_volume_name}`}
                         title="Open volume settings"
                         onClick={() => onOpenVolume(vm.source_volume_name!)}
@@ -871,7 +872,7 @@ function StackResourceConfigurationTabImpl({
                   <PlusCircle className="h-4 w-4 mr-2" />Add mount
                 </Button>
                 {(volumes || []).length === 0 && (
-                  <p className="text-sm text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
+                  <p className="text-body text-muted-foreground mt-2">No volumes available. Add volumes in the Volumes section below.</p>
                 )}
               </div>
             )}

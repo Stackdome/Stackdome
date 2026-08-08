@@ -36,13 +36,14 @@ describe("PreviewEnvCard", () => {
     expect(screen.getByText(label)).toBeInTheDocument();
   });
 
-  it("keeps failure details off the card — the FAILED status word is the only signal", () => {
+  it("keeps failure details off the card — the status word is the only signal", () => {
     const env: PreviewStack = {
       ...base,
       status: { phase: "Failed", reason: "StackfileNotFound", message: "no stackfile at path" },
     };
     renderCard({ env });
-    expect(screen.getByText("failed")).toBeInTheDocument();
+    // Sentence case now that §7 removed the CSS caps — words are words.
+    expect(screen.getByText(statusVariantLabel.error)).toBeInTheDocument();
     expect(screen.queryByText(/no stackfile at path/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/check the stackfile path/i)).not.toBeInTheDocument();
   });

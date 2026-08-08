@@ -123,14 +123,14 @@ export function EnvRow({
             id={`env-name-${resourceIndex}-${index}`}
             value={row.name || ""}
             onChange={(e) => onChangeName(e.target.value)}
-            className={`h-8 w-full font-mono text-xs md:text-xs ${isOrphanAddon ? "opacity-60" : ""} ${
+            className={`h-8 w-full font-mono text-meta md:text-meta ${isOrphanAddon ? "opacity-60" : ""} ${
               rowErrors?.duplicate || rowErrors?.name ? "border-danger" : ""
             }`}
             placeholder="KEY"
             readOnly={isOrphanAddon}
           />
           {(rowErrors?.duplicate || rowErrors?.name) && (
-            <p className="text-xs text-danger mt-1">
+            <p className="text-meta text-danger mt-1">
               {rowErrors.duplicate || rowErrors.name}
             </p>
           )}
@@ -142,7 +142,7 @@ export function EnvRow({
             <Input
               value={row.value || ""}
               onChange={(e) => onChangeValue(e.target.value)}
-              className={`h-8 w-full font-mono text-xs md:text-xs ${
+              className={`h-8 w-full font-mono text-meta md:text-meta ${
                 rowErrors?.value ? "border-danger" : ""
               }`}
               placeholder="value"
@@ -182,8 +182,8 @@ export function EnvRow({
           )}
           {row.from === "resourceTemplate" && (
             <div className="flex h-8 w-full min-w-0 items-center gap-2 rounded-md border border-border bg-muted/40 px-2.5">
-              <code className="truncate font-mono text-xs">{row.template}</code>
-              <span className="ml-auto flex-none text-[10px] italic text-muted-foreground">
+              <code className="truncate font-mono text-meta">{row.template}</code>
+              <span className="ml-auto flex-none text-label italic text-muted-foreground">
                 {row.resourceName} · resolved at deploy
               </span>
             </div>
@@ -196,7 +196,7 @@ export function EnvRow({
             />
           )}
           {rowErrors?.value && (
-            <p className="text-xs text-danger mt-1">{rowErrors.value}</p>
+            <p className="text-meta text-danger mt-1">{rowErrors.value}</p>
           )}
         </div>
 
@@ -206,7 +206,7 @@ export function EnvRow({
             value={row.from}
             onValueChange={(v) => onChangeFrom(v as EnvFrom)}
           >
-            <SelectTrigger size="sm" className="w-full text-xs">
+            <SelectTrigger size="sm" className="w-full text-meta">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -231,7 +231,7 @@ export function EnvRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-brand hover:bg-brand-bg hover:text-brand-press"
+              className="h-6 w-6"
               onClick={onReset}
               aria-label="Reset env var to original value"
               title="Reset to original value"
@@ -252,7 +252,7 @@ export function EnvRow({
         </div>
       </div>
       {isOrphanAddon && (
-        <p className="text-xs text-warn mt-1.5">
+        <p className="text-meta text-warn mt-1.5">
           Addon was deleted. This variable won't resolve. Remove to clean up.
         </p>
       )}
@@ -284,7 +284,7 @@ function SecretValueCell({
         onValueChange={(value) => onChange(value, "")}
         disabled={loading || genericSecrets.length === 0}
       >
-        <SelectTrigger size="sm" className="w-full text-xs">
+        <SelectTrigger size="sm" className="w-full text-meta">
           <SelectValue
             placeholder={
               genericSecrets.length === 0
@@ -312,7 +312,7 @@ function SecretValueCell({
           onValueChange={(value) => onChange(secretId, value)}
           disabled={availableKeys.length === 0}
         >
-          <SelectTrigger size="sm" className="w-full text-xs">
+          <SelectTrigger size="sm" className="w-full text-meta">
             <SelectValue
               placeholder={
                 availableKeys.length === 0
@@ -344,8 +344,8 @@ function OutputOptions({ outputs }: { outputs: string[] }) {
           {o.port ? <span className="text-muted-foreground"> · {o.port}</span> : null}
         </span>
         <span className="ml-2 flex items-center gap-2">
-          <span className="text-[10px] italic text-muted-foreground">resolved at deploy</span>
-          <span className="rounded bg-muted px-1 font-mono text-[10px] text-muted-foreground">{o.key}</span>
+          <span className="text-label italic text-muted-foreground">resolved at deploy</span>
+          <span className="rounded bg-muted px-1 font-mono text-label text-muted-foreground">{o.key}</span>
         </span>
       </span>
     </SelectItem>
@@ -386,7 +386,7 @@ function ResourceOutputCell({
         onValueChange={(v) => onChange(v, "")}
         disabled={resourceOptions.length === 0}
       >
-        <SelectTrigger size="sm" className="w-full text-xs" data-testid="resource-picker-trigger">
+        <SelectTrigger size="sm" className="w-full text-meta" data-testid="resource-picker-trigger">
           <SelectValue placeholder={resourceOptions.length === 0 ? "No other resources" : "select resource..."} />
         </SelectTrigger>
         <SelectContent>
@@ -397,7 +397,7 @@ function ResourceOutputCell({
       </Select>
       {resourceName && (
         <Select value={output || ""} onValueChange={(v) => onChange(resourceName, v)} disabled={outputs.length === 0}>
-          <SelectTrigger size="sm" className="w-full text-xs" data-testid="resource-output-trigger">
+          <SelectTrigger size="sm" className="w-full text-meta" data-testid="resource-output-trigger">
             <SelectValue placeholder={outputs.length === 0 ? "No outputs" : "select output..."} />
           </SelectTrigger>
           <SelectContent>
@@ -420,7 +420,7 @@ function SelfOutputCell({
 }) {
   return (
     <Select value={selfOutput || ""} onValueChange={onChange} disabled={outputs.length === 0}>
-      <SelectTrigger size="sm" className="w-full text-xs" data-testid="self-output-trigger">
+      <SelectTrigger size="sm" className="w-full text-meta" data-testid="self-output-trigger">
         <SelectValue placeholder={outputs.length === 0 ? "No outputs declared" : "select output..."} />
       </SelectTrigger>
       <SelectContent>
@@ -441,7 +441,7 @@ function AddonOrphanReadOnly({
 }) {
   const dbLabel = superuser ? "(superuser)" : database ?? "—";
   return (
-    <div className="text-xs italic py-1.5 text-warn">
+    <div className="text-meta italic py-1.5 text-warn">
       ⚙ &lt;missing addon&gt; · {dbLabel} · {credField ?? "—"}
     </div>
   );
@@ -467,7 +467,7 @@ function AddonCredFieldPicker({
       >
         <SelectTrigger
           size="sm"
-          className={`w-full text-xs ${error ? "border-danger" : ""}`}
+          className={`w-full text-meta ${error ? "border-danger" : ""}`}
           data-testid="field-picker-trigger"
         >
           <SelectValue placeholder={disabled ? "Pick an addon first" : "Select field"} />
@@ -478,7 +478,7 @@ function AddonCredFieldPicker({
               <span className="flex items-center gap-2">
                 <span>{f}</span>
                 {CLUSTER_WIDE_FIELDS.has(f) && (
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  <span className="text-label text-muted-foreground">
                     cluster
                   </span>
                 )}
@@ -487,7 +487,7 @@ function AddonCredFieldPicker({
           ))}
         </SelectContent>
       </Select>
-      {error && <p className="text-xs text-danger mt-1">{error}</p>}
+      {error && <p className="text-meta text-danger mt-1">{error}</p>}
     </div>
   );
 }

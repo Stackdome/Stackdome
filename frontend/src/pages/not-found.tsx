@@ -26,7 +26,7 @@ export default function NotFoundPage() {
 
       <main className="relative z-10 flex min-h-svh items-center justify-center px-6">
         <div className="flex max-w-xl flex-col items-center gap-6 text-center">
-          <EyebrowLabel tone="brand" className="font-bold">
+          <EyebrowLabel tone="brand" className="font-semibold">
             Error
           </EyebrowLabel>
 
@@ -40,11 +40,11 @@ export default function NotFoundPage() {
             404
           </h1>
 
-          <h2 className="text-[28px] font-semibold leading-tight tracking-tight">
+          <h2 className="text-head font-semibold leading-tight tracking-tight">
             Page not found
           </h2>
 
-          <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-md text-body leading-relaxed text-muted-foreground">
             The page you&apos;re looking for doesn&apos;t exist or has moved.
             Check the URL, or head back to your stacks.
           </p>
@@ -64,7 +64,7 @@ export default function NotFoundPage() {
         </div>
       </main>
 
-      <div className="absolute inset-x-0 bottom-6 z-10 flex items-center justify-between px-6 font-mono text-[10px] uppercase tracking-[1.5px] text-muted-foreground md:px-10">
+      <div className="absolute inset-x-0 bottom-6 z-10 flex items-center justify-between px-6 font-mono text-label text-muted-foreground md:px-10">
         <span>status: 404</span>
         <span>route_not_found</span>
       </div>

@@ -17,7 +17,7 @@ export function ReleaseMenu({ release, onRollback, onCancel, onCopyId }: Release
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Release actions" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+        <Button shape="flat" variant="ghost" size="icon" aria-label="Release actions" onClick={(e) => e.stopPropagation()}>
           <MoreVertical className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>

@@ -113,17 +113,17 @@ export default function PreviewsPage() {
                       <ProviderLogo providerId={providerIdForHost(host)} className="h-5 w-5 shrink-0" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-[15px] font-medium text-foreground">{c.name}</p>
-                      <p className="truncate font-mono text-[11.5px] text-fg-muted">
+                      <p className="truncate text-name font-medium text-foreground">{c.name}</p>
+                      <p className="truncate font-mono text-label text-fg-muted">
                         {c.git_repository?.repo_url ? repoTail(c.git_repository.repo_url) : ""}
                       </p>
                     </div>
                   </div>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border px-2 py-0.5 text-meta text-muted-foreground">
                     <GitBranch className="h-3 w-3" />
                     {c.git_repository?.base_branch}
                   </span>
-                  <span className="w-[130px] text-right font-mono text-[11px] text-muted-foreground tabular-nums">
+                  <span className="w-[130px] text-right font-mono text-label text-muted-foreground tabular-nums">
                     {count} environment{count === 1 ? "" : "s"}
                   </span>
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />

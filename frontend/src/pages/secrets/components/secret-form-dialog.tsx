@@ -304,7 +304,7 @@ export function SecretFormDialog({
                 className={formErrors.registry ? "border-danger" : ""}
               />
               {formErrors.registry && (
-                <p className="text-sm text-danger">{formErrors.registry}</p>
+                <p className="text-body text-danger">{formErrors.registry}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -322,7 +322,7 @@ export function SecretFormDialog({
                 className={formErrors.username ? "border-danger" : ""}
               />
               {formErrors.username && (
-                <p className="text-sm text-danger">{formErrors.username}</p>
+                <p className="text-body text-danger">{formErrors.username}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -352,7 +352,7 @@ export function SecretFormDialog({
                 </Button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-danger">{formErrors.password}</p>
+                <p className="text-body text-danger">{formErrors.password}</p>
               )}
             </div>
           </div>
@@ -362,12 +362,12 @@ export function SecretFormDialog({
         return (
           <div className="space-y-4">
             {formErrors.credentials && (
-              <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
+              <div className="text-body text-danger bg-danger-bg p-3 rounded-md">
                 {formErrors.credentials}
               </div>
             )}
             <div className="space-y-4">
-              <h4 className="text-sm font-medium">Option 1: Username & Password</h4>
+              <h4 className="text-body font-medium">Option 1: Username & Password</h4>
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input
@@ -409,8 +409,8 @@ export function SecretFormDialog({
                   </Button>
                 </div>
               </div>
-              <div className="text-center text-sm text-muted-foreground">OR</div>
-              <h4 className="text-sm font-medium">Option 2: Personal Access Token</h4>
+              <div className="text-center text-body text-muted-foreground">OR</div>
+              <h4 className="text-body font-medium">Option 2: Personal Access Token</h4>
               <div className="space-y-2">
                 <Label htmlFor="token">Token</Label>
                 <div className="relative">
@@ -460,7 +460,7 @@ export function SecretFormDialog({
                 className={formErrors.username ? "border-danger" : ""}
               />
               {formErrors.username && (
-                <p className="text-sm text-danger">{formErrors.username}</p>
+                <p className="text-body text-danger">{formErrors.username}</p>
               )}
             </div>
             <div className="space-y-2">
@@ -490,7 +490,7 @@ export function SecretFormDialog({
                 </Button>
               </div>
               {formErrors.password && (
-                <p className="text-sm text-danger">{formErrors.password}</p>
+                <p className="text-body text-danger">{formErrors.password}</p>
               )}
             </div>
           </div>
@@ -525,7 +525,7 @@ export function SecretFormDialog({
               </Button>
             </div>
             {formErrors.token && (
-              <p className="text-sm text-danger">{formErrors.token}</p>
+              <p className="text-body text-danger">{formErrors.token}</p>
             )}
           </div>
         );
@@ -548,7 +548,7 @@ export function SecretFormDialog({
               rows={6}
             />
             {formErrors.sshPrivateKey && (
-              <p className="text-sm text-danger">{formErrors.sshPrivateKey}</p>
+              <p className="text-body text-danger">{formErrors.sshPrivateKey}</p>
             )}
           </div>
         );
@@ -558,10 +558,10 @@ export function SecretFormDialog({
         return (
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label className="text-[13px] font-medium text-foreground">
+              <Label className="text-body font-medium text-foreground">
                 <span>
                   Secret Data
-                  <span className="ml-0.5 text-[15px] font-semibold text-brand/80 leading-none" aria-hidden>*</span>
+                  <span className="ml-0.5 text-name font-semibold text-foreground/70 leading-none" aria-hidden>*</span>
                 </span>
               </Label>
               <Button
@@ -586,7 +586,7 @@ export function SecretFormDialog({
                       className={formErrors[`key-${index}`] ? "border-danger" : ""}
                     />
                     {formErrors[`key-${index}`] && (
-                      <p className="text-xs text-danger">{formErrors[`key-${index}`]}</p>
+                      <p className="text-meta text-danger">{formErrors[`key-${index}`]}</p>
                     )}
                   </div>
                   <div className="flex-1 space-y-1">
@@ -609,7 +609,7 @@ export function SecretFormDialog({
                       </Button>
                     </div>
                     {formErrors[`value-${index}`] && (
-                      <p className="text-xs text-danger">{formErrors[`value-${index}`]}</p>
+                      <p className="text-meta text-danger">{formErrors[`value-${index}`]}</p>
                     )}
                   </div>
                   <Button
@@ -627,7 +627,7 @@ export function SecretFormDialog({
               ))}
             </div>
             {formErrors.data && (
-              <p className="text-sm text-danger">{formErrors.data}</p>
+              <p className="text-body text-danger">{formErrors.data}</p>
             )}
           </div>
         );
@@ -652,7 +652,7 @@ export function SecretFormDialog({
         <div className="-mx-1 flex-1 overflow-y-auto px-1">
           <div className="space-y-5 py-4">
             {error && (
-              <div className="text-sm text-danger bg-danger-bg p-3 rounded-md">
+              <div className="text-body text-danger bg-danger-bg p-3 rounded-md">
                 {error}
               </div>
             )}
@@ -708,7 +708,7 @@ export function SecretFormDialog({
         </div>
 
         <DialogFooter className="flex-shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
+          <Button shape="flat" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={isLoading}>

@@ -83,7 +83,7 @@ export function VolumeFields({
             value={volume.name || ""}
             onChange={(e) => update({ name: e.target.value })}
             disabled={nameReadOnly}
-            className={`h-9 font-mono text-[12.5px] ${errors.name || isDuplicate ? "border-danger" : ""}`}
+            className={`h-9 font-mono text-meta ${errors.name || isDuplicate ? "border-danger" : ""}`}
             aria-invalid={!!errors.name || isDuplicate}
           />
         </LedgerRow>
@@ -109,12 +109,13 @@ export function VolumeFields({
               })
             }
             disabled={specReadOnly}
-            className={`h-9 font-mono text-[12.5px] ${errors["spec.size"] ? "border-danger" : ""}`}
+            className={`h-9 font-mono text-meta ${errors["spec.size"] ? "border-danger" : ""}`}
             aria-invalid={!!errors["spec.size"]}
           />
         </LedgerRow>
         <LedgerRow label="Access mode" meta="single resource · read/write">
-          <code className="inline-block rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
+          {/* deliberate off-scale: ~22px-tall code chip, rounded-sm reads too round */}
+          <code className="inline-block rounded-[3px] bg-secondary px-2 py-1 font-mono text-label text-muted-foreground">
             ReadWriteOnce (RWO)
           </code>
         </LedgerRow>
@@ -128,11 +129,12 @@ export function VolumeFields({
           {mountingInfo.map((mount, mountIdx) => (
             <div key={mountIdx} className="border-b border-secondary/80 py-1">
               <div className="flex items-center gap-3 rounded-md px-1.5 py-1.5 transition-colors hover:bg-muted/20">
-                <div className="flex w-[150px] shrink-0 items-center gap-2 text-[13px] text-foreground/80 dark:text-fg-2">
+                <div className="flex w-[150px] shrink-0 items-center gap-2 text-body text-foreground/80 dark:text-fg-2">
                   <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-fg-muted" aria-hidden />
                   <span className="truncate">{mount.resourceName}</span>
                 </div>
-                <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-[11.5px] text-muted-foreground">
+                {/* deliberate off-scale: ~22px-tall code chip, rounded-sm reads too round */}
+                <code className="shrink-0 rounded-[3px] bg-secondary px-2 py-1 font-mono text-label text-muted-foreground">
                   {mount.targetPath}
                 </code>
               </div>
@@ -146,7 +148,7 @@ export function VolumeFields({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-7 gap-1.5 px-2 text-[12.5px] text-danger hover:bg-danger-bg hover:text-danger"
+          className="h-7 gap-1.5 px-2 text-meta text-danger hover:bg-danger-bg hover:text-danger"
           onClick={() => onRemove(index)}
           title="Remove volume"
         >

@@ -63,7 +63,7 @@ export function StatusPill({
       className={cn(
         // Pill: full-rounded, 1px border, mono uppercase bold per design system
         "inline-flex items-center gap-[7px] rounded-full border px-2.5 py-1 leading-none",
-        "font-mono text-[11px] font-bold uppercase tracking-[0.08em]",
+        "font-mono text-label font-semibold",
         s.wrap,
         className,
       )}

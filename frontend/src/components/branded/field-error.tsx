@@ -9,7 +9,7 @@ interface FieldErrorProps {
 export function FieldError({ children, className }: FieldErrorProps) {
   if (!children) return null;
   return (
-    <p className={cn("text-[11.5px] text-danger mt-1 leading-tight", className)}>
+    <p className={cn("text-label text-danger mt-1 leading-tight", className)}>
       {children}
     </p>
   );

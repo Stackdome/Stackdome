@@ -85,9 +85,9 @@ export default function ClusterCreatePage() {
         <div className="flex justify-between items-center">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold">Create New Cluster</h1>
+              <h1 className="text-head font-semibold">Create New Cluster</h1>
             </div>
-            <div className="flex items-center gap-4 text-muted-foreground text-sm mb-1">
+            <div className="flex items-center gap-4 text-muted-foreground text-body mb-1">
               <span>Configure your Kubernetes cluster connection</span>
             </div>
           </div>

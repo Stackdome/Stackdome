@@ -875,7 +875,7 @@ export default function CanvasEditorPage() {
   if (error) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-semibold mb-2">Error</h2>
+        <h2 className="text-head font-semibold mb-2">Error</h2>
         <p className="text-muted-foreground mb-4">{error}</p>
         <Button asChild>
           <Link to="/stacks">Return to Stacks</Link>
@@ -887,7 +887,7 @@ export default function CanvasEditorPage() {
   if (!isNewStack && !savedStack) {
     return (
       <div className="p-8 text-center">
-        <h2 className="text-xl font-semibold mb-2">Stack not found</h2>
+        <h2 className="text-head font-semibold mb-2">Stack not found</h2>
         <p className="text-muted-foreground mb-4">The stack you're looking for doesn't exist or has been deleted.</p>
         <Button asChild>
           <Link to="/stacks">Return to Stacks</Link>

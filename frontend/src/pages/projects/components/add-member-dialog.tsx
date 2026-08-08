@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/command";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
+import { FieldShell } from "@/components/branded";
 import { cn } from "@/lib/utils";
 import { getCurrentOrganizationId } from "@/lib/common";
 import { listOrganizationUsers } from "@/api/organizations";
@@ -97,8 +98,7 @@ export function AddMemberDialog({
 
         <div className="space-y-4">
           {/* User combobox */}
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">User</p>
+          <FieldShell label="User">
             <div className="rounded-md border border-border overflow-hidden">
               <Command>
                 <CommandInput placeholder="Search users…" />
@@ -129,7 +129,7 @@ export function AddMemberDialog({
                               {u.name ?? u.email ?? u.id}
                             </span>
                             {u.name && u.email && (
-                              <span className="ml-2 text-muted-foreground text-xs truncate">
+                              <span className="ml-2 text-muted-foreground text-meta truncate">
                                 {u.email}
                               </span>
                             )}
@@ -142,15 +142,14 @@ export function AddMemberDialog({
               </Command>
             </div>
             {selectedUser && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-meta text-muted-foreground">
                 Selected: {selectedUser.name ?? selectedUser.email}
               </p>
             )}
-          </div>
+          </FieldShell>
 
           {/* Role radio group */}
-          <div className="space-y-1.5">
-            <p className="text-sm font-medium">Project role</p>
+          <FieldShell label="Project role">
             <RadioGroup
               value={role}
               onValueChange={(v) => setRole(v as Role)}
@@ -158,22 +157,22 @@ export function AddMemberDialog({
             >
               <label className="flex items-center gap-2 cursor-pointer">
                 <RadioGroupItem value="Developer" id="add-role-dev" />
-                <span className="text-sm">Developer</span>
+                <span className="text-body">Developer</span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer">
                 <RadioGroupItem value="Viewer" id="add-role-viewer" />
-                <span className="text-sm">Viewer</span>
+                <span className="text-body">Viewer</span>
               </label>
             </RadioGroup>
-          </div>
+          </FieldShell>
 
           {error && (
-            <p className="text-sm text-destructive">{error}</p>
+            <p className="text-body text-destructive">{error}</p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={busy}>
+          <Button shape="flat" variant="outline" onClick={handleClose} disabled={busy}>
             Cancel
           </Button>
           <Button
