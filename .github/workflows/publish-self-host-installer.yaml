@@ -13,6 +13,7 @@ permissions:
 
 env:
   RELEASE_TAG: ${{ inputs.tag }}
+  R2_ACCOUNT_ID: ${{ vars.R2_ACCOUNT_ID }}
   R2_BUCKET: ${{ vars.R2_BUCKET }}
 
 jobs:
@@ -29,6 +30,7 @@ jobs:
             echo "invalid release tag: $RELEASE_TAG" >&2
             exit 1
           }
+          test -n "$R2_ACCOUNT_ID"
           test -n "$R2_BUCKET"
           gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
 
@@ -67,14 +69,15 @@ jobs:
 
       - name: Upload immutable install script
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://${{ vars.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: |
-          npx --yes wrangler@4.33.1 r2 object put "${R2_BUCKET}/releases/${RELEASE_TAG}/install.sh" \
-            --file dist/install.sh \
+          aws s3 cp dist/install.sh "s3://${R2_BUCKET}/releases/${RELEASE_TAG}/install.sh" \
+            --endpoint-url "$R2_ENDPOINT" \
             --content-type 'text/x-shellscript; charset=utf-8' \
-            --cache-control 'public, max-age=31536000, immutable' \
-            --remote
+            --cache-control 'public, max-age=31536000, immutable'
 
       - name: Smoke immutable install script
         run: |
@@ -86,14 +89,15 @@ jobs:
 
       - name: Promote live install script
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.CLOUDFLARE_R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.CLOUDFLARE_R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          R2_ENDPOINT: https://${{ vars.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
         run: |
-          npx --yes wrangler@4.33.1 r2 object put "${R2_BUCKET}/install.sh" \
-            --file dist/install.sh \
+          aws s3 cp dist/install.sh "s3://${R2_BUCKET}/install.sh" \
+            --endpoint-url "$R2_ENDPOINT" \
             --content-type 'text/x-shellscript; charset=utf-8' \
-            --cache-control 'public, max-age=300' \
-            --remote
+            --cache-control 'public, max-age=300'
 
       - name: Smoke live install script
         run: |
