@@ -123,25 +123,41 @@ if [ "${STACKDOME_DOWNLOAD_ONLY:-0}" = 1 ]; then
 fi
 
 needs_email=1
+needs_domain=1
 if [ "${1:-}" = upgrade ]; then
     needs_email=0
+    needs_domain=0
 fi
 for arg in "$@"; do
     case "$arg" in
         --email|--email=*) needs_email=0 ;;
+        --domain|--domain=*) needs_domain=0 ;;
     esac
 done
+
+interactive=0
+if [ "$json_output" -eq 0 ] && [ -r /dev/tty ] && [ -w /dev/tty ] && (: </dev/tty) 2>/dev/null; then
+    interactive=1
+fi
 
 if [ "$needs_email" -eq 1 ]; then
     if [ "$json_output" -eq 1 ]; then
         fail 'JSON install requires --email' 'non-interactive install requires --email'
-    elif [ -r /dev/tty ] && [ -w /dev/tty ] && (: </dev/tty) 2>/dev/null; then
+    elif [ "$interactive" -eq 1 ]; then
         printf 'Admin email: ' >/dev/tty
         IFS= read -r admin_email </dev/tty || fail 'unable to read admin email' 'admin email is required'
         [ -n "$admin_email" ] || fail 'admin email cannot be empty' 'admin email is required'
         set -- "$@" --email "$admin_email"
     else
         fail 'non-interactive install requires --email' 'non-interactive install requires --email'
+    fi
+fi
+
+if [ "$needs_domain" -eq 1 ] && [ "$interactive" -eq 1 ]; then
+    printf 'Custom domain (press Enter to use automatic nip.io): ' >/dev/tty
+    IFS= read -r custom_domain </dev/tty || fail 'unable to read custom domain' 'domain input failed'
+    if [ -n "$custom_domain" ]; then
+        set -- "$@" --domain "$custom_domain"
     fi
 fi
 
