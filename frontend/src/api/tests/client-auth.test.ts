@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { handleResponseError, type AuthErrorDeps } from "@/api/client";
+import { handleResponseError, isOnAuthPage, type AuthErrorDeps } from "@/api/client";
 
 function mkDeps(over: Partial<AuthErrorDeps> = {}): AuthErrorDeps {
   return {
@@ -97,5 +97,20 @@ describe("handleResponseError", () => {
     const deps = mkDeps({ isAuthPage: () => true });
     await expect(handleResponseError(err(403, "token is expired by 1h"), deps)).rejects.toBeDefined();
     expect(deps.refresh).not.toHaveBeenCalled();
+  });
+});
+
+describe("isOnAuthPage", () => {
+  // The callback page must count as an auth page: with a stale expired session,
+  // a failed refresh would otherwise redirect to /sign-in and abort the
+  // in-flight OAuth code exchange.
+  it.each(["/sign-in", "/sign-up", "/auth/github/callback"])("is true on %s", (path) => {
+    window.history.replaceState(null, "", path);
+    expect(isOnAuthPage()).toBe(true);
+  });
+
+  it("is false on app pages", () => {
+    window.history.replaceState(null, "", "/dashboard");
+    expect(isOnAuthPage()).toBe(false);
   });
 });
