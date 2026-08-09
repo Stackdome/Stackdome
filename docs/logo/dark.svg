@@ -1,6 +1,9 @@
 <!-- Generated from stackdome-website BrandLockup.tsx, the one place this
-     geometry is defined. Regenerate there; do not hand-edit. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 301 77" width="301" height="77" fill="none">
+     geometry is defined. Regenerate there; do not hand-edit.
+     viewBox is cropped to the ink (source box 301x77 ends in 13 units of
+     faded-out gradient) so a height-capped nav spends none of its budget
+     on empty space. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 301 64" width="301" height="64" fill="none">
   <defs><linearGradient id="g" x1="33.1211" y1="0" x2="33.1211" y2="54.6984" gradientUnits="userSpaceOnUse"><stop stop-color="#ffffff"/><stop offset="1" stop-opacity="0"/></linearGradient></defs>
   <path opacity="0.4" d="M0 55.4156V20.8546C0 19.7828 0.571798 18.7924 1.5 18.2565L31.6211 0.866025C32.5494 0.330127 33.6929 0.330128 34.6211 0.866026L64.7423 18.2565C65.6705 18.7924 66.2423 19.7828 66.2423 20.8546V55.4156C66.2423 56.4874 65.6705 57.4777 64.7423 58.0136L34.6211 75.4041C33.6929 75.94 32.5494 75.94 31.6211 75.4041L1.5 58.0136C0.571797 57.4777 0 56.4874 0 55.4156Z" fill="url(#g)"/>
   <rect opacity="0.25" width="30.588" height="30.588" rx="2" transform="matrix(0.866025 -0.5 0.866025 0.5 6.48999 49.125)" fill="#ffffff"/>
