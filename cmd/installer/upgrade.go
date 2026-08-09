@@ -129,7 +129,7 @@ func runUpgrade(args []string) error {
 	if installerOutput.isJSON() {
 		if err := emitJSON(upgradeSuccessResult{
 			Status:            "upgraded",
-			URL:               "https://" + domain,
+			URL:               installationURL(domain),
 			APIServerImage:    opts.image,
 			AgentChartVersion: opts.chartVersion,
 		}); err != nil {
@@ -137,7 +137,7 @@ func runUpgrade(args []string) error {
 		}
 		return nil
 	}
-	installerOutput.finalf("\n  URL:            https://%s\n", domain)
+	installerOutput.finalf("\n  URL:            %s\n", installationURL(domain))
 	installerOutput.finalf("  API server:     %s\n", opts.image)
 	installerOutput.finalf("  Agent chart:    v%s\n\n", opts.chartVersion)
 	return nil

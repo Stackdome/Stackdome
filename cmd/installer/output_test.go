@@ -128,3 +128,15 @@ func TestCommandLabelDoesNotIncludeTrailingArguments(t *testing.T) {
 		t.Fatalf("commandLabel() leaked trailing argument: %q", label)
 	}
 }
+
+func TestInstallationURLMatchesTLSMode(t *testing.T) {
+	tests := map[string]string{
+		"stackdome.192.0.2.1.nip.io": "http://stackdome.192.0.2.1.nip.io",
+		"stackdome.example.com":      "https://stackdome.example.com",
+	}
+	for domain, want := range tests {
+		if got := installationURL(domain); got != want {
+			t.Errorf("installationURL(%q) = %q, want %q", domain, got, want)
+		}
+	}
+}

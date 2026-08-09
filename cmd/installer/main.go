@@ -205,7 +205,7 @@ func banner(title string) {
 }
 
 func finishInstall(domain, email, password, credentialsFile string, reachable bool, result *bootstrapResult) error {
-	url := "https://" + domain
+	url := installationURL(domain)
 	if credentialsFile != "" {
 		credentials := bootstrapCredentials{URL: url, AdminEmail: email, AdminPassword: password}
 		if err := writeCredentials(credentialsFile, credentials); err != nil {
@@ -237,7 +237,7 @@ func printSummary(domain, email, password, credentialsFile string, externallyRea
 	installerOutput.finalf("\n================================================================\n")
 	installerOutput.finalf("  StackDome installed successfully!\n")
 	installerOutput.finalf("================================================================\n\n")
-	installerOutput.finalf("  URL:            https://%s\n", domain)
+	installerOutput.finalf("  URL:            %s\n", installationURL(domain))
 	installerOutput.finalf("  Email:          %s\n", email)
 	installerOutput.finalf("  Password:       %s\n", password)
 	if credentialsFile != "" {
@@ -257,4 +257,12 @@ func printSummary(domain, email, password, credentialsFile string, externallyRea
 	installerOutput.finalf("  Save these credentials -- they won't be shown again.\n\n")
 	installerOutput.finalf("  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\n\n")
 	installerOutput.finalf("================================================================\n")
+}
+
+func installationURL(domain string) string {
+	scheme := "http"
+	if isTLSDomain(domain) {
+		scheme = "https"
+	}
+	return scheme + "://" + domain
 }
