@@ -110,9 +110,11 @@ export interface AuthErrorDeps {
   isAuthPage?: () => boolean;
 }
 
-function isOnAuthPage(): boolean {
+// Includes the OAuth callback: a stale session's failed refresh must not
+// navigate away and abort the in-flight code exchange.
+export function isOnAuthPage(): boolean {
   const path = window.location.pathname;
-  return path === '/sign-in' || path === '/sign-up';
+  return path === '/sign-in' || path === '/sign-up' || path === '/auth/github/callback';
 }
 
 // Expired/invalid access tokens return 403 here (not 401); match the token reason
