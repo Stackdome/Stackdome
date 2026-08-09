@@ -2,6 +2,7 @@ package install
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -32,8 +33,8 @@ func TestBootstrapRootFailureOutputModes(t *testing.T) {
 		if err == nil {
 			return stdout.String(), stderr.String(), 0
 		}
-		exitErr, ok := err.(*exec.ExitError)
-		if !ok {
+		var exitErr *exec.ExitError
+		if !errors.As(err, &exitErr) {
 			t.Fatalf("bootstrap execution error = %v", err)
 		}
 		return stdout.String(), stderr.String(), exitErr.ExitCode()

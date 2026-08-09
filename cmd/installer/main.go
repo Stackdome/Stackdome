@@ -12,7 +12,10 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 )
 
-const defaultAPIServerImage = "quay.io/stackdome/stackdome:latest"
+const (
+	defaultAPIServerImage = "quay.io/stackdome/stackdome:latest"
+	installCommand        = "install"
+)
 
 var errEmailRequired = errors.New("--email is required")
 
@@ -41,7 +44,7 @@ func runMainWithIO(args []string, stdout, stderr io.Writer, terminal bool) int {
 	}
 	_ = configureOutput(mode, argumentsRequestNoColor(args), terminal, stdout, stderr)
 
-	command := "install"
+	command := installCommand
 	commandArgs := args
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		command, commandArgs = args[0], args[1:]
@@ -49,7 +52,7 @@ func runMainWithIO(args []string, stdout, stderr io.Writer, terminal bool) int {
 
 	var err error
 	switch command {
-	case "install":
+	case installCommand:
 		err = runInstall(commandArgs)
 	case "upgrade":
 		err = runUpgrade(commandArgs)
@@ -91,7 +94,7 @@ func usage() {
 }
 
 func parseInstallOptions(args []string) (*installOptions, error) {
-	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	fs := flag.NewFlagSet(installCommand, flag.ContinueOnError)
 	fs.SetOutput(installerOutput.stderr)
 	email := fs.String("email", "", "Admin user email (required)")
 	domain := fs.String("domain", "", "Dashboard domain (default: stackdome.<PUBLIC_IP>.nip.io)")
