@@ -3,55 +3,82 @@ package main
 import (
 	"flag"
 	"fmt"
-	"os"
 
 	"github.com/Stackdome/stackdome/install"
 )
 
-func runUpgrade(args []string) {
-	fs := flag.NewFlagSet("upgrade", flag.ExitOnError)
+type upgradeOptions struct {
+	image        string
+	chartVersion string
+	github       *githubFlags
+	platform     *platformFlags
+}
+
+func parseUpgradeOptions(args []string) (*upgradeOptions, error) {
+	fs := flag.NewFlagSet("upgrade", flag.ContinueOnError)
+	fs.SetOutput(installerOutput.stderr)
 	image := fs.String("image", "", "API server container image (default: keep the currently deployed one)")
 	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
+	output := registerOutputFlags(fs)
 	github := registerGitHubFlags(fs)
 	platform := registerPlatformFlags(fs)
-	_ = fs.Parse(args)
+	if err := fs.Parse(args); err != nil {
+		return nil, err
+	}
+	if fs.NArg() != 0 {
+		return nil, fmt.Errorf("unexpected positional arguments")
+	}
+	if err := output.apply(); err != nil {
+		return nil, err
+	}
+	return &upgradeOptions{
+		image:        *image,
+		chartVersion: *chartVersion,
+		github:       github,
+		platform:     platform,
+	}, nil
+}
+
+func runUpgrade(args []string) error {
+	opts, err := parseUpgradeOptions(args)
+	if err != nil {
+		return installationError("arguments", "invalid installer arguments", err)
+	}
 
 	totalPhases = 4
 	banner("StackDome Upgrade")
 
 	phaseLog(1, "Checking existing install...")
 	if err := requireRoot(); err != nil {
-		exitErr("Preflight failed", err)
+		return installationError("preflight", err.Error(), err)
 	}
 	if err := requireExistingInstall(); err != nil {
-		errLog(fmt.Sprintf("Nothing to upgrade: %v", err))
-		fmt.Println()
-		fmt.Println("Run the installer first:")
-		fmt.Println("  sudo ./stackdome-install install --email you@company.com")
-		os.Exit(1)
+		installerOutput.diagnosticf("\nRun the installer first:\n")
+		installerOutput.diagnosticf("  sudo ./stackdome-install install --email you@company.com\n")
+		return installationError("preflight", "no existing installation found", err)
 	}
 
 	domain, err := existingDomain()
 	if err != nil {
-		exitErr("Reading existing configuration failed", err)
+		return installationError("configuration", "reading existing configuration failed", err)
 	}
 	stepLog(fmt.Sprintf("Domain: %s", domain))
 
-	if *image == "" {
+	if opts.image == "" {
 		current, err := existingImage()
 		if err != nil {
-			exitErr("Reading existing configuration failed", err)
+			return installationError("configuration", "reading existing configuration failed", err)
 		}
-		*image = current
+		opts.image = current
 		stepLog(fmt.Sprintf("Image: %s (unchanged)", current))
 	} else {
-		stepLog(fmt.Sprintf("Image: %s", *image))
+		stepLog(fmt.Sprintf("Image: %s", opts.image))
 	}
 
 	phaseLog(2, "Loading existing secrets...")
 	secrets, err := readExistingSecrets()
 	if err != nil {
-		exitErr("Reading bootstrap secrets failed", err)
+		return installationError("configuration", "reading bootstrap secrets failed", err)
 	}
 	successLog("Secrets loaded")
 
@@ -59,13 +86,13 @@ func runUpgrade(args []string) {
 	// live Postgres between Deployment and StatefulSet is not this command's job.
 	dbWorkloadType, err := existingDBWorkloadType()
 	if err != nil {
-		exitErr("Reading existing configuration failed", err)
+		return installationError("configuration", "reading existing configuration failed", err)
 	}
 	stepLog(fmt.Sprintf("Database workload type: %s", dbWorkloadType))
 
 	vals := install.TemplateValues{
 		Domain:         domain,
-		APIServerImage: *image,
+		APIServerImage: opts.image,
 		DBWorkloadType: dbWorkloadType,
 		TLSEnabled:     isTLSDomain(domain),
 		DBPassword:     secrets.DBPassword,
@@ -73,37 +100,47 @@ func runUpgrade(args []string) {
 		EncryptionKey:  secrets.EncryptionKey,
 		AdminPassword:  secrets.AdminPassword,
 	}
-	vals.Platform, err = platform.resolvePlatformConfig(secrets.Platform)
+	vals.Platform, err = opts.platform.resolvePlatformConfig(secrets.Platform)
 	if err != nil {
-		exitErr("Reading platform configuration failed", err)
+		return installationError("configuration", "reading platform configuration failed", err)
 	}
-	if err := github.applyTo(&vals); err != nil {
-		exitErr("Reading GitHub credentials failed", err)
+	if err := opts.github.applyTo(&vals); err != nil {
+		return installationError("configuration", "reading GitHub credentials failed", err)
 	}
 
-	if err := installStackdomeAgent(*chartVersion); err != nil {
-		exitErr("stackdome-agent upgrade failed", err)
+	if err := installStackdomeAgent(opts.chartVersion); err != nil {
+		return installationError("agent", "stackdome-agent upgrade failed", err)
 	}
 	if err := applyAPIServerRBAC(); err != nil {
-		exitErr("API server RBAC upgrade failed", err)
+		return installationError("agent", "API server RBAC upgrade failed", err)
 	}
 	if err := ensurePlatformClusterCredentials(&vals.Platform); err != nil {
-		exitErr("Reading platform cluster credentials failed", err)
+		return installationError("configuration", "reading platform cluster credentials failed", err)
 	}
 	if err := mergeBootstrapConfig(&vals, secrets); err != nil {
-		exitErr("Storing bootstrap configuration failed", err)
+		return installationError("configuration", "storing bootstrap configuration failed", err)
 	}
 
 	if err := applyCRs(vals, domain); err != nil {
-		exitErr("CR application failed", err)
+		return installationError("configuration", "custom resource application failed", err)
 	}
 
 	successLog("Upgrade complete!")
-	fmt.Println()
-	fmt.Printf("  URL:            https://%s\n", domain)
-	fmt.Printf("  API server:     %s\n", *image)
-	fmt.Printf("  Agent chart:    v%s\n", *chartVersion)
-	fmt.Println()
+	if installerOutput.isJSON() {
+		if err := emitJSON(upgradeSuccessResult{
+			Status:            "upgraded",
+			URL:               "https://" + domain,
+			APIServerImage:    opts.image,
+			AgentChartVersion: opts.chartVersion,
+		}); err != nil {
+			return installationError("output", "writing JSON result failed", err)
+		}
+		return nil
+	}
+	installerOutput.finalf("\n  URL:            https://%s\n", domain)
+	installerOutput.finalf("  API server:     %s\n", opts.image)
+	installerOutput.finalf("  Agent chart:    v%s\n\n", opts.chartVersion)
+	return nil
 }
 
 func requireExistingInstall() error {

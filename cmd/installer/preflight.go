@@ -89,7 +89,7 @@ func detectPublicIP() (string, error) {
 	}
 	ip = strings.TrimSpace(ip)
 	if net.ParseIP(ip) == nil {
-		return "", fmt.Errorf("invalid public IP received: %q", ip)
+		return "", fmt.Errorf("invalid public IP response")
 	}
 	return ip, nil
 }

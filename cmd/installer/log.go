@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 const (
 	colorReset  = "\033[0m"
 	colorRed    = "\033[0;31m"
@@ -13,21 +11,28 @@ const (
 var totalPhases = 6
 
 func phaseLog(phase int, msg string) {
-	fmt.Printf("%s[%d/%d]%s %s\n", colorGreen, phase, totalPhases, colorReset, msg)
+	installerOutput.diagnosticf("%s[%d/%d]%s %s\n", color(colorGreen), phase, totalPhases, color(colorReset), msg)
 }
 
 func stepLog(msg string) {
-	fmt.Printf("  %s->%s %s\n", colorBlue, colorReset, msg)
+	installerOutput.diagnosticf("  %s->%s %s\n", color(colorBlue), color(colorReset), msg)
 }
 
 func warnLog(msg string) {
-	fmt.Printf("%s[!]%s %s\n", colorYellow, colorReset, msg)
+	installerOutput.diagnosticf("%s[!]%s %s\n", color(colorYellow), color(colorReset), msg)
 }
 
 func errLog(msg string) {
-	fmt.Printf("%s[ERROR]%s %s\n", colorRed, colorReset, msg)
+	installerOutput.diagnosticf("%s[ERROR]%s %s\n", color(colorRed), color(colorReset), msg)
 }
 
 func successLog(msg string) {
-	fmt.Printf("%s[ok]%s %s\n", colorGreen, colorReset, msg)
+	installerOutput.diagnosticf("%s[ok]%s %s\n", color(colorGreen), color(colorReset), msg)
+}
+
+func color(code string) string {
+	if !installerOutput.color {
+		return ""
+	}
+	return code
 }

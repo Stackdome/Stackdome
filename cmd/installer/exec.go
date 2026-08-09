@@ -10,22 +10,22 @@ import (
 
 func run(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = installerOutput.stderr
+	cmd.Stderr = installerOutput.stderr
 	cmd.Stdin = os.Stdin
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("command %q failed: %w", name+" "+strings.Join(args, " "), err)
+		return fmt.Errorf("%s failed: %w", commandLabel(name, args), err)
 	}
 	return nil
 }
 
 func output(name string, args ...string) (string, error) {
 	cmd := exec.Command(name, args...)
-	cmd.Stderr = os.Stderr
+	cmd.Stderr = installerOutput.stderr
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("command %q failed: %w", name+" "+strings.Join(args, " "), err)
+		return "", fmt.Errorf("%s failed: %w", commandLabel(name, args), err)
 	}
 	return strings.TrimSpace(out.String()), nil
 }
@@ -44,8 +44,8 @@ func outputQuiet(name string, args ...string) (string, error) {
 
 func runShell(command string) error {
 	cmd := exec.Command("sh", "-c", command)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = installerOutput.stderr
+	cmd.Stderr = installerOutput.stderr
 	cmd.Stdin = os.Stdin
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("shell command failed: %w", err)
@@ -61,10 +61,17 @@ func commandExists(name string) bool {
 func kubectlApply(manifest []byte) error {
 	cmd := exec.Command("kubectl", "apply", "-f", "-")
 	cmd.Stdin = bytes.NewReader(manifest)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd.Stdout = installerOutput.stderr
+	cmd.Stderr = installerOutput.stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("kubectl apply failed: %w", err)
 	}
 	return nil
+}
+
+func commandLabel(name string, args []string) string {
+	if len(args) == 0 || strings.HasPrefix(args[0], "-") {
+		return name
+	}
+	return name + " " + args[0]
 }

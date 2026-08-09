@@ -1,8 +1,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -12,87 +14,148 @@ import (
 
 const defaultAPIServerImage = "quay.io/stackdome/stackdome:latest"
 
+var errEmailRequired = errors.New("--email is required")
+
+type installOptions struct {
+	email           string
+	domain          string
+	image           string
+	chartVersion    string
+	credentialsFile string
+	github          *githubFlags
+	platform        *platformFlags
+}
+
 func main() {
-	args := os.Args[1:]
+	os.Exit(runMain(os.Args[1:]))
+}
+
+func runMain(args []string) int {
+	return runMainWithIO(args, os.Stdout, os.Stderr, stderrIsTerminal())
+}
+
+func runMainWithIO(args []string, stdout, stderr io.Writer, terminal bool) int {
+	mode := string(outputHuman)
+	if argumentsRequestJSON(args) {
+		mode = string(outputJSON)
+	}
+	_ = configureOutput(mode, argumentsRequestNoColor(args), terminal, stdout, stderr)
+
 	command := "install"
+	commandArgs := args
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
-		command, args = args[0], args[1:]
+		command, commandArgs = args[0], args[1:]
 	}
 
+	var err error
 	switch command {
 	case "install":
-		runInstall(args)
+		err = runInstall(commandArgs)
 	case "upgrade":
-		runUpgrade(args)
+		err = runUpgrade(commandArgs)
 	default:
 		usage()
-		os.Exit(1)
+		err = installationError("arguments", "unknown installer command", fmt.Errorf("unknown command %q", command))
 	}
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
+		emitFailure(err)
+		return 1
+	}
+	return 0
 }
 
 func usage() {
-	fmt.Println("Usage:")
-	fmt.Println("  stackdome-install install --email you@company.com [--domain stackdome.example.com]")
-	fmt.Println("                            [--image IMAGE] [--chart-version VERSION]")
-	fmt.Println("                            [GitHub flags] [platform flags]")
-	fmt.Println("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION]")
-	fmt.Println("                              [GitHub flags] [platform flags]")
-	fmt.Println()
-	fmt.Println("GitHub flags (all optional, stored in the bootstrap secret and reused by")
-	fmt.Println("later upgrades unless given again):")
-	fmt.Println("  --github-client-id ID --github-client-secret SECRET   'Sign in with GitHub'")
-	fmt.Println("  --github-app-id ID --github-app-slug SLUG             platform GitHub App")
-	fmt.Println("  --github-app-key-file PATH --github-app-webhook-secret SECRET")
-	fmt.Println()
-	fmt.Println("Platform flags (optional; configure wildcard hostnames and TLS):")
-	fmt.Println("  --platform-base-domain DOMAIN")
-	fmt.Println("  --platform-cloudflare-token-file PATH")
-	fmt.Println("  --platform-acme-environment production|staging")
-	fmt.Println("Only the Cloudflare token may be changed after initial configuration.")
-	fmt.Println()
-	fmt.Println("upgrade reuses the email, domain and secrets of the existing install,")
-	fmt.Println("and keeps the deployed image unless --image is given.")
+	installerOutput.diagnosticf("Usage:\n")
+	installerOutput.diagnosticf("  stackdome-install install --email you@company.com [--domain stackdome.example.com]\n")
+	installerOutput.diagnosticf("                            [--image IMAGE] [--chart-version VERSION]\n")
+	installerOutput.diagnosticf("                            [--output human|json] [--no-color]\n")
+	installerOutput.diagnosticf("                            [--credentials-file PATH] [GitHub flags] [platform flags]\n")
+	installerOutput.diagnosticf("  stackdome-install upgrade [--image IMAGE] [--chart-version VERSION]\n")
+	installerOutput.diagnosticf("                              [--output human|json] [--no-color]\n")
+	installerOutput.diagnosticf("                              [GitHub flags] [platform flags]\n\n")
+	installerOutput.diagnosticf("GitHub flags (all optional, stored in the bootstrap secret and reused by\n")
+	installerOutput.diagnosticf("later upgrades unless given again):\n")
+	installerOutput.diagnosticf("  --github-client-id ID --github-client-secret SECRET   'Sign in with GitHub'\n")
+	installerOutput.diagnosticf("  --github-app-id ID --github-app-slug SLUG             platform GitHub App\n")
+	installerOutput.diagnosticf("  --github-app-key-file PATH --github-app-webhook-secret SECRET\n\n")
+	installerOutput.diagnosticf("Platform flags (optional; configure wildcard hostnames and TLS):\n")
+	installerOutput.diagnosticf("  --platform-base-domain DOMAIN\n")
+	installerOutput.diagnosticf("  --platform-cloudflare-token-file PATH\n")
+	installerOutput.diagnosticf("  --platform-acme-environment production|staging\n")
+	installerOutput.diagnosticf("Only the Cloudflare token may be changed after initial configuration.\n\n")
+	installerOutput.diagnosticf("upgrade reuses the email, domain and secrets of the existing install,\n")
+	installerOutput.diagnosticf("and keeps the deployed image unless --image is given.\n")
 }
 
-func runInstall(args []string) {
-	fs := flag.NewFlagSet("install", flag.ExitOnError)
+func parseInstallOptions(args []string) (*installOptions, error) {
+	fs := flag.NewFlagSet("install", flag.ContinueOnError)
+	fs.SetOutput(installerOutput.stderr)
 	email := fs.String("email", "", "Admin user email (required)")
 	domain := fs.String("domain", "", "Dashboard domain (default: stackdome.<PUBLIC_IP>.nip.io)")
 	image := fs.String("image", defaultAPIServerImage, "API server container image")
 	chartVersion := fs.String("chart-version", defaultChartVersion, "stackdome-agent Helm chart version")
+	credentialsFile := fs.String("credentials-file", "", "Secure file for generated admin credentials")
+	output := registerOutputFlags(fs)
 	github := registerGitHubFlags(fs)
 	platform := registerPlatformFlags(fs)
-	_ = fs.Parse(args)
-
-	if *email == "" {
-		usage()
-		fmt.Println()
-		fmt.Println("Error: --email is required")
-		os.Exit(1)
+	if err := fs.Parse(args); err != nil {
+		return nil, err
 	}
+	if fs.NArg() != 0 {
+		return nil, fmt.Errorf("unexpected positional arguments")
+	}
+	if err := output.apply(); err != nil {
+		return nil, err
+	}
+	if *email == "" {
+		return nil, errEmailRequired
+	}
+	return &installOptions{
+		email:           *email,
+		domain:          *domain,
+		image:           *image,
+		chartVersion:    *chartVersion,
+		credentialsFile: credentialsPath(*credentialsFile),
+		github:          github,
+		platform:        platform,
+	}, nil
+}
 
+func runInstall(args []string) error {
+	opts, err := parseInstallOptions(args)
+	if err != nil {
+		if errors.Is(err, errEmailRequired) {
+			usage()
+			return installationError("arguments", err.Error(), err)
+		}
+		return installationError("arguments", "invalid installer arguments", err)
+	}
+	totalPhases = 6
 	banner("StackDome VPS Installer")
 
-	preflight, err := runPreflight(*email, *domain)
+	preflight, err := runPreflight(opts.email, opts.domain)
 	if err != nil {
-		exitErr("Preflight failed", err)
+		return installationError("preflight", err.Error(), err)
 	}
 
 	if err := installK3s(); err != nil {
-		exitErr("k3s installation failed", err)
+		return installationError("k3s", "k3s installation failed", err)
 	}
 
-	if err := installStackdomeAgent(*chartVersion); err != nil {
-		exitErr("stackdome-agent installation failed", err)
+	if err := installStackdomeAgent(opts.chartVersion); err != nil {
+		return installationError("agent", "stackdome-agent installation failed", err)
 	}
 	if err := applyAPIServerRBAC(); err != nil {
-		exitErr("API server RBAC installation failed", err)
+		return installationError("agent", "API server RBAC installation failed", err)
 	}
 
 	vals := install.TemplateValues{
-		AdminEmail:     *email,
+		AdminEmail:     opts.email,
 		Domain:         preflight.Domain,
-		APIServerImage: *image,
+		APIServerImage: opts.image,
 		DBWorkloadType: string(models.WorkloadTypeStatefulService),
 		TLSEnabled:     isTLSDomain(preflight.Domain),
 	}
@@ -100,76 +163,95 @@ func runInstall(args []string) {
 	if existingSecrets, readErr := readExistingSecrets(); readErr == nil {
 		storedPlatform = existingSecrets.Platform
 	}
-	vals.Platform, err = platform.resolvePlatformConfig(storedPlatform)
+	vals.Platform, err = opts.platform.resolvePlatformConfig(storedPlatform)
 	if err != nil {
-		exitErr("Reading platform configuration failed", err)
+		return installationError("configuration", "reading platform configuration failed", err)
 	}
 	if err := ensurePlatformClusterCredentials(&vals.Platform); err != nil {
-		exitErr("Reading platform cluster credentials failed", err)
+		return installationError("configuration", "reading platform cluster credentials failed", err)
 	}
-	if err := github.applyTo(&vals); err != nil {
-		exitErr("Reading GitHub credentials failed", err)
+	if err := opts.github.applyTo(&vals); err != nil {
+		return installationError("configuration", "reading GitHub credentials failed", err)
 	}
 
 	secrets, err := loadOrCreateSecrets(&vals)
 	if err != nil {
-		exitErr("Secret generation failed", err)
+		return installationError("configuration", "secret generation failed", err)
 	}
 
 	if err := configureTLS(vals); err != nil {
-		exitErr("TLS configuration failed", err)
+		return installationError("configuration", "TLS configuration failed", err)
 	}
 
 	if err := applyCRs(vals, preflight.Domain); err != nil {
-		exitErr("CR application failed", err)
+		return installationError("configuration", "custom resource application failed", err)
 	}
 
 	result, err := runAPIBootstrap(vals, secrets)
 	if err != nil {
-		exitErr("API bootstrap failed", err)
+		return installationError("bootstrap", "API bootstrap failed", err)
 	}
 
-	printSummary(preflight.Domain, *email, secrets.AdminPassword, externallyReachable, result)
+	return finishInstall(preflight.Domain, opts.email, secrets.AdminPassword, opts.credentialsFile, externallyReachable, result)
 }
 
 func banner(title string) {
-	fmt.Println()
-	fmt.Println("================================================================")
-	fmt.Printf("  %s\n", title)
-	fmt.Println("================================================================")
-	fmt.Println()
+	installerOutput.diagnosticf("\n================================================================\n")
+	installerOutput.diagnosticf("  %s\n", title)
+	installerOutput.diagnosticf("================================================================\n\n")
 }
 
-func exitErr(msg string, err error) {
-	errLog(fmt.Sprintf("%s: %v", msg, err))
-	os.Exit(1)
-}
-
-func printSummary(domain, email, password string, externallyReachable bool, result *bootstrapResult) {
-	successLog("Installation complete!")
-	fmt.Println()
-	fmt.Println("================================================================")
-	fmt.Println("  StackDome installed successfully!")
-	fmt.Println("================================================================")
-	fmt.Println()
-	fmt.Printf("  URL:            https://%s\n", domain)
-	fmt.Printf("  Email:          %s\n", email)
-	fmt.Printf("  Password:       %s\n", password)
-	fmt.Println()
-	fmt.Println("  What's ready:")
-	fmt.Printf("    - Organization \"Default\" with domain %s\n", domain)
-	fmt.Println("    - Cluster \"local\" registered and connected")
-	fmt.Println("    - In-cluster image registry (50Gi)")
-	fmt.Println("    - PostgreSQL database (10Gi persistent volume)")
-	fmt.Println()
-	if !externallyReachable {
-		fmt.Println("  WARNING: Dashboard is NOT reachable from the internet.")
-		fmt.Println("  Ensure ports 80 and 443 are open in your firewall/security group.")
-		fmt.Println()
+func finishInstall(domain, email, password, credentialsFile string, reachable bool, result *bootstrapResult) error {
+	url := "https://" + domain
+	if credentialsFile != "" {
+		credentials := bootstrapCredentials{URL: url, AdminEmail: email, AdminPassword: password}
+		if err := writeCredentials(credentialsFile, credentials); err != nil {
+			return installationError("configuration", "writing credentials file failed", err)
+		}
 	}
-	fmt.Println("  Save these credentials -- they won't be shown again.")
-	fmt.Println()
-	fmt.Println("  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml")
-	fmt.Println()
-	fmt.Println("================================================================")
+
+	successLog("Installation complete!")
+	if installerOutput.isJSON() {
+		response := installSuccessResult{
+			Status:          "installed",
+			URL:             url,
+			AdminEmail:      email,
+			CredentialsFile: credentialsFile,
+			Organization:    namedResult{Name: "Default", ID: result.OrgID},
+			Cluster:         namedResult{Name: "local", ID: result.ClusterID},
+		}
+		if err := emitJSON(response); err != nil {
+			return installationError("output", "writing JSON result failed", err)
+		}
+		return nil
+	}
+
+	printSummary(domain, email, password, credentialsFile, reachable)
+	return nil
+}
+
+func printSummary(domain, email, password, credentialsFile string, externallyReachable bool) {
+	installerOutput.finalf("\n================================================================\n")
+	installerOutput.finalf("  StackDome installed successfully!\n")
+	installerOutput.finalf("================================================================\n\n")
+	installerOutput.finalf("  URL:            https://%s\n", domain)
+	installerOutput.finalf("  Email:          %s\n", email)
+	installerOutput.finalf("  Password:       %s\n", password)
+	if credentialsFile != "" {
+		installerOutput.finalf("  Credentials:    %s\n", credentialsFile)
+	}
+	installerOutput.finalf("\n  What's ready:\n")
+	installerOutput.finalf("    - Organization \"Default\" with domain %s\n", domain)
+	installerOutput.finalf("    - Cluster \"local\" registered and connected\n")
+	installerOutput.finalf("    - In-cluster image registry (50Gi)\n")
+	installerOutput.finalf("    - PostgreSQL database (10Gi persistent volume)\n\n")
+	if !externallyReachable {
+		installerOutput.finalf("  WARNING: Dashboard is NOT reachable from the internet.\n")
+		installerOutput.finalf("  Ensure ports 80 and 443 are open in your firewall/security group.\n\n")
+	}
+	installerOutput.finalf("  WARNING: Human-mode stdout contains the generated password.\n")
+	installerOutput.finalf("  Do not redirect it to an insecure file.\n\n")
+	installerOutput.finalf("  Save these credentials -- they won't be shown again.\n\n")
+	installerOutput.finalf("  export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\n\n")
+	installerOutput.finalf("================================================================\n")
 }
