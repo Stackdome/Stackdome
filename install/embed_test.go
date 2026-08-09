@@ -17,6 +17,15 @@ func TestInstall(t *testing.T) {
 }
 
 var _ = Describe("RenderManifest", func() {
+	It("labels StackResources for the Stack controller", func() {
+		for _, name := range []string{"db-resource-cr.yaml", "api-server-resource-cr.yaml"} {
+			out, err := install.RenderManifest(name, install.TemplateValues{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(out)).To(ContainSubstring("core.stackdome.io/stack-name: stackdome-platform"))
+			Expect(string(out)).NotTo(ContainSubstring("\n    stackdome.io/stack-name:"))
+		}
+	})
+
 	Describe("db-resource-cr.yaml", func() {
 		It("renders the requested workload type", func() {
 			out, err := install.RenderManifest("db-resource-cr.yaml", install.TemplateValues{

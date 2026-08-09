@@ -1,0 +1,105 @@
+name: Publish Self-host Installer
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing GitHub Release tag to publish
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  RELEASE_TAG: ${{ inputs.tag }}
+  R2_BUCKET: ${{ vars.R2_BUCKET }}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: installer-production
+    steps:
+      - name: Validate existing GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s\n' "$RELEASE_TAG" | grep -Eq '^v[A-Za-z0-9._-]+$' || {
+            echo "invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          }
+          test -n "$R2_BUCKET"
+          gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null
+
+      - name: Checkout selected tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Download and verify release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p release-assets
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --dir release-assets \
+            --pattern stackdome-install-linux-amd64 \
+            --pattern stackdome-install-linux-arm64 \
+            --pattern checksums.txt
+          test "$(find release-assets -type f | wc -l | tr -d ' ')" -eq 3
+          test "$(awk 'NF { count++ } END { print count + 0 }' release-assets/checksums.txt)" -eq 2
+          for asset in stackdome-install-linux-amd64 stackdome-install-linux-arm64; do
+            count=$(awk -v asset="$asset" '$2 == asset || $2 == "*" asset { count++ } END { print count + 0 }' release-assets/checksums.txt)
+            test "$count" -eq 1
+          done
+          (cd release-assets && sha256sum --check checksums.txt)
+          file release-assets/stackdome-install-linux-amd64 | grep -q 'ELF 64-bit.*x86-64'
+          file release-assets/stackdome-install-linux-arm64 | grep -q 'ELF 64-bit.*ARM aarch64'
+
+      - name: Render versioned install script
+        run: |
+          mkdir -p dist
+          sed "s/@STACKDOME_VERSION@/$RELEASE_TAG/g" install/bootstrap.sh > dist/install.sh
+          sh -n dist/install.sh
+          placeholder_count=$(grep -c '@STACKDOME_VERSION@' dist/install.sh || true)
+          test "$placeholder_count" -eq 0
+
+      - name: Upload immutable install script
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4.33.1 r2 object put "${R2_BUCKET}/releases/${RELEASE_TAG}/install.sh" \
+            --file dist/install.sh \
+            --content-type 'text/x-shellscript; charset=utf-8' \
+            --cache-control 'public, max-age=31536000, immutable' \
+            --remote
+
+      - name: Smoke immutable install script
+        run: |
+          immutable_script=$(mktemp)
+          trap 'rm -f "$immutable_script"' EXIT
+          curl -fsS "https://get.stackdome.com/releases/${RELEASE_TAG}/install.sh" -o "$immutable_script"
+          sh -n "$immutable_script"
+          sudo env STACKDOME_DOWNLOAD_ONLY=1 STACKDOME_VERSION="$RELEASE_TAG" sh "$immutable_script"
+
+      - name: Promote live install script
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4.33.1 r2 object put "${R2_BUCKET}/install.sh" \
+            --file dist/install.sh \
+            --content-type 'text/x-shellscript; charset=utf-8' \
+            --cache-control 'public, max-age=300' \
+            --remote
+
+      - name: Smoke live install script
+        run: |
+          live_script=$(mktemp)
+          trap 'rm -f "$live_script"' EXIT
+          curl -fsSI https://get.stackdome.com/install.sh
+          curl -fsS https://get.stackdome.com/install.sh -o "$live_script"
+          sh -n "$live_script"
+          sudo env STACKDOME_DOWNLOAD_ONLY=1 sh "$live_script"

@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/part-of: stackdome-platform
     app.kubernetes.io/managed-by: stackdome-installer
     stackdome.io/bootstrap: "true"
-    stackdome.io/stack-name: stackdome-platform
+    core.stackdome.io/stack-name: stackdome-platform
   ownerReferences:
     - apiVersion: core.stackdome.io/v1alpha1
       kind: Stack

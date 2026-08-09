@@ -17,7 +17,6 @@ const nameField = "name"
 var apiBaseURL string
 
 type bootstrapResult struct {
-	Token     string
 	OrgID     string
 	ClusterID string
 }
@@ -52,7 +51,7 @@ func runAPIBootstrap(vals install.TemplateValues, secrets *BootstrapSecrets) (*b
 	stepLog(fmt.Sprintf("Cluster registered -- ID: %s", clusterID))
 
 	successLog("API bootstrap complete")
-	return &bootstrapResult{Token: token, OrgID: orgID, ClusterID: clusterID}, nil
+	return &bootstrapResult{OrgID: orgID, ClusterID: clusterID}, nil
 }
 
 func authenticate(email, password string) (token, orgID string, err error) {
@@ -118,7 +117,7 @@ func signup(email, password string) (string, string, error) {
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusCreated {
-		return "", "", fmt.Errorf("signup returned %d: %s", resp.StatusCode, string(body))
+		return "", "", fmt.Errorf("signup returned %d", resp.StatusCode)
 	}
 
 	token := parseJSONField(body, "jwt_token")
@@ -156,8 +155,7 @@ func configureDomain(token, orgID, domain string) error {
 	}
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("domain config returned %d: %s", resp.StatusCode, string(body))
+		return fmt.Errorf("domain config returned %d", resp.StatusCode)
 	}
 	return nil
 }
@@ -298,7 +296,7 @@ func registerCluster(token, orgID, clusterURL, caData, saToken string) (string, 
 
 	body, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusCreated {
-		return "", fmt.Errorf("cluster registration returned %d: %s", resp.StatusCode, string(body))
+		return "", fmt.Errorf("cluster registration returned %d", resp.StatusCode)
 	}
 
 	clusterID := parseJSONField(body, "id")
