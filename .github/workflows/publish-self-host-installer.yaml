@@ -62,10 +62,10 @@ jobs:
       - name: Render versioned install script
         run: |
           mkdir -p dist
-          sed "s/@STACKDOME_VERSION@/$RELEASE_TAG/g" install/bootstrap.sh > dist/install.sh
+          sed "/^release_tag=/s/@STACKDOME_VERSION@/$RELEASE_TAG/" install/bootstrap.sh > dist/install.sh
           sh -n dist/install.sh
           placeholder_count=$(grep -c '@STACKDOME_VERSION@' dist/install.sh || true)
-          test "$placeholder_count" -eq 0
+          test "$placeholder_count" -eq 1
 
       - name: Upload immutable install script
         env:
