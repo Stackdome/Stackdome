@@ -3,7 +3,14 @@
   "theme": "mint",
   "name": "Stackdome",
   "description": "Deploy, debug, and operate applications with coding agents, the Stackdome CLI, or the dashboard. Start on Stackdome Cloud or connect a self-hosted installation.",
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/favicon-32x32.png",
+    "dark": "/favicon-32x32-dark.png"
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
   "colors": {
     "primary": "#0F172A",
     "light": "#7C93B8",
