@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
+  "theme": "maple",
   "name": "Stackdome",
   "description": "Deploy, debug, and operate applications with coding agents, the Stackdome CLI, or the dashboard. Start on Stackdome Cloud or connect a self-hosted installation.",
   "colors": {
