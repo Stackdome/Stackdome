@@ -4,9 +4,16 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to rebuild and repair
+        required: true
+        type: string
 
 env:
   IMAGE_REPO: ${{ vars.IMAGE_REPO || 'quay.io/stackdome/stackdome' }}
+  RELEASE_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
 
 jobs:
   build-and-push:
@@ -14,35 +21,51 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Validate existing release tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          printf '%s\n' "$RELEASE_TAG" | grep -Eq '^v[A-Za-z0-9._-]+$' || {
+            echo "invalid release tag: $RELEASE_TAG" >&2
+            exit 1
+          }
+          gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null
+
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
         with:
           go-version-file: go.mod
 
-      - name: Configure private module access
-        run: git config --global url."https://${{ secrets.GH_PAT }}@github.com/".insteadOf "https://github.com/"
-
       - name: Download dependencies
-        run: go mod download
         env:
+          GH_PAT: ${{ secrets.GH_PAT }}
           GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
+        run: |
+          credential_config=$(mktemp)
+          trap 'rm -f "$credential_config"' EXIT
+          git config --file "$credential_config" credential.helper \
+            '!f() { if [ "$1" = get ]; then printf "%s\n" "username=x-access-token" "password=$GH_PAT"; fi; }; f'
+          GIT_CONFIG_GLOBAL="$credential_config" GIT_TERMINAL_PROMPT=0 go mod download
+
+      - name: Test installer
+        run: |
+          sh -n install/bootstrap.sh
+          go test ./cmd/installer ./install
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.4.0
         with:
           version: 10
-
-      - name: Extract tag
-        id: tag
-        run: echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
 
       - name: Build frontend
         run: make frontend
@@ -53,32 +76,64 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o bin/linux_arm64/stackdome-server cmd/main.go
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
 
       - name: Login to Quay.io
-        run: echo "${{ secrets.QUAY_TOKEN }}" | docker login quay.io -u "${{ secrets.QUAY_USER }}" --password-stdin
+        env:
+          QUAY_TOKEN: ${{ secrets.QUAY_TOKEN }}
+          QUAY_USER: ${{ secrets.QUAY_USER }}
+        run: printf '%s\n' "$QUAY_TOKEN" | docker login quay.io -u "$QUAY_USER" --password-stdin
 
       - name: Build and push image
         env:
-          VERSION: ${{ steps.tag.outputs.version }}
+          VERSION: ${{ env.RELEASE_TAG }}
         run: |
+          image_tags=(--tag "${{ env.IMAGE_REPO }}:${VERSION}")
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            image_tags+=(--tag "${{ env.IMAGE_REPO }}:latest")
+          fi
           docker buildx build --platform linux/amd64,linux/arm64 \
-            -t ${{ env.IMAGE_REPO }}:${VERSION} \
-            -t ${{ env.IMAGE_REPO }}:latest \
+            "${image_tags[@]}" \
             --push .
+
+      - name: Remove registry credentials
+        if: always()
+        run: docker logout quay.io
 
       - name: Build installer binaries
         run: |
-          make installer-linux-amd64
-          make installer-linux-arm64
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o bin/stackdome-install-linux-amd64 ./cmd/installer
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -o bin/stackdome-install-linux-arm64 ./cmd/installer
+          (cd bin && sha256sum stackdome-install-linux-amd64 stackdome-install-linux-arm64 > checksums.txt)
+          (cd bin && sha256sum --check checksums.txt)
+          file bin/stackdome-install-linux-amd64 | grep -q 'ELF 64-bit.*x86-64'
+          file bin/stackdome-install-linux-arm64 | grep -q 'ELF 64-bit.*ARM aarch64'
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             bin/stackdome-install-linux-amd64
             bin/stackdome-install-linux-arm64
+            bin/checksums.txt
+          fail_on_unmatched_files: true
           generate_release_notes: true
+
+      - name: Smoke released assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          smoke_dir=$(mktemp -d)
+          trap 'rm -rf "$smoke_dir"' EXIT
+          gh release download "$RELEASE_TAG" --dir "$smoke_dir" \
+            --pattern stackdome-install-linux-amd64 \
+            --pattern stackdome-install-linux-arm64 \
+            --pattern checksums.txt \
+            --clobber
+          (cd "$smoke_dir" && sha256sum --check checksums.txt)
+          file "$smoke_dir/stackdome-install-linux-amd64" | grep -q 'ELF 64-bit.*x86-64'
+          file "$smoke_dir/stackdome-install-linux-arm64" | grep -q 'ELF 64-bit.*ARM aarch64'
