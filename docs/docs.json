@@ -25,6 +25,11 @@
   "styling": {
     "codeblocks": { "theme": { "light": "vitesse-light", "dark": "vitesse-dark" } }
   },
+  "thumbnails": {
+    "appearance": "light",
+    "background": "/images/sky-card.png",
+    "fonts": { "family": "Geist" }
+  },
   "markdown": {
     "instructions": [
       "Treat Stackdome as an application-delivery platform for coding agents and developers, not as a Kubernetes dashboard.",
