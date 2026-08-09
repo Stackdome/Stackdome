@@ -1,0 +1,4 @@
+/* Mintlify caps the nav logo at h-6 (24px), which renders the wordmark at
+   about 12px against 14px sidebar labels. !important because h-6 is a
+   utility class on the element itself. */
+.nav-logo { height: 30px !important; }
