@@ -9,6 +9,46 @@ Self-host Stackdome when you need direct infrastructure control, capacity that p
 
 This page covers the user-visible installation outcome first, then the infrastructure it creates and the exact installer controls.
 
+## Quick install
+
+### Humans
+
+On a Linux `amd64` or `arm64` server:
+
+```bash
+curl -fsSL https://get.stackdome.com/install.sh | sudo sh
+```
+
+The installer asks for the admin email and then asks whether to use a custom domain. Press Enter at the domain prompt to use the automatic `stackdome.<PUBLIC_IP>.nip.io` address.
+
+To provide the custom domain in the command and skip that prompt:
+
+```bash
+curl -fsSL https://get.stackdome.com/install.sh |
+  sudo sh -s -- --domain stackdome.example.com
+```
+
+### Agents
+
+Pin the installer version, validate the downloaded script, provide every required input, and request structured output:
+
+```bash
+installer=$(mktemp)
+
+curl -fsSL \
+  https://get.stackdome.com/releases/v0.0.3-alpha/install.sh \
+  -o "$installer"
+
+sh -n "$installer"
+
+sudo sh "$installer" \
+  --email admin@example.com \
+  --output json \
+  --credentials-file /root/stackdome-credentials.json
+```
+
+For automation, exit code `0` means success. Progress and diagnostics go to stderr, while stdout contains the final JSON result. The generated admin password is written to the mode-protected credentials file rather than exposed in JSON. Use a versioned URL for deterministic automation; use `/install.sh` when you explicitly want the newest release.
+
 ## Prerequisites
 
 The installer runs a preflight check and refuses to continue unless all of the following hold.
@@ -28,13 +68,7 @@ Two more things matter but are not enforced up front:
 
 ## Flags
 
-You need the `stackdome-install` binary built for your server's platform — Linux on `amd64` or `arm64`.
-
-<Warning>
-A public download for `stackdome-install` is not available yet. This page documents the flags and behavior of the installer; once downloads are published, this section will point you at them.
-</Warning>
-
-With the binary on the server, give it the execute bit and run it as root:
+The public bootstrap script downloads the `stackdome-install` binary for Linux on `amd64` or `arm64`, verifies its checksum, and forwards the flags below. If you already have the binary, you can run it directly:
 
 ```bash
 chmod +x ./stackdome-install
@@ -45,8 +79,8 @@ The `install` subcommand is optional for backward compatibility, but using it ma
 
 | Flag | Required | Default | What it sets |
 | --- | --- | --- | --- |
-| `--email` | Yes | — | The admin user's email address. It is also the contact address registered with Let's Encrypt when you install on a custom domain, so use a real one. Omitting it prints usage and exits with status 1. |
-| `--domain` | No | `stackdome.<PUBLIC_IP>.nip.io` | The dashboard domain, and the domain your applications' generated hostnames are built under. |
+| `--email` | Yes | Prompted in a human terminal | The admin user's email address. It is also the contact address registered with Let's Encrypt when you install on a custom domain, so use a real one. Non-interactive and JSON installs must provide it explicitly. |
+| `--domain` | No | Prompted in a human terminal; Enter selects `stackdome.<PUBLIC_IP>.nip.io` | The dashboard domain, and the domain your applications' generated hostnames are built under. Non-interactive installs use the automatic `nip.io` address when the flag is omitted. |
 | `--image` | No | `quay.io/stackdome/stackdome:latest` | The API server container image. Override it to pin a specific version. |
 | `--chart-version` | No | `0.6.11-alpha-rc5` | Version of the `stackdome-agent` OCI Helm chart to install. |
 | `--github-client-id` | No | — | Client ID for the GitHub OAuth app used by **Sign in with GitHub**. Set it with `--github-client-secret`; GitHub sign-in stays disabled unless both values are present. |
@@ -59,7 +93,7 @@ The `install` subcommand is optional for backward compatibility, but using it ma
 The GitHub flags are optional. Values you provide are stored in `stackdome-bootstrap-secrets` and reused by later upgrades; a later non-empty flag replaces its stored value. Everything else the installer needs — the database password, JWT signing secret, encryption key, and your admin password — it generates for itself.
 
 <Warning>
-The final summary prints your admin password once and tells you it will not be shown again. Copy it into your password manager before you close the terminal.
+  The final summary prints your admin password once and tells you it will not be shown again. Copy it into your password manager before you close the terminal.
 </Warning>
 
 ## DNS
@@ -110,7 +144,7 @@ Namespaced installation resources land in `stackdome-control-plane`: the chart w
 The installer then polls the API server's `/health` endpoint for up to five minutes before continuing.
 
 <Warning>
-The API-server role is narrower than `cluster-admin`, but it is still a cluster-scoped credential with access across namespaces, including read and write access to workload Secrets. The service-account token is long-lived. Anyone who obtains it can exercise every permission in `stackdome-api-server-role`; protect `stackdome-api-server-account-secret` and restrict access to the control-plane namespace.
+  The API-server role is narrower than `cluster-admin`, but it is still a cluster-scoped credential with access across namespaces, including read and write access to workload Secrets. The service-account token is long-lived. Anyone who obtains it can exercise every permission in `stackdome-api-server-role`; protect `stackdome-api-server-account-secret` and restrict access to the control-plane namespace.
 </Warning>
 
 ### In Stackdome
@@ -123,21 +157,19 @@ With the API server up, the installer finishes the setup through Stackdome's own
 - An **in-cluster image registry** named `default-registry` with 50Gi of backing storage, attached to that cluster. It holds the images Stackdome builds from your git repositories.
 
 <Note>
-The in-cluster registry belongs to the cluster and is created with it. It is not one of the entries on the **Image registries** page — that page is for credentials you add for external registries, and it is empty on a fresh install.
+  The in-cluster registry belongs to the cluster and is created with it. It is not one of the entries on the **Image registries** page — that page is for credentials you add for external registries, and it is empty on a fresh install.
 </Note>
 
 <Visibility for="humans">
+  ## Sign in and confirm the dashboard
 
-## Sign in and confirm the dashboard
+  Open the dashboard URL from the installer summary. Sign in with the email passed to `--email` and the generated admin password that you saved from the summary.
 
-Open the dashboard URL from the installer summary. Sign in with the email passed to `--email` and the generated admin password that you saved from the summary.
+  ![The Stackdome sign-in form, headed "Welcome back.", with empty Email and Password fields and a Continue button](/images/quickstart-sign-in.png)
 
-![The Stackdome sign-in form, headed "Welcome back.", with empty Email and Password fields and a Continue button](/images/quickstart-sign-in.png)
+  Choose **Continue →**. A successful sign-in opens **Stacks**, where you can confirm the dashboard is available and the installed organization is ready for applications.
 
-Choose **Continue →**. A successful sign-in opens **Stacks**, where you can confirm the dashboard is available and the installed organization is ready for applications.
-
-![The Stacks list, with a "Filter stacks" box above stack cards showing resource and volume counts, an OK status, and when each stack last changed](/images/quickstart-dashboard.png)
-
+  ![The Stacks list, with a "Filter stacks" box above stack cards showing resource and volume counts, an OK status, and when each stack last changed](/images/quickstart-dashboard.png)
 </Visibility>
 
 ## TLS
@@ -160,11 +192,11 @@ The installer applies a `ClusterIssuer` named `letsencrypt-prod`, and annotates 
 - An HTTP-01 solver, so validation happens over port **80** on your hostname
 
 <Warning>
-The issuer is a `cert-manager.io/v1` resource supplied after the `stackdome-agent` chart is ready. The installer treats a failure to apply it as fatal, so a custom-domain install stops if the cert-manager API is unavailable.
+  The issuer is a `cert-manager.io/v1` resource supplied after the `stackdome-agent` chart is ready. The installer treats a failure to apply it as fatal, so a custom-domain install stops if the cert-manager API is unavailable.
 </Warning>
 
 <Note>
-Even once the issuer is applied, the installer does not wait for, or verify, that a certificate was actually issued. If HTTPS on your domain still shows a certificate error after the install finishes, inspect the `ClusterIssuer` and `Certificate` resources in the cluster rather than re-running the installer.
+  Even once the issuer is applied, the installer does not wait for, or verify, that a certificate was actually issued. If HTTPS on your domain still shows a certificate error after the install finishes, inspect the `ClusterIssuer` and `Certificate` resources in the cluster rather than re-running the installer.
 </Note>
 
 ## Upgrade an existing install
@@ -195,7 +227,7 @@ Re-running with the same flags is handled at every step, and the installer says 
 | Cluster registration | Skipped if the organization already has **any** cluster — see the warning below. |
 
 <Warning>
-Cluster reuse is not matched to this server. On a re-run the installer lists the organization's clusters and, if the list is not empty, keeps the **first** entry without checking that it points at this machine. On an organization that already has clusters, a re-run therefore adopts an arbitrary existing one and never registers the local cluster.
+  Cluster reuse is not matched to this server. On a re-run the installer lists the organization's clusters and, if the list is not empty, keeps the **first** entry without checking that it points at this machine. On an organization that already has clusters, a re-run therefore adopts an arbitrary existing one and never registers the local cluster.
 </Warning>
 
 Two more consequences are worth knowing before you rely on this:
