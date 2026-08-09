@@ -21,7 +21,6 @@
     "href": "https://stackdome.io"
   },
   "favicon": "/favicon.svg",
-  "icons": { "library": "lucide" },
   "appearance": { "default": "system" },
   "styling": {
     "codeblocks": { "theme": { "light": "vitesse-light", "dark": "vitesse-dark" } }
