@@ -4,9 +4,27 @@
   "name": "Stackdome",
   "description": "Deploy, debug, and operate applications with coding agents, the Stackdome CLI, or the dashboard. Start on Stackdome Cloud or connect a self-hosted installation.",
   "colors": {
-    "primary": "#0F172A",
-    "light": "#7C93B8",
-    "dark": "#7C93B8"
+    "primary": "#191714",
+    "light": "#F1EEE8",
+    "dark": "#F1EEE8"
+  },
+  "fonts": {
+    "heading": { "family": "Geist", "weight": 600 },
+    "body": { "family": "Geist", "weight": 400 }
+  },
+  "background": {
+    "color": { "light": "#F5F4F1", "dark": "#131210" }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg",
+    "href": "https://stackdome.io"
+  },
+  "favicon": "/favicon.svg",
+  "icons": { "library": "lucide" },
+  "appearance": { "default": "system" },
+  "styling": {
+    "codeblocks": { "theme": { "light": "vitesse-light", "dark": "vitesse-dark" } }
   },
   "markdown": {
     "instructions": [
