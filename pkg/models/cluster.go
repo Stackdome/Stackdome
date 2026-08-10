@@ -17,18 +17,17 @@ const (
 	PlatformWildcardTLSName       = "platform-wildcard-tls"
 )
 
-// PlatformClusterName is the fixed name of the bootstrap-provisioned platform
-// cluster row; it is not configurable.
-const PlatformClusterName = "platform"
+const SharedComputeClusterName = "shared-compute"
 
 type Cluster struct {
 	ID                     string `gorm:"primary_key;default:gen_random_uuid()"`
-	OrganisationID         string `gorm:"unique;not null"`
+	OrganisationID         string `gorm:"not null"`
 	Name                   string `gorm:"not null;check:name <> ''"`
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
-	Platform               bool
-	ClusterURL             string `gorm:"not null;check:cluster_url <> ''"`
+	DeletionTimestamp      *time.Time `json:"deletion_timestamp,omitempty"`
+	SharedCompute          bool
+	ClusterURL             string `gorm:"not null;check:cluster_url <> '';uniqueIndex:idx_clusters_cluster_url_unique"`
 	EncryptedClusterCAData string `gorm:"not null"`
 	EncryptedToken         string `gorm:"not null"`
 	ManagerRunning         bool

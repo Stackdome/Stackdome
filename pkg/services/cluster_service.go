@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	cmacme "github.com/cert-manager/cert-manager/pkg/apis/acme/v1"
 	cmv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -35,28 +36,32 @@ const httpsScheme = "https"
 //go:generate mockgen -destination=../mocks/mock_cluster_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ClusterService
 
 type ClusterService interface {
+	BackgroundJobEnqueuerInjectable
 	GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	AddCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError)
-	InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError)
+	InternalUpsertSharedComputeCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError)
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 	InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError
-	InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError
+	InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.PlatformConfig) *errors.ServiceError
 	DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError)
 }
 
 type clusterService struct {
 	clusterStore         stores.ClusterStore
 	organisationStore    stores.OrganisationStore
+	computeMode          config.ComputeMode
+	platformTLSEnabled   bool
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
 	permissions          auth.PermissionService
 	encryptionService    EncryptionService
+	BackgroundJobEnqueuerDep
 }
 
 func NewClusterService(spec ClusterServiceSpec) ClusterService {
@@ -73,6 +78,8 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		}),
 		clusterManager:       spec.ClusterManager,
 		logger:               spec.Logger,
+		computeMode:          spec.ComputeMode,
+		platformTLSEnabled:   spec.PlatformTLSEnabled,
 		imageRegistryService: spec.ImageRegistryService,
 		permissions:          spec.Permissions,
 		encryptionService:    spec.EncryptionService,
@@ -84,6 +91,8 @@ type ClusterServiceSpec struct {
 	ClusterStore         stores.ClusterStore
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
+	ComputeMode          config.ComputeMode
+	PlatformTLSEnabled   bool
 	Permissions          auth.PermissionService
 	EncryptionService    EncryptionService
 	Logger               logger.Logger
@@ -114,22 +123,47 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
-	// Check if the cluster already exists for the org
-	existingCluster, err := s.clusterStore.GetClusterForOrg(ctx, cluster.OrganisationID)
-	if err != nil && err.Code != errors.ErrorNotFound {
-		s.logger.Error(ctx, "failed to get existing cluster for org: %v", err)
-		return nil, err
+	if s.computeMode == config.ComputeModeShared {
+		return nil, errors.BadRequest("tenant clusters cannot be added when shared compute is enabled")
 	}
-	if existingCluster != nil {
-		return nil, errors.Conflict("cluster already exists for org")
+	if s.computeMode != config.ComputeModeBYOC {
+		return nil, errors.GeneralError("unsupported compute mode %q", s.computeMode)
 	}
-	var (
-		createdCluster *models.Cluster
-		createdErr     *errors.ServiceError
-	)
+
+	var createdCluster *models.Cluster
+	cerr := s.clusterStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if err := s.organisationStore.LockByID(txCtx, cluster.OrganisationID); err != nil {
+			return err
+		}
+
+		existingClusters, err := s.clusterStore.ListBYOCClustersForOrg(txCtx, cluster.OrganisationID)
+		if err != nil {
+			s.logger.Error(txCtx, "failed to list existing BYOC clusters for org: %v", err)
+			return err
+		}
+		if len(existingClusters) != 0 {
+			return errors.Conflict("cluster already exists for org")
+		}
+
+		createdCluster, err = s.createClusterWithTx(txCtx, cluster)
+		return err
+	})
+	if cerr != nil {
+		s.logger.Error(ctx, "failed to create cluster: %v", cerr)
+		return nil, cerr
+	}
+
+	s.ensureIssuerForCreatedCluster(ctx, createdCluster)
+	return createdCluster, nil
+}
+
+func (s *clusterService) createClusterWithTx(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	// The caller must enforce its access and compute-topology policy before
+	// entering this shared persistence path, and must hold the owning
+	// organisation's row lock in the current transaction.
 
 	// Validate the cluster
-	err = s.validateCluster(cluster)
+	err := s.validateCluster(ctx, cluster)
 	if err != nil {
 		s.logger.Error(ctx, "failed to validate cluster: %v", err)
 		return nil, err
@@ -155,41 +189,43 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 		registry = &models.ClusterImageRegistry{}
 	}
 
-	cerr := s.clusterStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		createdCluster, createdErr = s.clusterStore.CreateWithTx(ctx, cluster)
-		if createdErr != nil {
-			return createdErr
-		}
-
-		merr := s.clusterManager.RegisterCluster(createdCluster)
-		if merr != nil {
-			return errors.GeneralError("failed to register cluster with manager")
-		}
-		if registry != nil {
-			if registry.Name == "" {
-				registry.Name = orgRegistryName(org.Name, org.ID, createdCluster.ID)
-			}
-			registry.ClusterID = createdCluster.ID
-			registry.OrganisationID = createdCluster.OrganisationID
-			createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)
-			if err != nil {
-				s.logger.Error(ctx, "failed to create image registry: %v", err)
-				return err
-			}
-			createdCluster.ImageRegistries = []*models.ClusterImageRegistry{createdRegistry}
-		}
-		return nil
-	})
-	if cerr != nil {
-		s.logger.Error(ctx, "failed to create cluster: %v", cerr)
-		return nil, cerr
+	createdCluster, createdErr := s.clusterStore.CreateWithTx(ctx, cluster)
+	if createdErr != nil {
+		return nil, createdErr
+	}
+	if hookErr := db.OnRollback(ctx, func(context.Context) error {
+		return s.clusterManager.UnregisterCluster(createdCluster.ID)
+	}); hookErr != nil {
+		return nil, errors.GeneralError("failed to register cluster manager rollback compensation: %s", hookErr.Error())
+	}
+	if registerErr := s.clusterManager.RegisterCluster(createdCluster); registerErr != nil {
+		return nil, errors.GeneralError("failed to register cluster with manager: %s", registerErr.Error())
 	}
 
-	if err := s.ensureClusterIssuer(ctx, createdCluster); err != nil {
-		s.logger.Error(ctx, "failed to create ClusterIssuer on cluster %s: %v", createdCluster.ID, err)
+	if registry != nil {
+		if registry.Name == "" {
+			registry.Name = orgRegistryName(org.Name, org.ID, createdCluster.ID)
+		}
+		registry.ClusterID = createdCluster.ID
+		registry.OrganisationID = createdCluster.OrganisationID
+		createdRegistry, err := s.imageRegistryService.CreateWithTx(ctx, registry)
+		if err != nil {
+			s.logger.Error(ctx, "failed to create image registry: %v", err)
+			return nil, err
+		}
+		createdCluster.ImageRegistries = []*models.ClusterImageRegistry{createdRegistry}
 	}
 
 	return createdCluster, nil
+}
+
+func (s *clusterService) ensureIssuerForCreatedCluster(ctx context.Context, createdCluster *models.Cluster) {
+	shouldEnsureIssuer := !createdCluster.SharedCompute || s.platformTLSEnabled
+	if shouldEnsureIssuer {
+		if err := s.ensureClusterIssuer(ctx, createdCluster); err != nil {
+			s.logger.Error(ctx, "failed to create ClusterIssuer on cluster %s: %v", createdCluster.ID, err)
+		}
+	}
 }
 
 func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceError {
@@ -201,38 +237,38 @@ func (s *clusterService) Delete(ctx context.Context, ID string) *errors.ServiceE
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-	// Unregister the cluster from the cluster manager
-	cerr := s.clusterManager.UnregisterCluster(cluster.ID)
-	if cerr != nil {
-		return errors.InternalServerError("failed to unregister cluster from manager: %v", cerr)
-	}
-
-	if len(cluster.ImageRegistries) != 0 {
-		for _, registry := range cluster.ImageRegistries {
-			// Delete the image registry from the cluster
-			if registry == nil {
-				s.logger.Error(ctx, "image registry is nil")
-				return errors.GeneralError("image registry is nil")
-			}
-			s.logger.Info(ctx, "Deleting image registry %s", registry.ID)
-			err := s.imageRegistryService.Delete(ctx, cluster.OrganisationID, registry.ID)
-			if err != nil {
-				s.logger.Error(ctx, "failed to delete image registry: %v", err)
-				return err
-			}
+	deleteErr := s.clusterStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if lockErr := s.organisationStore.LockByID(txCtx, cluster.OrganisationID); lockErr != nil {
+			return lockErr
 		}
+		current, getErr := s.clusterStore.Get(txCtx, ID)
+		if getErr != nil {
+			return getErr
+		}
+		if current.DeletionTimestamp != nil {
+			return nil
+		}
+		if storeErr := s.clusterStore.MarkDeletingWithTx(txCtx, ID, time.Now().UTC()); storeErr != nil {
+			return storeErr
+		}
+		if registryErr := s.imageRegistryService.InternalMarkAllDeletingByClusterIDWithTx(txCtx, ID); registryErr != nil {
+			return registryErr
+		}
+		if s.BackgroundJobEnqueuer == nil {
+			return errors.GeneralError("background job enqueuer is not configured")
+		}
+		if enqueueErr := s.BackgroundJobEnqueuer.EnqueueAfterCommit(txCtx, models.ClusterImageRegistryOperand{ClusterID: ID}); enqueueErr != nil {
+			return errors.GeneralError("failed to enqueue cluster deletion: %s", enqueueErr.Error())
+		}
+		return nil
+	})
+	if deleteErr != nil {
+		s.logger.Error(ctx, "failed to delete cluster: %v", deleteErr)
 	}
-
-	// Delete the cluster from the database
-	err = s.clusterStore.Delete(ctx, ID)
-	if err != nil {
-		s.logger.Error(ctx, "failed to delete cluster: %v", err)
-		return err
-	}
-	return nil
+	return deleteErr
 }
 
-func (s *clusterService) validateCluster(cluster *models.Cluster) *errors.ServiceError {
+func (s *clusterService) validateCluster(ctx context.Context, cluster *models.Cluster) *errors.ServiceError {
 	if cluster == nil {
 		return errors.BadRequest("cluster cannot be nil")
 	}
@@ -265,13 +301,13 @@ func (s *clusterService) validateCluster(cluster *models.Cluster) *errors.Servic
 		return errors.BadRequest("cluster URL must use https scheme")
 	}
 
-	existingCluster, serr := s.clusterStore.GetByClusterUrl(context.Background(), cluster.ClusterURL)
+	existingCluster, serr := s.clusterStore.GetByClusterUrl(ctx, cluster.ClusterURL)
 	if serr != nil && serr.Code != errors.ErrorNotFound {
 		s.logger.Errorf("failed to get cluster by URL: %v", serr)
 		return serr
 	}
 
-	if existingCluster != nil {
+	if existingCluster != nil && existingCluster.ID != cluster.ID {
 		return errors.Conflict("cluster with this api URL already exists")
 	}
 
@@ -316,16 +352,40 @@ func (s *clusterService) PersistManagerState(ctx context.Context, clusterID stri
 	return nil
 }
 
-// GetOwnedClusterForOrg returns the cluster owned by the org, without falling
-// back to the platform cluster.
+// GetOwnedClusterForOrg returns the BYOC cluster owned by the org.
 func (s *clusterService) GetOwnedClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); permErr != nil {
 		return nil, permErr
 	}
-	cluster, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
+	return s.resolveBYOCClusterForOrg(ctx, orgID)
+}
+
+func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	if err := s.permissions.Check(ctx, orgID, auth.ResourceClusters, "", auth.ActionRead); err != nil {
+		return nil, err
+	}
+	switch s.computeMode {
+	case config.ComputeModeBYOC:
+		return s.resolveBYOCClusterForOrg(ctx, orgID)
+	case config.ComputeModeShared:
+		return s.resolveSharedComputeClusterForOrg(ctx, orgID)
+	default:
+		return nil, errors.GeneralError("unsupported compute mode %q", s.computeMode)
+	}
+}
+
+func (s *clusterService) resolveBYOCClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	clusters, err := s.clusterStore.ListBYOCClustersForOrg(ctx, orgID)
 	if err != nil {
 		return nil, err
 	}
+	if len(clusters) == 0 {
+		return nil, errors.NotFound("cluster for organisation '%s' not found", orgID)
+	}
+	if len(clusters) > 1 {
+		return nil, errors.GeneralError("multiple BYOC clusters found for organisation '%s'", orgID)
+	}
+	cluster := clusters[0]
 	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
 		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
 		return nil, decErr
@@ -333,14 +393,21 @@ func (s *clusterService) GetOwnedClusterForOrg(ctx context.Context, orgID string
 	return cluster, nil
 }
 
-func (s *clusterService) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
-	cluster, err := s.GetOwnedClusterForOrg(ctx, orgID)
+func (s *clusterService) resolveSharedComputeClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+	clusters, err := s.clusterStore.ListSharedComputeClusters(ctx)
 	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			return s.getPlatformCluster(ctx)
-		}
-		s.logger.Error(ctx, "failed to get cluster for org: %v", err)
 		return nil, err
+	}
+	if len(clusters) == 0 {
+		return nil, errors.NotFound("shared-compute cluster for organisation '%s' not found", orgID)
+	}
+	if len(clusters) > 1 {
+		return nil, errors.GeneralError("multiple shared-compute clusters configured")
+	}
+	cluster := clusters[0]
+	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
+		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
+		return nil, decErr
 	}
 	return cluster, nil
 }
@@ -460,7 +527,7 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 // InternalEnsurePlatformWildcardTLS creates or reconciles the namespace-scoped
 // DNS-01 resources used to issue a wildcard certificate for the platform apps
 // domain.
-func (s *clusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
+func (s *clusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.PlatformConfig) *errors.ServiceError {
 	if cfg.BaseDomain == "" {
 		return nil
 	}
@@ -559,52 +626,112 @@ func ensureWildcardCertificate(ctx context.Context, k8sClient client.Client, nam
 	return err
 }
 
-func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+func (s *clusterService) InternalUpsertSharedComputeCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	// Shared-compute bootstrap is a trusted internal caller, but the topology is
+	// valid only when the installation explicitly uses shared compute.
+	if s.computeMode != config.ComputeModeShared {
+		return nil, errors.BadRequest("shared-compute clusters require shared compute mode")
+	}
+	spec.SharedCompute = true
+
 	// Canonicalize before create AND compare, so the stored encoding never
 	// depends on which path first persisted the credentials.
 	spec.Token = normalizeBase64(spec.Token)
 	spec.ClusterCAData = normalizeBase64(spec.ClusterCAData)
 
-	existing, err := s.clusterStore.GetByClusterUrl(ctx, spec.ClusterURL)
-	if err != nil && err.Code != errors.ErrorNotFound {
-		return nil, err
-	}
-	if existing == nil {
-		return s.AddCluster(ctx, spec)
-	}
-
-	if existing.Name != spec.Name || !existing.Platform {
-		if uErr := s.clusterStore.UpdateNameAndPlatform(ctx, existing.ID, spec.Name); uErr != nil {
-			return nil, uErr
+	var (
+		result  *models.Cluster
+		created bool
+	)
+	txErr := s.clusterStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if err := s.organisationStore.LockByID(txCtx, spec.OrganisationID); err != nil {
+			return err
 		}
-		existing.Name = spec.Name
-		existing.Platform = true
+
+		owned, err := s.clusterStore.ListSharedComputeClustersForOrg(txCtx, spec.OrganisationID)
+		if err != nil {
+			return err
+		}
+		if len(owned) > 1 {
+			return errors.GeneralError("multiple shared-compute clusters found for organisation '%s'", spec.OrganisationID)
+		}
+
+		var existing *models.Cluster
+		if len(owned) == 1 {
+			existing = owned[0]
+		} else {
+			existing, err = s.clusterStore.GetByClusterUrl(txCtx, spec.ClusterURL)
+			if err != nil && err.Code != errors.ErrorNotFound {
+				return err
+			}
+			if existing != nil && existing.OrganisationID != spec.OrganisationID {
+				return errors.Conflict("cluster with this api URL already exists")
+			}
+			if existing == nil {
+				result, err = s.createClusterWithTx(txCtx, spec)
+				created = err == nil
+				return err
+			}
+		}
+
+		spec.ID = existing.ID
+		if validateErr := s.validateCluster(txCtx, spec); validateErr != nil {
+			return validateErr
+		}
+		if decErr := s.decryptClusterCredentials(existing); decErr != nil {
+			return decErr
+		}
+		previousManagerCluster := *existing
+		metadataChanged := existing.Name != spec.Name || !existing.SharedCompute || existing.ClusterURL != spec.ClusterURL
+		credentialsChanged := existing.Token != spec.Token || existing.ClusterCAData != spec.ClusterCAData
+		if !metadataChanged && !credentialsChanged {
+			result = existing
+			return nil
+		}
+		updated := &models.Cluster{
+			ID:             existing.ID,
+			OrganisationID: existing.OrganisationID,
+			Name:           spec.Name,
+			SharedCompute:  true,
+			ClusterURL:     spec.ClusterURL,
+			Token:          spec.Token,
+			ClusterCAData:  spec.ClusterCAData,
+		}
+		if encErr := s.encryptClusterCredentials(updated); encErr != nil {
+			return encErr
+		}
+		if uErr := s.clusterStore.UpdateSharedComputeCluster(txCtx, updated); uErr != nil {
+			return uErr
+		}
+		result, err = s.clusterStore.Get(txCtx, existing.ID)
+		if err != nil {
+			return err
+		}
+		reregister := existing.ClusterURL != spec.ClusterURL || credentialsChanged
+		if reregister {
+			if hookErr := db.OnRollback(txCtx, func(context.Context) error {
+				return s.clusterManager.ReRegisterCluster(&previousManagerCluster)
+			}); hookErr != nil {
+				return errors.GeneralError("failed to register cluster manager rollback compensation: %s", hookErr.Error())
+			}
+			if rErr := s.clusterManager.ReRegisterCluster(result); rErr != nil {
+				return errors.GeneralError("failed to re-register cluster with manager: %s", rErr.Error())
+			}
+		}
+		return nil
+	})
+	if txErr != nil {
+		return nil, txErr
 	}
 
-	if decErr := s.decryptClusterCredentials(existing); decErr != nil {
+	if created {
+		s.ensureIssuerForCreatedCluster(ctx, result)
+		return result, nil
+	}
+	if decErr := s.decryptClusterCredentials(result); decErr != nil {
 		return nil, decErr
 	}
-	if existing.Token == spec.Token && existing.ClusterCAData == spec.ClusterCAData {
-		return existing, nil
-	}
-	rotated := &models.Cluster{Token: spec.Token, ClusterCAData: spec.ClusterCAData}
-	if encErr := s.encryptClusterCredentials(rotated); encErr != nil {
-		return nil, encErr
-	}
-	if uErr := s.clusterStore.UpdateCredentials(ctx, existing.ID, rotated.EncryptedToken, rotated.EncryptedClusterCAData); uErr != nil {
-		return nil, uErr
-	}
-	fresh, gErr := s.clusterStore.Get(ctx, existing.ID)
-	if gErr != nil {
-		return nil, gErr
-	}
-	if rErr := s.clusterManager.ReRegisterCluster(fresh); rErr != nil {
-		return nil, errors.GeneralError("failed to re-register rotated cluster: %s", rErr.Error())
-	}
-	if decErr := s.decryptClusterCredentials(fresh); decErr != nil {
-		return nil, decErr
-	}
-	return fresh, nil
+	return result, nil
 }
 
 func (s *clusterService) InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError {
@@ -617,19 +744,6 @@ func (s *clusterService) DefaultStorageClass(ctx context.Context, clusterID stri
 		return "", err
 	}
 	return cluster.ClusterInfo.DefaultStorageClass(), nil
-}
-
-func (s *clusterService) getPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
-	cluster, err := s.clusterStore.GetPlatformCluster(ctx)
-	if err != nil {
-		s.logger.Error(ctx, "failed to get platform cluster: %v", err)
-		return nil, err
-	}
-	if decErr := s.decryptClusterCredentials(cluster); decErr != nil {
-		s.logger.Error(ctx, "failed to decrypt cluster credentials: %v", decErr)
-		return nil, decErr
-	}
-	return cluster, nil
 }
 
 func IsBase64(s string) bool {

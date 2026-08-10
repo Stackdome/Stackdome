@@ -66,7 +66,7 @@ func NewClientManager(baseURL string, logger logr.Logger) *ClientManager {
 	}
 }
 
-func (cm *ClientManager) Bootstrap(ctx context.Context, platformClusterID string) error {
+func (cm *ClientManager) Bootstrap(ctx context.Context, sharedComputeClusterID string) error {
 	cm.logger.Info("Starting client bootstrap")
 
 	// Create context with 10-minute timeout for client bootstrap
@@ -74,15 +74,15 @@ func (cm *ClientManager) Bootstrap(ctx context.Context, platformClusterID string
 	defer cancel()
 
 	// The server, on boot, provisioned the infrastructure-only platform org and
-	// cluster from the PLATFORM_* env. Sign up a tenant org for the suite; signup
-	// seeds its registry on the platform cluster, which stacks resolve via the
+	// shared-compute cluster. Sign up a tenant org for the suite; signup seeds
+	// its registry on the shared-compute cluster, which stacks resolve via the
 	// read-time fallback.
 	if err := cm.signupSuiteUser(bootstrapCtx); err != nil {
 		return fmt.Errorf("failed to sign up suite user: %w", err)
 	}
 
 	cm.configureAuthentication()
-	cm.clusterID = platformClusterID
+	cm.clusterID = sharedComputeClusterID
 
 	cm.logger.Info("Waiting for the seeded org image registry to become Running")
 	if err := cm.waitForRegistryRunning(bootstrapCtx); err != nil {

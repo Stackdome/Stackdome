@@ -45,6 +45,10 @@ var _ = Describe("Stack domain allocation", func() {
 		}
 	}
 
+	disableCustomDomains := func(service *stackDomainService) {
+		service.customDomainsDisabled = true
+	}
+
 	expectCreate := func(wantFQDN string, wantPort int) {
 		domains.EXPECT().
 			GetByFqdn(txCtx, wantFQDN).
@@ -132,6 +136,23 @@ var _ = Describe("Stack domain allocation", func() {
 		}
 
 		err := newService("platform.example").PopulateAndSaveExposedPortDomainsForResourceWithTx(txCtx, stack, resource)
+
+		Expect(err).To(BeNil())
+		Expect(resource.Ports[0].ExposedFqdn).To(Equal("my-app-aa982eec.platform.example"))
+		Expect(resource.Ports[0].GeneratedSubdomainPrefix).To(Equal("aa982eec"))
+	})
+
+	It("uses the platform domain when custom domains are disabled", func() {
+		domains.EXPECT().ListByStackResourceID(txCtx, "resource-a").Return(nil, nil)
+		expectCreate("my-app-aa982eec.platform.example", 8080)
+		resource := &models.StackResource{
+			ID: "resource-a", Name: "My App",
+			Ports: models.Ports{{Number: 8080, ExposedToPublic: true}},
+		}
+		service := newService("platform.example")
+		disableCustomDomains(service)
+
+		err := service.PopulateAndSaveExposedPortDomainsForResourceWithTx(txCtx, stack, resource)
 
 		Expect(err).To(BeNil())
 		Expect(resource.Ports[0].ExposedFqdn).To(Equal("my-app-aa982eec.platform.example"))

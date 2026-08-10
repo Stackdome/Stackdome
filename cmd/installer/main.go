@@ -84,11 +84,12 @@ func usage() {
 	installerOutput.diagnosticf("  --github-client-id ID --github-client-secret SECRET   'Sign in with GitHub'\n")
 	installerOutput.diagnosticf("  --github-app-id ID --github-app-slug SLUG             platform GitHub App\n")
 	installerOutput.diagnosticf("  --github-app-key-file PATH --github-app-webhook-secret SECRET\n\n")
-	installerOutput.diagnosticf("Platform flags (optional; configure wildcard hostnames and TLS):\n")
+	installerOutput.diagnosticf("Platform flags (optional; configure shared-compute hostnames and TLS):\n")
 	installerOutput.diagnosticf("  --platform-base-domain DOMAIN\n")
+	installerOutput.diagnosticf("  --platform-tls[=true|false]\n")
 	installerOutput.diagnosticf("  --platform-cloudflare-token-file PATH\n")
 	installerOutput.diagnosticf("  --platform-acme-environment production|staging\n")
-	installerOutput.diagnosticf("Only the Cloudflare token may be changed after initial configuration.\n\n")
+	installerOutput.diagnosticf("The base domain and configured ACME environment cannot be changed later.\n\n")
 	installerOutput.diagnosticf("upgrade reuses the email, domain and secrets of the existing install,\n")
 	installerOutput.diagnosticf("and keeps the deployed image unless --image is given.\n")
 }
@@ -163,15 +164,18 @@ func runInstall(args []string) error {
 		TLSEnabled:     isTLSDomain(preflight.Domain),
 	}
 	storedPlatform := install.PlatformConfig{}
+	storedSharedCompute := install.SharedComputeConfig{}
 	if existingSecrets, readErr := readExistingSecrets(); readErr == nil {
 		storedPlatform = existingSecrets.Platform
+		storedSharedCompute = existingSecrets.SharedCompute
 	}
 	vals.Platform, err = opts.platform.resolvePlatformConfig(storedPlatform)
 	if err != nil {
 		return installationError("configuration", "reading platform configuration failed", err)
 	}
-	if err := ensurePlatformClusterCredentials(&vals.Platform); err != nil {
-		return installationError("configuration", "reading platform cluster credentials failed", err)
+	vals.SharedCompute = storedSharedCompute
+	if err := ensureSharedComputeClusterCredentials(vals.Platform, &vals.SharedCompute); err != nil {
+		return installationError("configuration", "reading shared compute cluster credentials failed", err)
 	}
 	if err := opts.github.applyTo(&vals); err != nil {
 		return installationError("configuration", "reading GitHub credentials failed", err)

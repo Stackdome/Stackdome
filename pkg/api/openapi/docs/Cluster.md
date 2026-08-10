@@ -7,7 +7,8 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | **string** |  | 
 **OrganisationId** | Pointer to **string** |  | [optional] 
-**Platform** | Pointer to **bool** |  | [optional] [readonly] 
+**SharedCompute** | Pointer to **bool** |  | [optional] [readonly] 
+**Platform** | Pointer to **bool** | Deprecated alias for shared_compute. Both fields have the same value. | [optional] [readonly] 
 **ClusterUrl** | **string** |  | 
 **ClusterCaData** | **string** |  | 
 **ClusterSaToken** | **string** |  | 
@@ -101,6 +102,31 @@ SetOrganisationId sets OrganisationId field to given value.
 `func (o *Cluster) HasOrganisationId() bool`
 
 HasOrganisationId returns a boolean if a field has been set.
+
+### GetSharedCompute
+
+`func (o *Cluster) GetSharedCompute() bool`
+
+GetSharedCompute returns the SharedCompute field if non-nil, zero value otherwise.
+
+### GetSharedComputeOk
+
+`func (o *Cluster) GetSharedComputeOk() (*bool, bool)`
+
+GetSharedComputeOk returns a tuple with the SharedCompute field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetSharedCompute
+
+`func (o *Cluster) SetSharedCompute(v bool)`
+
+SetSharedCompute sets SharedCompute field to given value.
+
+### HasSharedCompute
+
+`func (o *Cluster) HasSharedCompute() bool`
+
+HasSharedCompute returns a boolean if a field has been set.
 
 ### GetPlatform
 

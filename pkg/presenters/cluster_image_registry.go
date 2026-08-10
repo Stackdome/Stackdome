@@ -67,6 +67,8 @@ func PresentClusterImageRegistryState(state models.RegistryState) *openapi.Clust
 		return openapi.IMAGE_REGISTRY_RUNNING.Ptr()
 	case models.RegistryStateError:
 		return openapi.IMAGE_REGISTRY_ERROR.Ptr()
+	case models.RegistryStateDeleting:
+		return openapi.IMAGE_REGISTRY_DELETING.Ptr()
 	default:
 		return openapi.IMAGE_REGISTRY_PENDING.Ptr()
 	}

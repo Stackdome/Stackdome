@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -45,11 +46,29 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, addon *models.Postg
 		if k8sapierrors.IsNotFound(err) {
 			r.logger.Info(ctx, "Creating namespace '%s' in cluster", namespace.Name)
 			return resultNil, clusterClient.Create(ctx, &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{Name: namespace.Name},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        namespace.Name,
+					Labels:      namespace.Labels.ToMap(),
+					Annotations: namespace.Annotations.ToMap(),
+				},
 			})
 		}
 		return resultNil, fmt.Errorf("failed to get namespace '%s': %w", namespace.Name, err)
 	}
 
-	return resultNil, nil
+	mergedLabels, labelsChanged := mergeDesiredNamespaceMetadata(existingNamespace.Labels, namespace.Labels.ToMap())
+	mergedAnnotations, annotationsChanged := mergeDesiredNamespaceMetadata(existingNamespace.Annotations, namespace.Annotations.ToMap())
+	if !labelsChanged && !annotationsChanged {
+		return resultNil, nil
+	}
+
+	existingNamespace.Labels = mergedLabels
+	existingNamespace.Annotations = mergedAnnotations
+	r.logger.Info(ctx, "Repairing metadata on namespace '%s'", namespace.Name)
+	return resultNil, clusterClient.Update(ctx, existingNamespace)
+}
+
+func mergeDesiredNamespaceMetadata(existing, desired map[string]string) (map[string]string, bool) {
+	merged := labels.Merge(existing, desired)
+	return merged, !labels.Equals(existing, merged)
 }

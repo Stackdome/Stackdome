@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/davecgh/go-spew/spew"
@@ -28,6 +29,8 @@ type ClusterResourceBuilder interface {
 type clusterResourceBuilder struct {
 	credentialResolver credentials.Resolver
 	platformBaseDomain string
+	computeMode        config.ComputeMode
+	platformTLSEnabled bool
 }
 
 type ClusterResourceBuilderSpec struct {
@@ -35,12 +38,16 @@ type ClusterResourceBuilderSpec struct {
 	// auto-attach to image pull / push specs.
 	CredentialResolver credentials.Resolver
 	PlatformBaseDomain string
+	ComputeMode        config.ComputeMode
+	PlatformTLSEnabled bool
 }
 
 func NewClusterResourceBuilder(spec ClusterResourceBuilderSpec) ClusterResourceBuilder {
 	return &clusterResourceBuilder{
 		credentialResolver: spec.CredentialResolver,
 		platformBaseDomain: spec.PlatformBaseDomain,
+		computeMode:        spec.ComputeMode,
+		platformTLSEnabled: spec.PlatformTLSEnabled,
 	}
 }
 
@@ -481,12 +488,16 @@ func (b *clusterResourceBuilder) setPorts(resourceSpecCr *corev1alpha1.StackReso
 	if len(stackResource.Ports) > 0 {
 		resourceSpecCr.Ports = make([]corev1alpha1.Port, len(stackResource.Ports))
 		for i, port := range stackResource.Ports {
+			tlsEnabled := port.ExposedToPublic && shouldEnableTLS(port.ExposedFqdn)
+			if b.computeMode == config.ComputeModeShared && !b.platformTLSEnabled {
+				tlsEnabled = false
+			}
 			resourceSpecCr.Ports[i] = corev1alpha1.Port{
 				Name:           port.Name,
 				Number:         int32(port.Number),
 				Protocol:       strings.ToLower(port.Protocol),
 				ExposeToPublic: port.ExposedToPublic,
-				TLS:            port.ExposedToPublic && shouldEnableTLS(port.ExposedFqdn),
+				TLS:            tlsEnabled,
 			}
 			if port.ExposedToPublic {
 				resourceSpecCr.Ports[i].FQDN = port.ExposedFqdn

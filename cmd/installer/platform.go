@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/Stackdome/stackdome/config"
@@ -13,12 +14,35 @@ import (
 
 type platformFlags struct {
 	baseDomain          *string
+	tlsEnabled          *optionalBoolFlag
 	cloudflareTokenFile *string
 	acmeEnvironment     *string
 }
 
+type optionalBoolFlag struct {
+	value bool
+	set   bool
+}
+
+func (f *optionalBoolFlag) Set(raw string) error {
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return err
+	}
+	f.value, f.set = value, true
+	return nil
+}
+
+func (f *optionalBoolFlag) String() string {
+	return strconv.FormatBool(f.value)
+}
+
+func (f *optionalBoolFlag) IsBoolFlag() bool {
+	return true
+}
+
 func registerPlatformFlags(fs *flag.FlagSet) *platformFlags {
-	return &platformFlags{
+	flags := &platformFlags{
 		baseDomain: fs.String(
 			"platform-base-domain",
 			"",
@@ -35,6 +59,9 @@ func registerPlatformFlags(fs *flag.FlagSet) *platformFlags {
 			"Let's Encrypt environment: production or staging",
 		),
 	}
+	flags.tlsEnabled = &optionalBoolFlag{}
+	fs.Var(flags.tlsEnabled, "platform-tls", "Enable platform-managed TLS for shared compute")
+	return flags
 }
 
 // resolvePlatformConfig applies explicitly supplied flags to the configuration
@@ -44,40 +71,51 @@ func (f *platformFlags) resolvePlatformConfig(stored install.PlatformConfig) (in
 	resolved := stored
 	requestedBaseDomain := strings.TrimSpace(*f.baseDomain)
 	requestedACMEEnvironment := strings.TrimSpace(*f.acmeEnvironment)
+	if f.tlsEnabled.set {
+		resolved.TLSEnabled = f.tlsEnabled.value
+	}
 	if requestedBaseDomain != "" {
 		if err := validatePlatformBaseDomain(requestedBaseDomain); err != nil {
 			return install.PlatformConfig{}, err
 		}
+	}
+	if !resolved.TLSEnabled && (*f.cloudflareTokenFile != "" || requestedACMEEnvironment != "") {
+		return install.PlatformConfig{}, fmt.Errorf("--platform-cloudflare-token-file and --platform-acme-environment require --platform-tls=true")
 	}
 
 	if stored.Enabled() {
 		if requestedBaseDomain != "" && requestedBaseDomain != stored.BaseDomain {
 			return install.PlatformConfig{}, fmt.Errorf("platform base domain is already configured as %q", stored.BaseDomain)
 		}
-		if requestedACMEEnvironment != "" && requestedACMEEnvironment != stored.ACMEEnvironment {
+		if requestedACMEEnvironment != "" && stored.ACMEEnvironment != "" && requestedACMEEnvironment != stored.ACMEEnvironment {
 			return install.PlatformConfig{}, fmt.Errorf("platform ACME environment is already configured as %q", stored.ACMEEnvironment)
 		}
 	} else {
 		resolved.BaseDomain = requestedBaseDomain
-		resolved.ACMEEnvironment = requestedACMEEnvironment
 	}
 
-	if *f.cloudflareTokenFile != "" {
+	if resolved.TLSEnabled && *f.cloudflareTokenFile != "" {
 		token, err := os.ReadFile(*f.cloudflareTokenFile)
 		if err != nil {
 			return install.PlatformConfig{}, fmt.Errorf("reading platform Cloudflare API token: %w", err)
 		}
 		resolved.CloudflareAPIToken = strings.TrimSpace(string(token))
 	}
+	if resolved.TLSEnabled && requestedACMEEnvironment != "" {
+		resolved.ACMEEnvironment = requestedACMEEnvironment
+	}
 
 	if !resolved.Enabled() {
-		if resolved.CloudflareAPIToken != "" || resolved.ACMEEnvironment != "" {
-			return install.PlatformConfig{}, fmt.Errorf("--platform-base-domain is required with platform TLS configuration")
+		if resolved.TLSEnabled {
+			return install.PlatformConfig{}, fmt.Errorf("--platform-base-domain is required when enabling platform TLS")
 		}
 		return resolved, nil
 	}
 	if err := validatePlatformBaseDomain(resolved.BaseDomain); err != nil {
 		return install.PlatformConfig{}, err
+	}
+	if !resolved.TLSEnabled {
+		return resolved, nil
 	}
 	if resolved.CloudflareAPIToken == "" {
 		return install.PlatformConfig{}, fmt.Errorf("--platform-cloudflare-token-file is required when enabling platform TLS")
@@ -101,17 +139,17 @@ func validatePlatformBaseDomain(baseDomain string) error {
 	return nil
 }
 
-func ensurePlatformClusterCredentials(platform *install.PlatformConfig) error {
-	if !platform.Enabled() || (platform.ClusterAPIURL != "" && platform.ClusterCAData != "" && platform.ClusterToken != "") {
+func ensureSharedComputeClusterCredentials(platform install.PlatformConfig, shared *install.SharedComputeConfig) error {
+	if !platform.Enabled() || shared.IsSet() {
 		return nil
 	}
 
 	clusterURL, caData, token, err := extractClusterCredentials()
 	if err != nil {
-		return fmt.Errorf("extracting platform cluster credentials: %w", err)
+		return fmt.Errorf("extracting shared compute cluster credentials: %w", err)
 	}
-	platform.ClusterAPIURL = clusterURL
-	platform.ClusterCAData = caData
-	platform.ClusterToken = token
+	shared.ClusterAPIURL = clusterURL
+	shared.ClusterCAData = caData
+	shared.ClusterToken = token
 	return nil
 }

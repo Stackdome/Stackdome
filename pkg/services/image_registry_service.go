@@ -8,7 +8,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	k8sresource "k8s.io/apimachinery/pkg/api/resource"
@@ -17,15 +16,17 @@ import (
 //go:generate mockgen -destination=../mocks/mock_image_registry_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services ImageRegistryService
 
 type ImageRegistryService interface {
+	BackgroundJobEnqueuerInjectable
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
+	InternalMarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError
 	ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
+	DeleteWithTx(ctx context.Context, orgID string, registry *models.ClusterImageRegistry) *errors.ServiceError
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
-	InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService)
 	PopulateInClusterRegistryNameForResource(ctx context.Context, orgID, clusterID, stackName string, resource *models.StackResource) *errors.ServiceError
 	Delete(ctx context.Context, orgID, ID string) *errors.ServiceError
 }
@@ -52,13 +53,9 @@ func NewClusterImageRegistryService(spec ImageRegistryServiceSpec) ImageRegistry
 type clusterImageRegistryService struct {
 	clusterImageRegistryStore stores.ClusterImageRegistryStore
 	clusterStore              stores.ClusterStore
-	clusterResourceService    clusterresource.ClusterImageRegistryService
 	permissions               auth.PermissionService
 	logger                    logger.Logger
-}
-
-func (s *clusterImageRegistryService) InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService) {
-	s.clusterResourceService = registryClusterService
+	BackgroundJobEnqueuerDep
 }
 
 func (s *clusterImageRegistryService) Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
@@ -81,21 +78,24 @@ func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string
 	return s.clusterImageRegistryStore.GetByID(ctx, ID)
 }
 
+func (s *clusterImageRegistryService) InternalMarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError {
+	return s.clusterImageRegistryStore.MarkAllDeletingByClusterIDWithTx(ctx, clusterID)
+}
+
 // validateOwnedCluster requires the target cluster to be owned by the org.
-// Seed registries on the shared platform cluster go through
+// Seed registries on the shared-compute cluster go through
 // InternalCreateSeedRegistry instead.
 func (s *clusterImageRegistryService) validateOwnedCluster(ctx context.Context, orgID, clusterID string) *errors.ServiceError {
-	owned, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
+	owned, err := s.clusterStore.ListBYOCClustersForOrg(ctx, orgID)
 	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
-		}
 		return err
 	}
-	if owned.ID != clusterID {
-		return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
+	for _, cluster := range owned {
+		if cluster.ID == clusterID {
+			return nil
+		}
 	}
-	return nil
+	return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
 }
 
 func (s *clusterImageRegistryService) ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
@@ -154,19 +154,19 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	return s.create(ctx, spec)
 }
 
-// InternalCreateSeedRegistry creates the org's seed registry on the shared
-// platform cluster. Org-provisioning only — the API Create path requires an
+// InternalCreateSeedRegistry creates the org's seed registry on a shared-compute
+// cluster. Org-provisioning only — the API Create path requires an
 // org-owned target cluster.
 func (s *clusterImageRegistryService) InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	if err := s.validateSpec(spec); err != nil {
 		return nil, err
 	}
-	platform, err := s.clusterStore.GetPlatformCluster(ctx)
+	cluster, err := s.clusterStore.Get(ctx, spec.ClusterID)
 	if err != nil {
 		return nil, err
 	}
-	if platform.ID != spec.ClusterID {
-		return nil, errors.NotFound("cluster '%s' is not the platform cluster", spec.ClusterID)
+	if !cluster.SharedCompute {
+		return nil, errors.NotFound("cluster '%s' is not a shared-compute cluster", spec.ClusterID)
 	}
 	return s.create(ctx, spec)
 }
@@ -205,13 +205,7 @@ func (s *clusterImageRegistryService) create(ctx context.Context, spec *models.C
 			return err
 		}
 
-		// Create registry in cluster
-		cerr := s.clusterResourceService.CreateImageRegistryInCluster(ctx, createdRegistry)
-		if cerr != nil {
-			s.logger.Error(ctx, "failed to create cluster image registry in cluster: %v", cerr)
-			return errors.GeneralError("failed to create cluster image registry in cluster: %s", cerr.Error())
-		}
-		return nil
+		return s.enqueueAfterCommit(ctx, createdRegistry.ClusterID)
 	})
 
 	if createErr != nil {
@@ -244,11 +238,8 @@ func (s *clusterImageRegistryService) CreateWithTx(ctx context.Context, spec *mo
 		return nil, err
 	}
 
-	// Create registry in cluster
-	cerr := s.clusterResourceService.CreateImageRegistryInCluster(ctx, createdRegistry)
-	if cerr != nil {
-		s.logger.Error(ctx, "failed to create cluster image registry in cluster: %v", cerr)
-		return nil, errors.GeneralError("failed to create cluster image registry in cluster: %s", cerr.Error())
+	if enqueueErr := s.enqueueAfterCommit(ctx, createdRegistry.ClusterID); enqueueErr != nil {
+		return nil, enqueueErr
 	}
 
 	return createdRegistry, nil
@@ -277,7 +268,6 @@ func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID stri
 	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-
 	registry, err := s.clusterImageRegistryStore.GetByID(ctx, ID)
 	if err != nil {
 		s.logger.Error(ctx, "failed to get cluster image registry for deletion: %v", err)
@@ -285,25 +275,39 @@ func (s *clusterImageRegistryService) Delete(ctx context.Context, orgID, ID stri
 	}
 
 	deleteErr := s.clusterImageRegistryStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		// Delete from cluster first
-		cErr := s.clusterResourceService.DeleteImageRegistryInCluster(ctx, registry)
-		if cErr != nil {
-			s.logger.Error(ctx, "failed to delete cluster image registry in cluster: %v", cErr)
-			return errors.GeneralError("failed to delete cluster image registry in cluster: %s", cErr.Error())
-		}
-
-		// Then delete from database
-		err = s.clusterImageRegistryStore.DeleteWithTx(ctx, ID)
-		if err != nil {
-			s.logger.Error(ctx, "failed to delete cluster image registry: %v", err)
-			return err
-		}
-		return nil
+		return s.DeleteWithTx(ctx, orgID, registry)
 	})
 
 	if deleteErr != nil {
 		s.logger.Error(ctx, "failed to delete cluster image registry: %v", deleteErr)
 		return deleteErr
+	}
+	return nil
+}
+
+// DeleteWithTx records durable deletion intent. Kubernetes cleanup and the
+// final database delete are performed asynchronously by the registry worker.
+func (s *clusterImageRegistryService) DeleteWithTx(ctx context.Context, orgID string, registry *models.ClusterImageRegistry) *errors.ServiceError {
+	if registry == nil {
+		return errors.GeneralError("image registry is nil")
+	}
+	if permErr := s.permissions.Check(ctx, orgID, auth.ResourceImageRegistries, registry.ID, auth.ActionDelete); permErr != nil {
+		return permErr
+	}
+
+	if err := s.clusterImageRegistryStore.MarkDeletingWithTx(ctx, registry.ID); err != nil {
+		s.logger.Error(ctx, "failed to mark cluster image registry for deletion: %v", err)
+		return err
+	}
+	return s.enqueueAfterCommit(ctx, registry.ClusterID)
+}
+
+func (s *clusterImageRegistryService) enqueueAfterCommit(ctx context.Context, clusterID string) *errors.ServiceError {
+	if s.BackgroundJobEnqueuer == nil {
+		return errors.GeneralError("background job enqueuer is not configured")
+	}
+	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.ClusterImageRegistryOperand{ClusterID: clusterID}); err != nil {
+		return errors.GeneralError("failed to enqueue image registry reconciliation: %s", err.Error())
 	}
 	return nil
 }

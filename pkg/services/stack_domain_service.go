@@ -33,6 +33,7 @@ type stackDomainService struct {
 	organisationDomainStore stores.OrganisationDomainStore
 	logger                  logger.Logger
 	platformBaseDomain      string
+	customDomainsDisabled   bool
 }
 
 type domainSelection struct {
@@ -41,9 +42,10 @@ type domainSelection struct {
 }
 
 type StackDomainsServiceSpec struct {
-	SessionFactory     db.SessionFactory
-	Logger             logger.Logger
-	PlatformBaseDomain string
+	SessionFactory        db.SessionFactory
+	Logger                logger.Logger
+	PlatformBaseDomain    string
+	CustomDomainsDisabled bool
 }
 
 func NewStackDomainsService(spec StackDomainsServiceSpec) StackDomainsService {
@@ -54,8 +56,9 @@ func NewStackDomainsService(spec StackDomainsServiceSpec) StackDomainsService {
 		organisationDomainStore: pgstore.NewOrganisationDomainStore(pgstore.OrganisationDomainStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger:             spec.Logger,
-		platformBaseDomain: spec.PlatformBaseDomain,
+		logger:                spec.Logger,
+		platformBaseDomain:    spec.PlatformBaseDomain,
+		customDomainsDisabled: spec.CustomDomainsDisabled,
 	}
 }
 
@@ -156,6 +159,12 @@ func hasUnassignedPublicPort(ports models.Ports, existingByPort map[int]*models.
 }
 
 func (s *stackDomainService) domainForNewAssignments(ctx context.Context, organisationID string) (*domainSelection, *errors.ServiceError) {
+	if s.customDomainsDisabled {
+		if s.platformBaseDomain == "" {
+			return nil, errors.BadRequest("platform base domain is required when custom domains are disabled")
+		}
+		return &domainSelection{domain: s.platformBaseDomain, platform: true}, nil
+	}
 	organisationDomains, err := s.organisationDomainStore.ListByOrganisationID(ctx, organisationID)
 	if err != nil {
 		s.logger.Error(ctx, "failed to list domains for organisation %s: %v", organisationID, err)

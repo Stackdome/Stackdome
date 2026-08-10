@@ -56,17 +56,18 @@ type PostgresAddonService interface {
 }
 
 type PostgresAddonServiceSpec struct {
-	SessionFactory        db.SessionFactory
-	ReferenceService      ReferenceService
-	ObjectStoreService    ObjectStoreService
-	ClusterService        ClusterService
-	NamespaceService      NamespaceService
-	SecretService         SecretService
-	PostgresBackupService PostgresBackupService
-	ClusterManager        clustermanager.ClusterManager
-	ProjectService        ProjectService
-	Logger                logger.Logger
-	Permissions           auth.PermissionService
+	SessionFactory         db.SessionFactory
+	ReferenceService       ReferenceService
+	ObjectStoreService     ObjectStoreService
+	ClusterService         ClusterService
+	NamespaceService       NamespaceService
+	SecretService          SecretService
+	PostgresBackupService  PostgresBackupService
+	ClusterManager         clustermanager.ClusterManager
+	ProjectService         ProjectService
+	Logger                 logger.Logger
+	Permissions            auth.PermissionService
+	ExternalImportDisabled bool
 }
 
 type postgresAddonService struct {
@@ -110,10 +111,12 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		secretService:      spec.SecretService,
 		projectService:     spec.ProjectService,
 		clusterManager:     spec.ClusterManager,
-		validator:          postgresaddon.NewPostgresAddonValidator(),
-		logger:             spec.Logger,
-		sessionFactory:     spec.SessionFactory,
-		permissions:        spec.Permissions,
+		validator: postgresaddon.NewPostgresAddonValidator(postgresaddon.PostgresAddonValidatorSpec{
+			ExternalImportDisabled: spec.ExternalImportDisabled,
+		}),
+		logger:         spec.Logger,
+		sessionFactory: spec.SessionFactory,
+		permissions:    spec.Permissions,
 	}
 }
 

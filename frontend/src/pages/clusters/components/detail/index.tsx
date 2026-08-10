@@ -98,6 +98,7 @@ export default function ClusterDetailPage() {
     if (registryState === "ImageRegistryRunning") return "Running";
     if (registryState === "ImageRegistryError") return "Error";
     if (registryState === "ImageRegistryPending") return "Pending";
+    if (registryState === "ImageRegistryDeleting") return "Deleting";
     return registryState;
   })();
 

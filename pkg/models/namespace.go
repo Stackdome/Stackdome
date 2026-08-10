@@ -3,8 +3,14 @@ package models
 import "time"
 
 const (
-	ManagedByLabelKey   = "stackdome.io/managed-by"
-	ManagedByLabelValue = "stackdome"
+	ManagedByLabelKey      = "stackdome.io/managed-by"
+	ManagedByLabelValue    = "stackdome"
+	CloudTenantLabelKey    = "stackdome.io/cloud-tenant"
+	CloudTenantLabelValue  = "true"
+	OrganizationIDLabelKey = "stackdome.io/organization-id"
+	NamespaceRoleLabelKey  = "stackdome.io/namespace-role"
+	NamespaceRoleStack     = "stack"
+	NamespaceRoleAddon     = "addon"
 )
 
 // Stack namespaces are generated as "<stack-name>-<uuid>" and then truncated
@@ -75,4 +81,14 @@ func (n *Namespace) AddDefaultLabels() {
 		Key:   ManagedByLabelKey,
 		Value: ManagedByLabelValue,
 	})
+}
+
+// AddSharedComputeTenantLabels preserves the legacy cloud-tenant label because
+// the hardening controller uses it to select tenant namespaces.
+func (n *Namespace) AddSharedComputeTenantLabels(role string) {
+	n.Labels = append(n.Labels,
+		Label{Key: CloudTenantLabelKey, Value: CloudTenantLabelValue},
+		Label{Key: OrganizationIDLabelKey, Value: n.OrganisationID},
+		Label{Key: NamespaceRoleLabelKey, Value: role},
+	)
 }

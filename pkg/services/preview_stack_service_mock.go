@@ -15,6 +15,7 @@ import (
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
+	clusterresource "github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	stores "github.com/Stackdome/stackdome/pkg/stores"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -88,7 +89,7 @@ func (mr *MockPreviewStackServiceMockRecorder) Get(ctx, previewStackID any) *gom
 }
 
 // InjectBackgroundJobEnqueuer mocks base method.
-func (m *MockPreviewStackService) InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep) {
+func (m *MockPreviewStackService) InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
 }

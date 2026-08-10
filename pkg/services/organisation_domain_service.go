@@ -12,6 +12,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 )
 
+const customDomainsDisabledInRuntime = "custom domains are disabled by runtime configuration"
+
 //go:generate mockgen -destination=../mocks/mock_organisation_domains_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services OrganisationDomainsService
 
 type OrganisationDomainsService interface {
@@ -30,11 +32,13 @@ type organisationDomainService struct {
 	organisationDomainStore stores.OrganisationDomainStore
 	stackDomainStore        stores.StackDomainsStore
 	logger                  logger.Logger
+	customDomainsDisabled   bool
 }
 
 type OrganisationDomainsServiceSpec struct {
-	SessionFactory db.SessionFactory
-	Logger         logger.Logger
+	SessionFactory        db.SessionFactory
+	Logger                logger.Logger
+	CustomDomainsDisabled bool
 }
 
 func NewOrganisationDomainsService(spec OrganisationDomainsServiceSpec) OrganisationDomainsService {
@@ -45,7 +49,8 @@ func NewOrganisationDomainsService(spec OrganisationDomainsServiceSpec) Organisa
 		stackDomainStore: pgstore.NewStackDomainsStore(pgstore.StackDomainsStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger: spec.Logger,
+		logger:                spec.Logger,
+		customDomainsDisabled: spec.CustomDomainsDisabled,
 	}
 }
 
@@ -97,6 +102,9 @@ func (s *organisationDomainService) InternalDeleteWithTx(ctx context.Context, id
 }
 
 func (s *organisationDomainService) Create(ctx context.Context, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
+	if s.customDomainsDisabled {
+		return nil, errors.BadRequest(customDomainsDisabledInRuntime)
+	}
 	if len(spec.Domain) == 0 {
 		return nil, errors.BadRequest("domain is required")
 	}
@@ -155,6 +163,9 @@ func stackDomainUsesOrganisationDomain(stackDomains models.StackDomainList, orga
 }
 
 func (s *organisationDomainService) Update(ctx context.Context, id string, spec *models.OrganisationDomain) (*models.OrganisationDomain, *errors.ServiceError) {
+	if s.customDomainsDisabled {
+		return nil, errors.BadRequest(customDomainsDisabledInRuntime)
+	}
 	if len(spec.Domain) == 0 {
 		return nil, errors.BadRequest("domain is required")
 	}

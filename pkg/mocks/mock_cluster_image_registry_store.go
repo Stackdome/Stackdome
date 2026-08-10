@@ -145,6 +145,21 @@ func (mr *MockClusterImageRegistryStoreMockRecorder) ListByClusterID(ctx, orgID,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByClusterID", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).ListByClusterID), ctx, orgID, clusterID)
 }
 
+// ListByClusterIDInternal mocks base method.
+func (m *MockClusterImageRegistryStore) ListByClusterIDInternal(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByClusterIDInternal", ctx, clusterID)
+	ret0, _ := ret[0].([]*models.ClusterImageRegistry)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListByClusterIDInternal indicates an expected call of ListByClusterIDInternal.
+func (mr *MockClusterImageRegistryStoreMockRecorder) ListByClusterIDInternal(ctx, clusterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByClusterIDInternal", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).ListByClusterIDInternal), ctx, clusterID)
+}
+
 // ListForOrg mocks base method.
 func (m *MockClusterImageRegistryStore) ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -158,6 +173,34 @@ func (m *MockClusterImageRegistryStore) ListForOrg(ctx context.Context, orgID st
 func (mr *MockClusterImageRegistryStoreMockRecorder) ListForOrg(ctx, orgID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListForOrg", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).ListForOrg), ctx, orgID)
+}
+
+// MarkAllDeletingByClusterIDWithTx mocks base method.
+func (m *MockClusterImageRegistryStore) MarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkAllDeletingByClusterIDWithTx", ctx, clusterID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// MarkAllDeletingByClusterIDWithTx indicates an expected call of MarkAllDeletingByClusterIDWithTx.
+func (mr *MockClusterImageRegistryStoreMockRecorder) MarkAllDeletingByClusterIDWithTx(ctx, clusterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkAllDeletingByClusterIDWithTx", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).MarkAllDeletingByClusterIDWithTx), ctx, clusterID)
+}
+
+// MarkDeletingWithTx mocks base method.
+func (m *MockClusterImageRegistryStore) MarkDeletingWithTx(ctx context.Context, ID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDeletingWithTx", ctx, ID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// MarkDeletingWithTx indicates an expected call of MarkDeletingWithTx.
+func (mr *MockClusterImageRegistryStoreMockRecorder) MarkDeletingWithTx(ctx, ID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDeletingWithTx", reflect.TypeOf((*MockClusterImageRegistryStore)(nil).MarkDeletingWithTx), ctx, ID)
 }
 
 // UpdateStatus mocks base method.

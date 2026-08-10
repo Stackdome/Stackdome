@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -66,12 +67,26 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack
 		return resultNil, fmt.Errorf("failed to get namespace %s: %w", namespace.Name, err)
 	}
 
-	log.Debug(ctx, "namespace %s already exists in cluster", namespace.Name)
-	return resultNil, nil
+	mergedLabels, labelsChanged := mergeDesiredMetadata(existingNamespace.Labels, desiredNamespace.Labels)
+	mergedAnnotations, annotationsChanged := mergeDesiredMetadata(existingNamespace.Annotations, desiredNamespace.Annotations)
+	if !labelsChanged && !annotationsChanged {
+		log.Debug(ctx, "namespace %s already has the desired metadata", namespace.Name)
+		return resultNil, nil
+	}
+
+	existingNamespace.Labels = mergedLabels
+	existingNamespace.Annotations = mergedAnnotations
+	log.Info(ctx, "repairing metadata on namespace %s", namespace.Name)
+	return resultNil, clusterClient.Update(ctx, existingNamespace)
 }
 
 func (r *namespaceReconciler) Name() string {
 	return "namespace-reconciler"
+}
+
+func mergeDesiredMetadata(existing, desired map[string]string) (map[string]string, bool) {
+	merged := labels.Merge(existing, desired)
+	return merged, !labels.Equals(existing, merged)
 }
 
 func labelsToMap(labels models.Labels) map[string]string {

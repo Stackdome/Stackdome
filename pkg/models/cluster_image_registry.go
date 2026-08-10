@@ -12,9 +12,10 @@ const (
 type RegistryState string
 
 const (
-	RegistryStatePending RegistryState = "Pending"
-	RegistryStateRunning RegistryState = "Running"
-	RegistryStateError   RegistryState = "Error"
+	RegistryStatePending  RegistryState = "Pending"
+	RegistryStateRunning  RegistryState = "Running"
+	RegistryStateError    RegistryState = "Error"
+	RegistryStateDeleting RegistryState = "Deleting"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 	// on an org's own cluster.
 	DefaultRegistryStorageSize = "50Gi"
 	// DefaultPlatformOrgRegistryStorageSize applies to the registry seeded
-	// for each org at signup on the shared platform cluster.
+	// for each org at signup on the shared-compute cluster.
 	DefaultPlatformOrgRegistryStorageSize = "10Gi"
 )
 

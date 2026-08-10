@@ -12,7 +12,7 @@ var _ = Describe("metrics listener configuration", func() {
 		DeferCleanup(setEnvForTest(EnvMetricsBindAddress.Name, "127.0.0.1:19090"))
 		cfg := NewApplicationConfig()
 
-		cfg.LoadEnvVariables()
+		Expect(cfg.LoadEnvVariables()).To(Succeed())
 
 		Expect(cfg.Server.MetricsBindAddress).To(Equal("127.0.0.1:19090"))
 	})

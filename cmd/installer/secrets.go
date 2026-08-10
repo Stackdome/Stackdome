@@ -31,6 +31,7 @@ type BootstrapSecrets struct {
 	GitHubAppPrivateKey    string
 	GitHubAppWebhookSecret string
 	Platform               install.PlatformConfig
+	SharedCompute          install.SharedComputeConfig
 }
 
 // githubFlags are the GitHub credentials install and upgrade both accept.
@@ -107,6 +108,7 @@ func loadOrCreateSecrets(vals *install.TemplateValues) (*BootstrapSecrets, error
 		AdminPassword: generateAlphanumeric(16),
 		AdminEmail:    vals.AdminEmail,
 		Platform:      vals.Platform,
+		SharedCompute: vals.SharedCompute,
 
 		GitHubClientID:         vals.GitHubClientID,
 		GitHubClientSecret:     vals.GitHubClientSecret,
@@ -147,11 +149,15 @@ func mergeBootstrapConfig(vals *install.TemplateValues, existing *BootstrapSecre
 		{&vals.Platform.BaseDomain, &existing.Platform.BaseDomain},
 		{&vals.Platform.CloudflareAPIToken, &existing.Platform.CloudflareAPIToken},
 		{&vals.Platform.ACMEEnvironment, &existing.Platform.ACMEEnvironment},
-		{&vals.Platform.ClusterAPIURL, &existing.Platform.ClusterAPIURL},
-		{&vals.Platform.ClusterCAData, &existing.Platform.ClusterCAData},
-		{&vals.Platform.ClusterToken, &existing.Platform.ClusterToken},
+		{&vals.SharedCompute.ClusterAPIURL, &existing.SharedCompute.ClusterAPIURL},
+		{&vals.SharedCompute.ClusterCAData, &existing.SharedCompute.ClusterCAData},
+		{&vals.SharedCompute.ClusterToken, &existing.SharedCompute.ClusterToken},
 	}
 	changed := false
+	if vals.Platform.TLSEnabled != existing.Platform.TLSEnabled {
+		existing.Platform.TLSEnabled = vals.Platform.TLSEnabled
+		changed = true
+	}
 	for _, f := range fields {
 		if *f.flag == "" {
 			*f.flag = *f.stored
@@ -196,16 +202,27 @@ func readExistingSecrets() (*BootstrapSecrets, error) {
 		return nil, fmt.Errorf("parsing secret JSON: %w", err)
 	}
 
-	decode := func(key string) string {
+	decodeWithPresence := func(key string) (string, bool) {
 		v, ok := secret.Data[key]
 		if !ok {
-			return ""
+			return "", false
 		}
 		b, err := base64.StdEncoding.DecodeString(v)
 		if err != nil {
-			return ""
+			return "", true
 		}
-		return string(b)
+		return string(b), true
+	}
+	decode := func(key string) string {
+		value, _ := decodeWithPresence(key)
+		return value
+	}
+
+	platformBaseDomain := decode("platform-base-domain")
+	platformTLSValue, platformTLSStored := decodeWithPresence("platform-tls-enabled")
+	platformTLSEnabled := platformTLSValue == "true"
+	if !platformTLSStored && platformBaseDomain != "" {
+		platformTLSEnabled = true
 	}
 
 	s := &BootstrapSecrets{
@@ -222,12 +239,15 @@ func readExistingSecrets() (*BootstrapSecrets, error) {
 		GitHubAppPrivateKey:    decode("github-app-private-key"),
 		GitHubAppWebhookSecret: decode("github-app-webhook-secret"),
 		Platform: install.PlatformConfig{
-			BaseDomain:         decode("platform-base-domain"),
+			BaseDomain:         platformBaseDomain,
+			TLSEnabled:         platformTLSEnabled,
 			CloudflareAPIToken: decode("platform-cloudflare-api-token"),
 			ACMEEnvironment:    decode("platform-acme-environment"),
-			ClusterAPIURL:      decode("platform-cluster-api-url"),
-			ClusterCAData:      decode("platform-cluster-ca-data"),
-			ClusterToken:       decode("platform-cluster-token"),
+		},
+		SharedCompute: install.SharedComputeConfig{
+			ClusterAPIURL: decode("shared-compute-cluster-api-url"),
+			ClusterCAData: decode("shared-compute-cluster-ca-data"),
+			ClusterToken:  decode("shared-compute-cluster-token"),
 		},
 	}
 

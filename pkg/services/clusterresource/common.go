@@ -9,6 +9,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 )
 
 const (
@@ -73,6 +74,18 @@ func WrapErrAsServiceError(err error) *errors.ServiceError {
 // tests of pkg/services and its dependents.
 type ClusterResourceServiceInjectable interface {
 	InjectClusterResourceServiceDeps(deps ClusterResourceServiceDeps)
+}
+
+type BackgroundJobEnqueuerDep struct {
+	BackgroundJobEnqueuer workermanager.BackgroundJobEnqueuer
+}
+
+type BackgroundJobEnqueuerInjectable interface {
+	InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep)
+}
+
+func (s *BackgroundJobEnqueuerDep) InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep) {
+	s.BackgroundJobEnqueuer = dep.BackgroundJobEnqueuer
 }
 
 // ClusterResourceServiceDeps is embedded in services that require cluster

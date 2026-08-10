@@ -17,3 +17,7 @@ type PostgresAddonOperand struct{ ID string }
 type OrgInviteOperand struct{ ID string }
 
 type PreviewStackOperand struct{ ID string }
+
+// ClusterImageRegistryOperand serializes all registry reconciliation for one
+// cluster, including cluster deletion once its registries have been removed.
+type ClusterImageRegistryOperand struct{ ClusterID string }

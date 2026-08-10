@@ -42,30 +42,31 @@ func (m *MockClusterResourceImageRegistryService) EXPECT() *MockClusterResourceI
 	return m.recorder
 }
 
-// CreateImageRegistryInCluster mocks base method.
-func (m *MockClusterResourceImageRegistryService) CreateImageRegistryInCluster(ctx context.Context, registry *models.ClusterImageRegistry) *clusterresource.ClusterResourceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateImageRegistryInCluster", ctx, registry)
-	ret0, _ := ret[0].(*clusterresource.ClusterResourceError)
-	return ret0
-}
-
-// CreateImageRegistryInCluster indicates an expected call of CreateImageRegistryInCluster.
-func (mr *MockClusterResourceImageRegistryServiceMockRecorder) CreateImageRegistryInCluster(ctx, registry any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateImageRegistryInCluster", reflect.TypeOf((*MockClusterResourceImageRegistryService)(nil).CreateImageRegistryInCluster), ctx, registry)
-}
-
 // DeleteImageRegistryInCluster mocks base method.
-func (m *MockClusterResourceImageRegistryService) DeleteImageRegistryInCluster(ctx context.Context, registry *models.ClusterImageRegistry) *clusterresource.ClusterResourceError {
+func (m *MockClusterResourceImageRegistryService) DeleteImageRegistryInCluster(ctx context.Context, registry *models.ClusterImageRegistry) (bool, *clusterresource.ClusterResourceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeleteImageRegistryInCluster", ctx, registry)
-	ret0, _ := ret[0].(*clusterresource.ClusterResourceError)
-	return ret0
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(*clusterresource.ClusterResourceError)
+	return ret0, ret1
 }
 
 // DeleteImageRegistryInCluster indicates an expected call of DeleteImageRegistryInCluster.
 func (mr *MockClusterResourceImageRegistryServiceMockRecorder) DeleteImageRegistryInCluster(ctx, registry any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteImageRegistryInCluster", reflect.TypeOf((*MockClusterResourceImageRegistryService)(nil).DeleteImageRegistryInCluster), ctx, registry)
+}
+
+// EnsureImageRegistryInCluster mocks base method.
+func (m *MockClusterResourceImageRegistryService) EnsureImageRegistryInCluster(ctx context.Context, registry *models.ClusterImageRegistry) *clusterresource.ClusterResourceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "EnsureImageRegistryInCluster", ctx, registry)
+	ret0, _ := ret[0].(*clusterresource.ClusterResourceError)
+	return ret0
+}
+
+// EnsureImageRegistryInCluster indicates an expected call of EnsureImageRegistryInCluster.
+func (mr *MockClusterResourceImageRegistryServiceMockRecorder) EnsureImageRegistryInCluster(ctx, registry any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureImageRegistryInCluster", reflect.TypeOf((*MockClusterResourceImageRegistryService)(nil).EnsureImageRegistryInCluster), ctx, registry)
 }

@@ -87,6 +87,20 @@ func (mr *MockImageRegistryServiceMockRecorder) Delete(ctx, orgID, ID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockImageRegistryService)(nil).Delete), ctx, orgID, ID)
 }
 
+// DeleteWithTx mocks base method.
+func (m *MockImageRegistryService) DeleteWithTx(ctx context.Context, orgID string, registry *models.ClusterImageRegistry) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWithTx", ctx, orgID, registry)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// DeleteWithTx indicates an expected call of DeleteWithTx.
+func (mr *MockImageRegistryServiceMockRecorder) DeleteWithTx(ctx, orgID, registry any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWithTx", reflect.TypeOf((*MockImageRegistryService)(nil).DeleteWithTx), ctx, orgID, registry)
+}
+
 // Get mocks base method.
 func (m *MockImageRegistryService) Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -102,16 +116,16 @@ func (mr *MockImageRegistryServiceMockRecorder) Get(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockImageRegistryService)(nil).Get), ctx, ID)
 }
 
-// InjectClusterResourceService mocks base method.
-func (m *MockImageRegistryService) InjectClusterResourceService(registryClusterService clusterresource.ClusterImageRegistryService) {
+// InjectBackgroundJobEnqueuer mocks base method.
+func (m *MockImageRegistryService) InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InjectClusterResourceService", registryClusterService)
+	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
 }
 
-// InjectClusterResourceService indicates an expected call of InjectClusterResourceService.
-func (mr *MockImageRegistryServiceMockRecorder) InjectClusterResourceService(registryClusterService any) *gomock.Call {
+// InjectBackgroundJobEnqueuer indicates an expected call of InjectBackgroundJobEnqueuer.
+func (mr *MockImageRegistryServiceMockRecorder) InjectBackgroundJobEnqueuer(dep any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectClusterResourceService", reflect.TypeOf((*MockImageRegistryService)(nil).InjectClusterResourceService), registryClusterService)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectBackgroundJobEnqueuer", reflect.TypeOf((*MockImageRegistryService)(nil).InjectBackgroundJobEnqueuer), dep)
 }
 
 // InternalCreateSeedRegistry mocks base method.
@@ -142,6 +156,20 @@ func (m *MockImageRegistryService) InternalGet(ctx context.Context, ID string) (
 func (mr *MockImageRegistryServiceMockRecorder) InternalGet(ctx, ID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockImageRegistryService)(nil).InternalGet), ctx, ID)
+}
+
+// InternalMarkAllDeletingByClusterIDWithTx mocks base method.
+func (m *MockImageRegistryService) InternalMarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalMarkAllDeletingByClusterIDWithTx", ctx, clusterID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// InternalMarkAllDeletingByClusterIDWithTx indicates an expected call of InternalMarkAllDeletingByClusterIDWithTx.
+func (mr *MockImageRegistryServiceMockRecorder) InternalMarkAllDeletingByClusterIDWithTx(ctx, clusterID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalMarkAllDeletingByClusterIDWithTx", reflect.TypeOf((*MockImageRegistryService)(nil).InternalMarkAllDeletingByClusterIDWithTx), ctx, clusterID)
 }
 
 // ListByClusterID mocks base method.

@@ -12,6 +12,7 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
+	time "time"
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
@@ -86,6 +87,35 @@ func (mr *MockClusterStoreMockRecorder) Delete(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockClusterStore)(nil).Delete), ctx, ID)
 }
 
+// DeleteWithTx mocks base method.
+func (m *MockClusterStore) DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteWithTx", ctx, ID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// DeleteWithTx indicates an expected call of DeleteWithTx.
+func (mr *MockClusterStoreMockRecorder) DeleteWithTx(ctx, ID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWithTx", reflect.TypeOf((*MockClusterStore)(nil).DeleteWithTx), ctx, ID)
+}
+
+// FindAnyClusterIDBySharedCompute mocks base method.
+func (m *MockClusterStore) FindAnyClusterIDBySharedCompute(ctx context.Context, sharedCompute bool) (string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAnyClusterIDBySharedCompute", ctx, sharedCompute)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// FindAnyClusterIDBySharedCompute indicates an expected call of FindAnyClusterIDBySharedCompute.
+func (mr *MockClusterStoreMockRecorder) FindAnyClusterIDBySharedCompute(ctx, sharedCompute any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAnyClusterIDBySharedCompute", reflect.TypeOf((*MockClusterStore)(nil).FindAnyClusterIDBySharedCompute), ctx, sharedCompute)
+}
+
 // Get mocks base method.
 func (m *MockClusterStore) Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -116,36 +146,6 @@ func (mr *MockClusterStoreMockRecorder) GetByClusterUrl(ctx, clusterURL any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByClusterUrl", reflect.TypeOf((*MockClusterStore)(nil).GetByClusterUrl), ctx, clusterURL)
 }
 
-// GetClusterForOrg mocks base method.
-func (m *MockClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetClusterForOrg", ctx, orgID)
-	ret0, _ := ret[0].(*models.Cluster)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetClusterForOrg indicates an expected call of GetClusterForOrg.
-func (mr *MockClusterStoreMockRecorder) GetClusterForOrg(ctx, orgID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetClusterForOrg", reflect.TypeOf((*MockClusterStore)(nil).GetClusterForOrg), ctx, orgID)
-}
-
-// GetPlatformCluster mocks base method.
-func (m *MockClusterStore) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPlatformCluster", ctx)
-	ret0, _ := ret[0].(*models.Cluster)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// GetPlatformCluster indicates an expected call of GetPlatformCluster.
-func (mr *MockClusterStoreMockRecorder) GetPlatformCluster(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformCluster", reflect.TypeOf((*MockClusterStore)(nil).GetPlatformCluster), ctx)
-}
-
 // ListAll mocks base method.
 func (m *MockClusterStore) ListAll(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -159,6 +159,80 @@ func (m *MockClusterStore) ListAll(ctx context.Context) ([]*models.Cluster, *err
 func (mr *MockClusterStoreMockRecorder) ListAll(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListAll", reflect.TypeOf((*MockClusterStore)(nil).ListAll), ctx)
+}
+
+// ListBYOCClustersForOrg mocks base method.
+func (m *MockClusterStore) ListBYOCClustersForOrg(ctx context.Context, orgID string) ([]*models.Cluster, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBYOCClustersForOrg", ctx, orgID)
+	ret0, _ := ret[0].([]*models.Cluster)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListBYOCClustersForOrg indicates an expected call of ListBYOCClustersForOrg.
+func (mr *MockClusterStoreMockRecorder) ListBYOCClustersForOrg(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBYOCClustersForOrg", reflect.TypeOf((*MockClusterStore)(nil).ListBYOCClustersForOrg), ctx, orgID)
+}
+
+// ListIDsForImageRegistryReconciliation mocks base method.
+func (m *MockClusterStore) ListIDsForImageRegistryReconciliation(ctx context.Context) ([]string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListIDsForImageRegistryReconciliation", ctx)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListIDsForImageRegistryReconciliation indicates an expected call of ListIDsForImageRegistryReconciliation.
+func (mr *MockClusterStoreMockRecorder) ListIDsForImageRegistryReconciliation(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListIDsForImageRegistryReconciliation", reflect.TypeOf((*MockClusterStore)(nil).ListIDsForImageRegistryReconciliation), ctx)
+}
+
+// ListSharedComputeClusters mocks base method.
+func (m *MockClusterStore) ListSharedComputeClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSharedComputeClusters", ctx)
+	ret0, _ := ret[0].([]*models.Cluster)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListSharedComputeClusters indicates an expected call of ListSharedComputeClusters.
+func (mr *MockClusterStoreMockRecorder) ListSharedComputeClusters(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSharedComputeClusters", reflect.TypeOf((*MockClusterStore)(nil).ListSharedComputeClusters), ctx)
+}
+
+// ListSharedComputeClustersForOrg mocks base method.
+func (m *MockClusterStore) ListSharedComputeClustersForOrg(ctx context.Context, orgID string) ([]*models.Cluster, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListSharedComputeClustersForOrg", ctx, orgID)
+	ret0, _ := ret[0].([]*models.Cluster)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListSharedComputeClustersForOrg indicates an expected call of ListSharedComputeClustersForOrg.
+func (mr *MockClusterStoreMockRecorder) ListSharedComputeClustersForOrg(ctx, orgID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListSharedComputeClustersForOrg", reflect.TypeOf((*MockClusterStore)(nil).ListSharedComputeClustersForOrg), ctx, orgID)
+}
+
+// MarkDeletingWithTx mocks base method.
+func (m *MockClusterStore) MarkDeletingWithTx(ctx context.Context, ID string, at time.Time) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "MarkDeletingWithTx", ctx, ID, at)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// MarkDeletingWithTx indicates an expected call of MarkDeletingWithTx.
+func (mr *MockClusterStoreMockRecorder) MarkDeletingWithTx(ctx, ID, at any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MarkDeletingWithTx", reflect.TypeOf((*MockClusterStore)(nil).MarkDeletingWithTx), ctx, ID, at)
 }
 
 // PersistManagerState mocks base method.
@@ -189,32 +263,18 @@ func (mr *MockClusterStoreMockRecorder) UpdateClusterInfo(ctx, ID, info any) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateClusterInfo", reflect.TypeOf((*MockClusterStore)(nil).UpdateClusterInfo), ctx, ID, info)
 }
 
-// UpdateCredentials mocks base method.
-func (m *MockClusterStore) UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError {
+// UpdateSharedComputeCluster mocks base method.
+func (m *MockClusterStore) UpdateSharedComputeCluster(ctx context.Context, cluster *models.Cluster) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateCredentials", ctx, id, encToken, encCAData)
+	ret := m.ctrl.Call(m, "UpdateSharedComputeCluster", ctx, cluster)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
-// UpdateCredentials indicates an expected call of UpdateCredentials.
-func (mr *MockClusterStoreMockRecorder) UpdateCredentials(ctx, id, encToken, encCAData any) *gomock.Call {
+// UpdateSharedComputeCluster indicates an expected call of UpdateSharedComputeCluster.
+func (mr *MockClusterStoreMockRecorder) UpdateSharedComputeCluster(ctx, cluster any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateCredentials", reflect.TypeOf((*MockClusterStore)(nil).UpdateCredentials), ctx, id, encToken, encCAData)
-}
-
-// UpdateNameAndPlatform mocks base method.
-func (m *MockClusterStore) UpdateNameAndPlatform(ctx context.Context, id, name string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateNameAndPlatform", ctx, id, name)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// UpdateNameAndPlatform indicates an expected call of UpdateNameAndPlatform.
-func (mr *MockClusterStoreMockRecorder) UpdateNameAndPlatform(ctx, id, name any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateNameAndPlatform", reflect.TypeOf((*MockClusterStore)(nil).UpdateNameAndPlatform), ctx, id, name)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSharedComputeCluster", reflect.TypeOf((*MockClusterStore)(nil).UpdateSharedComputeCluster), ctx, cluster)
 }
 
 // WithTransaction mocks base method.

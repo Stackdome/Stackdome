@@ -1,0 +1,49 @@
+# Stackdome Cloud alpha runtime policy. Set RUNTIME_MODE=stackdome_cloud and
+# STACKDOME_CLOUD_CONFIG to this file's deployed path.
+capacity:
+  # An allocation starts when an organization first deploys, not at signup.
+  # Expired allocations continue consuming capacity until cleanup changes state.
+  maxActiveTrialAllocations: 200
+  allocationTTL: 6h
+
+limits:
+  maxStacksPerOrganization: 2
+  maxStackResourcesPerOrganization: 6
+  replicasPerStackResource: 1
+  # Deployment must set cloud-guard controller.maxConcurrentBuilds from this
+  # same value. Hub validates this policy but does not schedule image builds.
+  concurrentBuilds: 1
+
+registry:
+  # Registries are created lazily only when an organization starts a build.
+  maxActiveRegistries: 200
+  storageClass: longhorn
+  storageSize: 10Gi
+
+features:
+  customDomains: false
+  externalPostgresImport: false
+  workspaceUsers: false
+
+signup:
+  # cloudflare requires the origin to accept requests only from Cloudflare.
+  clientIPSource: cloudflare
+  turnstile:
+    enabled: true
+    siteKey: 0x4AAAAAAELBwbqXF7OVIrmv
+    expectedHostname: stackdome.com
+    expectedAction: turnstile-spin-v2
+    verificationTimeout: 10s
+  # Signup throttling is always enforced in the stackdome_cloud runtime.
+  throttle:
+    ip:
+      maxTrackedClients: 10000
+      maxAttempts: 5
+      window: 10m
+    email:
+      maxTrackedAddresses: 10000
+      maxAttempts: 3
+      window: 1h
+
+# TURNSTILE_SECRET is intentionally not stored here. Set it in the environment
+# when Turnstile is enabled.

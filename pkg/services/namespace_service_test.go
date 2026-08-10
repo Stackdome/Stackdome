@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -12,17 +13,31 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
+func expectSharedComputeNamespaceLabels(namespace *models.Namespace, role string) {
+	labels := namespace.Labels.ToMap()
+	Expect(labels).To(HaveKeyWithValue(models.ManagedByLabelKey, models.ManagedByLabelValue))
+	Expect(labels).To(HaveKeyWithValue(models.CloudTenantLabelKey, models.CloudTenantLabelValue))
+	Expect(labels).To(HaveKeyWithValue(models.OrganizationIDLabelKey, namespace.OrganisationID))
+	Expect(labels).To(HaveKeyWithValue(models.NamespaceRoleLabelKey, role))
+}
+
+func expectBringYourOwnNamespaceLabels(namespace *models.Namespace) {
+	Expect(namespace.Labels.ToMap()).To(Equal(map[string]string{
+		models.ManagedByLabelKey: models.ManagedByLabelValue,
+	}))
+}
+
 type fakeAddon struct {
 	addonType string
 	addonName string
 }
 
+const addonType = "postgres"
+
 func (f fakeAddon) Type() string      { return f.addonType }
 func (f fakeAddon) AddonName() string { return f.addonName }
 
 var _ = Describe("namespaceNameForAddon", func() {
-	const addonType = "postgres"
-
 	It("truncates a max-length name to a valid RFC 1123 label keeping the entropy floor", func() {
 		addon := fakeAddon{
 			addonType: addonType,
@@ -71,6 +86,39 @@ var _ = Describe("namespaceNameForAddon", func() {
 		Expect(len(shortSuffix)).To(BeNumerically(">", len(maxSuffix)))
 		Expect(len(shortSuffix)).To(BeNumerically(">=", models.MinNamespaceUUIDSuffixLength))
 	})
+})
+
+var _ = Describe("shared compute namespace labels", func() {
+	DescribeTable("follows compute mode independently of runtime mode",
+		func(runtimeMode config.RuntimeMode, computeMode config.ComputeMode, expectTenantLabels bool) {
+			applicationConfig := config.NewApplicationConfig()
+			applicationConfig.RuntimeMode = runtimeMode
+			applicationConfig.ComputeMode = computeMode
+			service := NewNamespaceService(NamespaceServiceSpec{
+				SharedCompute: applicationConfig.UsesSharedCompute(),
+			})
+
+			stackNamespace, err := service.PrepareNamespaceForStack(context.Background(), &models.Stack{
+				Name: "api", OrganisationID: "organisation-1",
+			})
+			Expect(err).To(BeNil())
+			addonNamespace, err := service.PrepareNamespaceForAddon(
+				context.Background(), fakeAddon{addonType: addonType, addonName: "database"}, "organisation-1",
+			)
+			Expect(err).To(BeNil())
+
+			if expectTenantLabels {
+				expectSharedComputeNamespaceLabels(stackNamespace, models.NamespaceRoleStack)
+				expectSharedComputeNamespaceLabels(addonNamespace, models.NamespaceRoleAddon)
+				return
+			}
+			expectBringYourOwnNamespaceLabels(stackNamespace)
+			expectBringYourOwnNamespaceLabels(addonNamespace)
+		},
+		Entry("self-hosted shared compute", config.RuntimeModeSelfHosted, config.ComputeModeShared, true),
+		Entry("Stackdome Cloud shared compute", config.RuntimeModeStackdomeCloud, config.ComputeModeShared, true),
+		Entry("self-hosted bring-your-own compute", config.RuntimeModeSelfHosted, config.ComputeModeBYOC, false),
+	)
 })
 
 func addonPrefix(addonType, addonName string) string {

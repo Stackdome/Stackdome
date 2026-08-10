@@ -20,9 +20,10 @@ type ClusterImageRegistryState string
 
 // List of ClusterImageRegistryState
 const (
-	IMAGE_REGISTRY_PENDING ClusterImageRegistryState = "ImageRegistryPending"
-	IMAGE_REGISTRY_ERROR   ClusterImageRegistryState = "ImageRegistryError"
-	IMAGE_REGISTRY_RUNNING ClusterImageRegistryState = "ImageRegistryRunning"
+	IMAGE_REGISTRY_PENDING  ClusterImageRegistryState = "ImageRegistryPending"
+	IMAGE_REGISTRY_ERROR    ClusterImageRegistryState = "ImageRegistryError"
+	IMAGE_REGISTRY_RUNNING  ClusterImageRegistryState = "ImageRegistryRunning"
+	IMAGE_REGISTRY_DELETING ClusterImageRegistryState = "ImageRegistryDeleting"
 )
 
 // All allowed values of ClusterImageRegistryState enum
@@ -30,6 +31,7 @@ var AllowedClusterImageRegistryStateEnumValues = []ClusterImageRegistryState{
 	"ImageRegistryPending",
 	"ImageRegistryError",
 	"ImageRegistryRunning",
+	"ImageRegistryDeleting",
 }
 
 func (v *ClusterImageRegistryState) UnmarshalJSON(src []byte) error {

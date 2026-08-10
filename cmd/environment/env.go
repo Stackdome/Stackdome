@@ -30,8 +30,10 @@ import (
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
+	clusterimageregistryworker "github.com/Stackdome/stackdome/pkg/worker/clusterimageregistry"
 	inviteworker "github.com/Stackdome/stackdome/pkg/worker/invite"
 	postgresaddonworker "github.com/Stackdome/stackdome/pkg/worker/postgresaddon"
 	previewworker "github.com/Stackdome/stackdome/pkg/worker/preview"
@@ -51,13 +53,15 @@ type environmentImpl struct {
 	spec envSpec
 }
 
+type configLoader func() error
+
 func newEnvironment(spec envSpec) *environmentImpl {
 	return &environmentImpl{
 		spec: spec,
 		Env: &Env{
-			Name:            spec.name,
-			Config:          config.NewApplicationConfig(),
-			BootstrapConfig: config.NewBootstrapConfig(),
+			Name:           spec.name,
+			Config:         config.NewApplicationConfig(),
+			PlatformConfig: config.NewPlatformConfig(),
 		},
 	}
 }
@@ -68,14 +72,14 @@ type EnvConfigOption interface {
 
 type ApplicationConfigOption func(*config.ApplicationConfig)
 
-type BootstrapConfigOption func(*config.BootstrapConfig)
+type PlatformConfigOption func(*config.PlatformConfig)
 
 func (o ApplicationConfigOption) ApplyToEnv(env *Env) {
 	o(env.Config)
 }
 
-func (o BootstrapConfigOption) ApplyToEnv(env *Env) {
-	o(env.BootstrapConfig)
+func (o PlatformConfigOption) ApplyToEnv(env *Env) {
+	o(env.PlatformConfig)
 }
 
 func WithApplicationConfig(cfg *config.ApplicationConfig) EnvConfigOption {
@@ -84,8 +88,8 @@ func WithApplicationConfig(cfg *config.ApplicationConfig) EnvConfigOption {
 	})
 }
 
-func WithBootstrapConfig(cfg *config.BootstrapConfig) EnvConfigOption {
-	return BootstrapConfigOption(func(env *config.BootstrapConfig) {
+func WithPlatformConfig(cfg *config.PlatformConfig) EnvConfigOption {
+	return PlatformConfigOption(func(env *config.PlatformConfig) {
 		*env = *cfg
 	})
 }
@@ -114,6 +118,7 @@ func (e *environmentImpl) Init(ctx context.Context) error {
 		e.loadEnvAndConfigs,
 		e.setupLogger,
 		e.setupDatabase,
+		e.auditPersistedComputeTopology,
 		e.setupObservability,
 		e.initializeResourceAccessPolicyManager,
 		e.initializePermissionService,
@@ -123,7 +128,7 @@ func (e *environmentImpl) Init(ctx context.Context) error {
 		e.injectClusterResourceServices,
 		e.initializeBaseResourceAccessPolicies,
 		e.startManagers,
-		e.bootstrapPlatformDefaults,
+		e.bootstrapSharedComputeInfrastructure,
 	}
 
 	for _, step := range initializerSteps {
@@ -143,30 +148,63 @@ func (e *environmentImpl) InitDatabase(ctx context.Context) error {
 }
 
 func (e *environmentImpl) loadEnvAndConfigs(ctx context.Context) error {
-	if e.spec.managed {
+	if e.spec.dependencySource.createsDependencies() {
 		_ = godotenv.Load()
-		e.Config.LoadEnvVariables()
-		e.BootstrapConfig.LoadEnvVariables()
+		loaders := []configLoader{
+			e.Config.LoadEnvVariables,
+			e.PlatformConfig.LoadEnvVariables,
+			e.Config.LoadStackdomeCloudConfig,
+		}
+		if err := runConfigLoaders(loaders); err != nil {
+			return err
+		}
 	} else {
-		e.loadTestDefaults()
+		if err := e.loadTestDefaults(); err != nil {
+			return fmt.Errorf("load test defaults: %w", err)
+		}
 	}
 
 	if err := e.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig); err != nil {
-		return fmt.Errorf("invalid platform-provisioning config: %w", err)
+	if err := e.validateSharedComputeProvisioning(); err != nil {
+		return fmt.Errorf("invalid shared compute provisioning config: %w", err)
+	}
+	if err := e.validatePlatformRouting(); err != nil {
+		return fmt.Errorf("invalid platform routing config: %w", err)
 	}
 	return nil
 }
 
+func runConfigLoaders(loaders []configLoader) error {
+	for _, loader := range loaders {
+		if err := loader(); err != nil {
+			return fmt.Errorf("load configuration: %w", err)
+		}
+	}
+	return nil
+}
+
+func (e *environmentImpl) validateSharedComputeProvisioning() error {
+	return config.ValidateSharedComputeProvisioning(e.Config.ComputeMode, e.Config.SharedComputeCluster)
+}
+
+func (e *environmentImpl) validatePlatformRouting() error {
+	return config.ValidatePlatformRouting(e.Config.RuntimeMode, e.Config.ComputeMode, e.PlatformConfig)
+}
+
 // loadTestDefaults keeps tests runnable without a .env file while still letting
-// CI configure everything through environment variables. Platform-provisioning
-// config stays opt-in: unset in unit runs, set by the integration bootstrap.
-func (e *environmentImpl) loadTestDefaults() {
-	e.Config.PlatformCluster.LoadEnvVariables()
-	e.BootstrapConfig.LoadEnvVariables()
+// CI configure everything through environment variables. Shared-compute and
+// platform-routing configuration stays opt-in: unset in unit runs, set by the
+// integration bootstrap.
+func (e *environmentImpl) loadTestDefaults() error {
+	if err := e.Config.SharedComputeCluster.LoadEnvVariables(); err != nil {
+		return fmt.Errorf("load shared compute config: %w", err)
+	}
+	if err := e.PlatformConfig.LoadEnvVariables(); err != nil {
+		return fmt.Errorf("load platform config: %w", err)
+	}
 
 	if e.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
@@ -191,6 +229,7 @@ func (e *environmentImpl) loadTestDefaults() {
 			e.Config.LogLevel = "info"
 		}
 	}
+	return nil
 }
 
 func (e *environmentImpl) setupLogger(ctx context.Context) error {
@@ -200,7 +239,7 @@ func (e *environmentImpl) setupLogger(ctx context.Context) error {
 	}
 	e.Logger = applogger.NewLoggerWithPrefix(ctx, e.loggerName("api-server")).SetLevel(logLevel)
 
-	if !e.spec.managed {
+	if !e.spec.dependencySource.createsDependencies() {
 		logrus.SetOutput(os.Stdout)
 		logrus.SetFormatter(&logrus.TextFormatter{
 			FullTimestamp: true,
@@ -213,7 +252,7 @@ func (e *environmentImpl) setupLogger(ctx context.Context) error {
 }
 
 func (e *environmentImpl) setupDatabase(ctx context.Context) error {
-	if !e.spec.managed {
+	if !e.spec.dependencySource.createsDependencies() {
 		// The session factory is supplied by the test bootstrap.
 		return nil
 	}
@@ -224,6 +263,43 @@ func (e *environmentImpl) setupDatabase(ctx context.Context) error {
 	}
 	e.DBSession = db.NewSessionFactory(e.Config.Database)
 	return nil
+}
+
+func (e *environmentImpl) auditPersistedComputeTopology(ctx context.Context) error {
+	clusterStore := pgstore.NewClusterStore(pgstore.ClusterStoreSpec{SessionFactory: e.DBSession})
+	return checkPersistedComputeTopology(ctx, e.Config.ComputeMode, clusterStore)
+}
+
+func checkPersistedComputeTopology(ctx context.Context, mode config.ComputeMode, clusterStore stores.ClusterStore) error {
+	var incompatibleSharedCompute bool
+	switch mode {
+	case config.ComputeModeBYOC:
+		incompatibleSharedCompute = true
+	case config.ComputeModeShared:
+		incompatibleSharedCompute = false
+	default:
+		return fmt.Errorf("check persisted compute topology: unsupported compute mode %q", mode)
+	}
+
+	clusterID, err := clusterStore.FindAnyClusterIDBySharedCompute(ctx, incompatibleSharedCompute)
+	if err != nil {
+		return fmt.Errorf("find incompatible persisted cluster: %w", err)
+	}
+	if clusterID == "" {
+		return nil
+	}
+	if mode == config.ComputeModeBYOC {
+		return fmt.Errorf(
+			"bring-your-own compute cannot start while shared-compute cluster %q exists; "+
+				"set COMPUTE_MODE=shared or remove the shared-compute cluster and dependent resources",
+			clusterID,
+		)
+	}
+	return fmt.Errorf(
+		"shared compute cannot start while tenant-owned cluster %q exists; "+
+			"set COMPUTE_MODE=bring_your_own or remove the tenant-owned cluster and dependent resources",
+		clusterID,
+	)
 }
 
 func (e *environmentImpl) setupObservability(context.Context) error {
@@ -367,7 +443,7 @@ func (e *environmentImpl) initializePermissionService(ctx context.Context) error
 // wiring and SMTP_HOST is set; otherwise a no-op client.
 func (e *environmentImpl) newEmailService(ctx context.Context) emailpkg.EmailService {
 	noop := emailpkg.NewNoopEmailService(applogger.NewLoggerWithPrefix(ctx, e.loggerName("email-service")).SetLevel(e.Logger.GetLevel()))
-	if !e.spec.managed {
+	if !e.spec.dependencySource.createsDependencies() {
 		return noop
 	}
 
@@ -390,6 +466,9 @@ func (e *environmentImpl) newEmailService(ctx context.Context) emailpkg.EmailSer
 
 func (e *environmentImpl) loadServices(ctx context.Context) error {
 	e.Logger.Debugf("Initializing services")
+	stackdomeCloudRuntime := e.Config.IsStackdomeCloud()
+	customDomainsDisabled := stackdomeCloudRuntime && !e.Config.CustomDomainsEnabled()
+	externalPostgresImportDisabled := stackdomeCloudRuntime && !e.Config.ExternalPostgresImportEnabled()
 
 	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{
 		Masterkey: e.Config.EncryptionKey,
@@ -399,14 +478,16 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	}
 	e.EncryptionService = encryptionService
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
-		SessionFactory:     e.DBSession,
-		Logger:             e.Logger,
-		PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
+		SessionFactory:        e.DBSession,
+		Logger:                e.Logger,
+		PlatformBaseDomain:    e.PlatformConfig.BaseDomain,
+		CustomDomainsDisabled: customDomainsDisabled,
 	})
 
 	organisationDomainService := services.NewOrganisationDomainsService(services.OrganisationDomainsServiceSpec{
-		SessionFactory: e.DBSession,
-		Logger:         e.Logger,
+		SessionFactory:        e.DBSession,
+		Logger:                e.Logger,
+		CustomDomainsDisabled: customDomainsDisabled,
 	})
 
 	projectService := services.NewProjectService(services.ProjectServiceSpec{
@@ -425,13 +506,14 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
 		ImageRegistryService:      imageRegistryService,
-		OrgRegistryDefaults:       e.BootstrapConfig.OrgRegistry,
+		OrgRegistryDefaults:       e.PlatformConfig.OrgRegistry,
 		StackQueryService:         e.Services.StackService,
 		SessionFactory:            e.DBSession,
 		ProjectService:            projectService,
 		PolicyManager:             e.ResourceAccessPolicyManager,
 		Permissions:               e.PermissionService,
 		Logger:                    e.Logger,
+		CustomDomainsDisabled:     customDomainsDisabled,
 	})
 
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: e.DBSession})
@@ -513,6 +595,8 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ClusterManager:       e.ClusterManager,
 		ImageRegistryService: imageRegistryService,
 		SessionFactory:       e.DBSession,
+		ComputeMode:          e.Config.ComputeMode,
+		PlatformTLSEnabled:   e.PlatformConfig.PlatformTLSEnabled,
 		Logger:               e.Logger,
 		Permissions:          e.PermissionService,
 		EncryptionService:    encryptionService,
@@ -543,7 +627,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Domains:            organisationDomainService,
 		Credentials:        credentialResolver,
 		GitIntegrations:    gitIntegrationService,
-		PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
+		PlatformBaseDomain: e.PlatformConfig.BaseDomain,
 	})
 
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
@@ -569,6 +653,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	namespaceService := services.NewNamespaceService(services.NamespaceServiceSpec{
 		SessionFactory: e.DBSession,
 		Logger:         e.Logger,
+		SharedCompute:  e.Config.UsesSharedCompute(),
 	})
 
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
@@ -593,17 +678,18 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	})
 
 	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
-		SessionFactory:        e.DBSession,
-		NamespaceService:      namespaceService,
-		ClusterService:        clusterService,
-		SecretService:         secretService,
-		PostgresBackupService: postgresBackupService,
-		ObjectStoreService:    objectStoreService,
-		ProjectService:        projectService,
-		ClusterManager:        e.ClusterManager,
-		Logger:                e.Logger,
-		Permissions:           e.PermissionService,
-		ReferenceService:      referenceService,
+		SessionFactory:         e.DBSession,
+		NamespaceService:       namespaceService,
+		ClusterService:         clusterService,
+		SecretService:          secretService,
+		PostgresBackupService:  postgresBackupService,
+		ObjectStoreService:     objectStoreService,
+		ProjectService:         projectService,
+		ClusterManager:         e.ClusterManager,
+		Logger:                 e.Logger,
+		Permissions:            e.PermissionService,
+		ReferenceService:       referenceService,
+		ExternalImportDisabled: externalPostgresImportDisabled,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
@@ -621,7 +707,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ReferenceService:      referenceService,
 		CredentialResolver:    credentialResolver,
 		GitIntegrationService: gitIntegrationService,
-		PlatformBaseDomain:    e.BootstrapConfig.BaseDomain,
+		PlatformBaseDomain:    e.PlatformConfig.BaseDomain,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -800,7 +886,9 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:        e.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			CredentialResolver: e.Services.CredentialResolver,
-			PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
+			ComputeMode:        e.Config.ComputeMode,
+			PlatformTLSEnabled: e.PlatformConfig.PlatformTLSEnabled,
+			PlatformBaseDomain: e.PlatformConfig.BaseDomain,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),
 		Resolver: stackdeploy.NewResolver(stackdeploy.ResolverSpec{
@@ -834,6 +922,23 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Env:             e.Name,
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
+
+	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
+		ClusterManager: e.ClusterManager,
+		Logger:         e.Logger,
+	})
+	clusterImageRegistryWorker := clusterimageregistryworker.NewClusterImageRegistryWorker(clusterimageregistryworker.ClusterImageRegistryWorkerSpec{
+		ClusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+			SessionFactory: e.DBSession,
+		}),
+		ImageRegistryStore: pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
+			SessionFactory: e.DBSession,
+		}),
+		ClusterManager:  e.ClusterManager,
+		ClusterResource: clusterImageRegistryResource,
+		Env:             e.Name,
+	})
+	e.WorkerManager.RegisterWorker(clusterImageRegistryWorker, models.ClusterImageRegistryOperand{})
 
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
 		PostgresAddonService: e.Services.PostgresAddonService,
@@ -903,12 +1008,6 @@ func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) err
 		WorkspaceUserService: e.Services.WorkspaceUserService,
 	})
 
-	clusterImageRegistryService := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
-		ClusterManager: e.ClusterManager,
-		Logger:         e.Logger,
-		ClusterService: e.Services.ClusterService,
-	})
-
 	clusterNamespaceService := clusterresource.NewNamespaceClusterResourceService(clusterresource.NamespaceClusterResourceServiceSpec{
 		ClusterManager: e.ClusterManager,
 		Logger:         e.Logger,
@@ -944,7 +1043,8 @@ func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) err
 	e.Services.NamespaceService.InjectClusterResourceServiceDeps(deps)
 	e.Services.LoggingService.InjectClusterResourceServiceDeps(deps)
 	e.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
-	e.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
+	e.Services.ClusterImageRegistryService.InjectBackgroundJobEnqueuer(dep)
+	e.Services.ClusterService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.StackService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.StackResourceService.InjectClusterManager(e.ClusterManager)
 	e.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
@@ -983,12 +1083,12 @@ func (e *environmentImpl) startManagers(ctx context.Context) error {
 	return e.WorkerManager.Start(ctx)
 }
 
-func (e *environmentImpl) bootstrapPlatformDefaults(ctx context.Context) error {
+func (e *environmentImpl) bootstrapSharedComputeInfrastructure(ctx context.Context) error {
 	svc := bootstrap.NewService(bootstrap.Spec{
 		OrganisationService: e.Services.OrganisationService,
 		ClusterService:      e.Services.ClusterService,
-		BootstrapConfig:     e.BootstrapConfig,
-		ClusterConfig:       e.Config.PlatformCluster,
+		PlatformConfig:      e.PlatformConfig,
+		ClusterConfig:       e.Config.SharedComputeCluster,
 		Logger:              e.Logger,
 	})
 	if err := svc.Run(ctx); err != nil {

@@ -17,6 +17,7 @@ import (
 	clustermanager "github.com/Stackdome/stackdome/pkg/clustermanager"
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
+	clusterresource "github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -133,6 +134,18 @@ func (mr *MockClusterServiceMockRecorder) GetOwnedClusterForOrg(ctx, orgID any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnedClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetOwnedClusterForOrg), ctx, orgID)
 }
 
+// InjectBackgroundJobEnqueuer mocks base method.
+func (m *MockClusterService) InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
+}
+
+// InjectBackgroundJobEnqueuer indicates an expected call of InjectBackgroundJobEnqueuer.
+func (mr *MockClusterServiceMockRecorder) InjectBackgroundJobEnqueuer(dep any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectBackgroundJobEnqueuer", reflect.TypeOf((*MockClusterService)(nil).InjectBackgroundJobEnqueuer), dep)
+}
+
 // InjectClusterManager mocks base method.
 func (m *MockClusterService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
 	m.ctrl.T.Helper()
@@ -146,7 +159,7 @@ func (mr *MockClusterServiceMockRecorder) InjectClusterManager(clusterManager an
 }
 
 // InternalEnsurePlatformWildcardTLS mocks base method.
-func (m *MockClusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
+func (m *MockClusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.PlatformConfig) *errors.ServiceError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InternalEnsurePlatformWildcardTLS", ctx, cluster, cfg)
 	ret0, _ := ret[0].(*errors.ServiceError)
@@ -203,17 +216,17 @@ func (mr *MockClusterServiceMockRecorder) InternalUpdateClusterInfo(ctx, cluster
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateClusterInfo", reflect.TypeOf((*MockClusterService)(nil).InternalUpdateClusterInfo), ctx, clusterID, info)
 }
 
-// InternalUpsertPlatformCluster mocks base method.
-func (m *MockClusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+// InternalUpsertSharedComputeCluster mocks base method.
+func (m *MockClusterService) InternalUpsertSharedComputeCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalUpsertPlatformCluster", ctx, spec)
+	ret := m.ctrl.Call(m, "InternalUpsertSharedComputeCluster", ctx, spec)
 	ret0, _ := ret[0].(*models.Cluster)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// InternalUpsertPlatformCluster indicates an expected call of InternalUpsertPlatformCluster.
-func (mr *MockClusterServiceMockRecorder) InternalUpsertPlatformCluster(ctx, spec any) *gomock.Call {
+// InternalUpsertSharedComputeCluster indicates an expected call of InternalUpsertSharedComputeCluster.
+func (mr *MockClusterServiceMockRecorder) InternalUpsertSharedComputeCluster(ctx, spec any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertPlatformCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertPlatformCluster), ctx, spec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertSharedComputeCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertSharedComputeCluster), ctx, spec)
 }

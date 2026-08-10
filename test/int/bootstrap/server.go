@@ -30,14 +30,16 @@ type ServerManager struct {
 func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.DatabaseConfig, logger logr.Logger) *ServerManager {
 	return &ServerManager{
 		config: &config.ApplicationConfig{
+			RuntimeMode: config.RuntimeModeSelfHosted,
+			ComputeMode: config.ComputeModeShared,
 			Server: &config.ServerConfig{
 				Hostname:    "localhost",
 				BindAddress: fmt.Sprintf("0.0.0.0:%d", ServerPort),
 			},
-			Database:        dbConfig,
-			GitHubOAuth:     &config.GitHubOAuthConfig{},
-			GitHubApp:       &config.GitHubAppConfig{},
-			PlatformCluster: &config.ClusterConfig{},
+			Database:             dbConfig,
+			GitHubOAuth:          &config.GitHubOAuthConfig{},
+			GitHubApp:            &config.GitHubAppConfig{},
+			SharedComputeCluster: &config.ClusterConfig{},
 		},
 		port:           ServerPort,
 		baseURL:        fmt.Sprintf("http://localhost:%d", ServerPort),

@@ -9,6 +9,24 @@ import (
 
 var log = logger.NewLogger()
 
+type dependencySource string
+
+const (
+	dependenciesCreated  dependencySource = "created"
+	dependenciesInjected dependencySource = "injected"
+)
+
+func (source dependencySource) createsDependencies() bool {
+	switch source {
+	case dependenciesCreated:
+		return true
+	case dependenciesInjected:
+		return false
+	default:
+		panic(fmt.Sprintf("unsupported dependency source: %q", source))
+	}
+}
+
 // Selectable values of STACKDOME_ENV. The test environment is not selectable
 // here: it needs a session factory injected by the test bootstrap.
 const (
@@ -23,15 +41,15 @@ type envSpec struct {
 	name string
 	// logPrefix is prepended to logger and leadership-flag names.
 	logPrefix string
-	// managed means the environment loads its own config and builds its own
-	// database session and email client. Tests get those injected instead.
-	managed bool
+	// dependencySource controls whether the environment creates dependencies or
+	// receives them from the test bootstrap.
+	dependencySource dependencySource
 }
 
 var (
-	developmentSpec = envSpec{name: config.EnvironmentDevelopment, managed: true}
-	productionSpec  = envSpec{name: config.EnvironmentProduction, managed: true}
-	testSpec        = envSpec{name: config.EnvironmentTest, logPrefix: "test-"}
+	developmentSpec = envSpec{name: config.EnvironmentDevelopment, dependencySource: dependenciesCreated}
+	productionSpec  = envSpec{name: config.EnvironmentProduction, dependencySource: dependenciesCreated}
+	testSpec        = envSpec{name: config.EnvironmentTest, logPrefix: "test-", dependencySource: dependenciesInjected}
 )
 
 var specsByRuntimeName = map[string]envSpec{

@@ -87,6 +87,9 @@ func (r *clusterImageRegistryReconciler) Reconcile(ctx context.Context, req ctrl
 		r.Logger.Error(ctx, "failed to get cluster image registry from DB: %v", serr)
 		return ctrl.Result{}, fmt.Errorf("failed to get cluster image registry from DB: %w", serr)
 	}
+	if dbImageRegistry.Status != nil && dbImageRegistry.Status.State == models.RegistryStateDeleting {
+		return ctrl.Result{}, nil
+	}
 
 	if dbImageRegistry.Status == nil ||
 		string(dbImageRegistry.Status.State) != string(registryCr.Status.Phase) ||

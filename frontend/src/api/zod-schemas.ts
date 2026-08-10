@@ -867,6 +867,7 @@ const ClusterImageRegistryState = z.enum([
   "ImageRegistryPending",
   "ImageRegistryError",
   "ImageRegistryRunning",
+  "ImageRegistryDeleting",
 ]);
 const ClusterImageRegistryStatus = z
   .object({ state: ClusterImageRegistryState, conditions: z.array(Condition) })
@@ -889,6 +890,7 @@ const Cluster = z
     id: z.string().optional(),
     name: z.string(),
     organisation_id: z.string().optional(),
+    shared_compute: z.boolean().optional(),
     platform: z.boolean().optional(),
     cluster_url: z.string(),
     cluster_ca_data: z.string(),

@@ -13,6 +13,9 @@ type OrganisationStore interface {
 	OrganisationNameExists(ctx context.Context, name string) (bool, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError)
 	Get(ctx context.Context, ID string) (*models.Organisation, *errors.ServiceError)
+	// LockByID takes a row-level lock on the organisation. It must be called
+	// inside a transaction to serialize topology mutations owned by that org.
+	LockByID(ctx context.Context, ID string) *errors.ServiceError
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	Update(ctx context.Context, id string, org *models.Organisation) (*models.Organisation, *errors.ServiceError)
 }
