@@ -465,15 +465,16 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 
 	e.RuntimePolicy = services.NewSelfHostedRuntimePolicy()
 	if stackdomeCloudRuntime {
-		cloudTrials := services.NewCloudTrialService(services.CloudTrialServiceSpec{
-			Store: pgstore.NewTrialAllocationStore(pgstore.TrialAllocationStoreSpec{
-				SessionFactory: e.DBSession,
+		computeAccess := services.NewComputeAccessService(services.ComputeAccessServiceSpec{
+			Store: pgstore.NewComputeAccessStore(pgstore.ComputeAccessStoreSpec{
+				SessionFactory:               e.DBSession,
+				MaxActiveSharedComputeLeases: e.Config.StackdomeCloud.Access.MaxActiveSharedComputeLeases,
 			}),
-			Capacity: e.Config.StackdomeCloud.Capacity.MaxActiveTrialAllocations,
-			TTL:      e.Config.StackdomeCloud.Capacity.AllocationTTL.Duration(),
+			DefaultEntitlementSource:   models.ComputeEntitlementSourceTrial,
+			DefaultEntitlementDuration: e.Config.StackdomeCloud.Access.TrialEntitlementDuration.Duration(),
 		})
 		e.RuntimePolicy = services.NewStackdomeCloudRuntimePolicy(services.StackdomeCloudRuntimePolicySpec{
-			Trials:                 cloudTrials,
+			ComputeAccess:          computeAccess,
 			StackLimits:            pgstore.NewStackLimitStore(),
 			IsolationPolicyVersion: e.Config.StackdomeCloud.Isolation.PolicyVersion,
 			MaxStacks:              e.Config.StackdomeCloud.Limits.MaxStacksPerOrganization,

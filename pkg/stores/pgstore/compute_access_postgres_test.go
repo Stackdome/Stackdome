@@ -11,16 +11,18 @@ import (
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
+var _ = Describe("ComputeAccessStore PostgreSQL locking", func() {
 	It("serializes concurrent outer stack transactions at active capacity", func() {
-		if os.Getenv("STACKDOME_PG_TRIAL_ALLOCATION_TEST") != "1" {
-			Skip("set STACKDOME_PG_TRIAL_ALLOCATION_TEST=1 with DB_* variables to run PostgreSQL locking coverage")
+		if os.Getenv("STACKDOME_PG_COMPUTE_ACCESS_TEST") != "1" {
+			Skip("set STACKDOME_PG_COMPUTE_ACCESS_TEST=1 with DB_* variables to run PostgreSQL locking coverage")
 		}
 
 		port, err := strconv.Atoi(os.Getenv("DB_PORT"))
@@ -38,10 +40,12 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 
 		ctx := context.Background()
 		database := sessionFactory.New(ctx)
-		Expect(database.Exec("DELETE FROM trial_allocations WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
+		Expect(database.Exec("DELETE FROM shared_compute_leases WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
+		Expect(database.Exec("DELETE FROM compute_entitlements WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 		Expect(database.Exec("DELETE FROM organisations WHERE id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 		DeferCleanup(func() {
-			Expect(database.Exec("DELETE FROM trial_allocations WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
+			Expect(database.Exec("DELETE FROM shared_compute_leases WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
+			Expect(database.Exec("DELETE FROM compute_entitlements WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 			Expect(database.Exec("DELETE FROM organisations WHERE id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 		})
 
@@ -54,7 +58,9 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 			Expect(database.Exec("INSERT INTO organisations (id, name, platform) VALUES (?, ?, false)", id, id).Error).NotTo(HaveOccurred())
 		}
 
-		store := pgstore.NewTrialAllocationStore(pgstore.TrialAllocationStoreSpec{SessionFactory: sessionFactory})
+		store := pgstore.NewComputeAccessStore(pgstore.ComputeAccessStoreSpec{
+			SessionFactory: sessionFactory, MaxActiveSharedComputeLeases: capacity,
+		})
 		executor := pgstore.NewAtomicExecutor(sessionFactory)
 		now := time.Now().UTC()
 		start := make(chan struct{})
@@ -66,7 +72,12 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 				defer workers.Done()
 				<-start
 				results <- executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-					_, serr := store.AcquireWithTx(txCtx, fmt.Sprintf("pr2-lock-org-%02d", index), now, now.Add(6*time.Hour), capacity)
+					expiresAt := now.Add(6 * time.Hour)
+					_, serr := store.ActivateWithTx(txCtx, stores.ComputeAccessActivation{
+						OrganisationID:    fmt.Sprintf("pr2-lock-org-%02d", index),
+						EntitlementSource: models.ComputeEntitlementSourceTrial,
+						StartsAt:          now, ExpiresAt: &expiresAt,
+					})
 					return serr
 				})
 			}(i)
@@ -90,11 +101,11 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 		Expect(rejected).To(Equal(organisations - capacity))
 
 		var activeOrganisationID string
-		Expect(database.Raw(`SELECT organisation_id FROM trial_allocations WHERE state = 'active' LIMIT 1`).
+		Expect(database.Raw(`SELECT organisation_id FROM shared_compute_leases WHERE state = 'active' LIMIT 1`).
 			Scan(&activeOrganisationID).Error).NotTo(HaveOccurred())
 		Expect(activeOrganisationID).NotTo(BeEmpty())
 		Expect(database.Exec("DELETE FROM organisations WHERE id = ?", activeOrganisationID).Error).To(HaveOccurred(),
-			"trial allocation ownership must block organisation deletion until cleanup removes the allocation")
+			"compute access ownership must block organisation deletion until cleanup removes its records")
 
 		capacityLock := database.Begin()
 		Expect(capacityLock.Error).NotTo(HaveOccurred())
@@ -105,7 +116,11 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 		retryCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 		DeferCleanup(cancel)
 		serr := executor.WithTransaction(retryCtx, func(txCtx context.Context) *errors.ServiceError {
-			_, acquireErr := store.AcquireWithTx(txCtx, activeOrganisationID, now, now.Add(6*time.Hour), capacity)
+			expiresAt := now.Add(6 * time.Hour)
+			_, acquireErr := store.ActivateWithTx(txCtx, stores.ComputeAccessActivation{
+				OrganisationID: activeOrganisationID, EntitlementSource: models.ComputeEntitlementSourceTrial,
+				StartsAt: now, ExpiresAt: &expiresAt,
+			})
 			return acquireErr
 		})
 		Expect(serr).To(BeNil(), "an admitted organisation must not wait for the global capacity lock")

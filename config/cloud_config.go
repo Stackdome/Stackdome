@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/models"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -36,24 +37,19 @@ func (d ConfigDuration) Duration() time.Duration {
 }
 
 type StackdomeCloudConfig struct {
-	Capacity  StackdomeCloudCapacityConfig  `yaml:"capacity" json:"capacity"`
-	Limits    StackdomeCloudLimitsConfig    `yaml:"limits" json:"limits"`
-	Isolation StackdomeCloudIsolationConfig `yaml:"isolation" json:"isolation"`
-	Registry  StackdomeCloudRegistryConfig  `yaml:"registry" json:"registry"`
-	Features  StackdomeCloudFeaturesConfig  `yaml:"features" json:"features"`
-	Signup    StackdomeCloudSignupConfig    `yaml:"signup" json:"signup"`
+	Access    StackdomeCloudComputeAccessConfig `yaml:"access" json:"access"`
+	Limits    models.ComputeLimits              `yaml:"limits" json:"limits"`
+	Isolation StackdomeCloudIsolationConfig     `yaml:"isolation" json:"isolation"`
+	Registry  StackdomeCloudRegistryConfig      `yaml:"registry" json:"registry"`
+	Features  StackdomeCloudFeaturesConfig      `yaml:"features" json:"features"`
+	Signup    StackdomeCloudSignupConfig        `yaml:"signup" json:"signup"`
 }
 
-type StackdomeCloudCapacityConfig struct {
-	MaxActiveTrialAllocations int            `yaml:"maxActiveTrialAllocations" json:"max_active_trial_allocations"`
-	AllocationTTL             ConfigDuration `yaml:"allocationTTL" json:"allocation_ttl"`
-}
-
-type StackdomeCloudLimitsConfig struct {
-	MaxStacksPerOrganization         int64 `yaml:"maxStacksPerOrganization" json:"max_stacks_per_organization"`
-	MaxStackResourcesPerOrganization int64 `yaml:"maxStackResourcesPerOrganization" json:"max_stack_resources_per_organization"`
-	ReplicasPerStackResource         int32 `yaml:"replicasPerStackResource" json:"replicas_per_stack_resource"`
-	ConcurrentBuilds                 int   `yaml:"concurrentBuilds" json:"concurrent_builds"`
+// StackdomeCloudComputeAccessConfig configures the alpha's default trial grant
+// and the platform ceiling enforced when reserving shared compute.
+type StackdomeCloudComputeAccessConfig struct {
+	MaxActiveSharedComputeLeases int            `yaml:"maxActiveSharedComputeLeases" json:"max_active_shared_compute_leases"`
+	TrialEntitlementDuration     ConfigDuration `yaml:"trialEntitlementDuration" json:"trial_entitlement_duration"`
 }
 
 type StackdomeCloudIsolationConfig struct {
@@ -113,11 +109,11 @@ type StackdomeCloudEmailThrottleConfig struct {
 }
 
 func (c *StackdomeCloudConfig) Validate() error {
-	if c.Capacity.MaxActiveTrialAllocations <= 0 {
-		return fmt.Errorf("capacity.maxActiveTrialAllocations must be greater than zero")
+	if c.Access.MaxActiveSharedComputeLeases <= 0 {
+		return fmt.Errorf("access.maxActiveSharedComputeLeases must be greater than zero")
 	}
-	if c.Capacity.AllocationTTL.Duration() <= 0 {
-		return fmt.Errorf("capacity.allocationTTL must be greater than zero")
+	if c.Access.TrialEntitlementDuration.Duration() <= 0 {
+		return fmt.Errorf("access.trialEntitlementDuration must be greater than zero")
 	}
 	if c.Limits.MaxStacksPerOrganization <= 0 {
 		return fmt.Errorf("limits.maxStacksPerOrganization must be greater than zero")

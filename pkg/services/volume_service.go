@@ -203,7 +203,7 @@ func (s *volumeService) UpdateGitRepoSourceRevision(ctx context.Context, ID stri
 		if getErr != nil {
 			return getErr
 		}
-		admission, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID)
+		admission, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, volume.OrganisationID)
 		if policyErr != nil {
 			return policyErr
 		}
@@ -252,7 +252,7 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 		if getErr != nil {
 			return getErr
 		}
-		admission, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID)
+		admission, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, volume.OrganisationID)
 		if policyErr != nil {
 			return policyErr
 		}
@@ -296,7 +296,7 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 func (s *volumeService) resolveVolumeRevisionAuthority(
 	ctx context.Context,
 	volumeID string,
-	admission MutationAdmission,
+	admission ComputeMutationAdmission,
 ) (bool, *models.Stack, *models.StackRelease, *errors.ServiceError) {
 	if !admission.ReconcileCluster {
 		return false, nil, nil, nil
@@ -395,14 +395,14 @@ func (s *volumeService) lockAndRevalidateVolumeRevisionAuthority(
 	if currentRelease == nil || currentRelease.ID != release.ID {
 		return unlockCluster, false, nil
 	}
-	admission, serr := s.runtimePolicy.AdmitMutationWithTx(ctx, currentStack.OrganisationID)
+	admission, serr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, currentStack.OrganisationID)
 	if serr != nil {
 		unlockCluster()
 		return nil, false, serr
 	}
 	if !admission.ReconcileCluster {
 		unlockCluster()
-		return nil, false, errors.TrialInactive()
+		return nil, false, errors.ComputeAccessInactive()
 	}
 	return unlockCluster, true, nil
 }

@@ -427,7 +427,7 @@ func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, 
 }
 
 func (s *stackService) InternalUpdateShellWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
-	if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, existingStack.OrganisationID); policyErr != nil {
+	if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, existingStack.OrganisationID); policyErr != nil {
 		return nil, policyErr
 	}
 	updatedStack, updateErr := s.stackStore.UpdateShellWithTx(ctx, existingStack.ID, spec)
@@ -528,7 +528,7 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 		if serr != nil {
 			return serr
 		}
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, lockedStack.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, lockedStack.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		for _, existing := range lockedStack.Volumes {
@@ -668,7 +668,7 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 func (s *stackService) createStackConnection(ctx context.Context, existingStack *models.Stack, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	var createdConnection *models.StackConnection
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, existingStack.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, existingStack.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		var serr *errors.ServiceError
@@ -687,7 +687,7 @@ func (s *stackService) createStackConnection(ctx context.Context, existingStack 
 func (s *stackService) updateSingleStackConnection(ctx context.Context, existingStack *models.Stack, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	var updatedConnection *models.StackConnection
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, existingStack.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, existingStack.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		var serr *errors.ServiceError

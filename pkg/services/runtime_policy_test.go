@@ -13,14 +13,14 @@ import (
 )
 
 var _ = Describe("RuntimePolicy", func() {
-	It("keeps self-hosted provisioning eager without trial admission", func() {
+	It("keeps self-hosted provisioning eager without compute access admission", func() {
 		policy := NewSelfHostedRuntimePolicy()
 		Expect(policy.OrganisationProvisioningMode()).To(Equal(ProvisioningModeEager))
 		Expect(policy.DraftProvisioningMode()).To(Equal(ProvisioningModeEager))
-		Expect(policy.AdmitFirstReleaseWithTx(context.Background(), "org-1")).To(BeNil())
-		Expect(policy.AdmitRollbackWithTx(context.Background(), "org-1")).To(BeNil())
-		Expect(policy.RequireActiveAllocation(context.Background(), "org-1")).To(BeNil())
-		admission, serr := policy.AdmitMutationWithTx(context.Background(), "org-1")
+		Expect(policy.ActivateComputeAccessWithTx(context.Background(), "org-1")).To(BeNil())
+		Expect(policy.RequireComputeAccessWithTx(context.Background(), "org-1")).To(BeNil())
+		Expect(policy.RequireComputeAccess(context.Background(), "org-1")).To(BeNil())
+		admission, serr := policy.AdmitComputeMutationWithTx(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(admission.ReconcileCluster).To(BeTrue())
 		Expect(policy.AdmitOrganisationDeletion(context.Background(), "org-1")).To(BeNil())
@@ -29,55 +29,55 @@ var _ = Describe("RuntimePolicy", func() {
 
 	It("delegates cloud mutation and organisation deletion admission", func() {
 		ctrl := gomock.NewController(GinkgoT())
-		trials := NewMockCloudTrialService(ctrl)
+		access := NewMockComputeAccessService(ctrl)
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials: trials, StackLimits: &fakeStackLimitStore{}, IsolationPolicyVersion: "policy-v1",
+			ComputeAccess: access, StackLimits: &fakeStackLimitStore{}, IsolationPolicyVersion: "policy-v1",
 			MaxStacks: 2, MaxResources: 6, Replicas: 1,
 		})
-		trials.EXPECT().RevalidateIfExistsWithTx(gomock.Any(), "org-1").Return(nil, errors.TrialInactive())
-		_, serr := policy.AdmitMutationWithTx(context.Background(), "org-1")
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
-		trials.EXPECT().EnsureNoAllocation(gomock.Any(), "org-1").Return(errors.BadRequest("allocation exists"))
+		access.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(nil, errors.ComputeAccessInactive())
+		_, serr := policy.AdmitComputeMutationWithTx(context.Background(), "org-1")
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
+		access.EXPECT().EnsureNoLease(gomock.Any(), "org-1").Return(errors.BadRequest("allocation exists"))
 		Expect(policy.AdmitOrganisationDeletion(context.Background(), "org-1").Reason).To(Equal("allocation exists"))
 	})
 
-	It("distinguishes database-only draft mutations from active allocation mutations", func() {
-		trials := &fakeCloudTrialService{}
+	It("distinguishes database-only draft mutations from active compute access mutations", func() {
+		access := &fakeComputeAccessService{}
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials: trials, StackLimits: &fakeStackLimitStore{}, IsolationPolicyVersion: "policy-v1",
+			ComputeAccess: access, StackLimits: &fakeStackLimitStore{}, IsolationPolicyVersion: "policy-v1",
 			MaxStacks: 2, MaxResources: 6, Replicas: 1,
 		})
 
-		admission, serr := policy.AdmitMutationWithTx(context.Background(), "org-1")
+		admission, serr := policy.AdmitComputeMutationWithTx(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(admission.ReconcileCluster).To(BeFalse())
 
-		trials.existingAllocation = &models.TrialAllocation{OrganisationID: "org-1"}
-		admission, serr = policy.AdmitMutationWithTx(context.Background(), "org-1")
+		access.existingAccess = &models.ComputeAccess{Lease: &models.SharedComputeLease{OrganisationID: "org-1"}}
+		admission, serr = policy.AdmitComputeMutationWithTx(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(admission.ReconcileCluster).To(BeTrue())
 	})
 
-	It("rejects counted stack mutations before reading usage when an allocation is inactive", func() {
+	It("rejects counted stack mutations before reading usage when compute access is inactive", func() {
 		ctrl := gomock.NewController(GinkgoT())
-		trials := NewMockCloudTrialService(ctrl)
+		access := NewMockComputeAccessService(ctrl)
 		limits := &fakeStackLimitStore{}
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials: trials, StackLimits: limits, IsolationPolicyVersion: "policy-v1",
+			ComputeAccess: access, StackLimits: limits, IsolationPolicyVersion: "policy-v1",
 			MaxStacks: 2, MaxResources: 6, Replicas: 1,
 		})
-		trials.EXPECT().RevalidateIfExistsWithTx(gomock.Any(), "org-1").Return(nil, errors.TrialInactive())
+		access.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(nil, errors.ComputeAccessInactive())
 
 		serr := policy.AdmitStackMutationWithTx(context.Background(), StackMutation{Kind: StackMutationCreate, OrganisationID: "org-1"})
 
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 		Expect(limits.called).To(BeFalse())
 	})
 
-	It("makes cloud organisations and drafts database-only and delegates trial admission", func() {
-		cloudTrials := &fakeCloudTrialService{}
+	It("makes cloud organisations and drafts database-only and delegates compute access admission", func() {
+		computeAccess := &fakeComputeAccessService{}
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials:                 cloudTrials,
+			ComputeAccess:          computeAccess,
 			StackLimits:            &fakeStackLimitStore{},
 			IsolationPolicyVersion: "policy-v1",
 			MaxStacks:              2,
@@ -92,7 +92,7 @@ var _ = Describe("RuntimePolicy", func() {
 	It("enforces cloud stack and resource limits from locked usage", func() {
 		stackLimits := &fakeStackLimitStore{usage: stores.StackUsage{StackCount: 2, StackResourceCount: 5}}
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials:                 &fakeCloudTrialService{},
+			ComputeAccess:          &fakeComputeAccessService{},
 			StackLimits:            stackLimits,
 			IsolationPolicyVersion: "policy-v1",
 			MaxStacks:              2,
@@ -112,7 +112,7 @@ var _ = Describe("RuntimePolicy", func() {
 	It("checks a whole-stack update using persisted resources outside that stack plus the desired replacement", func() {
 		stackLimits := &fakeStackLimitStore{usage: stores.StackUsage{StackCount: 2, StackResourceCount: 2}}
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials:                 &fakeCloudTrialService{},
+			ComputeAccess:          &fakeComputeAccessService{},
 			StackLimits:            stackLimits,
 			IsolationPolicyVersion: "policy-v1",
 			MaxStacks:              2,
@@ -130,7 +130,7 @@ var _ = Describe("RuntimePolicy", func() {
 
 	It("forces every cloud stack resource to the configured replica count", func() {
 		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-			Trials:                 &fakeCloudTrialService{},
+			ComputeAccess:          &fakeComputeAccessService{},
 			StackLimits:            &fakeStackLimitStore{},
 			IsolationPolicyVersion: "policy-v1",
 			MaxStacks:              2,
@@ -145,10 +145,10 @@ var _ = Describe("RuntimePolicy", func() {
 	})
 })
 
-// fakeCloudTrialService keeps this test focused on runtime policy selection.
-// Delegation details are covered by cloud_trial_service_test.go.
-type fakeCloudTrialService struct {
-	existingAllocation *models.TrialAllocation
+// fakeComputeAccessService keeps this test focused on runtime policy selection.
+// Delegation details are covered by compute_access_service_test.go.
+type fakeComputeAccessService struct {
+	existingAccess *models.ComputeAccess
 }
 
 type fakeStackLimitStore struct {
@@ -163,7 +163,7 @@ func newCloudRuntimePolicyForTest() RuntimePolicy {
 
 func newCloudRuntimePolicyWithStoreForTest(stackLimits stores.StackLimitStore) RuntimePolicy {
 	return NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
-		Trials:                 &fakeCloudTrialService{},
+		ComputeAccess:          &fakeComputeAccessService{},
 		StackLimits:            stackLimits,
 		IsolationPolicyVersion: "policy-v1",
 		MaxStacks:              2,
@@ -178,22 +178,22 @@ func (f *fakeStackLimitStore) LockOrganisationAndGetUsageWithTx(_ context.Contex
 	return f.usage, nil
 }
 
-func (f *fakeCloudTrialService) AcquireWithTx(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
-	return &models.TrialAllocation{}, nil
+func (f *fakeComputeAccessService) ActivateWithTx(context.Context, string) (*models.ComputeAccess, *errors.ServiceError) {
+	return &models.ComputeAccess{}, nil
 }
 
-func (f *fakeCloudTrialService) RevalidateWithTx(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
-	return &models.TrialAllocation{}, nil
+func (f *fakeComputeAccessService) RequireWithTx(context.Context, string) (*models.ComputeAccess, *errors.ServiceError) {
+	return &models.ComputeAccess{}, nil
 }
 
-func (f *fakeCloudTrialService) RevalidateIfExistsWithTx(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
-	return f.existingAllocation, nil
+func (f *fakeComputeAccessService) AdmitComputeMutationWithTx(context.Context, string) (*models.ComputeAccess, *errors.ServiceError) {
+	return f.existingAccess, nil
 }
 
-func (f *fakeCloudTrialService) RequireActive(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
-	return &models.TrialAllocation{}, nil
+func (f *fakeComputeAccessService) RequireAccess(context.Context, string) (*models.ComputeAccess, *errors.ServiceError) {
+	return &models.ComputeAccess{}, nil
 }
 
-func (f *fakeCloudTrialService) EnsureNoAllocation(context.Context, string) *errors.ServiceError {
+func (f *fakeComputeAccessService) EnsureNoLease(context.Context, string) *errors.ServiceError {
 	return nil
 }

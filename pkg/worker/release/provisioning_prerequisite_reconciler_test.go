@@ -70,15 +70,15 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("fails closed before enqueueing when the allocation is inactive", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(errors.TrialInactive())
+		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(errors.ComputeAccessInactive())
 		result, err := newReconciler().Reconcile(ctx, release)
 		Expect(result).To(Equal(resultNil))
-		Expect(err).To(MatchError(ContainSubstring(errors.ErrorCodeTrialInactive)))
+		Expect(err).To(MatchError(ContainSubstring(errors.ErrorCodeComputeAccessInactive)))
 	})
 
 	It("fails closed before enqueueing when the cloud isolation version is absent", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
+		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		policy.EXPECT().IsolationPolicyVersion().Return("")
 
 		result, err := newReconciler().Reconcile(ctx, release)
@@ -88,7 +88,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("enqueues prerequisites and requeues until all are observed ready", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
+		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)
@@ -107,7 +107,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("uses only release snapshot volumes after the draft gains another volume", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
+		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns", Volumes: []*models.Volume{{ID: "volume-added-after-release"}}}, nil)
@@ -126,7 +126,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("requeues when tenant identity exists but guard policy readiness is absent", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
+		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		release.Snapshot.Volumes = nil
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
@@ -144,7 +144,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("rejects a current stack whose persisted identity differs from the release snapshot", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
+		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(&models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1"}, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "other-org", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)

@@ -50,7 +50,7 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 	if release.StackID != snapshot.ID {
 		return resultNil, fmt.Errorf("release %s stack identity does not match its snapshot", release.ID)
 	}
-	if err := r.runtimePolicy.RequireActiveAllocation(ctx, snapshot.OrganisationID); err != nil {
+	if err := r.runtimePolicy.RequireComputeAccess(ctx, snapshot.OrganisationID); err != nil {
 		return resultNil, err
 	}
 	expectedPolicyVersion := r.runtimePolicy.IsolationPolicyVersion()

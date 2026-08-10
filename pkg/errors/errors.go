@@ -111,10 +111,10 @@ type ServiceError struct {
 
 // Structured error detail codes.
 const (
-	ErrorCodeCredentialsRequired = "credentials_required"
-	ErrorCodeCredentialsInvalid  = "credentials_invalid"
-	ErrorCodeCapacityReached     = "capacity_reached"
-	ErrorCodeTrialInactive       = "trial_inactive"
+	ErrorCodeCredentialsRequired   = "credentials_required"
+	ErrorCodeCredentialsInvalid    = "credentials_invalid"
+	ErrorCodeCapacityReached       = "capacity_reached"
+	ErrorCodeComputeAccessInactive = "compute_access_inactive"
 )
 
 type CodeErrorDetails struct {
@@ -125,8 +125,8 @@ func CapacityReached() *ServiceError {
 	return ServiceUnavailable(ErrorCodeCapacityReached).WithDetails(CodeErrorDetails{Code: ErrorCodeCapacityReached})
 }
 
-func TrialInactive() *ServiceError {
-	return ServiceUnavailable(ErrorCodeTrialInactive).WithDetails(CodeErrorDetails{Code: ErrorCodeTrialInactive})
+func ComputeAccessInactive() *ServiceError {
+	return ServiceUnavailable(ErrorCodeComputeAccessInactive).WithDetails(CodeErrorDetails{Code: ErrorCodeComputeAccessInactive})
 }
 
 // Kinds of credential targets for structured credential errors.

@@ -393,7 +393,7 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 	resource.LifecycleConfig.RestartRequestTime = &now
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		admission, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, stack.OrganisationID)
+		admission, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, stack.OrganisationID)
 		if policyErr != nil {
 			return policyErr
 		}
@@ -439,7 +439,7 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 			if authoritative == nil {
 				return nil
 			}
-			admission, policyErr = s.runtimePolicy.AdmitMutationWithTx(txCtx, currentStack.OrganisationID)
+			admission, policyErr = s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, currentStack.OrganisationID)
 			if policyErr != nil {
 				return policyErr
 			}

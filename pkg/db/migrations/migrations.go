@@ -85,5 +85,5 @@ var MigrationList = []*gormigrate.Migration{
 	renameClusterPlatformToSharedCompute(),
 	addClusterDeletionTimestamp(),
 	dropWorkspaceUserTables(),
-	createTrialAllocations(),
+	createComputeAccess(),
 }

@@ -20,12 +20,12 @@ var _ = Describe("cloud runtime mutation admission", func() {
 		policy := NewMockRuntimePolicy(ctrl)
 		store := mocks.NewMockStackStore(ctrl)
 		svc := &stackService{stackStore: store, runtimePolicy: policy}
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{}, errors.TrialInactive())
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{}, errors.ComputeAccessInactive())
 
 		updated, serr := svc.InternalUpdateShellWithTx(context.Background(), &models.Stack{}, &models.Stack{ID: "stack-1", OrganisationID: "org-1"})
 
 		Expect(updated).To(BeNil())
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 	})
 
 	It("rejects connection creation inside its write transaction", func() {
@@ -38,12 +38,12 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			},
 		)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{}, errors.TrialInactive())
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{}, errors.ComputeAccessInactive())
 
 		created, serr := svc.createStackConnection(context.Background(), &models.Stack{ID: "stack-1", OrganisationID: "org-1"}, &models.StackConnection{})
 
 		Expect(created).To(BeNil())
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 	})
 
 	It("rejects resource restart before its direct Kubernetes path", func() {
@@ -62,12 +62,12 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			},
 		)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{}, errors.TrialInactive())
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{}, errors.ComputeAccessInactive())
 
 		updated, serr := svc.Restart(context.Background(), "stack-1", "web")
 
 		Expect(updated).To(BeNil())
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 	})
 
 	It("keeps an admitted pre-release resource restart out of Kubernetes", func() {
@@ -94,8 +94,8 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			},
 		)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), stack.OrganisationID).
-			Return(MutationAdmission{ReconcileCluster: false}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), stack.OrganisationID).
+			Return(ComputeMutationAdmission{ReconcileCluster: false}, nil)
 		resources.EXPECT().UpdateWithTx(gomock.Any(), resource.ID, gomock.Any(), stack).Return(resource, nil)
 
 		updated, serr := svc.Restart(context.Background(), stack.ID, resource.Name)
@@ -132,8 +132,8 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			},
 		)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), stack.OrganisationID).
-			Return(MutationAdmission{ReconcileCluster: true}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), stack.OrganisationID).
+			Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 		resources.EXPECT().UpdateWithTx(gomock.Any(), resource.ID, gomock.Any(), stack).Return(resource, nil)
 		stacks.EXPECT().LockByID(gomock.Any(), stack.ID).Return(nil)
 		stacks.EXPECT().GetByID(gomock.Any(), stack.ID).Return(&deleting, nil)
@@ -158,12 +158,12 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			},
 		)
 		store.EXPECT().GetByID(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1"}, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{}, errors.TrialInactive())
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{}, errors.ComputeAccessInactive())
 
 		updated, serr := svc.UpdateGitRepoSourceRevision(context.Background(), "volume-1", models.GitRepoRevision{Branch: "main"})
 
 		Expect(updated).To(BeNil())
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 	})
 
 	It("updates a pre-release volume revision in the database without touching Kubernetes", func() {
@@ -179,7 +179,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			},
 		)
 		store.EXPECT().GetByID(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1"}, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: false}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{ReconcileCluster: false}, nil)
 		store.EXPECT().UpdateGitRepoSourceRevisionWithTx(gomock.Any(), "volume-1", revision).Return(updated, nil)
 
 		result, serr := svc.UpdateGitRepoSourceRevision(context.Background(), "volume-1", revision)
@@ -210,7 +210,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			},
 		)
 		store.EXPECT().GetByID(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1"}, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil).Times(2)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{ReconcileCluster: true}, nil).Times(2)
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), "volume-1", "new-hash").Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		releaseID := "release-1"
@@ -260,7 +260,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			})
 		store.EXPECT().GetByID(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1"}, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), "volume-1", "new-hash").Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		releaseID := "release-a"
@@ -300,7 +300,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			})
 		store.EXPECT().GetByID(gomock.Any(), updated.ID).Return(updated, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), updated.OrganisationID).Return(MutationAdmission{ReconcileCluster: true}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), updated.OrganisationID).Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), updated.ID, revision.CurrentDirectoryHash).Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		releaseAID := "release-a"
@@ -339,7 +339,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			})
 		store.EXPECT().GetByID(gomock.Any(), updated.ID).Return(updated, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), updated.OrganisationID).Return(MutationAdmission{ReconcileCluster: true}, nil).Times(2)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), updated.OrganisationID).Return(ComputeMutationAdmission{ReconcileCluster: true}, nil).Times(2)
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), updated.ID, revision.CurrentDirectoryHash).Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		releaseAID := "release-a"
@@ -386,8 +386,8 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			})
 		store.EXPECT().GetByID(gomock.Any(), updated.ID).Return(updated, nil)
 		gomock.InOrder(
-			policy.EXPECT().AdmitMutationWithTx(gomock.Any(), updated.OrganisationID).Return(MutationAdmission{ReconcileCluster: true}, nil),
-			policy.EXPECT().AdmitMutationWithTx(gomock.Any(), updated.OrganisationID).Return(MutationAdmission{}, errors.TrialInactive()),
+			policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), updated.OrganisationID).Return(ComputeMutationAdmission{ReconcileCluster: true}, nil),
+			policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), updated.OrganisationID).Return(ComputeMutationAdmission{}, errors.ComputeAccessInactive()),
 		)
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), updated.ID, revision.CurrentDirectoryHash).Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
@@ -408,7 +408,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 		result, serr := svc.UpdateRemoteSourceRevision(context.Background(), updated.ID, revision)
 
 		Expect(result).To(BeNil())
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 	})
 
 	It("rechecks stack deletion under the fence before a volume Kubernetes write", func() {
@@ -432,7 +432,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			})
 		store.EXPECT().GetByID(gomock.Any(), updated.ID).Return(updated, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), updated.OrganisationID).Return(MutationAdmission{ReconcileCluster: true}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), updated.OrganisationID).Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), updated.ID, revision.CurrentDirectoryHash).Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		releaseID := "release-a"
@@ -481,7 +481,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			},
 		)
 		store.EXPECT().GetByID(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1"}, nil)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 		store.EXPECT().UpdateGitRepoSourceRevisionWithTx(gomock.Any(), "volume-1", revision).Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		references.EXPECT().IsReferentInUse(gomock.Any(), models.ReferentVolume, "volume-1").Return(true, []models.ResourceReference{{ReferentID: "volume-1"}}, nil)
@@ -506,11 +506,11 @@ var _ = Describe("cloud runtime mutation admission", func() {
 					return fn(ctx)
 				},
 			)
-			policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{}, errors.TrialInactive())
+			policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{}, errors.ComputeAccessInactive())
 
 			serr := invoke(svc)
 
-			Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+			Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 		},
 		Entry("backup", func(svc *postgresAddonService) *errors.ServiceError {
 			return svc.TriggerBackup(context.Background(), "addon-1")
@@ -542,7 +542,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 					return fn(ctx)
 				},
 			)
-			policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
+			policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 			expectLifecycleUpdate(store)
 			enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 
@@ -574,7 +574,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				return fn(ctx)
 			},
 		)
-		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
+		policy.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1").Return(ComputeMutationAdmission{ReconcileCluster: true}, nil)
 		store.EXPECT().SetHibernationWithTx(gomock.Any(), "addon-1", true).Return(nil, errors.GeneralError("update failed"))
 
 		serr := svc.TriggerHibernate(context.Background(), "addon-1", true)

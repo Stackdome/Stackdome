@@ -261,7 +261,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 				got.Replicas = &configuredReplicas
 			})
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 					Expect(release.Snapshot.Resources).To(HaveLen(1))
@@ -291,7 +291,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			gitClient.EXPECT().GetBranchHeadSHA(ctx, repoURL, "main").Return(&gitclient.RepoResult{HeadSHA: "commit-x"}, nil)
 			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 					Expect(release.Snapshot.Volumes[0].VolumeSource.GitRepoSource.Revision).To(Equal(models.GitRepoRevision{Branch: "main", Commit: "commit-x"}))
@@ -313,7 +313,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 		It("records release_created inside the creation transaction as its final act", func() {
 			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
@@ -327,7 +327,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 		It("fails creation and hands back no release when recording release_created fails", func() {
 			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(errors.GeneralError("event insert failed"))
@@ -340,7 +340,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 
 		It("rejects a first release when cloud capacity is full", func() {
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(errors.CapacityReached())
+			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(errors.CapacityReached())
 
 			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
 			Expect(got).To(BeNil())
@@ -351,7 +351,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			stackSvc.EXPECT().InternalGetStack(ctx, createEventsStackID).Return(stack, nil)
 			created := &models.StackRelease{ID: "rel-preview", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
@@ -379,7 +379,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 		It("records release_created inside the rollback transaction", func() {
 			created := &models.StackRelease{ID: "rel-2", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitRollbackWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().RequireComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
@@ -392,11 +392,11 @@ var _ = Describe("stackReleaseService release creation records release_created",
 
 		It("refuses rollback after the cloud trial expires without renewing it", func() {
 			runTxInline()
-			runtimePolicy.EXPECT().AdmitRollbackWithTx(ctx, createEventsOrgID).Return(errors.TrialInactive())
+			runtimePolicy.EXPECT().RequireComputeAccessWithTx(ctx, createEventsOrgID).Return(errors.ComputeAccessInactive())
 
 			got, serr := svc.RollbackRelease(ctx, createEventsStackID, rollbackFromRelID)
 			Expect(got).To(BeNil())
-			Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+			Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 		})
 	})
 

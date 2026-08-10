@@ -1,10 +1,10 @@
 # Stackdome Cloud alpha runtime policy. Set RUNTIME_MODE=stackdome_cloud and
 # STACKDOME_CLOUD_CONFIG to this file's deployed path.
-capacity:
-  # An allocation starts when an organization first deploys, not at signup.
-  # Expired allocations continue consuming capacity until cleanup changes state.
-  maxActiveTrialAllocations: 200
-  allocationTTL: 6h
+access:
+  # Platform-wide ceiling on shared-compute leases not yet cleaned.
+  maxActiveSharedComputeLeases: 200
+  # Granted when an organization first releases, not when it signs up.
+  trialEntitlementDuration: 6h
 
 limits:
   maxStacksPerOrganization: 2

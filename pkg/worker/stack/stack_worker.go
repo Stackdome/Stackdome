@@ -98,9 +98,9 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 			return worker.Result{}, nil
 		}
 		releaseID = authoritativeRelease.ID
-		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
-				log.Debug(ctx, "skipping draft provisioning without an active trial allocation")
+		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
+				log.Debug(ctx, "skipping provisioning without active compute access")
 				return worker.Result{}, nil
 			}
 			return worker.Result{}, admissionErr
@@ -162,8 +162,8 @@ func (w *stackWorker) authorizeMutation(stackID, releaseID string) worker.Mutati
 		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
 			return worker.ErrMutationNotAuthorized
 		}
-		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
 				return worker.ErrMutationNotAuthorized
 			}
 			return admissionErr

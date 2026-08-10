@@ -129,7 +129,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 			stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(&deleting, nil),
 		)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil)
+		policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil)
 		reconciler.EXPECT().Name().Return("write-boundary")
 		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, _ *models.Stack, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
@@ -164,8 +164,8 @@ var _ = Describe("StackWorker cloud admission", func() {
 		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		gomock.InOrder(
-			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil),
-			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(errors.TrialInactive()),
+			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil),
+			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(errors.ComputeAccessInactive()),
 		)
 		reconciler.EXPECT().Name().Return("write-boundary")
 		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).DoAndReturn(
@@ -187,7 +187,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 
 type activeWorkerRuntimePolicy struct{ inactiveWorkerRuntimePolicy }
 
-func (*activeWorkerRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
+func (*activeWorkerRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
@@ -200,17 +200,17 @@ func (*inactiveWorkerRuntimePolicy) DraftProvisioningMode() services.Provisionin
 	return services.ProvisioningModeDatabaseOnly
 }
 func (*inactiveWorkerRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
-func (*inactiveWorkerRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
+func (*inactiveWorkerRuntimePolicy) ActivateComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
-func (*inactiveWorkerRuntimePolicy) AdmitRollbackWithTx(context.Context, string) *errors.ServiceError {
+func (*inactiveWorkerRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
-func (*inactiveWorkerRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
-	return errors.TrialInactive()
+func (*inactiveWorkerRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
+	return errors.ComputeAccessInactive()
 }
-func (*inactiveWorkerRuntimePolicy) AdmitMutationWithTx(context.Context, string) (services.MutationAdmission, *errors.ServiceError) {
-	return services.MutationAdmission{}, nil
+func (*inactiveWorkerRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (services.ComputeMutationAdmission, *errors.ServiceError) {
+	return services.ComputeMutationAdmission{}, nil
 }
 func (*inactiveWorkerRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
 	return nil

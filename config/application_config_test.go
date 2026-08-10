@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/models"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -49,9 +50,9 @@ var _ = Describe("Runtime mode configuration", func() {
 	It("loads and validates the typed Stackdome Cloud YAML", func() {
 		path := filepath.Join(GinkgoT().TempDir(), "cloud.yaml")
 		Expect(os.WriteFile(path, []byte(`
-capacity:
-  maxActiveTrialAllocations: 200
-  allocationTTL: 6h
+access:
+  maxActiveSharedComputeLeases: 200
+  trialEntitlementDuration: 6h
 limits:
   maxStacksPerOrganization: 2
   maxStackResourcesPerOrganization: 6
@@ -94,8 +95,8 @@ signup:
 		Expect(cfg.LoadStackdomeCloudConfig()).To(Succeed())
 
 		Expect(cfg.IsStackdomeCloud()).To(BeTrue())
-		Expect(cfg.StackdomeCloud.Capacity.MaxActiveTrialAllocations).To(Equal(200))
-		Expect(cfg.StackdomeCloud.Capacity.AllocationTTL.Duration()).To(Equal(6 * time.Hour))
+		Expect(cfg.StackdomeCloud.Access.MaxActiveSharedComputeLeases).To(Equal(200))
+		Expect(cfg.StackdomeCloud.Access.TrialEntitlementDuration.Duration()).To(Equal(6 * time.Hour))
 		Expect(cfg.StackdomeCloud.Limits.MaxStackResourcesPerOrganization).To(Equal(int64(6)))
 		Expect(cfg.StackdomeCloud.Isolation.PolicyVersion).To(Equal("policy-v1"))
 		Expect(cfg.StackdomeCloud.Registry.MaxActiveRegistries).To(Equal(200))
@@ -125,7 +126,7 @@ signup:
 	It("parses the checked-in Stackdome Cloud example", func() {
 		cloudConfig, err := LoadStackdomeCloudConfig("stackdome_cloud.example.yaml")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(cloudConfig.Capacity.MaxActiveTrialAllocations).To(Equal(200))
+		Expect(cloudConfig.Access.MaxActiveSharedComputeLeases).To(Equal(200))
 		Expect(cloudConfig.Isolation.PolicyVersion).To(Equal("v1"))
 		Expect(cloudConfig.Registry.MaxActiveRegistries).To(Equal(200))
 		Expect(cloudConfig.Signup.ClientIPSource).To(Equal(StackdomeCloudClientIPSourceCloudflare))
@@ -335,7 +336,7 @@ var _ = Describe("Compute mode configuration", func() {
 		cfg.StackdomeCloud = &StackdomeCloudConfig{}
 
 		Expect(cfg.Validate()).To(MatchError(
-			"validate Stackdome Cloud config: capacity.maxActiveTrialAllocations must be greater than zero",
+			"validate Stackdome Cloud config: access.maxActiveSharedComputeLeases must be greater than zero",
 		))
 	})
 })
@@ -368,11 +369,11 @@ var _ = Describe("Shared compute environment", func() {
 
 func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 	return StackdomeCloudConfig{
-		Capacity: StackdomeCloudCapacityConfig{
-			MaxActiveTrialAllocations: 200,
-			AllocationTTL:             ConfigDuration(6 * time.Hour),
+		Access: StackdomeCloudComputeAccessConfig{
+			MaxActiveSharedComputeLeases: 200,
+			TrialEntitlementDuration:     ConfigDuration(6 * time.Hour),
 		},
-		Limits: StackdomeCloudLimitsConfig{
+		Limits: models.ComputeLimits{
 			MaxStacksPerOrganization:         2,
 			MaxStackResourcesPerOrganization: 6,
 			ReplicasPerStackResource:         1,

@@ -215,7 +215,7 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if admissionErr := s.runtimePolicy.AdmitFirstReleaseWithTx(txCtx, stack.OrganisationID); admissionErr != nil {
+		if admissionErr := s.runtimePolicy.ActivateComputeAccessWithTx(txCtx, stack.OrganisationID); admissionErr != nil {
 			return admissionErr
 		}
 		var e *errors.ServiceError
@@ -325,7 +325,7 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if admissionErr := s.runtimePolicy.AdmitRollbackWithTx(txCtx, stack.OrganisationID); admissionErr != nil {
+		if admissionErr := s.runtimePolicy.RequireComputeAccessWithTx(txCtx, stack.OrganisationID); admissionErr != nil {
 			return admissionErr
 		}
 		var e *errors.ServiceError

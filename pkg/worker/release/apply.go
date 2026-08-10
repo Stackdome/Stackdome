@@ -209,8 +209,8 @@ func (r *applyReconciler) authorizeMutation(release *models.StackRelease) worker
 			return serr
 		}
 		if latest != nil && latest.ID == release.ID && latest.IsAuthoritativeWorkloadRelease(stack, latest) {
-			if admissionErr := r.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
-				if admissionErr.Reason == serviceerrors.ErrorCodeTrialInactive {
+			if admissionErr := r.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
+				if admissionErr.Reason == serviceerrors.ErrorCodeComputeAccessInactive {
 					return errReleaseSuperseded
 				}
 				return admissionErr

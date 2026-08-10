@@ -151,8 +151,8 @@ var _ = Describe("PostgresAddonWorker", func() {
 		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(release, nil).Times(3)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		gomock.InOrder(
-			policy.EXPECT().RequireActiveAllocation(ctx, addon.OrganisationID).Return(nil),
-			policy.EXPECT().RequireActiveAllocation(ctx, addon.OrganisationID).Return(errors.TrialInactive()),
+			policy.EXPECT().RequireComputeAccess(ctx, addon.OrganisationID).Return(nil),
+			policy.EXPECT().RequireComputeAccess(ctx, addon.OrganisationID).Return(errors.ComputeAccessInactive()),
 		)
 		w.releaseService = releases
 		w.stackService = stacks
@@ -214,7 +214,7 @@ func (*authorizingAddonReconciler) Reconcile(ctx context.Context, _ *models.Post
 
 type activeAddonRuntimePolicy struct{ inactiveAddonRuntimePolicy }
 
-func (*activeAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
+func (*activeAddonRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
@@ -233,17 +233,17 @@ func (*inactiveAddonRuntimePolicy) DraftProvisioningMode() services.Provisioning
 	return services.ProvisioningModeDatabaseOnly
 }
 func (*inactiveAddonRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
-func (*inactiveAddonRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
+func (*inactiveAddonRuntimePolicy) ActivateComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
-func (*inactiveAddonRuntimePolicy) AdmitRollbackWithTx(context.Context, string) *errors.ServiceError {
+func (*inactiveAddonRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
-func (*inactiveAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
-	return errors.TrialInactive()
+func (*inactiveAddonRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
+	return errors.ComputeAccessInactive()
 }
-func (*inactiveAddonRuntimePolicy) AdmitMutationWithTx(context.Context, string) (services.MutationAdmission, *errors.ServiceError) {
-	return services.MutationAdmission{}, nil
+func (*inactiveAddonRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (services.ComputeMutationAdmission, *errors.ServiceError) {
+	return services.ComputeMutationAdmission{}, nil
 }
 func (*inactiveAddonRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
 	return nil

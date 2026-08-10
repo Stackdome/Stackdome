@@ -15,15 +15,18 @@ const (
 	ProvisioningModeDatabaseOnly ProvisioningMode = "database_only"
 )
 
+// RuntimePolicy keeps mode-specific access and limits out of core services.
+// Cloud enforces them here while self-hosted remains eager and unrestricted.
+//
 //go:generate mockgen -source=runtime_policy.go -destination=runtime_policy_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
 type RuntimePolicy interface {
 	OrganisationProvisioningMode() ProvisioningMode
 	DraftProvisioningMode() ProvisioningMode
 	IsolationPolicyVersion() string
-	AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError
-	AdmitRollbackWithTx(ctx context.Context, organisationID string) *errors.ServiceError
-	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
-	AdmitMutationWithTx(ctx context.Context, organisationID string) (MutationAdmission, *errors.ServiceError)
+	ActivateComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError
+	RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError
+	RequireComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError
+	AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (ComputeMutationAdmission, *errors.ServiceError)
 	AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError
 	ApplyStackResourceDefaults(resource *models.StackResource)
@@ -45,9 +48,9 @@ type StackMutation struct {
 	DesiredResourceCount int64
 }
 
-// MutationAdmission describes the side effects allowed by the allocation row
-// observed and locked in the mutation transaction.
-type MutationAdmission struct {
+// ComputeMutationAdmission carries the runtime side effects authorized by the
+// entitlement and lease rows locked in the mutation transaction.
+type ComputeMutationAdmission struct {
 	ReconcileCluster bool
 }
 
@@ -69,20 +72,20 @@ func (selfHostedRuntimePolicy) IsolationPolicyVersion() string {
 	return ""
 }
 
-func (selfHostedRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
+func (selfHostedRuntimePolicy) ActivateComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedRuntimePolicy) AdmitRollbackWithTx(context.Context, string) *errors.ServiceError {
+func (selfHostedRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
+func (selfHostedRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedRuntimePolicy) AdmitMutationWithTx(context.Context, string) (MutationAdmission, *errors.ServiceError) {
-	return MutationAdmission{ReconcileCluster: true}, nil
+func (selfHostedRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (ComputeMutationAdmission, *errors.ServiceError) {
+	return ComputeMutationAdmission{ReconcileCluster: true}, nil
 }
 
 func (selfHostedRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
@@ -96,7 +99,7 @@ func (selfHostedRuntimePolicy) AdmitStackMutationWithTx(context.Context, StackMu
 func (selfHostedRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}
 
 type stackdomeCloudRuntimePolicy struct {
-	trials                 CloudTrialService
+	computeAccess          ComputeAccessService
 	stackLimits            stores.StackLimitStore
 	isolationPolicyVersion string
 	maxStacks              int64
@@ -105,7 +108,7 @@ type stackdomeCloudRuntimePolicy struct {
 }
 
 type StackdomeCloudRuntimePolicySpec struct {
-	Trials                 CloudTrialService
+	ComputeAccess          ComputeAccessService
 	StackLimits            stores.StackLimitStore
 	IsolationPolicyVersion string
 	MaxStacks              int64
@@ -127,7 +130,7 @@ func NewStackdomeCloudRuntimePolicy(spec StackdomeCloudRuntimePolicySpec) Runtim
 		panic("services.NewStackdomeCloudRuntimePolicy: Replicas must be greater than zero")
 	}
 	return &stackdomeCloudRuntimePolicy{
-		trials:                 spec.Trials,
+		computeAccess:          spec.ComputeAccess,
 		stackLimits:            spec.StackLimits,
 		isolationPolicyVersion: spec.IsolationPolicyVersion,
 		maxStacks:              spec.MaxStacks,
@@ -148,32 +151,32 @@ func (p *stackdomeCloudRuntimePolicy) IsolationPolicyVersion() string {
 	return p.isolationPolicyVersion
 }
 
-func (p *stackdomeCloudRuntimePolicy) AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.trials.AcquireWithTx(ctx, organisationID)
+func (p *stackdomeCloudRuntimePolicy) ActivateComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
+	_, serr := p.computeAccess.ActivateWithTx(ctx, organisationID)
 	return serr
 }
 
-func (p *stackdomeCloudRuntimePolicy) AdmitRollbackWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.trials.RevalidateWithTx(ctx, organisationID)
+func (p *stackdomeCloudRuntimePolicy) RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
+	_, serr := p.computeAccess.RequireWithTx(ctx, organisationID)
 	return serr
 }
 
-func (p *stackdomeCloudRuntimePolicy) RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.trials.RequireActive(ctx, organisationID)
+func (p *stackdomeCloudRuntimePolicy) RequireComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError {
+	_, serr := p.computeAccess.RequireAccess(ctx, organisationID)
 	return serr
 }
 
-func (p *stackdomeCloudRuntimePolicy) AdmitMutationWithTx(ctx context.Context, organisationID string) (MutationAdmission, *errors.ServiceError) {
-	allocation, serr := p.trials.RevalidateIfExistsWithTx(ctx, organisationID)
-	return MutationAdmission{ReconcileCluster: allocation != nil}, serr
+func (p *stackdomeCloudRuntimePolicy) AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (ComputeMutationAdmission, *errors.ServiceError) {
+	access, serr := p.computeAccess.AdmitComputeMutationWithTx(ctx, organisationID)
+	return ComputeMutationAdmission{ReconcileCluster: access != nil}, serr
 }
 
 func (p *stackdomeCloudRuntimePolicy) AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
-	return p.trials.EnsureNoAllocation(ctx, organisationID)
+	return p.computeAccess.EnsureNoLease(ctx, organisationID)
 }
 
 func (p *stackdomeCloudRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
-	if _, serr := p.AdmitMutationWithTx(ctx, mutation.OrganisationID); serr != nil {
+	if _, serr := p.AdmitComputeMutationWithTx(ctx, mutation.OrganisationID); serr != nil {
 		return serr
 	}
 	excludedStackID := ""

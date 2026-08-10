@@ -548,7 +548,7 @@ var _ = Describe("ApplyReconciler", func() {
 		relSvc := NewMockreleaseService(ctrl)
 		relSvc.EXPECT().InternalGetLatestByStackID(gomock.Any(), stack.ID).Return(release, nil)
 		policy := NewMockruntimePolicy(ctrl)
-		policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(errors.TrialInactive())
+		policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(errors.ComputeAccessInactive())
 		r := &applyReconciler{releaseService: relSvc, stackService: stackSvc, runtimePolicy: policy}
 
 		err := r.authorizeMutation(release)(context.Background())

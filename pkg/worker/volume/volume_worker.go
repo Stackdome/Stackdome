@@ -84,8 +84,8 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		if !authorized {
 			return worker.Result{}, nil
 		}
-		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
 				return worker.Result{}, nil
 			}
 			return worker.Result{}, admissionErr
@@ -274,8 +274,8 @@ func (w *volumeWorker) releaseRemainsAuthoritative(ctx context.Context, releaseI
 	if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
 		return false, nil
 	}
-	if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
-		if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+	if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
+		if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
 			return false, nil
 		}
 		return false, admissionErr

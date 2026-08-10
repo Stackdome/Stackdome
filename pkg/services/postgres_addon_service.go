@@ -233,7 +233,7 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 
 	var createdPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, postgresAddon.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, postgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		// Create namespace
@@ -336,7 +336,7 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 
 	var updatedPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, existingPostgresAddon.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, existingPostgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		// Update PostgreSQL addon within transaction
@@ -526,7 +526,7 @@ func (s *postgresAddonService) RequestPostgresAddonBackup(ctx context.Context, i
 		return getErr
 	}
 	return s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, addon.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, addon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		now := time.Now().UTC()
@@ -575,7 +575,7 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 	}
 
 	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, addon.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, addon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		now := time.Now()
@@ -602,7 +602,7 @@ func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, 
 	}
 
 	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, postgresAddon.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, postgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		_, updateErr := s.postgresAddonStore.SetHibernationWithTx(txCtx, id, enabled)
@@ -629,7 +629,7 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 	}
 
 	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, postgresAddon.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, postgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		_, updateErr := s.postgresAddonStore.SetFencingWithTx(txCtx, id, enabled)

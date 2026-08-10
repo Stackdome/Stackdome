@@ -98,8 +98,8 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 		if !authorized {
 			return worker.Result{}, nil
 		}
-		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, addon.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, addon.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
 				return worker.Result{}, nil
 			}
 			return worker.Result{}, admissionErr
@@ -206,8 +206,8 @@ func (w *postgresAddonWorker) authorizeMutation(addonID, releaseID string) worke
 		if !authorized {
 			return worker.ErrMutationNotAuthorized
 		}
-		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, addon.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, addon.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
 				return worker.ErrMutationNotAuthorized
 			}
 			return admissionErr

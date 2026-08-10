@@ -125,9 +125,9 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		gomock.InOrder(
-			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil),
-			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil),
-			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(errors.TrialInactive()),
+			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil),
+			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil),
+			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(errors.ComputeAccessInactive()),
 		)
 		clusters.EXPECT().GetClient(stack.ClusterID).Return(clusterClient, nil)
 		w := &volumeWorker{
@@ -213,7 +213,7 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 
 type activeVolumeRuntimePolicy struct{ inactiveVolumeRuntimePolicy }
 
-func (*activeVolumeRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
+func (*activeVolumeRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
@@ -226,17 +226,17 @@ func (*inactiveVolumeRuntimePolicy) DraftProvisioningMode() services.Provisionin
 	return services.ProvisioningModeDatabaseOnly
 }
 func (*inactiveVolumeRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
-func (*inactiveVolumeRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
+func (*inactiveVolumeRuntimePolicy) ActivateComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
-func (*inactiveVolumeRuntimePolicy) AdmitRollbackWithTx(context.Context, string) *errors.ServiceError {
+func (*inactiveVolumeRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
-func (*inactiveVolumeRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
-	return errors.TrialInactive()
+func (*inactiveVolumeRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
+	return errors.ComputeAccessInactive()
 }
-func (*inactiveVolumeRuntimePolicy) AdmitMutationWithTx(context.Context, string) (services.MutationAdmission, *errors.ServiceError) {
-	return services.MutationAdmission{}, nil
+func (*inactiveVolumeRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (services.ComputeMutationAdmission, *errors.ServiceError) {
+	return services.ComputeMutationAdmission{}, nil
 }
 func (*inactiveVolumeRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
 	return nil
