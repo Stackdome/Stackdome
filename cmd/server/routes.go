@@ -332,11 +332,13 @@ func (s apiServer) routes() *mux.Router {
 	projectResourceRouter.HandleFunc("/object-stores/{id}", objectStoreHandler.Delete).Methods(http.MethodDelete)
 
 	// Workspace users (project-scoped)
-	projectResourceRouter.HandleFunc("/workspace-users", workspaceUserHandler.Create).Methods(http.MethodPost)
-	projectResourceRouter.HandleFunc("/workspace-users/current", workspaceUserHandler.Current).Methods(http.MethodGet)
-	projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Get).Methods(http.MethodGet)
-	projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
-	projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
+	if s.environment.Environment().Config.WorkspaceUsersEnabled() {
+		projectResourceRouter.HandleFunc("/workspace-users", workspaceUserHandler.Create).Methods(http.MethodPost)
+		projectResourceRouter.HandleFunc("/workspace-users/current", workspaceUserHandler.Current).Methods(http.MethodGet)
+		projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Get).Methods(http.MethodGet)
+		projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Update).Methods(http.MethodPut)
+		projectResourceRouter.HandleFunc("/workspace-users/{id}", workspaceUserHandler.Delete).Methods(http.MethodDelete)
+	}
 
 	// Preview configs (project-scoped)
 	previewConfigHandler := handlers.NewStackPreviewConfigHandler(handlers.StackPreviewConfigHandlerSpec{

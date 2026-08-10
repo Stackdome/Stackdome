@@ -30,6 +30,7 @@ type ServerManager struct {
 func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.DatabaseConfig, logger logr.Logger) *ServerManager {
 	return &ServerManager{
 		config: &config.ApplicationConfig{
+			RuntimeMode: config.RuntimeModeSelfHosted,
 			Server: &config.ServerConfig{
 				Hostname:    "localhost",
 				BindAddress: fmt.Sprintf("0.0.0.0:%d", ServerPort),

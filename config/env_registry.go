@@ -4,10 +4,13 @@ import "github.com/Stackdome/stackdome/pkg/models"
 
 var (
 	// Application
-	EnvJWTSecret     = StringVar("JWT_SECRET", "JWT token signing secret", nil, true)
-	EnvLogLevel      = StringVar("LOG_LEVEL", "Logging level (debug, info, warn, error)", ptr("info"), false)
-	EnvLogFormat     = StringVar("LOG_FORMAT", "Log output format (json or text)", ptr("json"), false)
-	EnvEncryptionKey = StringVar("ENCRYPTION_KEY", "Master encryption key (64-1024 chars)", nil, true)
+	EnvJWTSecret            = StringVar("JWT_SECRET", "JWT token signing secret", nil, true)
+	EnvLogLevel             = StringVar("LOG_LEVEL", "Logging level (debug, info, warn, error)", ptr("info"), false)
+	EnvLogFormat            = StringVar("LOG_FORMAT", "Log output format (json or text)", ptr("json"), false)
+	EnvEncryptionKey        = StringVar("ENCRYPTION_KEY", "Master encryption key (64-1024 chars)", nil, true)
+	EnvRuntimeMode          = StringVar("RUNTIME_MODE", "Runtime mode (self_hosted or stackdome_cloud)", ptr(string(RuntimeModeSelfHosted)), false)
+	EnvStackdomeCloudConfig = StringVar("STACKDOME_CLOUD_CONFIG", "Path to the Stackdome Cloud runtime configuration", nil, false)
+	EnvTurnstileSecret      = StringVar("TURNSTILE_SECRET", "Cloudflare Turnstile secret for signup verification", nil, false)
 	// GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are used for GitHub OAuth login
 	EnvGitHubClientID     = StringVar("GITHUB_CLIENT_ID", "GitHub OAuth app client ID", nil, false)
 	EnvGitHubClientSecret = StringVar("GITHUB_CLIENT_SECRET", "GitHub OAuth app client secret", nil, false)

@@ -4,6 +4,7 @@ import "github.com/Stackdome/stackdome/pkg/models"
 
 var (
 	ErrIncompleteClusterConfig         = &ConfigError{"PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
+	ErrPlatformProvisioningRequired    = &ConfigError{"platform provisioning is required in stackdome_cloud runtime mode"}
 	ErrClusterDomainMismatch           = &ConfigError{"PLATFORM_CLUSTER_* and PLATFORM_BASE_DOMAIN must be set together"}
 	ErrPlatformEmailRequired           = &ConfigError{"PLATFORM_EMAIL is required when a platform cluster is configured"}
 	ErrPlatformCloudflareTokenRequired = &ConfigError{"PLATFORM_DNS_CLOUDFLARE_API_TOKEN is required when a platform cluster is configured"}
@@ -18,6 +19,13 @@ const (
 	ACMEProductionDirectoryURL  = "https://acme-v02.api.letsencrypt.org/directory"
 	ACMEStagingDirectoryURL     = "https://acme-staging-v02.api.letsencrypt.org/directory"
 )
+
+func ValidateStackdomeCloudPlatformProvisioning(cluster *ClusterConfig, bootstrap *BootstrapConfig) error {
+	if !cluster.AnySet() && bootstrap.BaseDomain == "" {
+		return ErrPlatformProvisioningRequired
+	}
+	return ValidatePlatformProvisioning(cluster, bootstrap)
+}
 
 type ConfigError struct {
 	msg string
@@ -78,7 +86,7 @@ func NewBootstrapConfig() *BootstrapConfig {
 	return &BootstrapConfig{}
 }
 
-func (b *BootstrapConfig) LoadEnvVariables() {
+func (b *BootstrapConfig) LoadEnvVariables() error {
 	if val, ok := EnvPlatformEmail.Lookup(); ok {
 		b.Email = val
 	}
@@ -106,4 +114,6 @@ func (b *BootstrapConfig) LoadEnvVariables() {
 	if val, ok := EnvPlatformOrgRegistryStorageClass.Lookup(); ok {
 		b.OrgRegistry.StorageClass = val
 	}
+
+	return nil
 }

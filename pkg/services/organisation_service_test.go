@@ -6,6 +6,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -165,6 +166,54 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		org, serr := svc.InternalCreate(ctx, tenantOrg())
 		Expect(org).To(BeNil())
 		Expect(serr).To(Equal(boom))
+	})
+})
+
+var _ = Describe("OrganisationService custom-domain admission", func() {
+	It("rejects domains before creating an organisation when the runtime disables them", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		store := mocks.NewMockOrganisationStore(ctrl)
+		svc := &organisationService{
+			organisationStore:     store,
+			customDomainsDisabled: true,
+			logger:                logger.NewLogger(),
+		}
+
+		created, serr := svc.InternalCreate(context.Background(), &models.Organisation{
+			Name:    "Acme",
+			Domains: []*models.OrganisationDomain{{Domain: "example.com"}},
+		})
+
+		Expect(created).To(BeNil())
+		Expect(serr.Reason).To(Equal(customDomainsDisabledInRuntime))
+	})
+
+	It("rejects domain changes before updating an organisation", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		store := mocks.NewMockOrganisationStore(ctrl)
+		domains := mocks.NewMockOrganisationDomainsService(ctrl)
+		permissions := mocks.NewMockPermissionService(ctrl)
+		ctx := context.Background()
+		existing := &models.Organisation{ID: "org-1", Name: "Acme"}
+		permissions.EXPECT().Check(ctx, existing.ID, auth.ResourceOrgs, existing.ID, auth.ActionWrite).Return(nil)
+		permissions.EXPECT().Check(ctx, existing.ID, auth.ResourceOrgs, existing.ID, auth.ActionRead).Return(nil)
+		store.EXPECT().Get(ctx, existing.ID).Return(existing, nil)
+		domains.EXPECT().ListByOrganisationID(ctx, existing.ID).Return(nil, nil)
+		svc := &organisationService{
+			organisationStore:         store,
+			organisationDomainService: domains,
+			permissions:               permissions,
+			customDomainsDisabled:     true,
+			logger:                    logger.NewLogger(),
+		}
+
+		updated, serr := svc.Update(ctx, existing.ID, &models.Organisation{
+			Name:    existing.Name,
+			Domains: []*models.OrganisationDomain{{Domain: "example.com"}},
+		})
+
+		Expect(updated).To(BeNil())
+		Expect(serr.Reason).To(Equal(customDomainsDisabledInRuntime))
 	})
 })
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"net/http"
 	"os"
 	"regexp"
 	"sort"
@@ -12,6 +13,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/Stackdome/stackdome/cmd/environment"
+	"github.com/Stackdome/stackdome/config"
 )
 
 const openAPISpecPath = "../../config/openapi/stackdome_api.yaml"
@@ -100,6 +102,61 @@ var _ = Describe("route/OpenAPI parity", func() {
 	It("has a registered route for every OpenAPI operation", func() {
 		Expect(missing(specEndpoints, registeredEndpoints, specOperationsWithoutRoute)).To(BeEmpty(),
 			"spec operations have no route. Register the route, or drop the operation from %s.", openAPISpecPath)
+	})
+})
+
+var _ = Describe("workspace-user route registration", func() {
+	const workspaceUsersPath = "/api/v1/organizations/{org_id}/projects/{project_name}/workspace-users"
+
+	registeredEndpoints := func(stackdomeCloudRuntime, workspaceUsersEnabled bool) []string {
+		cfg := config.NewApplicationConfig()
+		if stackdomeCloudRuntime {
+			cfg.RuntimeMode = config.RuntimeModeStackdomeCloud
+			cfg.StackdomeCloud = &config.StackdomeCloudConfig{
+				Features: config.StackdomeCloudFeaturesConfig{WorkspaceUsers: workspaceUsersEnabled},
+			}
+		}
+
+		router := apiServer{
+			environment: environment.NewTestEnvironment(nil, environment.WithApplicationConfig(cfg)),
+		}.routes()
+		var endpoints []string
+		Expect(router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
+			path, err := route.GetPathTemplate()
+			if err != nil || !strings.HasPrefix(path, workspaceUsersPath) {
+				return nil
+			}
+			methods, methodErr := route.GetMethods()
+			if methodErr != nil {
+				return methodErr
+			}
+			for _, method := range methods {
+				endpoints = append(endpoints, method+" "+path)
+			}
+			return nil
+		})).To(Succeed())
+		sort.Strings(endpoints)
+		return endpoints
+	}
+
+	It("keeps the self-hosted routes enabled by default", func() {
+		expected := []string{
+			http.MethodPost + " " + workspaceUsersPath,
+			http.MethodGet + " " + workspaceUsersPath + "/current",
+			http.MethodGet + " " + workspaceUsersPath + "/{id}",
+			http.MethodPut + " " + workspaceUsersPath + "/{id}",
+			http.MethodDelete + " " + workspaceUsersPath + "/{id}",
+		}
+		sort.Strings(expected)
+		Expect(registeredEndpoints(false, false)).To(Equal(expected))
+	})
+
+	It("omits the routes when the Stackdome Cloud feature is disabled", func() {
+		Expect(registeredEndpoints(true, false)).To(BeEmpty())
+	})
+
+	It("registers the routes when the Stackdome Cloud feature is enabled", func() {
+		Expect(registeredEndpoints(true, true)).ToNot(BeEmpty())
 	})
 })
 

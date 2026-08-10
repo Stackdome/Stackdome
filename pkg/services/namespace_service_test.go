@@ -12,17 +12,29 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
+func enableCloudNamespaceMode(service *namespaceService) {
+	service.stackdomeCloudRuntime = true
+}
+
+func expectCloudNamespaceLabels(namespace *models.Namespace, role string) {
+	labels := namespace.Labels.ToMap()
+	Expect(labels).To(HaveKeyWithValue(models.ManagedByLabelKey, models.ManagedByLabelValue))
+	Expect(labels).To(HaveKeyWithValue(models.CloudTenantLabelKey, models.CloudTenantLabelValue))
+	Expect(labels).To(HaveKeyWithValue(models.OrganizationIDLabelKey, namespace.OrganisationID))
+	Expect(labels).To(HaveKeyWithValue(models.NamespaceRoleLabelKey, role))
+}
+
 type fakeAddon struct {
 	addonType string
 	addonName string
 }
 
+const addonType = "postgres"
+
 func (f fakeAddon) Type() string      { return f.addonType }
 func (f fakeAddon) AddonName() string { return f.addonName }
 
 var _ = Describe("namespaceNameForAddon", func() {
-	const addonType = "postgres"
-
 	It("truncates a max-length name to a valid RFC 1123 label keeping the entropy floor", func() {
 		addon := fakeAddon{
 			addonType: addonType,
@@ -70,6 +82,51 @@ var _ = Describe("namespaceNameForAddon", func() {
 
 		Expect(len(shortSuffix)).To(BeNumerically(">", len(maxSuffix)))
 		Expect(len(shortSuffix)).To(BeNumerically(">=", models.MinNamespaceUUIDSuffixLength))
+	})
+})
+
+var _ = Describe("cloud namespace labels", func() {
+	It("labels stack namespaces for the private guard", func() {
+		service := &namespaceService{}
+		enableCloudNamespaceMode(service)
+
+		namespace, err := service.PrepareNamespaceForStack(context.Background(), &models.Stack{
+			Name: "api", OrganisationID: "organisation-1",
+		})
+
+		Expect(err).To(BeNil())
+		expectCloudNamespaceLabels(namespace, models.NamespaceRoleStack)
+	})
+
+	It("labels addon namespaces for the private guard", func() {
+		service := &namespaceService{}
+		enableCloudNamespaceMode(service)
+
+		namespace, err := service.PrepareNamespaceForAddon(
+			context.Background(), fakeAddon{addonType: addonType, addonName: "database"}, "organisation-1",
+		)
+
+		Expect(err).To(BeNil())
+		expectCloudNamespaceLabels(namespace, models.NamespaceRoleAddon)
+	})
+
+	It("keeps self-hosted namespaces limited to the managed-by label", func() {
+		service := &namespaceService{}
+
+		stackNamespace, err := service.PrepareNamespaceForStack(context.Background(), &models.Stack{
+			Name: "api", OrganisationID: "organisation-1",
+		})
+		Expect(err).To(BeNil())
+		addonNamespace, err := service.PrepareNamespaceForAddon(
+			context.Background(), fakeAddon{addonType: addonType, addonName: "database"}, "organisation-1",
+		)
+		Expect(err).To(BeNil())
+
+		expected := map[string]string{
+			models.ManagedByLabelKey: models.ManagedByLabelValue,
+		}
+		Expect(stackNamespace.Labels.ToMap()).To(Equal(expected))
+		Expect(addonNamespace.Labels.ToMap()).To(Equal(expected))
 	})
 })
 

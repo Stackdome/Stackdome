@@ -13,10 +13,21 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-type postgresAddonValidator struct{}
+const (
+	ExternalImportDisabledField   = "initialization.importFromExternal"
+	ExternalImportDisabledMessage = "external PostgreSQL imports are disabled by runtime configuration"
+)
 
-func NewPostgresAddonValidator() validator.PostgresAddonValidator {
-	return &postgresAddonValidator{}
+type postgresAddonValidator struct {
+	externalImportDisabled bool
+}
+
+type PostgresAddonValidatorSpec struct {
+	ExternalImportDisabled bool
+}
+
+func NewPostgresAddonValidator(spec PostgresAddonValidatorSpec) validator.PostgresAddonValidator {
+	return &postgresAddonValidator{externalImportDisabled: spec.ExternalImportDisabled}
 }
 
 func (v *postgresAddonValidator) ValidateForCreate(ctx context.Context, spec *models.PostgresAddon) *errors.ServiceError {
@@ -257,6 +268,13 @@ func (v *postgresAddonValidator) validateInitialization(spec *models.PostgresAdd
 	initMethodCount := 0
 
 	if spec.Initialization.ImportFromExternal != nil {
+		if v.externalImportDisabled {
+			return errors.ValidationFailed([]errors.FieldError{{
+				Field:   ExternalImportDisabledField,
+				Code:    errors.VErrPostgresExternalImportDisabled,
+				Message: ExternalImportDisabledMessage,
+			}})
+		}
 		initMethodCount++
 		if err := v.validateImportFromExternal(spec.Initialization.ImportFromExternal); err != nil {
 			return err

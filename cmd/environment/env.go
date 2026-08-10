@@ -51,6 +51,8 @@ type environmentImpl struct {
 	spec envSpec
 }
 
+type configLoader func() error
+
 func newEnvironment(spec envSpec) *environmentImpl {
 	return &environmentImpl{
 		spec: spec,
@@ -143,30 +145,56 @@ func (e *environmentImpl) InitDatabase(ctx context.Context) error {
 }
 
 func (e *environmentImpl) loadEnvAndConfigs(ctx context.Context) error {
-	if e.spec.managed {
+	if e.spec.dependencySource.createsDependencies() {
 		_ = godotenv.Load()
-		e.Config.LoadEnvVariables()
-		e.BootstrapConfig.LoadEnvVariables()
+		loaders := []configLoader{
+			e.Config.LoadEnvVariables,
+			e.BootstrapConfig.LoadEnvVariables,
+			e.Config.LoadStackdomeCloudConfig,
+		}
+		if err := runConfigLoaders(loaders); err != nil {
+			return err
+		}
 	} else {
-		e.loadTestDefaults()
+		if err := e.loadTestDefaults(); err != nil {
+			return fmt.Errorf("load test defaults: %w", err)
+		}
 	}
 
 	if err := e.Config.Validate(); err != nil {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig); err != nil {
+	if err := e.validatePlatformProvisioning(); err != nil {
 		return fmt.Errorf("invalid platform-provisioning config: %w", err)
 	}
 	return nil
 }
 
+func runConfigLoaders(loaders []configLoader) error {
+	for _, loader := range loaders {
+		if err := loader(); err != nil {
+			return fmt.Errorf("load configuration: %w", err)
+		}
+	}
+	return nil
+}
+
+func (e *environmentImpl) validatePlatformProvisioning() error {
+	if e.Config.IsStackdomeCloud() {
+		return config.ValidateStackdomeCloudPlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig)
+	}
+	return config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig)
+}
+
 // loadTestDefaults keeps tests runnable without a .env file while still letting
 // CI configure everything through environment variables. Platform-provisioning
 // config stays opt-in: unset in unit runs, set by the integration bootstrap.
-func (e *environmentImpl) loadTestDefaults() {
+func (e *environmentImpl) loadTestDefaults() error {
 	e.Config.PlatformCluster.LoadEnvVariables()
-	e.BootstrapConfig.LoadEnvVariables()
+	if err := e.BootstrapConfig.LoadEnvVariables(); err != nil {
+		return fmt.Errorf("load bootstrap config: %w", err)
+	}
 
 	if e.Config.JwtSecret == "" {
 		if val, ok := config.EnvTestJWTSecret.Lookup(); ok {
@@ -191,6 +219,7 @@ func (e *environmentImpl) loadTestDefaults() {
 			e.Config.LogLevel = "info"
 		}
 	}
+	return nil
 }
 
 func (e *environmentImpl) setupLogger(ctx context.Context) error {
@@ -200,7 +229,7 @@ func (e *environmentImpl) setupLogger(ctx context.Context) error {
 	}
 	e.Logger = applogger.NewLoggerWithPrefix(ctx, e.loggerName("api-server")).SetLevel(logLevel)
 
-	if !e.spec.managed {
+	if !e.spec.dependencySource.createsDependencies() {
 		logrus.SetOutput(os.Stdout)
 		logrus.SetFormatter(&logrus.TextFormatter{
 			FullTimestamp: true,
@@ -213,7 +242,7 @@ func (e *environmentImpl) setupLogger(ctx context.Context) error {
 }
 
 func (e *environmentImpl) setupDatabase(ctx context.Context) error {
-	if !e.spec.managed {
+	if !e.spec.dependencySource.createsDependencies() {
 		// The session factory is supplied by the test bootstrap.
 		return nil
 	}
@@ -367,7 +396,7 @@ func (e *environmentImpl) initializePermissionService(ctx context.Context) error
 // wiring and SMTP_HOST is set; otherwise a no-op client.
 func (e *environmentImpl) newEmailService(ctx context.Context) emailpkg.EmailService {
 	noop := emailpkg.NewNoopEmailService(applogger.NewLoggerWithPrefix(ctx, e.loggerName("email-service")).SetLevel(e.Logger.GetLevel()))
-	if !e.spec.managed {
+	if !e.spec.dependencySource.createsDependencies() {
 		return noop
 	}
 
@@ -390,6 +419,9 @@ func (e *environmentImpl) newEmailService(ctx context.Context) emailpkg.EmailSer
 
 func (e *environmentImpl) loadServices(ctx context.Context) error {
 	e.Logger.Debugf("Initializing services")
+	stackdomeCloudRuntime := e.Config.IsStackdomeCloud()
+	customDomainsDisabled := stackdomeCloudRuntime && !e.Config.CustomDomainsEnabled()
+	externalPostgresImportDisabled := stackdomeCloudRuntime && !e.Config.ExternalPostgresImportEnabled()
 
 	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{
 		Masterkey: e.Config.EncryptionKey,
@@ -399,14 +431,16 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	}
 	e.EncryptionService = encryptionService
 	stackDomainService := services.NewStackDomainsService(services.StackDomainsServiceSpec{
-		SessionFactory:     e.DBSession,
-		Logger:             e.Logger,
-		PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
+		SessionFactory:        e.DBSession,
+		Logger:                e.Logger,
+		PlatformBaseDomain:    e.BootstrapConfig.BaseDomain,
+		CustomDomainsDisabled: customDomainsDisabled,
 	})
 
 	organisationDomainService := services.NewOrganisationDomainsService(services.OrganisationDomainsServiceSpec{
-		SessionFactory: e.DBSession,
-		Logger:         e.Logger,
+		SessionFactory:        e.DBSession,
+		Logger:                e.Logger,
+		CustomDomainsDisabled: customDomainsDisabled,
 	})
 
 	projectService := services.NewProjectService(services.ProjectServiceSpec{
@@ -432,6 +466,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		PolicyManager:             e.ResourceAccessPolicyManager,
 		Permissions:               e.PermissionService,
 		Logger:                    e.Logger,
+		CustomDomainsDisabled:     customDomainsDisabled,
 	})
 
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: e.DBSession})
@@ -567,8 +602,9 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	})
 
 	namespaceService := services.NewNamespaceService(services.NamespaceServiceSpec{
-		SessionFactory: e.DBSession,
-		Logger:         e.Logger,
+		SessionFactory:        e.DBSession,
+		Logger:                e.Logger,
+		StackdomeCloudRuntime: stackdomeCloudRuntime,
 	})
 
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
@@ -593,17 +629,18 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	})
 
 	postgresAddonService := services.NewPostgresAddonService(services.PostgresAddonServiceSpec{
-		SessionFactory:        e.DBSession,
-		NamespaceService:      namespaceService,
-		ClusterService:        clusterService,
-		SecretService:         secretService,
-		PostgresBackupService: postgresBackupService,
-		ObjectStoreService:    objectStoreService,
-		ProjectService:        projectService,
-		ClusterManager:        e.ClusterManager,
-		Logger:                e.Logger,
-		Permissions:           e.PermissionService,
-		ReferenceService:      referenceService,
+		SessionFactory:         e.DBSession,
+		NamespaceService:       namespaceService,
+		ClusterService:         clusterService,
+		SecretService:          secretService,
+		PostgresBackupService:  postgresBackupService,
+		ObjectStoreService:     objectStoreService,
+		ProjectService:         projectService,
+		ClusterManager:         e.ClusterManager,
+		Logger:                 e.Logger,
+		Permissions:            e.PermissionService,
+		ReferenceService:       referenceService,
+		ExternalImportDisabled: externalPostgresImportDisabled,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{

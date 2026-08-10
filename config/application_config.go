@@ -13,13 +13,17 @@ const (
 )
 
 type ApplicationConfig struct {
-	Server        *ServerConfig      `json:"server"`
-	Database      *DatabaseConfig    `json:"database"`
-	JwtSecret     string             `json:"jwt_secret"`
-	EncryptionKey string             `json:"encryption_key"`
-	LogLevel      string             `json:"log_level"`
-	LogFormat     string             `json:"log_format"`
-	GitHubOAuth   *GitHubOAuthConfig `json:"github_oauth"`
+	Server                   *ServerConfig         `json:"server"`
+	Database                 *DatabaseConfig       `json:"database"`
+	JwtSecret                string                `json:"jwt_secret"`
+	EncryptionKey            string                `json:"encryption_key"`
+	LogLevel                 string                `json:"log_level"`
+	LogFormat                string                `json:"log_format"`
+	RuntimeMode              RuntimeMode           `json:"runtime_mode"`
+	StackdomeCloudConfigPath string                `json:"stackdome_cloud_config_path"`
+	StackdomeCloud           *StackdomeCloudConfig `json:"stackdome_cloud,omitempty"`
+	TurnstileSecret          string                `json:"-"`
+	GitHubOAuth              *GitHubOAuthConfig    `json:"github_oauth"`
 	// GitHubApp is the platform-wide GitHub App; unset means per-org apps.
 	GitHubApp *GitHubAppConfig `json:"github_app"`
 	// ServerExternalURL is the externally reachable base URL of the hub,
@@ -31,7 +35,7 @@ type ApplicationConfig struct {
 	PlatformCluster *ClusterConfig `json:"platform_cluster"`
 }
 
-func (c *ApplicationConfig) LoadEnvVariables() {
+func (c *ApplicationConfig) LoadEnvVariables() error {
 	c.Server.LoadEnvVariables()
 	c.Database.LoadEnvVariables()
 
@@ -51,6 +55,16 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 		c.EncryptionKey = val
 	}
 
+	if val, ok := EnvRuntimeMode.Lookup(); ok {
+		c.RuntimeMode = RuntimeMode(val)
+	}
+	if val, ok := EnvStackdomeCloudConfig.Lookup(); ok {
+		c.StackdomeCloudConfigPath = val
+	}
+	if val, ok := EnvTurnstileSecret.Lookup(); ok {
+		c.TurnstileSecret = val
+	}
+
 	c.GitHubOAuth.LoadEnvVariables()
 	c.GitHubApp.LoadEnvVariables()
 	c.PlatformCluster.LoadEnvVariables()
@@ -68,6 +82,8 @@ func (c *ApplicationConfig) LoadEnvVariables() {
 	if c.GitHubOAuth.RedirectURI == "" && c.ServerExternalURL != "" {
 		c.GitHubOAuth.RedirectURI = strings.TrimSuffix(c.ServerExternalURL, "/") + gitHubOAuthCallbackPath
 	}
+
+	return nil
 }
 
 // gitHubOAuthCallbackPath is the SPA route GitHub sends the browser back to
@@ -81,6 +97,7 @@ func (c *ApplicationConfig) Validate() error {
 	validateFuncs := []func() error{
 		c.Server.Validate,
 		c.Database.Validate,
+		c.validateRuntimeMode,
 		func() error {
 			if c.JwtSecret == "" {
 				return fmt.Errorf("jwt secret is required")
@@ -108,6 +125,16 @@ func (c *ApplicationConfig) Validate() error {
 		if err := f(); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func (c *ApplicationConfig) validateRuntimeMode() error {
+	if c.RuntimeMode != RuntimeModeSelfHosted && c.RuntimeMode != RuntimeModeStackdomeCloud {
+		return fmt.Errorf("runtime mode must be %q or %q", RuntimeModeSelfHosted, RuntimeModeStackdomeCloud)
+	}
+	if c.IsStackdomeCloud() && c.StackdomeCloud == nil {
+		return fmt.Errorf("stackdome Cloud config is required in %q runtime mode", RuntimeModeStackdomeCloud)
 	}
 	return nil
 }
@@ -222,7 +249,49 @@ func NewApplicationConfig() *ApplicationConfig {
 		GitHubOAuth:     NewGitHubOAuthConfig(),
 		GitHubApp:       &GitHubAppConfig{},
 		PlatformCluster: &ClusterConfig{},
+		RuntimeMode:     RuntimeModeSelfHosted,
 	}
+}
+
+func (c *ApplicationConfig) IsStackdomeCloud() bool {
+	return c.RuntimeMode == RuntimeModeStackdomeCloud
+}
+
+func (c *ApplicationConfig) WorkspaceUsersEnabled() bool {
+	return !c.IsStackdomeCloud() || (c.StackdomeCloud != nil && c.StackdomeCloud.Features.WorkspaceUsers)
+}
+
+func (c *ApplicationConfig) CustomDomainsEnabled() bool {
+	return !c.IsStackdomeCloud() || (c.StackdomeCloud != nil && c.StackdomeCloud.Features.CustomDomains)
+}
+
+func (c *ApplicationConfig) ExternalPostgresImportEnabled() bool {
+	return !c.IsStackdomeCloud() || (c.StackdomeCloud != nil && c.StackdomeCloud.Features.ExternalPostgresImport)
+}
+
+func (c *ApplicationConfig) LoadStackdomeCloudConfig() error {
+	if !c.IsStackdomeCloud() {
+		if c.StackdomeCloudConfigPath != "" {
+			return fmt.Errorf("STACKDOME_CLOUD_CONFIG requires RUNTIME_MODE=%s", RuntimeModeStackdomeCloud)
+		}
+		if c.TurnstileSecret != "" {
+			return fmt.Errorf("TURNSTILE_SECRET requires RUNTIME_MODE=%s", RuntimeModeStackdomeCloud)
+		}
+		c.StackdomeCloud = nil
+		return nil
+	}
+	if c.StackdomeCloudConfigPath == "" {
+		return fmt.Errorf("STACKDOME_CLOUD_CONFIG is required in %q runtime mode", RuntimeModeStackdomeCloud)
+	}
+	cloudConfig, err := LoadStackdomeCloudConfig(c.StackdomeCloudConfigPath)
+	if err != nil {
+		return err
+	}
+	if cloudConfig.Signup.Turnstile.Enabled && c.TurnstileSecret == "" {
+		return fmt.Errorf("TURNSTILE_SECRET is required when signup Turnstile is enabled")
+	}
+	c.StackdomeCloud = cloudConfig
+	return nil
 }
 
 func NewGitHubOAuthConfig() *GitHubOAuthConfig {

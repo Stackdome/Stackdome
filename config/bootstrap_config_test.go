@@ -103,3 +103,14 @@ var _ = Describe("ValidatePlatformProvisioning", func() {
 		Expect(invalid.Validate()).To(MatchError("cluster url is required"))
 	})
 })
+
+var _ = Describe("ValidateStackdomeCloudPlatformProvisioning", func() {
+	It("requires a platform cluster when all provisioning settings are unset", func() {
+		Expect(ValidateStackdomeCloudPlatformProvisioning(&ClusterConfig{}, &BootstrapConfig{})).
+			To(MatchError(ErrPlatformProvisioningRequired))
+	})
+
+	It("accepts a fully valid platform configuration", func() {
+		Expect(ValidateStackdomeCloudPlatformProvisioning(fullCluster(), validBootstrapConfig())).To(Succeed())
+	})
+})

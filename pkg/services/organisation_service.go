@@ -71,6 +71,7 @@ type organisationService struct {
 	policyMgr                 resourceaccess.ResourceAccessPolicyManager
 	permissions               auth.PermissionService
 	logger                    logger.Logger
+	customDomainsDisabled     bool
 }
 
 func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
@@ -93,6 +94,7 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		policyMgr:                 spec.PolicyManager,
 		permissions:               spec.Permissions,
 		logger:                    spec.Logger,
+		customDomainsDisabled:     spec.CustomDomainsDisabled,
 	}
 }
 
@@ -106,6 +108,7 @@ type OrganisationServiceSpec struct {
 	PolicyManager             resourceaccess.ResourceAccessPolicyManager
 	Permissions               auth.PermissionService
 	Logger                    logger.Logger
+	CustomDomainsDisabled     bool
 }
 
 func (s *organisationService) InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
@@ -113,6 +116,9 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 		return nil, nameErr
 	}
 	spec.Name = strings.TrimSpace(spec.Name)
+	if s.customDomainsDisabled && len(spec.Domains) > 0 {
+		return nil, errors.BadRequest(customDomainsDisabledInRuntime)
+	}
 
 	org, err := s.organisationStore.Create(ctx, spec)
 	if err != nil {
@@ -244,6 +250,15 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 	if len(spec.Name) == 0 {
 		spec.Name = existing.Name
 	}
+	if s.customDomainsDisabled {
+		existingDomains, domainErr := s.organisationDomainService.ListByOrganisationID(ctx, ID)
+		if domainErr != nil {
+			return nil, domainErr
+		}
+		if !sameOrganisationDomains(existingDomains, spec.Domains) {
+			return nil, errors.BadRequest(customDomainsDisabledInRuntime)
+		}
+	}
 	org, err := s.organisationStore.Update(ctx, ID, spec)
 	if err != nil {
 		s.logger.Error(ctx, "failed to update organisation: %v", err)
@@ -281,6 +296,23 @@ func (s *organisationService) Update(ctx context.Context, ID string, spec *model
 		}
 	}
 	return s.Get(ctx, org.ID)
+}
+
+func sameOrganisationDomains(existing, desired []*models.OrganisationDomain) bool {
+	if len(existing) != len(desired) {
+		return false
+	}
+	domainCounts := make(map[string]int, len(existing))
+	for _, domain := range existing {
+		domainCounts[domain.Domain]++
+	}
+	for _, domain := range desired {
+		if domainCounts[domain.Domain] == 0 {
+			return false
+		}
+		domainCounts[domain.Domain]--
+	}
+	return true
 }
 
 func (s *organisationService) PromoteToOrgAdmin(ctx context.Context, orgID, userID string) *errors.ServiceError {

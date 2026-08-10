@@ -46,6 +46,9 @@ const (
 	VErrSubdomainDuplicate  = "subdomain_duplicate"
 	VErrDomainNotConfigured = "domain_not_configured"
 
+	// postgres addons
+	VErrPostgresExternalImportDisabled = "postgres_external_import_disabled"
+
 	// env
 	VErrEnvNameRequired      = "env_name_required"
 	VErrEnvNameDuplicate     = "env_name_duplicate"

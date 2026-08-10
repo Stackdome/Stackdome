@@ -105,3 +105,29 @@ var _ = Describe("Organisation domain deletion", func() {
 		})
 	}
 })
+
+var _ = Describe("Organisation custom domains disabled by runtime configuration", func() {
+	DescribeTable("rejects user-selected custom domains before persistence",
+		func(write func(*organisationDomainService, *models.OrganisationDomain) *errors.ServiceError) {
+			service := &organisationDomainService{customDomainsDisabled: true}
+			domain := &models.OrganisationDomain{
+				OrganisationID: "organisation-1",
+				Domain:         "customer.example.com",
+			}
+
+			err := write(service, domain)
+
+			Expect(err).NotTo(BeNil())
+			Expect(err.Code).To(Equal(errors.ErrorBadRequest))
+			Expect(err.Reason).To(Equal(customDomainsDisabledInRuntime))
+		},
+		Entry("create", func(service *organisationDomainService, domain *models.OrganisationDomain) *errors.ServiceError {
+			_, err := service.Create(context.Background(), domain)
+			return err
+		}),
+		Entry("update", func(service *organisationDomainService, domain *models.OrganisationDomain) *errors.ServiceError {
+			_, err := service.Update(context.Background(), "domain-1", domain)
+			return err
+		}),
+	)
+})
