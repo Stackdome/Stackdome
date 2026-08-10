@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	apperrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -26,6 +27,7 @@ var _ = Describe("PostgresAddonService cloud validation", func() {
 		service := NewPostgresAddonService(PostgresAddonServiceSpec{
 			Permissions:            permissions,
 			ExternalImportDisabled: true,
+			ComputePolicy:          computequota.NewSelfHostedPolicy(),
 		})
 		spec := &models.PostgresAddon{
 			Name:            addonType,
@@ -80,6 +82,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 			postgresAddonStore: addonStore,
 			referenceService:   refs,
 			permissions:        permissions,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 				BackgroundJobEnqueuer: enqueuer,
 			},
@@ -189,6 +192,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 			logger:             logger.NewLogger(),
 			postgresAddonStore: addonStore,
 			permissions:        permissions,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 			namespaceService:   namespaceSvc,
 			clusterService:     clusterService,
 			databaseService:    databaseService,
@@ -290,6 +294,7 @@ var _ = Describe("UpdatePostgresAddon storage class carry-forward", func() {
 			logger:             logger.NewLogger(),
 			postgresAddonStore: addonStore,
 			permissions:        permissions,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 			validator:          postgresaddon.NewPostgresAddonValidator(postgresaddon.PostgresAddonValidatorSpec{}),
 			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 				BackgroundJobEnqueuer: enqueuer,

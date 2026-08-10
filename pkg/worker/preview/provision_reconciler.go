@@ -80,7 +80,7 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 			}
 		}
 
-		if txErr := r.previewStackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		txErr := r.previewStackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 			if needsUpdate {
 				if _, sErr := r.stackService.InternalUpdateStack(txCtx, *preview.StackID, model); sErr != nil {
 					return sErr
@@ -109,7 +109,11 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 				return sErr
 			}
 			return nil
-		}); txErr != nil {
+		})
+		if txErr != nil {
+			if reason, recognized := previewAdmissionDenialReason(txErr); recognized {
+				return r.fail(ctx, preview, reason, txErr.Reason)
+			}
 			return resultNil, fmt.Errorf("sync transaction failed: %w", txErr)
 		}
 
@@ -158,11 +162,31 @@ func (r *provisionReconciler) Reconcile(ctx context.Context, preview *models.Pre
 		}
 		return nil
 	}); txErr != nil {
+		if reason, recognized := previewAdmissionDenialReason(txErr); recognized {
+			return r.fail(ctx, preview, reason, txErr.Reason)
+		}
 		return resultNil, fmt.Errorf("provision transaction failed: %w", txErr)
 	}
 
 	r.logger.Info(ctx, "preview %s provisioned, stack %s created", preview.ID, created.ID)
 	return resultRequeueAfter(convergePollInterval), nil
+}
+
+func previewAdmissionDenialReason(sErr *errors.ServiceError) (string, bool) {
+	if sErr == nil {
+		return "", false
+	}
+
+	switch sErr.Code {
+	case errors.ErrorComputeAccessInactive:
+		return "ComputeAccessInactive", true
+	case errors.ErrorComputeQuotaExceeded:
+		return "ComputeQuotaExceeded", true
+	case errors.ErrorSharedComputeCapacityReached:
+		return "SharedComputeCapacityUnavailable", true
+	default:
+		return "", false
+	}
 }
 
 func (r *provisionReconciler) resolveStackfileContent(ctx context.Context, preview *models.PreviewStack, config *models.StackPreviewConfig) ([]byte, string, *errors.OperationError) {

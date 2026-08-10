@@ -8,6 +8,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/auth"
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/interfaces"
@@ -70,7 +71,8 @@ type StackReleaseServiceSpec struct {
 	EventStore         stores.ReleaseEventStore
 	EventRecorder      ReleaseEventRecorder
 	// GitClients is optional; it defaults to real git clients.
-	GitClients sourceGitClientProvider
+	GitClients    sourceGitClientProvider
+	ComputePolicy computequota.Policy
 }
 
 type stackReleaseService struct {
@@ -82,6 +84,7 @@ type stackReleaseService struct {
 	eventStore         stores.ReleaseEventStore
 	eventRecorder      ReleaseEventRecorder
 	gitClients         sourceGitClientProvider
+	computePolicy      computequota.Policy
 	logger             logger.Logger
 	BackgroundJobEnqueuerDep
 }
@@ -100,6 +103,7 @@ func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 		eventStore:         spec.EventStore,
 		eventRecorder:      spec.EventRecorder,
 		gitClients:         gitClients,
+		computePolicy:      spec.ComputePolicy,
 		logger:             logger.NewLoggerWithPrefix(context.Background(), "stack-release-service"),
 	}
 }
@@ -168,6 +172,17 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(txCtx, stack.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		if limitErr := s.computePolicy.ValidateStackLimits(txCtx, computequota.StackLimitChange{
+			Operation:            computequota.StackLimitReplaceStack,
+			OrganisationID:       stack.OrganisationID,
+			StackID:              stack.ID,
+			DesiredResourceCount: int64(len(snapshot.Resources)),
+		}); limitErr != nil {
+			return limitErr
+		}
 		var e *errors.ServiceError
 		created, e = s.store.Create(txCtx, release)
 		if e != nil {
@@ -244,6 +259,17 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(txCtx, stack.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		if limitErr := s.computePolicy.ValidateStackLimits(txCtx, computequota.StackLimitChange{
+			Operation:            computequota.StackLimitReplaceStack,
+			OrganisationID:       stack.OrganisationID,
+			StackID:              stack.ID,
+			DesiredResourceCount: int64(len(src.Snapshot.Resources)),
+		}); limitErr != nil {
+			return limitErr
+		}
 		var e *errors.ServiceError
 		created, e = s.store.Create(txCtx, release)
 		if e != nil {

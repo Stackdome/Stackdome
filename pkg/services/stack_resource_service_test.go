@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -28,6 +29,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		ctx := context.Background()
@@ -67,6 +69,10 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockResourceStore.EXPECT().
 			GetByStackIDAndResourceName(ctx, stackID, resourceName).
 			Return(resource, nil)
+		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			})
 
 		mockResourceStore.EXPECT().
 			Update(ctx, resource.ID, gomock.Any(), stack).
@@ -97,6 +103,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		ctx := context.Background()
@@ -136,6 +143,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		ctx := context.Background()
