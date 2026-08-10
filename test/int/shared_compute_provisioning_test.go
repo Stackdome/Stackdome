@@ -2,9 +2,10 @@ package int
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -21,7 +22,6 @@ import (
 	"github.com/Stackdome/stackdome/test/int/shared"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/ptr"
 )
 
 // shortOrgIDLength mirrors the unexported services.shortOrgIDLength used by
@@ -40,15 +40,6 @@ func exposedProvisioningStack(name string) *openapi.Stack {
 	resource := openapi.NewStackResource("web")
 	resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 	resource.SetPorts([]openapi.Port{*openapi.NewPort("http", 80, true)})
-
-	spec := openapi.NewStackSpec()
-	spec.SetStackResources([]openapi.StackResource{*resource})
-	return openapi.NewStack(name, *spec)
-}
-
-func basicProvisioningStack(name string) *openapi.Stack {
-	resource := openapi.NewStackResource("web")
-	resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("nginx:1.25-alpine")})
 
 	spec := openapi.NewStackSpec()
 	spec.SetStackResources([]openapi.StackResource{*resource})
@@ -189,166 +180,46 @@ var _ = Describe("Shared-compute provisioning", func() {
 		}, 2*time.Minute, 5*time.Second).Should(Succeed())
 	})
 
-	It("deploys onto an org-owned cluster registered via the API, beating the platform fallback", func() {
+	It("rejects tenant cluster registration when shared compute is enabled", func() {
 		ctx := context.Background()
 		env := GetEnvironment()
 		db := env.Database.GetSessionFactory().New(ctx)
-		projectName := models.DefaultProjectName
 
 		By("signing up a fresh user with a new organisation")
 		ts := time.Now().UnixNano()
-		orgName := fmt.Sprintf("Owned Org %d", ts)
-		email := fmt.Sprintf("owned-%d@example.com", ts)
-		resp := shared.SignupNewUser("Owned Admin", email, "supersecret123", orgName)
+		resp := shared.SignupNewUser(
+			"Shared Compute Admin",
+			fmt.Sprintf("shared-compute-%d@example.com", ts),
+			"supersecret123",
+			fmt.Sprintf("Shared Compute Org %d", ts),
+		)
 		orgID := resp.User.GetOrganisationId()
 		client := shared.AuthenticatedClient(resp.GetJwtToken())
 
-		By("registering the org's own cluster via the API")
+		By("attempting to register a valid tenant cluster via the public API")
 		clusterURL, caData, saToken, err := bootstrap.ExtractAPIServerClusterCredentials(ctx, env.Cluster)
 		Expect(err).NotTo(HaveOccurred())
-		// Cluster URLs are globally unique, so the single Kind cluster is
-		// re-registered under a hostname alias (its API cert covers both SANs).
-		switch {
-		case strings.Contains(clusterURL, "127.0.0.1"):
-			clusterURL = strings.Replace(clusterURL, "127.0.0.1", "localhost", 1)
-		case strings.Contains(clusterURL, "localhost"):
-			clusterURL = strings.Replace(clusterURL, "localhost", "127.0.0.1", 1)
-		case strings.Contains(clusterURL, "0.0.0.0"):
-			clusterURL = strings.Replace(clusterURL, "0.0.0.0", "127.0.0.1", 1)
-		default:
-			Fail(fmt.Sprintf("cannot derive an alias for cluster URL %q", clusterURL))
-		}
-		clusterReq := openapi.NewCluster(fmt.Sprintf("owned-cluster-%d", ts), clusterURL, caData, saToken)
-		createdCluster, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdClustersPost(ctx, orgID).Cluster(*clusterReq).Execute()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))
-		ownedClusterID := createdCluster.GetId()
-		Expect(ownedClusterID).NotTo(BeEmpty())
-		DeferCleanup(func() {
-			// Deregister the second registration of the shared Kind cluster so
-			// its duplicate controller set doesn't keep reconciling for the
-			// rest of the suite.
-			resp, derr := client.DefaultApi.ApiV1OrganizationsOrgIdClustersIdDelete(ctx, orgID, ownedClusterID).Execute()
-			Expect(derr).NotTo(HaveOccurred())
-			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
-		})
+		clusterReq := openapi.NewCluster(fmt.Sprintf("tenant-cluster-%d", ts), clusterURL, caData, saToken)
+		createdCluster, httpResp, err := client.DefaultApi.
+			ApiV1OrganizationsOrgIdClustersPost(ctx, orgID).
+			Cluster(*clusterReq).
+			Execute()
 
-		By("attaching a custom domain to the organisation")
-		ownedDomain := fmt.Sprintf("owned-%d.test", ts)
-		orgResp, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdGet(ctx, orgID).Execute()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
-		// Round-tripping the GET response fails request validation (readOnly
-		// DomainName.id), and the update reconciles domains by fqdn — send
-		// fqdn-only entries for every domain the org should end up with.
-		domains := []openapi.DomainName{}
-		for _, d := range orgResp.GetDomains() {
-			domains = append(domains, openapi.DomainName{Fqdn: ptr.To(d.GetFqdn())})
-		}
-		domains = append(domains, openapi.DomainName{Fqdn: &ownedDomain})
-		orgUpdate := openapi.Organisation{Name: orgResp.Name, Domains: domains}
-		updatedOrg, httpResp, err := client.DefaultApi.ApiV1OrganizationsIdPut(ctx, orgID).Organisation(orgUpdate).Execute()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(httpResp.StatusCode).To(Equal(http.StatusOK))
-		updatedFqdns := []string{}
-		for _, d := range updatedOrg.GetDomains() {
-			updatedFqdns = append(updatedFqdns, d.GetFqdn())
-		}
-		Expect(updatedFqdns).To(ContainElement(ownedDomain))
-
-		By("creating and deploying a basic stack in the new org")
-		created, _ := shared.CreateStackAndDeploy(client, orgID, projectName, basicProvisioningStack("owned-web"))
-		stackID := created.GetId()
-		Expect(stackID).NotTo(BeEmpty())
-
-		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, projectName, stackID)
-			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
-		})
-
-		By("verifying the stack resolved to the org's own cluster, not the shared-compute cluster")
-		var stackRow models.Stack
-		Expect(db.First(&stackRow, "id = ?", stackID).Error).To(Succeed())
-		Expect(stackRow.ClusterID).To(Equal(ownedClusterID))
-		var sharedComputeCluster models.Cluster
-		Expect(db.Where(&models.Cluster{SharedCompute: true}).First(&sharedComputeCluster).Error).To(Succeed())
-		Expect(stackRow.ClusterID).NotTo(Equal(sharedComputeCluster.ID))
-
-		By("waiting for the stack to become Ready on the owned cluster")
-		shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
-
-		By("verifying AddCluster auto-created a <slug>-<shortOrgID>-<shortClusterID> registry on the owned cluster")
-		expectedRegistry := fmt.Sprintf("%s-%s-%s", slug.FromOrgName(orgName), shortTestID(orgID), shortTestID(ownedClusterID))
-		var ownedRegistry models.ClusterImageRegistry
-		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: orgID, ClusterID: ownedClusterID}).
-			First(&ownedRegistry).Error).To(Succeed())
-		Expect(ownedRegistry.Name).To(Equal(expectedRegistry))
-
-		if githubToken := os.Getenv("GITHUB_TOKEN"); githubToken != "" {
-			By("building from source: the build must push to the owned cluster's registry")
-			integration := shared.CreateGitCredentialsIntegration(client, orgID, shared.BuildSourceGitHost, shared.BuildSourceGitUsername, githubToken)
-			DeferCleanup(func() {
-				shared.DeleteGitIntegration(client, orgID, integration.GetId())
-			})
-
-			// Distinct resource name: image_builds rows are keyed by the CR
-			// name <resource>-<commit>, and the shared-fixture name at the
-			// same commit collides with the shared-compute cluster build spec.
-			const ownedBuildResourceName = "owned-app"
-			buildStack := shared.CreateStackWithNamedBuildSource("owned-build", ownedBuildResourceName, shared.BuildSourceRepoURL)
-			buildCreated, _ := shared.CreateStackAndDeploy(client, orgID, projectName, buildStack)
-			buildStackID := buildCreated.GetId()
-			DeferCleanup(func() {
-				shared.DeleteStack(client, orgID, projectName, buildStackID)
-				shared.WaitForStackDeleted(client, orgID, projectName, buildStackID, 2*time.Minute)
-			})
-
-			var buildStackRow models.Stack
-			Expect(db.First(&buildStackRow, "id = ?", buildStackID).Error).To(Succeed())
-			Expect(buildStackRow.ClusterID).To(Equal(ownedClusterID))
-
-			By("verifying the build resource resolved the owned cluster's registry")
-			var buildResource models.StackResource
-			Expect(db.Where(&models.StackResource{StackID: buildStackID, Name: ownedBuildResourceName}).
-				First(&buildResource).Error).To(Succeed())
-			Expect(buildResource.BuildConfig).NotTo(BeNil())
-			Expect(buildResource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(Equal(ownedRegistry.Name))
-
-			By("waiting for the built stack to become Ready on the owned cluster")
-			clusterClient := env.Cluster.GetClient()
-			shared.WaitForStackReadyWithDump(client, orgID, projectName, buildStackID, 10*time.Minute, clusterClient, buildCreated.GetNamespace())
-
-			By("verifying the deployment runs an image from the owned cluster's registry")
-			deploy, derr := shared.GetDeploymentForStackResource(ctx, clusterClient, buildCreated.GetNamespace(), ownedBuildResourceName)
-			Expect(derr).NotTo(HaveOccurred())
-			Expect(deploy.Spec.Template.Spec.Containers).To(HaveLen(1))
-			Expect(deploy.Spec.Template.Spec.Containers[0].Image).To(ContainSubstring(ownedRegistry.Name))
-		} else {
-			By("skipping the build case: GITHUB_TOKEN not set")
-		}
-
-		By("verifying builds fail fast once the owned cluster has no registry, even though another cluster's registry row exists")
-		// DB-only row on the shared-compute cluster: resolution must ignore it.
-		otherClusterRegistry := &models.ClusterImageRegistry{
-			OrganisationID:     orgID,
-			ClusterID:          sharedComputeCluster.ID,
-			Name:               fmt.Sprintf("other-cluster-reg-%d", ts),
-			BackendStorageSize: models.DefaultRegistryStorageSize,
-		}
-		Expect(db.Create(otherClusterRegistry).Error).To(Succeed())
-		httpResp, err = client.DefaultApi.ApiV1OrganizationsOrgIdClustersClusterIdImageRegistriesIdDelete(ctx, orgID, ownedClusterID, ownedRegistry.ID).Execute()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(httpResp.StatusCode).To(Equal(http.StatusNoContent))
-
-		noRegStack := shared.CreateStackWithNamedBuildSource("owned-noreg", "owned-noreg-app", shared.BuildSourceRepoURL)
-		thin, httpResp, err := client.DefaultApi.ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost(ctx, orgID, projectName).Stack(*noRegStack).Execute()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(httpResp.StatusCode).To(Equal(http.StatusCreated))
-		DeferCleanup(func() {
-			shared.DeleteStack(client, orgID, projectName, thin.GetId())
-		})
-		_, httpResp, err = client.DefaultApi.ApplyStack(ctx, orgID, projectName, thin.GetId()).Stack(*noRegStack).Execute()
+		Expect(createdCluster).To(BeNil())
 		Expect(err).To(HaveOccurred())
 		Expect(httpResp.StatusCode).To(Equal(http.StatusBadRequest))
+
+		var apiErr *openapi.GenericOpenAPIError
+		Expect(errors.As(err, &apiErr)).To(BeTrue(), "expected GenericOpenAPIError")
+		var errorResponse openapi.Error
+		Expect(json.Unmarshal(apiErr.Body(), &errorResponse)).To(Succeed())
+		Expect(errorResponse.GetReason()).To(Equal("tenant clusters cannot be added when shared compute is enabled"))
+
+		By("verifying the rejected request did not create a tenant-owned cluster")
+		var tenantClusterCount int64
+		Expect(db.Model(&models.Cluster{}).
+			Where("organisation_id = ? AND shared_compute = ?", orgID, false).
+			Count(&tenantClusterCount).Error).To(Succeed())
+		Expect(tenantClusterCount).To(BeZero())
 	})
 })

@@ -7,8 +7,8 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | **string** |  | 
 **OrganisationId** | Pointer to **string** |  | [optional] 
-**SharedCompute** | Pointer to **bool** |  | [optional] [readonly]
-**Platform** | Pointer to **bool** | Deprecated alias for shared_compute. Both fields have the same value. | [optional] [readonly]
+**SharedCompute** | Pointer to **bool** |  | [optional] [readonly] 
+**Platform** | Pointer to **bool** | Deprecated alias for shared_compute. Both fields have the same value. | [optional] [readonly] 
 **ClusterUrl** | **string** |  | 
 **ClusterCaData** | **string** |  | 
 **ClusterSaToken** | **string** |  | 
@@ -240,3 +240,5 @@ HasClusterImageRegistry returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
+
