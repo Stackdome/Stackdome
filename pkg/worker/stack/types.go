@@ -31,13 +31,14 @@ type stackService interface {
 	UpdateStackCrRevision(ctx context.Context, ID string, crRevision string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
 	InternalGetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError)
+	InternalListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.StackStatus) *errors.ServiceError
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
 }
 
 type releaseService interface {
 	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
-	InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
+	InternalListAuthoritativeWorkload(ctx context.Context) (*models.WorkloadAuthorityScan, *errors.ServiceError)
 }
 
 type secretService interface {

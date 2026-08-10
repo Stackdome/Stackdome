@@ -80,9 +80,12 @@ var _ = Describe("PostgresAddonWorker", func() {
 
 	It("does not select draft-only addons for periodic cloud reconciliation", func() {
 		releases := NewMockreleaseService(ctrl)
-		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(ctx).Return([]*models.StackRelease{}, nil)
-		addonSvc.EXPECT().InternalList(ctx, "deletion_timestamp IS NOT NULL").Return([]*models.PostgresAddon{}, nil)
+		refs := NewMockreferenceService(ctrl)
+		releases.EXPECT().InternalListAuthoritativeWorkload(ctx).Return(&models.WorkloadAuthorityScan{}, nil)
+		refs.EXPECT().InternalListReleaseReferents(ctx, []string{}, models.ReferentPostgresAddon).Return([]models.ResourceReference{}, nil)
+		addonSvc.EXPECT().InternalListIDs(ctx, "deletion_timestamp IS NOT NULL").Return([]string{}, nil)
 		w.releaseService = releases
+		w.referenceService = refs
 		w.runtimePolicy = &activeAddonRuntimePolicy{}
 
 		operands, serr := w.GetInput(ctx)
@@ -126,6 +129,42 @@ var _ = Describe("PostgresAddonWorker", func() {
 		Expect(reconciler.called).To(BeTrue())
 	})
 
+	It("stops a cluster write when allocation expires after initial authorization", func() {
+		addon := &models.PostgresAddon{
+			ID: "addon-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "database",
+			Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending},
+		}
+		release := &models.StackRelease{
+			ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending,
+			Snapshot: models.StackSnapshot{
+				Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: addon.OrganisationID},
+				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: addon.ID}}},
+			},
+		}
+		stack := &models.Stack{ID: release.StackID, OrganisationID: addon.OrganisationID}
+		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
+		policy := services.NewMockRuntimePolicy(ctrl)
+		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, addon.ID).Return(addon, nil).Times(2)
+		releases.EXPECT().InternalGet(ctx, release.ID).Return(release, nil).Times(3)
+		stacks.EXPECT().InternalGetStack(ctx, stack.ID).Return(stack, nil).Times(3)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(release, nil).Times(3)
+		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
+		gomock.InOrder(
+			policy.EXPECT().RequireActiveAllocation(ctx, addon.OrganisationID).Return(nil),
+			policy.EXPECT().RequireActiveAllocation(ctx, addon.OrganisationID).Return(errors.TrialInactive()),
+		)
+		w.releaseService = releases
+		w.stackService = stacks
+		w.runtimePolicy = policy
+		w.subReconcilers = []subReconciler{&authorizingAddonReconciler{}}
+
+		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: addon.ID, ReleaseID: release.ID})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
 	It("does not reconcile an addon from a historical release reference", func() {
 		refs := NewMockreferenceService(ctrl)
 		releases := NewMockreleaseService(ctrl)
@@ -164,6 +203,13 @@ func (*recordingAddonReconciler) Name() string { return "test-reconciler" }
 func (r *recordingAddonReconciler) Reconcile(context.Context, *models.PostgresAddon, worker.MutationAuthorizer) (subReconcilerResult, error) {
 	r.called = true
 	return resultNil, nil
+}
+
+type authorizingAddonReconciler struct{}
+
+func (*authorizingAddonReconciler) Name() string { return "authorize-mutation" }
+func (*authorizingAddonReconciler) Reconcile(ctx context.Context, _ *models.PostgresAddon, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
+	return resultNil, authorize(ctx)
 }
 
 type activeAddonRuntimePolicy struct{ inactiveAddonRuntimePolicy }

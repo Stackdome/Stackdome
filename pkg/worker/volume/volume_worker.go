@@ -29,6 +29,8 @@ type VolumeWorkerSpec struct {
 	Env              string
 	RuntimePolicy    services.RuntimePolicy
 	ReleaseService   releaseService
+	ClusterWrites    *worker.ClusterMutationCoordinator
+	ReferenceService referenceService
 }
 
 type volumeWorker struct {
@@ -39,6 +41,7 @@ type volumeWorker struct {
 	volumeCRbuilder  builders.ClusterResourceBuilder
 	runtimePolicy    services.RuntimePolicy
 	releaseService   releaseService
+	referenceService referenceService
 	worker.BaseWorker
 }
 
@@ -53,7 +56,10 @@ func NewVolumeWorker(spec VolumeWorkerSpec) worker.Worker {
 		volumeCRbuilder:  spec.VolumeCrBuilder,
 		runtimePolicy:    spec.RuntimePolicy,
 		releaseService:   spec.ReleaseService,
-		BaseWorker:       worker.NewBaseWorker(VolumeWorkerName, spec.Env),
+		referenceService: spec.ReferenceService,
+		BaseWorker: worker.NewBaseWorkerWithClusterMutationCoordinator(
+			VolumeWorkerName, spec.Env, spec.ClusterWrites,
+		),
 	}
 }
 
@@ -115,6 +121,8 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		}
 		stack = resolvedStack
 	}
+	unlockCluster := w.LockClusterNamespace(stack.ClusterID, stack.Namespace)
+	defer unlockCluster()
 
 	clusterClient, cerr := w.clusterManager.GetClient(stack.ClusterID)
 	if cerr != nil {
@@ -256,11 +264,23 @@ func (w *volumeWorker) releaseRemainsAuthoritative(ctx context.Context, releaseI
 	if serr != nil {
 		return false, serr
 	}
+	if stack.DeletionTimestamp != nil {
+		return false, nil
+	}
 	authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
 	if serr != nil {
 		return false, serr
 	}
-	return authoritativeRelease != nil && authoritativeRelease.ID == releaseID, nil
+	if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
+		return false, nil
+	}
+	if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
+		if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+			return false, nil
+		}
+		return false, admissionErr
+	}
+	return true, nil
 }
 
 func setVolumeReleaseID(volume *storagev1alpha1.Volume, releaseID string) {
@@ -291,33 +311,30 @@ func (w *volumeWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.
 }
 
 func (w *volumeWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	releases, serr := w.releaseService.InternalListAuthoritativeWorkloadReleases(ctx)
+	scan, serr := w.releaseService.InternalListAuthoritativeWorkload(ctx)
 	if serr != nil {
 		return nil, w.WorkerError.NewError("failed to list authoritative volume releases: %v", serr)
 	}
-	releaseByVolumeID := make(map[string]string)
-	volumeIDs := make([]string, 0)
-	for _, release := range releases {
-		for _, volume := range release.Snapshot.Volumes {
-			if volume == nil || volume.ID == "" {
-				continue
-			}
-			if _, exists := releaseByVolumeID[volume.ID]; !exists {
-				volumeIDs = append(volumeIDs, volume.ID)
-			}
-			releaseByVolumeID[volume.ID] = release.ID
-		}
+	releaseIDs := make([]string, len(scan.Releases))
+	for i, release := range scan.Releases {
+		releaseIDs[i] = release.ReleaseID
 	}
-	if len(volumeIDs) == 0 {
-		return []worker.Operand{}, nil
-	}
-	volumes, serr := w.volumeService.InternalList(ctx, volumeIDs)
+	refs, serr := w.referenceService.InternalListReleaseReferents(ctx, releaseIDs, models.ReferentVolume)
 	if serr != nil {
-		return nil, w.WorkerError.NewError("failed to list authoritative volumes: %v", serr)
+		return nil, w.WorkerError.NewError("failed to list authoritative volume references: %v", serr)
 	}
-	operands := make([]worker.Operand, 0, len(volumes))
-	for _, volume := range volumes {
-		operands = append(operands, models.VolumeOperand{ID: volume.ID, ReleaseID: releaseByVolumeID[volume.ID]})
+	operands := make([]worker.Operand, 0, len(refs))
+	seen := make(map[string]struct{}, len(refs))
+	for _, ref := range refs {
+		if ref.ReleaseID == nil {
+			continue
+		}
+		key := ref.ReferentID + "\x00" + *ref.ReleaseID
+		if _, exists := seen[key]; exists {
+			continue
+		}
+		seen[key] = struct{}{}
+		operands = append(operands, models.VolumeOperand{ID: ref.ReferentID, ReleaseID: *ref.ReleaseID})
 	}
 	return operands, nil
 }

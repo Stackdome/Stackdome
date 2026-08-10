@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"fmt"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -474,6 +475,35 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			Expect(resolved).To(BeNil())
 		})
 
+		DescribeTable("resolves persisted live authority across newer attempts",
+			func(convergedState, latestState models.StackReleaseState, convergedID, expectedID string) {
+				converged := newRelease("release-a", 1, convergedState)
+				latest := newRelease("release-b", 2, latestState)
+				stack.Status.LastConverged.ReleaseID = convergedID
+				releaseStore.EXPECT().GetLatestByStackID(ctx, stack.ID).Return(latest, nil)
+				if !latest.State.Active() {
+					if convergedID == latest.ID {
+						releaseStore.EXPECT().GetByID(ctx, convergedID).Return(latest, nil)
+					} else {
+						releaseStore.EXPECT().GetByID(ctx, convergedID).Return(converged, nil)
+					}
+				}
+
+				resolved, serr := svc.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+
+				Expect(serr).To(BeNil())
+				Expect(resolved).NotTo(BeNil())
+				Expect(resolved.ID).To(Equal(expectedID))
+			},
+			Entry("A superseded and B failed", models.ReleaseStateSuperseded, models.ReleaseStateFailed, "release-a", "release-a"),
+			Entry("A superseded and B cancelled", models.ReleaseStateSuperseded, models.ReleaseStateCancelled, "release-a", "release-a"),
+			Entry("A superseded and B superseded", models.ReleaseStateSuperseded, models.ReleaseStateSuperseded, "release-a", "release-a"),
+			Entry("A still in progress and B failed", models.ReleaseStateInProgress, models.ReleaseStateFailed, "release-a", "release-a"),
+			Entry("B pending", models.ReleaseStateSuperseded, models.ReleaseStatePending, "release-a", "release-b"),
+			Entry("B in progress", models.ReleaseStateSuperseded, models.ReleaseStateInProgress, "release-a", "release-b"),
+			Entry("B released and persisted live", models.ReleaseStateSuperseded, models.ReleaseStateReleased, "release-b", "release-b"),
+		)
+
 		It("lists only stacks with persisted or in-flight release authority", func() {
 			converged := newRelease("release-b", 2, models.ReleaseStateReleased)
 			activeStack := *stack
@@ -489,21 +519,25 @@ var _ = Describe("stackReleaseService release creation records release_created",
 					NamespaceID: activeStack.NamespaceID, Namespace: activeStack.Namespace,
 				}},
 			}
-			stackSvc.EXPECT().InternalList(ctx,
-				"deletion_timestamp IS NULL AND status->'last_converged'->>'release_id' IS NOT NULL").
-				Return([]*models.Stack{stack}, nil)
-			releaseStore.EXPECT().ListActive(ctx).Return([]*models.StackRelease{active}, nil)
-			stackSvc.EXPECT().InternalList(ctx, "deletion_timestamp IS NULL AND id IN ?", []string{activeStack.ID}).
-				Return([]*models.Stack{&activeStack}, nil)
-			releaseStore.EXPECT().GetLatestByStackIDs(ctx, []string{stack.ID, activeStack.ID}).Return(map[string]*models.StackRelease{
+			deletingAt := time.Now().UTC()
+			deletingStack := &models.Stack{ID: "stack-deleting", DeletionTimestamp: &deletingAt}
+			stackSvc.EXPECT().InternalListWorkloadAuthorityCandidates(ctx).
+				Return([]*models.Stack{stack, &activeStack, deletingStack}, nil)
+			releaseStore.EXPECT().GetLatestSummariesByStackIDs(ctx, []string{stack.ID, activeStack.ID}).Return(map[string]*models.StackRelease{
 				stack.ID: converged, activeStack.ID: active,
 			}, nil)
-			releaseStore.EXPECT().GetByIDs(ctx, []string{}).Return(map[string]*models.StackRelease{}, nil)
+			releaseStore.EXPECT().GetSummariesByIDs(ctx, []string{converged.ID}).Return(map[string]*models.StackRelease{
+				converged.ID: converged,
+			}, nil)
 
-			releases, serr := svc.InternalListAuthoritativeWorkloadReleases(ctx)
+			scan, serr := svc.InternalListAuthoritativeWorkload(ctx)
 
 			Expect(serr).To(BeNil())
-			Expect(releases).To(ConsistOf(converged, active))
+			Expect(scan.Releases).To(ConsistOf(
+				models.WorkloadReleaseRef{StackID: stack.ID, ReleaseID: converged.ID},
+				models.WorkloadReleaseRef{StackID: activeStack.ID, ReleaseID: active.ID},
+			))
+			Expect(scan.DeletingStackIDs).To(ConsistOf(deletingStack.ID))
 		})
 	})
 })

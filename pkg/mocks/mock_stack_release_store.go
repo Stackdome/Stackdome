@@ -177,6 +177,36 @@ func (mr *MockStackReleaseStoreMockRecorder) GetLatestByStackIDs(ctx, stackIDs a
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestByStackIDs", reflect.TypeOf((*MockStackReleaseStore)(nil).GetLatestByStackIDs), ctx, stackIDs)
 }
 
+// GetLatestSummariesByStackIDs mocks base method.
+func (m *MockStackReleaseStore) GetLatestSummariesByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLatestSummariesByStackIDs", ctx, stackIDs)
+	ret0, _ := ret[0].(map[string]*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetLatestSummariesByStackIDs indicates an expected call of GetLatestSummariesByStackIDs.
+func (mr *MockStackReleaseStoreMockRecorder) GetLatestSummariesByStackIDs(ctx, stackIDs any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLatestSummariesByStackIDs", reflect.TypeOf((*MockStackReleaseStore)(nil).GetLatestSummariesByStackIDs), ctx, stackIDs)
+}
+
+// GetSummariesByIDs mocks base method.
+func (m *MockStackReleaseStore) GetSummariesByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSummariesByIDs", ctx, ids)
+	ret0, _ := ret[0].(map[string]*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// GetSummariesByIDs indicates an expected call of GetSummariesByIDs.
+func (mr *MockStackReleaseStoreMockRecorder) GetSummariesByIDs(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSummariesByIDs", reflect.TypeOf((*MockStackReleaseStore)(nil).GetSummariesByIDs), ctx, ids)
+}
+
 // ListActive mocks base method.
 func (m *MockStackReleaseStore) ListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {
 	m.ctrl.T.Helper()

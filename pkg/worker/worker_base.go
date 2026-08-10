@@ -21,9 +21,14 @@ type BaseWorker struct {
 	logger        logger.Logger
 	Env           string
 	resourceLocks keymutex.KeyMutex
+	clusterWrites *ClusterMutationCoordinator
 }
 
 func NewBaseWorker(workerName string, env string) BaseWorker {
+	return NewBaseWorkerWithClusterMutationCoordinator(workerName, env, NewClusterMutationCoordinator())
+}
+
+func NewBaseWorkerWithClusterMutationCoordinator(workerName, env string, clusterWrites *ClusterMutationCoordinator) BaseWorker {
 	return BaseWorker{
 		WorkerName:  workerName,
 		logger:      logger.NewLoggerWithPrefix(context.Background(), workerName),
@@ -36,6 +41,7 @@ func NewBaseWorker(workerName string, env string) BaseWorker {
 		),
 		Env:           env,
 		resourceLocks: keymutex.NewHashed(resourceLockShards),
+		clusterWrites: clusterWrites,
 	}
 }
 
@@ -47,6 +53,10 @@ func (w *BaseWorker) LockResource(id string) func() {
 			panic(fmt.Sprintf("unlock worker resource %q: %v", id, err))
 		}
 	}
+}
+
+func (w *BaseWorker) LockClusterNamespace(clusterID, namespace string) func() {
+	return w.clusterWrites.LockClusterNamespace(clusterID, namespace)
 }
 
 // Clients call this method to enqueue work to a worker immeadiately.

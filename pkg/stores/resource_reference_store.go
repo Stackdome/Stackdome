@@ -16,4 +16,6 @@ type ResourceReferenceStore interface {
 	InsertReleaseWithTx(ctx context.Context, releaseID, stackID string, refs []models.ResourceReference) *errors.ServiceError
 	// ListByReferent returns every reference row (any scope, org-wide) for a referent.
 	ListByReferent(ctx context.Context, referentType models.ReferentType, referentID string) ([]models.ResourceReference, *errors.ServiceError)
+	// ListByReleaseIDs projects referents for a bounded set of authoritative releases.
+	ListByReleaseIDs(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError)
 }

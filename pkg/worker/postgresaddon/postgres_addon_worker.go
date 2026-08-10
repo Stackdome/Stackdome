@@ -38,6 +38,7 @@ type PostgresAddonWorkerSpec struct {
 	RuntimePolicy        services.RuntimePolicy
 	ReleaseService       releaseService
 	StackService         stackService
+	ClusterWrites        *worker.ClusterMutationCoordinator
 }
 
 func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
@@ -48,7 +49,9 @@ func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
 		referenceService:     spec.ReferenceService,
 		releaseService:       spec.ReleaseService,
 		stackService:         spec.StackService,
-		BaseWorker:           worker.NewBaseWorker(WorkerName, spec.Env),
+		BaseWorker: worker.NewBaseWorkerWithClusterMutationCoordinator(
+			WorkerName, spec.Env, spec.ClusterWrites,
+		),
 		subReconcilers: []subReconciler{
 			newDeprovisionReconciler(spec),
 			newNamespaceReconciler(spec),
@@ -80,6 +83,8 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 		}
 		return worker.Result{}, err
 	}
+	unlockCluster := w.LockClusterNamespace(addon.ClusterID, addon.Namespace)
+	defer unlockCluster()
 
 	w.Logger().Info(ctx, "Processing postgres addon: %s (%s)", addon.Name, addon.ID)
 	authorizingReleaseID := ""
@@ -163,6 +168,9 @@ func (w *postgresAddonWorker) releaseRemainsAuthoritative(ctx context.Context, a
 	if serr != nil {
 		return false, serr
 	}
+	if stack.DeletionTimestamp != nil {
+		return false, nil
+	}
 	authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
 	if serr != nil {
 		return false, serr
@@ -188,12 +196,21 @@ func (w *postgresAddonWorker) authorizeMutation(addonID, releaseID string) worke
 		if serr != nil {
 			return serr
 		}
+		if addon.DeletionTimestamp != nil {
+			return worker.ErrMutationNotAuthorized
+		}
 		authorized, serr := w.releaseRemainsAuthoritative(ctx, addon, releaseID)
 		if serr != nil {
 			return serr
 		}
 		if !authorized {
 			return worker.ErrMutationNotAuthorized
+		}
+		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, addon.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+				return worker.ErrMutationNotAuthorized
+			}
+			return admissionErr
 		}
 		return nil
 	}
@@ -241,31 +258,34 @@ func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *
 }
 
 func (w *postgresAddonWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	releases, serr := w.releaseService.InternalListAuthoritativeWorkloadReleases(ctx)
+	scan, serr := w.releaseService.InternalListAuthoritativeWorkload(ctx)
 	if serr != nil {
 		return nil, w.WorkerError.NewError("failed to list authoritative postgres releases: %v", serr)
 	}
-	releaseByAddonID := make(map[string]string)
-	addonIDs := make([]string, 0)
-	for _, release := range releases {
-		for _, connection := range release.Snapshot.Connections {
-			refs := []models.TopologyNodeRef{connection.From, connection.To}
-			for _, ref := range refs {
-				if ref.Type != models.TopologyNodeTypePostgresAddon || ref.Id == "" {
-					continue
-				}
-				if _, exists := releaseByAddonID[ref.Id]; !exists {
-					addonIDs = append(addonIDs, ref.Id)
-				}
-				releaseByAddonID[ref.Id] = release.ID
-			}
+	releaseIDs := make([]string, len(scan.Releases))
+	for i, release := range scan.Releases {
+		releaseIDs[i] = release.ReleaseID
+	}
+	refs, serr := w.referenceService.InternalListReleaseReferents(ctx, releaseIDs, models.ReferentPostgresAddon)
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list authoritative postgres references: %v", serr)
+	}
+	releaseByAddonID := make(map[string]string, len(refs))
+	addonIDs := make([]string, 0, len(refs))
+	for _, ref := range refs {
+		if ref.ReleaseID == nil {
+			continue
 		}
+		if _, exists := releaseByAddonID[ref.ReferentID]; !exists {
+			addonIDs = append(addonIDs, ref.ReferentID)
+		}
+		releaseByAddonID[ref.ReferentID] = *ref.ReleaseID
 	}
 
 	operands := make([]worker.Operand, 0, len(addonIDs))
 	seen := make(map[string]struct{}, len(addonIDs))
 	if len(addonIDs) > 0 {
-		addons, listErr := w.postgresAddonService.InternalList(ctx,
+		readyIDs, listErr := w.postgresAddonService.InternalListIDs(ctx,
 			"id IN ? AND status->>'state' IN ?",
 			addonIDs,
 			[]string{string(models.PostgresAddonStatePending), string(models.PostgresAddonStateError)},
@@ -273,20 +293,20 @@ func (w *postgresAddonWorker) getCloudInput(ctx context.Context) ([]worker.Opera
 		if listErr != nil {
 			return nil, w.WorkerError.NewError("failed to list authoritative postgres addons: %v", listErr)
 		}
-		for _, addon := range addons {
-			operands = append(operands, models.PostgresAddonOperand{ID: addon.ID, ReleaseID: releaseByAddonID[addon.ID]})
-			seen[addon.ID] = struct{}{}
+		for _, addonID := range readyIDs {
+			operands = append(operands, models.PostgresAddonOperand{ID: addonID, ReleaseID: releaseByAddonID[addonID]})
+			seen[addonID] = struct{}{}
 		}
 	}
-	deleting, serr := w.postgresAddonService.InternalList(ctx, "deletion_timestamp IS NOT NULL")
+	deleting, serr := w.postgresAddonService.InternalListIDs(ctx, "deletion_timestamp IS NOT NULL")
 	if serr != nil {
 		return nil, w.WorkerError.NewError("failed to list deleting postgres addons: %v", serr)
 	}
-	for _, addon := range deleting {
-		if _, exists := seen[addon.ID]; exists {
+	for _, addonID := range deleting {
+		if _, exists := seen[addonID]; exists {
 			continue
 		}
-		operands = append(operands, models.PostgresAddonOperand{ID: addon.ID})
+		operands = append(operands, models.PostgresAddonOperand{ID: addonID})
 	}
 	return operands, nil
 }

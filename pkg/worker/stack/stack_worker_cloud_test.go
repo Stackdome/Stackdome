@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	"time"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -19,8 +20,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 		stacks := NewMockstackService(ctrl)
 		releases := NewMockreleaseService(ctrl)
 		policy := &activeWorkerRuntimePolicy{}
-		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(gomock.Any()).Return([]*models.StackRelease{}, nil)
-		stacks.EXPECT().InternalList(gomock.Any(), "deletion_timestamp IS NOT NULL").Return([]*models.Stack{}, nil)
+		releases.EXPECT().InternalListAuthoritativeWorkload(gomock.Any()).Return(&models.WorkloadAuthorityScan{}, nil)
 		w := &stackWorker{stackService: stacks, releaseService: releases, runtimePolicy: policy, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test")}
 
 		operands, serr := w.GetInput(context.Background())
@@ -100,6 +100,85 @@ var _ = Describe("StackWorker cloud admission", func() {
 		}
 
 		result, serr := w.Execute(context.Background(), models.StackOperand{ID: "stack-1", ReleaseID: "release-1"})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
+	It("stops a cluster write when deletion begins after initial authorization", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		stacks := NewMockstackService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		reconciler := NewMocksubReconciler(ctrl)
+		policy := services.NewMockRuntimePolicy(ctrl)
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}
+		deleting := *stack
+		deletedAt := time.Now().UTC()
+		deleting.DeletionTimestamp = &deletedAt
+		release := &models.StackRelease{
+			ID: "release-1", StackID: stack.ID, State: models.ReleaseStatePending,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{
+				ID: stack.ID, OrganisationID: stack.OrganisationID, ClusterID: stack.ClusterID, Namespace: stack.Namespace,
+			}},
+		}
+		gomock.InOrder(
+			stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil),
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil),
+			stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil),
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil),
+			stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(&deleting, nil),
+		)
+		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
+		policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil)
+		reconciler.EXPECT().Name().Return("write-boundary")
+		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, _ *models.Stack, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
+				return resultNil, authorize(ctx)
+			},
+		)
+		w := &stackWorker{
+			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
+			runtimePolicy: policy, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
+		}
+
+		result, serr := w.Execute(context.Background(), models.StackOperand{ID: stack.ID, ReleaseID: release.ID})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
+	It("stops a cluster write when the allocation expires after initial authorization", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		stacks := NewMockstackService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		reconciler := NewMocksubReconciler(ctrl)
+		policy := services.NewMockRuntimePolicy(ctrl)
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}
+		release := &models.StackRelease{
+			ID: "release-1", StackID: stack.ID, State: models.ReleaseStatePending,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{
+				ID: stack.ID, OrganisationID: stack.OrganisationID, ClusterID: stack.ClusterID, Namespace: stack.Namespace,
+			}},
+		}
+		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil).Times(3)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
+		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
+		gomock.InOrder(
+			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil),
+			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(errors.TrialInactive()),
+		)
+		reconciler.EXPECT().Name().Return("write-boundary")
+		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, _ *models.Stack, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
+				return resultNil, authorize(ctx)
+			},
+		)
+		w := &stackWorker{
+			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
+			runtimePolicy: policy, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
+		}
+
+		result, serr := w.Execute(context.Background(), models.StackOperand{ID: stack.ID, ReleaseID: release.ID})
 
 		Expect(serr).To(BeNil())
 		Expect(result).To(Equal(worker.Result{}))

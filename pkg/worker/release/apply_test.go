@@ -11,6 +11,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
 const (
@@ -263,6 +264,7 @@ var _ = Describe("ApplyReconciler volume existence", func() {
 			clusterManager: clusterMgr,
 			volumeService:  volSvc,
 			logger:         testLogger(),
+			clusterWrites:  worker.NewClusterMutationCoordinator(),
 		}
 
 		result, err := r.Reconcile(context.Background(), release)

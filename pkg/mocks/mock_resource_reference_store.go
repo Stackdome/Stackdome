@@ -71,6 +71,21 @@ func (mr *MockResourceReferenceStoreMockRecorder) ListByReferent(ctx, referentTy
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByReferent", reflect.TypeOf((*MockResourceReferenceStore)(nil).ListByReferent), ctx, referentType, referentID)
 }
 
+// ListByReleaseIDs mocks base method.
+func (m *MockResourceReferenceStore) ListByReleaseIDs(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListByReleaseIDs", ctx, releaseIDs, referentType)
+	ret0, _ := ret[0].([]models.ResourceReference)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListByReleaseIDs indicates an expected call of ListByReleaseIDs.
+func (mr *MockResourceReferenceStoreMockRecorder) ListByReleaseIDs(ctx, releaseIDs, referentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByReleaseIDs", reflect.TypeOf((*MockResourceReferenceStore)(nil).ListByReleaseIDs), ctx, releaseIDs, referentType)
+}
+
 // ReplaceSpecWithTx mocks base method.
 func (m *MockResourceReferenceStore) ReplaceSpecWithTx(ctx context.Context, stackID string, refs []models.ResourceReference) *errors.ServiceError {
 	m.ctrl.T.Helper()

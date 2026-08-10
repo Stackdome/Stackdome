@@ -35,6 +35,11 @@ type StackReleaseStore interface {
 	// GetByIDs returns releases keyed by release ID.
 	GetByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError)
 
+	// GetLatestSummariesByStackIDs returns identity and state only, without snapshots.
+	GetLatestSummariesByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError)
+	// GetSummariesByIDs returns identity and state only, without snapshots.
+	GetSummariesByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError)
+
 	// CAS state transitions. The bool return indicates whether THIS caller won
 	// the compare-and-swap (i.e., the row was in the expected state).
 

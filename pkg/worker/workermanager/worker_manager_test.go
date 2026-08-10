@@ -12,6 +12,7 @@ import (
 	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/client-go/util/workqueue"
 )
 
 type testOperand struct{ ID string }
@@ -129,6 +130,23 @@ var _ = Describe("serviceWorkerManager", func() {
 		defer mu.Unlock()
 		Expect(overlap).To(BeFalse(), "same operand ran concurrently with itself")
 		Expect(peak).To(BeNumerically(">", 1), "expected concurrent processing of distinct operands")
+	})
+
+	It("keeps transient non-periodic work retryable after twenty errors", func() {
+		w := newTestWorker(func(context.Context, workerlib.Operand) (workerlib.Result, *errors.ServiceError) {
+			return workerlib.Result{}, errors.GeneralError("transient failure")
+		})
+		w.Queue = workqueue.NewTypedRateLimitingQueue[workerlib.Operand](
+			workqueue.NewTypedItemFastSlowRateLimiter[workerlib.Operand](0, 0, 1),
+		)
+		mgr = NewWorkerManager(WorkerManagerSpec{Environment: "test", Metrics: observability.NewMetrics()})
+		operand := testOperand{ID: "eventual-work"}
+		w.Queue.Add(operand)
+
+		for range 22 {
+			Expect(mgr.processNextWorkItemForWorker(context.Background(), w)).To(BeTrue())
+			Eventually(w.Queue.Len).Should(Equal(1))
+		}
 	})
 })
 

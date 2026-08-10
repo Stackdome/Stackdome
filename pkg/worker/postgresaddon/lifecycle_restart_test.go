@@ -115,7 +115,8 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
 			},
 		}
-		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(ctx).Return([]*models.StackRelease{release}, nil)
+		releases.EXPECT().InternalListAuthoritativeWorkload(ctx).Return(&models.WorkloadAuthorityScan{Releases: []models.WorkloadReleaseRef{{StackID: release.StackID, ReleaseID: release.ID}}}, nil)
+		references.EXPECT().InternalListReleaseReferents(ctx, []string{release.ID}, models.ReferentPostgresAddon).Return([]models.ResourceReference{{ReleaseID: &releaseID, ReferentID: "addon-1"}}, nil)
 		releases.EXPECT().InternalGet(ctx, releaseID).Return(release, nil).Times(2)
 		stack := &models.Stack{
 			ID: "stack-1", OrganisationID: "org-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: releaseID}},

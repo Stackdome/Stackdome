@@ -50,6 +50,7 @@ type ReleaseWorkerSpec struct {
 	RuntimePolicy         runtimePolicy
 	NamespaceService      namespaceService
 	Env                   string
+	ClusterWrites         *worker.ClusterMutationCoordinator
 }
 
 type releaseWorker struct {
@@ -76,7 +77,9 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 			newApplyReconciler(spec),
 			newConvergeReconciler(spec),
 		},
-		BaseWorker: worker.NewBaseWorker(ReleaseWorkerName, spec.Env),
+		BaseWorker: worker.NewBaseWorkerWithClusterMutationCoordinator(
+			ReleaseWorkerName, spec.Env, spec.ClusterWrites,
+		),
 	}
 }
 

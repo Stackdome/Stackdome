@@ -15,12 +15,13 @@ const (
 type RelationKind string
 
 const (
-	RelationEnv           RelationKind = "env"
-	RelationVolumeMount   RelationKind = "volume_mount"
-	RelationBuildArtifact RelationKind = "build_artifact_source"
-	RelationGitCredential RelationKind = "git_credential"
-	RelationImagePull     RelationKind = "image_pull"
-	RelationImagePush     RelationKind = "image_push"
+	RelationEnv               RelationKind = "env"
+	RelationVolumeDeclaration RelationKind = "volume_declaration"
+	RelationVolumeMount       RelationKind = "volume_mount"
+	RelationBuildArtifact     RelationKind = "build_artifact_source"
+	RelationGitCredential     RelationKind = "git_credential"
+	RelationImagePull         RelationKind = "image_pull"
+	RelationImagePush         RelationKind = "image_push"
 )
 
 // ResourceReference is a derived index row: a scope (the live stack spec when

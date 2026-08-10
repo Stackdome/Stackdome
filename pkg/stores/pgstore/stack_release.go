@@ -127,6 +127,48 @@ func (s *stackReleaseStore) ListActive(ctx context.Context) ([]*models.StackRele
 	return releases, nil
 }
 
+func (s *stackReleaseStore) GetLatestSummariesByStackIDs(ctx context.Context, stackIDs []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	if len(stackIDs) == 0 {
+		return map[string]*models.StackRelease{}, nil
+	}
+	latestSequences := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Select("stack_id, MAX(sequence) AS sequence").
+		Where("stack_id IN ?", stackIDs).
+		Group("stack_id")
+	var releases []*models.StackRelease
+	if err := s.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Select("stack_releases.id", "stack_releases.stack_id", "stack_releases.sequence", "stack_releases.state").
+		Joins("JOIN (?) AS latest ON latest.stack_id = stack_releases.stack_id AND latest.sequence = stack_releases.sequence", latestSequences).
+		Find(&releases).Error; err != nil {
+		return nil, errors.GeneralError("failed to get latest release summaries: %s", err.Error())
+	}
+	result := make(map[string]*models.StackRelease, len(releases))
+	for _, release := range releases {
+		result[release.StackID] = release
+	}
+	return result, nil
+}
+
+func (s *stackReleaseStore) GetSummariesByIDs(ctx context.Context, ids []string) (map[string]*models.StackRelease, *errors.ServiceError) {
+	if len(ids) == 0 {
+		return map[string]*models.StackRelease{}, nil
+	}
+	var releases []*models.StackRelease
+	if err := s.sessionFactory.New(ctx).
+		Select("id", "stack_id", "sequence", "state").
+		Where("id IN ?", ids).
+		Find(&releases).Error; err != nil {
+		return nil, errors.GeneralError("failed to get release summaries: %s", err.Error())
+	}
+	result := make(map[string]*models.StackRelease, len(releases))
+	for _, release := range releases {
+		result[release.ID] = release
+	}
+	return result, nil
+}
+
 // GetActiveByStackID returns the highest-sequence active release for a stack, or (nil, nil) if none.
 func (s *stackReleaseStore) GetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
 	var release models.StackRelease

@@ -80,3 +80,16 @@ func (s *resourceReferenceStore) ListByReferent(ctx context.Context, referentTyp
 	}
 	return refs, nil
 }
+
+func (s *resourceReferenceStore) ListByReleaseIDs(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError) {
+	if len(releaseIDs) == 0 {
+		return []models.ResourceReference{}, nil
+	}
+	var refs []models.ResourceReference
+	if err := s.sessionFactory.New(ctx).
+		Where("release_id IN ? AND referent_type = ?", releaseIDs, referentType).
+		Find(&refs).Error; err != nil {
+		return nil, errors.GeneralError("failed to list release references: %s", err.Error())
+	}
+	return refs, nil
+}

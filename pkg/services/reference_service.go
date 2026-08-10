@@ -21,6 +21,11 @@ type ReferenceService interface {
 		[]models.ResourceReference,
 		*errors.ServiceError,
 	)
+	InternalListReleaseReferents(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError)
+}
+
+func (s *referenceService) InternalListReleaseReferents(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError) {
+	return s.store.ListByReleaseIDs(ctx, releaseIDs, referentType)
 }
 
 type ReferenceServiceSpec struct {
@@ -90,6 +95,11 @@ func extractReferences(stack *models.Stack) []models.ResourceReference {
 	}
 
 	volumesByName := stack.VolumesMap()
+	for _, volume := range stack.Volumes {
+		if volume != nil {
+			add(models.ReferentVolume, volume.ID, models.RelationVolumeDeclaration)
+		}
+	}
 	for _, c := range stack.Connections {
 		for _, ep := range []models.TopologyNodeRef{c.From, c.To} {
 			switch ep.Type {

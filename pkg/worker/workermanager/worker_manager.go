@@ -15,10 +15,6 @@ import (
 	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 )
 
-// MaxOperandRequeue bounds permanent failures while still allowing transient
-// cluster errors to retry through the workqueue's exponential backoff.
-const MaxOperandRequeue = 20
-
 // Goroutines draining each worker's queue. The workqueue never hands the
 // same key to two goroutines (in-flight keys re-queue as dirty), so this
 // only requires operands to be comparable values — see models.StackOperand.
@@ -204,9 +200,7 @@ func (s *serviceWorkerManager) processNextWorkItemForWorker(ctx context.Context,
 			"operand":  fmt.Sprintf("%v", operand),
 			"requeues": requeues,
 		}).Error(ctx, "reconcile error: %v", err)
-		if requeues <= MaxOperandRequeue {
-			worker.WorkQueue().AddRateLimited(operand)
-		}
+		worker.WorkQueue().AddRateLimited(operand)
 	case result.RequeueAfter > 0:
 		worker.WorkQueue().Forget(operand)
 		worker.EnqueueAfter(operand, result.RequeueAfter)

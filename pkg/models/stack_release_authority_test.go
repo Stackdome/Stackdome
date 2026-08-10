@@ -26,6 +26,19 @@ var _ = ginkgo.Describe("StackRelease workload authority", func() {
 		gomega.Expect(release.IsAuthoritativeWorkloadRelease(stack, nil)).To(gomega.BeFalse())
 	})
 
+	ginkgo.It("keeps the exact persisted converged release live after supersession", func() {
+		release.State = ReleaseStateSuperseded
+
+		gomega.Expect(release.IsAuthoritativeWorkloadRelease(stack, nil)).To(gomega.BeTrue())
+	})
+
+	ginkgo.It("gives a newer active release authority over the persisted release", func() {
+		release.State = ReleaseStateSuperseded
+		active := &StackRelease{ID: "release-b", StackID: stack.ID, State: ReleaseStateInProgress}
+
+		gomega.Expect(release.IsAuthoritativeWorkloadRelease(stack, active)).To(gomega.BeFalse())
+	})
+
 	ginkgo.It("accepts a pending rollback only while it is the active release", func() {
 		release.ID = "rollback-1"
 		release.State = ReleaseStatePending
@@ -35,8 +48,8 @@ var _ = ginkgo.Describe("StackRelease workload authority", func() {
 		gomega.Expect(release.IsAuthoritativeWorkloadRelease(stack, &active)).To(gomega.BeFalse())
 	})
 
-	ginkgo.It("fails closed for cancellation, supersession, and identity drift", func() {
-		for _, state := range []StackReleaseState{ReleaseStateCancelled, ReleaseStateSuperseded, ReleaseStateFailed} {
+	ginkgo.It("fails closed for cancellation, failure, and identity drift", func() {
+		for _, state := range []StackReleaseState{ReleaseStateCancelled, ReleaseStateFailed} {
 			release.State = state
 			gomega.Expect(release.IsAuthoritativeWorkloadRelease(stack, release)).To(gomega.BeFalse())
 		}

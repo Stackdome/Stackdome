@@ -42,6 +42,21 @@ func (m *MockReferenceService) EXPECT() *MockReferenceServiceMockRecorder {
 	return m.recorder
 }
 
+// InternalListReleaseReferents mocks base method.
+func (m *MockReferenceService) InternalListReleaseReferents(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalListReleaseReferents", ctx, releaseIDs, referentType)
+	ret0, _ := ret[0].([]models.ResourceReference)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalListReleaseReferents indicates an expected call of InternalListReleaseReferents.
+func (mr *MockReferenceServiceMockRecorder) InternalListReleaseReferents(ctx, releaseIDs, referentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListReleaseReferents", reflect.TypeOf((*MockReferenceService)(nil).InternalListReleaseReferents), ctx, releaseIDs, referentType)
+}
+
 // IsReferentInUse mocks base method.
 func (m *MockReferenceService) IsReferentInUse(ctx context.Context, referentType models.ReferentType, referentID string) (bool, []models.ResourceReference, *errors.ServiceError) {
 	m.ctrl.T.Helper()

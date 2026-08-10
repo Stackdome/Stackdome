@@ -36,6 +36,7 @@ type StackService interface {
 	InternalDeleteStack(ctx context.Context, stack *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStackCrRevision(ctx context.Context, ID string, revision string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
+	InternalListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
 	SetReleaseService(rs releaseServiceForStack)
 	ClusterResourceServiceInjectable
@@ -717,6 +718,10 @@ func (s *stackService) InternalList(ctx context.Context, query string, args ...a
 		return nil, err
 	}
 	return stacks, nil
+}
+
+func (s *stackService) InternalListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError) {
+	return s.stackStore.ListWorkloadAuthorityCandidates(ctx)
 }
 
 func (s *stackService) GetStacksByProjectID(ctx context.Context, projectID string) ([]*models.Stack, *errors.ServiceError) {

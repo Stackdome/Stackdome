@@ -239,6 +239,21 @@ func (mr *MockStackStoreMockRecorder) ListByUserID(ctx, userID any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUserID", reflect.TypeOf((*MockStackStore)(nil).ListByUserID), ctx, userID)
 }
 
+// ListWorkloadAuthorityCandidates mocks base method.
+func (m *MockStackStore) ListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListWorkloadAuthorityCandidates", ctx)
+	ret0, _ := ret[0].([]*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// ListWorkloadAuthorityCandidates indicates an expected call of ListWorkloadAuthorityCandidates.
+func (mr *MockStackStoreMockRecorder) ListWorkloadAuthorityCandidates(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListWorkloadAuthorityCandidates", reflect.TypeOf((*MockStackStore)(nil).ListWorkloadAuthorityCandidates), ctx)
+}
+
 // LockByID mocks base method.
 func (m *MockStackStore) LockByID(ctx context.Context, id string) *errors.ServiceError {
 	m.ctrl.T.Helper()

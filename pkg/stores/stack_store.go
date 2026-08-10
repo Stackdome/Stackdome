@@ -28,6 +28,8 @@ type StackStore interface {
 	UpdateConnectionWithTx(ctx context.Context, id string, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError)
 	DeleteConnectionWithTx(ctx context.Context, id string, connectionID string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.Stack, *errors.ServiceError)
+	// ListWorkloadAuthorityCandidates omits stack associations and excludes draft-only stacks.
+	ListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError)
 	UpdateWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateShellWithTx(ctx context.Context, id string, spec *models.Stack) (*models.Stack, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, id string, status *models.StackStatus) *errors.ServiceError

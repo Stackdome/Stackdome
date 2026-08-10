@@ -30,3 +30,13 @@ type PreviewStackOperand struct{ ID string }
 // ClusterImageRegistryOperand serializes all registry reconciliation for one
 // cluster, including cluster deletion once its registries have been removed.
 type ClusterImageRegistryOperand struct{ ClusterID string }
+
+type WorkloadReleaseRef struct {
+	StackID   string
+	ReleaseID string
+}
+
+type WorkloadAuthorityScan struct {
+	Releases         []WorkloadReleaseRef
+	DeletingStackIDs []string
+}

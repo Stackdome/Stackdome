@@ -91,6 +91,22 @@ func (w *stackStore) InternalList(ctx context.Context, query string, args ...any
 	return stacks, nil
 }
 
+func (w *stackStore) ListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError) {
+	activeStackIDs := w.sessionFactory.New(ctx).
+		Model(&models.StackRelease{}).
+		Select("stack_id").
+		Where("state IN ?", activeReleaseStates)
+
+	var stacks []*models.Stack
+	if err := w.sessionFactory.New(ctx).
+		Select("id", "organisation_id", "project_id", "cluster_id", "user_id", "name", "namespace_id", "namespace", "status", "deletion_timestamp").
+		Where("deletion_timestamp IS NOT NULL OR status->'last_converged'->>'release_id' IS NOT NULL OR id IN (?)", activeStackIDs).
+		Find(&stacks).Error; err != nil {
+		return nil, errors.GeneralError("failed to list workload authority candidates: %s", err.Error())
+	}
+	return stacks, nil
+}
+
 func (w *stackStore) CreateWithTx(ctx context.Context, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {

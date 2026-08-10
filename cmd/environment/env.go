@@ -32,6 +32,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
+	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 	clusterimageregistryworker "github.com/Stackdome/stackdome/pkg/worker/clusterimageregistry"
 	inviteworker "github.com/Stackdome/stackdome/pkg/worker/invite"
 	postgresaddonworker "github.com/Stackdome/stackdome/pkg/worker/postgresaddon"
@@ -868,6 +869,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Environment: e.Name,
 		Metrics:     e.Observability,
 	})
+	clusterWrites := workerlib.NewClusterMutationCoordinator()
 
 	stackWorker := stack.NewStackWorker(stack.StackWorkerSpec{
 		StackService:     e.Services.StackService,
@@ -878,6 +880,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Env:              e.Name,
 		RuntimePolicy:    e.RuntimePolicy,
 		ReleaseService:   e.Services.StackReleaseService,
+		ClusterWrites:    clusterWrites,
 	})
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
@@ -911,6 +914,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		}),
 		ReleaseWorkerEnqueuer: e.WorkerManager,
 		Env:                   e.Name,
+		ClusterWrites:         clusterWrites,
 	})
 	e.WorkerManager.RegisterWorker(releaseWorker, models.StackReleaseOperand{})
 
@@ -928,10 +932,12 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		StackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: e.DBSession,
 		}),
-		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
-		Env:             e.Name,
-		RuntimePolicy:   e.RuntimePolicy,
-		ReleaseService:  e.Services.StackReleaseService,
+		VolumeCrBuilder:  builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
+		Env:              e.Name,
+		RuntimePolicy:    e.RuntimePolicy,
+		ReleaseService:   e.Services.StackReleaseService,
+		ClusterWrites:    clusterWrites,
+		ReferenceService: e.Services.ReferenceService,
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
@@ -964,6 +970,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		RuntimePolicy:        e.RuntimePolicy,
 		ReleaseService:       e.Services.StackReleaseService,
 		StackService:         e.Services.StackService,
+		ClusterWrites:        clusterWrites,
 	})
 	e.WorkerManager.RegisterWorker(pgAddonWorker, models.PostgresAddonOperand{})
 

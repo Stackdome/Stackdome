@@ -296,6 +296,21 @@ func (mr *MockStackServiceMockRecorder) InternalList(ctx, query any, args ...any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalList", reflect.TypeOf((*MockStackService)(nil).InternalList), varargs...)
 }
 
+// InternalListWorkloadAuthorityCandidates mocks base method.
+func (m *MockStackService) InternalListWorkloadAuthorityCandidates(ctx context.Context) ([]*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalListWorkloadAuthorityCandidates", ctx)
+	ret0, _ := ret[0].([]*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalListWorkloadAuthorityCandidates indicates an expected call of InternalListWorkloadAuthorityCandidates.
+func (mr *MockStackServiceMockRecorder) InternalListWorkloadAuthorityCandidates(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListWorkloadAuthorityCandidates", reflect.TypeOf((*MockStackService)(nil).InternalListWorkloadAuthorityCandidates), ctx)
+}
+
 // InternalUpdateStack mocks base method.
 func (m *MockStackService) InternalUpdateStack(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
 	m.ctrl.T.Helper()

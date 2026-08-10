@@ -24,12 +24,37 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		volumes := NewMockvolumeService(ctrl)
 		releases := NewMockreleaseService(ctrl)
-		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(gomock.Any()).Return([]*models.StackRelease{}, nil)
-		w := &volumeWorker{volumeService: volumes, releaseService: releases, runtimePolicy: &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test")}
+		refs := NewMockreferenceService(ctrl)
+		releases.EXPECT().InternalListAuthoritativeWorkload(gomock.Any()).Return(&models.WorkloadAuthorityScan{}, nil)
+		refs.EXPECT().InternalListReleaseReferents(gomock.Any(), []string{}, models.ReferentVolume).Return([]models.ResourceReference{}, nil)
+		w := &volumeWorker{volumeService: volumes, releaseService: releases, referenceService: refs, runtimePolicy: &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test")}
 
 		operands, serr := w.GetInput(context.Background())
 		Expect(serr).To(BeNil())
 		Expect(operands).To(BeEmpty())
+	})
+
+	It("selects declared release volumes without loading release snapshots", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		releases := NewMockreleaseService(ctrl)
+		refs := NewMockreferenceService(ctrl)
+		releases.EXPECT().InternalListAuthoritativeWorkload(gomock.Any()).Return(&models.WorkloadAuthorityScan{
+			Releases: []models.WorkloadReleaseRef{{StackID: "stack-1", ReleaseID: "release-1"}},
+		}, nil)
+		releaseID := "release-1"
+		refs.EXPECT().InternalListReleaseReferents(gomock.Any(), []string{releaseID}, models.ReferentVolume).Return([]models.ResourceReference{
+			{ReleaseID: &releaseID, ReferentType: models.ReferentVolume, ReferentID: "volume-1", RelationKind: models.RelationVolumeDeclaration},
+			{ReleaseID: &releaseID, ReferentType: models.ReferentVolume, ReferentID: "volume-1", RelationKind: models.RelationVolumeMount},
+		}, nil)
+		w := &volumeWorker{
+			releaseService: releases, referenceService: refs, runtimePolicy: &activeVolumeRuntimePolicy{},
+			BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
+		}
+
+		operands, serr := w.GetInput(context.Background())
+
+		Expect(serr).To(BeNil())
+		Expect(operands).To(ConsistOf(models.VolumeOperand{ID: "volume-1", ReleaseID: releaseID}))
 	})
 
 	It("provisions the immutable release volume even when the draft has drifted", func() {
@@ -72,11 +97,12 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		Expect(created.Spec.Source.RemoteDir.CurrentDirectoryHash).To(Equal("release-hash"))
 	})
 
-	It("does not create a volume when authority changes after the Kubernetes read", func() {
+	It("does not create a volume when allocation expires after the Kubernetes read", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		volumes := NewMockvolumeService(ctrl)
 		releases := NewMockreleaseService(ctrl)
 		stacks := NewMockstackService(ctrl)
+		policy := services.NewMockRuntimePolicy(ctrl)
 		clusters := mocks.NewMockClusterManager(ctrl)
 		scheme := runtime.NewScheme()
 		Expect(storagev1alpha1.AddToScheme(scheme)).To(Succeed())
@@ -96,16 +122,18 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		}
 		releases.EXPECT().InternalGet(gomock.Any(), release.ID).Return(release, nil)
 		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil).Times(3)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
+		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		gomock.InOrder(
-			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil),
-			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil),
-			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(nil, nil),
+			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil),
+			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(nil),
+			policy.EXPECT().RequireActiveAllocation(gomock.Any(), stack.OrganisationID).Return(errors.TrialInactive()),
 		)
 		clusters.EXPECT().GetClient(stack.ClusterID).Return(clusterClient, nil)
 		w := &volumeWorker{
 			volumeService: volumes, stackService: stacks, releaseService: releases, clusterManager: clusters,
 			volumeCRbuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
-			runtimePolicy:   &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
+			runtimePolicy:   policy, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
 		}
 
 		result, serr := w.Execute(context.Background(), models.VolumeOperand{ID: volume.ID, ReleaseID: release.ID})

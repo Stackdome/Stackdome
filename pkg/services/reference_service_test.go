@@ -33,6 +33,7 @@ func TestExtractReferences(t *testing.T) {
 	want := map[string]bool{
 		"secret|sec-1|env":                       true,
 		"postgres_addon|pg-1|env":                true,
+		"volume|vol-1|volume_declaration":        true,
 		"volume|vol-1|volume_mount":              true,
 		"registry_credential|rc-web|image_pull":  true,
 		"registry_credential|rc-pull|image_pull": true,

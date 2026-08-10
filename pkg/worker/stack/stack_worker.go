@@ -35,6 +35,7 @@ type StackWorkerSpec struct {
 	ClusterManager   clustermanager.ClusterManager
 	RuntimePolicy    services.RuntimePolicy
 	ReleaseService   releaseService
+	ClusterWrites    *worker.ClusterMutationCoordinator
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
@@ -43,7 +44,9 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		releaseService: spec.ReleaseService,
 		clusterManager: spec.ClusterManager,
 		runtimePolicy:  spec.RuntimePolicy,
-		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
+		BaseWorker: worker.NewBaseWorkerWithClusterMutationCoordinator(
+			StackWorkerName, spec.Env, spec.ClusterWrites,
+		),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
 				StackService:     spec.StackService,
@@ -80,6 +83,8 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		}
 		return worker.Result{}, err
 	}
+	unlockCluster := w.LockClusterNamespace(stack.ClusterID, stack.Namespace)
+	defer unlockCluster()
 	log.Info(ctx, "processing stack")
 	releaseID := ""
 	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
@@ -147,12 +152,21 @@ func (w *stackWorker) authorizeMutation(stackID, releaseID string) worker.Mutati
 		if serr != nil {
 			return serr
 		}
+		if stack.DeletionTimestamp != nil {
+			return worker.ErrMutationNotAuthorized
+		}
 		authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
 		if serr != nil {
 			return serr
 		}
 		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
 			return worker.ErrMutationNotAuthorized
+		}
+		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+				return worker.ErrMutationNotAuthorized
+			}
+			return admissionErr
 		}
 		return nil
 	}
@@ -203,25 +217,16 @@ func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.S
 }
 
 func (w *stackWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	releases, serr := w.releaseService.InternalListAuthoritativeWorkloadReleases(ctx)
+	scan, serr := w.releaseService.InternalListAuthoritativeWorkload(ctx)
 	if serr != nil {
 		return nil, w.WorkerError.NewError("failed to list authoritative stack releases: %v", serr)
 	}
-	operands := make([]worker.Operand, 0, len(releases))
-	seen := make(map[string]struct{}, len(releases))
-	for _, release := range releases {
-		operands = append(operands, models.StackOperand{ID: release.StackID, ReleaseID: release.ID})
-		seen[release.StackID] = struct{}{}
+	operands := make([]worker.Operand, 0, len(scan.Releases)+len(scan.DeletingStackIDs))
+	for _, release := range scan.Releases {
+		operands = append(operands, models.StackOperand{ID: release.StackID, ReleaseID: release.ReleaseID})
 	}
-	deleting, serr := w.stackService.InternalList(ctx, "deletion_timestamp IS NOT NULL")
-	if serr != nil {
-		return nil, w.WorkerError.NewError("failed to list deleting stacks: %v", serr)
-	}
-	for _, stack := range deleting {
-		if _, exists := seen[stack.ID]; exists {
-			continue
-		}
-		operands = append(operands, models.StackOperand{ID: stack.ID})
+	for _, stackID := range scan.DeletingStackIDs {
+		operands = append(operands, models.StackOperand{ID: stackID})
 	}
 	return operands, nil
 }

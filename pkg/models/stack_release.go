@@ -70,7 +70,7 @@ func (s StackReleaseState) Terminal() bool {
 // the stack's active release; a completed release must be the stack's current
 // converged release. Retained historical releases are rollback sources, not
 // live reconciliation authority.
-func (r *StackRelease) IsAuthoritativeWorkloadRelease(stack *Stack, active *StackRelease) bool {
+func (r *StackRelease) IsAuthoritativeWorkloadRelease(stack *Stack, latest *StackRelease) bool {
 	if r == nil || stack == nil || r.StackID != stack.ID || r.Snapshot.Stack.ID != stack.ID ||
 		r.Snapshot.Stack.OrganisationID != stack.OrganisationID ||
 		r.Snapshot.Stack.ProjectID != stack.ProjectID ||
@@ -81,13 +81,20 @@ func (r *StackRelease) IsAuthoritativeWorkloadRelease(stack *Stack, active *Stac
 		r.Snapshot.Stack.Namespace != stack.Namespace {
 		return false
 	}
+	if latest != nil && latest.ID != r.ID && latest.StackID == r.StackID && latest.State.Active() {
+		return false
+	}
+
+	if stack.GetConvergedReleaseID() == r.ID {
+		switch r.State {
+		case ReleaseStateInProgress, ReleaseStateReleased, ReleaseStateSuperseded:
+			return true
+		}
+	}
 
 	switch r.State {
 	case ReleaseStatePending, ReleaseStateInProgress:
-		return active != nil && active.ID == r.ID && active.StackID == r.StackID &&
-			(active.State == ReleaseStatePending || active.State == ReleaseStateInProgress)
-	case ReleaseStateReleased:
-		return stack.GetConvergedReleaseID() == r.ID
+		return latest != nil && latest.ID == r.ID && latest.StackID == r.StackID && latest.State.Active()
 	default:
 		return false
 	}

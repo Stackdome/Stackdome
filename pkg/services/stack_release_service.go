@@ -55,7 +55,7 @@ type StackReleaseService interface {
 	InternalCreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
-	InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
+	InternalListAuthoritativeWorkload(ctx context.Context) (*models.WorkloadAuthorityScan, *errors.ServiceError)
 	InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
@@ -580,63 +580,73 @@ func (s *stackReleaseService) InternalResolveAuthoritativeWorkloadRelease(ctx co
 	}
 
 	selected := selectAuthoritativeWorkloadRelease(latest, converged)
-	if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, selected) {
+	if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, latest) {
 		return nil, nil
 	}
 	return selected, nil
 }
 
-// InternalListAuthoritativeWorkloadReleases returns at most one release per
-// non-deleting stack. Draft-only stacks are excluded before release snapshots
-// are loaded, so periodic cloud reconciliation does not scan every signup.
-func (s *stackReleaseService) InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {
-	stacks, serr := s.stackQuery.InternalList(ctx,
-		"deletion_timestamp IS NULL AND status->'last_converged'->>'release_id' IS NOT NULL")
+// InternalListAuthoritativeWorkload returns only IDs needed to enqueue cloud
+// reconciliation. Full stacks and release snapshots are loaded by Execute.
+func (s *stackReleaseService) InternalListAuthoritativeWorkload(ctx context.Context) (*models.WorkloadAuthorityScan, *errors.ServiceError) {
+	stacks, serr := s.stackQuery.InternalListWorkloadAuthorityCandidates(ctx)
 	if serr != nil {
 		return nil, serr
 	}
-
-	activeReleases, serr := s.store.ListActive(ctx)
-	if serr != nil {
-		return nil, serr
+	scan := &models.WorkloadAuthorityScan{
+		Releases:         make([]models.WorkloadReleaseRef, 0, len(stacks)),
+		DeletingStackIDs: make([]string, 0),
 	}
-	knownStackIDs := make(map[string]struct{}, len(stacks))
+	activeStacks := make([]*models.Stack, 0, len(stacks))
 	for _, stack := range stacks {
-		knownStackIDs[stack.ID] = struct{}{}
-	}
-	activeStackIDs := make([]string, 0, len(activeReleases))
-	for _, release := range activeReleases {
-		if _, known := knownStackIDs[release.StackID]; known {
+		if stack.DeletionTimestamp != nil {
+			scan.DeletingStackIDs = append(scan.DeletingStackIDs, stack.ID)
 			continue
 		}
-		knownStackIDs[release.StackID] = struct{}{}
-		activeStackIDs = append(activeStackIDs, release.StackID)
+		activeStacks = append(activeStacks, stack)
 	}
-	if len(activeStackIDs) > 0 {
-		activeStacks, listErr := s.stackQuery.InternalList(ctx, "deletion_timestamp IS NULL AND id IN ?", activeStackIDs)
-		if listErr != nil {
-			return nil, listErr
-		}
-		stacks = append(stacks, activeStacks...)
-	}
-	if len(stacks) == 0 {
-		return []*models.StackRelease{}, nil
+	if len(activeStacks) == 0 {
+		return scan, nil
 	}
 
-	refs, serr := s.InternalGetReleaseRefs(ctx, stacks)
+	stackIDs := make([]string, len(activeStacks))
+	for i, stack := range activeStacks {
+		stackIDs[i] = stack.ID
+	}
+	latestByStackID, serr := s.store.GetLatestSummariesByStackIDs(ctx, stackIDs)
 	if serr != nil {
 		return nil, serr
 	}
-	authoritative := make([]*models.StackRelease, 0, len(stacks))
-	for _, stack := range stacks {
-		ref := refs[stack.ID]
-		selected := selectAuthoritativeWorkloadRelease(ref.Latest, ref.Converged)
-		if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, selected) {
+	convergedIDs := make([]string, 0, len(activeStacks))
+	for _, stack := range activeStacks {
+		latest := latestByStackID[stack.ID]
+		if latest != nil && latest.State.Active() {
 			continue
 		}
-		authoritative = append(authoritative, selected)
+		if convergedID := stack.GetConvergedReleaseID(); convergedID != "" {
+			convergedIDs = append(convergedIDs, convergedID)
+		}
 	}
-	return authoritative, nil
+	convergedByID, serr := s.store.GetSummariesByIDs(ctx, convergedIDs)
+	if serr != nil {
+		return nil, serr
+	}
+	for _, stack := range activeStacks {
+		latest := latestByStackID[stack.ID]
+		if latest != nil && latest.State.Active() {
+			scan.Releases = append(scan.Releases, models.WorkloadReleaseRef{StackID: stack.ID, ReleaseID: latest.ID})
+			continue
+		}
+		converged := convergedByID[stack.GetConvergedReleaseID()]
+		if converged == nil || converged.StackID != stack.ID {
+			continue
+		}
+		switch converged.State {
+		case models.ReleaseStateInProgress, models.ReleaseStateReleased, models.ReleaseStateSuperseded:
+			scan.Releases = append(scan.Releases, models.WorkloadReleaseRef{StackID: stack.ID, ReleaseID: converged.ID})
+		}
+	}
+	return scan, nil
 }
 
 func (s *stackReleaseService) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {

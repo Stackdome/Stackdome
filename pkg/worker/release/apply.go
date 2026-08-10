@@ -12,6 +12,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/credentials"
+	serviceerrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/worker"
@@ -67,6 +68,8 @@ type applyReconciler struct {
 	postgresAddonService postgresAddonService
 	volumeService        volumeService
 	logger               logger.Logger
+	runtimePolicy        runtimePolicy
+	clusterWrites        *worker.ClusterMutationCoordinator
 }
 
 func newApplyReconciler(spec ReleaseWorkerSpec) *applyReconciler {
@@ -79,6 +82,8 @@ func newApplyReconciler(spec ReleaseWorkerSpec) *applyReconciler {
 		credentialResolver:   spec.CredentialResolver,
 		postgresAddonService: spec.PostgresAddonService,
 		volumeService:        spec.VolumeService,
+		runtimePolicy:        spec.RuntimePolicy,
+		clusterWrites:        spec.ClusterWrites,
 		logger:               logger.NewLoggerWithPrefix(context.Background(), "release-apply"),
 	}
 }
@@ -103,6 +108,8 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		failRelease(ctx, r.releaseService, r.logger, release, "stack is being deleted")
 		return resultStop, nil
 	}
+	unlockCluster := r.clusterWrites.LockClusterNamespace(stack.ClusterID, stack.Namespace)
+	defer unlockCluster()
 
 	clusterClient, cerr := r.clusterManager.GetClient(stack.ClusterID)
 	if cerr != nil {
@@ -190,11 +197,24 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 
 func (r *applyReconciler) authorizeMutation(release *models.StackRelease) worker.MutationAuthorizer {
 	return func(ctx context.Context) error {
+		stack, serr := r.stackService.InternalGetStack(ctx, release.StackID)
+		if serr != nil {
+			return serr
+		}
+		if stack.DeletionTimestamp != nil {
+			return errReleaseSuperseded
+		}
 		latest, serr := r.releaseService.InternalGetLatestByStackID(ctx, release.StackID)
 		if serr != nil {
 			return serr
 		}
-		if latest != nil && latest.ID == release.ID && latest.State.Active() {
+		if latest != nil && latest.ID == release.ID && latest.IsAuthoritativeWorkloadRelease(stack, latest) {
+			if admissionErr := r.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
+				if admissionErr.Reason == serviceerrors.ErrorCodeTrialInactive {
+					return errReleaseSuperseded
+				}
+				return admissionErr
+			}
 			return nil
 		}
 		if latest != nil && latest.Sequence > release.Sequence {
