@@ -19,6 +19,8 @@ type postgresAddonWorker struct {
 	clusterManager       clustermanager.ClusterManager
 	subReconcilers       []subReconciler
 	runtimePolicy        services.RuntimePolicy
+	referenceService     referenceService
+	releaseService       releaseService
 	worker.BaseWorker
 }
 
@@ -32,6 +34,7 @@ type PostgresAddonWorkerSpec struct {
 	CRBuilder            builders.PostgresClusterBuilder
 	Env                  string
 	RuntimePolicy        services.RuntimePolicy
+	ReleaseService       releaseService
 }
 
 func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
@@ -39,6 +42,8 @@ func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
 		postgresAddonService: spec.PostgresAddonService,
 		clusterManager:       spec.ClusterManager,
 		runtimePolicy:        spec.RuntimePolicy,
+		referenceService:     spec.ReferenceService,
+		releaseService:       spec.ReleaseService,
 		BaseWorker:           worker.NewBaseWorker(WorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			newDeprovisionReconciler(spec),
@@ -72,6 +77,13 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 
 	w.Logger().Info(ctx, "Processing postgres addon: %s (%s)", addon.Name, addon.ID)
 	if addon.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		authorized, authorizationErr := w.authorizedByRelease(ctx, addon, addonRef.ReleaseID)
+		if authorizationErr != nil {
+			return worker.Result{}, authorizationErr
+		}
+		if !authorized {
+			return worker.Result{}, nil
+		}
 		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, addon.OrganisationID); admissionErr != nil {
 			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
 				return worker.Result{}, nil
@@ -86,6 +98,49 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 	}
 	return res, nil
+}
+
+func (w *postgresAddonWorker) authorizedByRelease(ctx context.Context, addon *models.PostgresAddon, requestedReleaseID string) (bool, *errors.ServiceError) {
+	releaseID := requestedReleaseID
+	if releaseID == "" {
+		inUse, refs, serr := w.referenceService.IsReferentInUse(ctx, models.ReferentPostgresAddon, addon.ID)
+		if serr != nil {
+			return false, serr
+		}
+		if !inUse {
+			return false, nil
+		}
+		for _, ref := range refs {
+			if ref.ReleaseID != nil && *ref.ReleaseID != "" {
+				releaseID = *ref.ReleaseID
+				break
+			}
+		}
+		if releaseID == "" {
+			return false, nil
+		}
+	}
+
+	release, serr := w.releaseService.InternalGet(ctx, releaseID)
+	if serr != nil {
+		return false, serr
+	}
+	if !release.State.AllowsWorkloadReconciliation() {
+		return false, nil
+	}
+	if release.StackID != release.Snapshot.Stack.ID || release.Snapshot.Stack.OrganisationID != addon.OrganisationID {
+		return false, w.WorkerError.NewError("release %s does not authorize postgres addon %s", release.ID, addon.ID)
+	}
+	for _, connection := range release.Snapshot.Connections {
+		if (connection.From.Type == models.TopologyNodeTypePostgresAddon && connection.From.Id == addon.ID) ||
+			(connection.To.Type == models.TopologyNodeTypePostgresAddon && connection.To.Id == addon.ID) {
+			return true, nil
+		}
+	}
+	if requestedReleaseID != "" {
+		return false, w.WorkerError.NewError("release %s does not reference postgres addon %s", release.ID, addon.ID)
+	}
+	return false, nil
 }
 
 func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.PostgresAddon) (worker.Result, error) {

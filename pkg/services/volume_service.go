@@ -55,9 +55,12 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 			SessionFactory: spec.SessionFactory,
 		}),
 		referenceService: spec.ReferenceService,
-		logger:           spec.Logger,
-		permissions:      spec.Permissions,
-		runtimePolicy:    spec.RuntimePolicy,
+		releaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		logger:        spec.Logger,
+		permissions:   spec.Permissions,
+		runtimePolicy: spec.RuntimePolicy,
 	}
 }
 
@@ -65,6 +68,7 @@ type volumeService struct {
 	volumeStore            stores.VolumeStore
 	stackVolumeStore       stores.StackVolumeStore
 	referenceService       ReferenceService
+	releaseStore           stores.StackReleaseStore
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
@@ -191,13 +195,21 @@ func (s *volumeService) UpdateGitRepoSourceRevision(ctx context.Context, ID stri
 		if getErr != nil {
 			return getErr
 		}
-		if policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID); policyErr != nil {
+		admission, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID)
+		if policyErr != nil {
 			return policyErr
 		}
 		updatedVolume, err = s.volumeStore.UpdateGitRepoSourceRevisionWithTx(ctx, ID, revision)
 		if err != nil {
 			s.logger.Error(ctx, "failed to update volume git repo source revision: %v", err)
 			return err
+		}
+		reconcileCluster, admissionErr := s.shouldReconcileVolumeRevisionWithCluster(ctx, updatedVolume.ID, admission)
+		if admissionErr != nil {
+			return admissionErr
+		}
+		if !reconcileCluster {
+			return nil
 		}
 		cErr := s.clusterResourceService.UpdateVolumeGitRevisionInCluster(ctx, updatedVolume)
 		if cErr != nil {
@@ -224,7 +236,8 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 		if getErr != nil {
 			return getErr
 		}
-		if policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID); policyErr != nil {
+		admission, policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID)
+		if policyErr != nil {
 			return policyErr
 		}
 		updatedVolume, err = s.volumeStore.UpdateRemoteDirSourceHashWithTx(ctx, ID, revision.CurrentDirectoryHash)
@@ -233,7 +246,14 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 			return err
 		}
 
-		cErr := s.clusterResourceService.UpdateVolumeGitRevisionInCluster(ctx, updatedVolume)
+		reconcileCluster, admissionErr := s.shouldReconcileVolumeRevisionWithCluster(ctx, updatedVolume.ID, admission)
+		if admissionErr != nil {
+			return admissionErr
+		}
+		if !reconcileCluster {
+			return nil
+		}
+		cErr := s.clusterResourceService.UpdateVolumeRemoteDirRevisionInCluster(ctx, updatedVolume)
 		if cErr != nil {
 			s.logger.Error(ctx, "failed to update volume git revision in cluster: %v", cErr)
 			return errors.GeneralError("failed to update volume git revision in cluster: %s", cErr.Error())
@@ -244,6 +264,39 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 		return nil, updateErr
 	}
 	return updatedVolume, nil
+}
+
+// shouldReconcileVolumeRevisionWithCluster keeps cloud draft revisions in the
+// database until the volume is part of a released workload. Self-hosted mode
+// remains eager.
+func (s *volumeService) shouldReconcileVolumeRevisionWithCluster(ctx context.Context, volumeID string, admission MutationAdmission) (bool, *errors.ServiceError) {
+	if !admission.ReconcileCluster {
+		return false, nil
+	}
+	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeEager {
+		return true, nil
+	}
+
+	inUse, refs, serr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volumeID)
+	if serr != nil {
+		return false, serr
+	}
+	if !inUse {
+		return false, nil
+	}
+	for _, ref := range refs {
+		if ref.ReleaseID == nil || *ref.ReleaseID == "" {
+			continue
+		}
+		release, releaseErr := s.releaseStore.GetByID(ctx, *ref.ReleaseID)
+		if releaseErr != nil {
+			return false, releaseErr
+		}
+		if release.State == models.ReleaseStateReleased {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // Assume ctx already has a transaction

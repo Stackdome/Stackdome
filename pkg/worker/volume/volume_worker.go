@@ -28,6 +28,7 @@ type VolumeWorkerSpec struct {
 	VolumeCrBuilder  builders.ClusterResourceBuilder
 	Env              string
 	RuntimePolicy    services.RuntimePolicy
+	ReleaseService   releaseService
 }
 
 type volumeWorker struct {
@@ -37,6 +38,7 @@ type volumeWorker struct {
 	clusterManager   clustermanager.ClusterManager
 	volumeCRbuilder  builders.ClusterResourceBuilder
 	runtimePolicy    services.RuntimePolicy
+	releaseService   releaseService
 	worker.BaseWorker
 }
 
@@ -50,6 +52,7 @@ func NewVolumeWorker(spec VolumeWorkerSpec) worker.Worker {
 		clusterManager:   spec.ClusterManager,
 		volumeCRbuilder:  spec.VolumeCrBuilder,
 		runtimePolicy:    spec.RuntimePolicy,
+		releaseService:   spec.ReleaseService,
 		BaseWorker:       worker.NewBaseWorker(VolumeWorkerName, spec.Env),
 	}
 }
@@ -60,22 +63,17 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.VolumeOperand")
 	}
 
-	vol, serr := w.volumeService.InternalGet(ctx, volumeRef.ID)
-	if serr != nil {
-		if serr.Is404() {
-			w.Logger().Info(ctx, "volume %s not found, skipping", volumeRef.ID)
-			return worker.Result{}, nil
-		}
-		return worker.Result{}, serr
-	}
-
-	w.Logger().Info(ctx, "processing volume: %s", vol.ID)
 	var stack *models.Stack
+	var vol *models.Volume
 	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
-		var stackErr error
-		stack, stackErr = w.resolveStack(ctx, vol.ID)
-		if stackErr != nil {
-			return worker.Result{}, w.WorkerError.NewError("failed to resolve stack for volume '%s': %v", vol.ID, stackErr)
+		var authorized bool
+		var resolveErr *errors.ServiceError
+		vol, stack, authorized, resolveErr = w.resolveCloudDesiredVolume(ctx, volumeRef)
+		if resolveErr != nil {
+			return worker.Result{}, resolveErr
+		}
+		if !authorized {
+			return worker.Result{}, nil
 		}
 		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
 			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
@@ -83,7 +81,19 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 			}
 			return worker.Result{}, admissionErr
 		}
+	} else {
+		var serr *errors.ServiceError
+		vol, serr = w.volumeService.InternalGet(ctx, volumeRef.ID)
+		if serr != nil {
+			if serr.Is404() {
+				w.Logger().Info(ctx, "volume %s not found, skipping", volumeRef.ID)
+				return worker.Result{}, nil
+			}
+			return worker.Result{}, serr
+		}
 	}
+
+	w.Logger().Info(ctx, "processing volume: %s", vol.ID)
 
 	if err := w.resolveGitRevision(ctx, vol); err != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to resolve git revision for volume '%s': %v", vol.ID, err)
@@ -145,6 +155,62 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	}
 
 	return worker.Result{}, nil
+}
+
+// resolveCloudDesiredVolume returns the immutable volume spec from the release
+// that authorizes this reconciliation. Periodic operands without a release ID
+// may only reconcile the stack's last converged release.
+func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models.VolumeOperand) (*models.Volume, *models.Stack, bool, *errors.ServiceError) {
+	releaseID := ref.ReleaseID
+	expectedStackID := ""
+	if releaseID == "" {
+		current, serr := w.volumeService.InternalGet(ctx, ref.ID)
+		if serr != nil {
+			if serr.Is404() {
+				return nil, nil, false, nil
+			}
+			return nil, nil, false, serr
+		}
+		stack, err := w.resolveStack(ctx, current.ID)
+		if err != nil {
+			return nil, nil, false, w.WorkerError.NewError("failed to resolve stack for volume '%s': %v", current.ID, err)
+		}
+		releaseID = stack.GetConvergedReleaseID()
+		if releaseID == "" {
+			return nil, nil, false, nil
+		}
+		expectedStackID = stack.ID
+	}
+
+	release, serr := w.releaseService.InternalGet(ctx, releaseID)
+	if serr != nil {
+		return nil, nil, false, serr
+	}
+	if !release.State.AllowsWorkloadReconciliation() {
+		return nil, nil, false, nil
+	}
+	stack := release.Snapshot.ToStack()
+	if release.StackID != stack.ID || stack.OrganisationID == "" || stack.ClusterID == "" {
+		return nil, nil, false, w.WorkerError.NewError("release %s has an invalid stack identity", release.ID)
+	}
+	if expectedStackID != "" && release.StackID != expectedStackID {
+		return nil, nil, false, w.WorkerError.NewError("release %s does not authorize stack %s", release.ID, expectedStackID)
+	}
+	for _, volume := range release.Snapshot.Volumes {
+		if volume == nil || volume.ID != ref.ID {
+			continue
+		}
+		if volume.OrganisationID != stack.OrganisationID || volume.ProjectID != stack.ProjectID ||
+			volume.NamespaceID != stack.NamespaceID || volume.Namespace != stack.Namespace {
+			return nil, nil, false, w.WorkerError.NewError("release %s does not authorize volume %s", release.ID, ref.ID)
+		}
+		return volume, stack, true, nil
+	}
+
+	if ref.ReleaseID != "" {
+		return nil, nil, false, w.WorkerError.NewError("release %s does not contain volume %s", release.ID, ref.ID)
+	}
+	return nil, nil, false, nil
 }
 
 func (w *volumeWorker) Interval() time.Duration {

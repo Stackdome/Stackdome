@@ -23,7 +23,7 @@ type RuntimePolicy interface {
 	AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitRollbackWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
-	AdmitMutationWithTx(ctx context.Context, organisationID string) *errors.ServiceError
+	AdmitMutationWithTx(ctx context.Context, organisationID string) (MutationAdmission, *errors.ServiceError)
 	AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError
 	ApplyStackResourceDefaults(resource *models.StackResource)
@@ -43,6 +43,12 @@ type StackMutation struct {
 	OrganisationID       string
 	StackID              string
 	DesiredResourceCount int64
+}
+
+// MutationAdmission describes the side effects allowed by the allocation row
+// observed and locked in the mutation transaction.
+type MutationAdmission struct {
+	ReconcileCluster bool
 }
 
 type selfHostedRuntimePolicy struct{}
@@ -75,8 +81,8 @@ func (selfHostedRuntimePolicy) RequireActiveAllocation(context.Context, string) 
 	return nil
 }
 
-func (selfHostedRuntimePolicy) AdmitMutationWithTx(context.Context, string) *errors.ServiceError {
-	return nil
+func (selfHostedRuntimePolicy) AdmitMutationWithTx(context.Context, string) (MutationAdmission, *errors.ServiceError) {
+	return MutationAdmission{ReconcileCluster: true}, nil
 }
 
 func (selfHostedRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
@@ -157,9 +163,9 @@ func (p *stackdomeCloudRuntimePolicy) RequireActiveAllocation(ctx context.Contex
 	return serr
 }
 
-func (p *stackdomeCloudRuntimePolicy) AdmitMutationWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.trials.RevalidateIfExistsWithTx(ctx, organisationID)
-	return serr
+func (p *stackdomeCloudRuntimePolicy) AdmitMutationWithTx(ctx context.Context, organisationID string) (MutationAdmission, *errors.ServiceError) {
+	allocation, serr := p.trials.RevalidateIfExistsWithTx(ctx, organisationID)
+	return MutationAdmission{ReconcileCluster: allocation != nil}, serr
 }
 
 func (p *stackdomeCloudRuntimePolicy) AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
@@ -167,7 +173,7 @@ func (p *stackdomeCloudRuntimePolicy) AdmitOrganisationDeletion(ctx context.Cont
 }
 
 func (p *stackdomeCloudRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
-	if serr := p.AdmitMutationWithTx(ctx, mutation.OrganisationID); serr != nil {
+	if _, serr := p.AdmitMutationWithTx(ctx, mutation.OrganisationID); serr != nil {
 		return serr
 	}
 	excludedStackID := ""

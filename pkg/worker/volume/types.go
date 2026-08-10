@@ -1,4 +1,4 @@
-//go:generate mockgen -source=types.go -destination=types_mock_test.go -package=volume
+//go:generate mockgen -source=types.go -destination=types_mock.go -package=volume
 package volume
 
 import (
@@ -20,4 +20,8 @@ type stackService interface {
 
 type stackVolumeStore interface {
 	GetByVolumeID(ctx context.Context, volumeID string) (*models.StackVolume, *errors.ServiceError)
+}
+
+type releaseService interface {
+	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 }

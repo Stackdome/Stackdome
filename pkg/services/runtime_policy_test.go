@@ -20,7 +20,9 @@ var _ = Describe("RuntimePolicy", func() {
 		Expect(policy.AdmitFirstReleaseWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.AdmitRollbackWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.RequireActiveAllocation(context.Background(), "org-1")).To(BeNil())
-		Expect(policy.AdmitMutationWithTx(context.Background(), "org-1")).To(BeNil())
+		admission, serr := policy.AdmitMutationWithTx(context.Background(), "org-1")
+		Expect(serr).To(BeNil())
+		Expect(admission.ReconcileCluster).To(BeTrue())
 		Expect(policy.AdmitOrganisationDeletion(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.IsolationPolicyVersion()).To(BeEmpty())
 	})
@@ -33,9 +35,27 @@ var _ = Describe("RuntimePolicy", func() {
 			MaxStacks: 2, MaxResources: 6, Replicas: 1,
 		})
 		trials.EXPECT().RevalidateIfExistsWithTx(gomock.Any(), "org-1").Return(nil, errors.TrialInactive())
-		Expect(policy.AdmitMutationWithTx(context.Background(), "org-1").Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		_, serr := policy.AdmitMutationWithTx(context.Background(), "org-1")
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
 		trials.EXPECT().EnsureNoAllocation(gomock.Any(), "org-1").Return(errors.BadRequest("allocation exists"))
 		Expect(policy.AdmitOrganisationDeletion(context.Background(), "org-1").Reason).To(Equal("allocation exists"))
+	})
+
+	It("distinguishes database-only draft mutations from active allocation mutations", func() {
+		trials := &fakeCloudTrialService{}
+		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
+			Trials: trials, StackLimits: &fakeStackLimitStore{}, IsolationPolicyVersion: "policy-v1",
+			MaxStacks: 2, MaxResources: 6, Replicas: 1,
+		})
+
+		admission, serr := policy.AdmitMutationWithTx(context.Background(), "org-1")
+		Expect(serr).To(BeNil())
+		Expect(admission.ReconcileCluster).To(BeFalse())
+
+		trials.existingAllocation = &models.TrialAllocation{OrganisationID: "org-1"}
+		admission, serr = policy.AdmitMutationWithTx(context.Background(), "org-1")
+		Expect(serr).To(BeNil())
+		Expect(admission.ReconcileCluster).To(BeTrue())
 	})
 
 	It("rejects counted stack mutations before reading usage when an allocation is inactive", func() {
@@ -128,6 +148,7 @@ var _ = Describe("RuntimePolicy", func() {
 // fakeCloudTrialService keeps this test focused on runtime policy selection.
 // Delegation details are covered by cloud_trial_service_test.go.
 type fakeCloudTrialService struct {
+	existingAllocation *models.TrialAllocation
 }
 
 type fakeStackLimitStore struct {
@@ -166,7 +187,7 @@ func (f *fakeCloudTrialService) RevalidateWithTx(context.Context, string) (*mode
 }
 
 func (f *fakeCloudTrialService) RevalidateIfExistsWithTx(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
-	return nil, nil
+	return f.existingAllocation, nil
 }
 
 func (f *fakeCloudTrialService) RequireActive(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {

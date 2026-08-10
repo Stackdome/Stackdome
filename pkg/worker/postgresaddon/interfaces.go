@@ -1,4 +1,4 @@
-//go:generate mockgen -source=interfaces.go -destination=interfaces_mock_test.go -package=postgresaddon
+//go:generate mockgen -source=interfaces.go -destination=interfaces_mock.go -package=postgresaddon
 package postgresaddon
 
 import (
@@ -35,4 +35,8 @@ type secretService interface {
 
 type referenceService interface {
 	IsReferentInUse(ctx context.Context, referentType models.ReferentType, referentID string) (bool, []models.ResourceReference, *errors.ServiceError)
+}
+
+type releaseService interface {
+	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
 }

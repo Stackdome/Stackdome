@@ -57,11 +57,12 @@ func (mr *MockRuntimePolicyMockRecorder) AdmitFirstReleaseWithTx(ctx, organisati
 }
 
 // AdmitMutationWithTx mocks base method.
-func (m *MockRuntimePolicy) AdmitMutationWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
+func (m *MockRuntimePolicy) AdmitMutationWithTx(ctx context.Context, organisationID string) (MutationAdmission, *errors.ServiceError) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AdmitMutationWithTx", ctx, organisationID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
+	ret0, _ := ret[0].(MutationAdmission)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
 }
 
 // AdmitMutationWithTx indicates an expected call of AdmitMutationWithTx.

@@ -877,6 +877,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		NamespaceService: e.Services.NamespaceService,
 		Env:              e.Name,
 		RuntimePolicy:    e.RuntimePolicy,
+		ReleaseService:   e.Services.StackReleaseService,
 	})
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
@@ -930,6 +931,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
 		Env:             e.Name,
 		RuntimePolicy:   e.RuntimePolicy,
+		ReleaseService:  e.Services.StackReleaseService,
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
@@ -960,6 +962,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
 		Env:                  e.Name,
 		RuntimePolicy:        e.RuntimePolicy,
+		ReleaseService:       e.Services.StackReleaseService,
 	})
 	e.WorkerManager.RegisterWorker(pgAddonWorker, models.PostgresAddonOperand{})
 

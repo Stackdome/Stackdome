@@ -92,16 +92,16 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 		return resultNil, err
 	}
 
-	if err := r.enqueuer.Enqueue(models.StackOperand{ID: release.StackID}); err != nil {
+	if err := r.enqueuer.Enqueue(models.StackOperand{ID: release.StackID, ReleaseID: release.ID}); err != nil {
 		return resultNil, fmt.Errorf("enqueue stack prerequisite: %w", err)
 	}
 	for _, volume := range volumes {
-		if err := r.enqueuer.Enqueue(models.VolumeOperand{ID: volume.ID}); err != nil {
+		if err := r.enqueuer.Enqueue(models.VolumeOperand{ID: volume.ID, ReleaseID: release.ID}); err != nil {
 			return resultNil, fmt.Errorf("enqueue volume prerequisite %s: %w", volume.ID, err)
 		}
 	}
 	for _, addon := range addons {
-		if err := r.enqueuer.Enqueue(models.PostgresAddonOperand{ID: addon.ID}); err != nil {
+		if err := r.enqueuer.Enqueue(models.PostgresAddonOperand{ID: addon.ID, ReleaseID: release.ID}); err != nil {
 			return resultNil, fmt.Errorf("enqueue postgres prerequisite %s: %w", addon.ID, err)
 		}
 	}

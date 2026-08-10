@@ -34,6 +34,10 @@ type stackService interface {
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
 }
 
+type releaseService interface {
+	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+}
+
 type secretService interface {
 	InternalGetByID(ctx context.Context, id string) (*models.Secret, *errors.ServiceError)
 }

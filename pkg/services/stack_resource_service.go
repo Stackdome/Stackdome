@@ -387,7 +387,7 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, stack.OrganisationID); policyErr != nil {
+		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, stack.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		var updateErr *errors.ServiceError

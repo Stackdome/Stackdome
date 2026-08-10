@@ -57,12 +57,79 @@ var _ = Describe("PostgresAddonWorker", func() {
 
 	It("does not reconcile a pending cloud addon without an active allocation", func() {
 		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}, nil)
+		releases := NewMockreleaseService(ctrl)
+		releases.EXPECT().InternalGet(ctx, "release-1").Return(&models.StackRelease{
+			ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending, Snapshot: models.StackSnapshot{
+				Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"},
+				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
+			},
+		}, nil)
+		w.releaseService = releases
 		w.runtimePolicy = &inactiveAddonRuntimePolicy{}
-		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: "addon-1"})
+		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: "addon-1", ReleaseID: "release-1"})
 		Expect(serr).To(BeNil())
 		Expect(result).To(Equal(worker.Result{}))
 	})
+
+	It("does not reconcile an unrelated draft selected by the periodic scanner", func() {
+		refs := NewMockreferenceService(ctrl)
+		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
+		addonSvc.EXPECT().InternalList(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*models.PostgresAddon{addon}, nil)
+		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(addon, nil)
+		refs.EXPECT().IsReferentInUse(ctx, models.ReferentPostgresAddon, "addon-1").Return(true, []models.ResourceReference{{ReferentID: "addon-1"}}, nil)
+		w.referenceService = refs
+		w.runtimePolicy = &activeAddonRuntimePolicy{}
+
+		operands, serr := w.GetInput(ctx)
+		Expect(serr).To(BeNil())
+		Expect(operands).To(ConsistOf(models.PostgresAddonOperand{ID: "addon-1"}))
+		result, serr := w.Execute(ctx, operands[0])
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
+	It("periodically reconciles an addon referenced by a release while its allocation is active", func() {
+		refs := NewMockreferenceService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		reconciler := &recordingAddonReconciler{}
+		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
+		releaseID := "release-1"
+		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(addon, nil)
+		refs.EXPECT().IsReferentInUse(ctx, models.ReferentPostgresAddon, "addon-1").Return(true, []models.ResourceReference{{ReleaseID: &releaseID, ReferentID: "addon-1"}}, nil)
+		releases.EXPECT().InternalGet(ctx, releaseID).Return(&models.StackRelease{
+			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
+			Snapshot: models.StackSnapshot{
+				Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"},
+				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
+			},
+		}, nil)
+		w.referenceService = refs
+		w.releaseService = releases
+		w.subReconcilers = []subReconciler{reconciler}
+		w.runtimePolicy = &activeAddonRuntimePolicy{}
+
+		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: "addon-1"})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+		Expect(reconciler.called).To(BeTrue())
+	})
 })
+
+type recordingAddonReconciler struct{ called bool }
+
+func (*recordingAddonReconciler) Name() string { return "test-reconciler" }
+func (r *recordingAddonReconciler) Reconcile(context.Context, *models.PostgresAddon) (subReconcilerResult, error) {
+	r.called = true
+	return resultNil, nil
+}
+
+type activeAddonRuntimePolicy struct{ inactiveAddonRuntimePolicy }
+
+func (*activeAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
+	return nil
+}
 
 type inactiveAddonRuntimePolicy struct{}
 
@@ -82,8 +149,8 @@ func (*inactiveAddonRuntimePolicy) AdmitRollbackWithTx(context.Context, string) 
 func (*inactiveAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return errors.TrialInactive()
 }
-func (*inactiveAddonRuntimePolicy) AdmitMutationWithTx(context.Context, string) *errors.ServiceError {
-	return nil
+func (*inactiveAddonRuntimePolicy) AdmitMutationWithTx(context.Context, string) (services.MutationAdmission, *errors.ServiceError) {
+	return services.MutationAdmission{}, nil
 }
 func (*inactiveAddonRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
 	return nil

@@ -6,13 +6,22 @@ package models
 //     new work and duplicates accumulate for long-running operands,
 //   - value keys also guarantee no two goroutines process the same
 //     operand concurrently once workers run with multiple goroutines.
-type StackOperand struct{ ID string }
+type StackOperand struct {
+	ID        string
+	ReleaseID string
+}
 
 type StackReleaseOperand struct{ ID string }
 
-type VolumeOperand struct{ ID string }
+type VolumeOperand struct {
+	ID        string
+	ReleaseID string
+}
 
-type PostgresAddonOperand struct{ ID string }
+type PostgresAddonOperand struct {
+	ID        string
+	ReleaseID string
+}
 
 type OrgInviteOperand struct{ ID string }
 

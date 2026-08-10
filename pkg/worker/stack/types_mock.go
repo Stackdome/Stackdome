@@ -172,6 +172,45 @@ func (mr *MockstackServiceMockRecorder) UpdateStatus(ctx, ID, status any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockstackService)(nil).UpdateStatus), ctx, ID, status)
 }
 
+// MockreleaseService is a mock of releaseService interface.
+type MockreleaseService struct {
+	ctrl     *gomock.Controller
+	recorder *MockreleaseServiceMockRecorder
+	isgomock struct{}
+}
+
+// MockreleaseServiceMockRecorder is the mock recorder for MockreleaseService.
+type MockreleaseServiceMockRecorder struct {
+	mock *MockreleaseService
+}
+
+// NewMockreleaseService creates a new mock instance.
+func NewMockreleaseService(ctrl *gomock.Controller) *MockreleaseService {
+	mock := &MockreleaseService{ctrl: ctrl}
+	mock.recorder = &MockreleaseServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockreleaseService) EXPECT() *MockreleaseServiceMockRecorder {
+	return m.recorder
+}
+
+// InternalGet mocks base method.
+func (m *MockreleaseService) InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGet", ctx, releaseID)
+	ret0, _ := ret[0].(*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGet indicates an expected call of InternalGet.
+func (mr *MockreleaseServiceMockRecorder) InternalGet(ctx, releaseID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockreleaseService)(nil).InternalGet), ctx, releaseID)
+}
+
 // MocksecretService is a mock of secretService interface.
 type MocksecretService struct {
 	ctrl     *gomock.Controller

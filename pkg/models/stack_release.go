@@ -65,6 +65,18 @@ func (s StackReleaseState) Terminal() bool {
 	}
 }
 
+// AllowsWorkloadReconciliation reports whether a release can still become, or
+// already is, the live workload. Failed, superseded, and cancelled snapshots
+// must never authorize cluster-side work.
+func (s StackReleaseState) AllowsWorkloadReconciliation() bool {
+	switch s {
+	case ReleaseStatePending, ReleaseStateInProgress, ReleaseStateReleased:
+		return true
+	default:
+		return false
+	}
+}
+
 // StackRelease represents a single atomic deployment attempt for a stack.
 type StackRelease struct {
 	ID               string            `gorm:"primary_key;default:gen_random_uuid()"`

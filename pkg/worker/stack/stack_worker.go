@@ -18,6 +18,7 @@ const (
 
 type stackWorker struct {
 	stackService   stackService
+	releaseService releaseService
 	clusterManager clustermanager.ClusterManager
 	subReconcilers []subReconciler
 	runtimePolicy  services.RuntimePolicy
@@ -32,11 +33,13 @@ type StackWorkerSpec struct {
 	Env              string
 	ClusterManager   clustermanager.ClusterManager
 	RuntimePolicy    services.RuntimePolicy
+	ReleaseService   releaseService
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 	return &stackWorker{
 		stackService:   spec.StackService,
+		releaseService: spec.ReleaseService,
 		clusterManager: spec.ClusterManager,
 		runtimePolicy:  spec.RuntimePolicy,
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
@@ -59,14 +62,14 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 }
 
 func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (worker.Result, *errors.ServiceError) {
-	stackID, ok := operand.(models.StackOperand)
+	stackRef, ok := operand.(models.StackOperand)
 	if !ok {
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.StackOperand")
 	}
 
-	log := w.Logger().WithField(logger.FieldStackID, stackID.ID)
+	log := w.Logger().WithField(logger.FieldStackID, stackRef.ID)
 
-	stack, err := w.stackService.InternalGetStack(ctx, stackID.ID)
+	stack, err := w.stackService.InternalGetStack(ctx, stackRef.ID)
 	if err != nil {
 		if err.Is404() {
 			log.Info(ctx, "stack not found, skipping reconciliation")
@@ -76,6 +79,30 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	}
 	log.Info(ctx, "processing stack")
 	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		releaseID := stackRef.ReleaseID
+		if releaseID == "" {
+			releaseID = stack.GetConvergedReleaseID()
+		}
+		if releaseID == "" {
+			log.Debug(ctx, "skipping stack without a released workload identity")
+			return worker.Result{}, nil
+		}
+		release, releaseErr := w.releaseService.InternalGet(ctx, releaseID)
+		if releaseErr != nil {
+			return worker.Result{}, releaseErr
+		}
+		if !release.State.AllowsWorkloadReconciliation() {
+			log.Debug(ctx, "skipping stack authorized by non-provisionable release %s", release.ID)
+			return worker.Result{}, nil
+		}
+		if release.StackID != stack.ID || release.Snapshot.Stack.ID != stack.ID ||
+			release.Snapshot.Stack.OrganisationID != stack.OrganisationID ||
+			release.Snapshot.Stack.ProjectID != stack.ProjectID ||
+			release.Snapshot.Stack.ClusterID != stack.ClusterID ||
+			release.Snapshot.Stack.NamespaceID != stack.NamespaceID ||
+			release.Snapshot.Stack.Namespace != stack.Namespace {
+			return worker.Result{}, w.WorkerError.NewError("release %s does not authorize stack %s", release.ID, stack.ID)
+		}
 		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
 			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
 				log.Debug(ctx, "skipping draft provisioning without an active trial allocation")
