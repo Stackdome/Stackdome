@@ -9,6 +9,7 @@ var (
 	EnvLogFormat            = StringVar("LOG_FORMAT", "Log output format (json or text)", ptr("json"), false)
 	EnvEncryptionKey        = StringVar("ENCRYPTION_KEY", "Master encryption key (64-1024 chars)", nil, true)
 	EnvRuntimeMode          = StringVar("RUNTIME_MODE", "Runtime mode (self_hosted or stackdome_cloud)", ptr(string(RuntimeModeSelfHosted)), false)
+	EnvComputeMode          = StringVar("COMPUTE_MODE", "Compute mode (bring_your_own or shared)", ptr(string(ComputeModeBYOC)), false)
 	EnvStackdomeCloudConfig = StringVar("STACKDOME_CLOUD_CONFIG", "Path to the Stackdome Cloud runtime configuration", nil, false)
 	EnvTurnstileSecret      = StringVar("TURNSTILE_SECRET", "Cloudflare Turnstile secret for signup verification", nil, false)
 	// GITHUB_CLIENT_ID and GITHUB_CLIENT_SECRET are used for GitHub OAuth login
@@ -42,17 +43,18 @@ var (
 	EnvDBRootCertFile   = StringVar("DB_ROOT_CERT_FILE", "Root CA cert path for SSL", nil, false)
 	EnvDBDebugMode      = BoolVar("DB_DEBUG_MODE", "Enable DB query debug logging", ptr(false), false)
 
-	// Platform Cluster
-	EnvPlatformClusterAPIURL = StringVar("PLATFORM_CLUSTER_API_URL", "Platform cluster API URL", nil, false)
-	EnvPlatformClusterCAData = StringVar("PLATFORM_CLUSTER_CA_DATA", "Platform cluster CA cert (base64)", nil, false)
-	EnvPlatformClusterToken  = StringVar("PLATFORM_CLUSTER_TOKEN", "Platform cluster auth token", nil, false)
+	// Shared Compute Cluster
+	EnvSharedComputeClusterAPIURL = StringVar("SHARED_COMPUTE_CLUSTER_API_URL", "Shared compute cluster API URL", nil, false)
+	EnvSharedComputeClusterCAData = StringVar("SHARED_COMPUTE_CLUSTER_CA_DATA", "Shared compute cluster CA cert (base64)", nil, false)
+	EnvSharedComputeClusterToken  = StringVar("SHARED_COMPUTE_CLUSTER_TOKEN", "Shared compute cluster auth token", nil, false)
 
 	// Platform Provisioning
 	EnvPlatformEmail                   = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform cluster issuer", nil, false)
 	EnvPlatformBaseDomain              = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
 	EnvPlatformDNSCloudflareAPIToken   = StringVar("PLATFORM_DNS_CLOUDFLARE_API_TOKEN", "Cloudflare API token used for platform wildcard DNS challenges", nil, false)
-	EnvPlatformACMEEnvironment         = StringVar("PLATFORM_ACME_ENVIRONMENT", "Let's Encrypt ACME environment (production or staging)", ptr(ACMEEnvironmentProduction), false)
-	EnvPlatformTLSNamespace            = StringVar("PLATFORM_TLS_NAMESPACE", "Namespace for platform TLS resources", ptr(DefaultPlatformTLSNamespace), false)
+	EnvPlatformTLSEnabled              = BoolVar("PLATFORM_TLS_ENABLED", "Enable platform-managed TLS on shared compute", ptr(false), false)
+	EnvPlatformACMEEnvironment         = StringVar("PLATFORM_ACME_ENVIRONMENT", "Let's Encrypt ACME environment (production or staging)", nil, false)
+	EnvPlatformTLSNamespace            = StringVar("PLATFORM_TLS_NAMESPACE", "Namespace for platform TLS resources", nil, false)
 	EnvPlatformOrgRegistryStorageSize  = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_SIZE", "Default storage size for each org's registry seeded at signup", ptr(models.DefaultPlatformOrgRegistryStorageSize), false)
 	EnvPlatformOrgRegistryStorageClass = StringVar("PLATFORM_ORG_REGISTRY_STORAGE_CLASS", "Default storage class for each org's registry seeded at signup", nil, false)
 

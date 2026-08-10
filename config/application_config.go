@@ -20,6 +20,7 @@ type ApplicationConfig struct {
 	LogLevel                 string                `json:"log_level"`
 	LogFormat                string                `json:"log_format"`
 	RuntimeMode              RuntimeMode           `json:"runtime_mode"`
+	ComputeMode              ComputeMode           `json:"compute_mode"`
 	StackdomeCloudConfigPath string                `json:"stackdome_cloud_config_path"`
 	StackdomeCloud           *StackdomeCloudConfig `json:"stackdome_cloud,omitempty"`
 	TurnstileSecret          string                `json:"-"`
@@ -31,8 +32,8 @@ type ApplicationConfig struct {
 	ServerExternalURL string `json:"server_external_url"`
 	// GitHubAPIBaseURL overrides the GitHub API endpoint (tests, GHES).
 	GitHubAPIBaseURL string `json:"github_api_base_url"`
-	// PlatformCluster holds the PLATFORM_CLUSTER_* config seeded at boot.
-	PlatformCluster *ClusterConfig `json:"platform_cluster"`
+	// SharedComputeCluster holds the SHARED_COMPUTE_CLUSTER_* configuration.
+	SharedComputeCluster *ClusterConfig `json:"shared_compute_cluster"`
 }
 
 func (c *ApplicationConfig) LoadEnvVariables() error {
@@ -58,6 +59,9 @@ func (c *ApplicationConfig) LoadEnvVariables() error {
 	if val, ok := EnvRuntimeMode.Lookup(); ok {
 		c.RuntimeMode = RuntimeMode(val)
 	}
+	if val, ok := EnvComputeMode.Lookup(); ok {
+		c.ComputeMode = ComputeMode(val)
+	}
 	if val, ok := EnvStackdomeCloudConfig.Lookup(); ok {
 		c.StackdomeCloudConfigPath = val
 	}
@@ -67,7 +71,7 @@ func (c *ApplicationConfig) LoadEnvVariables() error {
 
 	c.GitHubOAuth.LoadEnvVariables()
 	c.GitHubApp.LoadEnvVariables()
-	c.PlatformCluster.LoadEnvVariables()
+	c.SharedComputeCluster.LoadEnvVariables()
 
 	if val, ok := EnvServerExternalURL.Lookup(); ok {
 		c.ServerExternalURL = val
@@ -98,6 +102,8 @@ func (c *ApplicationConfig) Validate() error {
 		c.Server.Validate,
 		c.Database.Validate,
 		c.validateRuntimeMode,
+		c.validateComputeMode,
+		c.validateStackdomeCloudConfig,
 		func() error {
 			if c.JwtSecret == "" {
 				return fmt.Errorf("jwt secret is required")
@@ -129,12 +135,22 @@ func (c *ApplicationConfig) Validate() error {
 	return nil
 }
 
+func (c *ApplicationConfig) validateStackdomeCloudConfig() error {
+	if !c.IsStackdomeCloud() {
+		return nil
+	}
+	if c.StackdomeCloud == nil {
+		return fmt.Errorf("stackdome Cloud config is required in %q runtime mode", RuntimeModeStackdomeCloud)
+	}
+	if err := c.StackdomeCloud.Validate(); err != nil {
+		return fmt.Errorf("validate Stackdome Cloud config: %w", err)
+	}
+	return nil
+}
+
 func (c *ApplicationConfig) validateRuntimeMode() error {
 	if c.RuntimeMode != RuntimeModeSelfHosted && c.RuntimeMode != RuntimeModeStackdomeCloud {
 		return fmt.Errorf("runtime mode must be %q or %q", RuntimeModeSelfHosted, RuntimeModeStackdomeCloud)
-	}
-	if c.IsStackdomeCloud() && c.StackdomeCloud == nil {
-		return fmt.Errorf("stackdome Cloud config is required in %q runtime mode", RuntimeModeStackdomeCloud)
 	}
 	return nil
 }
@@ -162,15 +178,15 @@ func (c *ClusterConfig) Validate() error {
 }
 
 func (c *ClusterConfig) LoadEnvVariables() {
-	if val, ok := EnvPlatformClusterAPIURL.Lookup(); ok {
+	if val, ok := EnvSharedComputeClusterAPIURL.Lookup(); ok {
 		c.ClusterURL = val
 	}
 
-	if val, ok := EnvPlatformClusterCAData.Lookup(); ok {
+	if val, ok := EnvSharedComputeClusterCAData.Lookup(); ok {
 		c.ClusterCAData = val
 	}
 
-	if val, ok := EnvPlatformClusterToken.Lookup(); ok {
+	if val, ok := EnvSharedComputeClusterToken.Lookup(); ok {
 		c.Token = val
 	}
 }
@@ -242,14 +258,15 @@ type DBConnectionConfig struct {
 
 func NewApplicationConfig() *ApplicationConfig {
 	return &ApplicationConfig{
-		Server:          NewServerConfig(),
-		Database:        NewDatabaseConfig(),
-		LogLevel:        "info",
-		LogFormat:       "json",
-		GitHubOAuth:     NewGitHubOAuthConfig(),
-		GitHubApp:       &GitHubAppConfig{},
-		PlatformCluster: &ClusterConfig{},
-		RuntimeMode:     RuntimeModeSelfHosted,
+		Server:               NewServerConfig(),
+		Database:             NewDatabaseConfig(),
+		LogLevel:             "info",
+		LogFormat:            "json",
+		GitHubOAuth:          NewGitHubOAuthConfig(),
+		GitHubApp:            &GitHubAppConfig{},
+		SharedComputeCluster: &ClusterConfig{},
+		RuntimeMode:          RuntimeModeSelfHosted,
+		ComputeMode:          ComputeModeBYOC,
 	}
 }
 

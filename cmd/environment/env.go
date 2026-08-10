@@ -30,6 +30,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
 	inviteworker "github.com/Stackdome/stackdome/pkg/worker/invite"
@@ -116,6 +117,7 @@ func (e *environmentImpl) Init(ctx context.Context) error {
 		e.loadEnvAndConfigs,
 		e.setupLogger,
 		e.setupDatabase,
+		e.auditPersistedComputeTopology,
 		e.setupObservability,
 		e.initializeResourceAccessPolicyManager,
 		e.initializePermissionService,
@@ -165,8 +167,11 @@ func (e *environmentImpl) loadEnvAndConfigs(ctx context.Context) error {
 		return fmt.Errorf("invalid application config: %w", err)
 	}
 
-	if err := e.validatePlatformProvisioning(); err != nil {
-		return fmt.Errorf("invalid platform-provisioning config: %w", err)
+	if err := e.validateSharedComputeProvisioning(); err != nil {
+		return fmt.Errorf("invalid shared compute provisioning config: %w", err)
+	}
+	if err := e.validatePlatformRouting(); err != nil {
+		return fmt.Errorf("invalid platform routing config: %w", err)
 	}
 	return nil
 }
@@ -180,18 +185,20 @@ func runConfigLoaders(loaders []configLoader) error {
 	return nil
 }
 
-func (e *environmentImpl) validatePlatformProvisioning() error {
-	if e.Config.IsStackdomeCloud() {
-		return config.ValidateStackdomeCloudPlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig)
-	}
-	return config.ValidatePlatformProvisioning(e.Config.PlatformCluster, e.BootstrapConfig)
+func (e *environmentImpl) validateSharedComputeProvisioning() error {
+	return config.ValidateSharedComputeProvisioning(e.Config.ComputeMode, e.Config.SharedComputeCluster)
+}
+
+func (e *environmentImpl) validatePlatformRouting() error {
+	return config.ValidatePlatformRouting(e.Config.RuntimeMode, e.Config.ComputeMode, e.BootstrapConfig)
 }
 
 // loadTestDefaults keeps tests runnable without a .env file while still letting
-// CI configure everything through environment variables. Platform-provisioning
-// config stays opt-in: unset in unit runs, set by the integration bootstrap.
+// CI configure everything through environment variables. Shared-compute and
+// platform-routing configuration stays opt-in: unset in unit runs, set by the
+// integration bootstrap.
 func (e *environmentImpl) loadTestDefaults() error {
-	e.Config.PlatformCluster.LoadEnvVariables()
+	e.Config.SharedComputeCluster.LoadEnvVariables()
 	if err := e.BootstrapConfig.LoadEnvVariables(); err != nil {
 		return fmt.Errorf("load bootstrap config: %w", err)
 	}
@@ -252,6 +259,44 @@ func (e *environmentImpl) setupDatabase(ctx context.Context) error {
 		return fmt.Errorf("invalid database config: %w", err)
 	}
 	e.DBSession = db.NewSessionFactory(e.Config.Database)
+	return nil
+}
+
+func (e *environmentImpl) auditPersistedComputeTopology(ctx context.Context) error {
+	clusterStore := pgstore.NewClusterStore(pgstore.ClusterStoreSpec{SessionFactory: e.DBSession})
+	return checkPersistedComputeTopology(ctx, e.Config.ComputeMode, clusterStore)
+}
+
+func checkPersistedComputeTopology(ctx context.Context, mode config.ComputeMode, clusterStore stores.ClusterStore) error {
+	switch mode {
+	case config.ComputeModeShared, config.ComputeModeBYOC:
+	default:
+		return fmt.Errorf("check persisted compute topology: unsupported compute mode %q", mode)
+	}
+
+	clusters, err := clusterStore.ListAll(ctx)
+	if err != nil {
+		return fmt.Errorf("list persisted clusters: %w", err)
+	}
+	for _, cluster := range clusters {
+		if cluster == nil {
+			return fmt.Errorf("list persisted clusters: store returned a nil cluster")
+		}
+		if mode == config.ComputeModeBYOC && cluster.Platform {
+			return fmt.Errorf(
+				"bring-your-own compute cannot start while shared-compute cluster %q exists; "+
+					"set COMPUTE_MODE=shared or remove the shared-compute cluster and dependent resources",
+				cluster.ID,
+			)
+		}
+		if mode == config.ComputeModeShared && !cluster.Platform {
+			return fmt.Errorf(
+				"shared compute cannot start while tenant-owned cluster %q exists; "+
+					"set COMPUTE_MODE=bring_your_own or remove the tenant-owned cluster and dependent resources",
+				cluster.ID,
+			)
+		}
+	}
 	return nil
 }
 
@@ -548,6 +593,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ClusterManager:       e.ClusterManager,
 		ImageRegistryService: imageRegistryService,
 		SessionFactory:       e.DBSession,
+		SharedCompute:        e.Config.UsesSharedCompute(),
 		Logger:               e.Logger,
 		Permissions:          e.PermissionService,
 		EncryptionService:    encryptionService,
@@ -602,9 +648,9 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	})
 
 	namespaceService := services.NewNamespaceService(services.NamespaceServiceSpec{
-		SessionFactory:        e.DBSession,
-		Logger:                e.Logger,
-		StackdomeCloudRuntime: stackdomeCloudRuntime,
+		SessionFactory: e.DBSession,
+		Logger:         e.Logger,
+		SharedCompute:  e.Config.UsesSharedCompute(),
 	})
 
 	loggingService := services.NewLoggingService(services.LoggingServiceSpec{
@@ -1025,7 +1071,7 @@ func (e *environmentImpl) bootstrapPlatformDefaults(ctx context.Context) error {
 		OrganisationService: e.Services.OrganisationService,
 		ClusterService:      e.Services.ClusterService,
 		BootstrapConfig:     e.BootstrapConfig,
-		ClusterConfig:       e.Config.PlatformCluster,
+		ClusterConfig:       e.Config.SharedComputeCluster,
 		Logger:              e.Logger,
 	})
 	if err := svc.Run(ctx); err != nil {

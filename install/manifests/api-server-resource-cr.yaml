@@ -41,6 +41,8 @@ spec:
   environmentVariables:
     - name: STACKDOME_ENV
       value: PRODUCTION
+    - name: COMPUTE_MODE
+      value: "{{if .Platform.Enabled}}shared{{else}}bring_your_own{{end}}"
     - name: DB_HOST
       value: db.stackdome-control-plane.svc.cluster.local
     - name: DB_PORT

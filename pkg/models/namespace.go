@@ -83,7 +83,9 @@ func (n *Namespace) AddDefaultLabels() {
 	})
 }
 
-func (n *Namespace) AddCloudTenantLabels(role string) {
+// AddSharedComputeTenantLabels preserves the legacy cloud-tenant label because
+// the hardening controller uses it to select tenant namespaces.
+func (n *Namespace) AddSharedComputeTenantLabels(role string) {
 	n.Labels = append(n.Labels,
 		Label{Key: CloudTenantLabelKey, Value: CloudTenantLabelValue},
 		Label{Key: OrganizationIDLabelKey, Value: n.OrganisationID},

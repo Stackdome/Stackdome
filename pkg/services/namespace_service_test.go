@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -12,16 +13,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
-func enableCloudNamespaceMode(service *namespaceService) {
-	service.stackdomeCloudRuntime = true
-}
-
-func expectCloudNamespaceLabels(namespace *models.Namespace, role string) {
+func expectSharedComputeNamespaceLabels(namespace *models.Namespace, role string) {
 	labels := namespace.Labels.ToMap()
 	Expect(labels).To(HaveKeyWithValue(models.ManagedByLabelKey, models.ManagedByLabelValue))
 	Expect(labels).To(HaveKeyWithValue(models.CloudTenantLabelKey, models.CloudTenantLabelValue))
 	Expect(labels).To(HaveKeyWithValue(models.OrganizationIDLabelKey, namespace.OrganisationID))
 	Expect(labels).To(HaveKeyWithValue(models.NamespaceRoleLabelKey, role))
+}
+
+func expectBringYourOwnNamespaceLabels(namespace *models.Namespace) {
+	Expect(namespace.Labels.ToMap()).To(Equal(map[string]string{
+		models.ManagedByLabelKey: models.ManagedByLabelValue,
+	}))
 }
 
 type fakeAddon struct {
@@ -85,49 +88,37 @@ var _ = Describe("namespaceNameForAddon", func() {
 	})
 })
 
-var _ = Describe("cloud namespace labels", func() {
-	It("labels stack namespaces for the private guard", func() {
-		service := &namespaceService{}
-		enableCloudNamespaceMode(service)
+var _ = Describe("shared compute namespace labels", func() {
+	DescribeTable("follows compute mode independently of runtime mode",
+		func(runtimeMode config.RuntimeMode, computeMode config.ComputeMode, expectTenantLabels bool) {
+			applicationConfig := config.NewApplicationConfig()
+			applicationConfig.RuntimeMode = runtimeMode
+			applicationConfig.ComputeMode = computeMode
+			service := NewNamespaceService(NamespaceServiceSpec{
+				SharedCompute: applicationConfig.UsesSharedCompute(),
+			})
 
-		namespace, err := service.PrepareNamespaceForStack(context.Background(), &models.Stack{
-			Name: "api", OrganisationID: "organisation-1",
-		})
+			stackNamespace, err := service.PrepareNamespaceForStack(context.Background(), &models.Stack{
+				Name: "api", OrganisationID: "organisation-1",
+			})
+			Expect(err).To(BeNil())
+			addonNamespace, err := service.PrepareNamespaceForAddon(
+				context.Background(), fakeAddon{addonType: addonType, addonName: "database"}, "organisation-1",
+			)
+			Expect(err).To(BeNil())
 
-		Expect(err).To(BeNil())
-		expectCloudNamespaceLabels(namespace, models.NamespaceRoleStack)
-	})
-
-	It("labels addon namespaces for the private guard", func() {
-		service := &namespaceService{}
-		enableCloudNamespaceMode(service)
-
-		namespace, err := service.PrepareNamespaceForAddon(
-			context.Background(), fakeAddon{addonType: addonType, addonName: "database"}, "organisation-1",
-		)
-
-		Expect(err).To(BeNil())
-		expectCloudNamespaceLabels(namespace, models.NamespaceRoleAddon)
-	})
-
-	It("keeps self-hosted namespaces limited to the managed-by label", func() {
-		service := &namespaceService{}
-
-		stackNamespace, err := service.PrepareNamespaceForStack(context.Background(), &models.Stack{
-			Name: "api", OrganisationID: "organisation-1",
-		})
-		Expect(err).To(BeNil())
-		addonNamespace, err := service.PrepareNamespaceForAddon(
-			context.Background(), fakeAddon{addonType: addonType, addonName: "database"}, "organisation-1",
-		)
-		Expect(err).To(BeNil())
-
-		expected := map[string]string{
-			models.ManagedByLabelKey: models.ManagedByLabelValue,
-		}
-		Expect(stackNamespace.Labels.ToMap()).To(Equal(expected))
-		Expect(addonNamespace.Labels.ToMap()).To(Equal(expected))
-	})
+			if expectTenantLabels {
+				expectSharedComputeNamespaceLabels(stackNamespace, models.NamespaceRoleStack)
+				expectSharedComputeNamespaceLabels(addonNamespace, models.NamespaceRoleAddon)
+				return
+			}
+			expectBringYourOwnNamespaceLabels(stackNamespace)
+			expectBringYourOwnNamespaceLabels(addonNamespace)
+		},
+		Entry("self-hosted shared compute", config.RuntimeModeSelfHosted, config.ComputeModeShared, true),
+		Entry("Stackdome Cloud shared compute", config.RuntimeModeStackdomeCloud, config.ComputeModeShared, true),
+		Entry("self-hosted bring-your-own compute", config.RuntimeModeSelfHosted, config.ComputeModeBringYourOwn, false),
+	)
 })
 
 func addonPrefix(addonType, addonName string) string {

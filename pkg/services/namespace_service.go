@@ -32,16 +32,16 @@ type NamespaceService interface {
 }
 
 type namespaceService struct {
-	namespacesStore       stores.NamespacesStore
-	logger                logger.Logger
-	stackdomeCloudRuntime bool
+	namespacesStore stores.NamespacesStore
+	logger          logger.Logger
+	sharedCompute   bool
 	ClusterResourceServiceDeps
 }
 
 type NamespaceServiceSpec struct {
-	SessionFactory        db.SessionFactory
-	Logger                logger.Logger
-	StackdomeCloudRuntime bool
+	SessionFactory db.SessionFactory
+	Logger         logger.Logger
+	SharedCompute  bool
 }
 
 func NewNamespaceService(spec NamespaceServiceSpec) NamespaceService {
@@ -49,8 +49,8 @@ func NewNamespaceService(spec NamespaceServiceSpec) NamespaceService {
 		namespacesStore: pgstore.NewNamespacesStore(pgstore.NamespacesStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		logger:                spec.Logger,
-		stackdomeCloudRuntime: spec.StackdomeCloudRuntime,
+		logger:        spec.Logger,
+		sharedCompute: spec.SharedCompute,
 	}
 }
 
@@ -65,8 +65,8 @@ func (s *namespaceService) PrepareNamespaceForStack(ctx context.Context, stack *
 		OrganisationID: stack.OrganisationID,
 	}
 	namespace.AddDefaultLabels()
-	if s.stackdomeCloudRuntime {
-		namespace.AddCloudTenantLabels(models.NamespaceRoleStack)
+	if s.sharedCompute {
+		namespace.AddSharedComputeTenantLabels(models.NamespaceRoleStack)
 	}
 
 	return namespace, nil
@@ -89,8 +89,8 @@ func (s *namespaceService) PrepareNamespaceForAddon(ctx context.Context, addon m
 		OrganisationID: organisationID,
 	}
 	namespace.AddDefaultLabels()
-	if s.stackdomeCloudRuntime {
-		namespace.AddCloudTenantLabels(models.NamespaceRoleAddon)
+	if s.sharedCompute {
+		namespace.AddSharedComputeTenantLabels(models.NamespaceRoleAddon)
 	}
 	return namespace, nil
 }

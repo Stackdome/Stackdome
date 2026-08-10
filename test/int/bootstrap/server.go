@@ -31,6 +31,7 @@ func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.Databas
 	return &ServerManager{
 		config: &config.ApplicationConfig{
 			RuntimeMode: config.RuntimeModeSelfHosted,
+			ComputeMode: config.ComputeModeShared,
 			Server: &config.ServerConfig{
 				Hostname:    "localhost",
 				BindAddress: fmt.Sprintf("0.0.0.0:%d", ServerPort),

@@ -1,11 +1,16 @@
 package environment
 
 import (
+	"context"
 	"errors"
 
 	"github.com/Stackdome/stackdome/config"
+	serviceerrors "github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/mocks"
+	"github.com/Stackdome/stackdome/pkg/models"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"go.uber.org/mock/gomock"
 )
 
 var _ = Describe("LoadEnv", func() {
@@ -60,20 +65,99 @@ var _ = Describe("LoadEnv", func() {
 		Expect(func() { dependencySource("").createsDependencies() }).To(PanicWith("unsupported dependency source: \"\""))
 	})
 
-	It("requires platform provisioning in Stackdome Cloud mode", func() {
+	It("requires shared compute provisioning for shared compute", func() {
 		applicationConfig := config.NewApplicationConfig()
-		applicationConfig.RuntimeMode = config.RuntimeModeStackdomeCloud
+		applicationConfig.ComputeMode = config.ComputeModeShared
 		testEnv := NewTestEnvironment(nil, WithApplicationConfig(applicationConfig)).(*environmentImpl)
 
-		Expect(testEnv.validatePlatformProvisioning()).To(MatchError(config.ErrPlatformProvisioningRequired))
+		Expect(testEnv.validateSharedComputeProvisioning()).To(MatchError(config.ErrSharedComputeProvisioningRequired))
 	})
 
-	It("keeps platform provisioning optional in self-hosted mode", func() {
+	It("keeps shared compute provisioning disabled for BYOC", func() {
 		applicationConfig := config.NewApplicationConfig()
-		applicationConfig.RuntimeMode = config.RuntimeModeSelfHosted
+		applicationConfig.ComputeMode = config.ComputeModeBYOC
 		testEnv := NewTestEnvironment(nil, WithApplicationConfig(applicationConfig)).(*environmentImpl)
 
-		Expect(testEnv.validatePlatformProvisioning()).To(Succeed())
+		Expect(testEnv.validateSharedComputeProvisioning()).To(Succeed())
+	})
+
+	Describe("persisted compute topology", func() {
+		var (
+			ctx          context.Context
+			clusterStore *mocks.MockClusterStore
+		)
+
+		BeforeEach(func() {
+			ctx = context.Background()
+			clusterStore = mocks.NewMockClusterStore(gomock.NewController(GinkgoT()))
+		})
+
+		It("allows bring-your-own compute when no shared-compute cluster exists", func() {
+			clusterStore.EXPECT().ListAll(ctx).Return(nil, nil)
+
+			Expect(checkPersistedComputeTopology(ctx, config.ComputeModeBYOC, clusterStore)).To(Succeed())
+		})
+
+		It("allows bring-your-own compute with tenant-owned clusters", func() {
+			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
+				{ID: "tenant-cluster", Platform: false},
+			}, nil)
+
+			Expect(checkPersistedComputeTopology(ctx, config.ComputeModeBYOC, clusterStore)).To(Succeed())
+		})
+
+		It("rejects bring-your-own compute when a shared-compute cluster exists", func() {
+			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
+				{ID: "platform-cluster", Platform: true},
+			}, nil)
+
+			err := checkPersistedComputeTopology(ctx, config.ComputeModeBYOC, clusterStore)
+
+			Expect(err).To(MatchError(
+				"bring-your-own compute cannot start while shared-compute cluster \"platform-cluster\" exists; " +
+					"set COMPUTE_MODE=shared or remove the shared-compute cluster and dependent resources",
+			))
+		})
+
+		It("allows shared compute before its shared-compute cluster is bootstrapped", func() {
+			clusterStore.EXPECT().ListAll(ctx).Return(nil, nil)
+
+			Expect(checkPersistedComputeTopology(ctx, config.ComputeModeShared, clusterStore)).To(Succeed())
+		})
+
+		It("allows shared compute with a shared-compute cluster", func() {
+			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
+				{ID: "platform-cluster", Platform: true},
+			}, nil)
+
+			Expect(checkPersistedComputeTopology(ctx, config.ComputeModeShared, clusterStore)).To(Succeed())
+		})
+
+		It("rejects shared compute when a tenant-owned cluster exists", func() {
+			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
+				{ID: "tenant-cluster", Platform: false},
+			}, nil)
+
+			err := checkPersistedComputeTopology(ctx, config.ComputeModeShared, clusterStore)
+
+			Expect(err).To(MatchError(
+				"shared compute cannot start while tenant-owned cluster \"tenant-cluster\" exists; " +
+					"set COMPUTE_MODE=bring_your_own or remove the tenant-owned cluster and dependent resources",
+			))
+		})
+
+		DescribeTable("returns cluster lookup failures",
+			func(mode config.ComputeMode) {
+				clusterStore.EXPECT().ListAll(ctx).
+					Return(nil, serviceerrors.GeneralError("database unavailable"))
+
+				err := checkPersistedComputeTopology(ctx, mode, clusterStore)
+
+				Expect(err).To(MatchError("list persisted clusters: error: database unavailable"))
+			},
+			Entry("in bring-your-own mode", config.ComputeModeBYOC),
+			Entry("in shared mode", config.ComputeModeShared),
+		)
 	})
 
 	It("stops loading configuration after the first error", func() {

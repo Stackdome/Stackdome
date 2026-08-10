@@ -52,6 +52,7 @@ type ClusterService interface {
 type clusterService struct {
 	clusterStore         stores.ClusterStore
 	organisationStore    stores.OrganisationStore
+	sharedCompute        bool
 	logger               logger.Logger
 	clusterManager       clustermanager.ClusterManager
 	imageRegistryService ImageRegistryService
@@ -73,6 +74,7 @@ func NewClusterService(spec ClusterServiceSpec) ClusterService {
 		}),
 		clusterManager:       spec.ClusterManager,
 		logger:               spec.Logger,
+		sharedCompute:        spec.SharedCompute,
 		imageRegistryService: spec.ImageRegistryService,
 		permissions:          spec.Permissions,
 		encryptionService:    spec.EncryptionService,
@@ -84,6 +86,7 @@ type ClusterServiceSpec struct {
 	ClusterStore         stores.ClusterStore
 	ClusterManager       clustermanager.ClusterManager
 	ImageRegistryService ImageRegistryService
+	SharedCompute        bool
 	Permissions          auth.PermissionService
 	EncryptionService    EncryptionService
 	Logger               logger.Logger
@@ -114,6 +117,15 @@ func (s *clusterService) AddCluster(ctx context.Context, cluster *models.Cluster
 	if permErr := s.permissions.Check(ctx, cluster.OrganisationID, auth.ResourceClusters, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
+	if s.sharedCompute {
+		return nil, errors.BadRequest("tenant clusters cannot be added when shared compute is enabled")
+	}
+	return s.createCluster(ctx, cluster)
+}
+
+func (s *clusterService) createCluster(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	// The caller must enforce its access and compute-topology policy before
+	// entering this shared persistence path.
 	// Check if the cluster already exists for the org
 	existingCluster, err := s.clusterStore.GetClusterForOrg(ctx, cluster.OrganisationID)
 	if err != nil && err.Code != errors.ErrorNotFound {
@@ -560,6 +572,12 @@ func ensureWildcardCertificate(ctx context.Context, k8sClient client.Client, nam
 }
 
 func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+	// Platform bootstrap is a trusted internal caller, but platform topology is
+	// valid only when the installation explicitly uses shared compute.
+	if !s.sharedCompute {
+		return nil, errors.BadRequest("platform clusters require shared compute mode")
+	}
+
 	// Canonicalize before create AND compare, so the stored encoding never
 	// depends on which path first persisted the credentials.
 	spec.Token = normalizeBase64(spec.Token)
@@ -570,7 +588,7 @@ func (s *clusterService) InternalUpsertPlatformCluster(ctx context.Context, spec
 		return nil, err
 	}
 	if existing == nil {
-		return s.AddCluster(ctx, spec)
+		return s.createCluster(ctx, spec)
 	}
 
 	if existing.Name != spec.Name || !existing.Platform {

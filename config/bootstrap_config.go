@@ -3,13 +3,18 @@ package config
 import "github.com/Stackdome/stackdome/pkg/models"
 
 var (
-	ErrIncompleteClusterConfig         = &ConfigError{"PLATFORM_CLUSTER_API_URL, PLATFORM_CLUSTER_CA_DATA and PLATFORM_CLUSTER_TOKEN must all be set together"}
-	ErrPlatformProvisioningRequired    = &ConfigError{"platform provisioning is required in stackdome_cloud runtime mode"}
-	ErrClusterDomainMismatch           = &ConfigError{"PLATFORM_CLUSTER_* and PLATFORM_BASE_DOMAIN must be set together"}
-	ErrPlatformEmailRequired           = &ConfigError{"PLATFORM_EMAIL is required when a platform cluster is configured"}
-	ErrPlatformCloudflareTokenRequired = &ConfigError{"PLATFORM_DNS_CLOUDFLARE_API_TOKEN is required when a platform cluster is configured"}
-	ErrPlatformACMEEnvironmentInvalid  = &ConfigError{"PLATFORM_ACME_ENVIRONMENT must be production or staging"}
-	ErrPlatformTLSNamespaceRequired    = &ConfigError{"PLATFORM_TLS_NAMESPACE is required when a platform cluster is configured"}
+	ErrIncompleteSharedComputeClusterConfig = &ConfigError{"SHARED_COMPUTE_CLUSTER_API_URL, SHARED_COMPUTE_CLUSTER_CA_DATA and SHARED_COMPUTE_CLUSTER_TOKEN must all be set together"}
+	ErrUnsupportedComputeMode               = &ConfigError{"COMPUTE_MODE must be bring_your_own or shared"}
+	ErrSharedComputeProvisioningRequired    = &ConfigError{"shared compute provisioning is required in shared compute mode"}
+	ErrSharedComputeProvisioningNotAllowed  = &ConfigError{"shared compute provisioning is not allowed in bring_your_own compute mode"}
+	ErrPlatformRoutingNotAllowed            = &ConfigError{"platform routing is not allowed in bring_your_own compute mode"}
+	ErrPlatformBaseDomainRequired           = &ConfigError{"PLATFORM_BASE_DOMAIN is required in shared compute mode"}
+	ErrPlatformTLSRequired                  = &ConfigError{"PLATFORM_TLS_ENABLED is required in stackdome_cloud runtime mode"}
+	ErrPlatformTLSConfigNotAllowed          = &ConfigError{"platform TLS configuration requires PLATFORM_TLS_ENABLED=true"}
+	ErrPlatformEmailRequired                = &ConfigError{"PLATFORM_EMAIL is required when platform TLS is enabled"}
+	ErrPlatformCloudflareTokenRequired      = &ConfigError{"PLATFORM_DNS_CLOUDFLARE_API_TOKEN is required when platform TLS is enabled"}
+	ErrPlatformACMEEnvironmentInvalid       = &ConfigError{"PLATFORM_ACME_ENVIRONMENT must be production or staging"}
+	ErrPlatformTLSNamespaceRequired         = &ConfigError{"PLATFORM_TLS_NAMESPACE is required when platform TLS is enabled"}
 )
 
 const (
@@ -19,13 +24,6 @@ const (
 	ACMEProductionDirectoryURL  = "https://acme-v02.api.letsencrypt.org/directory"
 	ACMEStagingDirectoryURL     = "https://acme-staging-v02.api.letsencrypt.org/directory"
 )
-
-func ValidateStackdomeCloudPlatformProvisioning(cluster *ClusterConfig, bootstrap *BootstrapConfig) error {
-	if !cluster.AnySet() && bootstrap.BaseDomain == "" {
-		return ErrPlatformProvisioningRequired
-	}
-	return ValidatePlatformProvisioning(cluster, bootstrap)
-}
 
 type ConfigError struct {
 	msg string
@@ -39,6 +37,7 @@ type BootstrapConfig struct {
 	Email                 string
 	BaseDomain            string
 	DNSCloudflareAPIToken string
+	PlatformTLSEnabled    bool
 	ACMEEnvironment       string
 	TLSNamespace          string
 	OrgRegistry           models.OrgRegistryDefaults
@@ -55,16 +54,50 @@ func (b *BootstrapConfig) ACMEDirectoryURL() string {
 	}
 }
 
-func ValidatePlatformProvisioning(cluster *ClusterConfig, bootstrap *BootstrapConfig) error {
-	clusterSet := cluster.IsSet()
-	if !clusterSet && cluster.AnySet() {
-		return ErrIncompleteClusterConfig
+func ValidateSharedComputeProvisioning(mode ComputeMode, cluster *ClusterConfig) error {
+	if !cluster.IsSet() && cluster.AnySet() {
+		return ErrIncompleteSharedComputeClusterConfig
 	}
-	domainSet := bootstrap.BaseDomain != ""
-	if clusterSet != domainSet {
-		return ErrClusterDomainMismatch
+	switch mode {
+	case ComputeModeBYOC:
+		if cluster.AnySet() {
+			return ErrSharedComputeProvisioningNotAllowed
+		}
+		return nil
+	case ComputeModeShared:
+		if !cluster.IsSet() {
+			return ErrSharedComputeProvisioningRequired
+		}
+		return cluster.Validate()
+	default:
+		return ErrUnsupportedComputeMode
 	}
-	if !clusterSet {
+}
+
+func (b *BootstrapConfig) anyPlatformTLSConfigSet() bool {
+	return b.Email != "" || b.DNSCloudflareAPIToken != "" || b.ACMEEnvironment != "" || b.TLSNamespace != ""
+}
+
+func ValidatePlatformRouting(runtime RuntimeMode, mode ComputeMode, bootstrap *BootstrapConfig) error {
+	switch mode {
+	case ComputeModeBYOC:
+		if bootstrap.BaseDomain != "" || bootstrap.PlatformTLSEnabled || bootstrap.anyPlatformTLSConfigSet() {
+			return ErrPlatformRoutingNotAllowed
+		}
+	case ComputeModeShared:
+		if bootstrap.BaseDomain == "" {
+			return ErrPlatformBaseDomainRequired
+		}
+	default:
+		return ErrUnsupportedComputeMode
+	}
+	if runtime == RuntimeModeStackdomeCloud && !bootstrap.PlatformTLSEnabled {
+		return ErrPlatformTLSRequired
+	}
+	if !bootstrap.PlatformTLSEnabled {
+		if bootstrap.anyPlatformTLSConfigSet() {
+			return ErrPlatformTLSConfigNotAllowed
+		}
 		return nil
 	}
 	if bootstrap.Email == "" {
@@ -79,7 +112,7 @@ func ValidatePlatformProvisioning(cluster *ClusterConfig, bootstrap *BootstrapCo
 	if bootstrap.TLSNamespace == "" {
 		return ErrPlatformTLSNamespaceRequired
 	}
-	return cluster.Validate()
+	return nil
 }
 
 func NewBootstrapConfig() *BootstrapConfig {
@@ -98,13 +131,20 @@ func (b *BootstrapConfig) LoadEnvVariables() error {
 	if val, ok := EnvPlatformDNSCloudflareAPIToken.Lookup(); ok {
 		b.DNSCloudflareAPIToken = val
 	}
+	if val, ok := EnvPlatformTLSEnabled.Lookup(); ok {
+		b.PlatformTLSEnabled = val
+	}
 
 	if val, ok := EnvPlatformACMEEnvironment.Lookup(); ok {
 		b.ACMEEnvironment = val
+	} else if b.PlatformTLSEnabled {
+		b.ACMEEnvironment = ACMEEnvironmentProduction
 	}
 
 	if val, ok := EnvPlatformTLSNamespace.Lookup(); ok {
 		b.TLSNamespace = val
+	} else if b.PlatformTLSEnabled {
+		b.TLSNamespace = DefaultPlatformTLSNamespace
 	}
 
 	if val, ok := EnvPlatformOrgRegistryStorageSize.Lookup(); ok {

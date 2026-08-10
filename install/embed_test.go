@@ -58,6 +58,37 @@ var _ = Describe("RenderManifest", func() {
 	})
 
 	Describe("api-server-resource-cr.yaml", func() {
+		It("renders the compute mode from platform availability", func() {
+			type renderedEnvironmentVariable struct {
+				Name  string `yaml:"name"`
+				Value string `yaml:"value"`
+			}
+			var manifest struct {
+				Spec struct {
+					EnvironmentVariables []renderedEnvironmentVariable `yaml:"environmentVariables"`
+				} `yaml:"spec"`
+			}
+
+			renderComputeMode := func(platform install.PlatformConfig) string {
+				out, err := install.RenderManifest("api-server-resource-cr.yaml", install.TemplateValues{
+					Domain:   "stackdome.example.com",
+					Platform: platform,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(yaml.Unmarshal(out, &manifest)).To(Succeed())
+
+				for _, environmentVariable := range manifest.Spec.EnvironmentVariables {
+					if environmentVariable.Name == "COMPUTE_MODE" {
+						return environmentVariable.Value
+					}
+				}
+				return ""
+			}
+
+			Expect(renderComputeMode(install.PlatformConfig{BaseDomain: "apps.example.com"})).To(Equal("shared"))
+			Expect(renderComputeMode(install.PlatformConfig{})).To(Equal("bring_your_own"))
+		})
+
 		It("exposes metrics only through the internal service", func() {
 			type renderedPort struct {
 				Name           string `yaml:"name"`

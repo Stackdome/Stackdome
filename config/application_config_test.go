@@ -175,6 +175,69 @@ signup:
 	})
 })
 
+var _ = Describe("Compute mode configuration", func() {
+	It("defaults to bring-your-own compute", func() {
+		Expect(os.Unsetenv(EnvComputeMode.Name)).To(Succeed())
+
+		cfg := NewApplicationConfig()
+		Expect(cfg.LoadEnvVariables()).To(Succeed())
+
+		Expect(cfg.ComputeMode).To(Equal(ComputeModeBYOC))
+		Expect(cfg.UsesSharedCompute()).To(BeFalse())
+	})
+
+	DescribeTable("accepts supported compute modes",
+		func(mode ComputeMode, usesSharedCompute bool) {
+			GinkgoT().Setenv(EnvComputeMode.Name, string(mode))
+			GinkgoT().Setenv(EnvRuntimeMode.Name, string(RuntimeModeSelfHosted))
+
+			cfg := validApplicationConfigForTest()
+			Expect(cfg.LoadEnvVariables()).To(Succeed())
+
+			Expect(cfg.ComputeMode).To(Equal(mode))
+			Expect(cfg.Validate()).To(Succeed())
+			Expect(cfg.UsesSharedCompute()).To(Equal(usesSharedCompute))
+		},
+		Entry("bring-your-own", ComputeModeBYOC, false),
+		Entry("shared", ComputeModeShared, true),
+	)
+
+	It("rejects an unknown compute mode", func() {
+		GinkgoT().Setenv(EnvComputeMode.Name, "dedicated")
+		GinkgoT().Setenv(EnvRuntimeMode.Name, string(RuntimeModeSelfHosted))
+
+		cfg := validApplicationConfigForTest()
+		Expect(cfg.LoadEnvVariables()).To(Succeed())
+
+		Expect(cfg.Validate()).To(MatchError(
+			`compute mode must be "bring_your_own" or "shared"`,
+		))
+	})
+
+	It("requires shared compute in Stackdome Cloud", func() {
+		cloudConfig := validStackdomeCloudConfigForTest()
+		cfg := validApplicationConfigForTest()
+		cfg.RuntimeMode = RuntimeModeStackdomeCloud
+		cfg.ComputeMode = ComputeModeBYOC
+		cfg.StackdomeCloud = &cloudConfig
+
+		Expect(cfg.Validate()).To(MatchError(
+			`compute mode must be "shared" in "stackdome_cloud" runtime mode`,
+		))
+	})
+
+	It("validates an injected Stackdome Cloud configuration", func() {
+		cfg := validApplicationConfigForTest()
+		cfg.RuntimeMode = RuntimeModeStackdomeCloud
+		cfg.ComputeMode = ComputeModeShared
+		cfg.StackdomeCloud = &StackdomeCloudConfig{}
+
+		Expect(cfg.Validate()).To(MatchError(
+			"validate Stackdome Cloud config: capacity.maxActiveTrialAllocations must be greater than zero",
+		))
+	})
+})
+
 func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 	return StackdomeCloudConfig{
 		Capacity: StackdomeCloudCapacityConfig{
@@ -202,6 +265,21 @@ func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 			},
 		},
 	}
+}
+
+func validApplicationConfigForTest() *ApplicationConfig {
+	cfg := NewApplicationConfig()
+	cfg.Server.BindAddress = "127.0.0.1:8000"
+	cfg.Database.SSLMode = DBSSLModeDisable
+	cfg.Database.MaxOpenConnections = 10
+	cfg.Database.Host = "localhost"
+	cfg.Database.Port = 5432
+	cfg.Database.Name = "stackdome"
+	cfg.Database.Username = "stackdome"
+	cfg.Database.Password = "password"
+	cfg.JwtSecret = "jwt-secret"
+	cfg.EncryptionKey = "1234567890123456789012345678901234567890123456789012345678901234"
+	return cfg
 }
 
 func TestGitHubRedirectURIDerivedFromExternalURL(t *testing.T) {

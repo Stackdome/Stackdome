@@ -151,6 +151,39 @@ var _ = Describe("ClusterService", func() {
 			}
 		}
 
+		It("rejects tenant cluster creation in shared compute mode", func() {
+			permissions := mocks.NewMockPermissionService(ctrl)
+			permissions.EXPECT().Check(ctx, tenantOrgID, auth.ResourceClusters, "", auth.ActionCreate).Return(nil)
+			sharedService := NewClusterService(ClusterServiceSpec{
+				ClusterStore:  clusterStore,
+				SharedCompute: true,
+				Permissions:   permissions,
+			}).(*clusterService)
+
+			result, err := sharedService.AddCluster(ctx, newClusterSpec())
+
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError("error: tenant clusters cannot be added when shared compute is enabled"))
+			Expect(err.Code).To(Equal(apperrors.ErrorBadRequest))
+		})
+
+		It("returns an authorization failure before the shared compute policy", func() {
+			permissions := mocks.NewMockPermissionService(ctrl)
+			permissionError := apperrors.Forbidden("cluster creation is not allowed")
+			permissions.EXPECT().Check(ctx, tenantOrgID, auth.ResourceClusters, "", auth.ActionCreate).
+				Return(permissionError)
+			sharedService := NewClusterService(ClusterServiceSpec{
+				ClusterStore:  clusterStore,
+				SharedCompute: true,
+				Permissions:   permissions,
+			}).(*clusterService)
+
+			result, err := sharedService.AddCluster(ctx, newClusterSpec())
+
+			Expect(result).To(BeNil())
+			Expect(err).To(BeIdenticalTo(permissionError))
+		})
+
 		expectClusterCreated := func(created *models.Cluster) {
 			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), tenantOrgID).
 				Return(nil, apperrors.NotFound("no cluster"))
@@ -231,7 +264,11 @@ var _ = Describe("ClusterService", func() {
 	})
 
 	Describe("InternalUpsertPlatformCluster", func() {
-		It("delegates to AddCluster when no cluster exists for the URL", func() {
+		BeforeEach(func() {
+			svc.sharedCompute = true
+		})
+
+		It("creates the platform cluster through the trusted internal path", func() {
 			spec := &models.Cluster{
 				Name:           "default",
 				OrganisationID: "org-platform",
@@ -258,6 +295,16 @@ var _ = Describe("ClusterService", func() {
 			result, err := svc.InternalUpsertPlatformCluster(ctx, spec)
 			Expect(err).To(BeNil())
 			Expect(result.ID).To(Equal("cluster-new"))
+		})
+
+		It("rejects platform topology in bring-your-own mode before accessing the store", func() {
+			svc.sharedCompute = false
+
+			result, err := svc.InternalUpsertPlatformCluster(ctx, &models.Cluster{})
+
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError("error: platform clusters require shared compute mode"))
+			Expect(err.Code).To(Equal(apperrors.ErrorBadRequest))
 		})
 
 		It("is a no-op when the stored credentials already match", func() {
