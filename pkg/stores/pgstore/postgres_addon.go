@@ -28,6 +28,8 @@ var mutableFields = []string{
 	"Configuration", "BackupConfig", "UpdatedAt",
 }
 
+const postgresConfigurationPendingMessage = "Configuration change pending"
+
 func NewPostgresAddonStore(spec PostgresAddonStoreSpec) stores.PostgresAddonStore {
 	return &postgresAddonStore{
 		sessionFactory: spec.SessionFactory,
@@ -131,7 +133,7 @@ func (s *postgresAddonStore) Update(ctx context.Context, addon *models.PostgresA
 	}()
 
 	var existingAddon models.PostgresAddon
-	if err := tx.Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: rowLockStrengthUpdate}).Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
 		tx.Rollback()
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon with id '%s' not found", addon.ID)
@@ -162,23 +164,41 @@ func (s *postgresAddonStore) UpdateWithTx(ctx context.Context, addon *models.Pos
 	}
 
 	var existingAddon models.PostgresAddon
-	if err := tx.Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: rowLockStrengthUpdate}).Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.NotFound("postgres addon with id '%s' not found", addon.ID)
 		}
 		return nil, errors.GeneralError("failed to find postgres addon for update: %s", err.Error())
 	}
 
-	// Update only mutable fields
+	status := existingAddon.Status
+	status.State = models.PostgresAddonStatePending
+	status.Message = postgresConfigurationPendingMessage
+	updatedAt := time.Now().UTC()
+
 	if err := tx.Model(&existingAddon).
-		Select(mutableFields).
+		Select("Labels", "Annotations", "Instances", "Resources", "Storage", "Configuration", "BackupConfig", "Status", "UpdatedAt").
 		Omit(clause.Associations).
-		Updates(addon).Error; err != nil {
+		Updates(map[string]interface{}{
+			"labels":        addon.Labels,
+			"annotations":   addon.Annotations,
+			"instances":     addon.Instances,
+			"resources":     addon.Resources,
+			"storage":       addon.Storage,
+			"configuration": addon.Configuration,
+			"backup_config": addon.BackupConfig,
+			"status":        status,
+			"updated_at":    updatedAt,
+		}).Error; err != nil {
 		return nil, errors.GeneralError("failed to update postgres addon: %s", err.Error())
 	}
 
-	addon.LifecycleConfig = existingAddon.LifecycleConfig
-	return addon, nil
+	updated := *addon
+	updated.LifecycleConfig = existingAddon.LifecycleConfig
+	updated.DeletionTimestamp = existingAddon.DeletionTimestamp
+	updated.Status = status
+	updated.UpdatedAt = updatedAt
+	return &updated, nil
 }
 
 func (s *postgresAddonStore) SetHibernationWithTx(ctx context.Context, id string, enabled bool) (*models.PostgresAddon, *errors.ServiceError) {
@@ -371,4 +391,15 @@ func (s *postgresAddonStore) InternalList(ctx context.Context, query string, arg
 	}
 
 	return addons, nil
+}
+
+func (s *postgresAddonStore) InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError) {
+	var ids []string
+	if err := s.sessionFactory.New(ctx).
+		Model(&models.PostgresAddon{}).
+		Where(query, args...).
+		Pluck("id", &ids).Error; err != nil {
+		return nil, errors.GeneralError("failed to list postgres addon IDs: %s", err.Error())
+	}
+	return ids, nil
 }

@@ -48,6 +48,7 @@ type PostgresAddonService interface {
 	InternalGetCredentials(ctx context.Context, addonID string, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
+	InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError)
 
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 
@@ -542,6 +543,10 @@ func (s *postgresAddonService) InternalDeleteFromDB(ctx context.Context, id stri
 
 func (s *postgresAddonService) InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError) {
 	return s.postgresAddonStore.InternalList(ctx, query, args...)
+}
+
+func (s *postgresAddonService) InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError) {
+	return s.postgresAddonStore.InternalListIDs(ctx, query, args...)
 }
 
 // Composition services

@@ -137,6 +137,26 @@ func (mr *MockPostgresAddonStoreMockRecorder) InternalList(ctx, query any, args 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalList", reflect.TypeOf((*MockPostgresAddonStore)(nil).InternalList), varargs...)
 }
 
+// InternalListIDs mocks base method.
+func (m *MockPostgresAddonStore) InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	varargs := []any{ctx, query}
+	for _, a := range args {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "InternalListIDs", varargs...)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalListIDs indicates an expected call of InternalListIDs.
+func (mr *MockPostgresAddonStoreMockRecorder) InternalListIDs(ctx, query any, args ...any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]any{ctx, query}, args...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListIDs", reflect.TypeOf((*MockPostgresAddonStore)(nil).InternalListIDs), varargs...)
+}
+
 // ListByOrganisation mocks base method.
 func (m *MockPostgresAddonStore) ListByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError) {
 	m.ctrl.T.Helper()

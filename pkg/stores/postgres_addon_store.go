@@ -32,6 +32,8 @@ type PostgresAddonStore interface {
 	UpdateBackupRequestedAt(ctx context.Context, id string, timestamp *time.Time) *errors.ServiceError
 	UpdateDeletionTimestamp(ctx context.Context, id string, timestamp *time.Time) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
+	// InternalListIDs projects only IDs for periodic worker scans.
+	InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError)
 
 	// Transaction support
 	WithTransaction(ctx context.Context, fn func(ctx context.Context) *errors.ServiceError) *errors.ServiceError
