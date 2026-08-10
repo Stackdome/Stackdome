@@ -2,7 +2,6 @@ package stack
 
 import (
 	"context"
-	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
@@ -86,18 +85,15 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	unlockCluster := w.LockClusterNamespace(stack.ClusterID, stack.Namespace)
 	defer unlockCluster()
 	log.Info(ctx, "processing stack")
-	releaseID := ""
 	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
-		releaseID = stackRef.ReleaseID
 		authoritativeRelease, authorityErr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
 		if authorityErr != nil {
 			return worker.Result{}, authorityErr
 		}
-		if authoritativeRelease == nil || (releaseID != "" && authoritativeRelease.ID != releaseID) {
+		if authoritativeRelease == nil || (stackRef.ReleaseID != "" && authoritativeRelease.ID != stackRef.ReleaseID) {
 			log.Debug(ctx, "skipping stack without a released workload identity")
 			return worker.Result{}, nil
 		}
-		releaseID = authoritativeRelease.ID
 	}
 
 	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil && w.Env == config.EnvironmentTest {
@@ -105,70 +101,22 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
 	}
 
-	if releaseID != "" {
-		// Queue retries can outlive a release. Re-read both records at the last
-		// boundary before reconciliation so cancellation or supersession wins.
-		currentStack, stackErr := w.stackService.InternalGetStack(ctx, stack.ID)
-		if stackErr != nil {
-			return worker.Result{}, stackErr
-		}
-		authoritativeRelease, authorityErr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, currentStack)
-		if authorityErr != nil {
-			return worker.Result{}, authorityErr
-		}
-		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
-			log.Debug(ctx, "release authority changed before stack reconciliation")
-			return worker.Result{}, nil
-		}
-		stack = currentStack
-	}
-
-	authorizeMutation := worker.MutationAuthorizer(worker.AllowMutation)
-	if releaseID != "" {
-		authorizeMutation = w.authorizeMutation(stack.ID, releaseID)
-	}
-	res, err := w.reconcile(ctx, stack, authorizeMutation)
+	res, err := w.reconcile(ctx, stack)
 	if err != nil {
-		if stderrors.Is(err, worker.ErrMutationNotAuthorized) {
-			log.Debug(ctx, "release authority changed before cluster mutation")
-			return worker.Result{}, nil
-		}
 		log.Error(ctx, "failed to reconcile stack: %v", err)
 		return worker.Result{}, err
 	}
 	return res, nil
 }
 
-func (w *stackWorker) authorizeMutation(stackID, releaseID string) worker.MutationAuthorizer {
-	return func(ctx context.Context) error {
-		stack, serr := w.stackService.InternalGetStack(ctx, stackID)
-		if serr != nil {
-			return serr
-		}
-		if stack.DeletionTimestamp != nil {
-			return worker.ErrMutationNotAuthorized
-		}
-		authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
-		if serr != nil {
-			return serr
-		}
-		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
-			return worker.ErrMutationNotAuthorized
-		}
-		return nil
-	}
-}
-
-func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) (worker.Result, *errors.ServiceError) {
+func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worker.Result, *errors.ServiceError) {
 	log := w.Logger().WithField(logger.FieldStackID, stack.ID)
 	log.Info(ctx, "reconciling stack")
 
 	for _, subReconciler := range w.subReconcilers {
 		log.Debug(ctx, "reconciling with sub-reconciler: %s", subReconciler.Name())
-		result, err := subReconciler.Reconcile(ctx, stack, authorizeMutation)
+		result, err := subReconciler.Reconcile(ctx, stack)
 		switch {
-		case stderrors.Is(err, worker.ErrMutationNotAuthorized):
-			return worker.Result{}, nil
 		case err != nil:
 			return worker.Result{}, w.WorkerError.NewError("failed to reconcile stack %s with sub-reconciler %s: %v", stack.ID, subReconciler.Name(), err)
 		case result.resultStop:

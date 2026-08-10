@@ -8,7 +8,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	cnpgv1 "github.com/cloudnative-pg/cloudnative-pg/api/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +28,7 @@ func newImageCatalogReconciler(spec PostgresAddonWorkerSpec) *imageCatalogReconc
 
 func (r *imageCatalogReconciler) Name() string { return "image-catalog" }
 
-func (r *imageCatalogReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (r *imageCatalogReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
 	clusterClient, err := r.clusterManager.GetClient(addon.ClusterID)
 	if err != nil {
 		return resultNil, fmt.Errorf("failed to get cluster client: %w", err)
@@ -48,9 +47,6 @@ func (r *imageCatalogReconciler) Reconcile(ctx context.Context, addon *models.Po
 				Spec: cnpgv1.ImageCatalogSpec{
 					Images: defaultPostgresImages(),
 				},
-			}
-			if err := authorizeMutation(ctx); err != nil {
-				return resultStop, err
 			}
 			return resultNil, clusterClient.Create(ctx, catalog)
 		}

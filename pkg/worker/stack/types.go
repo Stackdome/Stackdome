@@ -6,7 +6,6 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
 type subReconcilerResult struct {
@@ -23,7 +22,7 @@ var (
 
 //go:generate mockgen -source=types.go -destination=types_mock.go -package=stack
 type subReconciler interface {
-	Reconcile(ctx context.Context, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error)
+	Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error)
 	Name() string
 }
 

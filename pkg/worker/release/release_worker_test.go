@@ -2,7 +2,6 @@ package release
 
 import (
 	"context"
-	stderrors "errors"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -29,7 +28,7 @@ var _ = Describe("GatekeeperReconciler", func() {
 
 	It("marks an older sequence superseded and stops", func() {
 		svc := NewMockreleaseService(ctrl)
-		svc.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 			Return(&models.StackRelease{ID: "newer", Sequence: 2}, nil)
 		svc.EXPECT().MarkSuperseded(gomock.Any(), "older", "Release superseded by release #2").
 			Return(true, nil)
@@ -48,7 +47,7 @@ var _ = Describe("GatekeeperReconciler", func() {
 		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 2, State: models.ReleaseStateInProgress}
 
 		svc := NewMockreleaseService(ctrl)
-		svc.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 			Return(release, nil)
 
 		rec := NewMockeventRecorder(ctrl)
@@ -64,7 +63,7 @@ var _ = Describe("GatekeeperReconciler", func() {
 		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
 
 		svc := NewMockreleaseService(ctrl)
-		svc.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 			Return(release, nil)
 		svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 			Return(true, nil)
@@ -84,7 +83,7 @@ var _ = Describe("GatekeeperReconciler", func() {
 		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
 
 		svc := NewMockreleaseService(ctrl)
-		svc.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 			Return(release, nil)
 		svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 			Return(true, nil)
@@ -104,7 +103,7 @@ var _ = Describe("GatekeeperReconciler", func() {
 		release := &models.StackRelease{ID: "self", StackID: "stack-1", Sequence: 1, State: models.ReleaseStatePending}
 
 		svc := NewMockreleaseService(ctrl)
-		svc.EXPECT().InternalGetLatestByStackID(gomock.Any(), "stack-1").
+		svc.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").
 			Return(release, nil)
 		svc.EXPECT().MarkInProgress(gomock.Any(), "self").
 			Return(false, nil)
@@ -507,50 +506,4 @@ var _ = Describe("ApplyReconciler", func() {
 		Expect(result.resultStop).To(BeTrue(), "expected resultStop when stack is being deleted")
 	})
 
-	It("rejects a cluster mutation after a newer terminal release is persisted", func() {
-		release := &models.StackRelease{ID: "release-a", StackID: "stack-1", Sequence: 1, State: models.ReleaseStateInProgress}
-		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1"}
-		newer := &models.StackRelease{ID: "release-b", StackID: "stack-1", Sequence: 2, State: models.ReleaseStateFailed}
-		relSvc := NewMockreleaseService(ctrl)
-		relSvc.EXPECT().InternalGetLatestByStackID(gomock.Any(), release.StackID).Return(newer, nil)
-		relSvc.EXPECT().MarkSuperseded(gomock.Any(), release.ID, "Release superseded by release #2").Return(true, nil)
-		stackSvc := NewMockstackService(ctrl)
-		stackSvc.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil)
-		r := &applyReconciler{releaseService: relSvc, stackService: stackSvc}
-
-		err := r.authorizeMutation(release)(context.Background())
-
-		Expect(stderrors.Is(err, errReleaseSuperseded)).To(BeTrue())
-	})
-
-	It("rejects a cluster mutation when stack deletion starts after apply authorization", func() {
-		now := time.Now().UTC()
-		release := &models.StackRelease{ID: "release-a", StackID: "stack-1", State: models.ReleaseStateInProgress}
-		stackSvc := NewMockstackService(ctrl)
-		stackSvc.EXPECT().InternalGetStack(gomock.Any(), release.StackID).Return(&models.Stack{
-			ID: release.StackID, DeletionTimestamp: &now,
-		}, nil)
-		r := &applyReconciler{stackService: stackSvc}
-
-		err := r.authorizeMutation(release)(context.Background())
-
-		Expect(stderrors.Is(err, errReleaseSuperseded)).To(BeTrue())
-	})
-
-	It("continues a cluster mutation after its release was admitted", func() {
-		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1"}
-		release := &models.StackRelease{
-			ID: "release-a", StackID: stack.ID, State: models.ReleaseStateInProgress,
-			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: stack.ID, OrganisationID: stack.OrganisationID}},
-		}
-		stackSvc := NewMockstackService(ctrl)
-		stackSvc.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil)
-		relSvc := NewMockreleaseService(ctrl)
-		relSvc.EXPECT().InternalGetLatestByStackID(gomock.Any(), stack.ID).Return(release, nil)
-		r := &applyReconciler{releaseService: relSvc, stackService: stackSvc}
-
-		err := r.authorizeMutation(release)(context.Background())
-
-		Expect(err).NotTo(HaveOccurred())
-	})
 })

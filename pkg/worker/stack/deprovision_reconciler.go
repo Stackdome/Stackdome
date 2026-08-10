@@ -7,7 +7,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -53,7 +52,7 @@ func (r *deprovisionReconciler) Name() string {
 	return deprovisionReconcilerName
 }
 
-func (r *deprovisionReconciler) Reconcile(ctx context.Context, stack *models.Stack, _ worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (r *deprovisionReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
 	if stack.DeletionTimestamp == nil {
 		// NOOP
 		return resultNil, nil

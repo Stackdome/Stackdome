@@ -10,7 +10,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,7 +22,7 @@ import (
 // secret refs sync from the backing hub secret, org-level registry credentials
 // are synthesized directly from resolver output, anonymous targets sync
 // nothing.
-func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) error {
+func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
 	// desired accumulates the cluster secrets to write, keyed by name.
 	// Multiple resources can resolve to the same secret name with different
 	// dockerconfig auth entries (e.g. one hub secret used for a pull on host A
@@ -84,7 +83,7 @@ func (r *applyReconciler) syncHubSecrets(ctx context.Context, clusterClient clie
 	}
 
 	for _, secret := range desired {
-		if err := createOrUpdateSecret(ctx, clusterClient, secret, authorizeMutation); err != nil {
+		if err := createOrUpdateSecret(ctx, clusterClient, secret); err != nil {
 			return fmt.Errorf("failed to sync secret '%s': %w", secret.Name, err)
 		}
 	}
@@ -231,7 +230,7 @@ type dockerConfigJSON struct {
 
 // syncPostgresCredentialSecrets ensures postgres connection credentials are
 // available as K8s secrets in the stack namespace.
-func (r *applyReconciler) syncPostgresCredentialSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) error {
+func (r *applyReconciler) syncPostgresCredentialSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
 	pgConnections := stack.Connections.FromType(models.TopologyNodeTypePostgresAddon)
 	if len(pgConnections) == 0 {
 		return nil
@@ -266,7 +265,7 @@ func (r *applyReconciler) syncPostgresCredentialSecrets(ctx context.Context, clu
 			},
 			Data: secretData,
 		}
-		if err := createOrUpdateSecret(ctx, clusterClient, desired, authorizeMutation); err != nil {
+		if err := createOrUpdateSecret(ctx, clusterClient, desired); err != nil {
 			return fmt.Errorf("failed to sync postgres credential secret '%s': %w", secretName, err)
 		}
 	}
@@ -276,7 +275,7 @@ func (r *applyReconciler) syncPostgresCredentialSecrets(ctx context.Context, clu
 
 // syncGenericSecrets ensures user-created secrets (Generic, Token, etc.) connected
 // to the stack are available as K8s Opaque secrets in the namespace.
-func (r *applyReconciler) syncGenericSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) error {
+func (r *applyReconciler) syncGenericSecrets(ctx context.Context, clusterClient client.Client, stack *models.Stack) error {
 	secretConnections := stack.Connections.FromType(models.TopologyNodeTypeSecret)
 	if len(secretConnections) == 0 {
 		return nil
@@ -314,7 +313,7 @@ func (r *applyReconciler) syncGenericSecrets(ctx context.Context, clusterClient 
 			},
 			Data: secretData,
 		}
-		if err := createOrUpdateSecret(ctx, clusterClient, desired, authorizeMutation); err != nil {
+		if err := createOrUpdateSecret(ctx, clusterClient, desired); err != nil {
 			return fmt.Errorf("failed to sync generic secret '%s': %w", secret.Name, err)
 		}
 	}
@@ -322,22 +321,16 @@ func (r *applyReconciler) syncGenericSecrets(ctx context.Context, clusterClient 
 	return nil
 }
 
-func createOrUpdateSecret(ctx context.Context, clusterClient client.Client, desired *corev1.Secret, authorizeMutation worker.MutationAuthorizer) error {
+func createOrUpdateSecret(ctx context.Context, clusterClient client.Client, desired *corev1.Secret) error {
 	existing := &corev1.Secret{}
 	err := clusterClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing)
 	if err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			if err := authorizeMutation(ctx); err != nil {
-				return err
-			}
 			return clusterClient.Create(ctx, desired)
 		}
 		return err
 	}
 	desired.ResourceVersion = existing.ResourceVersion
-	if err := authorizeMutation(ctx); err != nil {
-		return err
-	}
 	return clusterClient.Update(ctx, desired)
 }
 

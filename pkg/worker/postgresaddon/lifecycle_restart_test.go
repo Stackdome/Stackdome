@@ -123,7 +123,7 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 type recordingLifecycleReconciler struct{ hibernationEnabled bool }
 
 func (*recordingLifecycleReconciler) Name() string { return "record-lifecycle" }
-func (r *recordingLifecycleReconciler) Reconcile(_ context.Context, addon *models.PostgresAddon, _ worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (r *recordingLifecycleReconciler) Reconcile(_ context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
 	r.hibernationEnabled = addon.LifecycleConfig.HibernationEnabled
 	return resultNil, nil
 }

@@ -2,7 +2,6 @@ package postgresaddon
 
 import (
 	"context"
-	"time"
 
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/worker"
@@ -50,8 +49,8 @@ var _ = Describe("PostgresAddonWorker", func() {
 
 	It("reconciles a persisted addon without release authorization", func() {
 		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
-		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, addon.ID).Return(addon, nil).Times(2)
-		w.subReconcilers = []subReconciler{&authorizingAddonReconciler{}}
+		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, addon.ID).Return(addon, nil)
+		w.subReconcilers = []subReconciler{&noopAddonReconciler{}}
 
 		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: addon.ID})
 
@@ -59,27 +58,11 @@ var _ = Describe("PostgresAddonWorker", func() {
 		Expect(result).To(Equal(worker.Result{}))
 	})
 
-	It("stops a cluster mutation when addon deletion begins", func() {
-		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
-		deleting := *addon
-		deletedAt := time.Now().UTC()
-		deleting.DeletionTimestamp = &deletedAt
-		gomock.InOrder(
-			addonSvc.EXPECT().InternalGetPostgresAddon(ctx, addon.ID).Return(addon, nil),
-			addonSvc.EXPECT().InternalGetPostgresAddon(ctx, addon.ID).Return(&deleting, nil),
-		)
-		w.subReconcilers = []subReconciler{&authorizingAddonReconciler{}}
-
-		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: addon.ID})
-
-		Expect(serr).To(BeNil())
-		Expect(result).To(Equal(worker.Result{}))
-	})
 })
 
-type authorizingAddonReconciler struct{}
+type noopAddonReconciler struct{}
 
-func (*authorizingAddonReconciler) Name() string { return "authorize-mutation" }
-func (*authorizingAddonReconciler) Reconcile(ctx context.Context, _ *models.PostgresAddon, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
-	return resultNil, authorize(ctx)
+func (*noopAddonReconciler) Name() string { return "noop" }
+func (*noopAddonReconciler) Reconcile(context.Context, *models.PostgresAddon) (subReconcilerResult, error) {
+	return resultNil, nil
 }

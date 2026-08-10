@@ -2,7 +2,6 @@ package postgresaddon
 
 import (
 	"context"
-	stderrors "errors"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/builders"
@@ -73,39 +72,18 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 	defer unlockCluster()
 
 	w.Logger().Info(ctx, "Processing postgres addon: %s (%s)", addon.Name, addon.ID)
-	authorizeMutation := worker.MutationAuthorizer(worker.AllowMutation)
-	if addon.DeletionTimestamp == nil {
-		authorizeMutation = w.authorizeMutation(addon.ID)
-	}
-	res, reconcileErr := w.reconcile(ctx, addon, authorizeMutation)
+	res, reconcileErr := w.reconcile(ctx, addon)
 	if reconcileErr != nil {
-		if stderrors.Is(reconcileErr, worker.ErrMutationNotAuthorized) {
-			w.Logger().Debug(ctx, "Postgres addon desired state changed before cluster mutation")
-			return worker.Result{}, nil
-		}
 		w.Logger().Error(ctx, "Failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 	}
 	return res, nil
 }
 
-func (w *postgresAddonWorker) authorizeMutation(addonID string) worker.MutationAuthorizer {
-	return func(ctx context.Context) error {
-		addon, serr := w.postgresAddonService.InternalGetPostgresAddon(ctx, addonID)
-		if serr != nil {
-			return serr
-		}
-		if addon.DeletionTimestamp != nil {
-			return worker.ErrMutationNotAuthorized
-		}
-		return nil
-	}
-}
-
-func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (worker.Result, error) {
+func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.PostgresAddon) (worker.Result, error) {
 	for _, sr := range w.subReconcilers {
 		w.Logger().Info(ctx, "Running sub-reconciler: %s for addon: %s", sr.Name(), addon.ID)
-		result, err := sr.Reconcile(ctx, addon, authorizeMutation)
+		result, err := sr.Reconcile(ctx, addon)
 		switch {
 		case err != nil:
 			return worker.Result{}, err

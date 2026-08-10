@@ -6,7 +6,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -50,7 +49,7 @@ var _ = Describe("Postgres addon namespace reconciliation", func() {
 			logger:           logger.NewLoggerWithPrefix(ctx, "test"),
 		}
 
-		_, err := reconciler.Reconcile(ctx, addon, worker.AllowMutation)
+		_, err := reconciler.Reconcile(ctx, addon)
 
 		Expect(err).NotTo(HaveOccurred())
 		created := &corev1.Namespace{}
@@ -95,7 +94,7 @@ var _ = Describe("Postgres addon namespace reconciliation", func() {
 			logger:           logger.NewLoggerWithPrefix(ctx, "test"),
 		}
 
-		_, err := reconciler.Reconcile(ctx, addon, worker.AllowMutation)
+		_, err := reconciler.Reconcile(ctx, addon)
 
 		Expect(err).NotTo(HaveOccurred())
 		updated := &corev1.Namespace{}

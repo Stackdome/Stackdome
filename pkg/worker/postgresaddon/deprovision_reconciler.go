@@ -7,7 +7,6 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +31,7 @@ func newDeprovisionReconciler(spec PostgresAddonWorkerSpec) *deprovisionReconcil
 
 func (r *deprovisionReconciler) Name() string { return "deprovision" }
 
-func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon, _ worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (r *deprovisionReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
 	if addon.DeletionTimestamp == nil {
 		return resultNil, nil
 	}

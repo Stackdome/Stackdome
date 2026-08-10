@@ -29,9 +29,9 @@ func newGatekeeperReconciler(spec ReleaseWorkerSpec) *gatekeeperReconciler {
 func (r *gatekeeperReconciler) Name() string { return "gatekeeper" }
 
 func (r *gatekeeperReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
-	latest, serr := r.releaseService.InternalGetLatestByStackID(ctx, release.StackID)
+	latest, serr := r.releaseService.InternalGetActiveByStackID(ctx, release.StackID)
 	if serr != nil {
-		return resultNil, fmt.Errorf("failed to get latest release: %w", serr)
+		return resultNil, fmt.Errorf("failed to get active release: %w", serr)
 	}
 	if latest != nil && latest.ID != release.ID && latest.Sequence > release.Sequence {
 		reason := fmt.Sprintf(supersededEventMessageFmt, latest.Sequence)

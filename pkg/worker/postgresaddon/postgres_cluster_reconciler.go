@@ -8,7 +8,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -35,7 +34,7 @@ func newPostgresClusterReconciler(spec PostgresAddonWorkerSpec) *postgresCluster
 
 func (r *postgresClusterReconciler) Name() string { return "postgres-cluster" }
 
-func (r *postgresClusterReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (r *postgresClusterReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
 	clusterClient, err := r.clusterManager.GetClient(addon.ClusterID)
 	if err != nil {
 		return resultNil, fmt.Errorf("failed to get cluster client: %w", err)
@@ -55,9 +54,6 @@ func (r *postgresClusterReconciler) Reconcile(ctx context.Context, addon *models
 	if err := clusterClient.Get(ctx, client.ObjectKeyFromObject(desiredCR), existingCR); err != nil {
 		if k8sapierrors.IsNotFound(err) {
 			r.logger.Info(ctx, "Creating PostgresCluster CR '%s' in namespace '%s'", desiredCR.Name, desiredCR.Namespace)
-			if err := authorizeMutation(ctx); err != nil {
-				return resultStop, err
-			}
 			return resultNil, clusterClient.Create(ctx, desiredCR)
 		}
 		return resultNil, fmt.Errorf("failed to get PostgresCluster CR: %w", err)
@@ -66,9 +62,6 @@ func (r *postgresClusterReconciler) Reconcile(ctx context.Context, addon *models
 	if !equality.Semantic.DeepEqual(existingCR.Spec, desiredCR.Spec) {
 		r.logger.Info(ctx, "Updating PostgresCluster CR '%s'", desiredCR.Name)
 		desiredCR.ResourceVersion = existingCR.ResourceVersion
-		if err := authorizeMutation(ctx); err != nil {
-			return resultStop, err
-		}
 		return resultNil, clusterClient.Update(ctx, desiredCR)
 	}
 

@@ -7,7 +7,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	barmanapi "github.com/cloudnative-pg/barman-cloud/pkg/api"
 	machineryapi "github.com/cloudnative-pg/machinery/pkg/api"
 	barmancloudv1 "github.com/cloudnative-pg/plugin-barman-cloud/api/v1"
@@ -35,7 +34,7 @@ func newObjectStoreDependencyReconciler(spec PostgresAddonWorkerSpec) *objectSto
 
 func (r *objectStoreDependencyReconciler) Name() string { return "objectstore-dependency" }
 
-func (r *objectStoreDependencyReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (r *objectStoreDependencyReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
 	if addon.BackupConfig.ObjectStoreID == "" {
 		return resultNil, nil
 	}
@@ -58,11 +57,11 @@ func (r *objectStoreDependencyReconciler) Reconcile(ctx context.Context, addon *
 
 	r.logger.Info(ctx, "Deploying ObjectStore '%s' to namespace '%s'", objectStore.Name, addon.Namespace)
 
-	if err := r.ensureCredentialSecret(ctx, clusterClient, objectStore, addon.Namespace, authorizeMutation); err != nil {
+	if err := r.ensureCredentialSecret(ctx, clusterClient, objectStore, addon.Namespace); err != nil {
 		return resultNil, fmt.Errorf("failed to ensure credential secret: %w", err)
 	}
 
-	if err := r.createOrUpdateObjectStoreCR(ctx, clusterClient, objectStore, addon.Namespace, authorizeMutation); err != nil {
+	if err := r.createOrUpdateObjectStoreCR(ctx, clusterClient, objectStore, addon.Namespace); err != nil {
 		return resultNil, fmt.Errorf("failed to create ObjectStore CR: %w", err)
 	}
 
@@ -88,7 +87,6 @@ func (r *objectStoreDependencyReconciler) ensureCredentialSecret(
 	clusterClient client.Client,
 	objectStore *models.ObjectStore,
 	namespace string,
-	authorizeMutation worker.MutationAuthorizer,
 ) error {
 	secretData, err := r.resolveCredentialData(ctx, objectStore)
 	if err != nil {
@@ -111,18 +109,12 @@ func (r *objectStoreDependencyReconciler) ensureCredentialSecret(
 	existing := &corev1.Secret{}
 	if err := clusterClient.Get(ctx, client.ObjectKeyFromObject(k8sSecret), existing); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			if err := authorizeMutation(ctx); err != nil {
-				return err
-			}
 			return clusterClient.Create(ctx, k8sSecret)
 		}
 		return fmt.Errorf("failed to get existing secret '%s': %w", secretName, err)
 	}
 
 	existing.Data = secretData
-	if err := authorizeMutation(ctx); err != nil {
-		return err
-	}
 	return clusterClient.Update(ctx, existing)
 }
 
@@ -194,25 +186,18 @@ func (r *objectStoreDependencyReconciler) createOrUpdateObjectStoreCR(
 	clusterClient client.Client,
 	objectStore *models.ObjectStore,
 	namespace string,
-	authorizeMutation worker.MutationAuthorizer,
 ) error {
 	cr := r.buildObjectStoreCR(objectStore, namespace)
 
 	existing := &barmancloudv1.ObjectStore{}
 	if err := clusterClient.Get(ctx, client.ObjectKeyFromObject(cr), existing); err != nil {
 		if k8sapierrors.IsNotFound(err) {
-			if err := authorizeMutation(ctx); err != nil {
-				return err
-			}
 			return clusterClient.Create(ctx, cr)
 		}
 		return fmt.Errorf("failed to get existing ObjectStore CR '%s': %w", objectStore.Name, err)
 	}
 
 	existing.Spec = cr.Spec
-	if err := authorizeMutation(ctx); err != nil {
-		return err
-	}
 	return clusterClient.Update(ctx, existing)
 }
 

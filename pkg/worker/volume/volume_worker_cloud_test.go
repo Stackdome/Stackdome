@@ -80,8 +80,8 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 			},
 		}
 		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil)
-		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(3)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(clusterClient, nil)
 		w := &volumeWorker{
 			volumeService: volumes, stackService: stacks, releaseService: releases, clusterManager: clusters,
@@ -121,8 +121,8 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 			},
 		}
 		releases.EXPECT().InternalGet(gomock.Any(), release.ID).Return(release, nil)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil).Times(3)
-		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		clusters.EXPECT().GetClient(stack.ClusterID).Return(clusterClient, nil)
 		w := &volumeWorker{
@@ -188,8 +188,8 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 			Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"}, Volumes: []*models.Volume{snapshotVolume},
 		}}
 		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil)
-		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(3)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(clusterClient, nil)
 		w := &volumeWorker{
 			stackService: stacks, releaseService: releases, clusterManager: clusters,

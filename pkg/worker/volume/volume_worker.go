@@ -129,27 +129,11 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	}
 	if releaseID != "" {
 		setVolumeReleaseID(volumeCR, releaseID)
-		authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, releaseID, stack.ID)
-		if authorizationErr != nil {
-			return worker.Result{}, authorizationErr
-		}
-		if !authorized {
-			return worker.Result{}, nil
-		}
 	}
 
 	existingVolumeCR := &storagev1alpha1.Volume{}
 	if getErr := clusterClient.Get(ctx, client.ObjectKey{Name: volumeCR.Name, Namespace: volumeCR.Namespace}, existingVolumeCR); getErr != nil {
 		if k8sapierrors.IsNotFound(getErr) {
-			if releaseID != "" {
-				authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, releaseID, stack.ID)
-				if authorizationErr != nil {
-					return worker.Result{}, authorizationErr
-				}
-				if !authorized {
-					return worker.Result{}, nil
-				}
-			}
 			if createErr := clusterClient.Create(ctx, volumeCR); createErr != nil {
 				return worker.Result{}, w.WorkerError.NewError("failed to create volume CR for '%s': %v", vol.ID, createErr)
 			}
@@ -162,15 +146,6 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	metadataChanged = mergeDesiredMetadata(&existingVolumeCR.Annotations, volumeCR.Annotations) || metadataChanged
 	if !apiequality.Semantic.DeepEqual(existingVolumeCR.Spec, volumeCR.Spec) || metadataChanged {
 		existingVolumeCR.Spec = volumeCR.Spec
-		if releaseID != "" {
-			authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, releaseID, stack.ID)
-			if authorizationErr != nil {
-				return worker.Result{}, authorizationErr
-			}
-			if !authorized {
-				return worker.Result{}, nil
-			}
-		}
 		if updateErr := clusterClient.Update(ctx, existingVolumeCR); updateErr != nil {
 			return worker.Result{}, w.WorkerError.NewError("failed to update volume CR for '%s': %v", vol.ID, updateErr)
 		}
@@ -251,24 +226,6 @@ func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models
 		return nil, nil, "", false, w.WorkerError.NewError("release %s does not contain volume %s", release.ID, ref.ID)
 	}
 	return nil, nil, "", false, nil
-}
-
-func (w *volumeWorker) releaseRemainsAuthoritative(ctx context.Context, releaseID, stackID string) (bool, *errors.ServiceError) {
-	stack, serr := w.stackService.InternalGetStack(ctx, stackID)
-	if serr != nil {
-		return false, serr
-	}
-	if stack.DeletionTimestamp != nil {
-		return false, nil
-	}
-	authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
-	if serr != nil {
-		return false, serr
-	}
-	if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
-		return false, nil
-	}
-	return true, nil
 }
 
 func setVolumeReleaseID(volume *storagev1alpha1.Volume, releaseID string) {

@@ -7,7 +7,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/worker"
 	"github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -54,7 +53,7 @@ func TestNamespaceReconcilerRepairsExistingNamespaceMetadata(t *testing.T) {
 		Logger:           logger.NewLoggerWithPrefix(ctx, "test"),
 	})
 
-	_, err := reconciler.Reconcile(ctx, stack, worker.AllowMutation)
+	_, err := reconciler.Reconcile(ctx, stack)
 
 	g.Expect(err).NotTo(gomega.HaveOccurred())
 	updated := &corev1.Namespace{}

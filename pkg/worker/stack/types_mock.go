@@ -15,7 +15,6 @@ import (
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
-	worker "github.com/Stackdome/stackdome/pkg/worker"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -58,18 +57,18 @@ func (mr *MocksubReconcilerMockRecorder) Name() *gomock.Call {
 }
 
 // Reconcile mocks base method.
-func (m *MocksubReconciler) Reconcile(ctx context.Context, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error) {
+func (m *MocksubReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Reconcile", ctx, stack, authorizeMutation)
+	ret := m.ctrl.Call(m, "Reconcile", ctx, stack)
 	ret0, _ := ret[0].(subReconcilerResult)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Reconcile indicates an expected call of Reconcile.
-func (mr *MocksubReconcilerMockRecorder) Reconcile(ctx, stack, authorizeMutation any) *gomock.Call {
+func (mr *MocksubReconcilerMockRecorder) Reconcile(ctx, stack any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MocksubReconciler)(nil).Reconcile), ctx, stack, authorizeMutation)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Reconcile", reflect.TypeOf((*MocksubReconciler)(nil).Reconcile), ctx, stack)
 }
 
 // MockstackService is a mock of stackService interface.
