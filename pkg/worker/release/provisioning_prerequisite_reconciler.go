@@ -27,6 +27,24 @@ func newProvisioningPrerequisiteReconciler(spec ReleaseWorkerSpec) *provisioning
 	if spec.RuntimePolicy == nil {
 		panic("release.newProvisioningPrerequisiteReconciler: RuntimePolicy is required")
 	}
+	if spec.StackService == nil {
+		panic("release.newProvisioningPrerequisiteReconciler: StackService is required")
+	}
+	if spec.VolumeService == nil {
+		panic("release.newProvisioningPrerequisiteReconciler: VolumeService is required")
+	}
+	if spec.NamespaceService == nil {
+		panic("release.newProvisioningPrerequisiteReconciler: NamespaceService is required")
+	}
+	if spec.PostgresAddonService == nil {
+		panic("release.newProvisioningPrerequisiteReconciler: PostgresAddonService is required")
+	}
+	if spec.ReleaseWorkerEnqueuer == nil {
+		panic("release.newProvisioningPrerequisiteReconciler: ReleaseWorkerEnqueuer is required")
+	}
+	if spec.ClusterManager == nil {
+		panic("release.newProvisioningPrerequisiteReconciler: ClusterManager is required")
+	}
 	return &provisioningPrerequisiteReconciler{
 		runtimePolicy: spec.RuntimePolicy, stackService: spec.StackService,
 		volumeService: spec.VolumeService, namespaceService: spec.NamespaceService,

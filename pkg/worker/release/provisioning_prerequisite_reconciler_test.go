@@ -56,6 +56,16 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		})
 	}
 
+	It("fails fast when prerequisite wiring is incomplete", func() {
+		Expect(func() {
+			newProvisioningPrerequisiteReconciler(ReleaseWorkerSpec{
+				RuntimePolicy: policy, StackService: stacks, VolumeService: volumes,
+				NamespaceService: namespaces, PostgresAddonService: addons,
+				ReleaseWorkerEnqueuer: enqueuer,
+			})
+		}).To(PanicWith("release.newProvisioningPrerequisiteReconciler: ClusterManager is required"))
+	})
+
 	It("fails closed before enqueueing when the allocation is inactive", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(errors.TrialInactive())
