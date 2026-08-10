@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**GitRepoSource** | [**GitRepoSource**](GitRepoSource.md) |  |
+**GitRepoSource** | [**GitRepoSource**](GitRepoSource.md) |  | 
 
 ## Methods
 
@@ -47,4 +47,5 @@ SetGitRepoSource sets GitRepoSource field to given value.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
 
