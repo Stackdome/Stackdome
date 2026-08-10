@@ -94,7 +94,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		Expect(result).To(Equal(resultRequeue))
 	})
 
-	It("continues only when namespace, volumes, and referenced addons are ready", func() {
+	It("uses only release snapshot volumes after the draft gains another volume", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
