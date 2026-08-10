@@ -151,20 +151,6 @@ func (mr *MockpostgresAddonServiceMockRecorder) InternalListIDs(ctx, query any, 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListIDs", reflect.TypeOf((*MockpostgresAddonService)(nil).InternalListIDs), varargs...)
 }
 
-// UpdatePostgresAddonStatus mocks base method.
-func (m *MockpostgresAddonService) UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdatePostgresAddonStatus", ctx, id, status)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// UpdatePostgresAddonStatus indicates an expected call of UpdatePostgresAddonStatus.
-func (mr *MockpostgresAddonServiceMockRecorder) UpdatePostgresAddonStatus(ctx, id, status any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePostgresAddonStatus", reflect.TypeOf((*MockpostgresAddonService)(nil).UpdatePostgresAddonStatus), ctx, id, status)
-}
-
 // MockobjectStoreService is a mock of objectStoreService interface.
 type MockobjectStoreService struct {
 	ctrl     *gomock.Controller

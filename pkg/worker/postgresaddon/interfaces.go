@@ -15,7 +15,6 @@ type clusterClientGetter interface {
 
 type postgresAddonService interface {
 	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
-	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
 	InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
