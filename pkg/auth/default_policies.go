@@ -34,7 +34,6 @@ func DefaultPolicies() [][]string {
 		{models.ViewerRole.String(), "*", "addons/*/*", ActionRead},
 		{models.ViewerRole.String(), "*", ResourceObjectStores, ActionList},
 		{models.ViewerRole.String(), "*", "object-stores/*", ActionRead},
-		{models.ViewerRole.String(), "*", "workspace-users/*", ActionRead},
 
 		// Developer: CRUD on project resources
 		{models.DeveloperRole.String(), "*", ResourceStacks, ActionList},
@@ -52,8 +51,6 @@ func DefaultPolicies() [][]string {
 		{models.DeveloperRole.String(), "*", ResourceObjectStores, ActionList},
 		{models.DeveloperRole.String(), "*", ResourceObjectStores, ActionCreate},
 		{models.DeveloperRole.String(), "*", "object-stores/*", "*"},
-		{models.DeveloperRole.String(), "*", "workspace-users", ActionCreate},
-		{models.DeveloperRole.String(), "*", "workspace-users/*", "*"},
 
 		// OrgAdmin: full access to everything under the org.
 		{models.OrgAdminRole.String(), "*", "*", "*"},

@@ -53,7 +53,6 @@ type projectService struct {
 	volumeStore        stores.VolumeStore
 	postgresAddonStore stores.PostgresAddonStore
 	objectStoreStore   stores.ObjectStoreStore
-	workspaceUserStore stores.WorkspaceUserStore
 	policyMgr          resourceaccess.ResourceAccessPolicyManager
 	permissions        auth.PermissionService
 	logger             logger.Logger
@@ -83,9 +82,6 @@ func NewProjectService(spec ProjectServiceSpec) ProjectService {
 			SessionFactory: spec.SessionFactory,
 		}),
 		objectStoreStore: pgstore.NewObjectStoreStore(pgstore.ObjectStoreStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
-		workspaceUserStore: pgstore.NewWorkspaceUserStore(pgstore.WorkspaceUserStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
 		policyMgr:   spec.PolicyManager,
@@ -276,14 +272,6 @@ func (s *projectService) checkProjectDependencies(ctx context.Context, projectID
 	}
 	if len(objectStores) > 0 {
 		blocking = append(blocking, fmt.Sprintf("object stores (%d)", len(objectStores)))
-	}
-
-	workspaceUsers, err := s.workspaceUserStore.ListByProjectID(ctx, projectID)
-	if err != nil {
-		return errors.InternalServerError("failed to check project dependencies: %s", err.Reason)
-	}
-	if len(workspaceUsers) > 0 {
-		blocking = append(blocking, fmt.Sprintf("workspace users (%d)", len(workspaceUsers)))
 	}
 
 	if len(blocking) > 0 {

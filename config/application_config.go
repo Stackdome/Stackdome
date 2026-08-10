@@ -285,10 +285,6 @@ func (c *ApplicationConfig) IsStackdomeCloud() bool {
 	return c.RuntimeMode == RuntimeModeStackdomeCloud
 }
 
-func (c *ApplicationConfig) WorkspaceUsersEnabled() bool {
-	return !c.IsStackdomeCloud() || (c.StackdomeCloud != nil && c.StackdomeCloud.Features.WorkspaceUsers)
-}
-
 func (c *ApplicationConfig) CustomDomainsEnabled() bool {
 	return !c.IsStackdomeCloud() || (c.StackdomeCloud != nil && c.StackdomeCloud.Features.CustomDomains)
 }

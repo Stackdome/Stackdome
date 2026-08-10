@@ -226,10 +226,6 @@ docs/VolumeSourceTypes.md
 docs/VolumeSpec.md
 docs/VolumeStatus.md
 docs/WALConfiguration.md
-docs/WorkspaceUser.md
-docs/WorkspaceUserState.md
-docs/WorkspaceUserStatus.md
-docs/WorkspaceUserStatusProvisionedNamespacesInner.md
 git_push.sh
 go.mod
 go.sum
@@ -446,9 +442,5 @@ model_volume_source_types.go
 model_volume_spec.go
 model_volume_status.go
 model_wal_configuration.go
-model_workspace_user.go
-model_workspace_user_state.go
-model_workspace_user_status.go
-model_workspace_user_status_provisioned_namespaces_inner.go
 response.go
 utils.go

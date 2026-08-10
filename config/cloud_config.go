@@ -64,7 +64,8 @@ type StackdomeCloudRegistryConfig struct {
 type StackdomeCloudFeaturesConfig struct {
 	CustomDomains          bool `yaml:"customDomains" json:"custom_domains"`
 	ExternalPostgresImport bool `yaml:"externalPostgresImport" json:"external_postgres_import"`
-	WorkspaceUsers         bool `yaml:"workspaceUsers" json:"workspace_users"`
+	// WorkspaceUsers is accepted only as false for compatibility with the first cloud config.
+	WorkspaceUsers bool `yaml:"workspaceUsers" json:"workspace_users"`
 }
 
 type StackdomeCloudClientIPSource string
@@ -136,6 +137,9 @@ func (c *StackdomeCloudConfig) Validate() error {
 	}
 	if c.Registry.StorageSize == "" {
 		return fmt.Errorf("registry.storageSize is required")
+	}
+	if c.Features.WorkspaceUsers {
+		return fmt.Errorf("features.workspaceUsers has been removed and must be false")
 	}
 	storageSize, err := resource.ParseQuantity(c.Registry.StorageSize)
 	if err != nil {

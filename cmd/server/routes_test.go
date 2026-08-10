@@ -1,7 +1,6 @@
 package server
 
 import (
-	"net/http"
 	"os"
 	"regexp"
 	"sort"
@@ -108,17 +107,14 @@ var _ = Describe("route/OpenAPI parity", func() {
 var _ = Describe("workspace-user route registration", func() {
 	const workspaceUsersPath = "/api/v1/organizations/{org_id}/projects/{project_name}/workspace-users"
 
-	registeredEndpoints := func(stackdomeCloudRuntime, workspaceUsersEnabled bool) []string {
-		cfg := config.NewApplicationConfig()
-		if stackdomeCloudRuntime {
-			cfg.RuntimeMode = config.RuntimeModeStackdomeCloud
-			cfg.StackdomeCloud = &config.StackdomeCloudConfig{
-				Features: config.StackdomeCloudFeaturesConfig{WorkspaceUsers: workspaceUsersEnabled},
-			}
+	registeredEndpoints := func(runtimeMode config.RuntimeMode) []string {
+		applicationConfig := config.NewApplicationConfig()
+		applicationConfig.RuntimeMode = runtimeMode
+		if runtimeMode == config.RuntimeModeStackdomeCloud {
+			applicationConfig.StackdomeCloud = &config.StackdomeCloudConfig{}
 		}
-
 		router := apiServer{
-			environment: environment.NewTestEnvironment(nil, environment.WithApplicationConfig(cfg)),
+			environment: environment.NewTestEnvironment(nil, environment.WithApplicationConfig(applicationConfig)),
 		}.routes()
 		var endpoints []string
 		Expect(router.Walk(func(route *mux.Route, _ *mux.Router, _ []*mux.Route) error {
@@ -139,24 +135,13 @@ var _ = Describe("workspace-user route registration", func() {
 		return endpoints
 	}
 
-	It("keeps the self-hosted routes enabled by default", func() {
-		expected := []string{
-			http.MethodPost + " " + workspaceUsersPath,
-			http.MethodGet + " " + workspaceUsersPath + "/current",
-			http.MethodGet + " " + workspaceUsersPath + "/{id}",
-			http.MethodPut + " " + workspaceUsersPath + "/{id}",
-			http.MethodDelete + " " + workspaceUsersPath + "/{id}",
+	It("does not expose the removed API", func() {
+		for _, runtimeMode := range []config.RuntimeMode{
+			config.RuntimeModeSelfHosted,
+			config.RuntimeModeStackdomeCloud,
+		} {
+			Expect(registeredEndpoints(runtimeMode)).To(BeEmpty(), "runtime mode %s", runtimeMode)
 		}
-		sort.Strings(expected)
-		Expect(registeredEndpoints(false, false)).To(Equal(expected))
-	})
-
-	It("omits the routes when the Stackdome Cloud feature is disabled", func() {
-		Expect(registeredEndpoints(true, false)).To(BeEmpty())
-	})
-
-	It("registers the routes when the Stackdome Cloud feature is enabled", func() {
-		Expect(registeredEndpoints(true, true)).ToNot(BeEmpty())
 	})
 })
 

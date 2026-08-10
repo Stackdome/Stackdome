@@ -18,7 +18,6 @@ const (
 	ResourceProjects            = "projects"
 	ResourceObjectStores        = "object-stores"
 	ResourceUsers               = "users"
-	ResourceWorkspaceUsers      = "workspace-users"
 	ResourceImageBuilds         = "image-builds"
 	ResourceAddons              = "addons"
 	ResourceDomains             = "domains"

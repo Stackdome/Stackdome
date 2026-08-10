@@ -3,8 +3,6 @@ package clusterresource
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -34,29 +32,6 @@ func newError(message string, err error) *ClusterResourceError {
 		Message: message,
 		Err:     err,
 	}
-}
-
-func sanitizeName(name string) string {
-	// Replace spaces and special characters with hyphens
-	reg := regexp.MustCompile(`[^a-zA-Z0-9-]`)
-	sanitized := reg.ReplaceAllString(name, "-")
-
-	// Remove leading and trailing hyphens
-	sanitized = strings.TrimPrefix(sanitized, "-")
-	sanitized = strings.TrimSuffix(sanitized, "-")
-
-	return truncateObjectName(strings.ToLower(sanitized))
-}
-
-func truncateObjectName(name string) string {
-	// Truncate the object name if it exceeds the maximum length
-	maxLength := 63
-	if len(name) > maxLength {
-		name = name[:maxLength]
-	}
-
-	name = strings.TrimSuffix(name, "-")
-	return name
 }
 
 func WrapErrAsServiceError(err error) *errors.ServiceError {
@@ -110,14 +85,6 @@ type DBClusterService interface {
 
 type DBSecretService interface {
 	InternalGetByID(ctx context.Context, secretID string) (*models.Secret, *errors.ServiceError)
-}
-
-type DBUserService interface {
-	Get(ctx context.Context, userID string) (*models.User, *errors.ServiceError)
-}
-
-type DBWorkspaceUserService interface {
-	GetWorkspaceUser(ctx context.Context, userID string) (*models.WorkspaceUser, *errors.ServiceError)
 }
 
 type DBOrganisationService interface {
