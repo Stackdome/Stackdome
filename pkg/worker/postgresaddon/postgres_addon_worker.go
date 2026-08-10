@@ -21,6 +21,7 @@ type postgresAddonWorker struct {
 	runtimePolicy        services.RuntimePolicy
 	referenceService     referenceService
 	releaseService       releaseService
+	stackService         stackService
 	worker.BaseWorker
 }
 
@@ -35,6 +36,7 @@ type PostgresAddonWorkerSpec struct {
 	Env                  string
 	RuntimePolicy        services.RuntimePolicy
 	ReleaseService       releaseService
+	StackService         stackService
 }
 
 func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
@@ -44,6 +46,7 @@ func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
 		runtimePolicy:        spec.RuntimePolicy,
 		referenceService:     spec.ReferenceService,
 		releaseService:       spec.ReleaseService,
+		stackService:         spec.StackService,
 		BaseWorker:           worker.NewBaseWorker(WorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			newDeprovisionReconciler(spec),
@@ -76,8 +79,11 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 	}
 
 	w.Logger().Info(ctx, "Processing postgres addon: %s (%s)", addon.Name, addon.ID)
+	authorizingReleaseID := ""
 	if addon.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
-		authorized, authorizationErr := w.authorizedByRelease(ctx, addon, addonRef.ReleaseID)
+		var authorized bool
+		var authorizationErr *errors.ServiceError
+		authorizingReleaseID, authorized, authorizationErr = w.authorizedByRelease(ctx, addon, addonRef.ReleaseID)
 		if authorizationErr != nil {
 			return worker.Result{}, authorizationErr
 		}
@@ -91,6 +97,15 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 			return worker.Result{}, admissionErr
 		}
 	}
+	if authorizingReleaseID != "" {
+		authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, addon, authorizingReleaseID)
+		if authorizationErr != nil {
+			return worker.Result{}, authorizationErr
+		}
+		if !authorized {
+			return worker.Result{}, nil
+		}
+	}
 
 	res, reconcileErr := w.reconcile(ctx, addon)
 	if reconcileErr != nil {
@@ -100,35 +115,54 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 	return res, nil
 }
 
-func (w *postgresAddonWorker) authorizedByRelease(ctx context.Context, addon *models.PostgresAddon, requestedReleaseID string) (bool, *errors.ServiceError) {
-	releaseID := requestedReleaseID
-	if releaseID == "" {
+func (w *postgresAddonWorker) authorizedByRelease(ctx context.Context, addon *models.PostgresAddon, requestedReleaseID string) (string, bool, *errors.ServiceError) {
+	if requestedReleaseID == "" {
 		inUse, refs, serr := w.referenceService.IsReferentInUse(ctx, models.ReferentPostgresAddon, addon.ID)
 		if serr != nil {
-			return false, serr
+			return "", false, serr
 		}
 		if !inUse {
-			return false, nil
+			return "", false, nil
 		}
 		for _, ref := range refs {
-			if ref.ReleaseID != nil && *ref.ReleaseID != "" {
-				releaseID = *ref.ReleaseID
-				break
+			if ref.ReleaseID == nil || *ref.ReleaseID == "" {
+				continue
+			}
+			authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, addon, *ref.ReleaseID)
+			if authorizationErr != nil {
+				return "", false, authorizationErr
+			}
+			if authorized {
+				return *ref.ReleaseID, true, nil
 			}
 		}
-		if releaseID == "" {
-			return false, nil
-		}
+		return "", false, nil
 	}
 
+	authorized, serr := w.releaseRemainsAuthoritative(ctx, addon, requestedReleaseID)
+	return requestedReleaseID, authorized, serr
+}
+
+func (w *postgresAddonWorker) releaseRemainsAuthoritative(ctx context.Context, addon *models.PostgresAddon, releaseID string) (bool, *errors.ServiceError) {
 	release, serr := w.releaseService.InternalGet(ctx, releaseID)
 	if serr != nil {
 		return false, serr
 	}
-	if !release.State.AllowsWorkloadReconciliation() {
+	stack, serr := w.stackService.InternalGetStack(ctx, release.StackID)
+	if serr != nil {
+		return false, serr
+	}
+	var active *models.StackRelease
+	if release.State == models.ReleaseStatePending || release.State == models.ReleaseStateInProgress {
+		active, serr = w.releaseService.InternalGetActiveByStackID(ctx, release.StackID)
+		if serr != nil {
+			return false, serr
+		}
+	}
+	if !release.IsAuthoritativeWorkloadRelease(stack, active) {
 		return false, nil
 	}
-	if release.StackID != release.Snapshot.Stack.ID || release.Snapshot.Stack.OrganisationID != addon.OrganisationID {
+	if release.Snapshot.Stack.OrganisationID != addon.OrganisationID {
 		return false, w.WorkerError.NewError("release %s does not authorize postgres addon %s", release.ID, addon.ID)
 	}
 	for _, connection := range release.Snapshot.Connections {
@@ -136,9 +170,6 @@ func (w *postgresAddonWorker) authorizedByRelease(ctx context.Context, addon *mo
 			(connection.To.Type == models.TopologyNodeTypePostgresAddon && connection.To.Id == addon.ID) {
 			return true, nil
 		}
-	}
-	if requestedReleaseID != "" {
-		return false, w.WorkerError.NewError("release %s does not reference postgres addon %s", release.ID, addon.ID)
 	}
 	return false, nil
 }

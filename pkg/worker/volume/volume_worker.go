@@ -12,9 +12,9 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 	storagev1alpha1 "stackdome.io/cluster-agent/api/storage/v1alpha1"
 )
 
@@ -65,10 +65,11 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 
 	var stack *models.Stack
 	var vol *models.Volume
+	var releaseID string
 	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
 		var authorized bool
 		var resolveErr *errors.ServiceError
-		vol, stack, authorized, resolveErr = w.resolveCloudDesiredVolume(ctx, volumeRef)
+		vol, stack, releaseID, authorized, resolveErr = w.resolveCloudDesiredVolume(ctx, volumeRef)
 		if resolveErr != nil {
 			return worker.Result{}, resolveErr
 		}
@@ -95,7 +96,11 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 
 	w.Logger().Info(ctx, "processing volume: %s", vol.ID)
 
-	if err := w.resolveGitRevision(ctx, vol); err != nil {
+	if releaseID != "" {
+		if err := validatePinnedGitRevision(vol); err != nil {
+			return worker.Result{}, w.WorkerError.NewError("release volume '%s' is not immutable: %v", vol.ID, err)
+		}
+	} else if err := w.resolveGitRevision(ctx, vol); err != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to resolve git revision for volume '%s': %v", vol.ID, err)
 	}
 
@@ -117,6 +122,16 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	if buildErr != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to build volume CR for '%s': %v", vol.ID, buildErr)
 	}
+	if releaseID != "" {
+		setVolumeReleaseID(volumeCR, releaseID)
+		authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, releaseID, stack.ID)
+		if authorizationErr != nil {
+			return worker.Result{}, authorizationErr
+		}
+		if !authorized {
+			return worker.Result{}, nil
+		}
+	}
 
 	existingVolumeCR := &storagev1alpha1.Volume{}
 	if getErr := clusterClient.Get(ctx, client.ObjectKey{Name: volumeCR.Name, Namespace: volumeCR.Namespace}, existingVolumeCR); getErr != nil {
@@ -129,72 +144,74 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 		return worker.Result{}, w.WorkerError.NewError("failed to get volume CR for '%s': %v", vol.ID, getErr)
 	}
 
-	// Update source revisions on existing CRs.
-	if vol.VolumeSource == nil {
-		return worker.Result{}, nil
-	}
-
-	if vol.VolumeSource.GitRepoSource != nil {
-		updatedRevision := buildGitRevision(vol.VolumeSource.GitRepoSource.Revision)
-		if existingVolumeCR.Spec.Source.GitRepo.Revision != updatedRevision {
-			existingVolumeCR.Spec.Source.GitRepo.Revision = updatedRevision
-			if updateErr := clusterClient.Update(ctx, existingVolumeCR); updateErr != nil {
-				return worker.Result{}, w.WorkerError.NewError("failed to update volume CR git revision for '%s': %v", vol.ID, updateErr)
-			}
-		}
-		return worker.Result{}, nil
-	}
-
-	if vol.VolumeSource.RemoteDirSource != nil {
-		if existingVolumeCR.Spec.Source.RemoteDir.CurrentDirectoryHash != vol.VolumeSource.RemoteDirSource.CurrentDirectoryHash {
-			existingVolumeCR.Spec.Source.RemoteDir.CurrentDirectoryHash = vol.VolumeSource.RemoteDirSource.CurrentDirectoryHash
-			if updateErr := clusterClient.Update(ctx, existingVolumeCR); updateErr != nil {
-				return worker.Result{}, w.WorkerError.NewError("failed to update volume CR remote dir hash for '%s': %v", vol.ID, updateErr)
-			}
+	metadataChanged := mergeDesiredMetadata(&existingVolumeCR.Labels, volumeCR.Labels)
+	metadataChanged = mergeDesiredMetadata(&existingVolumeCR.Annotations, volumeCR.Annotations) || metadataChanged
+	if !apiequality.Semantic.DeepEqual(existingVolumeCR.Spec, volumeCR.Spec) || metadataChanged {
+		existingVolumeCR.Spec = volumeCR.Spec
+		if updateErr := clusterClient.Update(ctx, existingVolumeCR); updateErr != nil {
+			return worker.Result{}, w.WorkerError.NewError("failed to update volume CR for '%s': %v", vol.ID, updateErr)
 		}
 	}
 
 	return worker.Result{}, nil
 }
 
+func mergeDesiredMetadata(existing *map[string]string, desired map[string]string) bool {
+	if *existing == nil {
+		*existing = make(map[string]string, len(desired))
+	}
+	changed := false
+	for key, value := range desired {
+		if (*existing)[key] == value {
+			continue
+		}
+		(*existing)[key] = value
+		changed = true
+	}
+	return changed
+}
+
 // resolveCloudDesiredVolume returns the immutable volume spec from the release
 // that authorizes this reconciliation. Periodic operands without a release ID
 // may only reconcile the stack's last converged release.
-func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models.VolumeOperand) (*models.Volume, *models.Stack, bool, *errors.ServiceError) {
+func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models.VolumeOperand) (*models.Volume, *models.Stack, string, bool, *errors.ServiceError) {
 	releaseID := ref.ReleaseID
-	expectedStackID := ""
+	var stack *models.Stack
 	if releaseID == "" {
 		current, serr := w.volumeService.InternalGet(ctx, ref.ID)
 		if serr != nil {
 			if serr.Is404() {
-				return nil, nil, false, nil
+				return nil, nil, "", false, nil
 			}
-			return nil, nil, false, serr
+			return nil, nil, "", false, serr
 		}
-		stack, err := w.resolveStack(ctx, current.ID)
+		var err error
+		stack, err = w.resolveStack(ctx, current.ID)
 		if err != nil {
-			return nil, nil, false, w.WorkerError.NewError("failed to resolve stack for volume '%s': %v", current.ID, err)
+			return nil, nil, "", false, w.WorkerError.NewError("failed to resolve stack for volume '%s': %v", current.ID, err)
 		}
 		releaseID = stack.GetConvergedReleaseID()
 		if releaseID == "" {
-			return nil, nil, false, nil
+			return nil, nil, "", false, nil
 		}
-		expectedStackID = stack.ID
 	}
 
 	release, serr := w.releaseService.InternalGet(ctx, releaseID)
 	if serr != nil {
-		return nil, nil, false, serr
+		return nil, nil, "", false, serr
 	}
-	if !release.State.AllowsWorkloadReconciliation() {
-		return nil, nil, false, nil
+	if stack == nil {
+		stack, serr = w.stackService.InternalGetStack(ctx, release.StackID)
+		if serr != nil {
+			return nil, nil, "", false, serr
+		}
 	}
-	stack := release.Snapshot.ToStack()
-	if release.StackID != stack.ID || stack.OrganisationID == "" || stack.ClusterID == "" {
-		return nil, nil, false, w.WorkerError.NewError("release %s has an invalid stack identity", release.ID)
+	authorized, authorizationErr := w.releaseIsAuthoritative(ctx, release, stack)
+	if authorizationErr != nil {
+		return nil, nil, "", false, authorizationErr
 	}
-	if expectedStackID != "" && release.StackID != expectedStackID {
-		return nil, nil, false, w.WorkerError.NewError("release %s does not authorize stack %s", release.ID, expectedStackID)
+	if !authorized {
+		return nil, nil, "", false, nil
 	}
 	for _, volume := range release.Snapshot.Volumes {
 		if volume == nil || volume.ID != ref.ID {
@@ -202,15 +219,56 @@ func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models
 		}
 		if volume.OrganisationID != stack.OrganisationID || volume.ProjectID != stack.ProjectID ||
 			volume.NamespaceID != stack.NamespaceID || volume.Namespace != stack.Namespace {
-			return nil, nil, false, w.WorkerError.NewError("release %s does not authorize volume %s", release.ID, ref.ID)
+			return nil, nil, "", false, w.WorkerError.NewError("release %s does not authorize volume %s", release.ID, ref.ID)
 		}
-		return volume, stack, true, nil
+		return volume, stack, release.ID, true, nil
 	}
 
 	if ref.ReleaseID != "" {
-		return nil, nil, false, w.WorkerError.NewError("release %s does not contain volume %s", release.ID, ref.ID)
+		return nil, nil, "", false, w.WorkerError.NewError("release %s does not contain volume %s", release.ID, ref.ID)
 	}
-	return nil, nil, false, nil
+	return nil, nil, "", false, nil
+}
+
+func (w *volumeWorker) releaseIsAuthoritative(ctx context.Context, release *models.StackRelease, stack *models.Stack) (bool, *errors.ServiceError) {
+	var active *models.StackRelease
+	if release.State == models.ReleaseStatePending || release.State == models.ReleaseStateInProgress {
+		var serr *errors.ServiceError
+		active, serr = w.releaseService.InternalGetActiveByStackID(ctx, stack.ID)
+		if serr != nil {
+			return false, serr
+		}
+	}
+	return release.IsAuthoritativeWorkloadRelease(stack, active), nil
+}
+
+func (w *volumeWorker) releaseRemainsAuthoritative(ctx context.Context, releaseID, stackID string) (bool, *errors.ServiceError) {
+	release, serr := w.releaseService.InternalGet(ctx, releaseID)
+	if serr != nil {
+		return false, serr
+	}
+	stack, serr := w.stackService.InternalGetStack(ctx, stackID)
+	if serr != nil {
+		return false, serr
+	}
+	return w.releaseIsAuthoritative(ctx, release, stack)
+}
+
+func setVolumeReleaseID(volume *storagev1alpha1.Volume, releaseID string) {
+	if volume.Annotations == nil {
+		volume.Annotations = make(map[string]string)
+	}
+	volume.Annotations[models.VolumeReleaseIDAnnotation] = releaseID
+}
+
+func validatePinnedGitRevision(volume *models.Volume) error {
+	if volume.VolumeSource == nil || volume.VolumeSource.GitRepoSource == nil {
+		return nil
+	}
+	if volume.VolumeSource.GitRepoSource.Revision.Commit == "" {
+		return fmt.Errorf("git revision has no resolved commit SHA")
+	}
+	return nil
 }
 
 func (w *volumeWorker) Interval() time.Duration {
@@ -259,23 +317,4 @@ func (w *volumeWorker) resolveGitRevision(ctx context.Context, vol *models.Volum
 	}
 	vol.VolumeSource.GitRepoSource.Revision = resolved
 	return nil
-}
-
-func buildGitRevision(rev models.GitRepoRevision) corev1alpha1.GitRepoRevision {
-	result := corev1alpha1.GitRepoRevision{}
-	switch rev.Type() {
-	case models.Branch:
-		result.Branch = rev.Branch
-		if rev.Commit != "" {
-			result.Commit = rev.Commit
-		}
-	case models.Tag:
-		result.Tag = rev.Tag
-		if rev.Commit != "" {
-			result.Commit = rev.Commit
-		}
-	case models.Commit:
-		result.Commit = rev.Commit
-	}
-	return result
 }

@@ -117,9 +117,10 @@ var _ = Describe("cloud runtime mutation admission", func() {
 		clusterResources := mocks.NewMockVolumeClusterResourceService(ctrl)
 		references := mocks.NewMockReferenceService(ctrl)
 		releases := mocks.NewMockStackReleaseStore(ctrl)
+		stacks := mocks.NewMockStackStore(ctrl)
 		svc := &volumeService{
 			volumeStore: store, runtimePolicy: policy, clusterResourceService: clusterResources,
-			referenceService: references, releaseStore: releases,
+			referenceService: references, releaseStore: releases, stackStore: stacks,
 		}
 		revision := models.RemoteDirSource{CurrentDirectoryHash: "new-hash"}
 		updated := &models.Volume{ID: "volume-1", OrganisationID: "org-1"}
@@ -133,9 +134,53 @@ var _ = Describe("cloud runtime mutation admission", func() {
 		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), "volume-1", "new-hash").Return(updated, nil)
 		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
 		releaseID := "release-1"
-		references.EXPECT().IsReferentInUse(gomock.Any(), models.ReferentVolume, "volume-1").Return(true, []models.ResourceReference{{ReleaseID: &releaseID}}, nil)
-		releases.EXPECT().GetByID(gomock.Any(), releaseID).Return(&models.StackRelease{ID: releaseID, State: models.ReleaseStateReleased}, nil)
+		references.EXPECT().IsReferentInUse(gomock.Any(), models.ReferentVolume, "volume-1").Return(true, []models.ResourceReference{{StackID: "stack-1", ReleaseID: &releaseID}}, nil)
+		releases.EXPECT().GetByID(gomock.Any(), releaseID).Return(&models.StackRelease{
+			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1"}},
+		}, nil)
+		stacks.EXPECT().GetByID(gomock.Any(), "stack-1").Return(&models.Stack{
+			ID: "stack-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: releaseID}},
+		}, nil)
 		clusterResources.EXPECT().UpdateVolumeRemoteDirRevisionInCluster(gomock.Any(), updated).Return(nil)
+
+		result, serr := svc.UpdateRemoteSourceRevision(context.Background(), "volume-1", revision)
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(BeIdenticalTo(updated))
+	})
+
+	It("does not mutate Kubernetes for a retained historical volume reference", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		policy := NewMockRuntimePolicy(ctrl)
+		store := mocks.NewMockVolumeStore(ctrl)
+		clusterResources := mocks.NewMockVolumeClusterResourceService(ctrl)
+		references := mocks.NewMockReferenceService(ctrl)
+		releases := mocks.NewMockStackReleaseStore(ctrl)
+		stacks := mocks.NewMockStackStore(ctrl)
+		svc := &volumeService{
+			volumeStore: store, runtimePolicy: policy, clusterResourceService: clusterResources,
+			referenceService: references, releaseStore: releases, stackStore: stacks,
+		}
+		revision := models.RemoteDirSource{CurrentDirectoryHash: "new-hash"}
+		updated := &models.Volume{ID: "volume-1", OrganisationID: "org-1"}
+		store.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).DoAndReturn(
+			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			})
+		store.EXPECT().GetByID(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1"}, nil)
+		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
+		store.EXPECT().UpdateRemoteDirSourceHashWithTx(gomock.Any(), "volume-1", "new-hash").Return(updated, nil)
+		policy.EXPECT().DraftProvisioningMode().Return(ProvisioningModeDatabaseOnly)
+		releaseID := "release-a"
+		references.EXPECT().IsReferentInUse(gomock.Any(), models.ReferentVolume, "volume-1").Return(true, []models.ResourceReference{{StackID: "stack-1", ReleaseID: &releaseID}}, nil)
+		releases.EXPECT().GetByID(gomock.Any(), releaseID).Return(&models.StackRelease{
+			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1"}},
+		}, nil)
+		stacks.EXPECT().GetByID(gomock.Any(), "stack-1").Return(&models.Stack{
+			ID: "stack-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
+		}, nil)
 
 		result, serr := svc.UpdateRemoteSourceRevision(context.Background(), "volume-1", revision)
 
@@ -219,9 +264,10 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				},
 			)
 			policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
-			store.EXPECT().UpdateWithTx(gomock.Any(), gomock.Any()).DoAndReturn(
+			store.EXPECT().UpdateLifecycleWithTx(gomock.Any(), gomock.Any()).DoAndReturn(
 				func(_ context.Context, updated *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
 					Expect(enabledField(updated)).To(BeTrue())
+					Expect(updated.Status.State).To(Equal(models.PostgresAddonStatePending))
 					return updated, nil
 				},
 			)
@@ -252,7 +298,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			},
 		)
 		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
-		store.EXPECT().UpdateWithTx(gomock.Any(), gomock.Any()).Return(nil, errors.GeneralError("update failed"))
+		store.EXPECT().UpdateLifecycleWithTx(gomock.Any(), gomock.Any()).Return(nil, errors.GeneralError("update failed"))
 
 		serr := svc.TriggerHibernate(context.Background(), "addon-1", true)
 

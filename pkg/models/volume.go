@@ -26,6 +26,9 @@ const (
 const (
 	VolumePhasePending = "Pending"
 	VolumePhaseReady   = "Ready"
+	// VolumeReleaseIDAnnotation identifies the immutable release snapshot that
+	// last wrote a Volume CR. Release readiness uses it to reject stale status.
+	VolumeReleaseIDAnnotation = "stackdome.io/release-id"
 )
 
 type Volume struct {

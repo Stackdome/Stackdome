@@ -354,3 +354,57 @@ func (mr *MockreleaseServiceMockRecorder) InternalGet(ctx, releaseID any) *gomoc
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockreleaseService)(nil).InternalGet), ctx, releaseID)
 }
+
+// InternalGetActiveByStackID mocks base method.
+func (m *MockreleaseService) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetActiveByStackID", ctx, stackID)
+	ret0, _ := ret[0].(*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetActiveByStackID indicates an expected call of InternalGetActiveByStackID.
+func (mr *MockreleaseServiceMockRecorder) InternalGetActiveByStackID(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseService)(nil).InternalGetActiveByStackID), ctx, stackID)
+}
+
+// MockstackService is a mock of stackService interface.
+type MockstackService struct {
+	ctrl     *gomock.Controller
+	recorder *MockstackServiceMockRecorder
+	isgomock struct{}
+}
+
+// MockstackServiceMockRecorder is the mock recorder for MockstackService.
+type MockstackServiceMockRecorder struct {
+	mock *MockstackService
+}
+
+// NewMockstackService creates a new mock instance.
+func NewMockstackService(ctrl *gomock.Controller) *MockstackService {
+	mock := &MockstackService{ctrl: ctrl}
+	mock.recorder = &MockstackServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockstackService) EXPECT() *MockstackServiceMockRecorder {
+	return m.recorder
+}
+
+// InternalGetStack mocks base method.
+func (m *MockstackService) InternalGetStack(ctx context.Context, stackID string) (*models.Stack, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetStack", ctx, stackID)
+	ret0, _ := ret[0].(*models.Stack)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetStack indicates an expected call of InternalGetStack.
+func (mr *MockstackServiceMockRecorder) InternalGetStack(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetStack", reflect.TypeOf((*MockstackService)(nil).InternalGetStack), ctx, stackID)
+}

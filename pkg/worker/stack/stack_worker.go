@@ -78,8 +78,9 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		return worker.Result{}, err
 	}
 	log.Info(ctx, "processing stack")
+	releaseID := ""
 	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
-		releaseID := stackRef.ReleaseID
+		releaseID = stackRef.ReleaseID
 		if releaseID == "" {
 			releaseID = stack.GetConvergedReleaseID()
 		}
@@ -91,17 +92,13 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		if releaseErr != nil {
 			return worker.Result{}, releaseErr
 		}
-		if !release.State.AllowsWorkloadReconciliation() {
-			log.Debug(ctx, "skipping stack authorized by non-provisionable release %s", release.ID)
-			return worker.Result{}, nil
+		authorized, authorizationErr := w.releaseIsAuthoritative(ctx, release, stack)
+		if authorizationErr != nil {
+			return worker.Result{}, authorizationErr
 		}
-		if release.StackID != stack.ID || release.Snapshot.Stack.ID != stack.ID ||
-			release.Snapshot.Stack.OrganisationID != stack.OrganisationID ||
-			release.Snapshot.Stack.ProjectID != stack.ProjectID ||
-			release.Snapshot.Stack.ClusterID != stack.ClusterID ||
-			release.Snapshot.Stack.NamespaceID != stack.NamespaceID ||
-			release.Snapshot.Stack.Namespace != stack.Namespace {
-			return worker.Result{}, w.WorkerError.NewError("release %s does not authorize stack %s", release.ID, stack.ID)
+		if !authorized {
+			log.Debug(ctx, "skipping stack without current release authority")
+			return worker.Result{}, nil
 		}
 		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
 			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
@@ -117,12 +114,46 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		return worker.Result{}, w.markAsReadyForSkippedClusterProvisioning(ctx, stack)
 	}
 
+	if releaseID != "" {
+		// Queue retries can outlive a release. Re-read both records at the last
+		// boundary before reconciliation so cancellation or supersession wins.
+		currentStack, stackErr := w.stackService.InternalGetStack(ctx, stack.ID)
+		if stackErr != nil {
+			return worker.Result{}, stackErr
+		}
+		currentRelease, releaseErr := w.releaseService.InternalGet(ctx, releaseID)
+		if releaseErr != nil {
+			return worker.Result{}, releaseErr
+		}
+		authorized, authorizationErr := w.releaseIsAuthoritative(ctx, currentRelease, currentStack)
+		if authorizationErr != nil {
+			return worker.Result{}, authorizationErr
+		}
+		if !authorized {
+			log.Debug(ctx, "release authority changed before stack reconciliation")
+			return worker.Result{}, nil
+		}
+		stack = currentStack
+	}
+
 	res, err := w.reconcile(ctx, stack)
 	if err != nil {
 		log.Error(ctx, "failed to reconcile stack: %v", err)
 		return worker.Result{}, err
 	}
 	return res, nil
+}
+
+func (w *stackWorker) releaseIsAuthoritative(ctx context.Context, release *models.StackRelease, stack *models.Stack) (bool, *errors.ServiceError) {
+	var active *models.StackRelease
+	if release.State == models.ReleaseStatePending || release.State == models.ReleaseStateInProgress {
+		var serr *errors.ServiceError
+		active, serr = w.releaseService.InternalGetActiveByStackID(ctx, stack.ID)
+		if serr != nil {
+			return false, serr
+		}
+	}
+	return release.IsAuthoritativeWorkloadRelease(stack, active), nil
 }
 
 func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worker.Result, *errors.ServiceError) {

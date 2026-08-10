@@ -963,6 +963,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		Env:                  e.Name,
 		RuntimePolicy:        e.RuntimePolicy,
 		ReleaseService:       e.Services.StackReleaseService,
+		StackService:         e.Services.StackService,
 	})
 	e.WorkerManager.RegisterWorker(pgAddonWorker, models.PostgresAddonOperand{})
 

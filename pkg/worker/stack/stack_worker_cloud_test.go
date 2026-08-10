@@ -39,11 +39,11 @@ var _ = Describe("StackWorker cloud admission", func() {
 			ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1",
 			Status: &models.StackStatus{State: models.StackPending, LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-1"}},
 		}
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(2)
 		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(&models.StackRelease{
 			ID: "release-1", StackID: "stack-1", State: models.ReleaseStateReleased,
 			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}},
-		}, nil)
+		}, nil).Times(2)
 		reconciler.EXPECT().Name().Return("test-reconciler")
 		reconciler.EXPECT().Reconcile(gomock.Any(), stack).Return(resultNil, nil)
 		w := &stackWorker{
@@ -52,6 +52,61 @@ var _ = Describe("StackWorker cloud admission", func() {
 		}
 
 		result, serr := w.Execute(context.Background(), models.StackOperand{ID: "stack-1"})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
+	It("does not replay a historical released stack after a newer release converges", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		stacks := NewMockstackService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		reconciler := NewMocksubReconciler(ctrl)
+		stack := &models.Stack{
+			ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1",
+			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
+		}
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil)
+		releases.EXPECT().InternalGet(gomock.Any(), "release-a").Return(&models.StackRelease{
+			ID: "release-a", StackID: "stack-1", State: models.ReleaseStateReleased,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}},
+		}, nil)
+		w := &stackWorker{
+			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
+			runtimePolicy: &activeWorkerRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
+		}
+
+		result, serr := w.Execute(context.Background(), models.StackOperand{ID: "stack-1", ReleaseID: "release-a"})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
+	It("fails closed when an active release is cancelled before reconciliation", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		stacks := NewMockstackService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		reconciler := NewMocksubReconciler(ctrl)
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}
+		pending := &models.StackRelease{
+			ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}},
+		}
+		cancelled := *pending
+		cancelled.State = models.ReleaseStateCancelled
+		gomock.InOrder(
+			stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil),
+			releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(pending, nil),
+			releases.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(pending, nil),
+			stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil),
+			releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(&cancelled, nil),
+		)
+		w := &stackWorker{
+			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
+			runtimePolicy: &activeWorkerRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
+		}
+
+		result, serr := w.Execute(context.Background(), models.StackOperand{ID: "stack-1", ReleaseID: "release-1"})
 
 		Expect(serr).To(BeNil())
 		Expect(result).To(Equal(worker.Result{}))

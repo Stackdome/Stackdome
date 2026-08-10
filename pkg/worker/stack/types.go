@@ -36,6 +36,7 @@ type stackService interface {
 
 type releaseService interface {
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 }
 
 type secretService interface {

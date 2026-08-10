@@ -180,6 +180,32 @@ func (s *postgresAddonStore) UpdateWithTx(ctx context.Context, addon *models.Pos
 	return addon, nil
 }
 
+// UpdateLifecycleWithTx persists the desired lifecycle configuration and the
+// reconciliation-needed status atomically. Status is intentionally excluded
+// from the general mutableFields list so ordinary updates cannot overwrite it.
+func (s *postgresAddonStore) UpdateLifecycleWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return nil, errors.GeneralError("transaction not found in context")
+	}
+
+	var existingAddon models.PostgresAddon
+	if err := tx.Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NotFound("postgres addon with id '%s' not found", addon.ID)
+		}
+		return nil, errors.GeneralError("failed to find postgres addon for lifecycle update: %s", err.Error())
+	}
+
+	if err := tx.Model(&existingAddon).
+		Select("LifecycleConfig", "Status", "UpdatedAt").
+		Omit(clause.Associations).
+		Updates(addon).Error; err != nil {
+		return nil, errors.GeneralError("failed to update postgres addon lifecycle: %s", err.Error())
+	}
+	return addon, nil
+}
+
 func (s *postgresAddonStore) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	result := s.sessionFactory.New(ctx).Delete(&models.PostgresAddon{}, "id = ?", ID)
 	if result.Error != nil {

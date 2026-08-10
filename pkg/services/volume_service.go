@@ -58,6 +58,7 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		releaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
+		stackStore:    pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: spec.SessionFactory}),
 		logger:        spec.Logger,
 		permissions:   spec.Permissions,
 		runtimePolicy: spec.RuntimePolicy,
@@ -69,6 +70,7 @@ type volumeService struct {
 	stackVolumeStore       stores.StackVolumeStore
 	referenceService       ReferenceService
 	releaseStore           stores.StackReleaseStore
+	stackStore             stores.StackStore
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
@@ -293,7 +295,13 @@ func (s *volumeService) shouldReconcileVolumeRevisionWithCluster(ctx context.Con
 			return false, releaseErr
 		}
 		if release.State == models.ReleaseStateReleased {
-			return true, nil
+			stack, stackErr := s.stackStore.GetByID(ctx, ref.StackID)
+			if stackErr != nil {
+				return false, stackErr
+			}
+			if release.IsAuthoritativeWorkloadRelease(stack, nil) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil

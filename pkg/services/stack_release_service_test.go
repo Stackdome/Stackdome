@@ -14,6 +14,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stackrelease"
 	"go.uber.org/mock/gomock"
 )
 
@@ -271,6 +272,39 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			enqueuer.EXPECT().EnqueueAfterCommit(ctx, models.StackReleaseOperand{ID: "rel-1"}).Return(nil)
 
 			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
+			Expect(serr).To(BeNil())
+			Expect(got).To(Equal(created))
+		})
+
+		It("freezes a volume branch before hashing and persists the commit", func() {
+			const repoURL = "https://github.com/acme/data.git"
+			stack.Volumes = []*models.Volume{{
+				ID: "volume-1", Name: "data", VolumeSource: &models.VolumeSource{GitRepoSource: &models.GitRepoSource{
+					RepoUrl: repoURL, Revision: models.GitRepoRevision{Branch: "main"},
+				}},
+			}}
+			gitClients := NewMocksourceGitClientProvider(ctrl)
+			gitClient := mocks.NewMockGitClient(ctrl)
+			svc.gitClients = gitClients
+			gitClients.EXPECT().ClientFor(repoURL, gitclient.GitCredentials{}).Return(gitClient, nil)
+			gitClient.EXPECT().GetBranchHeadSHA(ctx, repoURL, "main").Return(&gitclient.RepoResult{HeadSHA: "commit-x"}, nil)
+			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
+			runTxInline()
+			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			releaseStore.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
+				func(_ context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
+					Expect(release.Snapshot.Volumes[0].VolumeSource.GitRepoSource.Revision).To(Equal(models.GitRepoRevision{Branch: "main", Commit: "commit-x"}))
+					expectedHash, err := stackrelease.HashJSON(release.Snapshot)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(release.SnapshotRevision).To(Equal(expectedHash))
+					return created, nil
+				})
+			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
+			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
+			enqueuer.EXPECT().EnqueueAfterCommit(ctx, models.StackReleaseOperand{ID: "rel-1"}).Return(nil)
+
+			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
+
 			Expect(serr).To(BeNil())
 			Expect(got).To(Equal(created))
 		})

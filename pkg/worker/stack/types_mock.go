@@ -211,6 +211,21 @@ func (mr *MockreleaseServiceMockRecorder) InternalGet(ctx, releaseID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockreleaseService)(nil).InternalGet), ctx, releaseID)
 }
 
+// InternalGetActiveByStackID mocks base method.
+func (m *MockreleaseService) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetActiveByStackID", ctx, stackID)
+	ret0, _ := ret[0].(*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetActiveByStackID indicates an expected call of InternalGetActiveByStackID.
+func (mr *MockreleaseServiceMockRecorder) InternalGetActiveByStackID(ctx, stackID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseService)(nil).InternalGetActiveByStackID), ctx, stackID)
+}
+
 // MocksecretService is a mock of secretService interface.
 type MocksecretService struct {
 	ctrl     *gomock.Controller

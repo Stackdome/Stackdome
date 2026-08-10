@@ -65,13 +65,29 @@ func (s StackReleaseState) Terminal() bool {
 	}
 }
 
-// AllowsWorkloadReconciliation reports whether a release can still become, or
-// already is, the live workload. Failed, superseded, and cancelled snapshots
-// must never authorize cluster-side work.
-func (s StackReleaseState) AllowsWorkloadReconciliation() bool {
-	switch s {
-	case ReleaseStatePending, ReleaseStateInProgress, ReleaseStateReleased:
-		return true
+// IsAuthoritativeWorkloadRelease reports whether this release is currently
+// allowed to drive cluster-side state for stack. An in-flight release must be
+// the stack's active release; a completed release must be the stack's current
+// converged release. Retained historical releases are rollback sources, not
+// live reconciliation authority.
+func (r *StackRelease) IsAuthoritativeWorkloadRelease(stack *Stack, active *StackRelease) bool {
+	if r == nil || stack == nil || r.StackID != stack.ID || r.Snapshot.Stack.ID != stack.ID ||
+		r.Snapshot.Stack.OrganisationID != stack.OrganisationID ||
+		r.Snapshot.Stack.ProjectID != stack.ProjectID ||
+		r.Snapshot.Stack.ClusterID != stack.ClusterID ||
+		r.Snapshot.Stack.UserID != stack.UserID ||
+		r.Snapshot.Stack.Name != stack.Name ||
+		r.Snapshot.Stack.NamespaceID != stack.NamespaceID ||
+		r.Snapshot.Stack.Namespace != stack.Namespace {
+		return false
+	}
+
+	switch r.State {
+	case ReleaseStatePending, ReleaseStateInProgress:
+		return active != nil && active.ID == r.ID && active.StackID == r.StackID &&
+			(active.State == ReleaseStatePending || active.State == ReleaseStateInProgress)
+	case ReleaseStateReleased:
+		return stack.GetConvergedReleaseID() == r.ID
 	default:
 		return false
 	}

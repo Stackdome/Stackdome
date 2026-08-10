@@ -58,13 +58,18 @@ var _ = Describe("PostgresAddonWorker", func() {
 	It("does not reconcile a pending cloud addon without an active allocation", func() {
 		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}, nil)
 		releases := NewMockreleaseService(ctrl)
-		releases.EXPECT().InternalGet(ctx, "release-1").Return(&models.StackRelease{
+		stacks := NewMockstackService(ctrl)
+		release := &models.StackRelease{
 			ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending, Snapshot: models.StackSnapshot{
 				Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"},
 				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
 			},
-		}, nil)
+		}
+		releases.EXPECT().InternalGet(ctx, "release-1").Return(release, nil)
+		releases.EXPECT().InternalGetActiveByStackID(ctx, "stack-1").Return(release, nil)
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1"}, nil)
 		w.releaseService = releases
+		w.stackService = stacks
 		w.runtimePolicy = &inactiveAddonRuntimePolicy{}
 		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: "addon-1", ReleaseID: "release-1"})
 		Expect(serr).To(BeNil())
@@ -92,20 +97,27 @@ var _ = Describe("PostgresAddonWorker", func() {
 	It("periodically reconciles an addon referenced by a release while its allocation is active", func() {
 		refs := NewMockreferenceService(ctrl)
 		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
 		reconciler := &recordingAddonReconciler{}
 		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
 		releaseID := "release-1"
 		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(addon, nil)
 		refs.EXPECT().IsReferentInUse(ctx, models.ReferentPostgresAddon, "addon-1").Return(true, []models.ResourceReference{{ReleaseID: &releaseID, ReferentID: "addon-1"}}, nil)
-		releases.EXPECT().InternalGet(ctx, releaseID).Return(&models.StackRelease{
+		release := &models.StackRelease{
 			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
 			Snapshot: models.StackSnapshot{
 				Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"},
 				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
 			},
-		}, nil)
+		}
+		releases.EXPECT().InternalGet(ctx, releaseID).Return(release, nil).Times(2)
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{
+			ID: "stack-1", OrganisationID: "org-1",
+			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: releaseID}},
+		}, nil).Times(2)
 		w.referenceService = refs
 		w.releaseService = releases
+		w.stackService = stacks
 		w.subReconcilers = []subReconciler{reconciler}
 		w.runtimePolicy = &activeAddonRuntimePolicy{}
 
@@ -114,6 +126,35 @@ var _ = Describe("PostgresAddonWorker", func() {
 		Expect(serr).To(BeNil())
 		Expect(result).To(Equal(worker.Result{}))
 		Expect(reconciler.called).To(BeTrue())
+	})
+
+	It("does not reconcile an addon from a historical release reference", func() {
+		refs := NewMockreferenceService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
+		reconciler := &recordingAddonReconciler{}
+		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
+		releaseID := "release-a"
+		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(addon, nil)
+		refs.EXPECT().IsReferentInUse(ctx, models.ReferentPostgresAddon, "addon-1").Return(true, []models.ResourceReference{{StackID: "stack-1", ReleaseID: &releaseID}}, nil)
+		releases.EXPECT().InternalGet(ctx, releaseID).Return(&models.StackRelease{
+			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
+			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"}, Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}}},
+		}, nil)
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{
+			ID: "stack-1", OrganisationID: "org-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
+		}, nil)
+		w.referenceService = refs
+		w.releaseService = releases
+		w.stackService = stacks
+		w.subReconcilers = []subReconciler{reconciler}
+		w.runtimePolicy = &activeAddonRuntimePolicy{}
+
+		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: "addon-1"})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+		Expect(reconciler.called).To(BeFalse())
 	})
 })
 

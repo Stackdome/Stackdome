@@ -43,6 +43,7 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		volumes := NewMockvolumeService(ctrl)
 		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
 		clusters := mocks.NewMockClusterManager(ctrl)
 		scheme := runtime.NewScheme()
 		Expect(storagev1alpha1.AddToScheme(scheme)).To(Succeed())
@@ -52,16 +53,20 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 			Name: "data", NamespaceID: "namespace-1", Namespace: "stack-1", Size: "1Gi",
 			VolumeSource: &models.VolumeSource{RemoteDirSource: &models.RemoteDirSource{Path: "/data", CurrentDirectoryHash: "release-hash"}},
 		}
-		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(&models.StackRelease{
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"}
+		release := &models.StackRelease{
 			ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending,
 			Snapshot: models.StackSnapshot{
 				Stack:   models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"},
 				Volumes: []*models.Volume{snapshotVolume},
 			},
-		}, nil)
+		}
+		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil).Times(2)
+		releases.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil).Times(2)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(2)
 		clusters.EXPECT().GetClient("cluster-1").Return(clusterClient, nil)
 		w := &volumeWorker{
-			volumeService: volumes, releaseService: releases, clusterManager: clusters,
+			volumeService: volumes, stackService: stacks, releaseService: releases, clusterManager: clusters,
 			volumeCRbuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
 			runtimePolicy:   &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
 		}
@@ -72,6 +77,69 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		created := &storagev1alpha1.Volume{}
 		Expect(clusterClient.Get(context.Background(), client.ObjectKey{Name: "data", Namespace: "stack-1"}, created)).To(Succeed())
 		Expect(created.Spec.Source.RemoteDir.CurrentDirectoryHash).To(Equal("release-hash"))
+	})
+
+	It("does not replay a historical volume after a newer release converges", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
+		clusters := mocks.NewMockClusterManager(ctrl)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(&models.Stack{
+			ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1",
+			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
+		}, nil)
+		releases.EXPECT().InternalGet(gomock.Any(), "release-a").Return(&models.StackRelease{
+			ID: "release-a", StackID: "stack-1", State: models.ReleaseStateReleased,
+			Snapshot: models.StackSnapshot{
+				Stack:   models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"},
+				Volumes: []*models.Volume{{ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", NamespaceID: "namespace-1", Namespace: "stack-1"}},
+			},
+		}, nil)
+		w := &volumeWorker{
+			stackService: stacks, releaseService: releases, clusterManager: clusters,
+			runtimePolicy: &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
+		}
+
+		result, serr := w.Execute(context.Background(), models.VolumeOperand{ID: "volume-1", ReleaseID: "release-a"})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
+
+	It("uses a persisted git commit without resolving the repository again", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
+		clusters := mocks.NewMockClusterManager(ctrl)
+		scheme := runtime.NewScheme()
+		Expect(storagev1alpha1.AddToScheme(scheme)).To(Succeed())
+		clusterClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"}
+		snapshotVolume := &models.Volume{
+			ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", Name: "data", NamespaceID: "namespace-1", Namespace: "stack-1", Size: "1Gi",
+			VolumeSource: &models.VolumeSource{GitRepoSource: &models.GitRepoSource{
+				RepoUrl: "not-a-network-url", Revision: models.GitRepoRevision{Branch: "main", Commit: "commit-x"},
+			}},
+		}
+		release := &models.StackRelease{ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending, Snapshot: models.StackSnapshot{
+			Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"}, Volumes: []*models.Volume{snapshotVolume},
+		}}
+		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil).Times(2)
+		releases.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil).Times(2)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(2)
+		clusters.EXPECT().GetClient("cluster-1").Return(clusterClient, nil)
+		w := &volumeWorker{
+			stackService: stacks, releaseService: releases, clusterManager: clusters,
+			volumeCRbuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
+			runtimePolicy:   &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
+		}
+
+		_, serr := w.Execute(context.Background(), models.VolumeOperand{ID: "volume-1", ReleaseID: "release-1"})
+
+		Expect(serr).To(BeNil())
+		created := &storagev1alpha1.Volume{}
+		Expect(clusterClient.Get(context.Background(), client.ObjectKey{Name: "data", Namespace: "stack-1"}, created)).To(Succeed())
+		Expect(created.Spec.Source.GitRepo.Revision.Commit).To(Equal("commit-x"))
 	})
 })
 

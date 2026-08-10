@@ -596,7 +596,9 @@ func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, 
 			return policyErr
 		}
 		postgresAddon.LifecycleConfig.HibernationEnabled = enabled
-		_, updateErr := s.postgresAddonStore.UpdateWithTx(txCtx, postgresAddon)
+		postgresAddon.Status.State = models.PostgresAddonStatePending
+		postgresAddon.Status.Message = "Lifecycle change pending"
+		_, updateErr := s.postgresAddonStore.UpdateLifecycleWithTx(txCtx, postgresAddon)
 		return updateErr
 	}); txErr != nil {
 		return txErr
@@ -624,7 +626,9 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 			return policyErr
 		}
 		postgresAddon.LifecycleConfig.FencingEnabled = enabled
-		_, updateErr := s.postgresAddonStore.UpdateWithTx(txCtx, postgresAddon)
+		postgresAddon.Status.State = models.PostgresAddonStatePending
+		postgresAddon.Status.Message = "Lifecycle change pending"
+		_, updateErr := s.postgresAddonStore.UpdateLifecycleWithTx(txCtx, postgresAddon)
 		return updateErr
 	}); txErr != nil {
 		return txErr

@@ -152,6 +152,9 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 	if err != nil {
 		return nil, errors.GeneralError("failed to create stack snapshot: %s", err.Error())
 	}
+	if freezeErr := s.freezeVolumeGitRevisions(ctx, &snapshot); freezeErr != nil {
+		return nil, freezeErr
+	}
 
 	pins, pinErr := s.resolvePins(ctx, stack)
 	if pinErr != nil {
@@ -196,6 +199,34 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 		return nil, errors.GeneralError("failed to enqueue release: %s", err.Error())
 	}
 	return created, nil
+}
+
+// freezeVolumeGitRevisions resolves mutable branch and tag references before
+// the snapshot is hashed and persisted. Retries and rollbacks can then consume
+// the same content without consulting a repository again.
+func (s *stackReleaseService) freezeVolumeGitRevisions(ctx context.Context, snapshot *models.StackSnapshot) *errors.ServiceError {
+	for _, volume := range snapshot.Volumes {
+		if volume == nil || volume.VolumeSource == nil || volume.VolumeSource.GitRepoSource == nil {
+			continue
+		}
+		source := volume.VolumeSource.GitRepoSource
+		if source.Revision.Commit != "" {
+			continue
+		}
+		gitClient, err := s.gitClients.ClientFor(source.RepoUrl, gitclient.GitCredentials{})
+		if err != nil {
+			return errors.BadRequest("volume '%s': failed to create git client: %s", volume.Name, err.Error())
+		}
+		resolved, err := gitclient.ResolveGitRepoRevision(ctx, gitClient, source.RepoUrl, source.Revision)
+		if err != nil {
+			return errors.BadRequest("volume '%s': failed to resolve git revision: %s", volume.Name, err.Error())
+		}
+		if resolved.Commit == "" {
+			return errors.BadRequest("volume '%s': resolved git revision has no commit SHA", volume.Name)
+		}
+		source.Revision = resolved
+	}
+	return nil
 }
 
 func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (

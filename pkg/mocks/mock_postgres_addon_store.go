@@ -225,6 +225,21 @@ func (mr *MockPostgresAddonStoreMockRecorder) UpdateDeletionTimestamp(ctx, id, t
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateDeletionTimestamp", reflect.TypeOf((*MockPostgresAddonStore)(nil).UpdateDeletionTimestamp), ctx, id, timestamp)
 }
 
+// UpdateLifecycleWithTx mocks base method.
+func (m *MockPostgresAddonStore) UpdateLifecycleWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLifecycleWithTx", ctx, addon)
+	ret0, _ := ret[0].(*models.PostgresAddon)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// UpdateLifecycleWithTx indicates an expected call of UpdateLifecycleWithTx.
+func (mr *MockPostgresAddonStoreMockRecorder) UpdateLifecycleWithTx(ctx, addon any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLifecycleWithTx", reflect.TypeOf((*MockPostgresAddonStore)(nil).UpdateLifecycleWithTx), ctx, addon)
+}
+
 // UpdateStatus mocks base method.
 func (m *MockPostgresAddonStore) UpdateStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
 	m.ctrl.T.Helper()
