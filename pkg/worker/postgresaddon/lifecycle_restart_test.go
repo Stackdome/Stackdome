@@ -115,11 +115,13 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
 			},
 		}
-		references.EXPECT().IsReferentInUse(ctx, models.ReferentPostgresAddon, "addon-1").Return(true, []models.ResourceReference{{StackID: "stack-1", ReleaseID: &releaseID}}, nil)
+		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(ctx).Return([]*models.StackRelease{release}, nil)
 		releases.EXPECT().InternalGet(ctx, releaseID).Return(release, nil).Times(2)
-		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{
+		stack := &models.Stack{
 			ID: "stack-1", OrganisationID: "org-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: releaseID}},
-		}, nil).Times(2)
+		}
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(stack, nil).Times(2)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(release, nil).Times(2)
 		restartedWorker := &postgresAddonWorker{
 			postgresAddonService: service,
 			runtimePolicy:        &activeAddonRuntimePolicy{},
@@ -131,7 +133,7 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 		}
 		operands, inputErr := restartedWorker.GetInput(ctx)
 		Expect(inputErr).To(BeNil())
-		Expect(operands).To(ConsistOf(models.PostgresAddonOperand{ID: "addon-1"}))
+		Expect(operands).To(ConsistOf(models.PostgresAddonOperand{ID: "addon-1", ReleaseID: releaseID}))
 
 		_, executeErr := restartedWorker.Execute(ctx, operands[0])
 
@@ -143,7 +145,7 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 type recordingLifecycleReconciler struct{ hibernationEnabled bool }
 
 func (*recordingLifecycleReconciler) Name() string { return "record-lifecycle" }
-func (r *recordingLifecycleReconciler) Reconcile(_ context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
+func (r *recordingLifecycleReconciler) Reconcile(_ context.Context, addon *models.PostgresAddon, _ worker.MutationAuthorizer) (subReconcilerResult, error) {
 	r.hibernationEnabled = addon.LifecycleConfig.HibernationEnabled
 	return resultNil, nil
 }

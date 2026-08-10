@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -26,6 +27,7 @@ var _ = Describe("VolumeWorker", func() {
 
 		w = &volumeWorker{
 			volumeService: volumeSvc,
+			runtimePolicy: &eagerVolumeRuntimePolicy{},
 			BaseWorker:    worker.NewBaseWorker(VolumeWorkerName, "test"),
 		}
 	})
@@ -54,3 +56,9 @@ var _ = Describe("VolumeWorker", func() {
 		})
 	})
 })
+
+type eagerVolumeRuntimePolicy struct{ activeVolumeRuntimePolicy }
+
+func (*eagerVolumeRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
+	return services.ProvisioningModeEager
+}

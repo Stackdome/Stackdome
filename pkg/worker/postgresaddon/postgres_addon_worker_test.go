@@ -27,6 +27,7 @@ var _ = Describe("PostgresAddonWorker", func() {
 
 		w = &postgresAddonWorker{
 			postgresAddonService: addonSvc,
+			runtimePolicy:        &eagerAddonRuntimePolicy{},
 			BaseWorker:           worker.NewBaseWorker(WorkerName, "test"),
 		}
 	})
@@ -66,8 +67,9 @@ var _ = Describe("PostgresAddonWorker", func() {
 			},
 		}
 		releases.EXPECT().InternalGet(ctx, "release-1").Return(release, nil)
-		releases.EXPECT().InternalGetActiveByStackID(ctx, "stack-1").Return(release, nil)
-		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1"}, nil)
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1"}
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(release, nil)
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(stack, nil)
 		w.releaseService = releases
 		w.stackService = stacks
 		w.runtimePolicy = &inactiveAddonRuntimePolicy{}
@@ -76,22 +78,16 @@ var _ = Describe("PostgresAddonWorker", func() {
 		Expect(result).To(Equal(worker.Result{}))
 	})
 
-	It("does not reconcile an unrelated draft selected by the periodic scanner", func() {
-		refs := NewMockreferenceService(ctrl)
-		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}
-		addonSvc.EXPECT().InternalList(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*models.PostgresAddon{addon}, nil)
-		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(addon, nil)
-		refs.EXPECT().IsReferentInUse(ctx, models.ReferentPostgresAddon, "addon-1").Return(true, []models.ResourceReference{{ReferentID: "addon-1"}}, nil)
-		w.referenceService = refs
+	It("does not select draft-only addons for periodic cloud reconciliation", func() {
+		releases := NewMockreleaseService(ctrl)
+		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(ctx).Return([]*models.StackRelease{}, nil)
+		addonSvc.EXPECT().InternalList(ctx, "deletion_timestamp IS NOT NULL").Return([]*models.PostgresAddon{}, nil)
+		w.releaseService = releases
 		w.runtimePolicy = &activeAddonRuntimePolicy{}
 
 		operands, serr := w.GetInput(ctx)
 		Expect(serr).To(BeNil())
-		Expect(operands).To(ConsistOf(models.PostgresAddonOperand{ID: "addon-1"}))
-		result, serr := w.Execute(ctx, operands[0])
-
-		Expect(serr).To(BeNil())
-		Expect(result).To(Equal(worker.Result{}))
+		Expect(operands).To(BeEmpty())
 	})
 
 	It("periodically reconciles an addon referenced by a release while its allocation is active", func() {
@@ -111,10 +107,12 @@ var _ = Describe("PostgresAddonWorker", func() {
 			},
 		}
 		releases.EXPECT().InternalGet(ctx, releaseID).Return(release, nil).Times(2)
-		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{
+		stack := &models.Stack{
 			ID: "stack-1", OrganisationID: "org-1",
 			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: releaseID}},
-		}, nil).Times(2)
+		}
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(stack, nil).Times(2)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(release, nil).Times(2)
 		w.referenceService = refs
 		w.releaseService = releases
 		w.stackService = stacks
@@ -141,9 +139,11 @@ var _ = Describe("PostgresAddonWorker", func() {
 			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
 			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"}, Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}}},
 		}, nil)
-		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{
+		stack := &models.Stack{
 			ID: "stack-1", OrganisationID: "org-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
-		}, nil)
+		}
+		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(stack, nil)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(nil, nil)
 		w.referenceService = refs
 		w.releaseService = releases
 		w.stackService = stacks
@@ -161,7 +161,7 @@ var _ = Describe("PostgresAddonWorker", func() {
 type recordingAddonReconciler struct{ called bool }
 
 func (*recordingAddonReconciler) Name() string { return "test-reconciler" }
-func (r *recordingAddonReconciler) Reconcile(context.Context, *models.PostgresAddon) (subReconcilerResult, error) {
+func (r *recordingAddonReconciler) Reconcile(context.Context, *models.PostgresAddon, worker.MutationAuthorizer) (subReconcilerResult, error) {
 	r.called = true
 	return resultNil, nil
 }
@@ -170,6 +170,12 @@ type activeAddonRuntimePolicy struct{ inactiveAddonRuntimePolicy }
 
 func (*activeAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return nil
+}
+
+type eagerAddonRuntimePolicy struct{ inactiveAddonRuntimePolicy }
+
+func (*eagerAddonRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
+	return services.ProvisioningModeEager
 }
 
 type inactiveAddonRuntimePolicy struct{}

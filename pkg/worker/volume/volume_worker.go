@@ -62,6 +62,8 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	if !ok {
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.VolumeOperand")
 	}
+	unlock := w.LockResource(volumeRef.ID)
+	defer unlock()
 
 	var stack *models.Stack
 	var vol *models.Volume
@@ -97,8 +99,9 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	w.Logger().Info(ctx, "processing volume: %s", vol.ID)
 
 	if releaseID != "" {
-		if err := validatePinnedGitRevision(vol); err != nil {
-			return worker.Result{}, w.WorkerError.NewError("release volume '%s' is not immutable: %v", vol.ID, err)
+		if err := models.ValidatePinnedVolumeGitRevisions(models.StackSnapshot{Volumes: []*models.Volume{vol}}); err != nil {
+			w.Logger().Info(ctx, "skipping incompatible release volume %s: %v", vol.ID, err)
+			return worker.Result{}, nil
 		}
 	} else if err := w.resolveGitRevision(ctx, vol); err != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to resolve git revision for volume '%s': %v", vol.ID, err)
@@ -136,6 +139,15 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	existingVolumeCR := &storagev1alpha1.Volume{}
 	if getErr := clusterClient.Get(ctx, client.ObjectKey{Name: volumeCR.Name, Namespace: volumeCR.Namespace}, existingVolumeCR); getErr != nil {
 		if k8sapierrors.IsNotFound(getErr) {
+			if releaseID != "" {
+				authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, releaseID, stack.ID)
+				if authorizationErr != nil {
+					return worker.Result{}, authorizationErr
+				}
+				if !authorized {
+					return worker.Result{}, nil
+				}
+			}
 			if createErr := clusterClient.Create(ctx, volumeCR); createErr != nil {
 				return worker.Result{}, w.WorkerError.NewError("failed to create volume CR for '%s': %v", vol.ID, createErr)
 			}
@@ -148,6 +160,15 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	metadataChanged = mergeDesiredMetadata(&existingVolumeCR.Annotations, volumeCR.Annotations) || metadataChanged
 	if !apiequality.Semantic.DeepEqual(existingVolumeCR.Spec, volumeCR.Spec) || metadataChanged {
 		existingVolumeCR.Spec = volumeCR.Spec
+		if releaseID != "" {
+			authorized, authorizationErr := w.releaseRemainsAuthoritative(ctx, releaseID, stack.ID)
+			if authorizationErr != nil {
+				return worker.Result{}, authorizationErr
+			}
+			if !authorized {
+				return worker.Result{}, nil
+			}
+		}
 		if updateErr := clusterClient.Update(ctx, existingVolumeCR); updateErr != nil {
 			return worker.Result{}, w.WorkerError.NewError("failed to update volume CR for '%s': %v", vol.ID, updateErr)
 		}
@@ -206,11 +227,11 @@ func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models
 			return nil, nil, "", false, serr
 		}
 	}
-	authorized, authorizationErr := w.releaseIsAuthoritative(ctx, release, stack)
+	authoritativeRelease, authorizationErr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
 	if authorizationErr != nil {
 		return nil, nil, "", false, authorizationErr
 	}
-	if !authorized {
+	if authoritativeRelease == nil || authoritativeRelease.ID != release.ID {
 		return nil, nil, "", false, nil
 	}
 	for _, volume := range release.Snapshot.Volumes {
@@ -230,28 +251,16 @@ func (w *volumeWorker) resolveCloudDesiredVolume(ctx context.Context, ref models
 	return nil, nil, "", false, nil
 }
 
-func (w *volumeWorker) releaseIsAuthoritative(ctx context.Context, release *models.StackRelease, stack *models.Stack) (bool, *errors.ServiceError) {
-	var active *models.StackRelease
-	if release.State == models.ReleaseStatePending || release.State == models.ReleaseStateInProgress {
-		var serr *errors.ServiceError
-		active, serr = w.releaseService.InternalGetActiveByStackID(ctx, stack.ID)
-		if serr != nil {
-			return false, serr
-		}
-	}
-	return release.IsAuthoritativeWorkloadRelease(stack, active), nil
-}
-
 func (w *volumeWorker) releaseRemainsAuthoritative(ctx context.Context, releaseID, stackID string) (bool, *errors.ServiceError) {
-	release, serr := w.releaseService.InternalGet(ctx, releaseID)
-	if serr != nil {
-		return false, serr
-	}
 	stack, serr := w.stackService.InternalGetStack(ctx, stackID)
 	if serr != nil {
 		return false, serr
 	}
-	return w.releaseIsAuthoritative(ctx, release, stack)
+	authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+	if serr != nil {
+		return false, serr
+	}
+	return authoritativeRelease != nil && authoritativeRelease.ID == releaseID, nil
 }
 
 func setVolumeReleaseID(volume *storagev1alpha1.Volume, releaseID string) {
@@ -261,21 +270,14 @@ func setVolumeReleaseID(volume *storagev1alpha1.Volume, releaseID string) {
 	volume.Annotations[models.VolumeReleaseIDAnnotation] = releaseID
 }
 
-func validatePinnedGitRevision(volume *models.Volume) error {
-	if volume.VolumeSource == nil || volume.VolumeSource.GitRepoSource == nil {
-		return nil
-	}
-	if volume.VolumeSource.GitRepoSource.Revision.Commit == "" {
-		return fmt.Errorf("git revision has no resolved commit SHA")
-	}
-	return nil
-}
-
 func (w *volumeWorker) Interval() time.Duration {
 	return 30 * time.Second
 }
 
 func (w *volumeWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		return w.getCloudInput(ctx)
+	}
 	volumes, err := w.volumeService.InternalListNotReady(ctx)
 	if err != nil {
 		return nil, w.WorkerError.NewError("failed to list not-ready volumes: %v", err)
@@ -284,6 +286,38 @@ func (w *volumeWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.
 	operands := make([]worker.Operand, len(volumes))
 	for i, vol := range volumes {
 		operands[i] = models.VolumeOperand{ID: vol.ID}
+	}
+	return operands, nil
+}
+
+func (w *volumeWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	releases, serr := w.releaseService.InternalListAuthoritativeWorkloadReleases(ctx)
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list authoritative volume releases: %v", serr)
+	}
+	releaseByVolumeID := make(map[string]string)
+	volumeIDs := make([]string, 0)
+	for _, release := range releases {
+		for _, volume := range release.Snapshot.Volumes {
+			if volume == nil || volume.ID == "" {
+				continue
+			}
+			if _, exists := releaseByVolumeID[volume.ID]; !exists {
+				volumeIDs = append(volumeIDs, volume.ID)
+			}
+			releaseByVolumeID[volume.ID] = release.ID
+		}
+	}
+	if len(volumeIDs) == 0 {
+		return []worker.Operand{}, nil
+	}
+	volumes, serr := w.volumeService.InternalList(ctx, volumeIDs)
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list authoritative volumes: %v", serr)
+	}
+	operands := make([]worker.Operand, 0, len(volumes))
+	for _, volume := range volumes {
+		operands = append(operands, models.VolumeOperand{ID: volume.ID, ReleaseID: releaseByVolumeID[volume.ID]})
 	}
 	return operands, nil
 }

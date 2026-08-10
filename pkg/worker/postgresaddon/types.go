@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
 type subReconcilerResult struct {
@@ -23,6 +24,6 @@ var (
 )
 
 type subReconciler interface {
-	Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error)
+	Reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error)
 	Name() string
 }

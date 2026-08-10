@@ -2,20 +2,25 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"k8s.io/client-go/util/workqueue"
+	"k8s.io/utils/keymutex"
 )
+
+const resourceLockShards = 64
 
 // BaseWorker implements generic functionalities for a worker.
 // Actual workers types are supposed to embed this type in them.
 type BaseWorker struct {
-	Queue       workqueue.TypedRateLimitingInterface[Operand]
-	WorkerName  string
-	WorkerError WorkerError
-	logger      logger.Logger
-	Env         string
+	Queue         workqueue.TypedRateLimitingInterface[Operand]
+	WorkerName    string
+	WorkerError   WorkerError
+	logger        logger.Logger
+	Env           string
+	resourceLocks keymutex.KeyMutex
 }
 
 func NewBaseWorker(workerName string, env string) BaseWorker {
@@ -29,7 +34,18 @@ func NewBaseWorker(workerName string, env string) BaseWorker {
 				Name: workerName,
 			},
 		),
-		Env: env,
+		Env:           env,
+		resourceLocks: keymutex.NewHashed(resourceLockShards),
+	}
+}
+
+// LockResource serializes operands that target the same persisted resource.
+func (w *BaseWorker) LockResource(id string) func() {
+	w.resourceLocks.LockKey(id)
+	return func() {
+		if err := w.resourceLocks.UnlockKey(id); err != nil {
+			panic(fmt.Sprintf("unlock worker resource %q: %v", id, err))
+		}
 	}
 }
 

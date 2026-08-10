@@ -20,23 +20,16 @@ import (
 )
 
 var _ = Describe("VolumeWorker cloud admission", func() {
-	It("does not reconcile a draft volume selected by the periodic scanner", func() {
+	It("does not select draft-only volumes for periodic cloud reconciliation", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		volumes := NewMockvolumeService(ctrl)
-		stackVolumes := NewMockstackVolumeStore(ctrl)
-		stacks := NewMockstackService(ctrl)
-		volumes.EXPECT().InternalGet(gomock.Any(), "volume-1").Return(&models.Volume{ID: "volume-1"}, nil)
-		stackVolumes.EXPECT().GetByVolumeID(gomock.Any(), "volume-1").Return(&models.StackVolume{StackID: "stack-1"}, nil)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1"}, nil)
-		volumes.EXPECT().InternalListNotReady(gomock.Any()).Return([]*models.Volume{{ID: "volume-1"}}, nil)
-		w := &volumeWorker{volumeService: volumes, stackVolumeStore: stackVolumes, stackService: stacks, runtimePolicy: &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test")}
+		releases := NewMockreleaseService(ctrl)
+		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(gomock.Any()).Return([]*models.StackRelease{}, nil)
+		w := &volumeWorker{volumeService: volumes, releaseService: releases, runtimePolicy: &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test")}
 
 		operands, serr := w.GetInput(context.Background())
 		Expect(serr).To(BeNil())
-		Expect(operands).To(ConsistOf(models.VolumeOperand{ID: "volume-1"}))
-		result, serr := w.Execute(context.Background(), operands[0])
-		Expect(serr).To(BeNil())
-		Expect(result).To(Equal(worker.Result{}))
+		Expect(operands).To(BeEmpty())
 	})
 
 	It("provisions the immutable release volume even when the draft has drifted", func() {
@@ -61,9 +54,9 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 				Volumes: []*models.Volume{snapshotVolume},
 			},
 		}
-		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil).Times(2)
-		releases.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil).Times(2)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(2)
+		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(3)
 		clusters.EXPECT().GetClient("cluster-1").Return(clusterClient, nil)
 		w := &volumeWorker{
 			volumeService: volumes, stackService: stacks, releaseService: releases, clusterManager: clusters,
@@ -79,6 +72,51 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		Expect(created.Spec.Source.RemoteDir.CurrentDirectoryHash).To(Equal("release-hash"))
 	})
 
+	It("does not create a volume when authority changes after the Kubernetes read", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		volumes := NewMockvolumeService(ctrl)
+		releases := NewMockreleaseService(ctrl)
+		stacks := NewMockstackService(ctrl)
+		clusters := mocks.NewMockClusterManager(ctrl)
+		scheme := runtime.NewScheme()
+		Expect(storagev1alpha1.AddToScheme(scheme)).To(Succeed())
+		clusterClient := fake.NewClientBuilder().WithScheme(scheme).Build()
+		volume := &models.Volume{
+			ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", UserID: "user-1",
+			Name: "data", NamespaceID: "namespace-1", Namespace: "stack-1", Size: "1Gi",
+			VolumeSource: &models.VolumeSource{RemoteDirSource: &models.RemoteDirSource{Path: "/data", CurrentDirectoryHash: "release-hash"}},
+		}
+		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"}
+		release := &models.StackRelease{
+			ID: "release-a", StackID: stack.ID, State: models.ReleaseStatePending,
+			Snapshot: models.StackSnapshot{
+				Stack:   models.StackShellSnapshot{ID: stack.ID, OrganisationID: stack.OrganisationID, ProjectID: stack.ProjectID, ClusterID: stack.ClusterID, NamespaceID: stack.NamespaceID, Namespace: stack.Namespace},
+				Volumes: []*models.Volume{volume},
+			},
+		}
+		releases.EXPECT().InternalGet(gomock.Any(), release.ID).Return(release, nil)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil).Times(3)
+		gomock.InOrder(
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil),
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil),
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(nil, nil),
+		)
+		clusters.EXPECT().GetClient(stack.ClusterID).Return(clusterClient, nil)
+		w := &volumeWorker{
+			volumeService: volumes, stackService: stacks, releaseService: releases, clusterManager: clusters,
+			volumeCRbuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
+			runtimePolicy:   &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
+		}
+
+		result, serr := w.Execute(context.Background(), models.VolumeOperand{ID: volume.ID, ReleaseID: release.ID})
+
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+		observed := &storagev1alpha1.Volume{}
+		Expect(clusterClient.Get(context.Background(), client.ObjectKey{Name: volume.Name, Namespace: volume.Namespace}, observed)).
+			To(MatchError(ContainSubstring("not found")))
+	})
+
 	It("does not replay a historical volume after a newer release converges", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		releases := NewMockreleaseService(ctrl)
@@ -88,13 +126,15 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 			ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1",
 			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
 		}, nil)
-		releases.EXPECT().InternalGet(gomock.Any(), "release-a").Return(&models.StackRelease{
+		historicalRelease := &models.StackRelease{
 			ID: "release-a", StackID: "stack-1", State: models.ReleaseStateReleased,
 			Snapshot: models.StackSnapshot{
 				Stack:   models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"},
 				Volumes: []*models.Volume{{ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", NamespaceID: "namespace-1", Namespace: "stack-1"}},
 			},
-		}, nil)
+		}
+		releases.EXPECT().InternalGet(gomock.Any(), "release-a").Return(historicalRelease, nil)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), gomock.Any()).Return(nil, nil)
 		w := &volumeWorker{
 			stackService: stacks, releaseService: releases, clusterManager: clusters,
 			runtimePolicy: &activeVolumeRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(VolumeWorkerName, "test"),
@@ -124,9 +164,9 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		release := &models.StackRelease{ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending, Snapshot: models.StackSnapshot{
 			Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ProjectID: "project-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "stack-1"}, Volumes: []*models.Volume{snapshotVolume},
 		}}
-		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil).Times(2)
-		releases.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(release, nil).Times(2)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(2)
+		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(release, nil)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
+		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(3)
 		clusters.EXPECT().GetClient("cluster-1").Return(clusterClient, nil)
 		w := &volumeWorker{
 			stackService: stacks, releaseService: releases, clusterManager: clusters,

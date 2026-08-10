@@ -14,6 +14,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 	"k8s.io/apimachinery/pkg/api/equality"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,7 +111,11 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 
 	effectiveStack := release.Snapshot.ToStack()
 
-	if err := r.syncHubSecrets(ctx, clusterClient, effectiveStack); err != nil {
+	authorizeMutation := r.authorizeMutation(release)
+	if err := r.syncHubSecrets(ctx, clusterClient, effectiveStack, authorizeMutation); err != nil {
+		if stderrors.Is(err, errReleaseSuperseded) {
+			return resultStop, nil
+		}
 		if isTransientClusterError(err) {
 			r.logger.Warn(ctx, "release %s: transient error syncing hub secrets, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
@@ -118,7 +123,10 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultNil, fmt.Errorf("failed to sync hub secrets: %w", err)
 	}
 
-	if err := r.syncPostgresCredentialSecrets(ctx, clusterClient, effectiveStack); err != nil {
+	if err := r.syncPostgresCredentialSecrets(ctx, clusterClient, effectiveStack, authorizeMutation); err != nil {
+		if stderrors.Is(err, errReleaseSuperseded) {
+			return resultStop, nil
+		}
 		if isTransientClusterError(err) {
 			r.logger.Warn(ctx, "release %s: transient error syncing postgres secrets, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
@@ -126,7 +134,10 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultNil, fmt.Errorf("failed to sync postgres credential secrets: %w", err)
 	}
 
-	if err := r.syncGenericSecrets(ctx, clusterClient, effectiveStack); err != nil {
+	if err := r.syncGenericSecrets(ctx, clusterClient, effectiveStack, authorizeMutation); err != nil {
+		if stderrors.Is(err, errReleaseSuperseded) {
+			return resultStop, nil
+		}
 		if isTransientClusterError(err) {
 			r.logger.Warn(ctx, "release %s: transient error syncing generic secrets, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
@@ -143,7 +154,7 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultNil, fmt.Errorf("failed to verify referenced volumes exist: %w", err)
 	}
 
-	stackCR, err := r.applyStackCR(ctx, clusterClient, release)
+	stackCR, err := r.applyStackCR(ctx, clusterClient, release, authorizeMutation)
 	if err != nil {
 		if stderrors.Is(err, errReleaseSuperseded) {
 			return resultStop, nil
@@ -155,7 +166,10 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		failRelease(ctx, r.releaseService, r.logger, release, fmt.Sprintf("failed to apply stack CR: %v", err))
 		return resultStop, nil
 	}
-	if err := r.applyStackResourceCRs(ctx, clusterClient, release, stackCR); err != nil {
+	if err := r.applyStackResourceCRs(ctx, clusterClient, release, stackCR, authorizeMutation); err != nil {
+		if stderrors.Is(err, errReleaseSuperseded) {
+			return resultStop, nil
+		}
 		if isTransient(err) {
 			r.logger.Warn(ctx, "release %s: transient error applying resource CRs, requeueing: %v", release.ID, err)
 			return resultRequeueAfter(convergencePollInterval), nil
@@ -164,11 +178,33 @@ func (r *applyReconciler) Reconcile(ctx context.Context, release *models.StackRe
 		return resultStop, nil
 	}
 
-	if err := r.pruneStackResources(ctx, clusterClient, stack, release.Manifest.ResourceNames); err != nil {
+	if err := r.pruneStackResources(ctx, clusterClient, stack, release.Manifest.ResourceNames, authorizeMutation); err != nil {
+		if stderrors.Is(err, errReleaseSuperseded) {
+			return resultStop, nil
+		}
 		r.logger.Error(ctx, "release %s: prune error (non-fatal): %v", release.ID, err)
 	}
 
 	return resultNil, nil
+}
+
+func (r *applyReconciler) authorizeMutation(release *models.StackRelease) worker.MutationAuthorizer {
+	return func(ctx context.Context) error {
+		latest, serr := r.releaseService.InternalGetLatestByStackID(ctx, release.StackID)
+		if serr != nil {
+			return serr
+		}
+		if latest != nil && latest.ID == release.ID && latest.State.Active() {
+			return nil
+		}
+		if latest != nil && latest.Sequence > release.Sequence {
+			reason := fmt.Sprintf(supersededEventMessageFmt, latest.Sequence)
+			if _, serr := r.releaseService.MarkSuperseded(ctx, release.ID, reason); serr != nil {
+				return serr
+			}
+		}
+		return errReleaseSuperseded
+	}
 }
 
 func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *corev1alpha1.Stack, release *models.StackRelease) (bool, error) {
@@ -197,7 +233,7 @@ func (r *applyReconciler) supersededByClusterCR(ctx context.Context, existing *c
 	return true, nil
 }
 
-func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client.Client, release *models.StackRelease) (*corev1alpha1.Stack, error) {
+func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client.Client, release *models.StackRelease, authorizeMutation worker.MutationAuthorizer) (*corev1alpha1.Stack, error) {
 	desired := &corev1alpha1.Stack{}
 	if err := json.Unmarshal(release.Manifest.StackCR, desired); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal stack CR: %w", err)
@@ -212,6 +248,9 @@ func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client
 	existing := &corev1alpha1.Stack{}
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing); err != nil {
 		if k8sapierrors.IsNotFound(err) {
+			if err := authorizeMutation(ctx); err != nil {
+				return nil, err
+			}
 			if err := clusterClient.Create(ctx, desired); err != nil {
 				return nil, wrapIfTransient(fmt.Errorf("failed to create stack CR: %w", err))
 			}
@@ -235,6 +274,9 @@ func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client
 
 	r.logger.Info(ctx, "stack CR '%s': updating", desired.Name)
 	desired.ResourceVersion = existing.ResourceVersion
+	if err := authorizeMutation(ctx); err != nil {
+		return nil, err
+	}
 	if err := clusterClient.Update(ctx, desired); err != nil {
 		return nil, wrapIfTransient(fmt.Errorf("failed to update stack CR: %w", err))
 	}
@@ -242,7 +284,7 @@ func (r *applyReconciler) applyStackCR(ctx context.Context, clusterClient client
 	return desired, nil
 }
 
-func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClient client.Client, release *models.StackRelease, stackCR *corev1alpha1.Stack) error {
+func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClient client.Client, release *models.StackRelease, stackCR *corev1alpha1.Stack, authorizeMutation worker.MutationAuthorizer) error {
 	for _, name := range release.Manifest.ResourceNames {
 		crBytes, ok := release.Manifest.StackResourceCRs[name]
 		if !ok {
@@ -272,6 +314,9 @@ func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClie
 		existing := &corev1alpha1.StackResource{}
 		if err := clusterClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, existing); err != nil {
 			if k8sapierrors.IsNotFound(err) {
+				if err := authorizeMutation(ctx); err != nil {
+					return err
+				}
 				if err := clusterClient.Create(ctx, desired); err != nil {
 					return wrapIfTransient(fmt.Errorf("failed to create StackResource CR '%s': %w", name, err))
 				}
@@ -289,6 +334,9 @@ func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClie
 
 		r.logger.Info(ctx, "resource '%s': updating", name)
 		desired.ResourceVersion = existing.ResourceVersion
+		if err := authorizeMutation(ctx); err != nil {
+			return err
+		}
 		if err := clusterClient.Update(ctx, desired); err != nil {
 			return wrapIfTransient(fmt.Errorf("failed to update StackResource CR '%s': %w", name, err))
 		}
@@ -296,7 +344,7 @@ func (r *applyReconciler) applyStackResourceCRs(ctx context.Context, clusterClie
 	return nil
 }
 
-func (r *applyReconciler) pruneStackResources(ctx context.Context, clusterClient client.Client, stack *models.Stack, activeNames []string) error {
+func (r *applyReconciler) pruneStackResources(ctx context.Context, clusterClient client.Client, stack *models.Stack, activeNames []string, authorizeMutation worker.MutationAuthorizer) error {
 	activeSet := make(map[string]struct{}, len(activeNames))
 	for _, n := range activeNames {
 		activeSet[n] = struct{}{}
@@ -313,6 +361,9 @@ func (r *applyReconciler) pruneStackResources(ctx context.Context, clusterClient
 		resourceName := srList.Items[i].Labels[corev1alpha1.LabelResourceName]
 		if _, keep := activeSet[resourceName]; !keep {
 			r.logger.Info(ctx, "pruning orphaned StackResource CR '%s'", srList.Items[i].Name)
+			if err := authorizeMutation(ctx); err != nil {
+				return err
+			}
 			if err := clusterClient.Delete(ctx, &srList.Items[i], client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
 				if k8sapierrors.IsNotFound(err) {
 					continue

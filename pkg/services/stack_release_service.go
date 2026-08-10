@@ -31,6 +31,16 @@ func (defaultSourceGitClientProvider) ClientFor(repoURL string, creds gitclient.
 	return gitclient.NewGitClientForRepo(repoURL, creds)
 }
 
+func selectAuthoritativeWorkloadRelease(latest, converged *models.StackRelease) *models.StackRelease {
+	if latest != nil {
+		switch latest.State {
+		case models.ReleaseStatePending, models.ReleaseStateInProgress:
+			return latest
+		}
+	}
+	return converged
+}
+
 type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
@@ -44,6 +54,8 @@ type StackReleaseService interface {
 	// Internal methods are called by workers and controllers; no permission checks.
 	InternalCreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
+	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
+	InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 	InternalGetReleaseRefs(ctx context.Context, stacks []*models.Stack) (map[string]models.StackReleaseRefs, *errors.ServiceError)
 	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
@@ -242,6 +254,9 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 
 	if src.State != models.ReleaseStateReleased {
 		return nil, errors.BadRequest("can only roll back to a successfully released deployment (#%d is %s)", src.Sequence, src.State)
+	}
+	if compatibilityErr := models.ValidatePinnedVolumeGitRevisions(src.Snapshot); compatibilityErr != nil {
+		return nil, errors.BadRequest("cannot roll back release #%d: %s", src.Sequence, compatibilityErr.Error())
 	}
 
 	// Permission check via the stack's project.
@@ -545,6 +560,83 @@ func (s *stackReleaseService) InternalGetReleaseRefs(ctx context.Context, stacks
 
 func (s *stackReleaseService) InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
 	return s.store.GetByID(ctx, releaseID)
+}
+
+func (s *stackReleaseService) InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError) {
+	latest, serr := s.store.GetLatestByStackID(ctx, stack.ID)
+	if serr != nil {
+		return nil, serr
+	}
+
+	var converged *models.StackRelease
+	convergedID := stack.GetConvergedReleaseID()
+	if latest == nil || (latest.State != models.ReleaseStatePending && latest.State != models.ReleaseStateInProgress) {
+		if convergedID != "" {
+			converged, serr = s.store.GetByID(ctx, convergedID)
+			if serr != nil {
+				return nil, serr
+			}
+		}
+	}
+
+	selected := selectAuthoritativeWorkloadRelease(latest, converged)
+	if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, selected) {
+		return nil, nil
+	}
+	return selected, nil
+}
+
+// InternalListAuthoritativeWorkloadReleases returns at most one release per
+// non-deleting stack. Draft-only stacks are excluded before release snapshots
+// are loaded, so periodic cloud reconciliation does not scan every signup.
+func (s *stackReleaseService) InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {
+	stacks, serr := s.stackQuery.InternalList(ctx,
+		"deletion_timestamp IS NULL AND status->'last_converged'->>'release_id' IS NOT NULL")
+	if serr != nil {
+		return nil, serr
+	}
+
+	activeReleases, serr := s.store.ListActive(ctx)
+	if serr != nil {
+		return nil, serr
+	}
+	knownStackIDs := make(map[string]struct{}, len(stacks))
+	for _, stack := range stacks {
+		knownStackIDs[stack.ID] = struct{}{}
+	}
+	activeStackIDs := make([]string, 0, len(activeReleases))
+	for _, release := range activeReleases {
+		if _, known := knownStackIDs[release.StackID]; known {
+			continue
+		}
+		knownStackIDs[release.StackID] = struct{}{}
+		activeStackIDs = append(activeStackIDs, release.StackID)
+	}
+	if len(activeStackIDs) > 0 {
+		activeStacks, listErr := s.stackQuery.InternalList(ctx, "deletion_timestamp IS NULL AND id IN ?", activeStackIDs)
+		if listErr != nil {
+			return nil, listErr
+		}
+		stacks = append(stacks, activeStacks...)
+	}
+	if len(stacks) == 0 {
+		return []*models.StackRelease{}, nil
+	}
+
+	refs, serr := s.InternalGetReleaseRefs(ctx, stacks)
+	if serr != nil {
+		return nil, serr
+	}
+	authoritative := make([]*models.StackRelease, 0, len(stacks))
+	for _, stack := range stacks {
+		ref := refs[stack.ID]
+		selected := selectAuthoritativeWorkloadRelease(ref.Latest, ref.Converged)
+		if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, selected) {
+			continue
+		}
+		authoritative = append(authoritative, selected)
+	}
+	return authoritative, nil
 }
 
 func (s *stackReleaseService) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {

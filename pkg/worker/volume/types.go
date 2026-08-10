@@ -10,6 +10,7 @@ import (
 
 type volumeService interface {
 	InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
+	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError)
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 }
@@ -24,5 +25,6 @@ type stackVolumeStore interface {
 
 type releaseService interface {
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
+	InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 }

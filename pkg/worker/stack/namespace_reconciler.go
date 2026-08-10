@@ -7,6 +7,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +35,7 @@ func NewNamespaceReconciler(spec NamespaceReconcilerSpec) *namespaceReconciler {
 	}
 }
 
-func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error) {
+func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error) {
 	log := r.logger.WithFields(map[string]interface{}{
 		logger.FieldStackID:   stack.ID,
 		logger.FieldClusterID: stack.ClusterID,
@@ -62,6 +63,9 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack
 	if err := clusterClient.Get(ctx, client.ObjectKey{Name: namespace.Name}, existingNamespace); err != nil {
 		if k8sapierrors.IsNotFound(err) {
 			log.Info(ctx, "creating namespace %s in cluster", namespace.Name)
+			if err := authorizeMutation(ctx); err != nil {
+				return resultStop, err
+			}
 			return resultNil, clusterClient.Create(ctx, desiredNamespace)
 		}
 		return resultNil, fmt.Errorf("failed to get namespace %s: %w", namespace.Name, err)
@@ -77,6 +81,9 @@ func (r *namespaceReconciler) Reconcile(ctx context.Context, stack *models.Stack
 	existingNamespace.Labels = mergedLabels
 	existingNamespace.Annotations = mergedAnnotations
 	log.Info(ctx, "repairing metadata on namespace %s", namespace.Name)
+	if err := authorizeMutation(ctx); err != nil {
+		return resultStop, err
+	}
 	return resultNil, clusterClient.Update(ctx, existingNamespace)
 }
 

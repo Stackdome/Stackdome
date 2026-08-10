@@ -39,7 +39,8 @@ type referenceService interface {
 
 type releaseService interface {
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
+	InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 }
 
 type stackService interface {

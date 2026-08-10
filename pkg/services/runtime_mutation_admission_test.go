@@ -245,7 +245,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 	)
 
 	DescribeTable("persists an admitted PostgreSQL lifecycle mutation in the admission transaction",
-		func(enabledField func(*models.PostgresAddon) bool, invoke func(*postgresAddonService) *errors.ServiceError) {
+		func(expectLifecycleUpdate func(*mocks.MockPostgresAddonStore), invoke func(*postgresAddonService) *errors.ServiceError) {
 			ctrl := gomock.NewController(GinkgoT())
 			policy := NewMockRuntimePolicy(ctrl)
 			store := mocks.NewMockPostgresAddonStore(ctrl)
@@ -264,21 +264,19 @@ var _ = Describe("cloud runtime mutation admission", func() {
 				},
 			)
 			policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
-			store.EXPECT().UpdateLifecycleWithTx(gomock.Any(), gomock.Any()).DoAndReturn(
-				func(_ context.Context, updated *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
-					Expect(enabledField(updated)).To(BeTrue())
-					Expect(updated.Status.State).To(Equal(models.PostgresAddonStatePending))
-					return updated, nil
-				},
-			)
+			expectLifecycleUpdate(store)
 			enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 
 			Expect(invoke(svc)).To(BeNil())
 		},
-		Entry("hibernate", func(addon *models.PostgresAddon) bool { return addon.LifecycleConfig.HibernationEnabled }, func(svc *postgresAddonService) *errors.ServiceError {
+		Entry("hibernate", func(store *mocks.MockPostgresAddonStore) {
+			store.EXPECT().SetHibernationWithTx(gomock.Any(), "addon-1", true).Return(&models.PostgresAddon{ID: "addon-1"}, nil)
+		}, func(svc *postgresAddonService) *errors.ServiceError {
 			return svc.TriggerHibernate(context.Background(), "addon-1", true)
 		}),
-		Entry("fence", func(addon *models.PostgresAddon) bool { return addon.LifecycleConfig.FencingEnabled }, func(svc *postgresAddonService) *errors.ServiceError {
+		Entry("fence", func(store *mocks.MockPostgresAddonStore) {
+			store.EXPECT().SetFencingWithTx(gomock.Any(), "addon-1", true).Return(&models.PostgresAddon{ID: "addon-1"}, nil)
+		}, func(svc *postgresAddonService) *errors.ServiceError {
 			return svc.TriggerFence(context.Background(), "addon-1", true)
 		}),
 	)
@@ -298,7 +296,7 @@ var _ = Describe("cloud runtime mutation admission", func() {
 			},
 		)
 		policy.EXPECT().AdmitMutationWithTx(gomock.Any(), "org-1").Return(MutationAdmission{ReconcileCluster: true}, nil)
-		store.EXPECT().UpdateLifecycleWithTx(gomock.Any(), gomock.Any()).Return(nil, errors.GeneralError("update failed"))
+		store.EXPECT().SetHibernationWithTx(gomock.Any(), "addon-1", true).Return(nil, errors.GeneralError("update failed"))
 
 		serr := svc.TriggerHibernate(context.Background(), "addon-1", true)
 

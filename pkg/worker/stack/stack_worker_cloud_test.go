@@ -14,20 +14,18 @@ import (
 )
 
 var _ = Describe("StackWorker cloud admission", func() {
-	It("does not reconcile an unrelated pending draft selected by the periodic scanner", func() {
+	It("does not select draft-only stacks for periodic cloud reconciliation", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		stacks := NewMockstackService(ctrl)
+		releases := NewMockreleaseService(ctrl)
 		policy := &activeWorkerRuntimePolicy{}
-		stacks.EXPECT().InternalList(gomock.Any(), gomock.Any(), gomock.Any()).Return([]*models.Stack{{ID: "stack-1"}}, nil)
-		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", Status: &models.StackStatus{State: models.StackPending}}, nil)
-		w := &stackWorker{stackService: stacks, runtimePolicy: policy, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test")}
+		releases.EXPECT().InternalListAuthoritativeWorkloadReleases(gomock.Any()).Return([]*models.StackRelease{}, nil)
+		stacks.EXPECT().InternalList(gomock.Any(), "deletion_timestamp IS NOT NULL").Return([]*models.Stack{}, nil)
+		w := &stackWorker{stackService: stacks, releaseService: releases, runtimePolicy: policy, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test")}
 
 		operands, serr := w.GetInput(context.Background())
 		Expect(serr).To(BeNil())
-		Expect(operands).To(ConsistOf(models.StackOperand{ID: "stack-1"}))
-		result, serr := w.Execute(context.Background(), operands[0])
-		Expect(serr).To(BeNil())
-		Expect(result).To(Equal(worker.Result{}))
+		Expect(operands).To(BeEmpty())
 	})
 
 	It("periodically reconciles an existing released workload while its allocation is active", func() {
@@ -40,12 +38,13 @@ var _ = Describe("StackWorker cloud admission", func() {
 			Status: &models.StackStatus{State: models.StackPending, LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-1"}},
 		}
 		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil).Times(2)
-		releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(&models.StackRelease{
+		release := &models.StackRelease{
 			ID: "release-1", StackID: "stack-1", State: models.ReleaseStateReleased,
 			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}},
-		}, nil).Times(2)
+		}
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(2)
 		reconciler.EXPECT().Name().Return("test-reconciler")
-		reconciler.EXPECT().Reconcile(gomock.Any(), stack).Return(resultNil, nil)
+		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).Return(resultNil, nil)
 		w := &stackWorker{
 			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
 			runtimePolicy: &activeWorkerRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
@@ -67,10 +66,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 			Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
 		}
 		stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil)
-		releases.EXPECT().InternalGet(gomock.Any(), "release-a").Return(&models.StackRelease{
-			ID: "release-a", StackID: "stack-1", State: models.ReleaseStateReleased,
-			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}},
-		}, nil)
+		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(nil, nil)
 		w := &stackWorker{
 			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
 			runtimePolicy: &activeWorkerRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
@@ -92,14 +88,11 @@ var _ = Describe("StackWorker cloud admission", func() {
 			ID: "release-1", StackID: "stack-1", State: models.ReleaseStatePending,
 			Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", Namespace: "stack-1"}},
 		}
-		cancelled := *pending
-		cancelled.State = models.ReleaseStateCancelled
 		gomock.InOrder(
 			stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil),
-			releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(pending, nil),
-			releases.EXPECT().InternalGetActiveByStackID(gomock.Any(), "stack-1").Return(pending, nil),
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(pending, nil),
 			stacks.EXPECT().InternalGetStack(gomock.Any(), "stack-1").Return(stack, nil),
-			releases.EXPECT().InternalGet(gomock.Any(), "release-1").Return(&cancelled, nil),
+			releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(nil, nil),
 		)
 		w := &stackWorker{
 			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},

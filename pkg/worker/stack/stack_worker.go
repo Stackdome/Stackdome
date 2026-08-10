@@ -2,6 +2,7 @@ package stack
 
 import (
 	"context"
+	stderrors "errors"
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
@@ -66,6 +67,8 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	if !ok {
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.StackOperand")
 	}
+	unlock := w.LockResource(stackRef.ID)
+	defer unlock()
 
 	log := w.Logger().WithField(logger.FieldStackID, stackRef.ID)
 
@@ -81,25 +84,15 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	releaseID := ""
 	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
 		releaseID = stackRef.ReleaseID
-		if releaseID == "" {
-			releaseID = stack.GetConvergedReleaseID()
+		authoritativeRelease, authorityErr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+		if authorityErr != nil {
+			return worker.Result{}, authorityErr
 		}
-		if releaseID == "" {
+		if authoritativeRelease == nil || (releaseID != "" && authoritativeRelease.ID != releaseID) {
 			log.Debug(ctx, "skipping stack without a released workload identity")
 			return worker.Result{}, nil
 		}
-		release, releaseErr := w.releaseService.InternalGet(ctx, releaseID)
-		if releaseErr != nil {
-			return worker.Result{}, releaseErr
-		}
-		authorized, authorizationErr := w.releaseIsAuthoritative(ctx, release, stack)
-		if authorizationErr != nil {
-			return worker.Result{}, authorizationErr
-		}
-		if !authorized {
-			log.Debug(ctx, "skipping stack without current release authority")
-			return worker.Result{}, nil
-		}
+		releaseID = authoritativeRelease.ID
 		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
 			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
 				log.Debug(ctx, "skipping draft provisioning without an active trial allocation")
@@ -121,49 +114,60 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		if stackErr != nil {
 			return worker.Result{}, stackErr
 		}
-		currentRelease, releaseErr := w.releaseService.InternalGet(ctx, releaseID)
-		if releaseErr != nil {
-			return worker.Result{}, releaseErr
+		authoritativeRelease, authorityErr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, currentStack)
+		if authorityErr != nil {
+			return worker.Result{}, authorityErr
 		}
-		authorized, authorizationErr := w.releaseIsAuthoritative(ctx, currentRelease, currentStack)
-		if authorizationErr != nil {
-			return worker.Result{}, authorizationErr
-		}
-		if !authorized {
+		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
 			log.Debug(ctx, "release authority changed before stack reconciliation")
 			return worker.Result{}, nil
 		}
 		stack = currentStack
 	}
 
-	res, err := w.reconcile(ctx, stack)
+	authorizeMutation := worker.MutationAuthorizer(worker.AllowMutation)
+	if releaseID != "" {
+		authorizeMutation = w.authorizeMutation(stack.ID, releaseID)
+	}
+	res, err := w.reconcile(ctx, stack, authorizeMutation)
 	if err != nil {
+		if stderrors.Is(err, worker.ErrMutationNotAuthorized) {
+			log.Debug(ctx, "release authority changed before cluster mutation")
+			return worker.Result{}, nil
+		}
 		log.Error(ctx, "failed to reconcile stack: %v", err)
 		return worker.Result{}, err
 	}
 	return res, nil
 }
 
-func (w *stackWorker) releaseIsAuthoritative(ctx context.Context, release *models.StackRelease, stack *models.Stack) (bool, *errors.ServiceError) {
-	var active *models.StackRelease
-	if release.State == models.ReleaseStatePending || release.State == models.ReleaseStateInProgress {
-		var serr *errors.ServiceError
-		active, serr = w.releaseService.InternalGetActiveByStackID(ctx, stack.ID)
+func (w *stackWorker) authorizeMutation(stackID, releaseID string) worker.MutationAuthorizer {
+	return func(ctx context.Context) error {
+		stack, serr := w.stackService.InternalGetStack(ctx, stackID)
 		if serr != nil {
-			return false, serr
+			return serr
 		}
+		authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+		if serr != nil {
+			return serr
+		}
+		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
+			return worker.ErrMutationNotAuthorized
+		}
+		return nil
 	}
-	return release.IsAuthoritativeWorkloadRelease(stack, active), nil
 }
 
-func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worker.Result, *errors.ServiceError) {
+func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) (worker.Result, *errors.ServiceError) {
 	log := w.Logger().WithField(logger.FieldStackID, stack.ID)
 	log.Info(ctx, "reconciling stack")
 
 	for _, subReconciler := range w.subReconcilers {
 		log.Debug(ctx, "reconciling with sub-reconciler: %s", subReconciler.Name())
-		result, err := subReconciler.Reconcile(ctx, stack)
+		result, err := subReconciler.Reconcile(ctx, stack, authorizeMutation)
 		switch {
+		case stderrors.Is(err, worker.ErrMutationNotAuthorized):
+			return worker.Result{}, nil
 		case err != nil:
 			return worker.Result{}, w.WorkerError.NewError("failed to reconcile stack %s with sub-reconciler %s: %v", stack.ID, subReconciler.Name(), err)
 		case result.resultStop:
@@ -179,6 +183,9 @@ func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worke
 }
 
 func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		return w.getCloudInput(ctx)
+	}
 	res, err := w.stackService.InternalList(ctx, "status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
 		[]models.StackState{
 			models.StackPending,
@@ -190,6 +197,30 @@ func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.S
 
 	operands := make([]worker.Operand, 0)
 	for _, stack := range res {
+		operands = append(operands, models.StackOperand{ID: stack.ID})
+	}
+	return operands, nil
+}
+
+func (w *stackWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	releases, serr := w.releaseService.InternalListAuthoritativeWorkloadReleases(ctx)
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list authoritative stack releases: %v", serr)
+	}
+	operands := make([]worker.Operand, 0, len(releases))
+	seen := make(map[string]struct{}, len(releases))
+	for _, release := range releases {
+		operands = append(operands, models.StackOperand{ID: release.StackID, ReleaseID: release.ID})
+		seen[release.StackID] = struct{}{}
+	}
+	deleting, serr := w.stackService.InternalList(ctx, "deletion_timestamp IS NOT NULL")
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list deleting stacks: %v", serr)
+	}
+	for _, stack := range deleting {
+		if _, exists := seen[stack.ID]; exists {
+			continue
+		}
 		operands = append(operands, models.StackOperand{ID: stack.ID})
 	}
 	return operands, nil

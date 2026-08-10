@@ -2,6 +2,7 @@ package postgresaddon
 
 import (
 	"context"
+	stderrors "errors"
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/builders"
@@ -68,6 +69,8 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 	if !ok {
 		return worker.Result{}, w.WorkerError.NewError("invalid operand type, expected models.PostgresAddonOperand")
 	}
+	unlock := w.LockResource(addonRef.ID)
+	defer unlock()
 
 	addon, err := w.postgresAddonService.InternalGetPostgresAddon(ctx, addonRef.ID)
 	if err != nil {
@@ -107,8 +110,16 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 		}
 	}
 
-	res, reconcileErr := w.reconcile(ctx, addon)
+	authorizeMutation := worker.MutationAuthorizer(worker.AllowMutation)
+	if authorizingReleaseID != "" {
+		authorizeMutation = w.authorizeMutation(addon.ID, authorizingReleaseID)
+	}
+	res, reconcileErr := w.reconcile(ctx, addon, authorizeMutation)
 	if reconcileErr != nil {
+		if stderrors.Is(reconcileErr, worker.ErrMutationNotAuthorized) {
+			w.Logger().Debug(ctx, "Release authority changed before postgres addon cluster mutation")
+			return worker.Result{}, nil
+		}
 		w.Logger().Error(ctx, "Failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 		return worker.Result{}, w.WorkerError.NewError("failed to reconcile postgres addon %s: %v", addon.ID, reconcileErr)
 	}
@@ -152,14 +163,11 @@ func (w *postgresAddonWorker) releaseRemainsAuthoritative(ctx context.Context, a
 	if serr != nil {
 		return false, serr
 	}
-	var active *models.StackRelease
-	if release.State == models.ReleaseStatePending || release.State == models.ReleaseStateInProgress {
-		active, serr = w.releaseService.InternalGetActiveByStackID(ctx, release.StackID)
-		if serr != nil {
-			return false, serr
-		}
+	authoritativeRelease, serr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+	if serr != nil {
+		return false, serr
 	}
-	if !release.IsAuthoritativeWorkloadRelease(stack, active) {
+	if authoritativeRelease == nil || authoritativeRelease.ID != release.ID {
 		return false, nil
 	}
 	if release.Snapshot.Stack.OrganisationID != addon.OrganisationID {
@@ -174,10 +182,27 @@ func (w *postgresAddonWorker) releaseRemainsAuthoritative(ctx context.Context, a
 	return false, nil
 }
 
-func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.PostgresAddon) (worker.Result, error) {
+func (w *postgresAddonWorker) authorizeMutation(addonID, releaseID string) worker.MutationAuthorizer {
+	return func(ctx context.Context) error {
+		addon, serr := w.postgresAddonService.InternalGetPostgresAddon(ctx, addonID)
+		if serr != nil {
+			return serr
+		}
+		authorized, serr := w.releaseRemainsAuthoritative(ctx, addon, releaseID)
+		if serr != nil {
+			return serr
+		}
+		if !authorized {
+			return worker.ErrMutationNotAuthorized
+		}
+		return nil
+	}
+}
+
+func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (worker.Result, error) {
 	for _, sr := range w.subReconcilers {
 		w.Logger().Info(ctx, "Running sub-reconciler: %s for addon: %s", sr.Name(), addon.ID)
-		result, err := sr.Reconcile(ctx, addon)
+		result, err := sr.Reconcile(ctx, addon, authorizeMutation)
 		switch {
 		case err != nil:
 			return worker.Result{}, err
@@ -193,6 +218,9 @@ func (w *postgresAddonWorker) reconcile(ctx context.Context, addon *models.Postg
 }
 
 func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		return w.getCloudInput(ctx)
+	}
 	addons, err := w.postgresAddonService.InternalList(ctx,
 		"status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
 		[]string{
@@ -208,6 +236,57 @@ func (w *postgresAddonWorker) GetInput(ctx context.Context) ([]worker.Operand, *
 	operands := make([]worker.Operand, len(addons))
 	for i, addon := range addons {
 		operands[i] = models.PostgresAddonOperand{ID: addon.ID}
+	}
+	return operands, nil
+}
+
+func (w *postgresAddonWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
+	releases, serr := w.releaseService.InternalListAuthoritativeWorkloadReleases(ctx)
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list authoritative postgres releases: %v", serr)
+	}
+	releaseByAddonID := make(map[string]string)
+	addonIDs := make([]string, 0)
+	for _, release := range releases {
+		for _, connection := range release.Snapshot.Connections {
+			refs := []models.TopologyNodeRef{connection.From, connection.To}
+			for _, ref := range refs {
+				if ref.Type != models.TopologyNodeTypePostgresAddon || ref.Id == "" {
+					continue
+				}
+				if _, exists := releaseByAddonID[ref.Id]; !exists {
+					addonIDs = append(addonIDs, ref.Id)
+				}
+				releaseByAddonID[ref.Id] = release.ID
+			}
+		}
+	}
+
+	operands := make([]worker.Operand, 0, len(addonIDs))
+	seen := make(map[string]struct{}, len(addonIDs))
+	if len(addonIDs) > 0 {
+		addons, listErr := w.postgresAddonService.InternalList(ctx,
+			"id IN ? AND status->>'state' IN ?",
+			addonIDs,
+			[]string{string(models.PostgresAddonStatePending), string(models.PostgresAddonStateError)},
+		)
+		if listErr != nil {
+			return nil, w.WorkerError.NewError("failed to list authoritative postgres addons: %v", listErr)
+		}
+		for _, addon := range addons {
+			operands = append(operands, models.PostgresAddonOperand{ID: addon.ID, ReleaseID: releaseByAddonID[addon.ID]})
+			seen[addon.ID] = struct{}{}
+		}
+	}
+	deleting, serr := w.postgresAddonService.InternalList(ctx, "deletion_timestamp IS NOT NULL")
+	if serr != nil {
+		return nil, w.WorkerError.NewError("failed to list deleting postgres addons: %v", serr)
+	}
+	for _, addon := range deleting {
+		if _, exists := seen[addon.ID]; exists {
+			continue
+		}
+		operands = append(operands, models.PostgresAddonOperand{ID: addon.ID})
 	}
 	return operands, nil
 }

@@ -66,9 +66,10 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 		releaseService:        spec.ReleaseService,
 		releaseWorkerEnqueuer: spec.ReleaseWorkerEnqueuer,
 		subReconcilers: []subReconciler{
-			newProvisioningPrerequisiteReconciler(spec),
 			newGatekeeperReconciler(spec),
 			newDeadlineReconciler(spec),
+			newCompatibilityReconciler(spec),
+			newProvisioningPrerequisiteReconciler(spec),
 			newSimulatorReconciler(spec),
 			newValidationReconciler(spec),
 			newRenderReconciler(spec),
@@ -97,6 +98,8 @@ func (w *releaseWorker) Execute(ctx context.Context, operand worker.Operand) (wo
 		}
 		return worker.Result{}, serr
 	}
+	unlock := w.LockResource(release.StackID)
+	defer unlock()
 
 	if release.State.Terminal() {
 		return worker.Result{}, nil

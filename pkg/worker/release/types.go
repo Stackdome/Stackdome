@@ -33,7 +33,7 @@ type subReconciler interface {
 
 type releaseService interface {
 	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+	InternalGetLatestByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
 	InternalListActive(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 	MarkInProgress(ctx context.Context, id string) (bool, *errors.ServiceError)
 	SaveManifest(ctx context.Context, id string, m *models.ReleaseManifest, rev string, pins models.ReleasePins, rendererVersion string) (bool, *errors.ServiceError)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
 type subReconcilerResult struct {
@@ -22,7 +23,7 @@ var (
 
 //go:generate mockgen -source=types.go -destination=types_mock.go -package=stack
 type subReconciler interface {
-	Reconcile(ctx context.Context, stack *models.Stack) (subReconcilerResult, error)
+	Reconcile(ctx context.Context, stack *models.Stack, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error)
 	Name() string
 }
 
@@ -35,8 +36,8 @@ type stackService interface {
 }
 
 type releaseService interface {
-	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError)
+	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
+	InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError)
 }
 
 type secretService interface {

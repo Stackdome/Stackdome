@@ -25,7 +25,7 @@ type postgresAddonStore struct {
 // List of mutable fields that can be updated
 var mutableFields = []string{
 	"Labels", "Annotations", "Instances", "Resources", "Storage",
-	"Configuration", "BackupConfig", "LifecycleConfig", "UpdatedAt",
+	"Configuration", "BackupConfig", "UpdatedAt",
 }
 
 func NewPostgresAddonStore(spec PostgresAddonStoreSpec) stores.PostgresAddonStore {
@@ -177,33 +177,54 @@ func (s *postgresAddonStore) UpdateWithTx(ctx context.Context, addon *models.Pos
 		return nil, errors.GeneralError("failed to update postgres addon: %s", err.Error())
 	}
 
+	addon.LifecycleConfig = existingAddon.LifecycleConfig
 	return addon, nil
 }
 
-// UpdateLifecycleWithTx persists the desired lifecycle configuration and the
-// reconciliation-needed status atomically. Status is intentionally excluded
-// from the general mutableFields list so ordinary updates cannot overwrite it.
-func (s *postgresAddonStore) UpdateLifecycleWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError) {
+func (s *postgresAddonStore) SetHibernationWithTx(ctx context.Context, id string, enabled bool) (*models.PostgresAddon, *errors.ServiceError) {
+	return s.updateLifecycleWithTx(ctx, id, func(config *models.PostgresLifecycleConfig) {
+		config.HibernationEnabled = enabled
+	})
+}
+
+func (s *postgresAddonStore) SetFencingWithTx(ctx context.Context, id string, enabled bool) (*models.PostgresAddon, *errors.ServiceError) {
+	return s.updateLifecycleWithTx(ctx, id, func(config *models.PostgresLifecycleConfig) {
+		config.FencingEnabled = enabled
+	})
+}
+
+// updateLifecycleWithTx locks and reloads the row before changing one lifecycle
+// field. Concurrent hibernate and fence requests therefore preserve each
+// other's changes instead of writing stale copies of the lifecycle JSON.
+func (s *postgresAddonStore) updateLifecycleWithTx(
+	ctx context.Context,
+	id string,
+	update func(*models.PostgresLifecycleConfig),
+) (*models.PostgresAddon, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
 	}
 
 	var existingAddon models.PostgresAddon
-	if err := tx.Where("id = ?", addon.ID).First(&existingAddon).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Where("id = ?", id).First(&existingAddon).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NotFound("postgres addon with id '%s' not found", addon.ID)
+			return nil, errors.NotFound("postgres addon with id '%s' not found", id)
 		}
 		return nil, errors.GeneralError("failed to find postgres addon for lifecycle update: %s", err.Error())
 	}
 
+	update(&existingAddon.LifecycleConfig)
+	existingAddon.Status.State = models.PostgresAddonStatePending
+	existingAddon.Status.Message = "Lifecycle change pending"
+	existingAddon.UpdatedAt = time.Now().UTC()
 	if err := tx.Model(&existingAddon).
 		Select("LifecycleConfig", "Status", "UpdatedAt").
 		Omit(clause.Associations).
-		Updates(addon).Error; err != nil {
+		Updates(&existingAddon).Error; err != nil {
 		return nil, errors.GeneralError("failed to update postgres addon lifecycle: %s", err.Error())
 	}
-	return addon, nil
+	return &existingAddon, nil
 }
 
 func (s *postgresAddonStore) Delete(ctx context.Context, ID string) *errors.ServiceError {

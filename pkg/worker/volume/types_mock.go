@@ -57,6 +57,21 @@ func (mr *MockvolumeServiceMockRecorder) InternalGet(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockvolumeService)(nil).InternalGet), ctx, ID)
 }
 
+// InternalList mocks base method.
+func (m *MockvolumeService) InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalList", ctx, ids)
+	ret0, _ := ret[0].([]*models.Volume)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalList indicates an expected call of InternalList.
+func (mr *MockvolumeServiceMockRecorder) InternalList(ctx, ids any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalList", reflect.TypeOf((*MockvolumeService)(nil).InternalList), ctx, ids)
+}
+
 // InternalListNotReady mocks base method.
 func (m *MockvolumeService) InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -204,17 +219,32 @@ func (mr *MockreleaseServiceMockRecorder) InternalGet(ctx, releaseID any) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockreleaseService)(nil).InternalGet), ctx, releaseID)
 }
 
-// InternalGetActiveByStackID mocks base method.
-func (m *MockreleaseService) InternalGetActiveByStackID(ctx context.Context, stackID string) (*models.StackRelease, *errors.ServiceError) {
+// InternalListAuthoritativeWorkloadReleases mocks base method.
+func (m *MockreleaseService) InternalListAuthoritativeWorkloadReleases(ctx context.Context) ([]*models.StackRelease, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalGetActiveByStackID", ctx, stackID)
+	ret := m.ctrl.Call(m, "InternalListAuthoritativeWorkloadReleases", ctx)
+	ret0, _ := ret[0].([]*models.StackRelease)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalListAuthoritativeWorkloadReleases indicates an expected call of InternalListAuthoritativeWorkloadReleases.
+func (mr *MockreleaseServiceMockRecorder) InternalListAuthoritativeWorkloadReleases(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListAuthoritativeWorkloadReleases", reflect.TypeOf((*MockreleaseService)(nil).InternalListAuthoritativeWorkloadReleases), ctx)
+}
+
+// InternalResolveAuthoritativeWorkloadRelease mocks base method.
+func (m *MockreleaseService) InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalResolveAuthoritativeWorkloadRelease", ctx, stack)
 	ret0, _ := ret[0].(*models.StackRelease)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// InternalGetActiveByStackID indicates an expected call of InternalGetActiveByStackID.
-func (mr *MockreleaseServiceMockRecorder) InternalGetActiveByStackID(ctx, stackID any) *gomock.Call {
+// InternalResolveAuthoritativeWorkloadRelease indicates an expected call of InternalResolveAuthoritativeWorkloadRelease.
+func (mr *MockreleaseServiceMockRecorder) InternalResolveAuthoritativeWorkloadRelease(ctx, stack any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetActiveByStackID", reflect.TypeOf((*MockreleaseService)(nil).InternalGetActiveByStackID), ctx, stackID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalResolveAuthoritativeWorkloadRelease", reflect.TypeOf((*MockreleaseService)(nil).InternalResolveAuthoritativeWorkloadRelease), ctx, stack)
 }

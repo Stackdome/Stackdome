@@ -7,6 +7,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 	corev1 "k8s.io/api/core/v1"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,7 +30,7 @@ func newSecretReconciler(spec PostgresAddonWorkerSpec) *secretReconciler {
 
 func (r *secretReconciler) Name() string { return "secret" }
 
-func (r *secretReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon) (subReconcilerResult, error) {
+func (r *secretReconciler) Reconcile(ctx context.Context, addon *models.PostgresAddon, authorizeMutation worker.MutationAuthorizer) (subReconcilerResult, error) {
 	if addon.Initialization.ImportFromExternal == nil {
 		return resultNil, nil
 	}
@@ -77,6 +78,9 @@ func (r *secretReconciler) Reconcile(ctx context.Context, addon *models.Postgres
 	}, existing); err != nil {
 		if k8sapierrors.IsNotFound(err) {
 			r.logger.Info(ctx, "Creating import password secret '%s'", secretName)
+			if err := authorizeMutation(ctx); err != nil {
+				return resultStop, err
+			}
 			return resultNil, clusterClient.Create(ctx, k8sSecret)
 		}
 		return resultNil, fmt.Errorf("failed to get secret '%s': %w", secretName, err)

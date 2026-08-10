@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"reflect"
 	"sync"
 	"time"
@@ -16,8 +15,9 @@ import (
 	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 )
 
-// TODO: set a reasonable value for this based on metrics and testing.
-const MaxOperandRequeue = math.MaxInt32
+// MaxOperandRequeue bounds permanent failures while still allowing transient
+// cluster errors to retry through the workqueue's exponential backoff.
+const MaxOperandRequeue = 20
 
 // Goroutines draining each worker's queue. The workqueue never hands the
 // same key to two goroutines (in-flight keys re-queue as dirty), so this

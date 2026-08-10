@@ -6,6 +6,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"go.uber.org/mock/gomock"
@@ -66,7 +67,7 @@ var _ = Describe("DeprovisionReconciler", func() {
 		It("no-ops even if the status state is Deleting", func() {
 			addon.Status.State = models.PostgresAddonStateDeleting
 
-			result, err := reconciler.Reconcile(ctx, addon)
+			result, err := reconciler.Reconcile(ctx, addon, worker.AllowMutation)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultNil))
 		})
@@ -92,7 +93,7 @@ var _ = Describe("DeprovisionReconciler", func() {
 			clusterMgr.EXPECT().GetClient(addon.ClusterID).Return(clusterClient, nil)
 			addonSvc.EXPECT().InternalDeleteFromDB(gomock.Any(), addon.ID).Return(nil)
 
-			result, err := reconciler.Reconcile(ctx, addon)
+			result, err := reconciler.Reconcile(ctx, addon, worker.AllowMutation)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultStop))
 
@@ -109,7 +110,7 @@ var _ = Describe("DeprovisionReconciler", func() {
 			clusterMgr.EXPECT().GetClient(addon.ClusterID).Return(clusterClient, nil)
 			addonSvc.EXPECT().InternalDeleteFromDB(gomock.Any(), addon.ID).Return(nil)
 
-			result, err := reconciler.Reconcile(ctx, addon)
+			result, err := reconciler.Reconcile(ctx, addon, worker.AllowMutation)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultStop))
 		})
@@ -119,7 +120,7 @@ var _ = Describe("DeprovisionReconciler", func() {
 
 			refSvc.EXPECT().IsReferentInUse(gomock.Any(), models.ReferentPostgresAddon, addon.ID).Return(true, nil, nil)
 
-			result, err := reconciler.Reconcile(ctx, addon)
+			result, err := reconciler.Reconcile(ctx, addon, worker.AllowMutation)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultRequeueAfter(30 * time.Second)))
 		})

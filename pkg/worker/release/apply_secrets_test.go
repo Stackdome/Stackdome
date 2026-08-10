@@ -9,6 +9,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/worker"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -118,7 +119,7 @@ func TestSyncHubSecrets_OrgPullPushDistinctNames(t *testing.T) {
 	}
 
 	clusterClient := applySecretsTestClient(t)
-	if err := r.syncHubSecrets(context.Background(), clusterClient, stack); err != nil {
+	if err := r.syncHubSecrets(context.Background(), clusterClient, stack, worker.AllowMutation); err != nil {
 		t.Fatalf("syncHubSecrets returned error: %v", err)
 	}
 

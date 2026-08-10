@@ -398,6 +398,138 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
 		})
 	})
+
+	It("rejects rollback to a legacy release with an unpinned Git volume", func() {
+		releaseStore.EXPECT().GetByID(ctx, rollbackFromRelID).Return(&models.StackRelease{
+			ID: rollbackFromRelID, StackID: createEventsStackID, State: models.ReleaseStateReleased, Sequence: 7,
+			Snapshot: models.StackSnapshot{Volumes: []*models.Volume{{
+				Name: "source",
+				VolumeSource: &models.VolumeSource{GitRepoSource: &models.GitRepoSource{
+					RepoUrl:  "https://example.com/repo.git",
+					Revision: models.GitRepoRevision{Tag: "v1"},
+				}},
+			}}},
+		}, nil)
+
+		got, serr := svc.RollbackRelease(ctx, createEventsStackID, rollbackFromRelID)
+
+		Expect(got).To(BeNil())
+		Expect(serr).NotTo(BeNil())
+		Expect(serr.Reason).To(ContainSubstring("no resolved Git commit"))
+	})
+
+	Describe("InternalResolveAuthoritativeWorkloadRelease", func() {
+		var stack *models.Stack
+
+		BeforeEach(func() {
+			stack = &models.Stack{
+				ID: createEventsStackID, OrganisationID: createEventsOrgID, ProjectID: createEventsProjectID,
+				ClusterID: "cluster-1", UserID: createEventsUserID, Name: "demo",
+				NamespaceID: "namespace-1", Namespace: "demo",
+				Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: "release-b"}},
+			}
+		})
+
+		newRelease := func(id string, sequence int, state models.StackReleaseState) *models.StackRelease {
+			return &models.StackRelease{
+				ID: id, StackID: stack.ID, Sequence: sequence, State: state,
+				Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{
+					ID: stack.ID, OrganisationID: stack.OrganisationID, ProjectID: stack.ProjectID,
+					ClusterID: stack.ClusterID, UserID: stack.UserID, Name: stack.Name,
+					NamespaceID: stack.NamespaceID, Namespace: stack.Namespace,
+				}},
+			}
+		}
+
+		It("selects the latest in-flight release", func() {
+			latest := newRelease("release-c", 3, models.ReleaseStateInProgress)
+			releaseStore.EXPECT().GetLatestByStackID(ctx, stack.ID).Return(latest, nil)
+
+			resolved, serr := svc.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+
+			Expect(serr).To(BeNil())
+			Expect(resolved).To(BeIdenticalTo(latest))
+		})
+
+		It("uses the persisted converged release after a newer attempt fails", func() {
+			latest := newRelease("release-c", 3, models.ReleaseStateFailed)
+			converged := newRelease("release-b", 2, models.ReleaseStateReleased)
+			releaseStore.EXPECT().GetLatestByStackID(ctx, stack.ID).Return(latest, nil)
+			releaseStore.EXPECT().GetByID(ctx, converged.ID).Return(converged, nil)
+
+			resolved, serr := svc.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+
+			Expect(serr).To(BeNil())
+			Expect(resolved).To(BeIdenticalTo(converged))
+		})
+
+		It("does not revive an older in-flight release after a newer terminal attempt", func() {
+			stack.Status = nil
+			latest := newRelease("release-b", 2, models.ReleaseStateFailed)
+			releaseStore.EXPECT().GetLatestByStackID(ctx, stack.ID).Return(latest, nil)
+
+			resolved, serr := svc.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
+
+			Expect(serr).To(BeNil())
+			Expect(resolved).To(BeNil())
+		})
+
+		It("lists only stacks with persisted or in-flight release authority", func() {
+			converged := newRelease("release-b", 2, models.ReleaseStateReleased)
+			activeStack := *stack
+			activeStack.ID = "stack-active"
+			activeStack.Name = "active"
+			activeStack.Namespace = "active"
+			activeStack.Status = nil
+			active := &models.StackRelease{
+				ID: "release-c", StackID: activeStack.ID, Sequence: 1, State: models.ReleaseStatePending,
+				Snapshot: models.StackSnapshot{Stack: models.StackShellSnapshot{
+					ID: activeStack.ID, OrganisationID: activeStack.OrganisationID, ProjectID: activeStack.ProjectID,
+					ClusterID: activeStack.ClusterID, UserID: activeStack.UserID, Name: activeStack.Name,
+					NamespaceID: activeStack.NamespaceID, Namespace: activeStack.Namespace,
+				}},
+			}
+			stackSvc.EXPECT().InternalList(ctx,
+				"deletion_timestamp IS NULL AND status->'last_converged'->>'release_id' IS NOT NULL").
+				Return([]*models.Stack{stack}, nil)
+			releaseStore.EXPECT().ListActive(ctx).Return([]*models.StackRelease{active}, nil)
+			stackSvc.EXPECT().InternalList(ctx, "deletion_timestamp IS NULL AND id IN ?", []string{activeStack.ID}).
+				Return([]*models.Stack{&activeStack}, nil)
+			releaseStore.EXPECT().GetLatestByStackIDs(ctx, []string{stack.ID, activeStack.ID}).Return(map[string]*models.StackRelease{
+				stack.ID: converged, activeStack.ID: active,
+			}, nil)
+			releaseStore.EXPECT().GetByIDs(ctx, []string{}).Return(map[string]*models.StackRelease{}, nil)
+
+			releases, serr := svc.InternalListAuthoritativeWorkloadReleases(ctx)
+
+			Expect(serr).To(BeNil())
+			Expect(releases).To(ConsistOf(converged, active))
+		})
+	})
+})
+
+var _ = Describe("authoritative workload release selection", func() {
+	It("prefers the newest in-flight attempt over the converged release", func() {
+		converged := &models.StackRelease{ID: "release-b", State: models.ReleaseStateReleased, Sequence: 2}
+		latest := &models.StackRelease{ID: "release-c", State: models.ReleaseStatePending, Sequence: 3}
+
+		Expect(selectAuthoritativeWorkloadRelease(latest, converged)).To(BeIdenticalTo(latest))
+	})
+
+	It("returns to the converged release after a newer attempt becomes terminal", func() {
+		converged := &models.StackRelease{ID: "release-b", State: models.ReleaseStateReleased, Sequence: 2}
+		latest := &models.StackRelease{ID: "release-c", State: models.ReleaseStateFailed, Sequence: 3}
+
+		Expect(selectAuthoritativeWorkloadRelease(latest, converged)).To(BeIdenticalTo(converged))
+	})
+
+	It("does not revive an older in-flight release when the latest release is terminal", func() {
+		older := &models.StackRelease{ID: "release-a", State: models.ReleaseStateInProgress, Sequence: 1}
+		latest := &models.StackRelease{ID: "release-b", State: models.ReleaseStateReleased, Sequence: 2}
+
+		Expect(selectAuthoritativeWorkloadRelease(latest, latest)).NotTo(BeIdenticalTo(older))
+		Expect(selectAuthoritativeWorkloadRelease(latest, latest)).To(BeIdenticalTo(latest))
+	})
 })
 
 var _ = Describe("stackReleaseService.CancelRelease records release_cancelled", func() {

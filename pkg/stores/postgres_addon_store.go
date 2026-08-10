@@ -16,7 +16,8 @@ type PostgresAddonStore interface {
 	GetByName(ctx context.Context, organisationID, name string) (*models.PostgresAddon, *errors.ServiceError)
 	Update(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
 	UpdateWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
-	UpdateLifecycleWithTx(ctx context.Context, addon *models.PostgresAddon) (*models.PostgresAddon, *errors.ServiceError)
+	SetHibernationWithTx(ctx context.Context, id string, enabled bool) (*models.PostgresAddon, *errors.ServiceError)
+	SetFencingWithTx(ctx context.Context, id string, enabled bool) (*models.PostgresAddon, *errors.ServiceError)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	ListByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListByProjectID(ctx context.Context, projectID string) ([]*models.PostgresAddon, *errors.ServiceError)

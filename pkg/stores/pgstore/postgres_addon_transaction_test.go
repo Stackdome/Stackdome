@@ -41,24 +41,52 @@ const postgresAddonsDDL = `
 `
 
 var _ = Describe("PostgresAddonStore transaction boundary", func() {
-	It("rolls back UpdateWithTx when the surrounding admission transaction fails", func() {
+	It("preserves lifecycle state during an ordinary configuration update", func() {
 		ctx := context.Background()
 		sf := newSQLiteSessionFactory(postgresAddonsDDL)
 		store := pgstore.NewPostgresAddonStore(pgstore.PostgresAddonStoreSpec{SessionFactory: sf})
-		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", ProjectID: "project-1", UserID: "user-1", ClusterID: "cluster-1", Name: "database", NamespaceID: "namespace-1", Namespace: "database"}
+		addon := &models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", ProjectID: "project-1", UserID: "user-1", ClusterID: "cluster-1", Name: "database", NamespaceID: "namespace-1", Namespace: "database", LifecycleConfig: models.PostgresLifecycleConfig{HibernationEnabled: true}}
+		Expect(sf.New(ctx).Omit(clause.Associations).Create(addon).Error).To(Succeed())
+
+		var updated *models.PostgresAddon
+		serr := store.WithTransaction(ctx, func(txCtx context.Context) *serviceerrors.ServiceError {
+			request := *addon
+			request.LifecycleConfig = models.PostgresLifecycleConfig{}
+			request.Instances = models.PostgresInstances{Count: 3}
+			var updateErr *serviceerrors.ServiceError
+			updated, updateErr = store.UpdateWithTx(txCtx, &request)
+			return updateErr
+		})
+
+		Expect(serr).To(BeNil())
+		var persisted models.PostgresAddon
+		Expect(sf.New(ctx).First(&persisted, "id = ?", addon.ID).Error).To(Succeed())
+		Expect(persisted.Instances.Count).To(Equal(3))
+		Expect(persisted.LifecycleConfig.HibernationEnabled).To(BeTrue())
+		Expect(updated.LifecycleConfig.HibernationEnabled).To(BeTrue())
+	})
+
+	It("changes one lifecycle flag without erasing the other and marks reconciliation pending", func() {
+		ctx := context.Background()
+		sf := newSQLiteSessionFactory(postgresAddonsDDL)
+		store := pgstore.NewPostgresAddonStore(pgstore.PostgresAddonStoreSpec{SessionFactory: sf})
+		addon := &models.PostgresAddon{
+			ID: "addon-1", OrganisationID: "org-1", ProjectID: "project-1", UserID: "user-1", ClusterID: "cluster-1", Name: "database", NamespaceID: "namespace-1", Namespace: "database",
+			LifecycleConfig: models.PostgresLifecycleConfig{FencingEnabled: true},
+			Status:          models.PostgresAddonStatus{State: models.PostgresAddonStateReady},
+		}
 		Expect(sf.New(ctx).Omit(clause.Associations).Create(addon).Error).To(Succeed())
 
 		serr := store.WithTransaction(ctx, func(txCtx context.Context) *serviceerrors.ServiceError {
-			addon.LifecycleConfig.HibernationEnabled = true
-			if _, updateErr := store.UpdateWithTx(txCtx, addon); updateErr != nil {
-				return updateErr
-			}
-			return serviceerrors.GeneralError("force rollback")
+			_, updateErr := store.SetHibernationWithTx(txCtx, addon.ID, true)
+			return updateErr
 		})
 
-		Expect(serr.Reason).To(Equal("force rollback"))
+		Expect(serr).To(BeNil())
 		var persisted models.PostgresAddon
 		Expect(sf.New(ctx).First(&persisted, "id = ?", addon.ID).Error).To(Succeed())
-		Expect(persisted.LifecycleConfig.HibernationEnabled).To(BeFalse())
+		Expect(persisted.LifecycleConfig.HibernationEnabled).To(BeTrue())
+		Expect(persisted.LifecycleConfig.FencingEnabled).To(BeTrue())
+		Expect(persisted.Status.State).To(Equal(models.PostgresAddonStatePending))
 	})
 })
