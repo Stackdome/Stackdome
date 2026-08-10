@@ -58,6 +58,9 @@ const (
 
 	// InternalServerError
 	ErrorInternalServerError ServiceErrorCode = 27
+
+	// Service Unavailable
+	ErrorServiceUnavailable ServiceErrorCode = 28
 )
 
 type ServiceErrorCode int
@@ -90,6 +93,7 @@ func Errors() ServiceErrors {
 		ServiceError{ErrorTooManyRequests, "Too many requests", http.StatusTooManyRequests, nil},
 		ServiceError{ErrorUnprocessableEntity, "Unable to process request entity", http.StatusUnprocessableEntity, nil},
 		ServiceError{ErrorInternalServerError, "Internal server error", http.StatusInternalServerError, nil},
+		ServiceError{ErrorServiceUnavailable, "Service unavailable", http.StatusServiceUnavailable, nil},
 	}
 }
 
@@ -109,7 +113,21 @@ type ServiceError struct {
 const (
 	ErrorCodeCredentialsRequired = "credentials_required"
 	ErrorCodeCredentialsInvalid  = "credentials_invalid"
+	ErrorCodeCapacityReached     = "capacity_reached"
+	ErrorCodeTrialInactive       = "trial_inactive"
 )
+
+type CodeErrorDetails struct {
+	Code string `json:"code"`
+}
+
+func CapacityReached() *ServiceError {
+	return ServiceUnavailable(ErrorCodeCapacityReached).WithDetails(CodeErrorDetails{Code: ErrorCodeCapacityReached})
+}
+
+func TrialInactive() *ServiceError {
+	return ServiceUnavailable(ErrorCodeTrialInactive).WithDetails(CodeErrorDetails{Code: ErrorCodeTrialInactive})
+}
 
 // Kinds of credential targets for structured credential errors.
 const (
@@ -239,6 +257,10 @@ func GeneralError(reason string, values ...interface{}) *ServiceError {
 
 func InternalServerError(reason string, values ...interface{}) *ServiceError {
 	return New(ErrorInternalServerError, reason, values...)
+}
+
+func ServiceUnavailable(reason string, values ...interface{}) *ServiceError {
+	return New(ErrorServiceUnavailable, reason, values...)
 }
 
 func Unauthorized(reason string, values ...interface{}) *ServiceError {
