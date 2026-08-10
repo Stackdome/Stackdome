@@ -63,7 +63,7 @@ func TestApplyStack_CloudDraftDoesNotEnqueueCompute(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
-	env.svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(&fakeCloudTrialService{})
+	env.svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{Trials: &fakeCloudTrialService{}, IsolationPolicyVersion: "v1"})
 
 	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", "project-1").Return(nil, errors.NotFound("missing")).Times(2)
 	env.permissions.EXPECT().Check(ctx, "project-1", auth.ResourceStacks, "", auth.ActionCreate).Return(nil)

@@ -17,6 +17,7 @@ const (
 type RuntimePolicy interface {
 	OrganisationProvisioningMode() ProvisioningMode
 	DraftProvisioningMode() ProvisioningMode
+	IsolationPolicyVersion() string
 	AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitRollbackWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
@@ -36,6 +37,10 @@ func (selfHostedRuntimePolicy) DraftProvisioningMode() ProvisioningMode {
 	return ProvisioningModeEager
 }
 
+func (selfHostedRuntimePolicy) IsolationPolicyVersion() string {
+	return ""
+}
+
 func (selfHostedRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
@@ -49,14 +54,26 @@ func (selfHostedRuntimePolicy) RequireActiveAllocation(context.Context, string) 
 }
 
 type stackdomeCloudRuntimePolicy struct {
-	trials CloudTrialService
+	trials                 CloudTrialService
+	isolationPolicyVersion string
 }
 
-func NewStackdomeCloudRuntimePolicy(trials CloudTrialService) RuntimePolicy {
-	if trials == nil {
+type StackdomeCloudRuntimePolicySpec struct {
+	Trials                 CloudTrialService
+	IsolationPolicyVersion string
+}
+
+func NewStackdomeCloudRuntimePolicy(spec StackdomeCloudRuntimePolicySpec) RuntimePolicy {
+	if spec.Trials == nil {
 		panic("services.NewStackdomeCloudRuntimePolicy: CloudTrialService is required")
 	}
-	return &stackdomeCloudRuntimePolicy{trials: trials}
+	if spec.IsolationPolicyVersion == "" {
+		panic("services.NewStackdomeCloudRuntimePolicy: IsolationPolicyVersion is required")
+	}
+	return &stackdomeCloudRuntimePolicy{
+		trials:                 spec.Trials,
+		isolationPolicyVersion: spec.IsolationPolicyVersion,
+	}
 }
 
 func (*stackdomeCloudRuntimePolicy) OrganisationProvisioningMode() ProvisioningMode {
@@ -65,6 +82,10 @@ func (*stackdomeCloudRuntimePolicy) OrganisationProvisioningMode() ProvisioningM
 
 func (*stackdomeCloudRuntimePolicy) DraftProvisioningMode() ProvisioningMode {
 	return ProvisioningModeDatabaseOnly
+}
+
+func (p *stackdomeCloudRuntimePolicy) IsolationPolicyVersion() string {
+	return p.isolationPolicyVersion
 }
 
 func (p *stackdomeCloudRuntimePolicy) AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError {

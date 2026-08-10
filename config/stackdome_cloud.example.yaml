@@ -14,6 +14,10 @@ limits:
   # same value. Hub validates this policy but does not schedule image builds.
   concurrentBuilds: 1
 
+isolation:
+  # Must match the policy version stamped by the deployed cloud guard.
+  policyVersion: v1
+
 registry:
   # Registries are created lazily only when an organization starts a build.
   maxActiveRegistries: 200

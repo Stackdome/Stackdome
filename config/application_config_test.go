@@ -57,6 +57,8 @@ limits:
   maxStackResourcesPerOrganization: 6
   replicasPerStackResource: 1
   concurrentBuilds: 1
+isolation:
+  policyVersion: policy-v1
 registry:
   maxActiveRegistries: 200
   storageClass: longhorn
@@ -95,6 +97,7 @@ signup:
 		Expect(cfg.StackdomeCloud.Capacity.MaxActiveTrialAllocations).To(Equal(200))
 		Expect(cfg.StackdomeCloud.Capacity.AllocationTTL.Duration()).To(Equal(6 * time.Hour))
 		Expect(cfg.StackdomeCloud.Limits.MaxStackResourcesPerOrganization).To(Equal(int64(6)))
+		Expect(cfg.StackdomeCloud.Isolation.PolicyVersion).To(Equal("policy-v1"))
 		Expect(cfg.StackdomeCloud.Registry.MaxActiveRegistries).To(Equal(200))
 		Expect(cfg.StackdomeCloud.Registry.StorageClass).To(Equal("longhorn"))
 		Expect(cfg.StackdomeCloud.Registry.StorageSize).To(Equal("10Gi"))
@@ -123,6 +126,7 @@ signup:
 		cloudConfig, err := LoadStackdomeCloudConfig("stackdome_cloud.example.yaml")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cloudConfig.Capacity.MaxActiveTrialAllocations).To(Equal(200))
+		Expect(cloudConfig.Isolation.PolicyVersion).To(Equal("v1"))
 		Expect(cloudConfig.Registry.MaxActiveRegistries).To(Equal(200))
 		Expect(cloudConfig.Signup.ClientIPSource).To(Equal(StackdomeCloudClientIPSourceCloudflare))
 		Expect(cloudConfig.Signup.Throttle.IP.MaxTrackedClients).To(Equal(10_000))
@@ -234,6 +238,16 @@ signup:
 		Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring("features.workspaceUsers has been removed")))
 	})
 
+	DescribeTable("validates the isolation policy version",
+		func(policyVersion, expectedError string) {
+			cloudConfig := validStackdomeCloudConfigForTest()
+			cloudConfig.Isolation.PolicyVersion = policyVersion
+
+			Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring(expectedError)))
+		},
+		Entry("missing", "", "isolation.policyVersion is required"),
+		Entry("invalid label value", "policy/version", "isolation.policyVersion must be a valid Kubernetes label value"),
+	)
 	It("requires registry storage configuration", func() {
 		cloudConfig := validStackdomeCloudConfigForTest()
 		cloudConfig.Registry.StorageClass = ""
@@ -364,6 +378,7 @@ func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 			ReplicasPerStackResource:         1,
 			ConcurrentBuilds:                 1,
 		},
+		Isolation: StackdomeCloudIsolationConfig{PolicyVersion: "policy-v1"},
 		Registry: StackdomeCloudRegistryConfig{
 			MaxActiveRegistries: 200,
 			StorageClass:        "longhorn",

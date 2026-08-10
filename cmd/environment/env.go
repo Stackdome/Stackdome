@@ -470,7 +470,10 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 			Capacity: e.Config.StackdomeCloud.Capacity.MaxActiveTrialAllocations,
 			TTL:      e.Config.StackdomeCloud.Capacity.AllocationTTL.Duration(),
 		})
-		e.RuntimePolicy = services.NewStackdomeCloudRuntimePolicy(cloudTrials)
+		e.RuntimePolicy = services.NewStackdomeCloudRuntimePolicy(services.StackdomeCloudRuntimePolicySpec{
+			Trials:                 cloudTrials,
+			IsolationPolicyVersion: e.Config.StackdomeCloud.Isolation.PolicyVersion,
+		})
 	}
 
 	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{

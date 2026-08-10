@@ -53,6 +53,7 @@ type eventRecorder interface {
 
 type runtimePolicy interface {
 	DraftProvisioningMode() services.ProvisioningMode
+	IsolationPolicyVersion() string
 	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
 }
 

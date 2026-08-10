@@ -87,7 +87,7 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		mockVolumeService := mocks.NewMockVolumeService(ctrl)
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
 		svc := &stackService{
-			runtimePolicy: NewStackdomeCloudRuntimePolicy(&fakeCloudTrialService{}),
+			runtimePolicy: NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{Trials: &fakeCloudTrialService{}, IsolationPolicyVersion: "v1"}),
 			stackStore:    mockStackStore, volumeService: mockVolumeService, permissions: mockPermissions,
 		}
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)

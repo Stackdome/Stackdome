@@ -16,6 +16,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const testCloudPolicyVersion = "policy-v1"
+
 var _ = Describe("cloud provisioning prerequisite", func() {
 	var (
 		ctx        context.Context
@@ -62,6 +64,16 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		Expect(err).To(MatchError(ContainSubstring(errors.ErrorCodeTrialInactive)))
 	})
 
+	It("fails closed before enqueueing when the cloud isolation version is absent", func() {
+		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
+		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
+		policy.EXPECT().IsolationPolicyVersion().Return("")
+
+		result, err := newReconciler().Reconcile(ctx, release)
+		Expect(result).To(Equal(resultNil))
+		Expect(err).To(MatchError("cloud isolation policy version is not configured"))
+	})
+
 	It("enqueues prerequisites and requeues until all are observed ready", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		policy.EXPECT().RequireActiveAllocation(ctx, "org-1").Return(nil)
@@ -74,6 +86,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(fake.NewClientBuilder().WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue}}}).Build(), nil)
+		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 
 		result, err := newReconciler().Reconcile(ctx, release)
 		Expect(err).NotTo(HaveOccurred())
@@ -91,7 +104,8 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
-		clusters.EXPECT().GetClient("cluster-1").Return(fake.NewClientBuilder().WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue, models.CloudPolicyReadyLabelKey: models.CloudPolicyReadyVersion}}}).Build(), nil)
+		clusters.EXPECT().GetClient("cluster-1").Return(fake.NewClientBuilder().WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue, models.CloudPolicyReadyLabelKey: testCloudPolicyVersion}}}).Build(), nil)
+		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 
 		result, err := newReconciler().Reconcile(ctx, release)
 		Expect(err).NotTo(HaveOccurred())
@@ -109,6 +123,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(fake.NewClientBuilder().WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue}}}).Build(), nil)
+		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 
 		result, err := newReconciler().Reconcile(ctx, release)
 		Expect(err).NotTo(HaveOccurred())

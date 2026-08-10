@@ -36,11 +36,12 @@ func (d ConfigDuration) Duration() time.Duration {
 }
 
 type StackdomeCloudConfig struct {
-	Capacity StackdomeCloudCapacityConfig `yaml:"capacity" json:"capacity"`
-	Limits   StackdomeCloudLimitsConfig   `yaml:"limits" json:"limits"`
-	Registry StackdomeCloudRegistryConfig `yaml:"registry" json:"registry"`
-	Features StackdomeCloudFeaturesConfig `yaml:"features" json:"features"`
-	Signup   StackdomeCloudSignupConfig   `yaml:"signup" json:"signup"`
+	Capacity  StackdomeCloudCapacityConfig  `yaml:"capacity" json:"capacity"`
+	Limits    StackdomeCloudLimitsConfig    `yaml:"limits" json:"limits"`
+	Isolation StackdomeCloudIsolationConfig `yaml:"isolation" json:"isolation"`
+	Registry  StackdomeCloudRegistryConfig  `yaml:"registry" json:"registry"`
+	Features  StackdomeCloudFeaturesConfig  `yaml:"features" json:"features"`
+	Signup    StackdomeCloudSignupConfig    `yaml:"signup" json:"signup"`
 }
 
 type StackdomeCloudCapacityConfig struct {
@@ -53,6 +54,10 @@ type StackdomeCloudLimitsConfig struct {
 	MaxStackResourcesPerOrganization int64 `yaml:"maxStackResourcesPerOrganization" json:"max_stack_resources_per_organization"`
 	ReplicasPerStackResource         int32 `yaml:"replicasPerStackResource" json:"replicas_per_stack_resource"`
 	ConcurrentBuilds                 int   `yaml:"concurrentBuilds" json:"concurrent_builds"`
+}
+
+type StackdomeCloudIsolationConfig struct {
+	PolicyVersion string `yaml:"policyVersion" json:"policy_version"`
 }
 
 type StackdomeCloudRegistryConfig struct {
@@ -125,6 +130,12 @@ func (c *StackdomeCloudConfig) Validate() error {
 	}
 	if c.Limits.ConcurrentBuilds <= 0 {
 		return fmt.Errorf("limits.concurrentBuilds must be greater than zero")
+	}
+	if c.Isolation.PolicyVersion == "" {
+		return fmt.Errorf("isolation.policyVersion is required")
+	}
+	if problems := validation.IsValidLabelValue(c.Isolation.PolicyVersion); len(problems) > 0 {
+		return fmt.Errorf("isolation.policyVersion must be a valid Kubernetes label value: %s", problems[0])
 	}
 	if c.Registry.MaxActiveRegistries <= 0 {
 		return fmt.Errorf("registry.maxActiveRegistries must be greater than zero")

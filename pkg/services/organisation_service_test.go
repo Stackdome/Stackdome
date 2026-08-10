@@ -168,7 +168,7 @@ var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 	})
 
 	It("keeps Stackdome Cloud organisation creation database-only", func() {
-		svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(&fakeCloudTrialService{})
+		svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{Trials: &fakeCloudTrialService{}, IsolationPolicyVersion: "v1"})
 		expectOrgCreated()
 		expectOrgFetched()
 

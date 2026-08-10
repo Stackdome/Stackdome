@@ -48,6 +48,10 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 	if err := r.runtimePolicy.RequireActiveAllocation(ctx, snapshot.OrganisationID); err != nil {
 		return resultNil, err
 	}
+	expectedPolicyVersion := r.runtimePolicy.IsolationPolicyVersion()
+	if expectedPolicyVersion == "" {
+		return resultNil, fmt.Errorf("cloud isolation policy version is not configured")
+	}
 	if snapshot.NamespaceID == "" || snapshot.Namespace == "" {
 		return resultNil, fmt.Errorf("release %s has no persisted namespace", release.ID)
 	}
@@ -101,7 +105,7 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 			return resultRequeue, nil
 		}
 	}
-	if observedNamespace.Labels[models.CloudPolicyReadyLabelKey] != models.CloudPolicyReadyVersion {
+	if observedNamespace.Labels[models.CloudPolicyReadyLabelKey] != expectedPolicyVersion {
 		return resultRequeue, nil
 	}
 	for _, volume := range volumes {

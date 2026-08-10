@@ -364,6 +364,20 @@ func (mr *MockruntimePolicyMockRecorder) DraftProvisioningMode() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DraftProvisioningMode", reflect.TypeOf((*MockruntimePolicy)(nil).DraftProvisioningMode))
 }
 
+// IsolationPolicyVersion mocks base method.
+func (m *MockruntimePolicy) IsolationPolicyVersion() string {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsolationPolicyVersion")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// IsolationPolicyVersion indicates an expected call of IsolationPolicyVersion.
+func (mr *MockruntimePolicyMockRecorder) IsolationPolicyVersion() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsolationPolicyVersion", reflect.TypeOf((*MockruntimePolicy)(nil).IsolationPolicyVersion))
+}
+
 // RequireActiveAllocation mocks base method.
 func (m *MockruntimePolicy) RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError {
 	m.ctrl.T.Helper()

@@ -18,13 +18,18 @@ var _ = Describe("RuntimePolicy", func() {
 		Expect(policy.AdmitFirstReleaseWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.AdmitRollbackWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.RequireActiveAllocation(context.Background(), "org-1")).To(BeNil())
+		Expect(policy.IsolationPolicyVersion()).To(BeEmpty())
 	})
 
 	It("makes cloud organisations and drafts database-only and delegates trial admission", func() {
 		cloudTrials := &fakeCloudTrialService{}
-		policy := NewStackdomeCloudRuntimePolicy(cloudTrials)
+		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
+			Trials:                 cloudTrials,
+			IsolationPolicyVersion: "policy-v1",
+		})
 		Expect(policy.OrganisationProvisioningMode()).To(Equal(ProvisioningModeDatabaseOnly))
 		Expect(policy.DraftProvisioningMode()).To(Equal(ProvisioningModeDatabaseOnly))
+		Expect(policy.IsolationPolicyVersion()).To(Equal("policy-v1"))
 	})
 })
 
