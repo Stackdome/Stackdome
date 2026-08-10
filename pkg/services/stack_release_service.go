@@ -89,9 +89,6 @@ type stackReleaseService struct {
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
-	if spec.RuntimePolicy == nil {
-		panic("services.NewStackReleaseService: RuntimePolicy is required")
-	}
 	gitClients := spec.GitClients
 	if gitClients == nil {
 		gitClients = defaultSourceGitClientProvider{}

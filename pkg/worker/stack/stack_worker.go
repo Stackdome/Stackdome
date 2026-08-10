@@ -35,9 +35,6 @@ type StackWorkerSpec struct {
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
-	if spec.RuntimePolicy == nil {
-		panic("stack.NewStackWorker: RuntimePolicy is required")
-	}
 	return &stackWorker{
 		stackService:   spec.StackService,
 		clusterManager: spec.ClusterManager,

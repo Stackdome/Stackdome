@@ -35,9 +35,6 @@ type PostgresAddonWorkerSpec struct {
 }
 
 func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
-	if spec.RuntimePolicy == nil {
-		panic("postgresaddon.NewPostgresAddonWorker: RuntimePolicy is required")
-	}
 	return &postgresAddonWorker{
 		postgresAddonService: spec.PostgresAddonService,
 		clusterManager:       spec.ClusterManager,

@@ -43,9 +43,6 @@ type volumeWorker struct {
 var _ worker.Worker = (*volumeWorker)(nil)
 
 func NewVolumeWorker(spec VolumeWorkerSpec) worker.Worker {
-	if spec.RuntimePolicy == nil {
-		panic("volume.NewVolumeWorker: RuntimePolicy is required")
-	}
 	return &volumeWorker{
 		volumeService:    spec.VolumeService,
 		stackService:     spec.StackService,
