@@ -88,6 +88,21 @@ func (mr *MockTrialAllocationStoreMockRecorder) GetByOrganisationID(ctx, organis
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByOrganisationID", reflect.TypeOf((*MockTrialAllocationStore)(nil).GetByOrganisationID), ctx, organisationID)
 }
 
+// RevalidateIfExistsWithTx mocks base method.
+func (m *MockTrialAllocationStore) RevalidateIfExistsWithTx(ctx context.Context, organisationID string, now time.Time) (*models.TrialAllocation, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RevalidateIfExistsWithTx", ctx, organisationID, now)
+	ret0, _ := ret[0].(*models.TrialAllocation)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// RevalidateIfExistsWithTx indicates an expected call of RevalidateIfExistsWithTx.
+func (mr *MockTrialAllocationStoreMockRecorder) RevalidateIfExistsWithTx(ctx, organisationID, now any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevalidateIfExistsWithTx", reflect.TypeOf((*MockTrialAllocationStore)(nil).RevalidateIfExistsWithTx), ctx, organisationID, now)
+}
+
 // RevalidateWithTx mocks base method.
 func (m *MockTrialAllocationStore) RevalidateWithTx(ctx context.Context, organisationID string, now time.Time) (*models.TrialAllocation, *errors.ServiceError) {
 	m.ctrl.T.Helper()

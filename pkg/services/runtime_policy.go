@@ -15,7 +15,7 @@ const (
 	ProvisioningModeDatabaseOnly ProvisioningMode = "database_only"
 )
 
-//go:generate mockgen -source=runtime_policy.go -destination=runtime_policy_mock_test.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
+//go:generate mockgen -source=runtime_policy.go -destination=runtime_policy_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
 type RuntimePolicy interface {
 	OrganisationProvisioningMode() ProvisioningMode
 	DraftProvisioningMode() ProvisioningMode
@@ -23,6 +23,8 @@ type RuntimePolicy interface {
 	AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitRollbackWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
+	AdmitMutationWithTx(ctx context.Context, organisationID string) *errors.ServiceError
+	AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError
 	ApplyStackResourceDefaults(resource *models.StackResource)
 }
@@ -73,6 +75,14 @@ func (selfHostedRuntimePolicy) RequireActiveAllocation(context.Context, string) 
 	return nil
 }
 
+func (selfHostedRuntimePolicy) AdmitMutationWithTx(context.Context, string) *errors.ServiceError {
+	return nil
+}
+
+func (selfHostedRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
+	return nil
+}
+
 func (selfHostedRuntimePolicy) AdmitStackMutationWithTx(context.Context, StackMutation) *errors.ServiceError {
 	return nil
 }
@@ -98,14 +108,8 @@ type StackdomeCloudRuntimePolicySpec struct {
 }
 
 func NewStackdomeCloudRuntimePolicy(spec StackdomeCloudRuntimePolicySpec) RuntimePolicy {
-	if spec.Trials == nil {
-		panic("services.NewStackdomeCloudRuntimePolicy: CloudTrialService is required")
-	}
 	if spec.IsolationPolicyVersion == "" {
 		panic("services.NewStackdomeCloudRuntimePolicy: IsolationPolicyVersion is required")
-	}
-	if spec.StackLimits == nil {
-		panic("services.NewStackdomeCloudRuntimePolicy: StackLimitStore is required")
 	}
 	if spec.MaxStacks <= 0 {
 		panic("services.NewStackdomeCloudRuntimePolicy: MaxStacks must be greater than zero")
@@ -153,7 +157,19 @@ func (p *stackdomeCloudRuntimePolicy) RequireActiveAllocation(ctx context.Contex
 	return serr
 }
 
+func (p *stackdomeCloudRuntimePolicy) AdmitMutationWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
+	_, serr := p.trials.RevalidateIfExistsWithTx(ctx, organisationID)
+	return serr
+}
+
+func (p *stackdomeCloudRuntimePolicy) AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
+	return p.trials.EnsureNoAllocation(ctx, organisationID)
+}
+
 func (p *stackdomeCloudRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
+	if serr := p.AdmitMutationWithTx(ctx, mutation.OrganisationID); serr != nil {
+		return serr
+	}
 	excludedStackID := ""
 	switch mutation.Kind {
 	case StackMutationCreate, StackMutationCreateResource, StackMutationUpdateResource:

@@ -6,6 +6,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
+	"go.uber.org/mock/gomock"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,7 +20,38 @@ var _ = Describe("RuntimePolicy", func() {
 		Expect(policy.AdmitFirstReleaseWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.AdmitRollbackWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.RequireActiveAllocation(context.Background(), "org-1")).To(BeNil())
+		Expect(policy.AdmitMutationWithTx(context.Background(), "org-1")).To(BeNil())
+		Expect(policy.AdmitOrganisationDeletion(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.IsolationPolicyVersion()).To(BeEmpty())
+	})
+
+	It("delegates cloud mutation and organisation deletion admission", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		trials := NewMockCloudTrialService(ctrl)
+		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
+			Trials: trials, StackLimits: &fakeStackLimitStore{}, IsolationPolicyVersion: "policy-v1",
+			MaxStacks: 2, MaxResources: 6, Replicas: 1,
+		})
+		trials.EXPECT().RevalidateIfExistsWithTx(gomock.Any(), "org-1").Return(nil, errors.TrialInactive())
+		Expect(policy.AdmitMutationWithTx(context.Background(), "org-1").Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		trials.EXPECT().EnsureNoAllocation(gomock.Any(), "org-1").Return(errors.BadRequest("allocation exists"))
+		Expect(policy.AdmitOrganisationDeletion(context.Background(), "org-1").Reason).To(Equal("allocation exists"))
+	})
+
+	It("rejects counted stack mutations before reading usage when an allocation is inactive", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		trials := NewMockCloudTrialService(ctrl)
+		limits := &fakeStackLimitStore{}
+		policy := NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{
+			Trials: trials, StackLimits: limits, IsolationPolicyVersion: "policy-v1",
+			MaxStacks: 2, MaxResources: 6, Replicas: 1,
+		})
+		trials.EXPECT().RevalidateIfExistsWithTx(gomock.Any(), "org-1").Return(nil, errors.TrialInactive())
+
+		serr := policy.AdmitStackMutationWithTx(context.Background(), StackMutation{Kind: StackMutationCreate, OrganisationID: "org-1"})
+
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+		Expect(limits.called).To(BeFalse())
 	})
 
 	It("makes cloud organisations and drafts database-only and delegates trial admission", func() {
@@ -101,6 +133,7 @@ type fakeCloudTrialService struct {
 type fakeStackLimitStore struct {
 	usage          stores.StackUsage
 	excludeStackID string
+	called         bool
 }
 
 func newCloudRuntimePolicyForTest() RuntimePolicy {
@@ -119,6 +152,7 @@ func newCloudRuntimePolicyWithStoreForTest(stackLimits stores.StackLimitStore) R
 }
 
 func (f *fakeStackLimitStore) LockOrganisationAndGetUsageWithTx(_ context.Context, _, excludeStackID string) (stores.StackUsage, *errors.ServiceError) {
+	f.called = true
 	f.excludeStackID = excludeStackID
 	return f.usage, nil
 }
@@ -131,6 +165,14 @@ func (f *fakeCloudTrialService) RevalidateWithTx(context.Context, string) (*mode
 	return &models.TrialAllocation{}, nil
 }
 
+func (f *fakeCloudTrialService) RevalidateIfExistsWithTx(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
+	return nil, nil
+}
+
 func (f *fakeCloudTrialService) RequireActive(context.Context, string) (*models.TrialAllocation, *errors.ServiceError) {
 	return &models.TrialAllocation{}, nil
+}
+
+func (f *fakeCloudTrialService) EnsureNoAllocation(context.Context, string) *errors.ServiceError {
+	return nil
 }

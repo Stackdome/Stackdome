@@ -48,6 +48,12 @@ func (*inactiveVolumeRuntimePolicy) AdmitRollbackWithTx(context.Context, string)
 func (*inactiveVolumeRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return errors.TrialInactive()
 }
+func (*inactiveVolumeRuntimePolicy) AdmitMutationWithTx(context.Context, string) *errors.ServiceError {
+	return nil
+}
+func (*inactiveVolumeRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
+	return nil
+}
 func (*inactiveVolumeRuntimePolicy) AdmitStackMutationWithTx(context.Context, services.StackMutation) *errors.ServiceError {
 	return nil
 }

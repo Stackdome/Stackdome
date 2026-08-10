@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"go.uber.org/mock/gomock"
@@ -45,5 +46,19 @@ var _ = Describe("CloudTrialService", func() {
 		allocation, serr = svc.RequireActive(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(allocation).To(BeIdenticalTo(expected))
+	})
+
+	It("allows organisation deletion only when no allocation row exists", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		store := mocks.NewMockTrialAllocationStore(ctrl)
+		svc := NewCloudTrialService(CloudTrialServiceSpec{Store: store})
+
+		store.EXPECT().GetByOrganisationID(gomock.Any(), "draft-org").Return(nil, errors.NotFound("trial allocation not found"))
+		Expect(svc.EnsureNoAllocation(context.Background(), "draft-org")).To(BeNil())
+
+		store.EXPECT().GetByOrganisationID(gomock.Any(), "allocated-org").Return(&models.TrialAllocation{ID: "allocation-1"}, nil)
+		serr := svc.EnsureNoAllocation(context.Background(), "allocated-org")
+		Expect(serr).NotTo(BeNil())
+		Expect(serr.Reason).To(Equal("cannot delete organisation while its cloud trial allocation exists"))
 	})
 })

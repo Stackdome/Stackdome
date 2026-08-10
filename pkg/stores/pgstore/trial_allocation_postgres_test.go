@@ -38,8 +38,10 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 
 		ctx := context.Background()
 		database := sessionFactory.New(ctx)
+		Expect(database.Exec("DELETE FROM trial_allocations WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 		Expect(database.Exec("DELETE FROM organisations WHERE id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 		DeferCleanup(func() {
+			Expect(database.Exec("DELETE FROM trial_allocations WHERE organisation_id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 			Expect(database.Exec("DELETE FROM organisations WHERE id LIKE 'pr2-lock-org-%'").Error).NotTo(HaveOccurred())
 		})
 
@@ -91,6 +93,8 @@ var _ = Describe("TrialAllocationStore PostgreSQL locking", func() {
 		Expect(database.Raw(`SELECT organisation_id FROM trial_allocations WHERE state = 'active' LIMIT 1`).
 			Scan(&activeOrganisationID).Error).NotTo(HaveOccurred())
 		Expect(activeOrganisationID).NotTo(BeEmpty())
+		Expect(database.Exec("DELETE FROM organisations WHERE id = ?", activeOrganisationID).Error).To(HaveOccurred(),
+			"trial allocation ownership must block organisation deletion until cleanup removes the allocation")
 
 		capacityLock := database.Begin()
 		Expect(capacityLock.Error).NotTo(HaveOccurred())

@@ -76,9 +76,6 @@ type organisationService struct {
 }
 
 func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
-	if spec.RuntimePolicy == nil {
-		panic("services.NewOrganisationService: RuntimePolicy is required")
-	}
 	return &organisationService{
 		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: spec.SessionFactory,
@@ -219,6 +216,9 @@ func (s *organisationService) Get(ctx context.Context, ID string) (*models.Organ
 func (s *organisationService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	if permErr := s.permissions.Check(ctx, ID, auth.ResourceOrgs, ID, auth.ActionDelete); permErr != nil {
 		return permErr
+	}
+	if policyErr := s.runtimePolicy.AdmitOrganisationDeletion(ctx, ID); policyErr != nil {
+		return policyErr
 	}
 	stacks, err := s.stackQueryService.GetStacksByOrganisationID(ctx, ID)
 	if err != nil {

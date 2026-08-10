@@ -9,11 +9,13 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
-//go:generate mockgen -source=cloud_trial_service.go -destination=cloud_trial_service_mock_test.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
+//go:generate mockgen -source=cloud_trial_service.go -destination=cloud_trial_service_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
 type CloudTrialService interface {
 	AcquireWithTx(ctx context.Context, organisationID string) (*models.TrialAllocation, *errors.ServiceError)
 	RevalidateWithTx(ctx context.Context, organisationID string) (*models.TrialAllocation, *errors.ServiceError)
+	RevalidateIfExistsWithTx(ctx context.Context, organisationID string) (*models.TrialAllocation, *errors.ServiceError)
 	RequireActive(ctx context.Context, organisationID string) (*models.TrialAllocation, *errors.ServiceError)
+	EnsureNoAllocation(ctx context.Context, organisationID string) *errors.ServiceError
 }
 
 type CloudTrialServiceSpec struct {
@@ -47,6 +49,21 @@ func (s *cloudTrialService) RevalidateWithTx(ctx context.Context, organisationID
 	return s.store.RevalidateWithTx(ctx, organisationID, s.now())
 }
 
+func (s *cloudTrialService) RevalidateIfExistsWithTx(ctx context.Context, organisationID string) (*models.TrialAllocation, *errors.ServiceError) {
+	return s.store.RevalidateIfExistsWithTx(ctx, organisationID, s.now())
+}
+
 func (s *cloudTrialService) RequireActive(ctx context.Context, organisationID string) (*models.TrialAllocation, *errors.ServiceError) {
 	return s.store.GetActiveByOrganisationID(ctx, organisationID, s.now())
+}
+
+func (s *cloudTrialService) EnsureNoAllocation(ctx context.Context, organisationID string) *errors.ServiceError {
+	_, serr := s.store.GetByOrganisationID(ctx, organisationID)
+	if serr == nil {
+		return errors.BadRequest("cannot delete organisation while its cloud trial allocation exists")
+	}
+	if serr.Is404() {
+		return nil
+	}
+	return serr
 }

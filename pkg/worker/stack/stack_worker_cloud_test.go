@@ -45,6 +45,12 @@ func (*inactiveWorkerRuntimePolicy) AdmitRollbackWithTx(context.Context, string)
 func (*inactiveWorkerRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return errors.TrialInactive()
 }
+func (*inactiveWorkerRuntimePolicy) AdmitMutationWithTx(context.Context, string) *errors.ServiceError {
+	return nil
+}
+func (*inactiveWorkerRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
+	return nil
+}
 func (*inactiveWorkerRuntimePolicy) AdmitStackMutationWithTx(context.Context, services.StackMutation) *errors.ServiceError {
 	return nil
 }

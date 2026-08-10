@@ -115,6 +115,21 @@ func (s *trialAllocationStore) RevalidateWithTx(ctx context.Context, organisatio
 	return validateExistingTrialAllocation(allocation, now)
 }
 
+func (s *trialAllocationStore) RevalidateIfExistsWithTx(ctx context.Context, organisationID string, now time.Time) (*models.TrialAllocation, *errors.ServiceError) {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return nil, errors.GeneralError("transaction not found in context")
+	}
+	allocation, err := findTrialAllocationForUpdate(tx, organisationID)
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, errors.GeneralError("failed to get trial allocation: %s", err.Error())
+	}
+	return validateExistingTrialAllocation(allocation, now)
+}
+
 func (s *trialAllocationStore) GetActiveByOrganisationID(ctx context.Context, organisationID string, now time.Time) (*models.TrialAllocation, *errors.ServiceError) {
 	allocation, serr := s.GetByOrganisationID(ctx, organisationID)
 	if serr != nil {

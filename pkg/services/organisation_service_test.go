@@ -64,6 +64,37 @@ var _ = Describe("Organisation.Platform", func() {
 	})
 })
 
+var _ = Describe("OrganisationService cloud trial deletion", func() {
+	It("deletes a database-only organisation that has no allocation", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		permissions := mocks.NewMockPermissionService(ctrl)
+		stacks := NewMockStackService(ctrl)
+		store := mocks.NewMockOrganisationStore(ctrl)
+		policy := NewMockRuntimePolicy(ctrl)
+		ctx := context.Background()
+		permissions.EXPECT().Check(ctx, "org-1", auth.ResourceOrgs, "org-1", auth.ActionDelete).Return(nil)
+		policy.EXPECT().AdmitOrganisationDeletion(ctx, "org-1").Return(nil)
+		stacks.EXPECT().GetStacksByOrganisationID(ctx, "org-1").Return(nil, nil)
+		store.EXPECT().Delete(ctx, "org-1").Return(nil)
+		svc := &organisationService{organisationStore: store, stackQueryService: stacks, permissions: permissions, runtimePolicy: policy, logger: logger.NewLogger()}
+
+		Expect(svc.Delete(ctx, "org-1")).To(BeNil())
+	})
+
+	It("rejects deletion before inspecting stacks when any allocation exists", func() {
+		ctrl := gomock.NewController(GinkgoT())
+		permissions := mocks.NewMockPermissionService(ctrl)
+		policy := NewMockRuntimePolicy(ctrl)
+		ctx := context.Background()
+		permissions.EXPECT().Check(ctx, "org-1", auth.ResourceOrgs, "org-1", auth.ActionDelete).Return(nil)
+		policy.EXPECT().AdmitOrganisationDeletion(ctx, "org-1").Return(errors.BadRequest("allocation exists"))
+		svc := &organisationService{permissions: permissions, runtimePolicy: policy}
+
+		serr := svc.Delete(ctx, "org-1")
+		Expect(serr.Reason).To(Equal("allocation exists"))
+	})
+})
+
 var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 	const (
 		orgName      = "Acme Inc"

@@ -16,7 +16,7 @@ func createTrialAllocations() *gormigrate.Migration {
 			if err := tx.Exec(`
 CREATE TABLE trial_allocations (
     id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
-    organisation_id TEXT NOT NULL UNIQUE REFERENCES organisations(id) ON DELETE CASCADE,
+    organisation_id TEXT NOT NULL UNIQUE REFERENCES organisations(id),
     state TEXT NOT NULL CHECK (state IN ('active', 'cleanup_pending', 'cleaning', 'cleaned', 'error')),
     activated_at TIMESTAMPTZ NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL,

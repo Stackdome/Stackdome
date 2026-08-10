@@ -132,6 +132,31 @@ var _ = Describe("TrialAllocationStore", func() {
 		Expect(got.ExpiresAt).To(BeTemporally("==", existing.ExpiresAt))
 	})
 
+	It("allows draft mutations before an allocation exists", func() {
+		var got *models.TrialAllocation
+		serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+			var revalidateErr *errors.ServiceError
+			got, revalidateErr = store.RevalidateIfExistsWithTx(txCtx, "org-1", now)
+			return revalidateErr
+		})
+		Expect(serr).To(BeNil())
+		Expect(got).To(BeNil())
+	})
+
+	It("rejects mutations after an allocation becomes inactive", func() {
+		existing := &models.TrialAllocation{
+			ID: "allocation-1", OrganisationID: "org-1", State: models.TrialAllocationStateCleanupPending,
+			ActivatedAt: now.Add(-time.Hour), ExpiresAt: now.Add(time.Hour),
+		}
+		Expect(sf.New(ctx).Create(existing).Error).NotTo(HaveOccurred())
+
+		serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+			_, revalidateErr := store.RevalidateIfExistsWithTx(txCtx, "org-1", now)
+			return revalidateErr
+		})
+		Expect(serr.Reason).To(Equal(errors.ErrorCodeTrialInactive))
+	})
+
 	DescribeTable("rejects rollback revalidation without an active unexpired allocation",
 		func(existing *models.TrialAllocation) {
 			if existing != nil {
