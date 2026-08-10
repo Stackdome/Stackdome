@@ -13,7 +13,6 @@ nouns; prefer them over synonyms in code, APIs, and docs.
 | ProjectMembership | A user's assignment to a Project with a ProjectRole (e.g. Viewer); the join between User and Project. | `pkg/models/project.go` |
 | ProjectRole | The permission level a member holds within a Project. | `pkg/models/project.go` |
 | User | An authentication identity that can belong to projects and act within an organisation; carries a UserRole. | `pkg/models/user.go` |
-| WorkspaceUser | A reconciled per-cluster identity that projects a User into a workspace namespace so they can access cluster workloads. | `pkg/models/workspace_user.go`, `pkg/controllers/workspaceuser` |
 | OrgInvite | A pending, tokenised invitation for an email to join an Organisation and Project at a given ProjectRole. | `pkg/models/org_invite.go` |
 | OrganisationDomain | A DNS domain claimed and verified by an Organisation for use by stack domains. | `pkg/models/organisation_domain.go` |
 
@@ -56,7 +55,6 @@ nouns; prefer them over synonyms in code, APIs, and docs.
 | VolumeMount | A binding that mounts a Volume into a workload at a target path from a source sub-path. | `pkg/models/volume_mount.go` |
 | ObjectStore | A project-owned external object-storage configuration (S3 / Azure / GCS) used to store backups and WAL files. | `pkg/models/object_store.go` |
 | Namespace | A reconciled Kubernetes namespace allocated for a tenant's workloads on a cluster. | `pkg/models/namespace.go` |
-| WorkspaceNamespace | The per-organisation/project namespace into which that tenant's resources are reconciled on a cluster. | `pkg/models/workspace_namespace.go` |
 
 ## Secrets
 

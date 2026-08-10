@@ -51,7 +51,6 @@ type Clients struct {
 
 type Services struct {
 	UserService                 services.UserService
-	WorkspaceUserService        services.WorkspaceUserService
 	OrganisationService         services.OrganisationService
 	ClusterService              services.ClusterService
 	StackStorageService         services.StackStorageService

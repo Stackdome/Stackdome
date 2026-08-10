@@ -20,7 +20,6 @@ import (
 	stackcontroller "github.com/Stackdome/stackdome/pkg/controllers/stack"
 	stackresourcecontroller "github.com/Stackdome/stackdome/pkg/controllers/stackresource"
 	volumecontroller "github.com/Stackdome/stackdome/pkg/controllers/volume"
-	workspaceusercontroller "github.com/Stackdome/stackdome/pkg/controllers/workspaceuser"
 	"github.com/Stackdome/stackdome/pkg/db"
 	emailpkg "github.com/Stackdome/stackdome/pkg/email"
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
@@ -340,14 +339,6 @@ func (e *environmentImpl) initializeClusterManager(ctx context.Context) error {
 				})
 			},
 			func(clusterID string) clustermanager.Controller {
-				return workspaceusercontroller.NewWorkspaceUserReconciler(workspaceusercontroller.WorkspaceUserReconcilerSpec{
-					Log:                  controllerLogger("workspace-user-controller", clusterID),
-					WorkspaceUserService: e.Services.WorkspaceUserService,
-					ClusterService:       e.Services.ClusterService,
-					Env:                  e.Name,
-				})
-			},
-			func(clusterID string) clustermanager.Controller {
 				return stackcontroller.NewStackReconciler(stackcontroller.StackReconcilerSpec{
 					Log:            controllerLogger("stack-controller", clusterID),
 					StackService:   e.Services.StackService,
@@ -602,14 +593,6 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		EncryptionService:    encryptionService,
 	})
 
-	workspaceUserService := services.NewWorkspaceUserService(services.WorkspaceUserServiceSpec{
-		SessionFactory: e.DBSession,
-		Logger:         e.Logger,
-		ClusterService: clusterService,
-		UserService:    userService,
-		Permissions:    e.PermissionService,
-	})
-
 	volumeService := services.NewVolumeService(services.VolumeServiceSpec{
 		SessionFactory:   e.DBSession,
 		Logger:           e.Logger,
@@ -633,7 +616,6 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	stackResourceService := services.NewStackResourceService(services.StackResourceServiceSpec{
 		SessionFactory:         e.DBSession,
 		Logger:                 e.Logger,
-		WorkspaceUserService:   workspaceUserService,
 		Permissions:            e.PermissionService,
 		StackStore:             stackStore,
 		ClusterRegistryService: imageRegistryService,
@@ -819,7 +801,6 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 
 	e.Services = Services{
 		UserService:                 userService,
-		WorkspaceUserService:        workspaceUserService,
 		OrganisationService:         organisationService,
 		ClusterService:              clusterService,
 		StackStorageService:         nil, // Not implemented yet
@@ -994,18 +975,10 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 }
 
 func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) error {
-	workspaceUserClusterResourceService := clusterresource.NewWorkspaceUserClusterResourceService(clusterresource.WorkspaceUserClusterResourceServiceSpec{
+	volumeClusterResourceService := clusterresource.NewVolumeClusterResourceService(clusterresource.VolumeClusterResourceServiceSpec{
+		ClusterService: e.Services.ClusterService,
 		ClusterManager: e.ClusterManager,
 		Logger:         e.Logger,
-		ClusterService: e.Services.ClusterService,
-		UserService:    e.Services.UserService,
-	})
-
-	volumeClusterResourceService := clusterresource.NewVolumeClusterResourceService(clusterresource.VolumeClusterResourceServiceSpec{
-		ClusterService:       e.Services.ClusterService,
-		ClusterManager:       e.ClusterManager,
-		Logger:               e.Logger,
-		WorkspaceUserService: e.Services.WorkspaceUserService,
 	})
 
 	clusterNamespaceService := clusterresource.NewNamespaceClusterResourceService(clusterresource.NamespaceClusterResourceServiceSpec{
@@ -1037,7 +1010,6 @@ func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) err
 		BackgroundJobEnqueuer: e.WorkerManager,
 	}
 
-	e.Services.WorkspaceUserService.InjectClusterResourceService(workspaceUserClusterResourceService)
 	e.Services.VolumeService.InjectClusterResourceService(volumeClusterResourceService)
 	e.Services.StackService.InjectClusterResourceServiceDeps(deps)
 	e.Services.NamespaceService.InjectClusterResourceServiceDeps(deps)

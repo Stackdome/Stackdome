@@ -98,6 +98,7 @@ signup:
 		Expect(cfg.StackdomeCloud.Registry.MaxActiveRegistries).To(Equal(200))
 		Expect(cfg.StackdomeCloud.Registry.StorageClass).To(Equal("longhorn"))
 		Expect(cfg.StackdomeCloud.Registry.StorageSize).To(Equal("10Gi"))
+		Expect(cfg.StackdomeCloud.Features.WorkspaceUsers).To(BeFalse())
 	})
 
 	It("rejects unknown cloud configuration fields", func() {
@@ -111,7 +112,7 @@ signup:
 		path := filepath.Join(GinkgoT().TempDir(), "cloud.yaml")
 		validConfig, err := os.ReadFile("stackdome_cloud.example.yaml")
 		Expect(err).NotTo(HaveOccurred())
-		validConfig = append(validConfig, []byte("\n---\nfeatures:\n  workspaceUsers: true\n")...)
+		validConfig = append(validConfig, []byte("\n---\nfeatures:\n  customDomains: true\n")...)
 		Expect(os.WriteFile(path, validConfig, 0o600)).To(Succeed())
 
 		_, err = LoadStackdomeCloudConfig(path)
@@ -224,6 +225,13 @@ signup:
 		cloudConfig.Registry.MaxActiveRegistries = 0
 
 		Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring("registry.maxActiveRegistries must be greater than zero")))
+	})
+
+	It("rejects enabling the removed WorkspaceUser feature", func() {
+		cloudConfig := validStackdomeCloudConfigForTest()
+		cloudConfig.Features.WorkspaceUsers = true
+
+		Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring("features.workspaceUsers has been removed")))
 	})
 
 	It("requires registry storage configuration", func() {
