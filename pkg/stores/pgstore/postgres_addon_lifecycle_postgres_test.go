@@ -21,6 +21,62 @@ import (
 )
 
 var _ = Describe("PostgresAddonStore PostgreSQL lifecycle locking", func() {
+	It("does not let a stale controller status erase a newer Pending wakeup", func() {
+		dsn := os.Getenv("STACKDOME_TEST_POSTGRES_DSN")
+		if dsn == "" {
+			Skip("STACKDOME_TEST_POSTGRES_DSN is not set")
+		}
+
+		admin, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		adminSQL, err := admin.DB()
+		Expect(err).NotTo(HaveOccurred())
+		DeferCleanup(adminSQL.Close)
+		schemaName := "postgres_status_cas_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+		Expect(admin.Exec("CREATE SCHEMA " + schemaName).Error).NotTo(HaveOccurred())
+		DeferCleanup(func() {
+			Expect(admin.Exec("DROP SCHEMA " + schemaName + " CASCADE").Error).NotTo(HaveOccurred())
+		})
+
+		database, err := gorm.Open(postgres.Open(dsn+" search_path="+schemaName), &gorm.Config{})
+		Expect(err).NotTo(HaveOccurred())
+		postgresDDL := strings.ReplaceAll(postgresAddonsDDL, "datetime", "timestamptz")
+		Expect(database.Exec(postgresDDL).Error).NotTo(HaveOccurred())
+		Expect(database.Exec(`
+			CREATE TABLE postgres_addon_databases (id TEXT PRIMARY KEY, postgres_addon_id TEXT NOT NULL);
+			CREATE TABLE postgres_backups (id TEXT PRIMARY KEY, postgres_addon_id TEXT NOT NULL);
+		`).Error).NotTo(HaveOccurred())
+		sessionFactory := &postgresTestSessionFactory{database: database}
+		DeferCleanup(sessionFactory.Close)
+		store := pgstore.NewPostgresAddonStore(pgstore.PostgresAddonStoreSpec{SessionFactory: sessionFactory})
+		addon := &models.PostgresAddon{
+			ID: "addon-1", OrganisationID: "org-1", ProjectID: "project-1", UserID: "user-1",
+			ClusterID: "cluster-1", Name: "database", NamespaceID: "namespace-1", Namespace: "database",
+			Status: models.PostgresAddonStatus{State: models.PostgresAddonStateReady},
+		}
+		ctx := context.Background()
+		Expect(database.Omit(clause.Associations).Create(addon).Error).To(Succeed())
+
+		controllerRead, serr := store.GetByID(ctx, addon.ID)
+		Expect(serr).To(BeNil())
+		Expect(controllerRead.UpdatedAt).NotTo(BeZero())
+		Expect(store.WithTransaction(ctx, func(txCtx context.Context) *serviceerrors.ServiceError {
+			_, updateErr := store.SetHibernationWithTx(txCtx, addon.ID, true)
+			return updateErr
+		})).To(BeNil())
+
+		applied, serr := store.UpdateStatusIfUnchanged(ctx, addon.ID, &models.PostgresAddonStatus{
+			State: models.PostgresAddonStateReady,
+		}, controllerRead.UpdatedAt)
+		Expect(serr).To(BeNil())
+		Expect(applied).To(BeFalse())
+
+		restartedStore := pgstore.NewPostgresAddonStore(pgstore.PostgresAddonStoreSpec{SessionFactory: sessionFactory})
+		pending, serr := restartedStore.InternalListIDs(ctx, "status->>'state' = ?", string(models.PostgresAddonStatePending))
+		Expect(serr).To(BeNil())
+		Expect(pending).To(Equal([]string{addon.ID}))
+	})
+
 	It("preserves concurrent hibernation and fencing changes", func() {
 		dsn := os.Getenv("STACKDOME_TEST_POSTGRES_DSN")
 		if dsn == "" {

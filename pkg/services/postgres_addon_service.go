@@ -30,7 +30,7 @@ type PostgresAddonService interface {
 	ListPostgresAddonsByOrganisation(ctx context.Context, organisationID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListPostgresAddonsForCurrentUser(ctx context.Context, orgID string) ([]*models.PostgresAddon, *errors.ServiceError)
 	ListPostgresAddonsByProjectID(ctx context.Context, projectID string) ([]*models.PostgresAddon, *errors.ServiceError)
-	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError
+	UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus, observedUpdatedAt time.Time) (bool, *errors.ServiceError)
 
 	// Lifecycle operations
 	TriggerBackup(ctx context.Context, id string) *errors.ServiceError
@@ -510,8 +510,13 @@ func (s *postgresAddonService) ListPostgresAddonsByProjectID(ctx context.Context
 	return s.postgresAddonStore.ListByProjectID(ctx, projectID)
 }
 
-func (s *postgresAddonService) UpdatePostgresAddonStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
-	return s.postgresAddonStore.UpdateStatus(ctx, id, status)
+func (s *postgresAddonService) UpdatePostgresAddonStatus(
+	ctx context.Context,
+	id string,
+	status *models.PostgresAddonStatus,
+	observedUpdatedAt time.Time,
+) (bool, *errors.ServiceError) {
+	return s.postgresAddonStore.UpdateStatusIfUnchanged(ctx, id, status, observedUpdatedAt)
 }
 
 // Lifecycle operations - accept updated models and persist lifecycle config changes

@@ -174,7 +174,7 @@ func (s *postgresAddonStore) UpdateWithTx(ctx context.Context, addon *models.Pos
 	status := existingAddon.Status
 	status.State = models.PostgresAddonStatePending
 	status.Message = postgresConfigurationPendingMessage
-	updatedAt := time.Now().UTC()
+	updatedAt := nextPostgresAddonUpdatedAt(existingAddon.UpdatedAt)
 
 	if err := tx.Model(&existingAddon).
 		Select("Labels", "Annotations", "Instances", "Resources", "Storage", "Configuration", "BackupConfig", "Status", "UpdatedAt").
@@ -237,7 +237,7 @@ func (s *postgresAddonStore) updateLifecycleWithTx(
 	update(&existingAddon.LifecycleConfig)
 	existingAddon.Status.State = models.PostgresAddonStatePending
 	existingAddon.Status.Message = "Lifecycle change pending"
-	existingAddon.UpdatedAt = time.Now().UTC()
+	existingAddon.UpdatedAt = nextPostgresAddonUpdatedAt(existingAddon.UpdatedAt)
 	if err := tx.Model(&existingAddon).
 		Select("LifecycleConfig", "Status", "UpdatedAt").
 		Omit(clause.Associations).
@@ -345,6 +345,36 @@ func (s *postgresAddonStore) UpdateStatus(ctx context.Context, id string, status
 	}
 
 	return nil
+}
+
+func (s *postgresAddonStore) UpdateStatusIfUnchanged(
+	ctx context.Context,
+	id string,
+	status *models.PostgresAddonStatus,
+	observedUpdatedAt time.Time,
+) (bool, *errors.ServiceError) {
+	result := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).
+		Where("id = ? AND updated_at = ?", id, observedUpdatedAt).
+		Updates(map[string]interface{}{
+			"status":     status,
+			"updated_at": nextPostgresAddonUpdatedAt(observedUpdatedAt),
+		})
+	if result.Error != nil {
+		return false, errors.GeneralError("failed to conditionally update postgres addon status: %s", result.Error.Error())
+	}
+	return result.RowsAffected > 0, nil
+}
+
+// PostgreSQL timestamps have microsecond precision. Advancing by at least one
+// microsecond keeps UpdatedAt a reliable compare-and-swap version even when two
+// mutations are computed within the same clock tick.
+func nextPostgresAddonUpdatedAt(previous time.Time) time.Time {
+	now := time.Now().UTC().Truncate(time.Microsecond)
+	previous = previous.UTC().Truncate(time.Microsecond)
+	if !now.After(previous) {
+		return previous.Add(time.Microsecond)
+	}
+	return now
 }
 
 func (s *postgresAddonStore) UpdateBackupRequestedAt(ctx context.Context, id string, timestamp *time.Time) *errors.ServiceError {

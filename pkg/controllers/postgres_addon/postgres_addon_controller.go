@@ -121,9 +121,12 @@ func (r *postgresAddonReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			return ctrl.Result{}, nil
 		}
 
-		serr = r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus)
+		updated, serr := r.PostgresAddonService.UpdatePostgresAddonStatus(ctx, dbInstance.ID, newStatus, dbInstance.UpdatedAt)
 		if serr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to update postgres addon status in db: %w", serr)
+		}
+		if !updated {
+			return ctrl.Result{Requeue: true}, nil
 		}
 		r.Log.Info(ctx, "updated postgres addon %s status: phase=%s", postgresAddonID, newStatus.State)
 	}
