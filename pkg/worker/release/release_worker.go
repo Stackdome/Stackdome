@@ -9,6 +9,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker"
@@ -47,6 +48,8 @@ type ReleaseWorkerSpec struct {
 	ReleaseWorkerEnqueuer workermanager.BackgroundJobEnqueuer
 	ValidationRecords     stores.ResourceValidationRecordStore
 	RegistryClients       registryClientProvider
+	ImageRegistryStore    stores.ClusterImageRegistryStore
+	ImageRegistryResource clusterresource.ClusterImageRegistryService
 	Env                   string
 }
 
@@ -68,6 +71,7 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 			newDeadlineReconciler(spec),
 			newSimulatorReconciler(spec),
 			newValidationReconciler(spec),
+			newRegistryPrerequisiteReconciler(spec),
 			newRenderReconciler(spec),
 			newApplyReconciler(spec),
 			newConvergeReconciler(spec),

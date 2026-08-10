@@ -855,6 +855,14 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
 
+	clusterImageRegistryStore := pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
+		SessionFactory: e.DBSession,
+	})
+	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
+		ClusterManager: e.ClusterManager,
+		Logger:         e.Logger,
+	})
+
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       e.Services.StackReleaseService,
 		EventRecorder:        e.Services.ReleaseEventRecorder,
@@ -881,6 +889,8 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 			SessionFactory: e.DBSession,
 		}),
 		ReleaseWorkerEnqueuer: e.WorkerManager,
+		ImageRegistryStore:    clusterImageRegistryStore,
+		ImageRegistryResource: clusterImageRegistryResource,
 		Env:                   e.Name,
 	})
 	e.WorkerManager.RegisterWorker(releaseWorker, models.StackReleaseOperand{})
@@ -904,20 +914,14 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
-	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
-		ClusterManager: e.ClusterManager,
-		Logger:         e.Logger,
-	})
 	clusterImageRegistryWorker := clusterimageregistryworker.NewClusterImageRegistryWorker(clusterimageregistryworker.ClusterImageRegistryWorkerSpec{
 		ClusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
 			SessionFactory: e.DBSession,
 		}),
-		ImageRegistryStore: pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
-			SessionFactory: e.DBSession,
-		}),
-		ClusterManager:  e.ClusterManager,
-		ClusterResource: clusterImageRegistryResource,
-		Env:             e.Name,
+		ImageRegistryStore: clusterImageRegistryStore,
+		ClusterManager:     e.ClusterManager,
+		ClusterResource:    clusterImageRegistryResource,
+		Env:                e.Name,
 	})
 	e.WorkerManager.RegisterWorker(clusterImageRegistryWorker, models.ClusterImageRegistryOperand{})
 

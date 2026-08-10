@@ -98,6 +98,9 @@ func (w *clusterImageRegistryWorker) Execute(ctx context.Context, operand worker
 			}
 			continue
 		}
+		if cluster.SharedCompute && registry.Status != nil && registry.Status.State == models.RegistryStatePending {
+			continue
+		}
 
 		if registry.Status != nil && registry.Status.State == models.RegistryStateRunning {
 			continue
