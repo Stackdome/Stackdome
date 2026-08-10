@@ -39,7 +39,6 @@ type StackResourceService interface {
 
 type StackResourceServiceSpec struct {
 	SessionFactory         db.SessionFactory
-	WorkspaceUserService   WorkspaceUserService
 	StorageService         StackStorageService
 	Logger                 logger.Logger
 	Permissions            auth.PermissionService
@@ -57,7 +56,6 @@ type stackResourceService struct {
 	clusterManager         clustermanager.ClusterManager
 	logger                 logger.Logger
 	sessionFactory         db.SessionFactory
-	workspaceUserService   WorkspaceUserService
 	storageService         StackStorageService
 	permissions            auth.PermissionService
 	clusterRegistryService ImageRegistryService
@@ -79,7 +77,6 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 	return &stackResourceService{
 		stackResourceStore:     stackResourceStore,
 		stackStore:             spec.StackStore,
-		workspaceUserService:   spec.WorkspaceUserService,
 		storageService:         spec.StorageService,
 		logger:                 spec.Logger,
 		sessionFactory:         spec.SessionFactory,

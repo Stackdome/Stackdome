@@ -16,7 +16,7 @@ During alpha, an organization can connect **one cluster**. The dashboard disable
 There is no in-place replace or migrate action. The dashboard exposes **Delete Cluster**, and the API deletes the cluster's in-cluster registry before removing the cluster record. Only after that deletion succeeds does **Add Cluster** become available again.
 
 <Warning>
-Treat delete-then-connect as recovery for an unused organization, not as workload migration. Stacks, workspace users, or Postgres addons that still reference the cluster can prevent its database record from being deleted. The operation does not move workloads or data, and deleting the in-cluster registry removes that registry from the old cluster. Remove dependent resources and back up anything you need before deleting the current cluster.
+Treat delete-then-connect as recovery for an unused organization, not as workload migration. Stacks or Postgres addons that still reference the cluster can prevent its database record from being deleted. The operation does not move workloads or data, and deleting the in-cluster registry removes that registry from the old cluster. Remove dependent resources and back up anything you need before deleting the current cluster.
 </Warning>
 
 ## Prerequisites

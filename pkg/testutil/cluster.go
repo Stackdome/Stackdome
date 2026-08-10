@@ -28,7 +28,6 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
 	storagev1alpha1 "stackdome.io/cluster-agent/api/storage/v1alpha1"
-	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
 
 // ClusterConfig holds configuration for test cluster setup
@@ -272,7 +271,6 @@ func (tc *TestCluster) getSchemeBuilder() runtime.SchemeBuilder {
 		corev1alpha1.AddToScheme,
 		registryv1alpha1.AddToScheme,
 		storagev1alpha1.AddToScheme,
-		usersv1alpha1.AddToScheme,
 		cmv1.AddToScheme,
 		clientgoscheme.AddToScheme,
 	}

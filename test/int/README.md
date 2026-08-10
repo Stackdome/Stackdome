@@ -86,11 +86,11 @@ The integration tests use a **4-phase bootstrap process**:
   - Environment variable loading (.env file support)
   - Structured logging with component prefixes
   - Resource access policy manager (Casbin)
-  - **All 18 services** with proper dependency injection
-  - **Cluster manager** with all 7 controllers:
+  - **All 17 services** with proper dependency injection
+  - **Cluster manager** with all 6 controllers:
     - Volume Controller, Stack Controller, PostgresAddon Controller
     - StackResource Controller, ImageBuild Controller
-    - WorkspaceUser Controller, ClusterImageRegistry Controller
+    - ClusterImageRegistry Controller
   - **Worker manager** with stack worker for async processing
   - Cluster resource services injection
   - RBAC policy initialization

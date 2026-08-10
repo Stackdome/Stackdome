@@ -30,7 +30,6 @@ import (
 	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 	registryv1alpha1 "stackdome.io/cluster-agent/api/registry/v1alpha1"
 	storagev1alpha1 "stackdome.io/cluster-agent/api/storage/v1alpha1"
-	usersv1alpha1 "stackdome.io/cluster-agent/api/users/v1alpha1"
 )
 
 type CredentialDecryptor interface {
@@ -375,10 +374,6 @@ func createScheme() (*runtime.Scheme, error) {
 
 	if err := buildsv1alpha1.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("failed to add buildsv1alpha1 scheme: %w", err)
-	}
-
-	if err := usersv1alpha1.AddToScheme(scheme); err != nil {
-		return nil, fmt.Errorf("failed to add userv1alpha1 scheme: %w", err)
 	}
 
 	if err := storagev1alpha1.AddToScheme(scheme); err != nil {

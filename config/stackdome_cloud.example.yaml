@@ -23,7 +23,6 @@ registry:
 features:
   customDomains: false
   externalPostgresImport: false
-  workspaceUsers: false
 
 signup:
   # cloudflare requires the origin to accept requests only from Cloudflare.
