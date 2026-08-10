@@ -35,6 +35,7 @@ func (*inactiveWorkerRuntimePolicy) OrganisationProvisioningMode() services.Prov
 func (*inactiveWorkerRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
 	return services.ProvisioningModeDatabaseOnly
 }
+func (*inactiveWorkerRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
 func (*inactiveWorkerRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
@@ -44,3 +45,7 @@ func (*inactiveWorkerRuntimePolicy) AdmitRollbackWithTx(context.Context, string)
 func (*inactiveWorkerRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return errors.TrialInactive()
 }
+func (*inactiveWorkerRuntimePolicy) AdmitStackMutationWithTx(context.Context, services.StackMutation) *errors.ServiceError {
+	return nil
+}
+func (*inactiveWorkerRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}

@@ -14,6 +14,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+const postgresDialectName = "postgres"
+
 const trialCapacityAdvisoryLockKey int64 = 0x535441434b444f4d
 
 type TrialAllocationStoreSpec struct {
@@ -42,7 +44,7 @@ func (s *trialAllocationStore) AcquireWithTx(ctx context.Context, organisationID
 		return nil, errors.GeneralError("failed to get trial allocation: %s", err.Error())
 	}
 
-	if tx.Name() == "postgres" {
+	if tx.Name() == postgresDialectName {
 		if err := tx.Exec("SELECT pg_advisory_xact_lock(?)", trialCapacityAdvisoryLockKey).Error; err != nil {
 			return nil, errors.GeneralError("failed to lock trial allocation capacity: %s", err.Error())
 		}
@@ -81,7 +83,7 @@ func (s *trialAllocationStore) AcquireWithTx(ctx context.Context, organisationID
 
 func findTrialAllocationForUpdate(tx *gorm.DB, organisationID string) (*models.TrialAllocation, error) {
 	query := tx
-	if tx.Name() == "postgres" {
+	if tx.Name() == postgresDialectName {
 		query = query.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	}
 	var allocation models.TrialAllocation

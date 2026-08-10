@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
+	models "github.com/Stackdome/stackdome/pkg/models"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -67,6 +68,32 @@ func (m *MockRuntimePolicy) AdmitRollbackWithTx(ctx context.Context, organisatio
 func (mr *MockRuntimePolicyMockRecorder) AdmitRollbackWithTx(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitRollbackWithTx", reflect.TypeOf((*MockRuntimePolicy)(nil).AdmitRollbackWithTx), ctx, organisationID)
+}
+
+// AdmitStackMutationWithTx mocks base method.
+func (m *MockRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AdmitStackMutationWithTx", ctx, mutation)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// AdmitStackMutationWithTx indicates an expected call of AdmitStackMutationWithTx.
+func (mr *MockRuntimePolicyMockRecorder) AdmitStackMutationWithTx(ctx, mutation any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitStackMutationWithTx", reflect.TypeOf((*MockRuntimePolicy)(nil).AdmitStackMutationWithTx), ctx, mutation)
+}
+
+// ApplyStackResourceDefaults mocks base method.
+func (m *MockRuntimePolicy) ApplyStackResourceDefaults(resource *models.StackResource) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "ApplyStackResourceDefaults", resource)
+}
+
+// ApplyStackResourceDefaults indicates an expected call of ApplyStackResourceDefaults.
+func (mr *MockRuntimePolicyMockRecorder) ApplyStackResourceDefaults(resource any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStackResourceDefaults", reflect.TypeOf((*MockRuntimePolicy)(nil).ApplyStackResourceDefaults), resource)
 }
 
 // DraftProvisioningMode mocks base method.

@@ -146,6 +146,11 @@ func (s *stackReleaseService) InternalCreateRelease(ctx context.Context, stackID
 }
 
 func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *models.Stack, cause models.ReleaseCause, createdBy string) (*models.StackRelease, *errors.ServiceError) {
+	for _, resource := range stack.StackResources {
+		if resource != nil {
+			s.runtimePolicy.ApplyStackResourceDefaults(resource)
+		}
+	}
 	snapshot, err := models.NewStackSnapshot(stack)
 	if err != nil {
 		return nil, errors.GeneralError("failed to create stack snapshot: %s", err.Error())

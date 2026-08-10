@@ -9,6 +9,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -59,11 +60,53 @@ func newApplyStackTestEnv(ctrl *gomock.Controller) *applyStackTestEnv {
 
 func TestApplyStack_CloudDraftDoesNotEnqueueCompute(t *testing.T) {
 	ctx := context.Background()
+	replicas := int32(8)
+	resource := &models.StackResource{Name: "web", Replicas: &replicas}
+	spec := &models.Stack{
+		Name: "demo", ProjectID: "project-1", OrganisationID: "org-1", UserID: "user-1",
+		StackResources: []*models.StackResource{resource},
+	}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	env := newApplyStackTestEnv(ctrl)
+	env.svc.runtimePolicy = newCloudRuntimePolicyForTest()
+
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", "project-1").Return(nil, errors.NotFound("missing")).Times(2)
+	env.permissions.EXPECT().Check(ctx, "project-1", auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
+	env.validator.EXPECT().ValidateForCreate(ctx, spec).DoAndReturn(func(_ context.Context, got *models.Stack) *errors.ServiceError {
+		assert.Equal(t, int32(1), *got.StackResources[0].Replicas)
+		return nil
+	})
+	namespace := &models.Namespace{Name: "ns-demo"}
+	env.namespaceService.EXPECT().PrepareNamespaceForStack(ctx, spec).Return(namespace, nil)
+	env.clusterService.EXPECT().GetClusterForOrg(ctx, "org-1").Return(&models.Cluster{ID: "cluster-1"}, nil)
+	env.stackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+		func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+			return fn(ctx)
+		})
+	env.namespaceService.EXPECT().CreateInDBWithTx(ctx, namespace).Return(&models.Namespace{ID: "ns-1", Name: "ns-demo"}, nil)
+	createdShell := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: "project-1"}
+	env.stackStore.EXPECT().CreateWithTx(ctx, gomock.Any()).Return(createdShell, nil)
+	env.resourceService.EXPECT().InternalCreateWithTx(ctx, createdShell, resource).Return(resource, nil)
+	env.referenceService.EXPECT().ReprojectSpec(ctx, "stack-1").Return(nil)
+	created := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: "project-1"}
+	env.stackStore.EXPECT().GetByID(ctx, "stack-1").Return(created, nil)
+
+	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
+	assert.Nil(t, serr)
+	assert.True(t, wasCreated)
+	assert.Equal(t, created, got)
+}
+
+func TestApplyStack_CloudLimitRejectsBeforePersistence(t *testing.T) {
+	ctx := context.Background()
 	spec := &models.Stack{Name: "demo", ProjectID: "project-1", OrganisationID: "org-1", UserID: "user-1"}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
-	env.svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(StackdomeCloudRuntimePolicySpec{Trials: &fakeCloudTrialService{}, IsolationPolicyVersion: "v1"})
+	env.svc.runtimePolicy = newCloudRuntimePolicyWithStoreForTest(&fakeStackLimitStore{
+		usage: stores.StackUsage{StackCount: 2},
+	})
 
 	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", "project-1").Return(nil, errors.NotFound("missing")).Times(2)
 	env.permissions.EXPECT().Check(ctx, "project-1", auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
@@ -75,17 +118,13 @@ func TestApplyStack_CloudDraftDoesNotEnqueueCompute(t *testing.T) {
 		func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 			return fn(ctx)
 		})
-	env.namespaceService.EXPECT().CreateInDBWithTx(ctx, namespace).Return(&models.Namespace{ID: "ns-1", Name: "ns-demo"}, nil)
-	createdShell := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: "project-1"}
-	env.stackStore.EXPECT().CreateWithTx(ctx, gomock.Any()).Return(createdShell, nil)
-	env.referenceService.EXPECT().ReprojectSpec(ctx, "stack-1").Return(nil)
-	created := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: "project-1"}
-	env.stackStore.EXPECT().GetByID(ctx, "stack-1").Return(created, nil)
 
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
-	assert.Nil(t, serr)
-	assert.True(t, wasCreated)
-	assert.Equal(t, created, got)
+	assert.Nil(t, got)
+	assert.False(t, wasCreated)
+	if assert.NotNil(t, serr) {
+		assert.Contains(t, serr.Reason, "maximum of 2 stacks")
+	}
 }
 
 // TestApplyStack_CreatesWhenMissing: no stack with the spec's name exists in
@@ -139,12 +178,16 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 	ctx := context.Background()
 	projectID := "project-1"
 	stackID := "stack-1"
-	existing := &models.Stack{ID: stackID, Name: "demo", ProjectID: projectID, Namespace: "ns-demo", ClusterID: "cluster-1"}
-	spec := &models.Stack{Name: "demo", ProjectID: projectID}
+	replicas := int32(4)
+	resource := &models.StackResource{Name: "web", Replicas: &replicas}
+	existing := &models.Stack{ID: stackID, Name: "demo", ProjectID: projectID, OrganisationID: "org-1", Namespace: "ns-demo", ClusterID: "cluster-1"}
+	spec := &models.Stack{Name: "demo", ProjectID: projectID, StackResources: []*models.StackResource{resource}}
 
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
+	stackLimits := &fakeStackLimitStore{}
+	env.svc.runtimePolicy = newCloudRuntimePolicyWithStoreForTest(stackLimits)
 
 	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).Return(existing, nil)
 	env.permissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
@@ -155,6 +198,7 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 		DoAndReturn(func(_ context.Context, _, got *models.Stack) *errors.ServiceError {
 			// The spec inherits identity from the resolved stack.
 			assert.Equal(t, stackID, got.ID)
+			assert.Equal(t, int32(1), *got.StackResources[0].Replicas)
 			return nil
 		})
 	env.stackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
@@ -174,6 +218,7 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 	assert.Nil(t, serr)
 	assert.False(t, wasCreated)
 	assert.Equal(t, updated, got)
+	assert.Equal(t, stackID, stackLimits.excludeStackID)
 }
 
 // TestApplyStack_ConflictOnDuplicateNameRecheck: the apply-level project-scoped

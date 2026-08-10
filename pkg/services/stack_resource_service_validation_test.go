@@ -8,6 +8,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
@@ -16,7 +17,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 	ctx := context.Background()
 	stackID := "stack-123"
 	projectID := "project-456"
-	stack := &models.Stack{ID: stackID, ProjectID: projectID}
+	stack := &models.Stack{ID: stackID, ProjectID: projectID, OrganisationID: "org-1"}
 
 	t.Run("field errors from the validator are returned as a 400 ValidationFailed", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -32,6 +33,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 		}
 
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
@@ -76,16 +78,22 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
+			runtimePolicy:      newCloudRuntimePolicyForTest(),
 			referenceService:   mockReferenceService,
 			domainNameService:  mockDomains,
 		}
 
-		resource := &models.StackResource{StackID: stackID, Name: "web"}
+		replicas := int32(9)
+		resource := &models.StackResource{StackID: stackID, Name: "web", Replicas: &replicas}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
 		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
 		mockResourceStore.EXPECT().GetByStackID(ctx, stackID).Return(nil, nil)
-		mockValidator.EXPECT().Validate(ctx, stack, resource, ([]*models.StackResource)(nil)).Return(nil, nil)
+		mockValidator.EXPECT().Validate(ctx, stack, resource, ([]*models.StackResource)(nil)).DoAndReturn(
+			func(_ context.Context, _ *models.Stack, got *models.StackResource, _ []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+				assert.Equal(t, int32(1), *got.Replicas)
+				return nil, nil
+			})
 
 		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
@@ -109,6 +117,43 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 		}
 	})
 
+	t.Run("cloud resource limit rejects before persistence", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		mockStackStore := mocks.NewMockStackStore(ctrl)
+		mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
+		mockPermissions := mocks.NewMockPermissionService(ctrl)
+		mockValidator := mocks.NewMockValidator(ctrl)
+
+		svc := &stackResourceService{
+			stackStore:         mockStackStore,
+			stackResourceStore: mockResourceStore,
+			permissions:        mockPermissions,
+			resourceValidator:  mockValidator,
+			runtimePolicy: newCloudRuntimePolicyWithStoreForTest(&fakeStackLimitStore{
+				usage: stores.StackUsage{StackResourceCount: 6},
+			}),
+		}
+		resource := &models.StackResource{StackID: stackID, Name: "web"}
+
+		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockResourceStore.EXPECT().GetByStackID(ctx, stackID).Return(nil, nil)
+		mockValidator.EXPECT().Validate(ctx, stack, resource, ([]*models.StackResource)(nil)).Return(nil, nil)
+		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			})
+
+		got, serr := svc.Create(ctx, resource)
+
+		assert.Nil(t, got)
+		if assert.NotNil(t, serr) {
+			assert.Contains(t, serr.Reason, "maximum of 6 stack resources")
+		}
+	})
+
 	t.Run("infra ServiceError from the validator is propagated and the store is never called", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
@@ -123,6 +168,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 		}
 
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
@@ -147,7 +193,7 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 	stackID := "stack-123"
 	projectID := "project-456"
 	resourceName := "web"
-	stack := &models.Stack{ID: stackID, ProjectID: projectID}
+	stack := &models.Stack{ID: stackID, ProjectID: projectID, OrganisationID: "org-1"}
 
 	t.Run("siblings passed to the validator exclude the resource being updated", func(t *testing.T) {
 		ctrl := gomock.NewController(t)
@@ -165,12 +211,14 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
+			runtimePolicy:      newCloudRuntimePolicyForTest(),
 			referenceService:   mockReferenceService,
 			domainNameService:  mockDomains,
 		}
 
 		existing := &models.StackResource{ID: "resource-1", StackID: stackID, Name: resourceName}
-		update := &models.StackResource{}
+		replicas := int32(7)
+		update := &models.StackResource{Replicas: &replicas}
 		worker := &models.StackResource{ID: "resource-2", StackID: stackID, Name: "worker"}
 		all := []*models.StackResource{existing, worker}
 
@@ -181,6 +229,7 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 
 		mockValidator.EXPECT().Validate(ctx, stack, update, gomock.Any()).DoAndReturn(
 			func(_ context.Context, _ *models.Stack, _ *models.StackResource, siblings []*models.StackResource) ([]errors.FieldError, *errors.ServiceError) {
+				assert.Equal(t, int32(1), *update.Replicas)
 				assert.Len(t, siblings, 1)
 				assert.Equal(t, "worker", siblings[0].Name)
 				for _, s := range siblings {

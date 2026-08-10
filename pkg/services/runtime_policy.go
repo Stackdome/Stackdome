@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
+	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
 type ProvisioningMode string
@@ -21,6 +23,24 @@ type RuntimePolicy interface {
 	AdmitFirstReleaseWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitRollbackWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
+	AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError
+	ApplyStackResourceDefaults(resource *models.StackResource)
+}
+
+type StackMutationKind string
+
+const (
+	StackMutationCreate         StackMutationKind = "create_stack"
+	StackMutationUpdate         StackMutationKind = "update_stack"
+	StackMutationCreateResource StackMutationKind = "create_resource"
+	StackMutationUpdateResource StackMutationKind = "update_resource"
+)
+
+type StackMutation struct {
+	Kind                 StackMutationKind
+	OrganisationID       string
+	StackID              string
+	DesiredResourceCount int64
 }
 
 type selfHostedRuntimePolicy struct{}
@@ -53,14 +73,28 @@ func (selfHostedRuntimePolicy) RequireActiveAllocation(context.Context, string) 
 	return nil
 }
 
+func (selfHostedRuntimePolicy) AdmitStackMutationWithTx(context.Context, StackMutation) *errors.ServiceError {
+	return nil
+}
+
+func (selfHostedRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}
+
 type stackdomeCloudRuntimePolicy struct {
 	trials                 CloudTrialService
+	stackLimits            stores.StackLimitStore
 	isolationPolicyVersion string
+	maxStacks              int64
+	maxResources           int64
+	replicas               int32
 }
 
 type StackdomeCloudRuntimePolicySpec struct {
 	Trials                 CloudTrialService
+	StackLimits            stores.StackLimitStore
 	IsolationPolicyVersion string
+	MaxStacks              int64
+	MaxResources           int64
+	Replicas               int32
 }
 
 func NewStackdomeCloudRuntimePolicy(spec StackdomeCloudRuntimePolicySpec) RuntimePolicy {
@@ -70,9 +104,25 @@ func NewStackdomeCloudRuntimePolicy(spec StackdomeCloudRuntimePolicySpec) Runtim
 	if spec.IsolationPolicyVersion == "" {
 		panic("services.NewStackdomeCloudRuntimePolicy: IsolationPolicyVersion is required")
 	}
+	if spec.StackLimits == nil {
+		panic("services.NewStackdomeCloudRuntimePolicy: StackLimitStore is required")
+	}
+	if spec.MaxStacks <= 0 {
+		panic("services.NewStackdomeCloudRuntimePolicy: MaxStacks must be greater than zero")
+	}
+	if spec.MaxResources <= 0 {
+		panic("services.NewStackdomeCloudRuntimePolicy: MaxResources must be greater than zero")
+	}
+	if spec.Replicas <= 0 {
+		panic("services.NewStackdomeCloudRuntimePolicy: Replicas must be greater than zero")
+	}
 	return &stackdomeCloudRuntimePolicy{
 		trials:                 spec.Trials,
+		stackLimits:            spec.StackLimits,
 		isolationPolicyVersion: spec.IsolationPolicyVersion,
+		maxStacks:              spec.MaxStacks,
+		maxResources:           spec.MaxResources,
+		replicas:               spec.Replicas,
 	}
 }
 
@@ -101,4 +151,47 @@ func (p *stackdomeCloudRuntimePolicy) AdmitRollbackWithTx(ctx context.Context, o
 func (p *stackdomeCloudRuntimePolicy) RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError {
 	_, serr := p.trials.RequireActive(ctx, organisationID)
 	return serr
+}
+
+func (p *stackdomeCloudRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
+	excludedStackID := ""
+	switch mutation.Kind {
+	case StackMutationCreate, StackMutationCreateResource, StackMutationUpdateResource:
+	case StackMutationUpdate:
+		if mutation.StackID == "" {
+			return errors.GeneralError("stack ID is required for a whole-stack update")
+		}
+		excludedStackID = mutation.StackID
+	default:
+		return errors.GeneralError("unsupported stack mutation kind %q", mutation.Kind)
+	}
+	usage, serr := p.stackLimits.LockOrganisationAndGetUsageWithTx(ctx, mutation.OrganisationID, excludedStackID)
+	if serr != nil {
+		return serr
+	}
+
+	stackCount := usage.StackCount
+	resourceCount := usage.StackResourceCount
+	switch mutation.Kind {
+	case StackMutationCreate:
+		stackCount++
+		resourceCount += mutation.DesiredResourceCount
+	case StackMutationUpdate:
+		resourceCount += mutation.DesiredResourceCount
+	case StackMutationCreateResource:
+		resourceCount++
+	case StackMutationUpdateResource:
+	}
+	if stackCount > p.maxStacks {
+		return errors.BadRequest("Stackdome Cloud allows a maximum of %d stacks per organisation", p.maxStacks)
+	}
+	if resourceCount > p.maxResources {
+		return errors.BadRequest("Stackdome Cloud allows a maximum of %d stack resources per organisation", p.maxResources)
+	}
+	return nil
+}
+
+func (p *stackdomeCloudRuntimePolicy) ApplyStackResourceDefaults(resource *models.StackResource) {
+	replicas := p.replicas
+	resource.Replicas = &replicas
 }

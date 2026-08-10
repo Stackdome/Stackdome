@@ -248,6 +248,33 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			stack = &models.Stack{ID: createEventsStackID, OrganisationID: createEventsOrgID}
 		})
 
+		It("applies runtime replica defaults before capturing the release snapshot", func() {
+			replicas := int32(5)
+			resource := &models.StackResource{Name: "web", Replicas: &replicas}
+			stack.StackResources = []*models.StackResource{resource}
+			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
+
+			runtimePolicy.EXPECT().ApplyStackResourceDefaults(resource).Do(func(got *models.StackResource) {
+				configuredReplicas := int32(1)
+				got.Replicas = &configuredReplicas
+			})
+			runTxInline()
+			runtimePolicy.EXPECT().AdmitFirstReleaseWithTx(ctx, createEventsOrgID).Return(nil)
+			releaseStore.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
+				func(_ context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
+					Expect(release.Snapshot.Resources).To(HaveLen(1))
+					Expect(*release.Snapshot.Resources[0].Replicas).To(Equal(int32(1)))
+					return created, nil
+				})
+			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
+			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
+			enqueuer.EXPECT().EnqueueAfterCommit(ctx, models.StackReleaseOperand{ID: "rel-1"}).Return(nil)
+
+			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
+			Expect(serr).To(BeNil())
+			Expect(got).To(Equal(created))
+		})
+
 		It("records release_created inside the creation transaction as its final act", func() {
 			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
 			runTxInline()

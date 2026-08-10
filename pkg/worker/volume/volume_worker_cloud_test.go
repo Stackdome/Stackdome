@@ -38,6 +38,7 @@ func (*inactiveVolumeRuntimePolicy) OrganisationProvisioningMode() services.Prov
 func (*inactiveVolumeRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
 	return services.ProvisioningModeDatabaseOnly
 }
+func (*inactiveVolumeRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
 func (*inactiveVolumeRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
@@ -47,3 +48,7 @@ func (*inactiveVolumeRuntimePolicy) AdmitRollbackWithTx(context.Context, string)
 func (*inactiveVolumeRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return errors.TrialInactive()
 }
+func (*inactiveVolumeRuntimePolicy) AdmitStackMutationWithTx(context.Context, services.StackMutation) *errors.ServiceError {
+	return nil
+}
+func (*inactiveVolumeRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}

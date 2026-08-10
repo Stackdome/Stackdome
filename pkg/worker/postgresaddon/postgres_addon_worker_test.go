@@ -72,6 +72,7 @@ func (*inactiveAddonRuntimePolicy) OrganisationProvisioningMode() services.Provi
 func (*inactiveAddonRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
 	return services.ProvisioningModeDatabaseOnly
 }
+func (*inactiveAddonRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
 func (*inactiveAddonRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
 	return nil
 }
@@ -81,3 +82,7 @@ func (*inactiveAddonRuntimePolicy) AdmitRollbackWithTx(context.Context, string) 
 func (*inactiveAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
 	return errors.TrialInactive()
 }
+func (*inactiveAddonRuntimePolicy) AdmitStackMutationWithTx(context.Context, services.StackMutation) *errors.ServiceError {
+	return nil
+}
+func (*inactiveAddonRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}

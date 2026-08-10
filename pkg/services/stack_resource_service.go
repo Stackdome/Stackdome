@@ -48,6 +48,7 @@ type StackResourceServiceSpec struct {
 	StackDomainService     StackDomainsService
 	ReferenceService       ReferenceService
 	ResourceValidator      stackresourcevalidator.Validator
+	RuntimePolicy          RuntimePolicy
 }
 
 type stackResourceService struct {
@@ -62,11 +63,15 @@ type stackResourceService struct {
 	domainNameService      StackDomainsService
 	referenceService       ReferenceService
 	resourceValidator      stackresourcevalidator.Validator
+	runtimePolicy          RuntimePolicy
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
 	if spec.ResourceValidator == nil {
 		panic("services.NewStackResourceService: ResourceValidator is required")
+	}
+	if spec.RuntimePolicy == nil {
+		panic("services.NewStackResourceService: RuntimePolicy is required")
 	}
 	stackResourceStore := spec.StackResourceStore
 	if stackResourceStore == nil {
@@ -85,6 +90,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		domainNameService:      spec.StackDomainService,
 		referenceService:       spec.ReferenceService,
 		resourceValidator:      spec.ResourceValidator,
+		runtimePolicy:          spec.RuntimePolicy,
 	}
 }
 
@@ -100,6 +106,7 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 	if permErr := s.permissions.Check(ctx, stack.ProjectID, auth.ResourceStacks, resource.StackID, auth.ActionWrite); permErr != nil {
 		return nil, permErr
 	}
+	s.runtimePolicy.ApplyStackResourceDefaults(resource)
 
 	siblings, sErr := s.stackResourceStore.GetByStackID(ctx, resource.StackID)
 	if sErr != nil {
@@ -115,6 +122,13 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 
 	var created *models.StackResource
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if admissionErr := s.runtimePolicy.AdmitStackMutationWithTx(txCtx, StackMutation{
+			Kind:           StackMutationCreateResource,
+			OrganisationID: stack.OrganisationID,
+			StackID:        stack.ID,
+		}); admissionErr != nil {
+			return admissionErr
+		}
 		var createErr *errors.ServiceError
 		created, createErr = s.InternalCreateWithTx(txCtx, stack, resource)
 		if createErr != nil {
@@ -145,6 +159,7 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 	resource.StackID = stackID
 	resource.ID = existing.ID
 	resource.Name = resourceName
+	s.runtimePolicy.ApplyStackResourceDefaults(resource)
 
 	all, sErr := s.stackResourceStore.GetByStackID(ctx, stackID)
 	if sErr != nil {
@@ -166,6 +181,13 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if admissionErr := s.runtimePolicy.AdmitStackMutationWithTx(txCtx, StackMutation{
+			Kind:           StackMutationUpdateResource,
+			OrganisationID: stack.OrganisationID,
+			StackID:        stack.ID,
+		}); admissionErr != nil {
+			return admissionErr
+		}
 		var updateErr *errors.ServiceError
 		updated, updateErr = s.InternalUpdateWithTx(txCtx, stack, existing.ID, resource)
 		if updateErr != nil {

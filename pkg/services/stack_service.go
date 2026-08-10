@@ -204,6 +204,7 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 		return nil, errors.Conflict("stack with name '%s' already exists", spec.Name)
 	}
 
+	s.applyRuntimeResourceDefaults(spec.StackResources)
 	s.logger.Info(ctx, "running validation for stack creation: %s", spec.Name)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
 		return nil, err
@@ -258,6 +259,13 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 }
 
 func (s *stackService) InternalCreateWithTx(ctx context.Context, spec *models.Stack, namespaceForStack *models.Namespace) (*models.Stack, *errors.ServiceError) {
+	if err := s.runtimePolicy.AdmitStackMutationWithTx(ctx, StackMutation{
+		Kind:                 StackMutationCreate,
+		OrganisationID:       spec.OrganisationID,
+		DesiredResourceCount: int64(len(spec.StackResources)),
+	}); err != nil {
+		return nil, err
+	}
 	namespace, err := s.namespaceService.CreateInDBWithTx(ctx, namespaceForStack)
 	if err != nil {
 		return nil, err
@@ -325,6 +333,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	spec.OrganisationID = existingStack.OrganisationID
 	spec.ProjectID = existingStack.ProjectID
 	spec.UserID = existingStack.UserID
+	s.applyRuntimeResourceDefaults(spec.StackResources)
 
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
 		return nil, err
@@ -428,6 +437,14 @@ func (s *stackService) InternalUpdateShellWithTx(ctx context.Context, spec *mode
 }
 
 func (s *stackService) InternalUpdateWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+	if err := s.runtimePolicy.AdmitStackMutationWithTx(ctx, StackMutation{
+		Kind:                 StackMutationUpdate,
+		OrganisationID:       existingStack.OrganisationID,
+		StackID:              existingStack.ID,
+		DesiredResourceCount: int64(len(spec.StackResources)),
+	}); err != nil {
+		return nil, err
+	}
 	desiredVolumes := spec.Volumes
 	desiredResources := spec.StackResources
 	shellSpec := stackShellFrom(spec)
@@ -458,6 +475,14 @@ func (s *stackService) InternalUpdateWithTx(ctx context.Context, spec *models.St
 		return nil, errors.GeneralError("failed to get updated stack '%s': %s", updatedStack.Name, err.Error())
 	}
 	return stack, nil
+}
+
+func (s *stackService) applyRuntimeResourceDefaults(resources []*models.StackResource) {
+	for _, resource := range resources {
+		if resource != nil {
+			s.runtimePolicy.ApplyStackResourceDefaults(resource)
+		}
+	}
 }
 
 func (s *stackService) GetStack(ctx context.Context, ID string) (*models.Stack, *errors.ServiceError) {

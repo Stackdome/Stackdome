@@ -472,7 +472,11 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		})
 		e.RuntimePolicy = services.NewStackdomeCloudRuntimePolicy(services.StackdomeCloudRuntimePolicySpec{
 			Trials:                 cloudTrials,
+			StackLimits:            pgstore.NewStackLimitStore(),
 			IsolationPolicyVersion: e.Config.StackdomeCloud.Isolation.PolicyVersion,
+			MaxStacks:              e.Config.StackdomeCloud.Limits.MaxStacksPerOrganization,
+			MaxResources:           e.Config.StackdomeCloud.Limits.MaxStackResourcesPerOrganization,
+			Replicas:               e.Config.StackdomeCloud.Limits.ReplicasPerStackResource,
 		})
 	}
 
@@ -638,6 +642,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		StackDomainService:     stackDomainService,
 		ReferenceService:       referenceService,
 		ResourceValidator:      resourceValidator,
+		RuntimePolicy:          e.RuntimePolicy,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
