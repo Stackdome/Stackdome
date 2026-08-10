@@ -7082,6 +7082,7 @@ components:
           cluster_ca_data: cluster_ca_data
           organisation_id: organisation_id
           cluster_sa_token: cluster_sa_token
+          shared_compute: true
           name: name
           cluster_image_registry:
             organisation_id: organisation_id
@@ -7109,11 +7110,11 @@ components:
                 observed_generation: 1
                 status: status
           id: id
-          platform: true
         - cluster_url: cluster_url
           cluster_ca_data: cluster_ca_data
           organisation_id: organisation_id
           cluster_sa_token: cluster_sa_token
+          shared_compute: true
           name: name
           cluster_image_registry:
             organisation_id: organisation_id
@@ -7141,7 +7142,6 @@ components:
                 observed_generation: 1
                 status: status
           id: id
-          platform: true
       properties:
         items:
           items:
@@ -7156,6 +7156,7 @@ components:
         cluster_ca_data: cluster_ca_data
         organisation_id: organisation_id
         cluster_sa_token: cluster_sa_token
+        shared_compute: true
         name: name
         cluster_image_registry:
           organisation_id: organisation_id
@@ -7183,7 +7184,6 @@ components:
               observed_generation: 1
               status: status
         id: id
-        platform: true
       properties:
         id:
           type: string
@@ -7191,7 +7191,7 @@ components:
           type: string
         organisation_id:
           type: string
-        platform:
+        shared_compute:
           readOnly: true
           type: boolean
         cluster_url:

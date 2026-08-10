@@ -55,8 +55,8 @@ func basicProvisioningStack(name string) *openapi.Stack {
 	return openapi.NewStack(name, *spec)
 }
 
-var _ = Describe("Platform provisioning", func() {
-	It("seeds a Platform=true cluster and wildcard TLS at boot", func() {
+var _ = Describe("Shared-compute provisioning", func() {
+	It("seeds a SharedCompute=true cluster and wildcard TLS at boot", func() {
 		ctx := context.Background()
 		env := GetEnvironment()
 		db := env.Database.GetSessionFactory().New(ctx)
@@ -65,10 +65,10 @@ var _ = Describe("Platform provisioning", func() {
 		var platformOrg models.Organisation
 		Expect(db.Where("platform = ?", true).Model(&models.Organisation{}).First(&platformOrg).Error).To(Succeed())
 
-		By("verifying the platform org owns a Platform=true cluster")
-		var platformCluster models.Cluster
-		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&platformCluster).Error).To(Succeed())
-		Expect(platformCluster.Platform).To(BeTrue())
+		By("verifying the platform org owns a SharedCompute=true cluster")
+		var sharedComputeCluster models.Cluster
+		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&sharedComputeCluster).Error).To(Succeed())
+		Expect(sharedComputeCluster.SharedCompute).To(BeTrue())
 
 		By("verifying organisation domains remain custom-only")
 		var domainCount int64
@@ -100,7 +100,7 @@ var _ = Describe("Platform provisioning", func() {
 			Name:      models.PlatformWildcardTLSName,
 		}, certificate)).To(Succeed())
 		Expect(certificate.Spec.SecretName).To(Equal(models.PlatformWildcardTLSName))
-		Expect(certificate.Spec.DNSNames).To(Equal([]string{"*." + bootstrap.PlatformProvisioningBaseDomain}))
+		Expect(certificate.Spec.DNSNames).To(Equal([]string{"*." + bootstrap.SharedComputeProvisioningBaseDomain}))
 		Expect(certificate.Spec.IssuerRef.Name).To(Equal(models.DNSIssuerName))
 		Expect(certificate.Spec.IssuerRef.Kind).To(Equal(cmv1.IssuerKind))
 
@@ -116,16 +116,17 @@ var _ = Describe("Platform provisioning", func() {
 		Expect(registryCount).To(BeZero())
 	})
 
-	It("keeps organisation domains custom-only, seeds the registry, and falls back to the platform cluster", func() {
+	It("keeps organisation domains custom-only, seeds the registry, and falls back to the shared-compute cluster", func() {
 		ctx := context.Background()
 		db := GetEnvironment().Database.GetSessionFactory().New(ctx)
 		projectName := models.DefaultProjectName
 
-		By("resolving the seeded platform cluster")
+		By("resolving the seeded shared-compute cluster")
 		var platformOrg models.Organisation
 		Expect(db.Where("platform = ?", true).Model(&models.Organisation{}).First(&platformOrg).Error).To(Succeed())
-		var platformCluster models.Cluster
-		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&platformCluster).Error).To(Succeed())
+		var sharedComputeCluster models.Cluster
+		Expect(db.Where(&models.Cluster{OrganisationID: platformOrg.ID}).First(&sharedComputeCluster).Error).To(Succeed())
+		Expect(sharedComputeCluster.SharedCompute).To(BeTrue())
 
 		By("signing up a fresh user with a new organisation")
 		ts := time.Now().UnixNano()
@@ -146,12 +147,12 @@ var _ = Describe("Platform provisioning", func() {
 			Count(&domainCount).Error).To(Succeed())
 		Expect(domainCount).To(BeZero())
 
-		By("verifying the org was seeded a <slug>-<shortOrgID>-<shortClusterID> registry on the platform cluster")
-		expectedRegistry := fmt.Sprintf("%s-%s-%s", orgSlug, shortTestID(newOrgID), shortTestID(platformCluster.ID))
+		By("verifying the org was seeded a <slug>-<shortOrgID>-<shortClusterID> registry on the shared-compute cluster")
+		expectedRegistry := fmt.Sprintf("%s-%s-%s", orgSlug, shortTestID(newOrgID), shortTestID(sharedComputeCluster.ID))
 		var registry models.ClusterImageRegistry
 		Expect(db.Where(&models.ClusterImageRegistry{OrganisationID: newOrgID}).First(&registry).Error).To(Succeed())
 		Expect(registry.Name).To(Equal(expectedRegistry))
-		Expect(registry.ClusterID).To(Equal(platformCluster.ID))
+		Expect(registry.ClusterID).To(Equal(sharedComputeCluster.ID))
 
 		By("creating and deploying a stack with a publicly exposed port in the new org")
 		newClient := shared.AuthenticatedClient(newToken)
@@ -170,12 +171,12 @@ var _ = Describe("Platform provisioning", func() {
 			Expect(resp.StatusCode).To(Equal(http.StatusNoContent))
 		})
 
-		By("verifying the stack resolved to the platform cluster via read-time fallback")
+		By("verifying the stack resolved to the shared-compute cluster via read-time fallback")
 		var stackRow models.Stack
 		Expect(db.First(&stackRow, "id = ?", stackID).Error).To(Succeed())
-		Expect(stackRow.ClusterID).To(Equal(platformCluster.ID))
+		Expect(stackRow.ClusterID).To(Equal(sharedComputeCluster.ID))
 
-		By("waiting for the stack to become Ready on the platform cluster")
+		By("waiting for the stack to become Ready on the shared-compute cluster")
 		shared.WaitForStackReady(newClient, newOrgID, projectName, stackID, 5*time.Minute)
 
 		By("verifying the exposed port received a deterministic platform hostname")
@@ -183,7 +184,7 @@ var _ = Describe("Platform provisioning", func() {
 			var stackDomain models.StackDomain
 			g.Expect(db.Where(&models.StackDomain{StackID: stackID}).First(&stackDomain).Error).To(Succeed())
 			g.Expect(stackDomain.Fqdn).To(MatchRegexp(
-				"^web-[a-f0-9]{8}\\." + regexp.QuoteMeta(bootstrap.PlatformProvisioningBaseDomain) + "$",
+				"^web-[a-f0-9]{8}\\." + regexp.QuoteMeta(bootstrap.SharedComputeProvisioningBaseDomain) + "$",
 			))
 		}, 2*time.Minute, 5*time.Second).Should(Succeed())
 	})
@@ -265,13 +266,13 @@ var _ = Describe("Platform provisioning", func() {
 			shared.WaitForStackDeleted(client, orgID, projectName, stackID, 1*time.Minute)
 		})
 
-		By("verifying the stack resolved to the org's own cluster, not the platform cluster")
+		By("verifying the stack resolved to the org's own cluster, not the shared-compute cluster")
 		var stackRow models.Stack
 		Expect(db.First(&stackRow, "id = ?", stackID).Error).To(Succeed())
 		Expect(stackRow.ClusterID).To(Equal(ownedClusterID))
-		var platformCluster models.Cluster
-		Expect(db.Where(&models.Cluster{Platform: true}).First(&platformCluster).Error).To(Succeed())
-		Expect(stackRow.ClusterID).NotTo(Equal(platformCluster.ID))
+		var sharedComputeCluster models.Cluster
+		Expect(db.Where(&models.Cluster{SharedCompute: true}).First(&sharedComputeCluster).Error).To(Succeed())
+		Expect(stackRow.ClusterID).NotTo(Equal(sharedComputeCluster.ID))
 
 		By("waiting for the stack to become Ready on the owned cluster")
 		shared.WaitForStackReady(client, orgID, projectName, stackID, 5*time.Minute)
@@ -292,7 +293,7 @@ var _ = Describe("Platform provisioning", func() {
 
 			// Distinct resource name: image_builds rows are keyed by the CR
 			// name <resource>-<commit>, and the shared-fixture name at the
-			// same commit collides with the platform-cluster build spec.
+			// same commit collides with the shared-compute cluster build spec.
 			const ownedBuildResourceName = "owned-app"
 			buildStack := shared.CreateStackWithNamedBuildSource("owned-build", ownedBuildResourceName, shared.BuildSourceRepoURL)
 			buildCreated, _ := shared.CreateStackAndDeploy(client, orgID, projectName, buildStack)
@@ -327,10 +328,10 @@ var _ = Describe("Platform provisioning", func() {
 		}
 
 		By("verifying builds fail fast once the owned cluster has no registry, even though another cluster's registry row exists")
-		// DB-only row on the platform cluster: resolution must ignore it.
+		// DB-only row on the shared-compute cluster: resolution must ignore it.
 		otherClusterRegistry := &models.ClusterImageRegistry{
 			OrganisationID:     orgID,
-			ClusterID:          platformCluster.ID,
+			ClusterID:          sharedComputeCluster.ID,
 			Name:               fmt.Sprintf("other-cluster-reg-%d", ts),
 			BackendStorageSize: models.DefaultRegistryStorageSize,
 		}

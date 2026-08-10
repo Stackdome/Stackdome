@@ -203,17 +203,17 @@ func (mr *MockClusterServiceMockRecorder) InternalUpdateClusterInfo(ctx, cluster
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpdateClusterInfo", reflect.TypeOf((*MockClusterService)(nil).InternalUpdateClusterInfo), ctx, clusterID, info)
 }
 
-// InternalUpsertPlatformCluster mocks base method.
-func (m *MockClusterService) InternalUpsertPlatformCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+// InternalUpsertSharedComputeCluster mocks base method.
+func (m *MockClusterService) InternalUpsertSharedComputeCluster(ctx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalUpsertPlatformCluster", ctx, spec)
+	ret := m.ctrl.Call(m, "InternalUpsertSharedComputeCluster", ctx, spec)
 	ret0, _ := ret[0].(*models.Cluster)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// InternalUpsertPlatformCluster indicates an expected call of InternalUpsertPlatformCluster.
-func (mr *MockClusterServiceMockRecorder) InternalUpsertPlatformCluster(ctx, spec any) *gomock.Call {
+// InternalUpsertSharedComputeCluster indicates an expected call of InternalUpsertSharedComputeCluster.
+func (mr *MockClusterServiceMockRecorder) InternalUpsertSharedComputeCluster(ctx, spec any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertPlatformCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertPlatformCluster), ctx, spec)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalUpsertSharedComputeCluster", reflect.TypeOf((*MockClusterService)(nil).InternalUpsertSharedComputeCluster), ctx, spec)
 }

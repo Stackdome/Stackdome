@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -147,6 +148,46 @@ var _ = Describe("clusterResourceBuilder platform wildcard TLS", func() {
 		Entry("sslip io hostname", "api.127-0-0-1.sslip.io", "sslip.io", false, false, false),
 		Entry("local hostname", "api.local", "local", false, false, false),
 		Entry("empty base domain", "api-1234abcd.cloud.stackdome.com", "", true, false, true),
+	)
+
+	DescribeTable("applies the shared compute TLS policy",
+		func(computeMode config.ComputeMode, platformTLSEnabled, wantTLS bool) {
+			fqdn := "api-1234abcd.cloud.stackdome.com"
+			if computeMode == config.ComputeModeBYOC {
+				fqdn = "api.customer.example.com"
+			}
+			builder := NewClusterResourceBuilder(ClusterResourceBuilderSpec{
+				ComputeMode:        computeMode,
+				PlatformTLSEnabled: platformTLSEnabled,
+				PlatformBaseDomain: "cloud.stackdome.com",
+			})
+			resource := &models.StackResource{
+				Name:      "api",
+				Namespace: "workload",
+				StackID:   "stack-1",
+				Ports: []models.Port{{
+					Name:            "http",
+					Number:          8080,
+					Protocol:        "http",
+					ExposedToPublic: true,
+					ExposedFqdn:     fqdn,
+				}},
+			}
+
+			cr, err := builder.BuildStackResourceCR(resource, "stack", "org")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cr.Spec.Ports).To(HaveLen(1))
+			Expect(cr.Spec.Ports[0].TLS).To(Equal(wantTLS))
+
+			if !wantTLS {
+				Expect(cr.Spec.Ports[0].TLSSecretRef).To(BeEmpty())
+				Expect(cr.Labels).NotTo(HaveKey(corev1alpha1.LabelUsesPlatformWildcardTLS))
+				Expect(cr.Annotations).NotTo(HaveKey(corev1alpha1.ClusterIssuerAnnotation))
+			}
+		},
+		Entry("shared platform domain with TLS enabled", config.ComputeModeShared, true, true),
+		Entry("shared platform domain with TLS disabled", config.ComputeModeShared, false, false),
+		Entry("BYOC custom domain keeps TLS behavior", config.ComputeModeBYOC, false, true),
 	)
 
 	It("keeps the cert-manager Issuer for a resource with platform and custom TLS ports", func() {

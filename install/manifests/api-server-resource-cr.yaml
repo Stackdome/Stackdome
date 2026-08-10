@@ -62,31 +62,34 @@ spec:
     - name: SERVER_EXTERNAL_URL
       value: "{{if .TLSEnabled}}https{{else}}http{{end}}://{{.Domain}}"
     {{- if .Platform.Enabled }}
-    - name: PLATFORM_CLUSTER_API_URL
+    - name: SHARED_COMPUTE_CLUSTER_API_URL
       valueFrom:
         secretKeyRef:
           name: stackdome-bootstrap-secrets
-          key: platform-cluster-api-url
-    - name: PLATFORM_CLUSTER_CA_DATA
+          key: shared-compute-cluster-api-url
+    - name: SHARED_COMPUTE_CLUSTER_CA_DATA
       valueFrom:
         secretKeyRef:
           name: stackdome-bootstrap-secrets
-          key: platform-cluster-ca-data
-    - name: PLATFORM_CLUSTER_TOKEN
+          key: shared-compute-cluster-ca-data
+    - name: SHARED_COMPUTE_CLUSTER_TOKEN
       valueFrom:
         secretKeyRef:
           name: stackdome-bootstrap-secrets
-          key: platform-cluster-token
-    - name: PLATFORM_EMAIL
-      valueFrom:
-        secretKeyRef:
-          name: stackdome-bootstrap-secrets
-          key: admin-email
+          key: shared-compute-cluster-token
     - name: PLATFORM_BASE_DOMAIN
       valueFrom:
         secretKeyRef:
           name: stackdome-bootstrap-secrets
           key: platform-base-domain
+    - name: PLATFORM_TLS_ENABLED
+      value: "{{.Platform.TLSEnabled}}"
+    {{- if .Platform.TLSEnabled }}
+    - name: PLATFORM_EMAIL
+      valueFrom:
+        secretKeyRef:
+          name: stackdome-bootstrap-secrets
+          key: admin-email
     - name: PLATFORM_DNS_CLOUDFLARE_API_TOKEN
       valueFrom:
         secretKeyRef:
@@ -97,8 +100,9 @@ spec:
         secretKeyRef:
           name: stackdome-bootstrap-secrets
           key: platform-acme-environment
+    {{- end }}
     - name: PLATFORM_CONFIG_REVISION
-      value: "{{.Platform.Revision}}"
+      value: "{{bootstrapConfigRevision .Platform .SharedCompute}}"
     {{- end }}
     {{- if .GitHubClientID }}
     - name: GITHUB_CLIENT_ID

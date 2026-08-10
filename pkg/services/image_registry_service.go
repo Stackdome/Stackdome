@@ -82,20 +82,19 @@ func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string
 }
 
 // validateOwnedCluster requires the target cluster to be owned by the org.
-// Seed registries on the shared platform cluster go through
+// Seed registries on the shared-compute cluster go through
 // InternalCreateSeedRegistry instead.
 func (s *clusterImageRegistryService) validateOwnedCluster(ctx context.Context, orgID, clusterID string) *errors.ServiceError {
-	owned, err := s.clusterStore.GetClusterForOrg(ctx, orgID)
+	owned, err := s.clusterStore.ListBYOCClustersForOrg(ctx, orgID)
 	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
-		}
 		return err
 	}
-	if owned.ID != clusterID {
-		return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
+	for _, cluster := range owned {
+		if cluster.ID == clusterID {
+			return nil
+		}
 	}
-	return nil
+	return errors.NotFound("cluster '%s' not found for organisation '%s'", clusterID, orgID)
 }
 
 func (s *clusterImageRegistryService) ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
@@ -154,19 +153,19 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	return s.create(ctx, spec)
 }
 
-// InternalCreateSeedRegistry creates the org's seed registry on the shared
-// platform cluster. Org-provisioning only — the API Create path requires an
+// InternalCreateSeedRegistry creates the org's seed registry on a shared-compute
+// cluster. Org-provisioning only — the API Create path requires an
 // org-owned target cluster.
 func (s *clusterImageRegistryService) InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	if err := s.validateSpec(spec); err != nil {
 		return nil, err
 	}
-	platform, err := s.clusterStore.GetPlatformCluster(ctx)
+	cluster, err := s.clusterStore.Get(ctx, spec.ClusterID)
 	if err != nil {
 		return nil, err
 	}
-	if platform.ID != spec.ClusterID {
-		return nil, errors.NotFound("cluster '%s' is not the platform cluster", spec.ClusterID)
+	if !cluster.SharedCompute {
+		return nil, errors.NotFound("cluster '%s' is not a shared-compute cluster", spec.ClusterID)
 	}
 	return s.create(ctx, spec)
 }

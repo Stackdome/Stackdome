@@ -7,7 +7,7 @@ Name | Type | Description | Notes
 **Id** | Pointer to **string** |  | [optional] 
 **Name** | **string** |  | 
 **OrganisationId** | Pointer to **string** |  | [optional] 
-**Platform** | Pointer to **bool** |  | [optional] [readonly] 
+**SharedCompute** | Pointer to **bool** |  | [optional] [readonly]
 **ClusterUrl** | **string** |  | 
 **ClusterCaData** | **string** |  | 
 **ClusterSaToken** | **string** |  | 
@@ -102,30 +102,30 @@ SetOrganisationId sets OrganisationId field to given value.
 
 HasOrganisationId returns a boolean if a field has been set.
 
-### GetPlatform
+### GetSharedCompute
 
-`func (o *Cluster) GetPlatform() bool`
+`func (o *Cluster) GetSharedCompute() bool`
 
-GetPlatform returns the Platform field if non-nil, zero value otherwise.
+GetSharedCompute returns the SharedCompute field if non-nil, zero value otherwise.
 
-### GetPlatformOk
+### GetSharedComputeOk
 
-`func (o *Cluster) GetPlatformOk() (*bool, bool)`
+`func (o *Cluster) GetSharedComputeOk() (*bool, bool)`
 
-GetPlatformOk returns a tuple with the Platform field if it's non-nil, zero value otherwise
+GetSharedComputeOk returns a tuple with the SharedCompute field if it's non-nil, zero value otherwise
 and a boolean to check if the value has been set.
 
-### SetPlatform
+### SetSharedCompute
 
-`func (o *Cluster) SetPlatform(v bool)`
+`func (o *Cluster) SetSharedCompute(v bool)`
 
-SetPlatform sets Platform field to given value.
+SetSharedCompute sets SharedCompute field to given value.
 
-### HasPlatform
+### HasSharedCompute
 
-`func (o *Cluster) HasPlatform() bool`
+`func (o *Cluster) HasSharedCompute() bool`
 
-HasPlatform returns a boolean if a field has been set.
+HasSharedCompute returns a boolean if a field has been set.
 
 ### GetClusterUrl
 
@@ -214,5 +214,4 @@ HasClusterImageRegistry returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
 

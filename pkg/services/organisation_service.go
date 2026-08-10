@@ -134,7 +134,7 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 	}
 
 	if !org.Platform {
-		if seedErr := s.seedPlatformInfra(ctx, org.ID, org.Name); seedErr != nil {
+		if seedErr := s.seedSharedComputeRegistry(ctx, org.ID, org.Name); seedErr != nil {
 			return nil, seedErr
 		}
 	}
@@ -142,19 +142,22 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 	return s.organisationStore.Get(ctx, org.ID)
 }
 
-// seedPlatformInfra gives a new tenant org a seed registry on the shared
-// platform cluster. No platform cluster configured (self-hosted install) → no-op.
-func (s *organisationService) seedPlatformInfra(ctx context.Context, orgID, orgName string) *errors.ServiceError {
-	platformCluster, err := s.clusterStore.GetPlatformCluster(ctx)
+// seedSharedComputeRegistry gives a new tenant org a seed registry on the
+// shared-compute cluster. No shared-compute cluster configured → no-op.
+func (s *organisationService) seedSharedComputeRegistry(ctx context.Context, orgID, orgName string) *errors.ServiceError {
+	sharedClusters, err := s.clusterStore.ListSharedComputeClusters(ctx)
 	if err != nil {
-		if err.Code == errors.ErrorNotFound {
-			return nil
-		}
 		return err
+	}
+	if len(sharedClusters) == 0 {
+		return nil
+	}
+	if len(sharedClusters) > 1 {
+		return errors.GeneralError("multiple shared-compute clusters configured")
 	}
 	ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
 
-	return s.seedOrgRegistry(ctx, orgID, orgName, platformCluster.ID)
+	return s.seedOrgRegistry(ctx, orgID, orgName, sharedClusters[0].ID)
 }
 
 func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgName, clusterID string) *errors.ServiceError {

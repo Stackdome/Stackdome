@@ -38,11 +38,12 @@ func NewService(spec Spec) *Service {
 	}
 }
 
-// Run provisions the platform org, cluster, and wildcard TLS.
+// Run provisions the platform org and shared-compute cluster, then conditionally
+// reconciles platform wildcard TLS.
 // The platform org is infrastructure-only: no users, no projects.
 func (s *Service) Run(ctx context.Context) error {
 	if !s.clusterCfg.IsSet() {
-		s.logger.Info(ctx, "no platform cluster configured; skipping platform bootstrap")
+		s.logger.Info(ctx, "no shared-compute cluster configured; skipping shared-compute bootstrap")
 		return nil
 	}
 
@@ -51,26 +52,28 @@ func (s *Service) Run(ctx context.Context) error {
 		return err
 	}
 
-	sysCtx := auth.SetIdentityInContext(ctx, &auth.Identity{
-		IsSystem:     true,
-		OrgID:        org.ID,
-		ContactEmail: s.bootstrapCfg.Email,
-	})
+	systemIdentity := &auth.Identity{IsSystem: true, OrgID: org.ID}
+	if s.bootstrapCfg.PlatformTLSEnabled {
+		systemIdentity.ContactEmail = s.bootstrapCfg.Email
+	}
+	sysCtx := auth.SetIdentityInContext(ctx, systemIdentity)
 
-	cluster, cErr := s.clusterService.InternalUpsertPlatformCluster(sysCtx, &models.Cluster{
-		Name:           models.PlatformClusterName,
+	cluster, cErr := s.clusterService.InternalUpsertSharedComputeCluster(sysCtx, &models.Cluster{
+		Name:           models.SharedComputeClusterName,
 		OrganisationID: org.ID,
-		Platform:       true,
+		SharedCompute:  true,
 		ClusterURL:     s.clusterCfg.ClusterURL,
 		ClusterCAData:  s.clusterCfg.ClusterCAData,
 		Token:          s.clusterCfg.Token,
 	})
 	if cErr != nil {
-		return fmt.Errorf("failed to upsert platform cluster: %w", cErr)
+		return fmt.Errorf("failed to upsert shared-compute cluster: %w", cErr)
 	}
 
-	if err := s.clusterService.InternalEnsurePlatformWildcardTLS(sysCtx, cluster, s.bootstrapCfg); err != nil {
-		return fmt.Errorf("failed to create or update platform wildcard TLS: %w", err)
+	if s.bootstrapCfg.PlatformTLSEnabled {
+		if err := s.clusterService.InternalEnsurePlatformWildcardTLS(sysCtx, cluster, s.bootstrapCfg); err != nil {
+			return fmt.Errorf("failed to create or update platform wildcard TLS: %w", err)
+		}
 	}
 
 	return nil

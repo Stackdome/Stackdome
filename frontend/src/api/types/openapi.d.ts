@@ -7895,7 +7895,7 @@ export interface components {
             id?: string;
             name: string;
             organisation_id?: string;
-            readonly platform?: boolean;
+            readonly shared_compute?: boolean;
             cluster_url: string;
             cluster_ca_data: string;
             cluster_sa_token: string;

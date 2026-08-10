@@ -114,8 +114,9 @@ func runUpgrade(args []string) error {
 	if err := applyAPIServerRBAC(); err != nil {
 		return installationError("agent", "API server RBAC upgrade failed", err)
 	}
-	if err := ensurePlatformClusterCredentials(&vals.Platform); err != nil {
-		return installationError("configuration", "reading platform cluster credentials failed", err)
+	vals.SharedCompute = secrets.SharedCompute
+	if err := ensureSharedComputeClusterCredentials(vals.Platform, &vals.SharedCompute); err != nil {
+		return installationError("configuration", "reading shared compute cluster credentials failed", err)
 	}
 	if err := mergeBootstrapConfig(&vals, secrets); err != nil {
 		return installationError("configuration", "storing bootstrap configuration failed", err)

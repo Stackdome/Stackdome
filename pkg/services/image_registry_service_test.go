@@ -17,7 +17,7 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 	const (
 		guardOrgID       = "org-guard"
 		ownedClusterID   = "cluster-owned"
-		platformCluster  = "cluster-platform"
+		sharedCluster    = "cluster-shared"
 		foreignClusterID = "cluster-foreign"
 	)
 
@@ -56,25 +56,24 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 
 	Describe("Create", func() {
 		It("rejects a cluster the org does not own when it owns another", func() {
-			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-				Return(&models.Cluster{ID: ownedClusterID}, nil)
+			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), guardOrgID).
+				Return([]*models.Cluster{{ID: ownedClusterID}}, nil)
 
 			_, serr := svc.Create(ctx, newSpec(foreignClusterID))
 			Expect(serr).ToNot(BeNil())
 			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
 		})
 
-		It("rejects the platform cluster when the org owns none — seed registries are not an API path", func() {
-			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-				Return(nil, errors.NotFound("no cluster"))
+		It("rejects the shared-compute cluster when the org owns none — seed registries are not an API path", func() {
+			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), guardOrgID).Return(nil, nil)
 
-			_, serr := svc.Create(ctx, newSpec(platformCluster))
+			_, serr := svc.Create(ctx, newSpec(sharedCluster))
 			Expect(serr).ToNot(BeNil())
 			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
 		})
 
 		It("propagates non-NotFound owned-cluster lookup errors", func() {
-			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
+			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), guardOrgID).
 				Return(nil, errors.GeneralError("db down"))
 
 			_, serr := svc.Create(ctx, newSpec(ownedClusterID))
@@ -83,8 +82,8 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 		})
 
 		It("accepts the org's own cluster", func() {
-			clusterStore.EXPECT().GetClusterForOrg(gomock.Any(), guardOrgID).
-				Return(&models.Cluster{ID: ownedClusterID}, nil)
+			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), guardOrgID).
+				Return([]*models.Cluster{{ID: ownedClusterID}}, nil)
 
 			Expect(svc.validateOwnedCluster(ctx, guardOrgID, ownedClusterID)).To(BeNil())
 		})
@@ -130,34 +129,34 @@ var _ = Describe("ClusterImageRegistry cluster ownership guard", func() {
 	})
 
 	Describe("InternalCreateSeedRegistry", func() {
-		It("rejects a target that is not the platform cluster", func() {
-			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-				Return(&models.Cluster{ID: platformCluster}, nil)
+		It("rejects a target that is not a shared-compute cluster", func() {
+			clusterStore.EXPECT().Get(gomock.Any(), ownedClusterID).
+				Return(&models.Cluster{ID: ownedClusterID}, nil)
 
 			_, serr := svc.InternalCreateSeedRegistry(ctx, newSpec(ownedClusterID))
 			Expect(serr).ToNot(BeNil())
 			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
 		})
 
-		It("propagates a missing platform cluster", func() {
-			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-				Return(nil, errors.NotFound("platform cluster not found"))
+		It("propagates a missing shared-compute cluster", func() {
+			clusterStore.EXPECT().Get(gomock.Any(), sharedCluster).
+				Return(nil, errors.NotFound("shared-compute cluster not found"))
 
-			_, serr := svc.InternalCreateSeedRegistry(ctx, newSpec(platformCluster))
+			_, serr := svc.InternalCreateSeedRegistry(ctx, newSpec(sharedCluster))
 			Expect(serr).ToNot(BeNil())
 			Expect(serr.Code).To(Equal(errors.ErrorNotFound))
 		})
 
-		It("creates the registry on the platform cluster", func() {
-			clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-				Return(&models.Cluster{ID: platformCluster}, nil)
+		It("creates the registry on a shared-compute cluster", func() {
+			clusterStore.EXPECT().Get(gomock.Any(), sharedCluster).
+				Return(&models.Cluster{ID: sharedCluster, SharedCompute: true}, nil)
 
 			registryStore := mocks.NewMockClusterImageRegistryStore(ctrl)
 			crs := mocks.NewMockClusterResourceImageRegistryService(ctrl)
 			svc.clusterImageRegistryStore = registryStore
 			svc.clusterResourceService = crs
 
-			spec := newSpec(platformCluster)
+			spec := newSpec(sharedCluster)
 			registryStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
 					return fn(ctx)

@@ -64,7 +64,7 @@ var _ = Describe("Organisation.Platform", func() {
 	})
 })
 
-var _ = Describe("OrganisationService platform-infra seeding", func() {
+var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 	const (
 		orgName      = "Acme Inc"
 		orgID        = "11112222-3333-4444-5555-666677778888"
@@ -96,8 +96,8 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		orgStore.EXPECT().Get(gomock.Any(), orgID).Return(&models.Organisation{ID: orgID, Name: orgName}, nil)
 	}
 
-	expectPlatformCluster := func() {
-		clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).Return(&models.Cluster{ID: "cluster-1"}, nil)
+	expectSharedComputeCluster := func() {
+		clusterStore.EXPECT().ListSharedComputeClusters(gomock.Any()).Return([]*models.Cluster{{ID: "cluster-1", SharedCompute: true}}, nil)
 	}
 
 	BeforeEach(func() {
@@ -119,15 +119,24 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		ctrl.Finish()
 	})
 
-	It("skips seeding when no platform cluster exists", func() {
+	It("skips seeding when no shared-compute cluster exists", func() {
 		expectOrgCreated()
-		clusterStore.EXPECT().GetPlatformCluster(gomock.Any()).
-			Return(nil, errors.NotFound("platform cluster not found"))
+		clusterStore.EXPECT().ListSharedComputeClusters(gomock.Any()).Return(nil, nil)
 		expectOrgFetched()
 
 		org, serr := svc.InternalCreate(ctx, tenantOrg())
 		Expect(serr).To(BeNil())
 		Expect(org).ToNot(BeNil())
+	})
+
+	It("fails closed when multiple shared-compute clusters exist", func() {
+		expectOrgCreated()
+		clusterStore.EXPECT().ListSharedComputeClusters(gomock.Any()).Return([]*models.Cluster{{ID: "cluster-1"}, {ID: "cluster-2"}}, nil)
+
+		org, serr := svc.InternalCreate(ctx, tenantOrg())
+
+		Expect(org).To(BeNil())
+		Expect(serr).To(MatchError("error: multiple shared-compute clusters configured"))
 	})
 
 	It("does not seed the platform org itself", func() {
@@ -140,9 +149,9 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 		Expect(org.Platform).To(BeTrue())
 	})
 
-	It("seeds a registry on the platform cluster", func() {
+	It("seeds a registry on the shared-compute cluster", func() {
 		expectOrgCreated()
-		expectPlatformCluster()
+		expectSharedComputeCluster()
 		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), &models.ClusterImageRegistry{
 			ClusterID:           "cluster-1",
 			OrganisationID:      orgID,
@@ -159,7 +168,7 @@ var _ = Describe("OrganisationService platform-infra seeding", func() {
 
 	It("fails org creation when seed-registry creation fails", func() {
 		expectOrgCreated()
-		expectPlatformCluster()
+		expectSharedComputeCluster()
 		boom := errors.GeneralError("cluster unreachable")
 		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), gomock.Any()).Return(nil, boom)
 

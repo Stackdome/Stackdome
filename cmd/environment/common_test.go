@@ -100,7 +100,7 @@ var _ = Describe("LoadEnv", func() {
 
 		It("allows bring-your-own compute with tenant-owned clusters", func() {
 			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
-				{ID: "tenant-cluster", Platform: false},
+				{ID: "tenant-cluster", SharedCompute: false},
 			}, nil)
 
 			Expect(checkPersistedComputeTopology(ctx, config.ComputeModeBYOC, clusterStore)).To(Succeed())
@@ -108,13 +108,13 @@ var _ = Describe("LoadEnv", func() {
 
 		It("rejects bring-your-own compute when a shared-compute cluster exists", func() {
 			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
-				{ID: "platform-cluster", Platform: true},
+				{ID: "shared-cluster", SharedCompute: true},
 			}, nil)
 
 			err := checkPersistedComputeTopology(ctx, config.ComputeModeBYOC, clusterStore)
 
 			Expect(err).To(MatchError(
-				"bring-your-own compute cannot start while shared-compute cluster \"platform-cluster\" exists; " +
+				"bring-your-own compute cannot start while shared-compute cluster \"shared-cluster\" exists; " +
 					"set COMPUTE_MODE=shared or remove the shared-compute cluster and dependent resources",
 			))
 		})
@@ -127,7 +127,7 @@ var _ = Describe("LoadEnv", func() {
 
 		It("allows shared compute with a shared-compute cluster", func() {
 			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
-				{ID: "platform-cluster", Platform: true},
+				{ID: "shared-cluster", SharedCompute: true},
 			}, nil)
 
 			Expect(checkPersistedComputeTopology(ctx, config.ComputeModeShared, clusterStore)).To(Succeed())
@@ -135,7 +135,7 @@ var _ = Describe("LoadEnv", func() {
 
 		It("rejects shared compute when a tenant-owned cluster exists", func() {
 			clusterStore.EXPECT().ListAll(ctx).Return([]*models.Cluster{
-				{ID: "tenant-cluster", Platform: false},
+				{ID: "tenant-cluster", SharedCompute: false},
 			}, nil)
 
 			err := checkPersistedComputeTopology(ctx, config.ComputeModeShared, clusterStore)

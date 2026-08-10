@@ -82,4 +82,5 @@ var MigrationList = []*gormigrate.Migration{
 	addClusterInfo(),
 	deleteSeededPlatformDomains(),
 	addReleaseWorkerStatus(),
+	renameClusterPlatformToSharedCompute(),
 }

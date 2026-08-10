@@ -88,11 +88,12 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("MinIO deployment failed: %w", err)
 	}
 
-	// Export PLATFORM_* env from the provisioned cluster so the server creates
-	// the platform cluster, platform org, and wildcard TLS resources at boot.
-	logger.Info("Exporting platform-provisioning environment")
-	if err := exportPlatformProvisioningEnv(ctx, env.Cluster); err != nil {
-		return fmt.Errorf("failed to export platform provisioning env: %w", err)
+	// Export shared-compute and platform-routing environment values so the
+	// server creates the platform org, shared-compute cluster, and optional
+	// wildcard TLS resources at boot.
+	logger.Info("Exporting shared-compute provisioning environment")
+	if err := exportSharedComputeProvisioningEnv(ctx, env.Cluster); err != nil {
+		return fmt.Errorf("failed to export shared-compute provisioning env: %w", err)
 	}
 
 	// Initialize server
@@ -103,19 +104,20 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 
-	// The booted server created the infrastructure-only platform org + cluster.
-	// Resolve the platform cluster from the DB (tenants never see it via API),
+	// The booted server created the infrastructure-only platform org and its
+	// shared-compute cluster. Resolve the shared-compute cluster from the DB
+	// (tenants never see it via API),
 	// then sign up the suite's tenant org, which inherits it at read time.
-	var platformCluster models.Cluster
+	var sharedComputeCluster models.Cluster
 	if err := dbManager.GetSessionFactory().New(ctx).
-		Where("platform = ?", true).First(&platformCluster).Error; err != nil {
-		return fmt.Errorf("failed to resolve platform cluster: %w", err)
+		Where("shared_compute = ?", true).First(&sharedComputeCluster).Error; err != nil {
+		return fmt.Errorf("failed to resolve shared-compute cluster: %w", err)
 	}
 
 	logger.Info("Bootstrapping client against platform defaults")
 	clientManager := NewClientManager(serverManager.GetBaseURL(), logger)
 	env.clientManager = clientManager
-	if err := clientManager.Bootstrap(ctx, platformCluster.ID); err != nil {
+	if err := clientManager.Bootstrap(ctx, sharedComputeCluster.ID); err != nil {
 		return fmt.Errorf("client bootstrap failed: %w", err)
 	}
 

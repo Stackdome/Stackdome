@@ -48,8 +48,8 @@ var (
 	EnvSharedComputeClusterCAData = StringVar("SHARED_COMPUTE_CLUSTER_CA_DATA", "Shared compute cluster CA cert (base64)", nil, false)
 	EnvSharedComputeClusterToken  = StringVar("SHARED_COMPUTE_CLUSTER_TOKEN", "Shared compute cluster auth token", nil, false)
 
-	// Platform Provisioning
-	EnvPlatformEmail                   = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform cluster issuer", nil, false)
+	// Platform routing and TLS
+	EnvPlatformEmail                   = StringVar("PLATFORM_EMAIL", "Operator contact email; ACME contact for the platform TLS issuer", nil, false)
 	EnvPlatformBaseDomain              = StringVar("PLATFORM_BASE_DOMAIN", "Base domain for the platform org and per-org subdomains", nil, false)
 	EnvPlatformDNSCloudflareAPIToken   = StringVar("PLATFORM_DNS_CLOUDFLARE_API_TOKEN", "Cloudflare API token used for platform wildcard DNS challenges", nil, false)
 	EnvPlatformTLSEnabled              = BoolVar("PLATFORM_TLS_ENABLED", "Enable platform-managed TLS on shared compute", ptr(false), false)

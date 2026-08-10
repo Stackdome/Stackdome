@@ -889,7 +889,7 @@ const Cluster = z
     id: z.string().optional(),
     name: z.string(),
     organisation_id: z.string().optional(),
-    platform: z.boolean().optional(),
+    shared_compute: z.boolean().optional(),
     cluster_url: z.string(),
     cluster_ca_data: z.string(),
     cluster_sa_token: z.string(),

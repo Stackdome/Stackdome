@@ -117,7 +117,7 @@ var _ = Describe("shared compute namespace labels", func() {
 		},
 		Entry("self-hosted shared compute", config.RuntimeModeSelfHosted, config.ComputeModeShared, true),
 		Entry("Stackdome Cloud shared compute", config.RuntimeModeStackdomeCloud, config.ComputeModeShared, true),
-		Entry("self-hosted bring-your-own compute", config.RuntimeModeSelfHosted, config.ComputeModeBringYourOwn, false),
+		Entry("self-hosted bring-your-own compute", config.RuntimeModeSelfHosted, config.ComputeModeBYOC, false),
 	)
 })
 

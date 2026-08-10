@@ -97,40 +97,34 @@ func (d dbClusterStore) Get(ctx context.Context, id string) (*models.Cluster, *e
 	return &res, nil
 }
 
-func (d dbClusterStore) GetClusterForOrg(ctx context.Context, orgID string) (*models.Cluster, *errors.ServiceError) {
+func (d dbClusterStore) ListBYOCClustersForOrg(ctx context.Context, orgID string) ([]*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
-	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("organisation_id = ?", orgID).Preload(clause.Associations).First(&res).Error
+	var res []*models.Cluster
+	err := grm.Model(&models.Cluster{}).Where("organisation_id = ? AND shared_compute = false", orgID).Preload(clause.Associations).Find(&res).Error
 	if err != nil {
-		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NotFound("cluster for organisation '%s' not found", orgID)
-		}
-		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
+		return nil, errors.GeneralError("failed to fetch BYOC clusters: %s", err.Error())
 	}
-	return &res, nil
+	return res, nil
 }
 
-func (d dbClusterStore) GetPlatformCluster(ctx context.Context) (*models.Cluster, *errors.ServiceError) {
+func (d dbClusterStore) ListSharedComputeClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
-	var res models.Cluster
-	err := grm.Model(&models.Cluster{}).Where("platform = ?", true).Preload(clause.Associations).First(&res).Error
+	var res []*models.Cluster
+	err := grm.Model(&models.Cluster{}).Where("shared_compute = true").Preload(clause.Associations).Find(&res).Error
 	if err != nil {
-		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NotFound("platform cluster not found")
-		}
-		return nil, errors.GeneralError("failed to fetch cluster: %s", err.Error())
+		return nil, errors.GeneralError("failed to fetch shared-compute clusters: %s", err.Error())
 	}
-	return &res, nil
+	return res, nil
 }
 
-func (d dbClusterStore) UpdateNameAndPlatform(ctx context.Context, id, name string) *errors.ServiceError {
+func (d dbClusterStore) UpdateNameAndSharedCompute(ctx context.Context, id, name string) *errors.ServiceError {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":     name,
-		"platform": true,
+		"name":           name,
+		"shared_compute": true,
 	}).Error
 	if err != nil {
-		return errors.GeneralError("failed to update cluster name/platform: %s", err.Error())
+		return errors.GeneralError("failed to update cluster name/shared-compute flag: %s", err.Error())
 	}
 	return nil
 }

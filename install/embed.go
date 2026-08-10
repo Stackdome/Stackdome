@@ -14,22 +14,32 @@ var manifestsFS embed.FS
 
 type PlatformConfig struct {
 	BaseDomain         string
+	TLSEnabled         bool
 	CloudflareAPIToken string
 	ACMEEnvironment    string
-	ClusterAPIURL      string
-	ClusterCAData      string
-	ClusterToken       string
+}
+
+type SharedComputeConfig struct {
+	ClusterAPIURL string
+	ClusterCAData string
+	ClusterToken  string
 }
 
 func (c PlatformConfig) Enabled() bool {
 	return c.BaseDomain != ""
 }
 
-// Revision changes when a pod restart is required to load updated Secret-backed
-// platform configuration. It reveals none of the stored credentials.
-func (c PlatformConfig) Revision() string {
-	data := c.BaseDomain + "\x00" + c.CloudflareAPIToken + "\x00" + c.ACMEEnvironment + "\x00" +
-		c.ClusterAPIURL + "\x00" + c.ClusterCAData + "\x00" + c.ClusterToken
+func (c SharedComputeConfig) IsSet() bool {
+	return c.ClusterAPIURL != "" && c.ClusterCAData != "" && c.ClusterToken != ""
+}
+
+// BootstrapConfigRevision changes when a pod restart is required to load
+// updated Secret-backed bootstrap configuration. It reveals none of the stored
+// credentials.
+func BootstrapConfigRevision(platform PlatformConfig, shared SharedComputeConfig) string {
+	data := fmt.Sprintf("%t", platform.TLSEnabled) + "\x00" + platform.BaseDomain + "\x00" +
+		platform.CloudflareAPIToken + "\x00" + platform.ACMEEnvironment + "\x00" +
+		shared.ClusterAPIURL + "\x00" + shared.ClusterCAData + "\x00" + shared.ClusterToken
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(data)))[:16]
 }
 
@@ -45,6 +55,7 @@ type TemplateValues struct {
 	StackUID       string
 	TLSEnabled     bool
 	Platform       PlatformConfig
+	SharedCompute  SharedComputeConfig
 	// GitHub OAuth login credentials; empty leaves login disabled.
 	GitHubClientID     string
 	GitHubClientSecret string
@@ -62,6 +73,7 @@ var manifestFuncs = template.FuncMap{
 		b, err := json.Marshal(s)
 		return string(b), err
 	},
+	"bootstrapConfigRevision": BootstrapConfigRevision,
 }
 
 func RenderManifest(name string, vals TemplateValues) ([]byte, error) {

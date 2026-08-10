@@ -112,31 +112,50 @@ These variables configure one GitHub App that organizations install for reposito
 | `GITHUB_APP_PRIVATE_KEY` | No | — | GitHub App private key in PEM form |
 | `GITHUB_APP_WEBHOOK_SECRET` | No | — | Secret used to verify GitHub webhook signatures |
 
-## Platform cluster
+## Shared compute and platform routing
 
-These variables bootstrap an infrastructure-only platform organization, its compute cluster, wildcard domain, TLS resources, and the default image-registry settings for organizations created on the platform. This is separate from the single-server installer's `Default` organization and `local` cluster, which the installer creates through the API.
+These variables bootstrap an infrastructure-only platform organization, its shared-compute cluster, platform routing, optional wildcard TLS resources, and default image-registry settings for organizations created on the platform. This is separate from the single-server installer's `Default` organization and `local` cluster, which the installer creates through the API.
+
+### Runtime and compute mode
 
 | Variable | Required | Default | Purpose |
 | --- | --- | --- | --- |
-| `PLATFORM_CLUSTER_API_URL` | No | — | Kubernetes API URL of the cluster to seed |
-| `PLATFORM_CLUSTER_CA_DATA` | No | — | That cluster's CA certificate, base64-encoded |
-| `PLATFORM_CLUSTER_TOKEN` | No | — | Service-account token for that cluster |
-| `PLATFORM_BASE_DOMAIN` | No | — | Base domain for the platform organization and per-organization subdomains |
-| `PLATFORM_EMAIL` | No | — | Operator contact email, also used as the ACME contact for the platform cluster's certificate issuer |
-| `PLATFORM_DNS_CLOUDFLARE_API_TOKEN` | When a platform cluster is configured | — | Cloudflare API token used by the DNS-01 issuer for the platform wildcard certificate |
-| `PLATFORM_ACME_ENVIRONMENT` | No | `production` | Let's Encrypt environment. Accepted values are `production` and `staging`. |
-| `PLATFORM_TLS_NAMESPACE` | No | `stackdome-control-plane` | Namespace for the Cloudflare token Secret, DNS Issuer, and wildcard Certificate |
-| `PLATFORM_ORG_REGISTRY_STORAGE_SIZE` | No | `10Gi` | Storage size for the image registry seeded for each new organization |
-| `PLATFORM_ORG_REGISTRY_STORAGE_CLASS` | No | — | Storage class for that registry. Leave unset to use the cluster's default. |
+| `RUNTIME_MODE` | No | `self_hosted` | Runtime mode. Accepted values are `self_hosted` and `stackdome_cloud`. |
+| `COMPUTE_MODE` | No | `bring_your_own` | Compute topology. Accepted values are `bring_your_own` and `shared`. `stackdome_cloud` requires `shared`. |
 
-The server validates this group as a unit at startup and refuses to boot on a partial configuration:
+Use this runtime and compute mode matrix:
 
-- the three `PLATFORM_CLUSTER_*` variables must all be set, or all be unset
-- `PLATFORM_CLUSTER_*` and `PLATFORM_BASE_DOMAIN` must be set together — one without the other is an error
-- `PLATFORM_EMAIL` is required once a platform cluster is configured
-- `PLATFORM_DNS_CLOUDFLARE_API_TOKEN` is required once a platform cluster is configured
-- `PLATFORM_ACME_ENVIRONMENT` must be `production` or `staging`
-- `PLATFORM_TLS_NAMESPACE` cannot be empty once a platform cluster is configured
+| Runtime mode | Compute mode | Required configuration |
+| --- | --- | --- |
+| `self_hosted` | `bring_your_own` | No shared cluster or platform routing config. |
+| `self_hosted` | `shared` | Shared cluster and base domain required; platform TLS optional. |
+| `stackdome_cloud` | `shared` | Shared cluster, base domain, and platform TLS required. |
+
+### Shared-compute cluster and platform routing
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `SHARED_COMPUTE_CLUSTER_API_URL` | When `COMPUTE_MODE=shared` | — | Kubernetes API URL of the shared-compute cluster. |
+| `SHARED_COMPUTE_CLUSTER_CA_DATA` | When `COMPUTE_MODE=shared` | — | Shared-compute cluster CA certificate, base64-encoded. |
+| `SHARED_COMPUTE_CLUSTER_TOKEN` | When `COMPUTE_MODE=shared` | — | Service-account token for the shared-compute cluster. |
+| `PLATFORM_BASE_DOMAIN` | When `COMPUTE_MODE=shared` | — | Base domain for platform routing and per-organization subdomains. |
+| `PLATFORM_ORG_REGISTRY_STORAGE_SIZE` | No | `10Gi` | Storage size for the image registry seeded for each new organization. |
+| `PLATFORM_ORG_REGISTRY_STORAGE_CLASS` | No | — | Storage class for that registry. Leave unset to use the shared-compute cluster's default. |
+| `PLATFORM_CONFIG_REVISION` | Installer-managed | — | Installer-generated revision that restarts the API server when installer-controlled shared-compute, platform-routing, or TLS configuration changes. Do not set it manually. |
+
+The three `SHARED_COMPUTE_CLUSTER_*` variables must all be set together. In `bring_your_own` mode, do not set any shared-compute or platform-routing value. In `shared` mode, set all three cluster values and `PLATFORM_BASE_DOMAIN`.
+
+### Platform TLS
+
+Set `PLATFORM_TLS_ENABLED=true` to enable platform-managed wildcard TLS. It is optional for `self_hosted` + `shared` and required for `stackdome_cloud` + `shared`. TLS-only values are conditional: set them only when `PLATFORM_TLS_ENABLED=true`; when TLS is disabled, do not set them.
+
+| Variable | Required | Default | Purpose |
+| --- | --- | --- | --- |
+| `PLATFORM_TLS_ENABLED` | `stackdome_cloud` + `shared`; optional for `self_hosted` + `shared` | `false` | Enables platform-managed wildcard TLS. |
+| `PLATFORM_EMAIL` | When `PLATFORM_TLS_ENABLED=true` | — | Operator contact email and ACME contact for the platform TLS issuer. |
+| `PLATFORM_DNS_CLOUDFLARE_API_TOKEN` | When `PLATFORM_TLS_ENABLED=true` | — | Cloudflare API token used by the DNS-01 issuer for the platform wildcard certificate. |
+| `PLATFORM_ACME_ENVIRONMENT` | When `PLATFORM_TLS_ENABLED=true` | `production` | Let's Encrypt environment. Accepted values are `production` and `staging`. |
+| `PLATFORM_TLS_NAMESPACE` | When `PLATFORM_TLS_ENABLED=true` | `stackdome-control-plane` | Namespace for the Cloudflare token Secret, DNS Issuer, and wildcard Certificate. |
 
 <Warning>
 The Cloudflare token is written to a Secret named `cloudflare-api-token` in `PLATFORM_TLS_NAMESPACE`. Give it only the DNS permissions required for the platform domain and protect it as a production credential.
@@ -160,8 +179,8 @@ The installer generates these secret values on first run, keeps them in a Kubern
 - `JWT_SECRET` — 48 random bytes, base64-encoded
 - `ENCRYPTION_KEY` — 32 random bytes, hex-encoded, which is the 64 characters the validator requires
 - the generated admin password, plus the admin email and domain needed by installer bootstrap
-- any GitHub OAuth or platform GitHub App values supplied with installer flags
+- any GitHub OAuth or platform-wide GitHub App values supplied with installer flags
 
-It sets `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `LOG_LEVEL=info`, `STACKDOME_ENV=PRODUCTION`, and `SERVER_EXTERNAL_URL` for the PostgreSQL instance and public URL it deployed. GitHub environment variables are added only when their installer flags were supplied. The single-server installer does not set the `PLATFORM_*` bootstrap group.
+It sets `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, `LOG_LEVEL=info`, `STACKDOME_ENV=PRODUCTION`, and `SERVER_EXTERNAL_URL` for the PostgreSQL instance and public URL it deployed. GitHub environment variables are added only when their installer flags were supplied. When it configures shared compute, it also generates `PLATFORM_CONFIG_REVISION` so the API server reloads changed installer-managed bootstrap values.
 
 To change a value afterwards, edit the environment variables on the `api-server` resource and let it redeploy. Read the warning about `ENCRYPTION_KEY` before you touch that one.

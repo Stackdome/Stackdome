@@ -282,14 +282,14 @@ func checkPersistedComputeTopology(ctx context.Context, mode config.ComputeMode,
 		if cluster == nil {
 			return fmt.Errorf("list persisted clusters: store returned a nil cluster")
 		}
-		if mode == config.ComputeModeBYOC && cluster.Platform {
+		if mode == config.ComputeModeBYOC && cluster.SharedCompute {
 			return fmt.Errorf(
 				"bring-your-own compute cannot start while shared-compute cluster %q exists; "+
 					"set COMPUTE_MODE=shared or remove the shared-compute cluster and dependent resources",
 				cluster.ID,
 			)
 		}
-		if mode == config.ComputeModeShared && !cluster.Platform {
+		if mode == config.ComputeModeShared && !cluster.SharedCompute {
 			return fmt.Errorf(
 				"shared compute cannot start while tenant-owned cluster %q exists; "+
 					"set COMPUTE_MODE=bring_your_own or remove the tenant-owned cluster and dependent resources",
@@ -593,7 +593,8 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ClusterManager:       e.ClusterManager,
 		ImageRegistryService: imageRegistryService,
 		SessionFactory:       e.DBSession,
-		SharedCompute:        e.Config.UsesSharedCompute(),
+		ComputeMode:          e.Config.ComputeMode,
+		PlatformTLSEnabled:   e.BootstrapConfig.PlatformTLSEnabled,
 		Logger:               e.Logger,
 		Permissions:          e.PermissionService,
 		EncryptionService:    encryptionService,
@@ -883,6 +884,8 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:        e.Services.VolumeService,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			CredentialResolver: e.Services.CredentialResolver,
+			ComputeMode:        e.Config.ComputeMode,
+			PlatformTLSEnabled: e.BootstrapConfig.PlatformTLSEnabled,
 			PlatformBaseDomain: e.BootstrapConfig.BaseDomain,
 		}),
 		SecretBuilder: builders.NewSecretBuilder(builders.SecretBuilderSpec{}),

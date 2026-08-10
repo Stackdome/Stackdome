@@ -59,6 +59,7 @@ func fullBootstrapConfig() *config.BootstrapConfig {
 		Email:                 contactEmail,
 		BaseDomain:            baseDomain,
 		DNSCloudflareAPIToken: dnsAPIToken,
+		PlatformTLSEnabled:    true,
 		ACMEEnvironment:       config.ACMEEnvironmentStaging,
 		TLSNamespace:          tlsNamespace,
 		OrgRegistry:           models.OrgRegistryDefaults{StorageSize: storageSize, StorageClass: storageClass},
@@ -90,7 +91,7 @@ var _ = Describe("Bootstrap", func() {
 		ctrl.Finish()
 	})
 
-	When("no platform cluster is configured", func() {
+	When("no shared-compute cluster is configured", func() {
 		It("no-ops without touching any service", func() {
 			svc := deps.service(fullBootstrapConfig(), &config.ClusterConfig{})
 			Expect(svc.Run(ctx)).To(Succeed())
@@ -98,7 +99,7 @@ var _ = Describe("Bootstrap", func() {
 	})
 
 	When("bootstrapping a fresh install", func() {
-		It("creates the platform org, cluster, and wildcard TLS", func() {
+		It("creates the platform org, shared-compute cluster, and platform wildcard TLS", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
 				Return(nil, errors.NotFound("platform organisation not found"))
 			deps.orgSvc.EXPECT().InternalCreate(gomock.Any(), gomock.Any()).
@@ -108,28 +109,28 @@ var _ = Describe("Bootstrap", func() {
 					return &models.Organisation{ID: orgID, Name: models.PlatformOrganisationName, Platform: true}, nil
 				})
 
-			platformCluster := &models.Cluster{ID: clusterID}
-			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
+			sharedComputeCluster := &models.Cluster{ID: clusterID}
+			deps.clusterSvc.EXPECT().InternalUpsertSharedComputeCluster(gomock.Any(), gomock.Any()).
 				DoAndReturn(func(callCtx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 					identity := auth.GetIdentityFromCtx(callCtx)
 					Expect(identity.IsSystem).To(BeTrue())
 					Expect(identity.ContactEmail).To(Equal(contactEmail))
-					Expect(spec.Name).To(Equal(models.PlatformClusterName))
+					Expect(spec.Name).To(Equal(models.SharedComputeClusterName))
 					Expect(spec.OrganisationID).To(Equal(orgID))
-					Expect(spec.Platform).To(BeTrue())
+					Expect(spec.SharedCompute).To(BeTrue())
 					Expect(spec.ClusterURL).To(Equal(clusterURL))
 					Expect(spec.ClusterCAData).To(Equal(clusterCA))
 					Expect(spec.Token).To(Equal(clusterToken))
-					return platformCluster, nil
+					return sharedComputeCluster, nil
 				})
 
 			bootstrapCfg := fullBootstrapConfig()
-			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), platformCluster, bootstrapCfg).
+			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), sharedComputeCluster, bootstrapCfg).
 				DoAndReturn(func(callCtx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
 					identity := auth.GetIdentityFromCtx(callCtx)
 					Expect(identity.IsSystem).To(BeTrue())
 					Expect(identity.ContactEmail).To(Equal(contactEmail))
-					Expect(cluster).To(BeIdenticalTo(platformCluster))
+					Expect(cluster).To(BeIdenticalTo(sharedComputeCluster))
 					Expect(cfg).To(BeIdenticalTo(bootstrapCfg))
 					return nil
 				})
@@ -138,14 +139,35 @@ var _ = Describe("Bootstrap", func() {
 			Expect(svc.Run(ctx)).To(Succeed())
 		})
 
+		It("creates the platform org and shared-compute cluster without platform TLS when disabled", func() {
+			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
+				Return(nil, errors.NotFound("platform organisation not found"))
+			deps.orgSvc.EXPECT().InternalCreate(gomock.Any(), gomock.Any()).
+				Return(&models.Organisation{ID: orgID, Name: models.PlatformOrganisationName, Platform: true}, nil)
+
+			deps.clusterSvc.EXPECT().InternalUpsertSharedComputeCluster(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(callCtx context.Context, spec *models.Cluster) (*models.Cluster, *errors.ServiceError) {
+					identity := auth.GetIdentityFromCtx(callCtx)
+					Expect(identity.IsSystem).To(BeTrue())
+					Expect(identity.ContactEmail).To(BeEmpty())
+					Expect(spec.SharedCompute).To(BeTrue())
+					return &models.Cluster{ID: clusterID, SharedCompute: true}, nil
+				})
+
+			bootstrapCfg := fullBootstrapConfig()
+			bootstrapCfg.PlatformTLSEnabled = false
+			svc := deps.service(bootstrapCfg, setClusterConfig())
+			Expect(svc.Run(ctx)).To(Succeed())
+		})
+
 		It("returns a contextual error when wildcard TLS provisioning fails", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
 				Return(&models.Organisation{ID: orgID, Name: models.PlatformOrganisationName, Platform: true}, nil)
 
-			platformCluster := &models.Cluster{ID: clusterID}
-			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
-				Return(platformCluster, nil)
-			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), platformCluster, gomock.Any()).
+			sharedComputeCluster := &models.Cluster{ID: clusterID}
+			deps.clusterSvc.EXPECT().InternalUpsertSharedComputeCluster(gomock.Any(), gomock.Any()).
+				Return(sharedComputeCluster, nil)
+			deps.clusterSvc.EXPECT().InternalEnsurePlatformWildcardTLS(gomock.Any(), sharedComputeCluster, gomock.Any()).
 				Return(errors.GeneralError("certificate request failed"))
 
 			svc := deps.service(fullBootstrapConfig(), setClusterConfig())
@@ -158,7 +180,7 @@ var _ = Describe("Bootstrap", func() {
 			deps.orgSvc.EXPECT().InternalGetPlatformOrg(gomock.Any()).
 				Return(&models.Organisation{ID: orgID, Name: models.PlatformOrganisationName, Platform: true}, nil)
 
-			deps.clusterSvc.EXPECT().InternalUpsertPlatformCluster(gomock.Any(), gomock.Any()).
+			deps.clusterSvc.EXPECT().InternalUpsertSharedComputeCluster(gomock.Any(), gomock.Any()).
 				Return(&models.Cluster{ID: clusterID}, nil)
 
 			bootstrapCfg := fullBootstrapConfig()
