@@ -19,11 +19,12 @@ type ImageRegistryService interface {
 	BackgroundJobEnqueuerInjectable
 	Get(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalGet(ctx context.Context, ID string) (*models.ClusterImageRegistry, *errors.ServiceError)
+	InternalGetForOrgAndCluster(ctx context.Context, orgID, clusterID string) (*models.ClusterImageRegistry, *errors.ServiceError)
 	InternalMarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError
 	ListForOrg(ctx context.Context, orgID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	ListByClusterID(ctx context.Context, orgID, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError)
 	Create(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
-	InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
+	InternalCreatePendingSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	CreateWithTx(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError)
 	DeleteWithTx(ctx context.Context, orgID string, registry *models.ClusterImageRegistry) *errors.ServiceError
 	UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError
@@ -78,13 +79,17 @@ func (s *clusterImageRegistryService) InternalGet(ctx context.Context, ID string
 	return s.clusterImageRegistryStore.GetByID(ctx, ID)
 }
 
+func (s *clusterImageRegistryService) InternalGetForOrgAndCluster(ctx context.Context, orgID, clusterID string) (*models.ClusterImageRegistry, *errors.ServiceError) {
+	return s.clusterImageRegistryStore.GetForOrgAndCluster(ctx, orgID, clusterID)
+}
+
 func (s *clusterImageRegistryService) InternalMarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError {
 	return s.clusterImageRegistryStore.MarkAllDeletingByClusterIDWithTx(ctx, clusterID)
 }
 
 // validateOwnedCluster requires the target cluster to be owned by the org.
 // Seed registries on the shared-compute cluster go through
-// InternalCreateSeedRegistry instead.
+// InternalCreatePendingSeedRegistry instead.
 func (s *clusterImageRegistryService) validateOwnedCluster(ctx context.Context, orgID, clusterID string) *errors.ServiceError {
 	owned, err := s.clusterStore.ListBYOCClustersForOrg(ctx, orgID)
 	if err != nil {
@@ -154,10 +159,9 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	return s.create(ctx, spec)
 }
 
-// InternalCreateSeedRegistry creates the org's seed registry on a shared-compute
-// cluster. Org-provisioning only — the API Create path requires an
-// org-owned target cluster.
-func (s *clusterImageRegistryService) InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
+// InternalCreatePendingSeedRegistry records the org's shared-compute registry
+// without provisioning it. A release creates the cluster resource on first use.
+func (s *clusterImageRegistryService) InternalCreatePendingSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	if err := s.validateSpec(spec); err != nil {
 		return nil, err
 	}
@@ -168,7 +172,17 @@ func (s *clusterImageRegistryService) InternalCreateSeedRegistry(ctx context.Con
 	if !cluster.SharedCompute {
 		return nil, errors.NotFound("cluster '%s' is not a shared-compute cluster", spec.ClusterID)
 	}
-	return s.create(ctx, spec)
+	if spec.Status == nil {
+		spec.Status = &models.ClusterImageRegistryStatus{State: models.RegistryStatePending, Conditions: []models.Condition{}}
+	}
+	s.setDefaultValues(spec)
+	var created *models.ClusterImageRegistry
+	createErr := s.clusterImageRegistryStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		var createErr *errors.ServiceError
+		created, createErr = s.clusterImageRegistryStore.CreateWithTx(txCtx, spec)
+		return createErr
+	})
+	return created, createErr
 }
 
 func (s *clusterImageRegistryService) validateSpec(spec *models.ClusterImageRegistry) *errors.ServiceError {

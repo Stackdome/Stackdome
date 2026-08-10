@@ -6906,17 +6906,6 @@ components:
                 commit: commit
                 tag: tag
                 branch: branch
-            remote_source:
-              path: path
-              current_directory_hash: current_directory_hash
-            build_source:
-            - destination_path: destination_path
-              resource_ref: resource_ref
-              source_path: source_path
-            - destination_path: destination_path
-              resource_ref: resource_ref
-              source_path: source_path
-            source_type: null
           access_mode: null
         labels:
         - value: value
@@ -6925,15 +6914,7 @@ components:
           key: key
         status:
           phase: phase
-          build_artifact_syncs:
-          - build_id: build_id
-            resource_name: resource_name
-            status: status
-          - build_id: build_id
-            resource_name: resource_name
-            status: status
           last_synced_git_revision: last_synced_git_revision
-          last_remote_sync_hash: last_remote_sync_hash
           conditions:
           - reason: reason
             last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -6995,17 +6976,6 @@ components:
                   commit: commit
                   tag: tag
                   branch: branch
-              remote_source:
-                path: path
-                current_directory_hash: current_directory_hash
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
             access_mode: null
           labels:
           - value: value
@@ -7014,15 +6984,7 @@ components:
             key: key
           status:
             phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
             last_synced_git_revision: last_synced_git_revision
-            last_remote_sync_hash: last_remote_sync_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7055,17 +7017,6 @@ components:
                   commit: commit
                   tag: tag
                   branch: branch
-              remote_source:
-                path: path
-                current_directory_hash: current_directory_hash
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
             access_mode: null
           labels:
           - value: value
@@ -7074,15 +7025,7 @@ components:
             key: key
           status:
             phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
             last_synced_git_revision: last_synced_git_revision
-            last_remote_sync_hash: last_remote_sync_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7126,17 +7069,6 @@ components:
               commit: commit
               tag: tag
               branch: branch
-          remote_source:
-            path: path
-            current_directory_hash: current_directory_hash
-          build_source:
-          - destination_path: destination_path
-            resource_ref: resource_ref
-            source_path: source_path
-          - destination_path: destination_path
-            resource_ref: resource_ref
-            source_path: source_path
-          source_type: null
         access_mode: null
       properties:
         size:
@@ -7169,37 +7101,12 @@ components:
             commit: commit
             tag: tag
             branch: branch
-        remote_source:
-          path: path
-          current_directory_hash: current_directory_hash
-        build_source:
-        - destination_path: destination_path
-          resource_ref: resource_ref
-          source_path: source_path
-        - destination_path: destination_path
-          resource_ref: resource_ref
-          source_path: source_path
-        source_type: null
       properties:
         git_repo_source:
           $ref: '#/components/schemas/GitRepoSource'
-        source_type:
-          $ref: '#/components/schemas/VolumeSourceTypes'
-        remote_source:
-          $ref: '#/components/schemas/RemoteSource'
-        build_source:
-          items:
-            $ref: '#/components/schemas/BuildArtifact'
-          type: array
       required:
-      - source_type
+      - git_repo_source
       type: object
-    VolumeSourceTypes:
-      enum:
-      - RemoteDir
-      - BuildArtifact
-      - GitRepo
-      type: string
     GitRepoSource:
       example:
         repo_url: repo_url
@@ -7229,48 +7136,10 @@ components:
         commit:
           type: string
       type: object
-    RemoteSource:
-      example:
-        path: path
-        current_directory_hash: current_directory_hash
-      properties:
-        path:
-          type: string
-        current_directory_hash:
-          type: string
-      required:
-      - current_directory_hash
-      - path
-      type: object
-    BuildArtifact:
-      example:
-        destination_path: destination_path
-        resource_ref: resource_ref
-        source_path: source_path
-      properties:
-        resource_ref:
-          type: string
-        source_path:
-          type: string
-        destination_path:
-          type: string
-      required:
-      - destination_path
-      - resource_ref
-      - source_path
-      type: object
     VolumeStatus:
       example:
         phase: phase
-        build_artifact_syncs:
-        - build_id: build_id
-          resource_name: resource_name
-          status: status
-        - build_id: build_id
-          resource_name: resource_name
-          status: status
         last_synced_git_revision: last_synced_git_revision
-        last_remote_sync_hash: last_remote_sync_hash
         conditions:
         - reason: reason
           last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7291,26 +7160,7 @@ components:
           type: array
         phase:
           type: string
-        build_artifact_syncs:
-          items:
-            $ref: '#/components/schemas/BuildArtifactSyncInfo'
-          type: array
         last_synced_git_revision:
-          type: string
-        last_remote_sync_hash:
-          type: string
-      type: object
-    BuildArtifactSyncInfo:
-      example:
-        build_id: build_id
-        resource_name: resource_name
-        status: status
-      properties:
-        resource_name:
-          type: string
-        build_id:
-          type: string
-        status:
           type: string
       type: object
     Stack:
@@ -7540,17 +7390,6 @@ components:
                     commit: commit
                     tag: tag
                     branch: branch
-                remote_source:
-                  path: path
-                  current_directory_hash: current_directory_hash
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
               access_mode: null
             labels:
             - value: value
@@ -7559,15 +7398,7 @@ components:
               key: key
             status:
               phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
               last_synced_git_revision: last_synced_git_revision
-              last_remote_sync_hash: last_remote_sync_hash
               conditions:
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -7600,17 +7431,6 @@ components:
                     commit: commit
                     tag: tag
                     branch: branch
-                remote_source:
-                  path: path
-                  current_directory_hash: current_directory_hash
-                build_source:
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                - destination_path: destination_path
-                  resource_ref: resource_ref
-                  source_path: source_path
-                source_type: null
               access_mode: null
             labels:
             - value: value
@@ -7619,15 +7439,7 @@ components:
               key: key
             status:
               phase: phase
-              build_artifact_syncs:
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
-              - build_id: build_id
-                resource_name: resource_name
-                status: status
               last_synced_git_revision: last_synced_git_revision
-              last_remote_sync_hash: last_remote_sync_hash
               conditions:
               - reason: reason
                 last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -8022,17 +7834,6 @@ components:
                       commit: commit
                       tag: tag
                       branch: branch
-                  remote_source:
-                    path: path
-                    current_directory_hash: current_directory_hash
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
                 access_mode: null
               labels:
               - value: value
@@ -8041,15 +7842,7 @@ components:
                 key: key
               status:
                 phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
                 last_synced_git_revision: last_synced_git_revision
-                last_remote_sync_hash: last_remote_sync_hash
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -8082,17 +7875,6 @@ components:
                       commit: commit
                       tag: tag
                       branch: branch
-                  remote_source:
-                    path: path
-                    current_directory_hash: current_directory_hash
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
                 access_mode: null
               labels:
               - value: value
@@ -8101,15 +7883,7 @@ components:
                 key: key
               status:
                 phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
                 last_synced_git_revision: last_synced_git_revision
-                last_remote_sync_hash: last_remote_sync_hash
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -8435,17 +8209,6 @@ components:
                       commit: commit
                       tag: tag
                       branch: branch
-                  remote_source:
-                    path: path
-                    current_directory_hash: current_directory_hash
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
                 access_mode: null
               labels:
               - value: value
@@ -8454,15 +8217,7 @@ components:
                 key: key
               status:
                 phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
                 last_synced_git_revision: last_synced_git_revision
-                last_remote_sync_hash: last_remote_sync_hash
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -8495,17 +8250,6 @@ components:
                       commit: commit
                       tag: tag
                       branch: branch
-                  remote_source:
-                    path: path
-                    current_directory_hash: current_directory_hash
-                  build_source:
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  - destination_path: destination_path
-                    resource_ref: resource_ref
-                    source_path: source_path
-                  source_type: null
                 access_mode: null
               labels:
               - value: value
@@ -8514,15 +8258,7 @@ components:
                 key: key
               status:
                 phase: phase
-                build_artifact_syncs:
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
-                - build_id: build_id
-                  resource_name: resource_name
-                  status: status
                 last_synced_git_revision: last_synced_git_revision
-                last_remote_sync_hash: last_remote_sync_hash
                 conditions:
                 - reason: reason
                   last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -8916,17 +8652,6 @@ components:
                   commit: commit
                   tag: tag
                   branch: branch
-              remote_source:
-                path: path
-                current_directory_hash: current_directory_hash
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
             access_mode: null
           labels:
           - value: value
@@ -8935,15 +8660,7 @@ components:
             key: key
           status:
             phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
             last_synced_git_revision: last_synced_git_revision
-            last_remote_sync_hash: last_remote_sync_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -8976,17 +8693,6 @@ components:
                   commit: commit
                   tag: tag
                   branch: branch
-              remote_source:
-                path: path
-                current_directory_hash: current_directory_hash
-              build_source:
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              - destination_path: destination_path
-                resource_ref: resource_ref
-                source_path: source_path
-              source_type: null
             access_mode: null
           labels:
           - value: value
@@ -8995,15 +8701,7 @@ components:
             key: key
           status:
             phase: phase
-            build_artifact_syncs:
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
-            - build_id: build_id
-              resource_name: resource_name
-              status: status
             last_synced_git_revision: last_synced_git_revision
-            last_remote_sync_hash: last_remote_sync_hash
             conditions:
             - reason: reason
               last_transition_time: 2000-01-23T04:56:07.000+00:00
@@ -9666,7 +9364,6 @@ components:
           enum:
           - env
           - volume_mount
-          - build_artifact_source
           - depends_on
           type: string
         source:
@@ -9733,12 +9430,10 @@ components:
           type: string
         kind:
           description: "The relationship type. `env` injects values into environment\
-            \ variables, `volume_mount` mounts a volume into a resource, and `build_artifact_source`\
-            \ seeds a volume from build output.\n"
+            \ variables, and `volume_mount` mounts a volume into a resource.\n"
           enum:
           - env
           - volume_mount
-          - build_artifact_source
           type: string
         from:
           $ref: '#/components/schemas/TopologyNodeRef'
@@ -9831,13 +9526,11 @@ components:
     StackConnectionConfig:
       description: "Kind-specific connection configuration. The shape depends on the\
         \ connection kind and source type: use PostgresEnvConfig when kind is env\
-        \ and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount,\
-        \ and BuildArtifactSourceConfig when kind is build_artifact_source. Omit config\
-        \ entirely for env connections from stack_resource or secret sources.\n"
+        \ and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount.\
+        \ Omit config entirely for env connections from stack_resource or secret sources.\n"
       oneOf:
       - $ref: '#/components/schemas/PostgresEnvConfig'
       - $ref: '#/components/schemas/VolumeMountConfig'
-      - $ref: '#/components/schemas/BuildArtifactSourceConfig'
     PostgresEnvConfig:
       additionalProperties: false
       description: "Config for env connections from a PostgreSQL addon (kind=env,\
@@ -9871,19 +9564,6 @@ components:
           type: boolean
       required:
       - mount_path
-      type: object
-    BuildArtifactSourceConfig:
-      additionalProperties: false
-      description: Config for build artifact source connections (kind=build_artifact_source).
-      properties:
-        source_path:
-          description: Path within the build output to copy from.
-          type: string
-        destination_path:
-          description: Path within the volume to copy to.
-          type: string
-      required:
-      - source_path
       type: object
     ValueRef:
       description: "Describes how to read a value from the connection's `from` node.\
@@ -11081,8 +10761,6 @@ components:
     VolumeMountSourceType:
       enum:
       - EmptyVolume
-      - RemoteDirSyncedVolume
-      - BuildArtifactSyncedVolume
       - GitRepoSyncedVolume
       type: string
     Port:

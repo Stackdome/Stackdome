@@ -4539,26 +4539,11 @@ components:
     VolumeSource:
       type: object
       required:
-        - source_type
+        - git_repo_source
       additionalProperties: false
       properties:
         git_repo_source:
           $ref: '#/components/schemas/GitRepoSource'
-        source_type:
-          $ref: '#/components/schemas/VolumeSourceTypes'
-        remote_source:
-          $ref: '#/components/schemas/RemoteSource'
-        build_source:
-          type: array
-          items:
-            $ref: '#/components/schemas/BuildArtifact'
-
-    VolumeSourceTypes:
-      type: string
-      enum:
-      - RemoteDir
-      - BuildArtifact
-      - GitRepo
 
     GitRepoSource:
       type: object
@@ -4581,31 +4566,6 @@ components:
         commit:
           type: string
 
-    RemoteSource:
-      type: object
-      required:
-        - path
-        - current_directory_hash
-      properties:
-        path:
-          type: string
-        current_directory_hash:
-          type: string
-
-    BuildArtifact:
-      type: object
-      required:
-        - resource_ref
-        - source_path
-        - destination_path
-      properties:
-        resource_ref:
-          type: string
-        source_path:
-          type: string
-        destination_path:
-          type: string
-
     VolumeStatus:
       type: object
       properties:
@@ -4615,23 +4575,7 @@ components:
             $ref: '#/components/schemas/Condition'
         phase:
           type: string
-        build_artifact_syncs:
-          type: array
-          items:
-            $ref: '#/components/schemas/BuildArtifactSyncInfo'
         last_synced_git_revision:
-          type: string
-        last_remote_sync_hash:
-          type: string
-
-    BuildArtifactSyncInfo:
-      type: object
-      properties:
-        resource_name:
-          type: string
-        build_id:
-          type: string
-        status:
           type: string
 
     Stack:
@@ -4882,7 +4826,6 @@ components:
           enum:
             - env
             - volume_mount
-            - build_artifact_source
             - depends_on
           description: Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
         source:
@@ -4919,12 +4862,10 @@ components:
           type: string
           description: >
             The relationship type. `env` injects values into environment variables,
-            `volume_mount` mounts a volume into a resource, and
-            `build_artifact_source` seeds a volume from build output.
+            and `volume_mount` mounts a volume into a resource.
           enum:
             - env
             - volume_mount
-            - build_artifact_source
         from:
           $ref: '#/components/schemas/TopologyNodeRef'
         to:
@@ -4996,13 +4937,11 @@ components:
         Kind-specific connection configuration. The shape depends on the
         connection kind and source type: use PostgresEnvConfig when kind is
         env and from.type is addon/postgres, VolumeMountConfig when kind is
-        volume_mount, and BuildArtifactSourceConfig when kind is
-        build_artifact_source. Omit config entirely for env connections from
+        volume_mount. Omit config entirely for env connections from
         stack_resource or secret sources.
       oneOf:
         - $ref: '#/components/schemas/PostgresEnvConfig'
         - $ref: '#/components/schemas/VolumeMountConfig'
-        - $ref: '#/components/schemas/BuildArtifactSourceConfig'
 
     PostgresEnvConfig:
       type: object
@@ -5040,20 +4979,6 @@ components:
         read_only:
           type: boolean
           description: Mount the volume read-only.
-      additionalProperties: false
-
-    BuildArtifactSourceConfig:
-      type: object
-      description: Config for build artifact source connections (kind=build_artifact_source).
-      required:
-        - source_path
-      properties:
-        source_path:
-          type: string
-          description: Path within the build output to copy from.
-        destination_path:
-          type: string
-          description: Path within the volume to copy to.
       additionalProperties: false
 
     ValueRef:
@@ -5680,8 +5605,6 @@ components:
       type: string
       enum:
       - EmptyVolume
-      - RemoteDirSyncedVolume
-      - BuildArtifactSyncedVolume
       - GitRepoSyncedVolume
     Port:
       type: object

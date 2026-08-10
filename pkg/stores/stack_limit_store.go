@@ -6,14 +6,16 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 )
 
-type StackUsage struct {
+type ComputeUsage struct {
 	StackCount         int64
 	StackResourceCount int64
+	VolumeCount        int64
+	PostgresAddonCount int64
 }
 
-type StackLimitStore interface {
-	// LockOrganisationAndGetUsageWithTx serializes limit-changing mutations for
-	// one organisation and returns persisted usage. excludeStackID is used by a
-	// whole-stack replacement, which supplies that stack's desired count itself.
-	LockOrganisationAndGetUsageWithTx(ctx context.Context, organisationID, excludeStackID string) (StackUsage, *errors.ServiceError)
+type ComputeUsageStore interface {
+	// LockOrganisationAndGetUsageWithTx serializes capacity-changing mutations
+	// for one organisation and returns persisted usage. excludeStackID is used
+	// when a stack's desired resources replace its current resources.
+	LockOrganisationAndGetUsageWithTx(ctx context.Context, organisationID, excludeStackID string) (ComputeUsage, *errors.ServiceError)
 }

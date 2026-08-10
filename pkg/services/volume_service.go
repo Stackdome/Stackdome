@@ -4,8 +4,8 @@ package services
 
 import (
 	"context"
-
 	"github.com/Stackdome/stackdome/pkg/auth"
+	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -21,13 +21,8 @@ type VolumeService interface {
 	GetByVolumeNameAndNamespace(ctx context.Context, volumeName, namespace string) (*models.Volume, *errors.ServiceError)
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError)
-	CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
-	CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError)
-	CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError
 	ListByUserID(ctx context.Context, projectID, userID string) ([]*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError
-	UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
-	UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError)
 	InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService)
 	Delete(ctx context.Context, ID string) *errors.ServiceError
 	InternalDeleteFromDB(ctx context.Context, ID string) *errors.ServiceError
@@ -35,17 +30,38 @@ type VolumeService interface {
 	DeleteWithTx(ctx context.Context, ID string) *errors.ServiceError
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 	InternalCreateWithTx(ctx context.Context, stack *models.Stack, volume *models.Volume) (*models.Volume, *errors.ServiceError)
+	PrepareForCreate(ctx context.Context, volume *models.Volume) *errors.ServiceError
 	InternalSyncVolumesWithTx(ctx context.Context, stack *models.Stack, existingStack *models.Stack, desired []*models.Volume) *errors.ServiceError
+}
+
+// PrepareForCreate resolves mutable Git references before the volume enters a
+// transaction. The persisted volume definition is then stable across retries.
+func (s *volumeService) PrepareForCreate(ctx context.Context, volume *models.Volume) *errors.ServiceError {
+	if volume.VolumeSource == nil || volume.VolumeSource.GitRepoSource == nil || volume.VolumeSource.GitRepoSource.Revision.Commit != "" {
+		return nil
+	}
+	source := volume.VolumeSource.GitRepoSource
+	client, err := gitclient.NewGitClientForRepo(source.RepoUrl, gitclient.GitCredentials{})
+	if err != nil {
+		return errors.BadRequest("failed to create Git client for volume '%s': %s", volume.Name, err.Error())
+	}
+	resolved, err := gitclient.ResolveGitRepoRevision(ctx, client, source.RepoUrl, source.Revision)
+	if err != nil {
+		return errors.BadRequest("failed to resolve Git revision for volume '%s': %s", volume.Name, err.Error())
+	}
+	if resolved.Commit == "" {
+		return errors.GeneralError("resolved Git revision for volume '%s' has no commit", volume.Name)
+	}
+	volume.VolumeSource.GitRepoSource.Revision = resolved
+	return nil
 }
 
 type VolumeServiceSpec struct {
 	SessionFactory   db.SessionFactory
 	ReferenceService ReferenceService
+	RuntimePolicy    RuntimePolicy
 	Logger           logger.Logger
 	Permissions      auth.PermissionService
-	RuntimePolicy    RuntimePolicy
-	ClusterService   ClusterService
-	ClusterWrites    ClusterMutationCoordinator
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -57,15 +73,9 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 			SessionFactory: spec.SessionFactory,
 		}),
 		referenceService: spec.ReferenceService,
-		releaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
-		stackStore:     pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: spec.SessionFactory}),
-		logger:         spec.Logger,
-		permissions:    spec.Permissions,
-		runtimePolicy:  spec.RuntimePolicy,
-		clusterService: spec.ClusterService,
-		clusterWrites:  spec.ClusterWrites,
+		runtimePolicy:    spec.RuntimePolicy,
+		logger:           spec.Logger,
+		permissions:      spec.Permissions,
 	}
 }
 
@@ -73,14 +83,10 @@ type volumeService struct {
 	volumeStore            stores.VolumeStore
 	stackVolumeStore       stores.StackVolumeStore
 	referenceService       ReferenceService
-	releaseStore           stores.StackReleaseStore
-	stackStore             stores.StackStore
+	runtimePolicy          RuntimePolicy
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
-	runtimePolicy          RuntimePolicy
-	clusterService         ClusterService
-	clusterWrites          ClusterMutationCoordinator
 }
 
 func (s *volumeService) InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService) {
@@ -118,8 +124,14 @@ func (s *volumeService) InternalCreateWithTx(ctx context.Context, stack *models.
 	volume.ProjectID = stack.ProjectID
 	volume.UserID = stack.UserID
 	volume.Namespace = stack.Namespace
+	if policyErr := s.runtimePolicy.EnsureComputeAccess(ctx, stack.OrganisationID); policyErr != nil {
+		return nil, policyErr
+	}
+	if policyErr := s.runtimePolicy.ValidateVolumeLimits(ctx, stack.OrganisationID, volume.Size); policyErr != nil {
+		return nil, policyErr
+	}
 
-	createdVolume, err := s.CreateInDbWithTx(ctx, volume)
+	createdVolume, err := s.volumeStore.CreateWithTx(ctx, volume)
 	if err != nil {
 		return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
 	}
@@ -189,268 +201,6 @@ func (s *volumeService) InternalListNotReady(ctx context.Context) ([]*models.Vol
 		return nil, err
 	}
 	return volumes, nil
-}
-
-func (s *volumeService) UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError) {
-	var updatedVolume *models.Volume
-	var err *errors.ServiceError
-
-	if !revision.IsValid() {
-		return nil, errors.BadRequest("invalid git repo revision")
-	}
-	updateErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		volume, getErr := s.volumeStore.GetByID(ctx, ID)
-		if getErr != nil {
-			return getErr
-		}
-		admission, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, volume.OrganisationID)
-		if policyErr != nil {
-			return policyErr
-		}
-		updatedVolume, err = s.volumeStore.UpdateGitRepoSourceRevisionWithTx(ctx, ID, revision)
-		if err != nil {
-			s.logger.Error(ctx, "failed to update volume git repo source revision: %v", err)
-			return err
-		}
-		reconcileCluster, stack, release, admissionErr := s.resolveVolumeRevisionAuthority(ctx, updatedVolume.ID, admission)
-		if admissionErr != nil {
-			return admissionErr
-		}
-		if !reconcileCluster {
-			return nil
-		}
-		unlockCluster, authorized, authorityErr := s.lockAndRevalidateVolumeRevisionAuthority(ctx, updatedVolume, stack, release)
-		if authorityErr != nil {
-			return authorityErr
-		}
-		defer unlockCluster()
-		if !authorized {
-			return nil
-		}
-		cErr := s.clusterResourceService.UpdateVolumeGitRevisionInCluster(ctx, updatedVolume)
-		if cErr != nil {
-			s.logger.Error(ctx, "failed to update volume git revision in cluster: %v", cErr)
-			return errors.GeneralError("failed to update volume git revision in cluster: %s", cErr.Error())
-		}
-		return nil
-	})
-	if updateErr != nil {
-		return nil, updateErr
-	}
-	return updatedVolume, nil
-}
-
-func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError) {
-	var updatedVolume *models.Volume
-	var err *errors.ServiceError
-	if revision.CurrentDirectoryHash == "" {
-		return nil, errors.BadRequest("current directory hash is required")
-	}
-
-	updateErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		volume, getErr := s.volumeStore.GetByID(ctx, ID)
-		if getErr != nil {
-			return getErr
-		}
-		admission, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, volume.OrganisationID)
-		if policyErr != nil {
-			return policyErr
-		}
-		updatedVolume, err = s.volumeStore.UpdateRemoteDirSourceHashWithTx(ctx, ID, revision.CurrentDirectoryHash)
-		if err != nil {
-			s.logger.Error(ctx, "failed to update volume remote source revision: %v", err)
-			return err
-		}
-
-		reconcileCluster, stack, release, admissionErr := s.resolveVolumeRevisionAuthority(ctx, updatedVolume.ID, admission)
-		if admissionErr != nil {
-			return admissionErr
-		}
-		if !reconcileCluster {
-			return nil
-		}
-		unlockCluster, authorized, authorityErr := s.lockAndRevalidateVolumeRevisionAuthority(ctx, updatedVolume, stack, release)
-		if authorityErr != nil {
-			return authorityErr
-		}
-		defer unlockCluster()
-		if !authorized {
-			return nil
-		}
-		cErr := s.clusterResourceService.UpdateVolumeRemoteDirRevisionInCluster(ctx, updatedVolume)
-		if cErr != nil {
-			s.logger.Error(ctx, "failed to update volume git revision in cluster: %v", cErr)
-			return errors.GeneralError("failed to update volume git revision in cluster: %s", cErr.Error())
-		}
-		return nil
-	})
-	if updateErr != nil {
-		return nil, updateErr
-	}
-	return updatedVolume, nil
-}
-
-// shouldReconcileVolumeRevisionWithCluster keeps cloud draft revisions in the
-// database until the volume is part of a released workload. Self-hosted mode
-// remains eager.
-func (s *volumeService) resolveVolumeRevisionAuthority(
-	ctx context.Context,
-	volumeID string,
-	admission ComputeMutationAdmission,
-) (bool, *models.Stack, *models.StackRelease, *errors.ServiceError) {
-	if !admission.ReconcileCluster {
-		return false, nil, nil, nil
-	}
-	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeEager {
-		return true, nil, nil, nil
-	}
-
-	inUse, refs, serr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volumeID)
-	if serr != nil {
-		return false, nil, nil, serr
-	}
-	if !inUse {
-		return false, nil, nil, nil
-	}
-	for _, ref := range refs {
-		if ref.ReleaseID == nil || *ref.ReleaseID == "" {
-			continue
-		}
-		stack, stackErr := s.stackStore.GetByID(ctx, ref.StackID)
-		if stackErr != nil {
-			return false, nil, nil, stackErr
-		}
-		if stack.DeletionTimestamp != nil {
-			continue
-		}
-		release, releaseErr := resolveAuthoritativeWorkloadRelease(ctx, s.releaseStore, stack)
-		if releaseErr != nil {
-			return false, nil, nil, releaseErr
-		}
-		if release != nil && release.ID == *ref.ReleaseID {
-			return true, stack, release, nil
-		}
-	}
-	return false, nil, nil, nil
-}
-
-func (s *volumeService) lockAndRevalidateVolumeRevisionAuthority(
-	ctx context.Context,
-	volume *models.Volume,
-	stack *models.Stack,
-	release *models.StackRelease,
-) (func(), bool, *errors.ServiceError) {
-	clusterID := ""
-	if stack == nil {
-		cluster, serr := s.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
-		if serr != nil {
-			return nil, false, serr
-		}
-		clusterID = cluster.ID
-	} else {
-		clusterID = stack.ClusterID
-	}
-	unlockCluster := s.clusterWrites.LockClusterNamespace(clusterID, volume.Namespace)
-
-	if stack == nil {
-		return unlockCluster, true, nil
-	}
-	if lockErr := s.stackStore.LockByID(ctx, stack.ID); lockErr != nil {
-		unlockCluster()
-		return nil, false, lockErr
-	}
-	currentStack, serr := s.stackStore.GetByID(ctx, stack.ID)
-	if serr != nil {
-		unlockCluster()
-		return nil, false, serr
-	}
-	if currentStack.DeletionTimestamp != nil {
-		return unlockCluster, false, nil
-	}
-	currentRelease, serr := resolveAuthoritativeWorkloadRelease(ctx, s.releaseStore, currentStack)
-	if serr != nil {
-		unlockCluster()
-		return nil, false, serr
-	}
-	if currentRelease == nil || currentRelease.ID != release.ID {
-		return unlockCluster, false, nil
-	}
-	if lockErr := s.releaseStore.LockByID(ctx, currentRelease.ID); lockErr != nil {
-		unlockCluster()
-		return nil, false, lockErr
-	}
-	currentStack, serr = s.stackStore.GetByID(ctx, stack.ID)
-	if serr != nil {
-		unlockCluster()
-		return nil, false, serr
-	}
-	if currentStack.DeletionTimestamp != nil {
-		return unlockCluster, false, nil
-	}
-	currentRelease, serr = resolveAuthoritativeWorkloadRelease(ctx, s.releaseStore, currentStack)
-	if serr != nil {
-		unlockCluster()
-		return nil, false, serr
-	}
-	if currentRelease == nil || currentRelease.ID != release.ID {
-		return unlockCluster, false, nil
-	}
-	admission, serr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, currentStack.OrganisationID)
-	if serr != nil {
-		unlockCluster()
-		return nil, false, serr
-	}
-	if !admission.ReconcileCluster {
-		unlockCluster()
-		return nil, false, errors.ComputeAccessInactive()
-	}
-	return unlockCluster, true, nil
-}
-
-// Assume ctx already has a transaction
-func (s *volumeService) CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	var createdVolume *models.Volume
-	var err *errors.ServiceError
-	createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
-	if err != nil {
-		s.logger.Error(ctx, "failed to create volume: %v", err)
-		return nil, err
-	}
-	cerr := s.clusterResourceService.CreateVolumeInCluster(ctx, createdVolume)
-	if cerr != nil {
-		s.logger.Error(ctx, "failed to create volume in cluster: %v", cerr)
-		return nil, errors.GeneralError("failed to create volume in cluster: %s", cerr.Error())
-	}
-	return createdVolume, nil
-}
-
-func (s *volumeService) CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError {
-	volume, err := s.volumeStore.GetByID(ctx, spec.ID)
-	if err != nil {
-		s.logger.Error(ctx, "failed to get volume for creation in cluster: %v", err)
-		return err
-	}
-	if volume == nil {
-		s.logger.Error(ctx, "volume not found for creation in cluster: %v", spec.ID)
-		return errors.NotFound("volume not found")
-	}
-	cErr := s.clusterResourceService.CreateVolumeInCluster(ctx, volume)
-	if cErr != nil {
-		s.logger.Error(ctx, "failed to create volume in cluster: %v", cErr)
-		return errors.GeneralError("failed to create volume in cluster: %s", cErr.Error())
-	}
-	return nil
-}
-
-func (s *volumeService) CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	var createdVolume *models.Volume
-	var err *errors.ServiceError
-	createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
-	if err != nil {
-		s.logger.Error(ctx, "failed to create volume: %v", err)
-		return nil, err
-	}
-	return createdVolume, nil
 }
 
 func (s *volumeService) UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError {

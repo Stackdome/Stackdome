@@ -7,7 +7,6 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/services"
 )
 
 type subReconcilerResult struct {
@@ -52,7 +51,6 @@ type eventRecorder interface {
 }
 
 type runtimePolicy interface {
-	DraftProvisioningMode() services.ProvisioningMode
 	IsolationPolicyVersion() string
 }
 

@@ -10,18 +10,18 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type stackLimitStore struct{}
+type computeUsageStore struct{}
 
-var _ stores.StackLimitStore = (*stackLimitStore)(nil)
+var _ stores.ComputeUsageStore = (*computeUsageStore)(nil)
 
-func NewStackLimitStore() stores.StackLimitStore {
-	return &stackLimitStore{}
+func NewComputeUsageStore() stores.ComputeUsageStore {
+	return &computeUsageStore{}
 }
 
-func (*stackLimitStore) LockOrganisationAndGetUsageWithTx(ctx context.Context, organisationID, excludeStackID string) (stores.StackUsage, *errors.ServiceError) {
+func (*computeUsageStore) LockOrganisationAndGetUsageWithTx(ctx context.Context, organisationID, excludeStackID string) (stores.ComputeUsage, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
-		return stores.StackUsage{}, errors.GeneralError("transaction not found in context")
+		return stores.ComputeUsage{}, errors.GeneralError("transaction not found in context")
 	}
 
 	query := tx.Model(&models.Organisation{}).Select("id").Where("id = ?", organisationID)
@@ -31,15 +31,15 @@ func (*stackLimitStore) LockOrganisationAndGetUsageWithTx(ctx context.Context, o
 	var lockedOrganisationID string
 	result := query.Scan(&lockedOrganisationID)
 	if result.Error != nil {
-		return stores.StackUsage{}, errors.GeneralError("failed to lock organisation for stack limits: %s", result.Error.Error())
+		return stores.ComputeUsage{}, errors.GeneralError("failed to lock organisation for compute usage: %s", result.Error.Error())
 	}
 	if result.RowsAffected != 1 {
-		return stores.StackUsage{}, errors.NotFound("organisation '%s' not found", organisationID)
+		return stores.ComputeUsage{}, errors.NotFound("organisation '%s' not found", organisationID)
 	}
 
-	usage := stores.StackUsage{}
+	usage := stores.ComputeUsage{}
 	if err := tx.Model(&models.Stack{}).Where("organisation_id = ?", organisationID).Count(&usage.StackCount).Error; err != nil {
-		return stores.StackUsage{}, errors.GeneralError("failed to count organisation stacks: %s", err.Error())
+		return stores.ComputeUsage{}, errors.GeneralError("failed to count organisation stacks: %s", err.Error())
 	}
 	resourceQuery := tx.Table("stack_resources AS sr").
 		Joins("JOIN stacks AS s ON s.id = sr.stack_id").
@@ -48,7 +48,13 @@ func (*stackLimitStore) LockOrganisationAndGetUsageWithTx(ctx context.Context, o
 		resourceQuery = resourceQuery.Where("s.id <> ?", excludeStackID)
 	}
 	if err := resourceQuery.Count(&usage.StackResourceCount).Error; err != nil {
-		return stores.StackUsage{}, errors.GeneralError("failed to count organisation stack resources: %s", err.Error())
+		return stores.ComputeUsage{}, errors.GeneralError("failed to count organisation stack resources: %s", err.Error())
+	}
+	if err := tx.Model(&models.Volume{}).Where("organisation_id = ?", organisationID).Count(&usage.VolumeCount).Error; err != nil {
+		return stores.ComputeUsage{}, errors.GeneralError("failed to count organisation volumes: %s", err.Error())
+	}
+	if err := tx.Model(&models.PostgresAddon{}).Where("organisation_id = ?", organisationID).Count(&usage.PostgresAddonCount).Error; err != nil {
+		return stores.ComputeUsage{}, errors.GeneralError("failed to count organisation PostgreSQL addons: %s", err.Error())
 	}
 	return usage, nil
 }

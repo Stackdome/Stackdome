@@ -9,6 +9,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker"
@@ -49,6 +51,8 @@ type ReleaseWorkerSpec struct {
 	RegistryClients       registryClientProvider
 	RuntimePolicy         runtimePolicy
 	NamespaceService      namespaceService
+	ImageRegistryService  services.ImageRegistryService
+	ImageRegistryResource clusterresource.ClusterImageRegistryService
 	Env                   string
 	ClusterWrites         *worker.ClusterMutationCoordinator
 }
@@ -69,7 +73,6 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 		subReconcilers: []subReconciler{
 			newGatekeeperReconciler(spec),
 			newDeadlineReconciler(spec),
-			newCompatibilityReconciler(spec),
 			newProvisioningPrerequisiteReconciler(spec),
 			newSimulatorReconciler(spec),
 			newValidationReconciler(spec),

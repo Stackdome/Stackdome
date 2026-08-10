@@ -420,11 +420,6 @@ func (r *applyReconciler) verifyReferencedVolumesExist(ctx context.Context, rele
 // release.Snapshot.Resources, does NOT reflect connection-driven mounts; the
 // connections themselves must be walked directly to recover them.
 //
-// build_artifact_source connections are deliberately excluded: they point
-// FROM a stack resource TO a volume (the resource's build output is copied
-// into that volume by the volume controller), so the volume is never
-// referenced by the Stack/StackResource CRs this reconciler applies — it's
-// managed entirely by the separate volume worker/controller.
 func referencedVolumeRefs(snapshot *models.StackSnapshot) []volumeRef {
 	seen := make(map[volumeRef]struct{})
 	var refs []volumeRef

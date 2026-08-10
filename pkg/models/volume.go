@@ -26,9 +26,6 @@ const (
 const (
 	VolumePhasePending = "Pending"
 	VolumePhaseReady   = "Ready"
-	// VolumeReleaseIDAnnotation identifies the immutable release snapshot that
-	// last wrote a Volume CR. Release readiness uses it to reject stale status.
-	VolumeReleaseIDAnnotation = "stackdome.io/release-id"
 )
 
 type Volume struct {
@@ -52,24 +49,14 @@ type Volume struct {
 }
 
 func (v *Volume) VolumeSourceType() SourceVolumeType {
-	switch {
-	case v.VolumeSource == nil:
-		return EmptyVolume
-	case len(v.VolumeSource.BuildSource) != 0:
-		return BuildArtifactSyncedVolume
-	case v.VolumeSource.RemoteDirSource != nil:
-		return RemoteDirSyncedVolume
-	case v.VolumeSource.GitRepoSource != nil:
+	if v.VolumeSource != nil && v.VolumeSource.GitRepoSource != nil {
 		return GitRepoVolume
-	default:
-		return EmptyVolume
 	}
+	return EmptyVolume
 }
 
 type VolumeSource struct {
-	RemoteDirSource *RemoteDirSource     `json:"remote_dir_source,omitempty"`
-	BuildSource     BuildArtifactSources `json:"build_source,omitempty"`
-	GitRepoSource   *GitRepoSource       `json:"git_repo_source,omitempty"`
+	GitRepoSource *GitRepoSource `json:"git_repo_source,omitempty"`
 }
 
 func (v VolumeSource) Value() (driver.Value, error) {
@@ -146,29 +133,13 @@ func (g *GitRepoRevision) Scan(value interface{}) error {
 	return json.Unmarshal(b, &g)
 }
 
-type BuildArtifactSources []BuildArtifactSource
-
-func (b BuildArtifactSources) Value() (driver.Value, error) {
-	return json.Marshal(b)
-}
-
-func (b *BuildArtifactSources) Scan(value interface{}) error {
-	v, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte for BuildArtifactSources failed")
-	}
-	return json.Unmarshal(v, &b)
-}
-
 type VolumeStatus struct {
-	ObservedGeneration     int64                   `json:"observed_generation"`
-	Conditions             []Condition             `json:"conditions"`
-	Phase                  string                  `json:"phase"`
-	BuildArtifactSyncs     []BuildArtifactSyncInfo `json:"build_artifact_syncs,omitempty"`
-	LastObservedStatusHash string                  `json:"last_observed_status_hash,omitempty"`
-	InUse                  bool                    `json:"in_use"`
-	LastSyncedGitRevision  string                  `json:"last_synced_git_revision,omitempty"`
-	LastRemoteDirSyncHash  string                  `json:"last_remote_dir_sync_hash,omitempty"`
+	ObservedGeneration     int64       `json:"observed_generation"`
+	Conditions             []Condition `json:"conditions"`
+	Phase                  string      `json:"phase"`
+	LastObservedStatusHash string      `json:"last_observed_status_hash,omitempty"`
+	InUse                  bool        `json:"in_use"`
+	LastSyncedGitRevision  string      `json:"last_synced_git_revision,omitempty"`
 }
 
 func (v VolumeStatus) Value() (driver.Value, error) {
@@ -181,60 +152,6 @@ func (v *VolumeStatus) Scan(value interface{}) error {
 		return errors.New("type assertion to []byte for VolumeStatus failed")
 	}
 	return json.Unmarshal(b, &v)
-}
-
-type BuildArtifactSyncInfo struct {
-	ResourceName string `json:"resource_name"`
-	BuildID      string `json:"build_id"`
-	Status       string `json:"status"`
-}
-
-func (b BuildArtifactSyncInfo) Value() (driver.Value, error) {
-	return json.Marshal(b)
-}
-
-func (b *BuildArtifactSyncInfo) Scan(value interface{}) error {
-	v, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte for BuildArtifactSyncInfo failed")
-	}
-	return json.Unmarshal(v, &b)
-}
-
-type RemoteDirSource struct {
-	// Path within the client where the directory to be synced is located.
-	Path string `json:"path"`
-	// We use this to track the current state of the remote directory.
-	CurrentDirectoryHash string `json:"current_directory_hash"`
-}
-
-func (l RemoteDirSource) Value() (driver.Value, error) {
-	return json.Marshal(l)
-}
-
-func (l *RemoteDirSource) Scan(value interface{}) error {
-	b, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte for LocalSource failed")
-	}
-	return json.Unmarshal(b, &l)
-}
-
-type BuildArtifactSource struct {
-	ResourceName    string `json:"resource_name"`
-	SourcePath      string `json:"source_path"`
-	DestinationPath string `json:"destination_path"`
-}
-
-func (b BuildArtifactSource) Value() (driver.Value, error) {
-	return json.Marshal(b)
-}
-func (b *BuildArtifactSource) Scan(value interface{}) error {
-	v, ok := value.([]byte)
-	if !ok {
-		return errors.New("type assertion to []byte for BuildArtifactSource failed")
-	}
-	return json.Unmarshal(v, &b)
 }
 
 type VolumeMountPath struct {

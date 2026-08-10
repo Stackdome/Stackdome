@@ -8,7 +8,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
@@ -21,7 +20,6 @@ type stackWorker struct {
 	releaseService releaseService
 	clusterManager clustermanager.ClusterManager
 	subReconcilers []subReconciler
-	runtimePolicy  services.RuntimePolicy
 	worker.BaseWorker
 }
 
@@ -32,7 +30,6 @@ type StackWorkerSpec struct {
 	NamespaceService namespaceService
 	Env              string
 	ClusterManager   clustermanager.ClusterManager
-	RuntimePolicy    services.RuntimePolicy
 	ReleaseService   releaseService
 	ClusterWrites    *worker.ClusterMutationCoordinator
 }
@@ -42,7 +39,6 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 		stackService:   spec.StackService,
 		releaseService: spec.ReleaseService,
 		clusterManager: spec.ClusterManager,
-		runtimePolicy:  spec.RuntimePolicy,
 		BaseWorker: worker.NewBaseWorkerWithClusterMutationCoordinator(
 			StackWorkerName, spec.Env, spec.ClusterWrites,
 		),
@@ -59,6 +55,10 @@ func NewStackWorker(spec StackWorkerSpec) worker.Worker {
 				ClusterManager:   spec.ClusterManager,
 				NamespaceService: spec.NamespaceService,
 				Logger:           logger.NewLoggerWithPrefix(context.Background(), "stack-namespace-reconciler"),
+			}),
+			NewResourceRestartReconciler(ResourceRestartReconcilerSpec{
+				ClusterManager: spec.ClusterManager,
+				Logger:         logger.NewLoggerWithPrefix(context.Background(), "stack-resource-restart-reconciler"),
 			}),
 		},
 	}
@@ -85,7 +85,7 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 	unlockCluster := w.LockClusterNamespace(stack.ClusterID, stack.Namespace)
 	defer unlockCluster()
 	log.Info(ctx, "processing stack")
-	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+	if stack.DeletionTimestamp == nil {
 		authoritativeRelease, authorityErr := w.releaseService.InternalResolveAuthoritativeWorkloadRelease(ctx, stack)
 		if authorityErr != nil {
 			return worker.Result{}, authorityErr
@@ -132,26 +132,6 @@ func (w *stackWorker) reconcile(ctx context.Context, stack *models.Stack) (worke
 }
 
 func (w *stackWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
-	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
-		return w.getCloudInput(ctx)
-	}
-	res, err := w.stackService.InternalList(ctx, "status->>'state' IN ? OR deletion_timestamp IS NOT NULL",
-		[]models.StackState{
-			models.StackPending,
-			models.StackDeleting,
-		})
-	if err != nil {
-		return nil, w.WorkerError.NewError("failed to list pending stacks: %v", err)
-	}
-
-	operands := make([]worker.Operand, 0)
-	for _, stack := range res {
-		operands = append(operands, models.StackOperand{ID: stack.ID})
-	}
-	return operands, nil
-}
-
-func (w *stackWorker) getCloudInput(ctx context.Context) ([]worker.Operand, *errors.ServiceError) {
 	scan, serr := w.releaseService.InternalListAuthoritativeWorkload(ctx)
 	if serr != nil {
 		return nil, w.WorkerError.NewError("failed to list authoritative stack releases: %v", serr)

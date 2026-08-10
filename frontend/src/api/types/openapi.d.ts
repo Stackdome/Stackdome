@@ -7606,13 +7606,8 @@ export interface components {
         /** @enum {string} */
         VolumeAccessMode: "ReadWriteOnce" | "ReadWriteMany" | "ReadOnlyMany";
         VolumeSource: {
-            git_repo_source?: components["schemas"]["GitRepoSource"];
-            source_type: components["schemas"]["VolumeSourceTypes"];
-            remote_source?: components["schemas"]["RemoteSource"];
-            build_source?: components["schemas"]["BuildArtifact"][];
+            git_repo_source: components["schemas"]["GitRepoSource"];
         };
-        /** @enum {string} */
-        VolumeSourceTypes: "RemoteDir" | "BuildArtifact" | "GitRepo";
         GitRepoSource: {
             repo_url: string;
             revision: components["schemas"]["GitRepoRevision"];
@@ -7622,26 +7617,10 @@ export interface components {
             tag?: string;
             commit?: string;
         };
-        RemoteSource: {
-            path: string;
-            current_directory_hash: string;
-        };
-        BuildArtifact: {
-            resource_ref: string;
-            source_path: string;
-            destination_path: string;
-        };
         VolumeStatus: {
             conditions?: components["schemas"]["Condition"][];
             phase?: string;
-            build_artifact_syncs?: components["schemas"]["BuildArtifactSyncInfo"][];
             last_synced_git_revision?: string;
-            last_remote_sync_hash?: string;
-        };
-        BuildArtifactSyncInfo: {
-            resource_name?: string;
-            build_id?: string;
-            status?: string;
         };
         Stack: {
             readonly id?: string;
@@ -7747,7 +7726,7 @@ export interface components {
              * @description Edge kind. Explicit connections reuse connection kinds; derived edges use depends_on.
              * @enum {string}
              */
-            kind: "env" | "volume_mount" | "build_artifact_source" | "depends_on";
+            kind: "env" | "volume_mount" | "depends_on";
             /** @description The producing end of the edge. Corresponds to StackConnection.from. */
             source: components["schemas"]["TopologyNodeRef"];
             /** @description The consuming end of the edge. Corresponds to StackConnection.to. */
@@ -7765,11 +7744,11 @@ export interface components {
             /** @description Stable connection identifier. Generated when omitted. */
             id?: string;
             /**
-             * @description The relationship type. `env` injects values into environment variables, `volume_mount` mounts a volume into a resource, and `build_artifact_source` seeds a volume from build output.
+             * @description The relationship type. `env` injects values into environment variables, and `volume_mount` mounts a volume into a resource.
              *
              * @enum {string}
              */
-            kind: "env" | "volume_mount" | "build_artifact_source";
+            kind: "env" | "volume_mount";
             from: components["schemas"]["TopologyNodeRef"];
             to: components["schemas"]["TopologyNodeRef"];
             /** @description Target/value mappings for kinds that move values, such as `env`.
@@ -7806,9 +7785,9 @@ export interface components {
             /** @description Absolute file path when type is file. */
             path?: string;
         };
-        /** @description Kind-specific connection configuration. The shape depends on the connection kind and source type: use PostgresEnvConfig when kind is env and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount, and BuildArtifactSourceConfig when kind is build_artifact_source. Omit config entirely for env connections from stack_resource or secret sources.
+        /** @description Kind-specific connection configuration. The shape depends on the connection kind and source type: use PostgresEnvConfig when kind is env and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount. Omit config entirely for env connections from stack_resource or secret sources.
          *      */
-        StackConnectionConfig: components["schemas"]["PostgresEnvConfig"] | components["schemas"]["VolumeMountConfig"] | components["schemas"]["BuildArtifactSourceConfig"];
+        StackConnectionConfig: components["schemas"]["PostgresEnvConfig"] | components["schemas"]["VolumeMountConfig"];
         /** @description Config for env connections from a PostgreSQL addon (kind=env, from.type=addon/postgres). credential_scope and superuser are mutually exclusive.
          *      */
         PostgresEnvConfig: {
@@ -7830,13 +7809,6 @@ export interface components {
             sub_path?: string;
             /** @description Mount the volume read-only. */
             read_only?: boolean;
-        };
-        /** @description Config for build artifact source connections (kind=build_artifact_source). */
-        BuildArtifactSourceConfig: {
-            /** @description Path within the build output to copy from. */
-            source_path: string;
-            /** @description Path within the volume to copy to. */
-            destination_path?: string;
         };
         /** @description Describes how to read a value from the connection's `from` node. This is only used inside `StackConnection.mappings[]`.
          *      */
@@ -8130,7 +8102,7 @@ export interface components {
             target_path: string;
         };
         /** @enum {string} */
-        VolumeMountSourceType: "EmptyVolume" | "RemoteDirSyncedVolume" | "BuildArtifactSyncedVolume" | "GitRepoSyncedVolume";
+        VolumeMountSourceType: "EmptyVolume" | "GitRepoSyncedVolume";
         Port: {
             name: string;
             number: number;

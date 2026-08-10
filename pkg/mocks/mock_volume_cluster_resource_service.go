@@ -42,20 +42,6 @@ func (m *MockVolumeClusterResourceService) EXPECT() *MockVolumeClusterResourceSe
 	return m.recorder
 }
 
-// CreateVolumeInCluster mocks base method.
-func (m *MockVolumeClusterResourceService) CreateVolumeInCluster(ctx context.Context, volume *models.Volume) *clusterresource.ClusterResourceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateVolumeInCluster", ctx, volume)
-	ret0, _ := ret[0].(*clusterresource.ClusterResourceError)
-	return ret0
-}
-
-// CreateVolumeInCluster indicates an expected call of CreateVolumeInCluster.
-func (mr *MockVolumeClusterResourceServiceMockRecorder) CreateVolumeInCluster(ctx, volume any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateVolumeInCluster", reflect.TypeOf((*MockVolumeClusterResourceService)(nil).CreateVolumeInCluster), ctx, volume)
-}
-
 // DeleteVolumeInCluster mocks base method.
 func (m *MockVolumeClusterResourceService) DeleteVolumeInCluster(ctx context.Context, volume *models.Volume) *clusterresource.ClusterResourceError {
 	m.ctrl.T.Helper()
@@ -68,32 +54,4 @@ func (m *MockVolumeClusterResourceService) DeleteVolumeInCluster(ctx context.Con
 func (mr *MockVolumeClusterResourceServiceMockRecorder) DeleteVolumeInCluster(ctx, volume any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteVolumeInCluster", reflect.TypeOf((*MockVolumeClusterResourceService)(nil).DeleteVolumeInCluster), ctx, volume)
-}
-
-// UpdateVolumeGitRevisionInCluster mocks base method.
-func (m *MockVolumeClusterResourceService) UpdateVolumeGitRevisionInCluster(ctx context.Context, volume *models.Volume) *clusterresource.ClusterResourceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateVolumeGitRevisionInCluster", ctx, volume)
-	ret0, _ := ret[0].(*clusterresource.ClusterResourceError)
-	return ret0
-}
-
-// UpdateVolumeGitRevisionInCluster indicates an expected call of UpdateVolumeGitRevisionInCluster.
-func (mr *MockVolumeClusterResourceServiceMockRecorder) UpdateVolumeGitRevisionInCluster(ctx, volume any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVolumeGitRevisionInCluster", reflect.TypeOf((*MockVolumeClusterResourceService)(nil).UpdateVolumeGitRevisionInCluster), ctx, volume)
-}
-
-// UpdateVolumeRemoteDirRevisionInCluster mocks base method.
-func (m *MockVolumeClusterResourceService) UpdateVolumeRemoteDirRevisionInCluster(ctx context.Context, volume *models.Volume) *clusterresource.ClusterResourceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateVolumeRemoteDirRevisionInCluster", ctx, volume)
-	ret0, _ := ret[0].(*clusterresource.ClusterResourceError)
-	return ret0
-}
-
-// UpdateVolumeRemoteDirRevisionInCluster indicates an expected call of UpdateVolumeRemoteDirRevisionInCluster.
-func (mr *MockVolumeClusterResourceServiceMockRecorder) UpdateVolumeRemoteDirRevisionInCluster(ctx, volume any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateVolumeRemoteDirRevisionInCluster", reflect.TypeOf((*MockVolumeClusterResourceService)(nil).UpdateVolumeRemoteDirRevisionInCluster), ctx, volume)
 }

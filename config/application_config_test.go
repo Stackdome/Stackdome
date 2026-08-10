@@ -57,6 +57,11 @@ limits:
   maxStacksPerOrganization: 2
   maxStackResourcesPerOrganization: 6
   replicasPerStackResource: 1
+  maxVolumesPerOrganization: 2
+  maxVolumeSize: 2Gi
+  maxPostgresAddonsPerOrganization: 1
+  postgresInstances: 1
+  maxPostgresStorageSize: 2Gi
   concurrentBuilds: 1
 isolation:
   policyVersion: policy-v1
@@ -377,6 +382,11 @@ func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 			MaxStacksPerOrganization:         2,
 			MaxStackResourcesPerOrganization: 6,
 			ReplicasPerStackResource:         1,
+			MaxVolumesPerOrganization:        2,
+			MaxVolumeSize:                    "2Gi",
+			MaxPostgresAddonsPerOrganization: 1,
+			PostgresInstances:                1,
+			MaxPostgresStorageSize:           "2Gi",
 			ConcurrentBuilds:                 1,
 		},
 		Isolation: StackdomeCloudIsolationConfig{PolicyVersion: "policy-v1"},

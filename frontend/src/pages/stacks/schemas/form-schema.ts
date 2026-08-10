@@ -227,37 +227,7 @@ const FormStackResourceSchema = ApiStackResourceSchema.extend({
   }
 });
 
-const FormVolumeSourceSchema = ApiVolumeSourceSchema.superRefine(
-  (data, ctx) => {
-    // Validate that the appropriate source is provided based on source_type
-    if (data.source_type === "GitRepo" && !data.git_repo_source) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Required for GitRepo source",
-        path: ["git_repo_source"],
-      });
-    }
-
-    if (data.source_type === "RemoteDir" && !data.remote_source) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Required for RemoteDir source",
-        path: ["remote_source"],
-      });
-    }
-
-    if (
-      data.source_type === "BuildArtifact" &&
-      (!data.build_source || data.build_source.length === 0)
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Required for BuildArtifact source",
-        path: ["build_source"],
-      });
-    }
-  }
-);
+const FormVolumeSourceSchema = ApiVolumeSourceSchema;
 
 const FormVolumeSpecSchema = ApiVolumeSpecSchema.extend({
   source: FormVolumeSourceSchema.optional(),
@@ -270,9 +240,7 @@ const FormVolumeSchema = ApiVolumeSchema.extend({
 // Helper for UI to manage different source types
 const FormVolumeExtendedSchema = FormVolumeSchema.extend({
   // UI helper field, not part of the API spec
-  sourceType: z
-    .enum(["None", "GitRepo", "RemoteDir", "BuildArtifact"])
-    .default("None"),
+  sourceType: z.enum(["None", "GitRepo"]).default("None"),
 });
 
 const FormStackSchema = ApiStackSchema.extend({
@@ -423,31 +391,12 @@ function convertFormVolumeToApiVolume(
 ): VolumeUpdateRequest {
 
   const { sourceType, ...rest } = volume as FormVolumeExtendedData;
-  // Ensure needs_sync_before_use is always present and boolean
-  // Ensure remote_source.current_directory_hash and path are always present and strings if remote_source exists
-  let fixedSource = rest.spec?.source;
-  if (fixedSource && fixedSource.source_type === "RemoteDir") {
-    if (fixedSource.remote_source) {
-      fixedSource = {
-        ...fixedSource,
-        remote_source: {
-          path: fixedSource.remote_source.path || "",
-          current_directory_hash: fixedSource.remote_source.current_directory_hash || "",
-        },
-      };
-    } else {
-      fixedSource = {
-        ...fixedSource,
-        remote_source: { path: "", current_directory_hash: "" },
-      };
-    }
-  }
   return {
     ...rest,
     spec: {
       ...rest.spec,
       needs_sync_before_use: rest.spec?.needs_sync_before_use ?? false,
-      source: fixedSource,
+      source: rest.spec?.source,
     },
   };
 }
@@ -514,11 +463,7 @@ function convertApiVolumeToFormVolume(
   volume: z.infer<typeof ApiVolumeSchema>
 ): FormVolumeExtendedData {
   // Determine sourceType based on the volume's source specification
-  let sourceType: "None" | "GitRepo" | "RemoteDir" | "BuildArtifact" = "None";
-
-  if (volume.spec?.source) {
-    sourceType = volume.spec.source.source_type;
-  }
+  const sourceType: "None" | "GitRepo" = volume.spec?.source ? "GitRepo" : "None";
 
   // Ensure all required fields are present, defaulting as needed
   return {

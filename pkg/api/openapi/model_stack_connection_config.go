@@ -15,18 +15,10 @@ import (
 	"fmt"
 )
 
-// StackConnectionConfig - Kind-specific connection configuration. The shape depends on the connection kind and source type: use PostgresEnvConfig when kind is env and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount, and BuildArtifactSourceConfig when kind is build_artifact_source. Omit config entirely for env connections from stack_resource or secret sources.
+// StackConnectionConfig - Kind-specific connection configuration. The shape depends on the connection kind and source type: use PostgresEnvConfig when kind is env and from.type is addon/postgres, VolumeMountConfig when kind is volume_mount. Omit config entirely for env connections from stack_resource or secret sources.
 type StackConnectionConfig struct {
-	BuildArtifactSourceConfig *BuildArtifactSourceConfig
-	PostgresEnvConfig         *PostgresEnvConfig
-	VolumeMountConfig         *VolumeMountConfig
-}
-
-// BuildArtifactSourceConfigAsStackConnectionConfig is a convenience function that returns BuildArtifactSourceConfig wrapped in StackConnectionConfig
-func BuildArtifactSourceConfigAsStackConnectionConfig(v *BuildArtifactSourceConfig) StackConnectionConfig {
-	return StackConnectionConfig{
-		BuildArtifactSourceConfig: v,
-	}
+	PostgresEnvConfig *PostgresEnvConfig
+	VolumeMountConfig *VolumeMountConfig
 }
 
 // PostgresEnvConfigAsStackConnectionConfig is a convenience function that returns PostgresEnvConfig wrapped in StackConnectionConfig
@@ -47,19 +39,6 @@ func VolumeMountConfigAsStackConnectionConfig(v *VolumeMountConfig) StackConnect
 func (dst *StackConnectionConfig) UnmarshalJSON(data []byte) error {
 	var err error
 	match := 0
-	// try to unmarshal data into BuildArtifactSourceConfig
-	err = newStrictDecoder(data).Decode(&dst.BuildArtifactSourceConfig)
-	if err == nil {
-		jsonBuildArtifactSourceConfig, _ := json.Marshal(dst.BuildArtifactSourceConfig)
-		if string(jsonBuildArtifactSourceConfig) == "{}" { // empty struct
-			dst.BuildArtifactSourceConfig = nil
-		} else {
-			match++
-		}
-	} else {
-		dst.BuildArtifactSourceConfig = nil
-	}
-
 	// try to unmarshal data into PostgresEnvConfig
 	err = newStrictDecoder(data).Decode(&dst.PostgresEnvConfig)
 	if err == nil {
@@ -88,7 +67,6 @@ func (dst *StackConnectionConfig) UnmarshalJSON(data []byte) error {
 
 	if match > 1 { // more than 1 match
 		// reset to nil
-		dst.BuildArtifactSourceConfig = nil
 		dst.PostgresEnvConfig = nil
 		dst.VolumeMountConfig = nil
 
@@ -102,10 +80,6 @@ func (dst *StackConnectionConfig) UnmarshalJSON(data []byte) error {
 
 // Marshal data from the first non-nil pointers in the struct to JSON
 func (src StackConnectionConfig) MarshalJSON() ([]byte, error) {
-	if src.BuildArtifactSourceConfig != nil {
-		return json.Marshal(&src.BuildArtifactSourceConfig)
-	}
-
 	if src.PostgresEnvConfig != nil {
 		return json.Marshal(&src.PostgresEnvConfig)
 	}
@@ -122,10 +96,6 @@ func (obj *StackConnectionConfig) GetActualInstance() interface{} {
 	if obj == nil {
 		return nil
 	}
-	if obj.BuildArtifactSourceConfig != nil {
-		return obj.BuildArtifactSourceConfig
-	}
-
 	if obj.PostgresEnvConfig != nil {
 		return obj.PostgresEnvConfig
 	}

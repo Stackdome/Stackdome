@@ -6,9 +6,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Conditions** | Pointer to [**[]Condition**](Condition.md) |  | [optional] 
 **Phase** | Pointer to **string** |  | [optional] 
-**BuildArtifactSyncs** | Pointer to [**[]BuildArtifactSyncInfo**](BuildArtifactSyncInfo.md) |  | [optional] 
 **LastSyncedGitRevision** | Pointer to **string** |  | [optional] 
-**LastRemoteSyncHash** | Pointer to **string** |  | [optional] 
 
 ## Methods
 
@@ -79,31 +77,6 @@ SetPhase sets Phase field to given value.
 
 HasPhase returns a boolean if a field has been set.
 
-### GetBuildArtifactSyncs
-
-`func (o *VolumeStatus) GetBuildArtifactSyncs() []BuildArtifactSyncInfo`
-
-GetBuildArtifactSyncs returns the BuildArtifactSyncs field if non-nil, zero value otherwise.
-
-### GetBuildArtifactSyncsOk
-
-`func (o *VolumeStatus) GetBuildArtifactSyncsOk() (*[]BuildArtifactSyncInfo, bool)`
-
-GetBuildArtifactSyncsOk returns a tuple with the BuildArtifactSyncs field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetBuildArtifactSyncs
-
-`func (o *VolumeStatus) SetBuildArtifactSyncs(v []BuildArtifactSyncInfo)`
-
-SetBuildArtifactSyncs sets BuildArtifactSyncs field to given value.
-
-### HasBuildArtifactSyncs
-
-`func (o *VolumeStatus) HasBuildArtifactSyncs() bool`
-
-HasBuildArtifactSyncs returns a boolean if a field has been set.
-
 ### GetLastSyncedGitRevision
 
 `func (o *VolumeStatus) GetLastSyncedGitRevision() string`
@@ -128,31 +101,6 @@ SetLastSyncedGitRevision sets LastSyncedGitRevision field to given value.
 `func (o *VolumeStatus) HasLastSyncedGitRevision() bool`
 
 HasLastSyncedGitRevision returns a boolean if a field has been set.
-
-### GetLastRemoteSyncHash
-
-`func (o *VolumeStatus) GetLastRemoteSyncHash() string`
-
-GetLastRemoteSyncHash returns the LastRemoteSyncHash field if non-nil, zero value otherwise.
-
-### GetLastRemoteSyncHashOk
-
-`func (o *VolumeStatus) GetLastRemoteSyncHashOk() (*string, bool)`
-
-GetLastRemoteSyncHashOk returns a tuple with the LastRemoteSyncHash field if it's non-nil, zero value otherwise
-and a boolean to check if the value has been set.
-
-### SetLastRemoteSyncHash
-
-`func (o *VolumeStatus) SetLastRemoteSyncHash(v string)`
-
-SetLastRemoteSyncHash sets LastRemoteSyncHash field to given value.
-
-### HasLastRemoteSyncHash
-
-`func (o *VolumeStatus) HasLastRemoteSyncHash() bool`
-
-HasLastRemoteSyncHash returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

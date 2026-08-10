@@ -312,11 +312,10 @@ func (s *StackSnapshot) Scan(value interface{}) error {
 // ReleaseManifest holds the rendered Kubernetes CRs produced by the renderer.
 // Once written it is immutable (enforced by a DB trigger).
 type ReleaseManifest struct {
-	StackCR            json.RawMessage                  `json:"stack_cr"`
-	StackResourceCRs   map[string]json.RawMessage       `json:"stack_resource_crs"`
-	ResourceNames      []string                         `json:"resource_names"`
-	VolumeBuildSources map[string][]BuildArtifactSource `json:"volume_build_sources,omitempty"`
-	ResourceRevisions  map[string]string                `json:"resource_revisions"`
+	StackCR           json.RawMessage            `json:"stack_cr"`
+	StackResourceCRs  map[string]json.RawMessage `json:"stack_resource_crs"`
+	ResourceNames     []string                   `json:"resource_names"`
+	ResourceRevisions map[string]string          `json:"resource_revisions"`
 }
 
 func (m ReleaseManifest) Value() (driver.Value, error) {

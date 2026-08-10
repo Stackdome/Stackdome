@@ -2,55 +2,45 @@ package services
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-type ProvisioningMode string
-
-const (
-	ProvisioningModeEager        ProvisioningMode = "eager"
-	ProvisioningModeDatabaseOnly ProvisioningMode = "database_only"
-)
-
-// RuntimePolicy keeps mode-specific access and limits out of core services.
-// Cloud enforces them here while self-hosted remains eager and unrestricted.
+// RuntimePolicy keeps access, limits, and runtime-owned defaults out of core
+// services. Stack deployment itself is release-driven in every runtime.
 //
 //go:generate mockgen -source=runtime_policy.go -destination=runtime_policy_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
 type RuntimePolicy interface {
-	OrganisationProvisioningMode() ProvisioningMode
-	DraftProvisioningMode() ProvisioningMode
 	IsolationPolicyVersion() string
-	ActivateComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError
-	RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError
-	AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (ComputeMutationAdmission, *errors.ServiceError)
-	AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError
-	AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError
+	EnsureComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError
+	ValidateOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError
+	ValidateStackLimits(ctx context.Context, change StackLimitChange) *errors.ServiceError
+	ValidateVolumeLimits(ctx context.Context, organisationID, size string) *errors.ServiceError
+	ValidatePostgresAddonLimits(ctx context.Context, organisationID, existingAddonID string, addon *models.PostgresAddon) *errors.ServiceError
 	ApplyStackResourceDefaults(resource *models.StackResource)
+	ApplyPostgresAddonDefaults(addon *models.PostgresAddon)
 }
 
-type StackMutationKind string
+type StackLimitChangeKind string
 
 const (
-	StackMutationCreate         StackMutationKind = "create_stack"
-	StackMutationUpdate         StackMutationKind = "update_stack"
-	StackMutationCreateResource StackMutationKind = "create_resource"
-	StackMutationUpdateResource StackMutationKind = "update_resource"
+	StackLimitCreate         StackLimitChangeKind = "create_stack"
+	StackLimitUpdate         StackLimitChangeKind = "update_stack"
+	StackLimitCreateResource StackLimitChangeKind = "create_resource"
+	StackLimitUpdateResource StackLimitChangeKind = "update_resource"
 )
 
-type StackMutation struct {
-	Kind                 StackMutationKind
+// StackLimitChange describes how a proposed draft edit changes counted stack
+// usage. It does not decide compute access or runtime reconciliation.
+type StackLimitChange struct {
+	Kind                 StackLimitChangeKind
 	OrganisationID       string
 	StackID              string
 	DesiredResourceCount int64
-}
-
-// ComputeMutationAdmission carries the runtime side effects authorized by the
-// entitlement and lease rows locked in the mutation transaction.
-type ComputeMutationAdmission struct {
-	ReconcileCluster bool
 }
 
 type selfHostedRuntimePolicy struct{}
@@ -59,154 +49,178 @@ func NewSelfHostedRuntimePolicy() RuntimePolicy {
 	return selfHostedRuntimePolicy{}
 }
 
-func (selfHostedRuntimePolicy) OrganisationProvisioningMode() ProvisioningMode {
-	return ProvisioningModeEager
-}
-
-func (selfHostedRuntimePolicy) DraftProvisioningMode() ProvisioningMode {
-	return ProvisioningModeEager
-}
-
 func (selfHostedRuntimePolicy) IsolationPolicyVersion() string {
 	return ""
 }
 
-func (selfHostedRuntimePolicy) ActivateComputeAccessWithTx(context.Context, string) *errors.ServiceError {
+func (selfHostedRuntimePolicy) EnsureComputeAccess(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
+func (selfHostedRuntimePolicy) ValidateOrganisationDeletion(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (ComputeMutationAdmission, *errors.ServiceError) {
-	return ComputeMutationAdmission{ReconcileCluster: true}, nil
-}
-
-func (selfHostedRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
+func (selfHostedRuntimePolicy) ValidateStackLimits(context.Context, StackLimitChange) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedRuntimePolicy) AdmitStackMutationWithTx(context.Context, StackMutation) *errors.ServiceError {
+func (selfHostedRuntimePolicy) ValidateVolumeLimits(context.Context, string, string) *errors.ServiceError {
+	return nil
+}
+
+func (selfHostedRuntimePolicy) ValidatePostgresAddonLimits(context.Context, string, string, *models.PostgresAddon) *errors.ServiceError {
 	return nil
 }
 
 func (selfHostedRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}
 
+func (selfHostedRuntimePolicy) ApplyPostgresAddonDefaults(*models.PostgresAddon) {}
+
 type stackdomeCloudRuntimePolicy struct {
 	computeAccess          ComputeAccessService
-	stackLimits            stores.StackLimitStore
+	computeUsage           stores.ComputeUsageStore
 	isolationPolicyVersion string
-	maxStacks              int64
-	maxResources           int64
-	replicas               int32
+	limits                 models.ComputeLimits
+	maxVolumeSize          resource.Quantity
+	maxPostgresStorageSize resource.Quantity
 }
 
 type StackdomeCloudRuntimePolicySpec struct {
 	ComputeAccess          ComputeAccessService
-	StackLimits            stores.StackLimitStore
+	ComputeUsage           stores.ComputeUsageStore
 	IsolationPolicyVersion string
-	MaxStacks              int64
-	MaxResources           int64
-	Replicas               int32
+	Limits                 models.ComputeLimits
 }
 
 func NewStackdomeCloudRuntimePolicy(spec StackdomeCloudRuntimePolicySpec) RuntimePolicy {
 	if spec.IsolationPolicyVersion == "" {
 		panic("services.NewStackdomeCloudRuntimePolicy: IsolationPolicyVersion is required")
 	}
-	if spec.MaxStacks <= 0 {
-		panic("services.NewStackdomeCloudRuntimePolicy: MaxStacks must be greater than zero")
-	}
-	if spec.MaxResources <= 0 {
-		panic("services.NewStackdomeCloudRuntimePolicy: MaxResources must be greater than zero")
-	}
-	if spec.Replicas <= 0 {
-		panic("services.NewStackdomeCloudRuntimePolicy: Replicas must be greater than zero")
-	}
+	maxVolumeSize := mustParsePolicyQuantity("MaxVolumeSize", spec.Limits.MaxVolumeSize)
+	maxPostgresStorageSize := mustParsePolicyQuantity("MaxPostgresStorageSize", spec.Limits.MaxPostgresStorageSize)
 	return &stackdomeCloudRuntimePolicy{
 		computeAccess:          spec.ComputeAccess,
-		stackLimits:            spec.StackLimits,
+		computeUsage:           spec.ComputeUsage,
 		isolationPolicyVersion: spec.IsolationPolicyVersion,
-		maxStacks:              spec.MaxStacks,
-		maxResources:           spec.MaxResources,
-		replicas:               spec.Replicas,
+		limits:                 spec.Limits,
+		maxVolumeSize:          maxVolumeSize,
+		maxPostgresStorageSize: maxPostgresStorageSize,
 	}
 }
 
-func (*stackdomeCloudRuntimePolicy) OrganisationProvisioningMode() ProvisioningMode {
-	return ProvisioningModeDatabaseOnly
-}
-
-func (*stackdomeCloudRuntimePolicy) DraftProvisioningMode() ProvisioningMode {
-	return ProvisioningModeDatabaseOnly
+func mustParsePolicyQuantity(name, value string) resource.Quantity {
+	quantity, err := resource.ParseQuantity(value)
+	if err != nil || quantity.Sign() <= 0 {
+		panic(fmt.Sprintf("services.NewStackdomeCloudRuntimePolicy: %s must be a positive Kubernetes quantity", name))
+	}
+	return quantity
 }
 
 func (p *stackdomeCloudRuntimePolicy) IsolationPolicyVersion() string {
 	return p.isolationPolicyVersion
 }
 
-func (p *stackdomeCloudRuntimePolicy) ActivateComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.computeAccess.ActivateWithTx(ctx, organisationID)
+func (p *stackdomeCloudRuntimePolicy) EnsureComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError {
+	_, serr := p.computeAccess.Activate(ctx, organisationID)
 	return serr
 }
 
-func (p *stackdomeCloudRuntimePolicy) RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.computeAccess.RequireWithTx(ctx, organisationID)
-	return serr
-}
-
-func (p *stackdomeCloudRuntimePolicy) AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (ComputeMutationAdmission, *errors.ServiceError) {
-	access, serr := p.computeAccess.AdmitComputeMutationWithTx(ctx, organisationID)
-	return ComputeMutationAdmission{ReconcileCluster: access != nil}, serr
-}
-
-func (p *stackdomeCloudRuntimePolicy) AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
+func (p *stackdomeCloudRuntimePolicy) ValidateOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
 	return p.computeAccess.EnsureNoLease(ctx, organisationID)
 }
 
-func (p *stackdomeCloudRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
-	if _, serr := p.AdmitComputeMutationWithTx(ctx, mutation.OrganisationID); serr != nil {
-		return serr
-	}
+func (p *stackdomeCloudRuntimePolicy) ValidateStackLimits(ctx context.Context, change StackLimitChange) *errors.ServiceError {
 	excludedStackID := ""
-	switch mutation.Kind {
-	case StackMutationCreate, StackMutationCreateResource, StackMutationUpdateResource:
-	case StackMutationUpdate:
-		if mutation.StackID == "" {
+	switch change.Kind {
+	case StackLimitCreate, StackLimitCreateResource, StackLimitUpdateResource:
+	case StackLimitUpdate:
+		if change.StackID == "" {
 			return errors.GeneralError("stack ID is required for a whole-stack update")
 		}
-		excludedStackID = mutation.StackID
+		excludedStackID = change.StackID
 	default:
-		return errors.GeneralError("unsupported stack mutation kind %q", mutation.Kind)
+		return errors.GeneralError("unsupported stack limit change kind %q", change.Kind)
 	}
-	usage, serr := p.stackLimits.LockOrganisationAndGetUsageWithTx(ctx, mutation.OrganisationID, excludedStackID)
+	usage, serr := p.computeUsage.LockOrganisationAndGetUsageWithTx(ctx, change.OrganisationID, excludedStackID)
 	if serr != nil {
 		return serr
 	}
 
 	stackCount := usage.StackCount
 	resourceCount := usage.StackResourceCount
-	switch mutation.Kind {
-	case StackMutationCreate:
+	switch change.Kind {
+	case StackLimitCreate:
 		stackCount++
-		resourceCount += mutation.DesiredResourceCount
-	case StackMutationUpdate:
-		resourceCount += mutation.DesiredResourceCount
-	case StackMutationCreateResource:
+		resourceCount += change.DesiredResourceCount
+	case StackLimitUpdate:
+		resourceCount += change.DesiredResourceCount
+	case StackLimitCreateResource:
 		resourceCount++
-	case StackMutationUpdateResource:
+	case StackLimitUpdateResource:
 	}
-	if stackCount > p.maxStacks {
-		return errors.BadRequest("Stackdome Cloud allows a maximum of %d stacks per organisation", p.maxStacks)
+	if stackCount > p.limits.MaxStacksPerOrganization {
+		return errors.BadRequest("Stackdome Cloud allows a maximum of %d stacks per organisation", p.limits.MaxStacksPerOrganization)
 	}
-	if resourceCount > p.maxResources {
-		return errors.BadRequest("Stackdome Cloud allows a maximum of %d stack resources per organisation", p.maxResources)
+	if resourceCount > p.limits.MaxStackResourcesPerOrganization {
+		return errors.BadRequest("Stackdome Cloud allows a maximum of %d stack resources per organisation", p.limits.MaxStackResourcesPerOrganization)
+	}
+	return nil
+}
+
+func (p *stackdomeCloudRuntimePolicy) ValidateVolumeLimits(ctx context.Context, organisationID, size string) *errors.ServiceError {
+	usage, serr := p.computeUsage.LockOrganisationAndGetUsageWithTx(ctx, organisationID, "")
+	if serr != nil {
+		return serr
+	}
+	if usage.VolumeCount+1 > p.limits.MaxVolumesPerOrganization {
+		return errors.BadRequest("Stackdome Cloud allows a maximum of %d volumes per organisation", p.limits.MaxVolumesPerOrganization)
+	}
+	requested, err := resource.ParseQuantity(size)
+	if err != nil || requested.Sign() <= 0 {
+		return errors.BadRequest("volume size must be a positive Kubernetes quantity")
+	}
+	if requested.Cmp(p.maxVolumeSize) > 0 {
+		return errors.BadRequest("Stackdome Cloud allows a maximum volume size of %s", p.limits.MaxVolumeSize)
+	}
+	return nil
+}
+
+func (p *stackdomeCloudRuntimePolicy) ValidatePostgresAddonLimits(ctx context.Context, organisationID, existingAddonID string, addon *models.PostgresAddon) *errors.ServiceError {
+	usage, serr := p.computeUsage.LockOrganisationAndGetUsageWithTx(ctx, organisationID, "")
+	if serr != nil {
+		return serr
+	}
+	addonCount := usage.PostgresAddonCount
+	if existingAddonID == "" {
+		addonCount++
+	}
+	if addonCount > p.limits.MaxPostgresAddonsPerOrganization {
+		return errors.BadRequest("Stackdome Cloud allows a maximum of %d PostgreSQL addon per organisation", p.limits.MaxPostgresAddonsPerOrganization)
+	}
+	if addon.Instances.Count != p.limits.PostgresInstances {
+		return errors.BadRequest("Stackdome Cloud PostgreSQL addons must use exactly %d instance", p.limits.PostgresInstances)
+	}
+	requested, err := resource.ParseQuantity(addon.Storage.Size)
+	if err != nil || requested.Sign() <= 0 {
+		return errors.BadRequest("PostgreSQL addon storage size must be a positive Kubernetes quantity")
+	}
+	if requested.Cmp(p.maxPostgresStorageSize) > 0 {
+		return errors.BadRequest("Stackdome Cloud allows a maximum PostgreSQL addon storage size of %s", p.limits.MaxPostgresStorageSize)
 	}
 	return nil
 }
 
 func (p *stackdomeCloudRuntimePolicy) ApplyStackResourceDefaults(resource *models.StackResource) {
-	replicas := p.replicas
+	replicas := p.limits.ReplicasPerStackResource
 	resource.Replicas = &replicas
+}
+
+func (p *stackdomeCloudRuntimePolicy) ApplyPostgresAddonDefaults(addon *models.PostgresAddon) {
+	if addon.Instances.Count == 0 {
+		addon.Instances.Count = p.limits.PostgresInstances
+	}
+	if addon.Storage.Size == "" {
+		addon.Storage.Size = p.limits.MaxPostgresStorageSize
+	}
 }

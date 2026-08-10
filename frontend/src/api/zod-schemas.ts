@@ -406,12 +406,7 @@ const ExecutionConfig = z
   })
   .partial()
   .passthrough();
-const VolumeMountSourceType = z.enum([
-  "EmptyVolume",
-  "RemoteDirSyncedVolume",
-  "BuildArtifactSyncedVolume",
-  "GitRepoSyncedVolume",
-]);
+const VolumeMountSourceType = z.enum(["EmptyVolume", "GitRepoSyncedVolume"]);
 const VolumeMount = z
   .object({
     stack_resource_id: z.string().optional(),
@@ -470,23 +465,7 @@ const GitRepoRevision = z
 const GitRepoSource = z
   .object({ repo_url: z.string(), revision: GitRepoRevision })
   .passthrough();
-const VolumeSourceTypes = z.enum(["RemoteDir", "BuildArtifact", "GitRepo"]);
-const RemoteSource = z
-  .object({ path: z.string(), current_directory_hash: z.string() })
-  .passthrough();
-const BuildArtifact = z
-  .object({
-    resource_ref: z.string(),
-    source_path: z.string(),
-    destination_path: z.string(),
-  })
-  .passthrough();
-const VolumeSource = z.object({
-  git_repo_source: GitRepoSource.optional(),
-  source_type: VolumeSourceTypes,
-  remote_source: RemoteSource.optional(),
-  build_source: z.array(BuildArtifact).optional(),
-});
+const VolumeSource = z.object({ git_repo_source: GitRepoSource });
 const VolumeSpec = z.object({
   size: z.string(),
   storage_class: z.string().optional(),
@@ -504,21 +483,11 @@ const Condition = z
     message: z.string(),
   })
   .partial();
-const BuildArtifactSyncInfo = z
-  .object({
-    resource_name: z.string(),
-    build_id: z.string(),
-    status: z.string(),
-  })
-  .partial()
-  .passthrough();
 const VolumeStatus = z
   .object({
     conditions: z.array(Condition),
     phase: z.string(),
-    build_artifact_syncs: z.array(BuildArtifactSyncInfo),
     last_synced_git_revision: z.string(),
-    last_remote_sync_hash: z.string(),
   })
   .partial()
   .passthrough();
@@ -575,19 +544,11 @@ const VolumeMountConfig = z.object({
   sub_path: z.string().optional(),
   read_only: z.boolean().optional(),
 });
-const BuildArtifactSourceConfig = z.object({
-  source_path: z.string(),
-  destination_path: z.string().optional(),
-});
-const StackConnectionConfig = z.union([
-  PostgresEnvConfig,
-  VolumeMountConfig,
-  BuildArtifactSourceConfig,
-]);
+const StackConnectionConfig = z.union([PostgresEnvConfig, VolumeMountConfig]);
 const StackConnection = z
   .object({
     id: z.string().optional(),
-    kind: z.enum(["env", "volume_mount", "build_artifact_source"]),
+    kind: z.enum(["env", "volume_mount"]),
     from: TopologyNodeRef,
     to: TopologyNodeRef,
     mappings: z.array(ConnectionMapping).optional(),
@@ -1040,12 +1001,7 @@ const TopologyNode = z
 const TopologyEdge = z
   .object({
     id: z.string().optional(),
-    kind: z.enum([
-      "env",
-      "volume_mount",
-      "build_artifact_source",
-      "depends_on",
-    ]),
+    kind: z.enum(["env", "volume_mount", "depends_on"]),
     source: TopologyNodeRef,
     target: TopologyNodeRef,
     mappings: z.array(ConnectionMapping).optional(),
@@ -1697,13 +1653,9 @@ export const schemas = {
   VolumeAccessMode,
   GitRepoRevision,
   GitRepoSource,
-  VolumeSourceTypes,
-  RemoteSource,
-  BuildArtifact,
   VolumeSource,
   VolumeSpec,
   Condition,
-  BuildArtifactSyncInfo,
   VolumeStatus,
   Volume,
   TopologyNodeRef,
@@ -1713,7 +1665,6 @@ export const schemas = {
   ConnectionMapping,
   PostgresEnvConfig,
   VolumeMountConfig,
-  BuildArtifactSourceConfig,
   StackConnectionConfig,
   StackConnection,
   StackSpec,

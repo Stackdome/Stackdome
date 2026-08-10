@@ -43,50 +43,6 @@ func (m *MockVolumeService) EXPECT() *MockVolumeServiceMockRecorder {
 	return m.recorder
 }
 
-// CreateInCluster mocks base method.
-func (m *MockVolumeService) CreateInCluster(ctx context.Context, spec *models.Volume) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInCluster", ctx, spec)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// CreateInCluster indicates an expected call of CreateInCluster.
-func (mr *MockVolumeServiceMockRecorder) CreateInCluster(ctx, spec any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInCluster", reflect.TypeOf((*MockVolumeService)(nil).CreateInCluster), ctx, spec)
-}
-
-// CreateInDbWithTx mocks base method.
-func (m *MockVolumeService) CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateInDbWithTx", ctx, spec)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// CreateInDbWithTx indicates an expected call of CreateInDbWithTx.
-func (mr *MockVolumeServiceMockRecorder) CreateInDbWithTx(ctx, spec any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateInDbWithTx", reflect.TypeOf((*MockVolumeService)(nil).CreateInDbWithTx), ctx, spec)
-}
-
-// CreateWithTx mocks base method.
-func (m *MockVolumeService) CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateWithTx", ctx, spec)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// CreateWithTx indicates an expected call of CreateWithTx.
-func (mr *MockVolumeServiceMockRecorder) CreateWithTx(ctx, spec any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateWithTx", reflect.TypeOf((*MockVolumeService)(nil).CreateWithTx), ctx, spec)
-}
-
 // Delete mocks base method.
 func (m *MockVolumeService) Delete(ctx context.Context, ID string) *errors.ServiceError {
 	m.ctrl.T.Helper()
@@ -289,34 +245,18 @@ func (mr *MockVolumeServiceMockRecorder) ListVolumesUsedByStack(ctx, stackID any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVolumesUsedByStack", reflect.TypeOf((*MockVolumeService)(nil).ListVolumesUsedByStack), ctx, stackID)
 }
 
-// UpdateGitRepoSourceRevision mocks base method.
-func (m *MockVolumeService) UpdateGitRepoSourceRevision(ctx context.Context, ID string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError) {
+// PrepareForCreate mocks base method.
+func (m *MockVolumeService) PrepareForCreate(ctx context.Context, volume *models.Volume) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateGitRepoSourceRevision", ctx, ID, revision)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
+	ret := m.ctrl.Call(m, "PrepareForCreate", ctx, volume)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
 }
 
-// UpdateGitRepoSourceRevision indicates an expected call of UpdateGitRepoSourceRevision.
-func (mr *MockVolumeServiceMockRecorder) UpdateGitRepoSourceRevision(ctx, ID, revision any) *gomock.Call {
+// PrepareForCreate indicates an expected call of PrepareForCreate.
+func (mr *MockVolumeServiceMockRecorder) PrepareForCreate(ctx, volume any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGitRepoSourceRevision", reflect.TypeOf((*MockVolumeService)(nil).UpdateGitRepoSourceRevision), ctx, ID, revision)
-}
-
-// UpdateRemoteSourceRevision mocks base method.
-func (m *MockVolumeService) UpdateRemoteSourceRevision(ctx context.Context, ID string, revision models.RemoteDirSource) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRemoteSourceRevision", ctx, ID, revision)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// UpdateRemoteSourceRevision indicates an expected call of UpdateRemoteSourceRevision.
-func (mr *MockVolumeServiceMockRecorder) UpdateRemoteSourceRevision(ctx, ID, revision any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRemoteSourceRevision", reflect.TypeOf((*MockVolumeService)(nil).UpdateRemoteSourceRevision), ctx, ID, revision)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareForCreate", reflect.TypeOf((*MockVolumeService)(nil).PrepareForCreate), ctx, volume)
 }
 
 // UpdateStatus mocks base method.

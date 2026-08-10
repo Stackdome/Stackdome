@@ -12,7 +12,7 @@ const ComputeEntitlementStatusActive ComputeEntitlementStatus = "active"
 
 // ComputeEntitlement records why an organisation may use compute. The alpha
 // grants only trial entitlements; future subscription and licence sources can
-// be added without changing runtime admission callers.
+// be added without changing the services that require compute access.
 type ComputeEntitlement struct {
 	ID             string                   `gorm:"primary_key;default:gen_random_uuid()" json:"id"`
 	OrganisationID string                   `gorm:"not null;uniqueIndex:idx_compute_entitlement_org_source" json:"organisation_id"`
@@ -51,19 +51,26 @@ type SharedComputeLease struct {
 	UpdatedAt        time.Time               `json:"updated_at"`
 }
 
-// ComputeAccess is the entitlement and shared-capacity lease observed by one
-// admission decision. It is not persisted as its own record.
+// ComputeAccess groups the entitlement and shared-capacity lease returned when
+// access is activated. It is not persisted as its own record.
 type ComputeAccess struct {
 	Entitlement *ComputeEntitlement
 	Lease       *SharedComputeLease
 }
 
-// ComputeLimits are the effective organisation limits enforced by runtime
-// admission. They are configuration today and may later be resolved from a
+// ComputeLimits are the effective organisation limits enforced by the runtime.
+// They are configuration today and may later be resolved from a
 // plan or licence without changing service callers.
 type ComputeLimits struct {
-	MaxStacksPerOrganization         int64 `yaml:"maxStacksPerOrganization" json:"max_stacks_per_organization"`
-	MaxStackResourcesPerOrganization int64 `yaml:"maxStackResourcesPerOrganization" json:"max_stack_resources_per_organization"`
-	ReplicasPerStackResource         int32 `yaml:"replicasPerStackResource" json:"replicas_per_stack_resource"`
-	ConcurrentBuilds                 int   `yaml:"concurrentBuilds" json:"concurrent_builds"`
+	MaxStacksPerOrganization         int64  `yaml:"maxStacksPerOrganization" json:"max_stacks_per_organization"`
+	MaxStackResourcesPerOrganization int64  `yaml:"maxStackResourcesPerOrganization" json:"max_stack_resources_per_organization"`
+	ReplicasPerStackResource         int32  `yaml:"replicasPerStackResource" json:"replicas_per_stack_resource"`
+	MaxVolumesPerOrganization        int64  `yaml:"maxVolumesPerOrganization" json:"max_volumes_per_organization"`
+	MaxVolumeSize                    string `yaml:"maxVolumeSize" json:"max_volume_size"`
+	MaxPostgresAddonsPerOrganization int64  `yaml:"maxPostgresAddonsPerOrganization" json:"max_postgres_addons_per_organization"`
+	PostgresInstances                int    `yaml:"postgresInstances" json:"postgres_instances"`
+	MaxPostgresStorageSize           string `yaml:"maxPostgresStorageSize" json:"max_postgres_storage_size"`
+	// ConcurrentBuilds is published with the policy for the external build
+	// controller. The hub does not schedule or enforce build concurrency.
+	ConcurrentBuilds int `yaml:"concurrentBuilds" json:"concurrent_builds"`
 }

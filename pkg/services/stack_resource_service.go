@@ -5,23 +5,20 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
-	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	corev1alpha1 "stackdome.io/cluster-agent/api/core/v1alpha1"
 )
 
 //go:generate mockgen -destination=../mocks/mock_stack_resource_service.go -package=mocks github.com/Stackdome/stackdome/pkg/services StackResourceService
 
 type StackResourceService interface {
-	InjectClusterManager(clusterManager clustermanager.ClusterManager)
+	InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep)
 	Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError)
 	GetByStackID(ctx context.Context, stackID string) ([]*models.StackResource, *errors.ServiceError)
 	GetByID(ctx context.Context, ID string) (*models.StackResource, *errors.ServiceError)
@@ -49,13 +46,12 @@ type StackResourceServiceSpec struct {
 	ReferenceService       ReferenceService
 	ResourceValidator      stackresourcevalidator.Validator
 	RuntimePolicy          RuntimePolicy
-	ClusterWrites          ClusterMutationCoordinator
 }
 
 type stackResourceService struct {
+	BackgroundJobEnqueuerDep
 	stackResourceStore     stores.StackResourceStore
 	stackStore             stores.StackStore
-	clusterManager         clustermanager.ClusterManager
 	logger                 logger.Logger
 	sessionFactory         db.SessionFactory
 	storageService         StackStorageService
@@ -65,8 +61,6 @@ type stackResourceService struct {
 	referenceService       ReferenceService
 	resourceValidator      stackresourcevalidator.Validator
 	runtimePolicy          RuntimePolicy
-	releaseStore           stores.StackReleaseStore
-	clusterWrites          ClusterMutationCoordinator
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -91,15 +85,7 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		referenceService:       spec.ReferenceService,
 		resourceValidator:      spec.ResourceValidator,
 		runtimePolicy:          spec.RuntimePolicy,
-		releaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
-			SessionFactory: spec.SessionFactory,
-		}),
-		clusterWrites: spec.ClusterWrites,
 	}
-}
-
-func (s *stackResourceService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
-	s.clusterManager = clusterManager
 }
 
 func (s *stackResourceService) Create(ctx context.Context, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
@@ -126,12 +112,12 @@ func (s *stackResourceService) Create(ctx context.Context, resource *models.Stac
 
 	var created *models.StackResource
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if admissionErr := s.runtimePolicy.AdmitStackMutationWithTx(txCtx, StackMutation{
-			Kind:           StackMutationCreateResource,
+		if policyErr := s.runtimePolicy.ValidateStackLimits(txCtx, StackLimitChange{
+			Kind:           StackLimitCreateResource,
 			OrganisationID: stack.OrganisationID,
 			StackID:        stack.ID,
-		}); admissionErr != nil {
-			return admissionErr
+		}); policyErr != nil {
+			return policyErr
 		}
 		var createErr *errors.ServiceError
 		created, createErr = s.InternalCreateWithTx(txCtx, stack, resource)
@@ -185,12 +171,12 @@ func (s *stackResourceService) Update(ctx context.Context, stackID, resourceName
 
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if admissionErr := s.runtimePolicy.AdmitStackMutationWithTx(txCtx, StackMutation{
-			Kind:           StackMutationUpdateResource,
+		if policyErr := s.runtimePolicy.ValidateStackLimits(txCtx, StackLimitChange{
+			Kind:           StackLimitUpdateResource,
 			OrganisationID: stack.OrganisationID,
 			StackID:        stack.ID,
-		}); admissionErr != nil {
-			return admissionErr
+		}); policyErr != nil {
+			return policyErr
 		}
 		var updateErr *errors.ServiceError
 		updated, updateErr = s.InternalUpdateWithTx(txCtx, stack, existing.ID, resource)
@@ -220,15 +206,10 @@ func (s *stackResourceService) populateRegistryUrlForResource(ctx context.Contex
 	if resource.BuildConfig == nil || !resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
 		return nil
 	}
-	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeDatabaseOnly {
-		resource.BuildConfig.BuildImageRepository.ClusterRegistryName = ""
-		return nil
-	}
-	if s.clusterRegistryService == nil {
-		return errors.GeneralError("cluster registry service is not configured")
-	}
-	return s.clusterRegistryService.PopulateInClusterRegistryNameForResource(
-		ctx, stack.OrganisationID, stack.ClusterID, stack.Name, resource)
+	// Stack drafts are release-only. The release resolves the seeded registry
+	// immediately before rendering the immutable snapshot.
+	resource.BuildConfig.BuildImageRepository.ClusterRegistryName = ""
+	return nil
 }
 
 func (s *stackResourceService) InternalCreateWithTx(ctx context.Context, stack *models.Stack, resource *models.StackResource) (*models.StackResource, *errors.ServiceError) {
@@ -393,87 +374,21 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 	resource.LifecycleConfig.RestartRequestTime = &now
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		admission, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, stack.OrganisationID)
-		if policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(txCtx, stack.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		var updateErr *errors.ServiceError
 		updated, updateErr = s.stackResourceStore.UpdateWithTx(txCtx, resource.ID, resource, stack)
-		if updateErr != nil || s.clusterManager == nil || !admission.ReconcileCluster {
+		if updateErr != nil {
 			return updateErr
 		}
-		unlockCluster := s.clusterWrites.LockClusterNamespace(stack.ClusterID, stack.Namespace)
-		defer unlockCluster()
-		if lockErr := s.stackStore.LockByID(txCtx, stack.ID); lockErr != nil {
-			return lockErr
+		if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(txCtx, models.StackOperand{ID: stack.ID}); err != nil {
+			return errors.GeneralError("failed to enqueue restart for stack resource '%s': %s", resource.Name, err.Error())
 		}
-		currentStack, currentErr := s.stackStore.GetByID(txCtx, stack.ID)
-		if currentErr != nil {
-			return currentErr
-		}
-		if currentStack.DeletionTimestamp != nil {
-			return nil
-		}
-		if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeDatabaseOnly {
-			authoritative, authorityErr := resolveAuthoritativeWorkloadRelease(txCtx, s.releaseStore, currentStack)
-			if authorityErr != nil {
-				return authorityErr
-			}
-			if authoritative == nil {
-				return nil
-			}
-			if lockErr := s.releaseStore.LockByID(txCtx, authoritative.ID); lockErr != nil {
-				return lockErr
-			}
-			currentStack, currentErr = s.stackStore.GetByID(txCtx, stack.ID)
-			if currentErr != nil {
-				return currentErr
-			}
-			if currentStack.DeletionTimestamp != nil {
-				return nil
-			}
-			authoritative, authorityErr = resolveAuthoritativeWorkloadRelease(txCtx, s.releaseStore, currentStack)
-			if authorityErr != nil {
-				return authorityErr
-			}
-			if authoritative == nil {
-				return nil
-			}
-			admission, policyErr = s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, currentStack.OrganisationID)
-			if policyErr != nil {
-				return policyErr
-			}
-			if !admission.ReconcileCluster {
-				return nil
-			}
-		}
-		s.patchRestartRequestInCluster(txCtx, currentStack, resource, now)
 		return nil
 	}); txErr != nil {
 		return nil, txErr
 	}
 
 	return updated, nil
-}
-
-func (s *stackResourceService) patchRestartRequestInCluster(ctx context.Context, stack *models.Stack, resource *models.StackResource, restartTime time.Time) {
-	clusterClient, err := s.clusterManager.GetClient(stack.ClusterID)
-	if err != nil {
-		s.logger.Warn(ctx, "restart: failed to get cluster client for cluster '%s': %v", stack.ClusterID, err)
-		return
-	}
-
-	existing := &corev1alpha1.StackResource{}
-	if err := clusterClient.Get(ctx, client.ObjectKey{
-		Name:      resource.Name,
-		Namespace: resource.Namespace,
-	}, existing); err != nil {
-		s.logger.Warn(ctx, "restart: failed to get StackResource CR '%s/%s': %v", resource.Namespace, resource.Name, err)
-		return
-	}
-
-	existing.Spec.RestartRequest = &metav1.Time{Time: restartTime}
-	if err := clusterClient.Update(ctx, existing); err != nil {
-		s.logger.Warn(ctx, "restart: failed to update StackResource CR '%s/%s': %v", resource.Namespace, resource.Name, err)
-	}
 }

@@ -23,12 +23,14 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockStackStore := mocks.NewMockStackStore(ctrl)
 		mockResourceStore := mocks.NewMockStackResourceStore(ctrl)
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
+		mockEnqueuer := mocks.NewMockBackgroundJobEnqueuer(ctrl)
 
 		svc := &stackResourceService{
-			runtimePolicy:      NewSelfHostedRuntimePolicy(),
-			stackStore:         mockStackStore,
-			stackResourceStore: mockResourceStore,
-			permissions:        mockPermissions,
+			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{BackgroundJobEnqueuer: mockEnqueuer},
+			runtimePolicy:            NewSelfHostedRuntimePolicy(),
+			stackStore:               mockStackStore,
+			stackResourceStore:       mockResourceStore,
+			permissions:              mockPermissions,
 		}
 
 		ctx := context.Background()
@@ -81,6 +83,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 				return fn(txCtx)
 			},
 		)
+		mockEnqueuer.EXPECT().EnqueueAfterCommit(ctx, models.StackOperand{ID: stackID}).Return(nil)
 
 		result, err := svc.Restart(ctx, stackID, resourceName)
 

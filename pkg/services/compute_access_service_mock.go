@@ -42,34 +42,19 @@ func (m *MockComputeAccessService) EXPECT() *MockComputeAccessServiceMockRecorde
 	return m.recorder
 }
 
-// ActivateWithTx mocks base method.
-func (m *MockComputeAccessService) ActivateWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError) {
+// Activate mocks base method.
+func (m *MockComputeAccessService) Activate(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ActivateWithTx", ctx, organisationID)
+	ret := m.ctrl.Call(m, "Activate", ctx, organisationID)
 	ret0, _ := ret[0].(*models.ComputeAccess)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ActivateWithTx indicates an expected call of ActivateWithTx.
-func (mr *MockComputeAccessServiceMockRecorder) ActivateWithTx(ctx, organisationID any) *gomock.Call {
+// Activate indicates an expected call of Activate.
+func (mr *MockComputeAccessServiceMockRecorder) Activate(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateWithTx", reflect.TypeOf((*MockComputeAccessService)(nil).ActivateWithTx), ctx, organisationID)
-}
-
-// AdmitComputeMutationWithTx mocks base method.
-func (m *MockComputeAccessService) AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdmitComputeMutationWithTx", ctx, organisationID)
-	ret0, _ := ret[0].(*models.ComputeAccess)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// AdmitComputeMutationWithTx indicates an expected call of AdmitComputeMutationWithTx.
-func (mr *MockComputeAccessServiceMockRecorder) AdmitComputeMutationWithTx(ctx, organisationID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitComputeMutationWithTx", reflect.TypeOf((*MockComputeAccessService)(nil).AdmitComputeMutationWithTx), ctx, organisationID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Activate", reflect.TypeOf((*MockComputeAccessService)(nil).Activate), ctx, organisationID)
 }
 
 // EnsureNoLease mocks base method.
@@ -84,19 +69,4 @@ func (m *MockComputeAccessService) EnsureNoLease(ctx context.Context, organisati
 func (mr *MockComputeAccessServiceMockRecorder) EnsureNoLease(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureNoLease", reflect.TypeOf((*MockComputeAccessService)(nil).EnsureNoLease), ctx, organisationID)
-}
-
-// RequireWithTx mocks base method.
-func (m *MockComputeAccessService) RequireWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequireWithTx", ctx, organisationID)
-	ret0, _ := ret[0].(*models.ComputeAccess)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// RequireWithTx indicates an expected call of RequireWithTx.
-func (mr *MockComputeAccessServiceMockRecorder) RequireWithTx(ctx, organisationID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequireWithTx", reflect.TypeOf((*MockComputeAccessService)(nil).RequireWithTx), ctx, organisationID)
 }

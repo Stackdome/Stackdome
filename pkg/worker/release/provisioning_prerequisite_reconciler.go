@@ -8,6 +8,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
@@ -22,6 +23,8 @@ type provisioningPrerequisiteReconciler struct {
 	volumeService    volumeService
 	namespaceService namespaceService
 	postgresAddons   postgresAddonService
+	imageRegistries  services.ImageRegistryService
+	registryResource clusterresource.ClusterImageRegistryService
 	enqueuer         workermanager.BackgroundJobEnqueuer
 	clusterManager   clustermanager.ClusterManager
 	crBuilder        builders.ClusterResourceBuilder
@@ -32,6 +35,7 @@ func newProvisioningPrerequisiteReconciler(spec ReleaseWorkerSpec) *provisioning
 		runtimePolicy: spec.RuntimePolicy, stackService: spec.StackService,
 		volumeService: spec.VolumeService, namespaceService: spec.NamespaceService,
 		postgresAddons: spec.PostgresAddonService, enqueuer: spec.ReleaseWorkerEnqueuer,
+		imageRegistries: spec.ImageRegistryService, registryResource: spec.ImageRegistryResource,
 		clusterManager: spec.ClusterManager,
 		crBuilder:      spec.CRBuilder,
 	}
@@ -42,18 +46,11 @@ func (r *provisioningPrerequisiteReconciler) Name() string {
 }
 
 func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, release *models.StackRelease) (subReconcilerResult, error) {
-	if r.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeEager {
-		return resultNil, nil
-	}
-
 	snapshot := release.Snapshot.Stack
 	if release.StackID != snapshot.ID {
 		return resultNil, fmt.Errorf("release %s stack identity does not match its snapshot", release.ID)
 	}
 	expectedPolicyVersion := r.runtimePolicy.IsolationPolicyVersion()
-	if expectedPolicyVersion == "" {
-		return resultNil, fmt.Errorf("cloud isolation policy version is not configured")
-	}
 	if snapshot.NamespaceID == "" || snapshot.Namespace == "" {
 		return resultNil, fmt.Errorf("release %s has no persisted namespace", release.ID)
 	}
@@ -72,11 +69,28 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 		stack.NamespaceID != snapshot.NamespaceID || stack.Namespace != snapshot.Namespace || stack.DeletionTimestamp != nil {
 		return resultNil, fmt.Errorf("release %s stack identity does not match its snapshot", release.ID)
 	}
+	if err := r.ensureImageRegistry(ctx, &release.Snapshot); err != nil {
+		return resultNil, err
+	}
 
-	volumes := make([]*models.Volume, 0, len(release.Snapshot.Volumes))
+	volumeByID := make(map[string]*models.Volume, len(release.Snapshot.Volumes))
+	volumeByName := make(map[string]*models.Volume, len(release.Snapshot.Volumes))
 	for _, snapshotVolume := range release.Snapshot.Volumes {
 		if snapshotVolume == nil || snapshotVolume.ID == "" {
 			return resultNil, fmt.Errorf("release %s contains a volume without an id", release.ID)
+		}
+		volumeByID[snapshotVolume.ID] = snapshotVolume
+		volumeByName[snapshotVolume.Name] = snapshotVolume
+	}
+	volumeRefs := referencedVolumeRefs(&release.Snapshot)
+	volumes := make([]*models.Volume, 0, len(volumeRefs))
+	for _, ref := range volumeRefs {
+		snapshotVolume := volumeByID[ref.id]
+		if snapshotVolume == nil {
+			snapshotVolume = volumeByName[ref.name]
+		}
+		if snapshotVolume == nil {
+			return resultNil, fmt.Errorf("release %s references an unknown volume", release.ID)
 		}
 		volume, serr := r.volumeService.InternalGet(ctx, snapshotVolume.ID)
 		if serr != nil {
@@ -99,7 +113,7 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 		return resultNil, fmt.Errorf("enqueue stack prerequisite: %w", err)
 	}
 	for _, volume := range volumes {
-		if err := r.enqueuer.Enqueue(models.VolumeOperand{ID: volume.ID, ReleaseID: release.ID}); err != nil {
+		if err := r.enqueuer.Enqueue(models.VolumeOperand{ID: volume.ID}); err != nil {
 			return resultNil, fmt.Errorf("enqueue volume prerequisite %s: %w", volume.ID, err)
 		}
 	}
@@ -125,7 +139,7 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 			return resultRequeue, nil
 		}
 	}
-	if observedNamespace.Labels[models.CloudPolicyReadyLabelKey] != expectedPolicyVersion {
+	if expectedPolicyVersion != "" && observedNamespace.Labels[models.CloudPolicyReadyLabelKey] != expectedPolicyVersion {
 		return resultRequeue, nil
 	}
 	for _, volume := range volumes {
@@ -133,7 +147,6 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 		if buildErr != nil {
 			return resultNil, fmt.Errorf("build volume prerequisite %s: %w", volume.ID, buildErr)
 		}
-		setPrerequisiteVolumeReleaseID(desired, release.ID)
 		observed := &storagev1alpha1.Volume{}
 		if err := clusterClient.Get(ctx, client.ObjectKey{Name: desired.Name, Namespace: desired.Namespace}, observed); err != nil {
 			if k8sapierrors.IsNotFound(err) {
@@ -141,7 +154,7 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 			}
 			return resultNil, fmt.Errorf("observe volume prerequisite %s: %w", volume.ID, err)
 		}
-		if !volumeReadyForRelease(observed, desired, release.ID) {
+		if !volumeReadyForRelease(observed, desired) {
 			return resultRequeue, nil
 		}
 	}
@@ -153,16 +166,34 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 	return resultNil, nil
 }
 
-func setPrerequisiteVolumeReleaseID(volume *storagev1alpha1.Volume, releaseID string) {
-	if volume.Annotations == nil {
-		volume.Annotations = make(map[string]string)
+func (r *provisioningPrerequisiteReconciler) ensureImageRegistry(ctx context.Context, snapshot *models.StackSnapshot) error {
+	needsRegistry := false
+	for _, stackResource := range snapshot.Resources {
+		if stackResource != nil && stackResource.BuildConfig != nil && stackResource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+			needsRegistry = true
+			break
+		}
 	}
-	volume.Annotations[models.VolumeReleaseIDAnnotation] = releaseID
+	if !needsRegistry {
+		return nil
+	}
+	registry, serr := r.imageRegistries.InternalGetForOrgAndCluster(ctx, snapshot.Stack.OrganisationID, snapshot.Stack.ClusterID)
+	if serr != nil {
+		return serr
+	}
+	for _, stackResource := range snapshot.Resources {
+		if stackResource != nil && stackResource.BuildConfig != nil && stackResource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+			stackResource.BuildConfig.BuildImageRepository.ClusterRegistryName = registry.Name
+		}
+	}
+	if resourceErr := r.registryResource.EnsureImageRegistryInCluster(ctx, registry); resourceErr != nil {
+		return fmt.Errorf("ensure image registry %s: %w", registry.ID, resourceErr)
+	}
+	return nil
 }
 
-func volumeReadyForRelease(observed, desired *storagev1alpha1.Volume, releaseID string) bool {
-	if observed.Annotations[models.VolumeReleaseIDAnnotation] != releaseID ||
-		!containsDesiredMetadata(observed.Labels, desired.Labels) ||
+func volumeReadyForRelease(observed, desired *storagev1alpha1.Volume) bool {
+	if !containsDesiredMetadata(observed.Labels, desired.Labels) ||
 		!containsDesiredMetadata(observed.Annotations, desired.Annotations) ||
 		!apiequality.Semantic.DeepEqual(observed.Spec, desired.Spec) ||
 		observed.Generation <= 0 || observed.Status.ObservedGeneration != observed.Generation ||
@@ -171,9 +202,6 @@ func volumeReadyForRelease(observed, desired *storagev1alpha1.Volume, releaseID 
 	}
 	if desired.Spec.Source == nil {
 		return true
-	}
-	if desired.Spec.Source.RemoteDir != nil {
-		return observed.Status.LastRemoteSyncHash == desired.Spec.Source.RemoteDir.CurrentDirectoryHash
 	}
 	if desired.Spec.Source.GitRepo != nil {
 		return observed.Status.LastSyncedGitReference == desired.Spec.Source.GitRepo.Revision.GetGitRevisionString()

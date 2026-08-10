@@ -190,66 +190,6 @@ func (mr *MockVolumeStoreMockRecorder) ListByProjectID(ctx, projectID any) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByProjectID", reflect.TypeOf((*MockVolumeStore)(nil).ListByProjectID), ctx, projectID)
 }
 
-// UpdateGitRepoSourceRevision mocks base method.
-func (m *MockVolumeStore) UpdateGitRepoSourceRevision(ctx context.Context, id string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateGitRepoSourceRevision", ctx, id, revision)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// UpdateGitRepoSourceRevision indicates an expected call of UpdateGitRepoSourceRevision.
-func (mr *MockVolumeStoreMockRecorder) UpdateGitRepoSourceRevision(ctx, id, revision any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGitRepoSourceRevision", reflect.TypeOf((*MockVolumeStore)(nil).UpdateGitRepoSourceRevision), ctx, id, revision)
-}
-
-// UpdateGitRepoSourceRevisionWithTx mocks base method.
-func (m *MockVolumeStore) UpdateGitRepoSourceRevisionWithTx(ctx context.Context, id string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateGitRepoSourceRevisionWithTx", ctx, id, revision)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// UpdateGitRepoSourceRevisionWithTx indicates an expected call of UpdateGitRepoSourceRevisionWithTx.
-func (mr *MockVolumeStoreMockRecorder) UpdateGitRepoSourceRevisionWithTx(ctx, id, revision any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateGitRepoSourceRevisionWithTx", reflect.TypeOf((*MockVolumeStore)(nil).UpdateGitRepoSourceRevisionWithTx), ctx, id, revision)
-}
-
-// UpdateRemoteDirSourceHash mocks base method.
-func (m *MockVolumeStore) UpdateRemoteDirSourceHash(ctx context.Context, id, remoteDirHash string) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRemoteDirSourceHash", ctx, id, remoteDirHash)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// UpdateRemoteDirSourceHash indicates an expected call of UpdateRemoteDirSourceHash.
-func (mr *MockVolumeStoreMockRecorder) UpdateRemoteDirSourceHash(ctx, id, remoteDirHash any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRemoteDirSourceHash", reflect.TypeOf((*MockVolumeStore)(nil).UpdateRemoteDirSourceHash), ctx, id, remoteDirHash)
-}
-
-// UpdateRemoteDirSourceHashWithTx mocks base method.
-func (m *MockVolumeStore) UpdateRemoteDirSourceHashWithTx(ctx context.Context, id, remoteDirHash string) (*models.Volume, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateRemoteDirSourceHashWithTx", ctx, id, remoteDirHash)
-	ret0, _ := ret[0].(*models.Volume)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// UpdateRemoteDirSourceHashWithTx indicates an expected call of UpdateRemoteDirSourceHashWithTx.
-func (mr *MockVolumeStoreMockRecorder) UpdateRemoteDirSourceHashWithTx(ctx, id, remoteDirHash any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateRemoteDirSourceHashWithTx", reflect.TypeOf((*MockVolumeStore)(nil).UpdateRemoteDirSourceHashWithTx), ctx, id, remoteDirHash)
-}
-
 // UpdateStatus mocks base method.
 func (m *MockVolumeStore) UpdateStatus(ctx context.Context, id string, status *models.VolumeStatus) *errors.ServiceError {
 	m.ctrl.T.Helper()

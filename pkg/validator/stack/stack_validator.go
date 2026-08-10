@@ -334,8 +334,7 @@ func (v *stackValidator) validateSingleConnection(
 func validateConnectionKind(label string, kind models.ConnectionKind) *errors.ServiceError {
 	switch kind {
 	case models.ConnectionKindEnv,
-		models.ConnectionKindVolumeMount,
-		models.ConnectionKindBuildArtifactSource:
+		models.ConnectionKindVolumeMount:
 		return nil
 	default:
 		return errors.BadRequest("connection '%s' has unsupported kind '%s'", label, kind)
@@ -358,9 +357,6 @@ func (v *stackValidator) validateConnectionSource(
 		resource, ok := resourceMap[connection.From.Name]
 		if !ok {
 			return nil, errors.BadRequest("connection '%s' references unknown stack resource '%s'", label, connection.From.Name)
-		}
-		if connection.Kind == models.ConnectionKindBuildArtifactSource {
-			return nil, validateBuildArtifactSourceConfig(volumeMap, label, connection)
 		}
 		if len(connection.Config) > 0 {
 			return nil, errors.BadRequest("connection '%s' does not support config for from.type '%s'", label, connection.From.Type)
@@ -495,32 +491,6 @@ func validateConnectionTargetResource(resourceMap map[string]*models.StackResour
 		if ref.Name == "" {
 			return errors.BadRequest("connection '%s' is missing to.name for volume target", label)
 		}
-	}
-	return nil
-}
-
-func validateBuildArtifactSourceConfig(volumeMap map[string]*models.Volume, label string, connection models.StackConnection) *errors.ServiceError {
-	if connection.To.Type != models.TopologyNodeTypeVolume {
-		return errors.BadRequest("connection '%s' with kind '%s' requires to.type '%s'", label, connection.Kind, models.TopologyNodeTypeVolume)
-	}
-	if _, ok := volumeMap[connection.To.Name]; !ok {
-		return errors.BadRequest("connection '%s' references unknown volume '%s'", label, connection.To.Name)
-	}
-	if err := validateConfigKeys(connection.Config, map[string]struct{}{
-		string(models.ConnectionConfigKeySourcePath):      {},
-		string(models.ConnectionConfigKeyDestinationPath): {},
-	}, label, "build_artifact_source"); err != nil {
-		return err
-	}
-	sourcePath, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeySourcePath), label)
-	if err != nil {
-		return err
-	}
-	if sourcePath == "" {
-		return errors.BadRequest("connection '%s' requires config.source_path for build artifact sources", label)
-	}
-	if _, _, err := getOptionalStringConfig(connection.Config, string(models.ConnectionConfigKeyDestinationPath), label); err != nil {
-		return err
 	}
 	return nil
 }

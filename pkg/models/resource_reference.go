@@ -18,7 +18,6 @@ const (
 	RelationEnv               RelationKind = "env"
 	RelationVolumeDeclaration RelationKind = "volume_declaration"
 	RelationVolumeMount       RelationKind = "volume_mount"
-	RelationBuildArtifact     RelationKind = "build_artifact_source"
 	RelationGitCredential     RelationKind = "git_credential"
 	RelationImagePull         RelationKind = "image_pull"
 	RelationImagePush         RelationKind = "image_push"

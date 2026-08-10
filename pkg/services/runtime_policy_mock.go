@@ -42,61 +42,16 @@ func (m *MockRuntimePolicy) EXPECT() *MockRuntimePolicyMockRecorder {
 	return m.recorder
 }
 
-// ActivateComputeAccessWithTx mocks base method.
-func (m *MockRuntimePolicy) ActivateComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
+// ApplyPostgresAddonDefaults mocks base method.
+func (m *MockRuntimePolicy) ApplyPostgresAddonDefaults(addon *models.PostgresAddon) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ActivateComputeAccessWithTx", ctx, organisationID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
+	m.ctrl.Call(m, "ApplyPostgresAddonDefaults", addon)
 }
 
-// ActivateComputeAccessWithTx indicates an expected call of ActivateComputeAccessWithTx.
-func (mr *MockRuntimePolicyMockRecorder) ActivateComputeAccessWithTx(ctx, organisationID any) *gomock.Call {
+// ApplyPostgresAddonDefaults indicates an expected call of ApplyPostgresAddonDefaults.
+func (mr *MockRuntimePolicyMockRecorder) ApplyPostgresAddonDefaults(addon any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateComputeAccessWithTx", reflect.TypeOf((*MockRuntimePolicy)(nil).ActivateComputeAccessWithTx), ctx, organisationID)
-}
-
-// AdmitComputeMutationWithTx mocks base method.
-func (m *MockRuntimePolicy) AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (ComputeMutationAdmission, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdmitComputeMutationWithTx", ctx, organisationID)
-	ret0, _ := ret[0].(ComputeMutationAdmission)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// AdmitComputeMutationWithTx indicates an expected call of AdmitComputeMutationWithTx.
-func (mr *MockRuntimePolicyMockRecorder) AdmitComputeMutationWithTx(ctx, organisationID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitComputeMutationWithTx", reflect.TypeOf((*MockRuntimePolicy)(nil).AdmitComputeMutationWithTx), ctx, organisationID)
-}
-
-// AdmitOrganisationDeletion mocks base method.
-func (m *MockRuntimePolicy) AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdmitOrganisationDeletion", ctx, organisationID)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// AdmitOrganisationDeletion indicates an expected call of AdmitOrganisationDeletion.
-func (mr *MockRuntimePolicyMockRecorder) AdmitOrganisationDeletion(ctx, organisationID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitOrganisationDeletion", reflect.TypeOf((*MockRuntimePolicy)(nil).AdmitOrganisationDeletion), ctx, organisationID)
-}
-
-// AdmitStackMutationWithTx mocks base method.
-func (m *MockRuntimePolicy) AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdmitStackMutationWithTx", ctx, mutation)
-	ret0, _ := ret[0].(*errors.ServiceError)
-	return ret0
-}
-
-// AdmitStackMutationWithTx indicates an expected call of AdmitStackMutationWithTx.
-func (mr *MockRuntimePolicyMockRecorder) AdmitStackMutationWithTx(ctx, mutation any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitStackMutationWithTx", reflect.TypeOf((*MockRuntimePolicy)(nil).AdmitStackMutationWithTx), ctx, mutation)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyPostgresAddonDefaults", reflect.TypeOf((*MockRuntimePolicy)(nil).ApplyPostgresAddonDefaults), addon)
 }
 
 // ApplyStackResourceDefaults mocks base method.
@@ -111,18 +66,18 @@ func (mr *MockRuntimePolicyMockRecorder) ApplyStackResourceDefaults(resource any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyStackResourceDefaults", reflect.TypeOf((*MockRuntimePolicy)(nil).ApplyStackResourceDefaults), resource)
 }
 
-// DraftProvisioningMode mocks base method.
-func (m *MockRuntimePolicy) DraftProvisioningMode() ProvisioningMode {
+// EnsureComputeAccess mocks base method.
+func (m *MockRuntimePolicy) EnsureComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DraftProvisioningMode")
-	ret0, _ := ret[0].(ProvisioningMode)
+	ret := m.ctrl.Call(m, "EnsureComputeAccess", ctx, organisationID)
+	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
-// DraftProvisioningMode indicates an expected call of DraftProvisioningMode.
-func (mr *MockRuntimePolicyMockRecorder) DraftProvisioningMode() *gomock.Call {
+// EnsureComputeAccess indicates an expected call of EnsureComputeAccess.
+func (mr *MockRuntimePolicyMockRecorder) EnsureComputeAccess(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DraftProvisioningMode", reflect.TypeOf((*MockRuntimePolicy)(nil).DraftProvisioningMode))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnsureComputeAccess", reflect.TypeOf((*MockRuntimePolicy)(nil).EnsureComputeAccess), ctx, organisationID)
 }
 
 // IsolationPolicyVersion mocks base method.
@@ -139,30 +94,58 @@ func (mr *MockRuntimePolicyMockRecorder) IsolationPolicyVersion() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsolationPolicyVersion", reflect.TypeOf((*MockRuntimePolicy)(nil).IsolationPolicyVersion))
 }
 
-// OrganisationProvisioningMode mocks base method.
-func (m *MockRuntimePolicy) OrganisationProvisioningMode() ProvisioningMode {
+// ValidateOrganisationDeletion mocks base method.
+func (m *MockRuntimePolicy) ValidateOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "OrganisationProvisioningMode")
-	ret0, _ := ret[0].(ProvisioningMode)
-	return ret0
-}
-
-// OrganisationProvisioningMode indicates an expected call of OrganisationProvisioningMode.
-func (mr *MockRuntimePolicyMockRecorder) OrganisationProvisioningMode() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OrganisationProvisioningMode", reflect.TypeOf((*MockRuntimePolicy)(nil).OrganisationProvisioningMode))
-}
-
-// RequireComputeAccessWithTx mocks base method.
-func (m *MockRuntimePolicy) RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequireComputeAccessWithTx", ctx, organisationID)
+	ret := m.ctrl.Call(m, "ValidateOrganisationDeletion", ctx, organisationID)
 	ret0, _ := ret[0].(*errors.ServiceError)
 	return ret0
 }
 
-// RequireComputeAccessWithTx indicates an expected call of RequireComputeAccessWithTx.
-func (mr *MockRuntimePolicyMockRecorder) RequireComputeAccessWithTx(ctx, organisationID any) *gomock.Call {
+// ValidateOrganisationDeletion indicates an expected call of ValidateOrganisationDeletion.
+func (mr *MockRuntimePolicyMockRecorder) ValidateOrganisationDeletion(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequireComputeAccessWithTx", reflect.TypeOf((*MockRuntimePolicy)(nil).RequireComputeAccessWithTx), ctx, organisationID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateOrganisationDeletion", reflect.TypeOf((*MockRuntimePolicy)(nil).ValidateOrganisationDeletion), ctx, organisationID)
+}
+
+// ValidatePostgresAddonLimits mocks base method.
+func (m *MockRuntimePolicy) ValidatePostgresAddonLimits(ctx context.Context, organisationID, existingAddonID string, addon *models.PostgresAddon) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidatePostgresAddonLimits", ctx, organisationID, existingAddonID, addon)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// ValidatePostgresAddonLimits indicates an expected call of ValidatePostgresAddonLimits.
+func (mr *MockRuntimePolicyMockRecorder) ValidatePostgresAddonLimits(ctx, organisationID, existingAddonID, addon any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidatePostgresAddonLimits", reflect.TypeOf((*MockRuntimePolicy)(nil).ValidatePostgresAddonLimits), ctx, organisationID, existingAddonID, addon)
+}
+
+// ValidateStackLimits mocks base method.
+func (m *MockRuntimePolicy) ValidateStackLimits(ctx context.Context, change StackLimitChange) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateStackLimits", ctx, change)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// ValidateStackLimits indicates an expected call of ValidateStackLimits.
+func (mr *MockRuntimePolicyMockRecorder) ValidateStackLimits(ctx, change any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateStackLimits", reflect.TypeOf((*MockRuntimePolicy)(nil).ValidateStackLimits), ctx, change)
+}
+
+// ValidateVolumeLimits mocks base method.
+func (m *MockRuntimePolicy) ValidateVolumeLimits(ctx context.Context, organisationID, size string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ValidateVolumeLimits", ctx, organisationID, size)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// ValidateVolumeLimits indicates an expected call of ValidateVolumeLimits.
+func (mr *MockRuntimePolicyMockRecorder) ValidateVolumeLimits(ctx, organisationID, size any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ValidateVolumeLimits", reflect.TypeOf((*MockRuntimePolicy)(nil).ValidateVolumeLimits), ctx, organisationID, size)
 }

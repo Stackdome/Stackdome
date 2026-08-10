@@ -16,19 +16,16 @@ import (
 
 // VolumeSource struct for VolumeSource
 type VolumeSource struct {
-	GitRepoSource *GitRepoSource    `json:"git_repo_source,omitempty"`
-	SourceType    VolumeSourceTypes `json:"source_type"`
-	RemoteSource  *RemoteSource     `json:"remote_source,omitempty"`
-	BuildSource   []BuildArtifact   `json:"build_source,omitempty"`
+	GitRepoSource GitRepoSource `json:"git_repo_source"`
 }
 
 // NewVolumeSource instantiates a new VolumeSource object
 // This constructor will assign default values to properties that have it defined,
 // and makes sure properties required by API are set, but the set of arguments
 // will change when the set of required properties is changed
-func NewVolumeSource(sourceType VolumeSourceTypes) *VolumeSource {
+func NewVolumeSource(gitRepoSource GitRepoSource) *VolumeSource {
 	this := VolumeSource{}
-	this.SourceType = sourceType
+	this.GitRepoSource = gitRepoSource
 	return &this
 }
 
@@ -40,139 +37,34 @@ func NewVolumeSourceWithDefaults() *VolumeSource {
 	return &this
 }
 
-// GetGitRepoSource returns the GitRepoSource field value if set, zero value otherwise.
+// GetGitRepoSource returns the GitRepoSource field value
 func (o *VolumeSource) GetGitRepoSource() GitRepoSource {
-	if o == nil || o.GitRepoSource == nil {
+	if o == nil {
 		var ret GitRepoSource
 		return ret
 	}
-	return *o.GitRepoSource
+
+	return o.GitRepoSource
 }
 
-// GetGitRepoSourceOk returns a tuple with the GitRepoSource field value if set, nil otherwise
+// GetGitRepoSourceOk returns a tuple with the GitRepoSource field value
 // and a boolean to check if the value has been set.
 func (o *VolumeSource) GetGitRepoSourceOk() (*GitRepoSource, bool) {
-	if o == nil || o.GitRepoSource == nil {
+	if o == nil {
 		return nil, false
 	}
-	return o.GitRepoSource, true
+	return &o.GitRepoSource, true
 }
 
-// HasGitRepoSource returns a boolean if a field has been set.
-func (o *VolumeSource) HasGitRepoSource() bool {
-	if o != nil && o.GitRepoSource != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetGitRepoSource gets a reference to the given GitRepoSource and assigns it to the GitRepoSource field.
+// SetGitRepoSource sets field value
 func (o *VolumeSource) SetGitRepoSource(v GitRepoSource) {
-	o.GitRepoSource = &v
-}
-
-// GetSourceType returns the SourceType field value
-func (o *VolumeSource) GetSourceType() VolumeSourceTypes {
-	if o == nil {
-		var ret VolumeSourceTypes
-		return ret
-	}
-
-	return o.SourceType
-}
-
-// GetSourceTypeOk returns a tuple with the SourceType field value
-// and a boolean to check if the value has been set.
-func (o *VolumeSource) GetSourceTypeOk() (*VolumeSourceTypes, bool) {
-	if o == nil {
-		return nil, false
-	}
-	return &o.SourceType, true
-}
-
-// SetSourceType sets field value
-func (o *VolumeSource) SetSourceType(v VolumeSourceTypes) {
-	o.SourceType = v
-}
-
-// GetRemoteSource returns the RemoteSource field value if set, zero value otherwise.
-func (o *VolumeSource) GetRemoteSource() RemoteSource {
-	if o == nil || o.RemoteSource == nil {
-		var ret RemoteSource
-		return ret
-	}
-	return *o.RemoteSource
-}
-
-// GetRemoteSourceOk returns a tuple with the RemoteSource field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *VolumeSource) GetRemoteSourceOk() (*RemoteSource, bool) {
-	if o == nil || o.RemoteSource == nil {
-		return nil, false
-	}
-	return o.RemoteSource, true
-}
-
-// HasRemoteSource returns a boolean if a field has been set.
-func (o *VolumeSource) HasRemoteSource() bool {
-	if o != nil && o.RemoteSource != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetRemoteSource gets a reference to the given RemoteSource and assigns it to the RemoteSource field.
-func (o *VolumeSource) SetRemoteSource(v RemoteSource) {
-	o.RemoteSource = &v
-}
-
-// GetBuildSource returns the BuildSource field value if set, zero value otherwise.
-func (o *VolumeSource) GetBuildSource() []BuildArtifact {
-	if o == nil || o.BuildSource == nil {
-		var ret []BuildArtifact
-		return ret
-	}
-	return o.BuildSource
-}
-
-// GetBuildSourceOk returns a tuple with the BuildSource field value if set, nil otherwise
-// and a boolean to check if the value has been set.
-func (o *VolumeSource) GetBuildSourceOk() ([]BuildArtifact, bool) {
-	if o == nil || o.BuildSource == nil {
-		return nil, false
-	}
-	return o.BuildSource, true
-}
-
-// HasBuildSource returns a boolean if a field has been set.
-func (o *VolumeSource) HasBuildSource() bool {
-	if o != nil && o.BuildSource != nil {
-		return true
-	}
-
-	return false
-}
-
-// SetBuildSource gets a reference to the given []BuildArtifact and assigns it to the BuildSource field.
-func (o *VolumeSource) SetBuildSource(v []BuildArtifact) {
-	o.BuildSource = v
+	o.GitRepoSource = v
 }
 
 func (o VolumeSource) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
-	if o.GitRepoSource != nil {
-		toSerialize["git_repo_source"] = o.GitRepoSource
-	}
 	if true {
-		toSerialize["source_type"] = o.SourceType
-	}
-	if o.RemoteSource != nil {
-		toSerialize["remote_source"] = o.RemoteSource
-	}
-	if o.BuildSource != nil {
-		toSerialize["build_source"] = o.BuildSource
+		toSerialize["git_repo_source"] = o.GitRepoSource
 	}
 	return json.Marshal(toSerialize)
 }

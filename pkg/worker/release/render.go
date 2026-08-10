@@ -85,19 +85,11 @@ func (r *renderReconciler) Reconcile(ctx context.Context, release *models.StackR
 		resourceRevisions[sr.Name] = stackrelease.ComputeResourceRevision(srCR)
 	}
 
-	volumeBuildSources := make(map[string][]models.BuildArtifactSource)
-	for _, volume := range effective.Volumes {
-		if volume.VolumeSource != nil && len(volume.VolumeSource.BuildSource) > 0 {
-			volumeBuildSources[volume.Name] = volume.VolumeSource.BuildSource
-		}
-	}
-
 	manifest := &models.ReleaseManifest{
-		StackCR:            stackCRBytes,
-		StackResourceCRs:   resourceCRs,
-		ResourceNames:      resourceNames,
-		ResourceRevisions:  resourceRevisions,
-		VolumeBuildSources: volumeBuildSources,
+		StackCR:           stackCRBytes,
+		StackResourceCRs:  resourceCRs,
+		ResourceNames:     resourceNames,
+		ResourceRevisions: resourceRevisions,
 	}
 
 	manifestRevision := stackrelease.ComputeManifestRevision(manifest)

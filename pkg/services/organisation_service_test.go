@@ -73,7 +73,7 @@ var _ = Describe("OrganisationService cloud trial deletion", func() {
 		policy := NewMockRuntimePolicy(ctrl)
 		ctx := context.Background()
 		permissions.EXPECT().Check(ctx, "org-1", auth.ResourceOrgs, "org-1", auth.ActionDelete).Return(nil)
-		policy.EXPECT().AdmitOrganisationDeletion(ctx, "org-1").Return(nil)
+		policy.EXPECT().ValidateOrganisationDeletion(ctx, "org-1").Return(nil)
 		stacks.EXPECT().GetStacksByOrganisationID(ctx, "org-1").Return(nil, nil)
 		store.EXPECT().Delete(ctx, "org-1").Return(nil)
 		svc := &organisationService{organisationStore: store, stackQueryService: stacks, permissions: permissions, runtimePolicy: policy, logger: logger.NewLogger()}
@@ -87,7 +87,7 @@ var _ = Describe("OrganisationService cloud trial deletion", func() {
 		policy := NewMockRuntimePolicy(ctrl)
 		ctx := context.Background()
 		permissions.EXPECT().Check(ctx, "org-1", auth.ResourceOrgs, "org-1", auth.ActionDelete).Return(nil)
-		policy.EXPECT().AdmitOrganisationDeletion(ctx, "org-1").Return(errors.BadRequest("allocation exists"))
+		policy.EXPECT().ValidateOrganisationDeletion(ctx, "org-1").Return(errors.BadRequest("allocation exists"))
 		svc := &organisationService{permissions: permissions, runtimePolicy: policy}
 
 		serr := svc.Delete(ctx, "org-1")
@@ -184,7 +184,7 @@ var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 	It("seeds a registry on the shared-compute cluster", func() {
 		expectOrgCreated()
 		expectSharedComputeCluster()
-		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), &models.ClusterImageRegistry{
+		registrySvc.EXPECT().InternalCreatePendingSeedRegistry(gomock.Any(), &models.ClusterImageRegistry{
 			ClusterID:           "cluster-1",
 			OrganisationID:      orgID,
 			Name:                registryName,
@@ -198,9 +198,17 @@ var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 		Expect(org).ToNot(BeNil())
 	})
 
-	It("keeps Stackdome Cloud organisation creation database-only", func() {
+	It("seeds the pending shared-compute registry in Stackdome Cloud", func() {
 		svc.runtimePolicy = newCloudRuntimePolicyForTest()
 		expectOrgCreated()
+		expectSharedComputeCluster()
+		registrySvc.EXPECT().InternalCreatePendingSeedRegistry(gomock.Any(), &models.ClusterImageRegistry{
+			ClusterID:           "cluster-1",
+			OrganisationID:      orgID,
+			Name:                registryName,
+			BackendStorageSize:  storageSize,
+			BackendStorageClass: storageClass,
+		}).Return(&models.ClusterImageRegistry{}, nil)
 		expectOrgFetched()
 
 		org, serr := svc.InternalCreate(ctx, tenantOrg())
@@ -212,7 +220,7 @@ var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 		expectOrgCreated()
 		expectSharedComputeCluster()
 		boom := errors.GeneralError("cluster unreachable")
-		registrySvc.EXPECT().InternalCreateSeedRegistry(gomock.Any(), gomock.Any()).Return(nil, boom)
+		registrySvc.EXPECT().InternalCreatePendingSeedRegistry(gomock.Any(), gomock.Any()).Return(nil, boom)
 
 		org, serr := svc.InternalCreate(ctx, tenantOrg())
 		Expect(org).To(BeNil())

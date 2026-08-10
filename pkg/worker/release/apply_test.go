@@ -63,15 +63,6 @@ func volumeMountConnection(volumeID, volumeName, resourceName string) models.Sta
 	}
 }
 
-func buildArtifactSourceConnection(resourceName, volumeID, volumeName string) models.StackConnection {
-	return models.StackConnection{
-		ID:   "conn-bas-" + volumeID,
-		Kind: models.ConnectionKindBuildArtifactSource,
-		From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: resourceName},
-		To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Id: volumeID, Name: volumeName},
-	}
-}
-
 func liveVolume(id string) *models.Volume {
 	return &models.Volume{ID: id, Name: id}
 }
@@ -181,22 +172,6 @@ var _ = Describe("ApplyReconciler volume existence", func() {
 
 		volSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), volExistTestStackID).
 			Return([]*models.Volume{liveVolume("data")}, nil)
-
-		r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
-		Expect(r.verifyReferencedVolumesExist(context.Background(), release)).To(Succeed())
-	})
-
-	// A build_artifact_source connection (resource -> volume, the volume being a
-	// build-output destination) contributes no referenced volume: that volume is
-	// never referenced by the Stack/StackResource CRs applied here — it's managed
-	// by the separate volume worker/controller. With no other references the
-	// service must not be called at all.
-	It("does not treat a build_artifact_source connection as a volume reference", func() {
-		// No EXPECT() set: any call to ListVolumesUsedByStack fails the test.
-		release := volExistTestRelease(
-			[]*models.StackResource{{Name: "builder"}},
-			models.StackConnections{buildArtifactSourceConnection("builder", "v4", "artifacts")},
-		)
 
 		r := &applyReconciler{volumeService: volSvc, logger: testLogger()}
 		Expect(r.verifyReferencedVolumesExist(context.Background(), release)).To(Succeed())

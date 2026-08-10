@@ -131,8 +131,8 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
-			runtimePolicy: newCloudRuntimePolicyWithStoreForTest(&fakeStackLimitStore{
-				usage: stores.StackUsage{StackResourceCount: 6},
+			runtimePolicy: newCloudRuntimePolicyWithStoreForTest(&fakeComputeUsageStore{
+				usage: stores.ComputeUsage{StackResourceCount: 6},
 			}),
 		}
 		resource := &models.StackResource{StackID: stackID, Name: "web"}

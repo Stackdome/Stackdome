@@ -34,26 +34,9 @@ func ValidateVolume(in *openapi.Volume) Validate {
 			if _, err := k8sresource.ParseQuantity(in.Spec.Size); err != nil {
 				return errors.Validation("spec.size is not a valid quantity")
 			}
-			// If source is not nil, validate it
 			if in.Spec.Source != nil {
-				if !in.Spec.Source.SourceType.IsValid() {
-					return errors.Validation("spec.source is not a valid source type")
-				}
-				switch in.Spec.Source.SourceType {
-				case openapi.REMOTE_DIR:
-					if err := validateRemoteSource(in.Spec.Source.RemoteSource); err != nil {
-						return err
-					}
-				case openapi.BUILD_ARTIFACT:
-					if err := validateBuildSource(in.Spec.Source.BuildSource); err != nil {
-						return err
-					}
-				case openapi.GIT_REPO:
-					if err := validateGitRepoSource(in.Spec.Source.GitRepoSource); err != nil {
-						return err
-					}
-				default:
-					return errors.Validation("spec.source is not a valid source type")
+				if err := validateGitRepoSource(&in.Spec.Source.GitRepoSource); err != nil {
+					return err
 				}
 			}
 			return nil
@@ -61,40 +44,9 @@ func ValidateVolume(in *openapi.Volume) Validate {
 	})
 }
 
-func validateBuildSource(buildSource []openapi.BuildArtifact) *errors.ServiceError {
-	if len(buildSource) == 0 {
-		return nil
-	}
-	for _, source := range buildSource {
-		if len(source.ResourceRef) == 0 {
-			return errors.Validation("build source resource ref cannot be empty")
-		}
-		if len(source.DestinationPath) == 0 {
-			return errors.Validation("build source destination path cannot be empty")
-		}
-		if len(source.SourcePath) == 0 {
-			return errors.Validation("build source source path cannot be empty")
-		}
-	}
-	return nil
-}
-
-func validateRemoteSource(remoteSource *openapi.RemoteSource) *errors.ServiceError {
-	if remoteSource == nil {
-		return nil
-	}
-	if remoteSource.Path == "" {
-		return errors.Validation("remote source path cannot be empty")
-	}
-	if remoteSource.CurrentDirectoryHash == "" {
-		return errors.Validation("remote source current directory hash cannot be empty")
-	}
-	return nil
-}
-
 func validateGitRepoSource(gitRepoSource *openapi.GitRepoSource) *errors.ServiceError {
 	if gitRepoSource == nil {
-		return nil
+		return errors.Validation("git repo source is required")
 	}
 	if gitRepoSource.RepoUrl == "" {
 		return errors.Validation("git repo source repo url cannot be empty")

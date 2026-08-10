@@ -281,10 +281,6 @@ func presentVolumeMounts(mounts []*models.VolumeMount) []openapi.VolumeMount {
 
 func presentVolumeSourceType(sourceType models.SourceVolumeType) *openapi.VolumeMountSourceType {
 	switch sourceType {
-	case models.BuildArtifactSyncedVolume:
-		return openapi.BUILD_ARTIFACT_SYNCED_VOLUME.Ptr()
-	case models.RemoteDirSyncedVolume:
-		return openapi.REMOTE_DIR_SYNCED_VOLUME.Ptr()
 	case models.GitRepoVolume:
 		return openapi.GIT_REPO_SYNCED_VOLUME.Ptr()
 	default:
@@ -707,13 +703,6 @@ func presentConnectionConfig(kind models.ConnectionKind, from models.TopologyNod
 		}
 		return &openapi.StackConnectionConfig{VolumeMountConfig: vc}
 
-	case models.ConnectionKindBuildArtifactSource:
-		bc := openapi.NewBuildArtifactSourceConfig(stringFromConfig(cfg, string(models.ConnectionConfigKeySourcePath)))
-		if v, ok := cfg[string(models.ConnectionConfigKeyDestinationPath)].(string); ok {
-			bc.DestinationPath = &v
-		}
-		return &openapi.StackConnectionConfig{BuildArtifactSourceConfig: bc}
-
 	case models.ConnectionKindEnv:
 		if from.Type != models.TopologyNodeTypePostgresAddon {
 			return nil
@@ -758,12 +747,6 @@ func convertConnectionConfig(cfg openapi.StackConnectionConfig) models.Connectio
 		}
 		if vc.ReadOnly != nil {
 			result[string(models.ConnectionConfigKeyReadOnly)] = *vc.ReadOnly
-		}
-	case cfg.BuildArtifactSourceConfig != nil:
-		bc := cfg.BuildArtifactSourceConfig
-		result[string(models.ConnectionConfigKeySourcePath)] = bc.SourcePath
-		if bc.DestinationPath != nil {
-			result[string(models.ConnectionConfigKeyDestinationPath)] = *bc.DestinationPath
 		}
 	}
 	if len(result) == 0 {

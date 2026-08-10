@@ -5,7 +5,7 @@
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **Id** | Pointer to **string** | Stable connection identifier. Generated when omitted. | [optional] 
-**Kind** | **string** | The relationship type. &#x60;env&#x60; injects values into environment variables, &#x60;volume_mount&#x60; mounts a volume into a resource, and &#x60;build_artifact_source&#x60; seeds a volume from build output.  | 
+**Kind** | **string** | The relationship type. &#x60;env&#x60; injects values into environment variables, and &#x60;volume_mount&#x60; mounts a volume into a resource.  |
 **From** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **To** | [**TopologyNodeRef**](TopologyNodeRef.md) |  | 
 **Mappings** | Pointer to [**[]ConnectionMapping**](ConnectionMapping.md) | Target/value mappings for kinds that move values, such as &#x60;env&#x60;.  | [optional] 
@@ -167,5 +167,4 @@ HasConfig returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
 

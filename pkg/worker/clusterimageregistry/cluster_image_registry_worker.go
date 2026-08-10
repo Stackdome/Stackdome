@@ -98,6 +98,12 @@ func (w *clusterImageRegistryWorker) Execute(ctx context.Context, operand worker
 			}
 			continue
 		}
+		// Shared-compute registries are seeded in the database at signup and
+		// created lazily by the first release that needs one. A cluster-wide
+		// reconciliation must not provision every tenant's pending seed.
+		if cluster.SharedCompute {
+			continue
+		}
 
 		if registry.Status != nil && registry.Status.State == models.RegistryStateRunning {
 			continue

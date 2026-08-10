@@ -40,7 +40,6 @@ func ComputeManifestRevision(m *models.ReleaseManifest) string {
 	_, _ = printer.Fprintf(hasher, "%#v", m.StackCR)
 	_, _ = printer.Fprintf(hasher, "%#v", m.ResourceNames)
 	_, _ = printer.Fprintf(hasher, "%#v", m.ResourceRevisions)
-	_, _ = printer.Fprintf(hasher, "%#v", m.VolumeBuildSources)
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum64()))
 }
 

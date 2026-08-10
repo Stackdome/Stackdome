@@ -152,31 +152,6 @@ func TestStackConnectionStoreReferencesSourceByStackScopedName(t *testing.T) {
 	}
 }
 
-func TestStackConnectionStoreReferencesTargetByStackScopedName(t *testing.T) {
-	ctx := context.Background()
-	sf := newTestSessionFactory(t)
-	store := NewStackConnectionStore(StackConnectionStoreSpec{SessionFactory: sf})
-
-	createConnectionRecord(t, sf, models.StackConnection{
-		ID:      "conn-1",
-		StackID: "stack-1",
-		Kind:    models.ConnectionKindBuildArtifactSource,
-		From:    models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
-		To:      models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
-	})
-
-	referenced, err := store.IsNodeReferencedAsTarget(ctx, "stack-1", models.TopologyNodeRef{
-		Type: models.TopologyNodeTypeVolume,
-		Name: "assets",
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if !referenced {
-		t.Fatalf("expected stack-local volume target to be referenced")
-	}
-}
-
 func TestStackConnectionStoreAllowsMultipleConnectionsToSameAddonWithDifferentDatabases(t *testing.T) {
 	sf := newTestSessionFactory(t)
 

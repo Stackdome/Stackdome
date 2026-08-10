@@ -6,7 +6,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/services"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -47,6 +46,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		clusters = mocks.NewMockClusterManager(ctrl)
 		release = &models.StackRelease{ID: "release-1", StackID: "stack-1", Snapshot: models.StackSnapshot{
 			Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"},
+			Resources:   []*models.StackResource{{VolumeMounts: []*models.VolumeMount{{SourceVolumeID: "volume-1"}}}},
 			Volumes:     []*models.Volume{{ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}},
 			Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
 		}}
@@ -67,24 +67,14 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 	}
 
-	It("fails closed before enqueueing when the cloud isolation version is absent", func() {
-		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().IsolationPolicyVersion().Return("")
-
-		result, err := newReconciler().Reconcile(ctx, release)
-		Expect(result).To(Equal(resultNil))
-		Expect(err).To(MatchError("cloud isolation policy version is not configured"))
-	})
-
 	It("enqueues prerequisites and requeues until all are observed ready", func() {
-		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)
 		volumes.EXPECT().InternalGet(ctx, "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", NamespaceID: "namespace-1", Namespace: "demo-ns", Status: &models.VolumeStatus{Phase: models.VolumePhasePending}}, nil)
 		addons.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}, nil)
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1", ReleaseID: "release-1"}).Return(nil)
-		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1", ReleaseID: "release-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(newClusterClient(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue}}}), nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
@@ -95,14 +85,13 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 	})
 
 	It("uses only release snapshot volumes after the draft gains another volume", func() {
-		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns", Volumes: []*models.Volume{{ID: "volume-added-after-release"}}}, nil)
 		volumes.EXPECT().InternalGet(ctx, "volume-1").Return(&models.Volume{ID: "volume-1", OrganisationID: "org-1", ProjectID: "project-1", NamespaceID: "namespace-1", Namespace: "demo-ns", Status: &models.VolumeStatus{Phase: models.VolumePhaseReady}}, nil)
 		addons.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStateReady}}, nil)
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1", ReleaseID: "release-1"}).Return(nil)
-		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1", ReleaseID: "release-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(newClusterClient(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue, models.CloudPolicyReadyLabelKey: testCloudPolicyVersion}}}), nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
@@ -113,8 +102,8 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 	})
 
 	It("requeues when tenant identity exists but guard policy readiness is absent", func() {
-		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		release.Snapshot.Volumes = nil
+		release.Snapshot.Resources = nil
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)
@@ -130,7 +119,6 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 	})
 
 	It("rejects a current stack whose persisted identity differs from the release snapshot", func() {
-		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(&models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1"}, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "other-org", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)
@@ -140,34 +128,22 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		Expect(err).To(MatchError("release release-1 stack identity does not match its snapshot"))
 	})
 
-	It("binds volume readiness to the release spec, marker, generation, and synced source", func() {
+	It("binds volume readiness to the desired spec and observed generation", func() {
 		desired := &storagev1alpha1.Volume{
-			ObjectMeta: metav1.ObjectMeta{Annotations: map[string]string{models.VolumeReleaseIDAnnotation: "release-b"}},
-			Spec: storagev1alpha1.VolumeSpec{Size: "1Gi", Source: &storagev1alpha1.VolumeSource{
-				RemoteDir: &storagev1alpha1.RemoteDirSource{Path: "/data", CurrentDirectoryHash: "hash-b"},
-			}},
+			Spec: storagev1alpha1.VolumeSpec{Size: "1Gi"},
 		}
 		ready := desired.DeepCopy()
 		ready.Generation = 2
 		ready.Status.ObservedGeneration = 2
 		ready.Status.Phase = storagev1alpha1.VolumePhaseReady
-		ready.Status.LastRemoteSyncHash = "hash-b"
-		Expect(volumeReadyForRelease(ready, desired, "release-b")).To(BeTrue())
+		Expect(volumeReadyForRelease(ready, desired)).To(BeTrue())
 
-		staleRevision := ready.DeepCopy()
-		staleRevision.Spec.Source.RemoteDir.CurrentDirectoryHash = "hash-a"
-		Expect(volumeReadyForRelease(staleRevision, desired, "release-b")).To(BeFalse())
-
-		staleRollback := ready.DeepCopy()
-		staleRollback.Annotations[models.VolumeReleaseIDAnnotation] = "release-a"
-		Expect(volumeReadyForRelease(staleRollback, desired, "release-b")).To(BeFalse())
+		staleSpec := ready.DeepCopy()
+		staleSpec.Spec.Size = "2Gi"
+		Expect(volumeReadyForRelease(staleSpec, desired)).To(BeFalse())
 
 		delayedController := ready.DeepCopy()
 		delayedController.Status.ObservedGeneration = 1
-		Expect(volumeReadyForRelease(delayedController, desired, "release-b")).To(BeFalse())
-
-		driftAfterRestart := ready.DeepCopy()
-		driftAfterRestart.Status.LastRemoteSyncHash = "hash-a"
-		Expect(volumeReadyForRelease(driftAfterRestart, desired, "release-b")).To(BeFalse())
+		Expect(volumeReadyForRelease(delayedController, desired)).To(BeFalse())
 	})
 })

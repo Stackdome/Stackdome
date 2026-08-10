@@ -15,7 +15,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/stackrelease"
 	"go.uber.org/mock/gomock"
 )
 
@@ -228,6 +227,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			},
 		}
 		ctx = context.Background()
+		runtimePolicy.EXPECT().ValidateStackLimits(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 	})
 
 	AfterEach(func() {
@@ -261,7 +261,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 				got.Replicas = &configuredReplicas
 			})
 			runTxInline()
-			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
 				func(_ context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
 					Expect(release.Snapshot.Resources).To(HaveLen(1))
@@ -277,43 +277,10 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			Expect(got).To(Equal(created))
 		})
 
-		It("freezes a volume branch before hashing and persists the commit", func() {
-			const repoURL = "https://github.com/acme/data.git"
-			stack.Volumes = []*models.Volume{{
-				ID: "volume-1", Name: "data", VolumeSource: &models.VolumeSource{GitRepoSource: &models.GitRepoSource{
-					RepoUrl: repoURL, Revision: models.GitRepoRevision{Branch: "main"},
-				}},
-			}}
-			gitClients := NewMocksourceGitClientProvider(ctrl)
-			gitClient := mocks.NewMockGitClient(ctrl)
-			svc.gitClients = gitClients
-			gitClients.EXPECT().ClientFor(repoURL, gitclient.GitCredentials{}).Return(gitClient, nil)
-			gitClient.EXPECT().GetBranchHeadSHA(ctx, repoURL, "main").Return(&gitclient.RepoResult{HeadSHA: "commit-x"}, nil)
-			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
-			runTxInline()
-			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
-			releaseStore.EXPECT().Create(ctx, gomock.Any()).DoAndReturn(
-				func(_ context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError) {
-					Expect(release.Snapshot.Volumes[0].VolumeSource.GitRepoSource.Revision).To(Equal(models.GitRepoRevision{Branch: "main", Commit: "commit-x"}))
-					expectedHash, err := stackrelease.HashJSON(release.Snapshot)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(release.SnapshotRevision).To(Equal(expectedHash))
-					return created, nil
-				})
-			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
-			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
-			enqueuer.EXPECT().EnqueueAfterCommit(ctx, models.StackReleaseOperand{ID: "rel-1"}).Return(nil)
-
-			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
-
-			Expect(serr).To(BeNil())
-			Expect(got).To(Equal(created))
-		})
-
 		It("records release_created inside the creation transaction as its final act", func() {
 			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
@@ -327,7 +294,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 		It("fails creation and hands back no release when recording release_created fails", func() {
 			created := &models.StackRelease{ID: "rel-1", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(errors.GeneralError("event insert failed"))
@@ -340,18 +307,18 @@ var _ = Describe("stackReleaseService release creation records release_created",
 
 		It("rejects a first release when cloud capacity is full", func() {
 			runTxInline()
-			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(errors.CapacityReached())
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(errors.CapacityReached())
 
 			got, serr := svc.createReleaseForStack(ctx, stack, models.ReleaseCause{Kind: models.ReleaseCauseManual}, createEventsUserID)
 			Expect(got).To(BeNil())
 			Expect(serr.Reason).To(Equal(errors.ErrorCodeCapacityReached))
 		})
 
-		It("applies the same first-release admission to preview and internal releases", func() {
+		It("applies the same first-release access check to preview and internal releases", func() {
 			stackSvc.EXPECT().InternalGetStack(ctx, createEventsStackID).Return(stack, nil)
 			created := &models.StackRelease{ID: "rel-preview", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().ActivateComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
@@ -379,7 +346,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 		It("records release_created inside the rollback transaction", func() {
 			created := &models.StackRelease{ID: "rel-2", StackID: createEventsStackID}
 			runTxInline()
-			runtimePolicy.EXPECT().RequireComputeAccessWithTx(ctx, createEventsOrgID).Return(nil)
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(nil)
 			releaseStore.EXPECT().Create(ctx, gomock.Any()).Return(created, nil)
 			referenceSvc.EXPECT().ProjectRelease(ctx, created).Return(nil)
 			recorder.EXPECT().RecordReleaseCreated(ctx, created).Return(nil)
@@ -392,31 +359,12 @@ var _ = Describe("stackReleaseService release creation records release_created",
 
 		It("refuses rollback after the cloud trial expires without renewing it", func() {
 			runTxInline()
-			runtimePolicy.EXPECT().RequireComputeAccessWithTx(ctx, createEventsOrgID).Return(errors.ComputeAccessInactive())
+			runtimePolicy.EXPECT().EnsureComputeAccess(ctx, createEventsOrgID).Return(errors.ComputeAccessInactive())
 
 			got, serr := svc.RollbackRelease(ctx, createEventsStackID, rollbackFromRelID)
 			Expect(got).To(BeNil())
 			Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
 		})
-	})
-
-	It("rejects rollback to a legacy release with an unpinned Git volume", func() {
-		releaseStore.EXPECT().GetByID(ctx, rollbackFromRelID).Return(&models.StackRelease{
-			ID: rollbackFromRelID, StackID: createEventsStackID, State: models.ReleaseStateReleased, Sequence: 7,
-			Snapshot: models.StackSnapshot{Volumes: []*models.Volume{{
-				Name: "source",
-				VolumeSource: &models.VolumeSource{GitRepoSource: &models.GitRepoSource{
-					RepoUrl:  "https://example.com/repo.git",
-					Revision: models.GitRepoRevision{Tag: "v1"},
-				}},
-			}}},
-		}, nil)
-
-		got, serr := svc.RollbackRelease(ctx, createEventsStackID, rollbackFromRelID)
-
-		Expect(got).To(BeNil())
-		Expect(serr).NotTo(BeNil())
-		Expect(serr.Reason).To(ContainSubstring("no resolved Git commit"))
 	})
 
 	Describe("InternalResolveAuthoritativeWorkloadRelease", func() {

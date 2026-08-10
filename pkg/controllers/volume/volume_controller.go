@@ -113,21 +113,7 @@ func mapToVolumeStatus(clusterStatus storagev1alpha1.VolumeStatus) *models.Volum
 		ObservedGeneration:     clusterStatus.ObservedGeneration,
 		Conditions:             models.ConvertConditions(clusterStatus.Conditions),
 		Phase:                  string(clusterStatus.Phase),
-		BuildArtifactSyncs:     mapToBuildArtifactSyncInfo(clusterStatus.BuildArtifactSyncs),
 		LastObservedStatusHash: clusterStatus.StatusHash,
 		LastSyncedGitRevision:  clusterStatus.LastSyncedGitReference,
-		LastRemoteDirSyncHash:  clusterStatus.LastRemoteSyncHash,
 	}
-}
-
-func mapToBuildArtifactSyncInfo(clusterBuildArtifactSyncInfoMap map[string]storagev1alpha1.BuildArtifactSyncInfo) []models.BuildArtifactSyncInfo {
-	res := make([]models.BuildArtifactSyncInfo, 0)
-	for resourceRef, syncInfo := range clusterBuildArtifactSyncInfoMap {
-		res = append(res, models.BuildArtifactSyncInfo{
-			ResourceName: resourceRef,
-			BuildID:      syncInfo.BuildID,
-			Status:       string(syncInfo.Status),
-		})
-	}
-	return res
 }

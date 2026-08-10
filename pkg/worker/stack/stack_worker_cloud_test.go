@@ -3,9 +3,7 @@ package stack
 import (
 	"context"
 
-	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
-	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 	"go.uber.org/mock/gomock"
 
@@ -13,21 +11,20 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("StackWorker cloud admission", func() {
+var _ = Describe("StackWorker cloud behavior", func() {
 	It("does not select draft-only stacks for periodic cloud reconciliation", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		stacks := NewMockstackService(ctrl)
 		releases := NewMockreleaseService(ctrl)
-		policy := &activeWorkerRuntimePolicy{}
 		releases.EXPECT().InternalListAuthoritativeWorkload(gomock.Any()).Return(&models.WorkloadAuthorityScan{}, nil)
-		w := &stackWorker{stackService: stacks, releaseService: releases, runtimePolicy: policy, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test")}
+		w := &stackWorker{stackService: stacks, releaseService: releases, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test")}
 
 		operands, serr := w.GetInput(context.Background())
 		Expect(serr).To(BeNil())
 		Expect(operands).To(BeEmpty())
 	})
 
-	It("periodically reconciles an existing released workload while its allocation is active", func() {
+	It("periodically reconciles an existing released workload", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		stacks := NewMockstackService(ctrl)
 		releases := NewMockreleaseService(ctrl)
@@ -46,7 +43,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 		reconciler.EXPECT().Reconcile(gomock.Any(), stack).Return(resultNil, nil)
 		w := &stackWorker{
 			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
-			runtimePolicy: &activeWorkerRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
+			BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
 		}
 
 		result, serr := w.Execute(context.Background(), models.StackOperand{ID: "stack-1"})
@@ -68,7 +65,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(nil, nil)
 		w := &stackWorker{
 			stackService: stacks, releaseService: releases, subReconcilers: []subReconciler{reconciler},
-			runtimePolicy: &activeWorkerRuntimePolicy{}, BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
+			BaseWorker: worker.NewBaseWorker(StackWorkerName, "test"),
 		}
 
 		result, serr := w.Execute(context.Background(), models.StackOperand{ID: "stack-1", ReleaseID: "release-a"})
@@ -78,31 +75,3 @@ var _ = Describe("StackWorker cloud admission", func() {
 	})
 
 })
-
-type activeWorkerRuntimePolicy struct{ inactiveWorkerRuntimePolicy }
-
-type inactiveWorkerRuntimePolicy struct{}
-
-func (*inactiveWorkerRuntimePolicy) OrganisationProvisioningMode() services.ProvisioningMode {
-	return services.ProvisioningModeDatabaseOnly
-}
-func (*inactiveWorkerRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
-	return services.ProvisioningModeDatabaseOnly
-}
-func (*inactiveWorkerRuntimePolicy) IsolationPolicyVersion() string { return "v1" }
-func (*inactiveWorkerRuntimePolicy) ActivateComputeAccessWithTx(context.Context, string) *errors.ServiceError {
-	return nil
-}
-func (*inactiveWorkerRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
-	return nil
-}
-func (*inactiveWorkerRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (services.ComputeMutationAdmission, *errors.ServiceError) {
-	return services.ComputeMutationAdmission{}, nil
-}
-func (*inactiveWorkerRuntimePolicy) AdmitOrganisationDeletion(context.Context, string) *errors.ServiceError {
-	return nil
-}
-func (*inactiveWorkerRuntimePolicy) AdmitStackMutationWithTx(context.Context, services.StackMutation) *errors.ServiceError {
-	return nil
-}
-func (*inactiveWorkerRuntimePolicy) ApplyStackResourceDefaults(*models.StackResource) {}

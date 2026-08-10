@@ -11,9 +11,8 @@ import (
 type ConnectionKind string
 
 const (
-	ConnectionKindEnv                 ConnectionKind = "env"
-	ConnectionKindVolumeMount         ConnectionKind = "volume_mount"
-	ConnectionKindBuildArtifactSource ConnectionKind = "build_artifact_source"
+	ConnectionKindEnv         ConnectionKind = "env"
+	ConnectionKindVolumeMount ConnectionKind = "volume_mount"
 )
 
 type TopologyNodeType string
@@ -38,10 +37,6 @@ const (
 	ConnectionConfigKeyMountPath ConnectionConfigKey = "mount_path"
 	ConnectionConfigKeySubPath   ConnectionConfigKey = "sub_path"
 	ConnectionConfigKeyReadOnly  ConnectionConfigKey = "read_only"
-
-	// Build artifact source config keys
-	ConnectionConfigKeySourcePath      ConnectionConfigKey = "source_path"
-	ConnectionConfigKeyDestinationPath ConnectionConfigKey = "destination_path"
 )
 
 // Postgres credential_scope values

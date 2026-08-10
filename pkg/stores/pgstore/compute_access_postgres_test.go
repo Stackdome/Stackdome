@@ -73,7 +73,7 @@ var _ = Describe("ComputeAccessStore PostgreSQL locking", func() {
 				<-start
 				results <- executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 					expiresAt := now.Add(6 * time.Hour)
-					_, serr := store.ActivateWithTx(txCtx, stores.ComputeAccessActivation{
+					_, serr := store.Activate(txCtx, stores.ComputeAccessActivation{
 						OrganisationID:    fmt.Sprintf("pr2-lock-org-%02d", index),
 						EntitlementSource: models.ComputeEntitlementSourceTrial,
 						StartsAt:          now, ExpiresAt: &expiresAt,
@@ -117,7 +117,7 @@ var _ = Describe("ComputeAccessStore PostgreSQL locking", func() {
 		DeferCleanup(cancel)
 		serr := executor.WithTransaction(retryCtx, func(txCtx context.Context) *errors.ServiceError {
 			expiresAt := now.Add(6 * time.Hour)
-			_, acquireErr := store.ActivateWithTx(txCtx, stores.ComputeAccessActivation{
+			_, acquireErr := store.Activate(txCtx, stores.ComputeAccessActivation{
 				OrganisationID: activeOrganisationID, EntitlementSource: models.ComputeEntitlementSourceTrial,
 				StartsAt: now, ExpiresAt: &expiresAt,
 			})

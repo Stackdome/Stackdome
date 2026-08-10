@@ -11,11 +11,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("StackLimitStore", func() {
+var _ = Describe("ComputeUsageStore", func() {
 	var (
 		ctx      context.Context
 		sf       *sqliteSessionFactory
-		store    stores.StackLimitStore
+		store    stores.ComputeUsageStore
 		executor stores.AtomicExecutor
 	)
 
@@ -25,9 +25,11 @@ var _ = Describe("StackLimitStore", func() {
 			`CREATE TABLE organisations (id TEXT PRIMARY KEY)`,
 			`CREATE TABLE stacks (id TEXT PRIMARY KEY, organisation_id TEXT NOT NULL)`,
 			`CREATE TABLE stack_resources (id TEXT PRIMARY KEY, stack_id TEXT NOT NULL)`,
+			`CREATE TABLE volumes (id TEXT PRIMARY KEY, organisation_id TEXT NOT NULL)`,
+			`CREATE TABLE postgres_addons (id TEXT PRIMARY KEY, organisation_id TEXT NOT NULL)`,
 		)
 		Expect(sf.New(ctx).Exec(`INSERT INTO organisations (id) VALUES ('org-1')`).Error).NotTo(HaveOccurred())
-		store = pgstore.NewStackLimitStore()
+		store = pgstore.NewComputeUsageStore()
 		executor = pgstore.NewAtomicExecutor(sf)
 	})
 
@@ -40,7 +42,7 @@ var _ = Describe("StackLimitStore", func() {
 	It("locks the organisation and counts stacks and resources excluding one stack", func() {
 		Expect(sf.New(ctx).Exec(`INSERT INTO stacks (id, organisation_id) VALUES ('stack-1', 'org-1'), ('stack-2', 'org-1')`).Error).NotTo(HaveOccurred())
 		Expect(sf.New(ctx).Exec(`INSERT INTO stack_resources (id, stack_id) VALUES ('r1', 'stack-1'), ('r2', 'stack-1'), ('r3', 'stack-2')`).Error).NotTo(HaveOccurred())
-		var usage stores.StackUsage
+		var usage stores.ComputeUsage
 		serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 			var getErr *errors.ServiceError
 			usage, getErr = store.LockOrganisationAndGetUsageWithTx(txCtx, "org-1", "stack-1")

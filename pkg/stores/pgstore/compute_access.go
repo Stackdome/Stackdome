@@ -30,7 +30,7 @@ type computeAccessStore struct {
 }
 
 // NewComputeAccessStore fixes the platform capacity ceiling at construction so
-// individual activation callers cannot weaken admission.
+// individual activation callers cannot weaken the platform-wide limit.
 func NewComputeAccessStore(spec ComputeAccessStoreSpec) stores.ComputeAccessStore {
 	return &computeAccessStore{
 		sessionFactory:               spec.SessionFactory,
@@ -38,7 +38,7 @@ func NewComputeAccessStore(spec ComputeAccessStoreSpec) stores.ComputeAccessStor
 	}
 }
 
-func (s *computeAccessStore) ActivateWithTx(ctx context.Context, activation stores.ComputeAccessActivation) (*models.ComputeAccess, *errors.ServiceError) {
+func (s *computeAccessStore) Activate(ctx context.Context, activation stores.ComputeAccessActivation) (*models.ComputeAccess, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
 		return nil, errors.GeneralError("transaction not found in context")
@@ -47,7 +47,7 @@ func (s *computeAccessStore) ActivateWithTx(ctx context.Context, activation stor
 		return nil, errors.GeneralError("maximum active shared compute leases must be greater than zero")
 	}
 
-	// Return the existing grant so retrying first-provisioning admission is safe.
+	// Return the existing grant so retrying the first capacity-consuming request is safe.
 	access, err := findCurrentComputeAccessForUpdate(tx, activation.OrganisationID)
 	if err == nil {
 		return validateComputeAccess(access, activation.StartsAt)
@@ -116,37 +116,6 @@ func (s *computeAccessStore) ActivateWithTx(ctx context.Context, activation stor
 	return &models.ComputeAccess{Entitlement: entitlement, Lease: lease}, nil
 }
 
-func (s *computeAccessStore) RequireWithTx(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
-	tx := db.TxFromContext(ctx)
-	if tx == nil {
-		return nil, errors.GeneralError("transaction not found in context")
-	}
-	access, err := findCurrentComputeAccessForUpdate(tx, organisationID)
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.ComputeAccessInactive()
-	}
-	if err != nil {
-		return nil, errors.GeneralError("failed to get compute access: %s", err.Error())
-	}
-	return validateComputeAccess(access, now)
-}
-
-func (s *computeAccessStore) AdmitComputeMutationWithTx(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
-	tx := db.TxFromContext(ctx)
-	if tx == nil {
-		return nil, errors.GeneralError("transaction not found in context")
-	}
-	access, err := findCurrentComputeAccessForUpdate(tx, organisationID)
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		// Database-only drafts do not reserve or reconcile shared compute yet.
-		return nil, nil
-	}
-	if err != nil {
-		return nil, errors.GeneralError("failed to get compute access: %s", err.Error())
-	}
-	return validateComputeAccess(access, now)
-}
-
 func (s *computeAccessStore) HasSharedComputeLease(ctx context.Context, organisationID string) (bool, *errors.ServiceError) {
 	var count int64
 	if err := s.sessionFactory.New(ctx).Model(&models.SharedComputeLease{}).
@@ -188,11 +157,20 @@ func hasComputeEntitlementForUpdate(tx *gorm.DB, organisationID string, source m
 }
 
 func validateComputeAccess(access *models.ComputeAccess, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
-	if access == nil || access.Entitlement == nil || access.Lease == nil ||
-		access.Entitlement.Status != models.ComputeEntitlementStatusActive ||
-		access.Entitlement.StartsAt.After(now) ||
-		(access.Entitlement.ExpiresAt != nil && !access.Entitlement.ExpiresAt.After(now)) ||
-		access.Lease.State != models.SharedComputeLeaseStateActive {
+	if access == nil || access.Entitlement == nil || access.Lease == nil {
+		return nil, errors.ComputeAccessInactive()
+	}
+	entitlement := access.Entitlement
+	if entitlement.Status != models.ComputeEntitlementStatusActive {
+		return nil, errors.ComputeAccessInactive()
+	}
+	if entitlement.StartsAt.After(now) {
+		return nil, errors.ComputeAccessInactive()
+	}
+	if entitlement.ExpiresAt != nil && !entitlement.ExpiresAt.After(now) {
+		return nil, errors.ComputeAccessInactive()
+	}
+	if access.Lease.State != models.SharedComputeLeaseStateActive {
 		return nil, errors.ComputeAccessInactive()
 	}
 	return access, nil

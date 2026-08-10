@@ -10,6 +10,11 @@ limits:
   maxStacksPerOrganization: 2
   maxStackResourcesPerOrganization: 6
   replicasPerStackResource: 1
+  maxVolumesPerOrganization: 2
+  maxVolumeSize: 2Gi
+  maxPostgresAddonsPerOrganization: 1
+  postgresInstances: 1
+  maxPostgresStorageSize: 2Gi
   # Deployment must set cloud-guard controller.maxConcurrentBuilds from this
   # same value. Hub validates this policy but does not schedule image builds.
   concurrentBuilds: 1
@@ -22,7 +27,7 @@ registry:
   # Registries are created lazily only when an organization starts a build.
   maxActiveRegistries: 200
   storageClass: longhorn
-  storageSize: 10Gi
+  storageSize: 2Gi
 
 features:
   customDomains: false

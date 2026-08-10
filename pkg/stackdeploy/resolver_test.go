@@ -376,45 +376,6 @@ func TestResolveVolumeMountConnection(t *testing.T) {
 	g.Expect(stack.StackResources[0].VolumeMounts).To(BeNil())
 }
 
-func TestResolveBuildArtifactSourceConnection(t *testing.T) {
-	g := NewWithT(t)
-	ctrl := gomock.NewController(t)
-	volumeSvc := NewMockVolumeService(ctrl)
-	volumeSvc.EXPECT().ListVolumesUsedByStack(gomock.Any(), "stack-1").
-		Return([]*models.Volume{{ID: "vol-1", Name: "assets"}}, nil)
-
-	stack := &models.Stack{
-		ID: "stack-1",
-		StackResources: []*models.StackResource{
-			{ID: "res-1", Name: "builder", BuildConfig: &models.BuildConfigSpec{}},
-		},
-		Connections: models.StackConnections{
-			{
-				ID:   "build-assets",
-				Kind: models.ConnectionKindBuildArtifactSource,
-				From: models.TopologyNodeRef{Type: models.TopologyNodeTypeStackResource, Name: "builder"},
-				To:   models.TopologyNodeRef{Type: models.TopologyNodeTypeVolume, Name: "assets"},
-				Config: map[string]interface{}{
-					"source_path":      "/app/public",
-					"destination_path": "/",
-				},
-			},
-		},
-	}
-
-	resolver := NewResolver(ResolverSpec{VolumeService: volumeSvc})
-	effective, err := resolver.Resolve(context.Background(), stack)
-
-	g.Expect(err).NotTo(HaveOccurred())
-	volume := effective.Volumes[0]
-	g.Expect(volume.VolumeSource).NotTo(BeNil())
-	g.Expect(volume.VolumeSource.BuildSource).To(HaveLen(1))
-	bs := volume.VolumeSource.BuildSource[0]
-	g.Expect(bs.ResourceName).To(Equal("builder"))
-	g.Expect(bs.SourcePath).To(Equal("/app/public"))
-	g.Expect(bs.DestinationPath).To(Equal("/"))
-}
-
 func TestResolveVolumeMountUnknownVolumeFails(t *testing.T) {
 	g := NewWithT(t)
 	ctrl := gomock.NewController(t)

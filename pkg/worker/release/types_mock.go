@@ -16,7 +16,6 @@ import (
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
-	services "github.com/Stackdome/stackdome/pkg/services"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -348,20 +347,6 @@ func NewMockruntimePolicy(ctrl *gomock.Controller) *MockruntimePolicy {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockruntimePolicy) EXPECT() *MockruntimePolicyMockRecorder {
 	return m.recorder
-}
-
-// DraftProvisioningMode mocks base method.
-func (m *MockruntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "DraftProvisioningMode")
-	ret0, _ := ret[0].(services.ProvisioningMode)
-	return ret0
-}
-
-// DraftProvisioningMode indicates an expected call of DraftProvisioningMode.
-func (mr *MockruntimePolicyMockRecorder) DraftProvisioningMode() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DraftProvisioningMode", reflect.TypeOf((*MockruntimePolicy)(nil).DraftProvisioningMode))
 }
 
 // IsolationPolicyVersion mocks base method.

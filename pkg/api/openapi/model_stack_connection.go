@@ -18,7 +18,7 @@ import (
 type StackConnection struct {
 	// Stable connection identifier. Generated when omitted.
 	Id *string `json:"id,omitempty"`
-	// The relationship type. `env` injects values into environment variables, `volume_mount` mounts a volume into a resource, and `build_artifact_source` seeds a volume from build output.
+	// The relationship type. `env` injects values into environment variables, and `volume_mount` mounts a volume into a resource.
 	Kind string          `json:"kind"`
 	From TopologyNodeRef `json:"from"`
 	To   TopologyNodeRef `json:"to"`

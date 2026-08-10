@@ -80,19 +80,8 @@ func presentVolumeSpec(spec *models.Volume) openapi.VolumeSpec {
 		NeedsSyncBeforeUse: spec.SyncBeforeUse,
 		AccessMode:         presentVolumeAccessMode(spec.AccessMode),
 	}
-	if spec.VolumeSource != nil {
-		res.Source = &openapi.VolumeSource{}
-		switch {
-		case spec.VolumeSource.RemoteDirSource != nil:
-			res.Source.SourceType = openapi.REMOTE_DIR
-			res.Source.RemoteSource = presentRemoteSource(spec.VolumeSource.RemoteDirSource)
-		case len(spec.VolumeSource.BuildSource) > 0:
-			res.Source.SourceType = openapi.BUILD_ARTIFACT
-			res.Source.BuildSource = presentBuildArtifacts(spec.VolumeSource.BuildSource)
-		case spec.VolumeSource.GitRepoSource != nil:
-			res.Source.SourceType = openapi.GIT_REPO
-			res.Source.GitRepoSource = presentGitRepoSource(spec.VolumeSource.GitRepoSource)
-		}
+	if spec.VolumeSource != nil && spec.VolumeSource.GitRepoSource != nil {
+		res.Source = &openapi.VolumeSource{GitRepoSource: *presentGitRepoSource(spec.VolumeSource.GitRepoSource)}
 	}
 
 	return res
@@ -133,42 +122,13 @@ func presentVolumeAccessMode(mode models.VolumeAccessMode) openapi.VolumeAccessM
 	}
 }
 
-func presentRemoteSource(source *models.RemoteDirSource) *openapi.RemoteSource {
-	if source == nil {
-		return nil
-	}
-	return &openapi.RemoteSource{
-		Path:                 source.Path,
-		CurrentDirectoryHash: source.CurrentDirectoryHash,
-	}
-}
-
-func presentBuildArtifacts(artifacts []models.BuildArtifactSource) []openapi.BuildArtifact {
-	if len(artifacts) == 0 {
-		return nil
-	}
-	result := make([]openapi.BuildArtifact, len(artifacts))
-	for i, artifact := range artifacts {
-		result[i] = openapi.BuildArtifact{
-			ResourceRef:     artifact.ResourceName,
-			SourcePath:      artifact.SourcePath,
-			DestinationPath: artifact.DestinationPath,
-		}
-	}
-	return result
-}
-
 func presentVolumeStatus(status *models.VolumeStatus) *openapi.VolumeStatus {
 	if status == nil {
 		return nil
 	}
 	res := &openapi.VolumeStatus{
-		Conditions:         presentConditions(status.Conditions),
-		Phase:              &status.Phase,
-		BuildArtifactSyncs: presentBuildArtifactSyncInfo(status.BuildArtifactSyncs),
-	}
-	if status.LastRemoteDirSyncHash != "" {
-		res.LastRemoteSyncHash = &status.LastRemoteDirSyncHash
+		Conditions: presentConditions(status.Conditions),
+		Phase:      &status.Phase,
 	}
 	if status.LastSyncedGitRevision != "" {
 		res.LastSyncedGitRevision = &status.LastSyncedGitRevision
@@ -194,22 +154,6 @@ func presentConditions(conditions []models.Condition) []openapi.Condition {
 	return result
 }
 
-func presentBuildArtifactSyncInfo(info []models.BuildArtifactSyncInfo) []openapi.BuildArtifactSyncInfo {
-	if len(info) == 0 {
-		return nil
-	}
-	result := make([]openapi.BuildArtifactSyncInfo, len(info))
-
-	for i, syncInfo := range info {
-		result[i] = openapi.BuildArtifactSyncInfo{
-			ResourceName: &syncInfo.ResourceName,
-			BuildId:      &syncInfo.BuildID,
-			Status:       &syncInfo.Status,
-		}
-	}
-	return result
-}
-
 func ConvertVolume(v *openapi.Volume) *models.Volume {
 	res := &models.Volume{
 		Name:          v.Name,
@@ -221,15 +165,7 @@ func ConvertVolume(v *openapi.Volume) *models.Volume {
 		SyncBeforeUse: v.Spec.GetNeedsSyncBeforeUse(),
 	}
 	if v.Spec.Source != nil {
-		res.VolumeSource = &models.VolumeSource{}
-		switch v.Spec.Source.SourceType {
-		case openapi.REMOTE_DIR:
-			res.VolumeSource.RemoteDirSource = convertRemoteDirSource(v.Spec.Source.RemoteSource)
-		case openapi.BUILD_ARTIFACT:
-			res.VolumeSource.BuildSource = convertBuildArtifacts(v.Spec.Source.BuildSource)
-		case openapi.GIT_REPO:
-			res.VolumeSource.GitRepoSource = convertGitRepoSource(v.Spec.Source.GitRepoSource)
-		}
+		res.VolumeSource = &models.VolumeSource{GitRepoSource: convertGitRepoSource(&v.Spec.Source.GitRepoSource)}
 	}
 	return res
 }
@@ -297,26 +233,4 @@ func convertGitRepoSource(source *openapi.GitRepoSource) *models.GitRepoSource {
 		RepoUrl:  source.RepoUrl,
 		Revision: revision,
 	}
-}
-
-func convertRemoteDirSource(source *openapi.RemoteSource) *models.RemoteDirSource {
-	if source == nil {
-		return nil
-	}
-	return &models.RemoteDirSource{
-		Path:                 source.Path,
-		CurrentDirectoryHash: source.CurrentDirectoryHash,
-	}
-}
-
-func convertBuildArtifacts(artifacts []openapi.BuildArtifact) []models.BuildArtifactSource {
-	result := make([]models.BuildArtifactSource, len(artifacts))
-	for i, artifact := range artifacts {
-		result[i] = models.BuildArtifactSource{
-			ResourceName:    artifact.ResourceRef,
-			SourcePath:      artifact.SourcePath,
-			DestinationPath: artifact.DestinationPath,
-		}
-	}
-	return result
 }

@@ -14,10 +14,6 @@ type VolumeStore interface {
 	InternalList(ctx context.Context, ids []string) ([]*models.Volume, *errors.ServiceError)
 	InternalListNotReady(ctx context.Context) ([]*models.Volume, *errors.ServiceError)
 	GetByID(ctx context.Context, id string) (*models.Volume, *errors.ServiceError)
-	UpdateGitRepoSourceRevision(ctx context.Context, id string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
-	UpdateGitRepoSourceRevisionWithTx(ctx context.Context, id string, revision models.GitRepoRevision) (*models.Volume, *errors.ServiceError)
-	UpdateRemoteDirSourceHash(ctx context.Context, id string, remoteDirHash string) (*models.Volume, *errors.ServiceError)
-	UpdateRemoteDirSourceHashWithTx(ctx context.Context, id string, remoteDirHash string) (*models.Volume, *errors.ServiceError)
 	UpdateStatus(ctx context.Context, id string, status *models.VolumeStatus) *errors.ServiceError
 	Delete(ctx context.Context, id string) *errors.ServiceError
 	DeleteWithTx(ctx context.Context, id string) *errors.ServiceError

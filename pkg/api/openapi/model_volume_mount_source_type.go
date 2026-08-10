@@ -20,17 +20,13 @@ type VolumeMountSourceType string
 
 // List of VolumeMountSourceType
 const (
-	EMPTY_VOLUME                 VolumeMountSourceType = "EmptyVolume"
-	REMOTE_DIR_SYNCED_VOLUME     VolumeMountSourceType = "RemoteDirSyncedVolume"
-	BUILD_ARTIFACT_SYNCED_VOLUME VolumeMountSourceType = "BuildArtifactSyncedVolume"
-	GIT_REPO_SYNCED_VOLUME       VolumeMountSourceType = "GitRepoSyncedVolume"
+	EMPTY_VOLUME           VolumeMountSourceType = "EmptyVolume"
+	GIT_REPO_SYNCED_VOLUME VolumeMountSourceType = "GitRepoSyncedVolume"
 )
 
 // All allowed values of VolumeMountSourceType enum
 var AllowedVolumeMountSourceTypeEnumValues = []VolumeMountSourceType{
 	"EmptyVolume",
-	"RemoteDirSyncedVolume",
-	"BuildArtifactSyncedVolume",
 	"GitRepoSyncedVolume",
 }
 

@@ -8,7 +8,7 @@ import (
 )
 
 func (r *Resolver) resolveVolumeConnections(ctx context.Context, stack *models.Stack) error {
-	if !stack.Connections.HasAnyKind(models.ConnectionKindVolumeMount, models.ConnectionKindBuildArtifactSource) {
+	if !stack.Connections.HasAnyKind(models.ConnectionKindVolumeMount) {
 		return nil
 	}
 
@@ -18,10 +18,7 @@ func (r *Resolver) resolveVolumeConnections(ctx context.Context, stack *models.S
 	resourceMap := stack.ResourcesMap()
 	volumeMap := buildVolumeMap(stack)
 
-	if err := resolveVolumeMountConnections(stack, resourceMap, volumeMap); err != nil {
-		return err
-	}
-	return resolveBuildArtifactSourceConnections(stack, resourceMap, volumeMap)
+	return resolveVolumeMountConnections(stack, resourceMap, volumeMap)
 }
 
 func (r *Resolver) loadVolumes(ctx context.Context, stack *models.Stack) error {
@@ -80,44 +77,6 @@ func resolveVolumeMountConnections(
 		}
 
 		resource.VolumeMounts = append(resource.VolumeMounts, mount)
-	}
-
-	return nil
-}
-
-func resolveBuildArtifactSourceConnections(
-	stack *models.Stack,
-	resourceMap map[string]*models.StackResource,
-	volumeMap map[string]*models.Volume,
-) error {
-	for _, connection := range stack.Connections.OfKind(models.ConnectionKindBuildArtifactSource) {
-		if _, ok := resourceMap[connection.From.Name]; !ok {
-			return fmt.Errorf("build_artifact_source connection '%s' references unknown stack resource '%s'", connection.ID, connection.From.Name)
-		}
-
-		volume, ok := volumeMap[connection.To.Name]
-		if !ok {
-			return fmt.Errorf("build_artifact_source connection '%s' references unknown volume '%s'", connection.ID, connection.To.Name)
-		}
-
-		sourcePath, err := connection.RequiredConfigString(string(models.ConnectionConfigKeySourcePath))
-		if err != nil {
-			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.ID, err)
-		}
-		destinationPath, _, err := connection.ConfigString(string(models.ConnectionConfigKeyDestinationPath))
-		if err != nil {
-			return fmt.Errorf("build_artifact_source connection '%s' has invalid config: %w", connection.ID, err)
-		}
-
-		if volume.VolumeSource == nil {
-			volume.VolumeSource = &models.VolumeSource{}
-		}
-
-		volume.VolumeSource.BuildSource = append(volume.VolumeSource.BuildSource, models.BuildArtifactSource{
-			ResourceName:    connection.From.Name,
-			SourcePath:      sourcePath,
-			DestinationPath: destinationPath,
-		})
 	}
 
 	return nil

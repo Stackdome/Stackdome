@@ -24,7 +24,6 @@ export type AttachmentKind = typeof NODE_KIND.secret | typeof NODE_KIND.volume |
 export const EDGE_KIND = {
   env: "env",
   volumeMount: "volume_mount",
-  buildArtifactSource: "build_artifact_source",
   dependsOn: "depends_on",
 } as const;
 export type EdgeKind = (typeof EDGE_KIND)[keyof typeof EDGE_KIND];

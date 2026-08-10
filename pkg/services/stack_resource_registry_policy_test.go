@@ -33,15 +33,14 @@ var _ = Describe("StackResource registry preparation", func() {
 		Expect(resource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(BeEmpty())
 	})
 
-	It("keeps eager self-hosted registry resolution unchanged", func() {
+	It("defers self-hosted registry resolution to release deployment too", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		registry := mocks.NewMockImageRegistryService(ctrl)
 		svc := &stackResourceService{clusterRegistryService: registry, runtimePolicy: NewSelfHostedRuntimePolicy()}
 		resource := newResource()
-		registry.EXPECT().PopulateInClusterRegistryNameForResource(gomock.Any(), "org-1", "cluster-1", "demo", resource).Return(nil)
-
 		serr := svc.prepareResource(context.Background(), &models.Stack{ID: "stack-1", Name: "demo", OrganisationID: "org-1", ClusterID: "cluster-1"}, resource)
 
 		Expect(serr).To(BeNil())
+		Expect(resource.BuildConfig.BuildImageRepository.ClusterRegistryName).To(BeEmpty())
 	})
 })

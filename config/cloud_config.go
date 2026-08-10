@@ -124,6 +124,21 @@ func (c *StackdomeCloudConfig) Validate() error {
 	if c.Limits.ReplicasPerStackResource <= 0 {
 		return fmt.Errorf("limits.replicasPerStackResource must be greater than zero")
 	}
+	if c.Limits.MaxVolumesPerOrganization <= 0 {
+		return fmt.Errorf("limits.maxVolumesPerOrganization must be greater than zero")
+	}
+	if err := validatePositiveQuantity("limits.maxVolumeSize", c.Limits.MaxVolumeSize); err != nil {
+		return err
+	}
+	if c.Limits.MaxPostgresAddonsPerOrganization <= 0 {
+		return fmt.Errorf("limits.maxPostgresAddonsPerOrganization must be greater than zero")
+	}
+	if c.Limits.PostgresInstances <= 0 {
+		return fmt.Errorf("limits.postgresInstances must be greater than zero")
+	}
+	if err := validatePositiveQuantity("limits.maxPostgresStorageSize", c.Limits.MaxPostgresStorageSize); err != nil {
+		return err
+	}
 	if c.Limits.ConcurrentBuilds <= 0 {
 		return fmt.Errorf("limits.concurrentBuilds must be greater than zero")
 	}
@@ -148,12 +163,8 @@ func (c *StackdomeCloudConfig) Validate() error {
 	if c.Features.WorkspaceUsers {
 		return fmt.Errorf("features.workspaceUsers has been removed and must be false")
 	}
-	storageSize, err := resource.ParseQuantity(c.Registry.StorageSize)
-	if err != nil {
-		return fmt.Errorf("registry.storageSize must be a valid Kubernetes quantity: %w", err)
-	}
-	if storageSize.Sign() <= 0 {
-		return fmt.Errorf("registry.storageSize must be greater than zero")
+	if err := validatePositiveQuantity("registry.storageSize", c.Registry.StorageSize); err != nil {
+		return err
 	}
 	switch c.Signup.ClientIPSource {
 	case StackdomeCloudClientIPSourceCloudflare, StackdomeCloudClientIPSourceRemoteAddr:
@@ -192,6 +203,17 @@ func (c *StackdomeCloudConfig) Validate() error {
 	}
 	if c.Signup.Throttle.Email.Window.Duration() <= 0 {
 		return fmt.Errorf("signup.throttle.email.window must be greater than zero")
+	}
+	return nil
+}
+
+func validatePositiveQuantity(field, value string) error {
+	quantity, err := resource.ParseQuantity(value)
+	if err != nil {
+		return fmt.Errorf("%s must be a valid Kubernetes quantity: %w", field, err)
+	}
+	if quantity.Sign() <= 0 {
+		return fmt.Errorf("%s must be greater than zero", field)
 	}
 	return nil
 }

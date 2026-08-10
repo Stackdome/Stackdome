@@ -132,6 +132,7 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 	if permErr := s.permissions.Check(ctx, postgresAddon.ProjectID, auth.ResourceAddonsPostgres, "", auth.ActionCreate); permErr != nil {
 		return nil, permErr
 	}
+	s.runtimePolicy.ApplyPostgresAddonDefaults(postgresAddon)
 
 	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
 		return nil, err
@@ -233,7 +234,10 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 
 	var createdPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		if policyErr := s.runtimePolicy.ActivateComputeAccessWithTx(ctx, postgresAddon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(ctx, postgresAddon.OrganisationID); policyErr != nil {
+			return policyErr
+		}
+		if policyErr := s.runtimePolicy.ValidatePostgresAddonLimits(ctx, postgresAddon.OrganisationID, "", postgresAddon); policyErr != nil {
 			return policyErr
 		}
 		// Create namespace
@@ -317,6 +321,12 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 	if postgresAddon.Storage.StorageClass == "" {
 		postgresAddon.Storage.StorageClass = existingPostgresAddon.Storage.StorageClass
 	}
+	if postgresAddon.Storage.Size == "" {
+		postgresAddon.Storage.Size = existingPostgresAddon.Storage.Size
+	}
+	if postgresAddon.Instances.Count == 0 {
+		postgresAddon.Instances.Count = existingPostgresAddon.Instances.Count
+	}
 
 	// Validate update using validator
 	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
@@ -336,7 +346,10 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 
 	var updatedPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, existingPostgresAddon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(ctx, existingPostgresAddon.OrganisationID); policyErr != nil {
+			return policyErr
+		}
+		if policyErr := s.runtimePolicy.ValidatePostgresAddonLimits(ctx, existingPostgresAddon.OrganisationID, existingPostgresAddon.ID, postgresAddon); policyErr != nil {
 			return policyErr
 		}
 		// Update PostgreSQL addon within transaction
@@ -526,7 +539,7 @@ func (s *postgresAddonService) RequestPostgresAddonBackup(ctx context.Context, i
 		return getErr
 	}
 	return s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, addon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(txCtx, addon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		now := time.Now().UTC()
@@ -575,7 +588,7 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 	}
 
 	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, addon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(txCtx, addon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		now := time.Now()
@@ -602,7 +615,7 @@ func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, 
 	}
 
 	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, postgresAddon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(txCtx, postgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		_, updateErr := s.postgresAddonStore.SetHibernationWithTx(txCtx, id, enabled)
@@ -629,7 +642,7 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 	}
 
 	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(txCtx, postgresAddon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.EnsureComputeAccess(txCtx, postgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		_, updateErr := s.postgresAddonStore.SetFencingWithTx(txCtx, id, enabled)

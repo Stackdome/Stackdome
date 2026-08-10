@@ -119,29 +119,7 @@ func (b *clusterResourceBuilder) BuildVolumeCR(ctx context.Context, volume *mode
 	}
 
 	if volume.VolumeSource != nil {
-		switch {
-		case volume.VolumeSource.RemoteDirSource != nil:
-			res.Spec.Source = &storagev1alpha1.VolumeSource{
-				RemoteDir: &storagev1alpha1.RemoteDirSource{
-					Path:                 volume.VolumeSource.RemoteDirSource.Path,
-					CurrentDirectoryHash: volume.VolumeSource.RemoteDirSource.CurrentDirectoryHash,
-				},
-			}
-		case len(volume.VolumeSource.BuildSource) > 0:
-			buildSrcs := make([]storagev1alpha1.BuildArtifactSource, len(volume.VolumeSource.BuildSource))
-			for i, buildSrc := range volume.VolumeSource.BuildSource {
-				buildSrcs[i] = storagev1alpha1.BuildArtifactSource{
-					BuildSource: storagev1alpha1.StackResourceReference{
-						Name: buildSrc.ResourceName,
-					},
-					SourcePath:      buildSrc.SourcePath,
-					DestinationPath: buildSrc.DestinationPath,
-				}
-			}
-			res.Spec.Source = &storagev1alpha1.VolumeSource{
-				BuildArtifacts: buildSrcs,
-			}
-		case volume.VolumeSource.GitRepoSource != nil:
+		if volume.VolumeSource.GitRepoSource != nil {
 			gitRevision := corev1alpha1.GitRepoRevision{}
 
 			switch volume.VolumeSource.GitRepoSource.Revision.Type() {

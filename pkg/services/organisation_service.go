@@ -136,8 +136,8 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 		}
 	}
 
-	if !org.Platform && s.runtimePolicy.OrganisationProvisioningMode() == ProvisioningModeEager {
-		if seedErr := s.seedSharedComputeRegistry(ctx, org.ID, org.Name); seedErr != nil {
+	if !org.Platform {
+		if seedErr := s.createPendingSharedComputeRegistry(ctx, org.ID, org.Name); seedErr != nil {
 			return nil, seedErr
 		}
 	}
@@ -145,9 +145,9 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 	return s.organisationStore.Get(ctx, org.ID)
 }
 
-// seedSharedComputeRegistry gives a new tenant org a seed registry on the
-// shared-compute cluster. No shared-compute cluster configured → no-op.
-func (s *organisationService) seedSharedComputeRegistry(ctx context.Context, orgID, orgName string) *errors.ServiceError {
+// createPendingSharedComputeRegistry records the registry identity and storage
+// policy at signup. It intentionally does not create anything in Kubernetes.
+func (s *organisationService) createPendingSharedComputeRegistry(ctx context.Context, orgID, orgName string) *errors.ServiceError {
 	sharedClusters, err := s.clusterStore.ListSharedComputeClusters(ctx)
 	if err != nil {
 		return err
@@ -164,7 +164,7 @@ func (s *organisationService) seedSharedComputeRegistry(ctx context.Context, org
 }
 
 func (s *organisationService) seedOrgRegistry(ctx context.Context, orgID, orgName, clusterID string) *errors.ServiceError {
-	_, err := s.imageRegistryService.InternalCreateSeedRegistry(ctx, &models.ClusterImageRegistry{
+	_, err := s.imageRegistryService.InternalCreatePendingSeedRegistry(ctx, &models.ClusterImageRegistry{
 		ClusterID:           clusterID,
 		OrganisationID:      orgID,
 		Name:                orgRegistryName(orgName, orgID, clusterID),
@@ -217,7 +217,7 @@ func (s *organisationService) Delete(ctx context.Context, ID string) *errors.Ser
 	if permErr := s.permissions.Check(ctx, ID, auth.ResourceOrgs, ID, auth.ActionDelete); permErr != nil {
 		return permErr
 	}
-	if policyErr := s.runtimePolicy.AdmitOrganisationDeletion(ctx, ID); policyErr != nil {
+	if policyErr := s.runtimePolicy.ValidateOrganisationDeletion(ctx, ID); policyErr != nil {
 		return policyErr
 	}
 	stacks, err := s.stackQueryService.GetStacksByOrganisationID(ctx, ID)

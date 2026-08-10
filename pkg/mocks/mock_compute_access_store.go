@@ -12,7 +12,6 @@ package mocks
 import (
 	context "context"
 	reflect "reflect"
-	time "time"
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
@@ -44,34 +43,19 @@ func (m *MockComputeAccessStore) EXPECT() *MockComputeAccessStoreMockRecorder {
 	return m.recorder
 }
 
-// ActivateWithTx mocks base method.
-func (m *MockComputeAccessStore) ActivateWithTx(ctx context.Context, activation stores.ComputeAccessActivation) (*models.ComputeAccess, *errors.ServiceError) {
+// Activate mocks base method.
+func (m *MockComputeAccessStore) Activate(ctx context.Context, activation stores.ComputeAccessActivation) (*models.ComputeAccess, *errors.ServiceError) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ActivateWithTx", ctx, activation)
+	ret := m.ctrl.Call(m, "Activate", ctx, activation)
 	ret0, _ := ret[0].(*models.ComputeAccess)
 	ret1, _ := ret[1].(*errors.ServiceError)
 	return ret0, ret1
 }
 
-// ActivateWithTx indicates an expected call of ActivateWithTx.
-func (mr *MockComputeAccessStoreMockRecorder) ActivateWithTx(ctx, activation any) *gomock.Call {
+// Activate indicates an expected call of Activate.
+func (mr *MockComputeAccessStoreMockRecorder) Activate(ctx, activation any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ActivateWithTx", reflect.TypeOf((*MockComputeAccessStore)(nil).ActivateWithTx), ctx, activation)
-}
-
-// AdmitComputeMutationWithTx mocks base method.
-func (m *MockComputeAccessStore) AdmitComputeMutationWithTx(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AdmitComputeMutationWithTx", ctx, organisationID, now)
-	ret0, _ := ret[0].(*models.ComputeAccess)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// AdmitComputeMutationWithTx indicates an expected call of AdmitComputeMutationWithTx.
-func (mr *MockComputeAccessStoreMockRecorder) AdmitComputeMutationWithTx(ctx, organisationID, now any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AdmitComputeMutationWithTx", reflect.TypeOf((*MockComputeAccessStore)(nil).AdmitComputeMutationWithTx), ctx, organisationID, now)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Activate", reflect.TypeOf((*MockComputeAccessStore)(nil).Activate), ctx, activation)
 }
 
 // HasSharedComputeLease mocks base method.
@@ -87,19 +71,4 @@ func (m *MockComputeAccessStore) HasSharedComputeLease(ctx context.Context, orga
 func (mr *MockComputeAccessStoreMockRecorder) HasSharedComputeLease(ctx, organisationID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasSharedComputeLease", reflect.TypeOf((*MockComputeAccessStore)(nil).HasSharedComputeLease), ctx, organisationID)
-}
-
-// RequireWithTx mocks base method.
-func (m *MockComputeAccessStore) RequireWithTx(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "RequireWithTx", ctx, organisationID, now)
-	ret0, _ := ret[0].(*models.ComputeAccess)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// RequireWithTx indicates an expected call of RequireWithTx.
-func (mr *MockComputeAccessStoreMockRecorder) RequireWithTx(ctx, organisationID, now any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequireWithTx", reflect.TypeOf((*MockComputeAccessStore)(nil).RequireWithTx), ctx, organisationID, now)
 }

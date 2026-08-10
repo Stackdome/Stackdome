@@ -24,9 +24,6 @@ docs/ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsHibernateP
 docs/ApiV1OrganizationsOrgIdProjectsProjectNameAddonsPostgresIdActionsHibernatePostRequest.md
 docs/AppConfigResponse.md
 docs/AzureCredentials.md
-docs/BuildArtifact.md
-docs/BuildArtifactSourceConfig.md
-docs/BuildArtifactSyncInfo.md
 docs/BuildFailureDetail.md
 docs/BuildSourceContext.md
 docs/BuildSourceContextGitRepo.md
@@ -163,7 +160,6 @@ docs/ReleasePins.md
 docs/ReleaseSummary.md
 docs/ReleaseValidationError.md
 docs/ReleasesApi.md
-docs/RemoteSource.md
 docs/ResourceMetrics.md
 docs/ResourceMetricsNodeCapacitiesInner.md
 docs/ResourceOutcome.md
@@ -222,7 +218,6 @@ docs/VolumeMount.md
 docs/VolumeMountConfig.md
 docs/VolumeMountSourceType.md
 docs/VolumeSource.md
-docs/VolumeSourceTypes.md
 docs/VolumeSpec.md
 docs/VolumeStatus.md
 docs/WALConfiguration.md
@@ -244,9 +239,6 @@ model_api_token_create_response.go
 model_api_token_list.go
 model_app_config_response.go
 model_azure_credentials.go
-model_build_artifact.go
-model_build_artifact_source_config.go
-model_build_artifact_sync_info.go
 model_build_failure_detail.go
 model_build_source_context.go
 model_build_source_context_git_repo.go
@@ -379,7 +371,6 @@ model_release_outcome.go
 model_release_pins.go
 model_release_summary.go
 model_release_validation_error.go
-model_remote_source.go
 model_resource_metrics.go
 model_resource_metrics_node_capacities_inner.go
 model_resource_outcome.go
@@ -438,7 +429,6 @@ model_volume_mount.go
 model_volume_mount_config.go
 model_volume_mount_source_type.go
 model_volume_source.go
-model_volume_source_types.go
 model_volume_spec.go
 model_volume_status.go
 model_wal_configuration.go

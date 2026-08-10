@@ -63,7 +63,7 @@ var _ = Describe("ComputeAccessStore", func() {
 		expiresAt := now.Add(6 * time.Hour)
 		serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
 			var activationErr *errors.ServiceError
-			access, activationErr = store.ActivateWithTx(txCtx, stores.ComputeAccessActivation{
+			access, activationErr = store.Activate(txCtx, stores.ComputeAccessActivation{
 				OrganisationID: orgID, EntitlementSource: models.ComputeEntitlementSourceTrial,
 				StartsAt: now, ExpiresAt: &expiresAt,
 			})
@@ -89,7 +89,7 @@ var _ = Describe("ComputeAccessStore", func() {
 
 	It("requires the caller's outer transaction", func() {
 		expiresAt := now.Add(time.Hour)
-		access, serr := store.ActivateWithTx(ctx, stores.ComputeAccessActivation{
+		access, serr := store.Activate(ctx, stores.ComputeAccessActivation{
 			OrganisationID: "org-1", EntitlementSource: models.ComputeEntitlementSourceTrial,
 			StartsAt: now, ExpiresAt: &expiresAt,
 		})
@@ -127,7 +127,7 @@ var _ = Describe("ComputeAccessStore", func() {
 	It("rolls both records back when later release persistence fails", func() {
 		expiresAt := now.Add(6 * time.Hour)
 		serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-			access, activationErr := store.ActivateWithTx(txCtx, stores.ComputeAccessActivation{
+			access, activationErr := store.Activate(txCtx, stores.ComputeAccessActivation{
 				OrganisationID: "org-1", EntitlementSource: models.ComputeEntitlementSourceTrial,
 				StartsAt: now, ExpiresAt: &expiresAt,
 			})
@@ -156,33 +156,6 @@ var _ = Describe("ComputeAccessStore", func() {
 		Expect(entitlement.ExpiresAt).NotTo(BeNil())
 		Expect(*entitlement.ExpiresAt).To(BeTemporally("==", now))
 	})
-
-	It("admits database-only drafts before a lease exists", func() {
-		var access *models.ComputeAccess
-		serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-			var admissionErr *errors.ServiceError
-			access, admissionErr = store.AdmitComputeMutationWithTx(txCtx, "org-1", now)
-			return admissionErr
-		})
-		Expect(serr).To(BeNil())
-		Expect(access).To(BeNil())
-	})
-
-	DescribeTable("requires an active entitlement and lease",
-		func(expiresAt *time.Time, leaseState models.SharedComputeLeaseState) {
-			if expiresAt != nil || leaseState != "" {
-				persistAccess("org-1", models.ComputeEntitlementStatusActive, leaseState, expiresAt)
-			}
-			serr := executor.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-				_, accessErr := store.RequireWithTx(txCtx, "org-1", now)
-				return accessErr
-			})
-			Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
-		},
-		Entry("missing", nil, models.SharedComputeLeaseState("")),
-		Entry("expired", func() *time.Time { value := now; return &value }(), models.SharedComputeLeaseStateActive),
-		Entry("cleanup pending", func() *time.Time { value := now.Add(time.Hour); return &value }(), models.SharedComputeLeaseStateCleanupPending),
-	)
 
 	DescribeTable("counts every non-cleaned lease state as shared capacity",
 		func(state models.SharedComputeLeaseState, wantCapacityError bool) {

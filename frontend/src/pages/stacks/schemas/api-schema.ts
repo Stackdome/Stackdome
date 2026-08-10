@@ -22,10 +22,6 @@ const ApiVolumeMountSchema = schemas.VolumeMount;
 
 const ApiStackResourceSchema = schemas.StackResource;
 
-// Generated emits this enum as `VolumeSourceTypes` (plural) — alias for our singular name.
-const ApiVolumeSourceTypeSchema = schemas.VolumeSourceTypes;
-const ApiRemoteSourceSchema = schemas.RemoteSource;
-const ApiBuildArtifactSchema = schemas.BuildArtifact;
 const ApiGitRepoSourceSchema = schemas.GitRepoSource;
 const ApiVolumeSourceSchema = schemas.VolumeSource;
 const ApiVolumeAccessModeSchema = schemas.VolumeAccessMode;
@@ -38,7 +34,6 @@ const ApiVolumeStatusSchema = schemas.VolumeStatus;
 
 export {
   ApiAnnotationSchema,
-  ApiBuildArtifactSchema,
   ApiBuildSourceContextSchema,
   ApiEnvVarSchema,
   ApiExecutionConfigSchema,
@@ -49,7 +44,6 @@ export {
   ApiInitSpecSchema,
   ApiLabelSchema,
   ApiPortSchema,
-  ApiRemoteSourceSchema,
   ApiSourceSpecSchema,
   ApiStackResourceSchema,
   ApiStackResourceStatusSchema,
@@ -59,7 +53,6 @@ export {
   ApiVolumeMountSchema,
   ApiVolumeSchema,
   ApiVolumeSourceSchema,
-  ApiVolumeSourceTypeSchema,
   ApiVolumeSpecSchema,
   ApiVolumeStatusSchema,
 };

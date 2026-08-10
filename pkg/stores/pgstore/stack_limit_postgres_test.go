@@ -44,7 +44,7 @@ func (f *postgresTestSessionFactory) Close() error {
 	return f.DirectDB().Close()
 }
 
-var _ = Describe("StackLimitStore PostgreSQL locking", func() {
+var _ = Describe("ComputeUsageStore PostgreSQL locking", func() {
 	It("serializes concurrent stack admissions for one organisation", func() {
 		dsn := os.Getenv("STACKDOME_TEST_POSTGRES_DSN")
 		if dsn == "" {
@@ -68,13 +68,15 @@ var _ = Describe("StackLimitStore PostgreSQL locking", func() {
 			CREATE TABLE organisations (id TEXT PRIMARY KEY);
 			CREATE TABLE stacks (id TEXT PRIMARY KEY, organisation_id TEXT NOT NULL);
 			CREATE TABLE stack_resources (id TEXT PRIMARY KEY, stack_id TEXT NOT NULL);
+			CREATE TABLE volumes (id TEXT PRIMARY KEY, organisation_id TEXT NOT NULL);
+			CREATE TABLE postgres_addons (id TEXT PRIMARY KEY, organisation_id TEXT NOT NULL);
 			INSERT INTO organisations (id) VALUES ('org-1');
 		`).Error).NotTo(HaveOccurred())
 
 		sessionFactory := &postgresTestSessionFactory{database: schemaDB}
 		DeferCleanup(sessionFactory.Close)
 		executor := pgstore.NewAtomicExecutor(sessionFactory)
-		store := pgstore.NewStackLimitStore()
+		store := pgstore.NewComputeUsageStore()
 		ctx := context.Background()
 		start := make(chan struct{})
 		results := make(chan *errors.ServiceError, 2)
@@ -116,7 +118,7 @@ var _ = Describe("StackLimitStore PostgreSQL locking", func() {
 				rejected++
 				continue
 			}
-			Fail(fmt.Sprintf("unexpected stack admission error: %v", serr))
+			Fail(fmt.Sprintf("unexpected stack limit error: %v", serr))
 		}
 		Expect(admitted).To(Equal(1))
 		Expect(rejected).To(Equal(1))

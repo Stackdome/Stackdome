@@ -160,7 +160,8 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 			func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
 				return fn(ctx)
 			})
-		runtimePolicy.EXPECT().ActivateComputeAccessWithTx(gomock.Any(), orgID).Return(nil)
+		runtimePolicy.EXPECT().EnsureComputeAccess(gomock.Any(), orgID).Return(nil)
+		runtimePolicy.EXPECT().ValidatePostgresAddonLimits(gomock.Any(), orgID, "", gomock.Any()).Return(nil)
 		namespaceSvc.EXPECT().CreateInDBWithTx(gomock.Any(), gomock.Any()).
 			Return(&models.Namespace{ID: namespaceID, Name: namespaceName}, nil)
 		addonStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
@@ -191,6 +192,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 		runtimePolicy = NewMockRuntimePolicy(ctrl)
 		ctx = context.Background()
 		capturedAddon = nil
+		runtimePolicy.EXPECT().ApplyPostgresAddonDefaults(gomock.Any()).AnyTimes()
 
 		svc = &postgresAddonService{
 			logger:             logger.NewLogger(),

@@ -3,10 +3,8 @@ package models
 type SourceVolumeType string
 
 const (
-	EmptyVolume               SourceVolumeType = "EmptyVolume"
-	RemoteDirSyncedVolume     SourceVolumeType = "RemoteDirSyncedVolume"
-	BuildArtifactSyncedVolume SourceVolumeType = "BuildArtifactSyncedVolume"
-	GitRepoVolume             SourceVolumeType = "GitRepoVolume"
+	EmptyVolume   SourceVolumeType = "EmptyVolume"
+	GitRepoVolume SourceVolumeType = "GitRepoVolume"
 )
 
 type VolumeMount struct {

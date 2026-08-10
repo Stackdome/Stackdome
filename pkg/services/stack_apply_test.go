@@ -104,8 +104,8 @@ func TestApplyStack_CloudLimitRejectsBeforePersistence(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
-	env.svc.runtimePolicy = newCloudRuntimePolicyWithStoreForTest(&fakeStackLimitStore{
-		usage: stores.StackUsage{StackCount: 2},
+	env.svc.runtimePolicy = newCloudRuntimePolicyWithStoreForTest(&fakeComputeUsageStore{
+		usage: stores.ComputeUsage{StackCount: 2},
 	})
 
 	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", "project-1").Return(nil, errors.NotFound("missing")).Times(2)
@@ -163,8 +163,6 @@ func TestApplyStack_CreatesWhenMissing(t *testing.T) {
 	env.referenceService.EXPECT().ReprojectSpec(ctx, "stack-1").Return(nil)
 	created := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: projectID}
 	env.stackStore.EXPECT().GetByID(ctx, "stack-1").Return(created, nil)
-	env.backgroundEnqueue.EXPECT().EnqueueAfterCommit(ctx, models.StackOperand{ID: "stack-1"}).Return(nil)
-
 	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
 	assert.Nil(t, serr)
 	assert.True(t, wasCreated)
@@ -186,7 +184,7 @@ func TestApplyStack_UpdatesWhenExists(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	env := newApplyStackTestEnv(ctrl)
-	stackLimits := &fakeStackLimitStore{}
+	stackLimits := &fakeComputeUsageStore{}
 	env.svc.runtimePolicy = newCloudRuntimePolicyWithStoreForTest(stackLimits)
 
 	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", projectID).Return(existing, nil)

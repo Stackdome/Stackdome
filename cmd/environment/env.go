@@ -475,11 +475,9 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		})
 		e.RuntimePolicy = services.NewStackdomeCloudRuntimePolicy(services.StackdomeCloudRuntimePolicySpec{
 			ComputeAccess:          computeAccess,
-			StackLimits:            pgstore.NewStackLimitStore(),
+			ComputeUsage:           pgstore.NewComputeUsageStore(),
 			IsolationPolicyVersion: e.Config.StackdomeCloud.Isolation.PolicyVersion,
-			MaxStacks:              e.Config.StackdomeCloud.Limits.MaxStacksPerOrganization,
-			MaxResources:           e.Config.StackdomeCloud.Limits.MaxStackResourcesPerOrganization,
-			Replicas:               e.Config.StackdomeCloud.Limits.ReplicasPerStackResource,
+			Limits:                 e.Config.StackdomeCloud.Limits,
 		})
 	}
 
@@ -516,10 +514,17 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:    e.PermissionService,
 	})
 
+	orgRegistryDefaults := e.PlatformConfig.OrgRegistry
+	if stackdomeCloudRuntime {
+		orgRegistryDefaults = models.OrgRegistryDefaults{
+			StorageSize:  e.Config.StackdomeCloud.Registry.StorageSize,
+			StorageClass: e.Config.StackdomeCloud.Registry.StorageClass,
+		}
+	}
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
 		ImageRegistryService:      imageRegistryService,
-		OrgRegistryDefaults:       e.PlatformConfig.OrgRegistry,
+		OrgRegistryDefaults:       orgRegistryDefaults,
 		StackQueryService:         e.Services.StackService,
 		SessionFactory:            e.DBSession,
 		ProjectService:            projectService,
@@ -622,8 +627,6 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:      e.PermissionService,
 		ReferenceService: referenceService,
 		RuntimePolicy:    e.RuntimePolicy,
-		ClusterService:   clusterService,
-		ClusterWrites:    e.ClusterWrites,
 	})
 
 	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
@@ -649,7 +652,6 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ReferenceService:       referenceService,
 		ResourceValidator:      resourceValidator,
 		RuntimePolicy:          e.RuntimePolicy,
-		ClusterWrites:          e.ClusterWrites,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -881,25 +883,30 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:    e.Services.VolumeService,
 		NamespaceService: e.Services.NamespaceService,
 		Env:              e.Name,
-		RuntimePolicy:    e.RuntimePolicy,
 		ReleaseService:   e.Services.StackReleaseService,
 		ClusterWrites:    e.ClusterWrites,
 	})
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
 
+	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
+		ClusterManager: e.ClusterManager,
+		Logger:         e.Logger,
+	})
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
-		ReleaseService:       e.Services.StackReleaseService,
-		EventRecorder:        e.Services.ReleaseEventRecorder,
-		StackService:         e.Services.StackService,
-		ImageBuildService:    e.Services.ImageBuildService,
-		ClusterManager:       e.ClusterManager,
-		SecretService:        e.Services.SecretService,
-		CredentialResolver:   e.Services.CredentialResolver,
-		PostgresAddonService: e.Services.PostgresAddonService,
-		VolumeService:        e.Services.VolumeService,
-		NamespaceService:     e.Services.NamespaceService,
-		RuntimePolicy:        e.RuntimePolicy,
+		ReleaseService:        e.Services.StackReleaseService,
+		EventRecorder:         e.Services.ReleaseEventRecorder,
+		StackService:          e.Services.StackService,
+		ImageBuildService:     e.Services.ImageBuildService,
+		ClusterManager:        e.ClusterManager,
+		SecretService:         e.Services.SecretService,
+		CredentialResolver:    e.Services.CredentialResolver,
+		PostgresAddonService:  e.Services.PostgresAddonService,
+		VolumeService:         e.Services.VolumeService,
+		NamespaceService:      e.Services.NamespaceService,
+		ImageRegistryService:  e.Services.ClusterImageRegistryService,
+		ImageRegistryResource: clusterImageRegistryResource,
+		RuntimePolicy:         e.RuntimePolicy,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			CredentialResolver: e.Services.CredentialResolver,
 			ComputeMode:        e.Config.ComputeMode,
@@ -935,19 +942,12 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		StackVolumeStore: pgstore.NewStackVolumeStore(pgstore.StackVolumeStoreSpec{
 			SessionFactory: e.DBSession,
 		}),
-		VolumeCrBuilder:  builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
-		Env:              e.Name,
-		RuntimePolicy:    e.RuntimePolicy,
-		ReleaseService:   e.Services.StackReleaseService,
-		ClusterWrites:    e.ClusterWrites,
-		ReferenceService: e.Services.ReferenceService,
+		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
+		Env:             e.Name,
+		ClusterWrites:   e.ClusterWrites,
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
-	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
-		ClusterManager: e.ClusterManager,
-		Logger:         e.Logger,
-	})
 	clusterImageRegistryWorker := clusterimageregistryworker.NewClusterImageRegistryWorker(clusterimageregistryworker.ClusterImageRegistryWorkerSpec{
 		ClusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
 			SessionFactory: e.DBSession,
@@ -1059,7 +1059,7 @@ func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) err
 	e.Services.ClusterImageRegistryService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.ClusterService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.StackService.InjectBackgroundJobEnqueuer(dep)
-	e.Services.StackResourceService.InjectClusterManager(e.ClusterManager)
+	e.Services.StackResourceService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.OrgInviteService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.StackReleaseService.InjectBackgroundJobEnqueuer(dep)

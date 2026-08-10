@@ -13,10 +13,7 @@ type StackOperand struct {
 
 type StackReleaseOperand struct{ ID string }
 
-type VolumeOperand struct {
-	ID        string
-	ReleaseID string
-}
+type VolumeOperand struct{ ID string }
 
 type PostgresAddonOperand struct{ ID string }
 

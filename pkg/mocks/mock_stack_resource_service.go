@@ -13,9 +13,9 @@ import (
 	context "context"
 	reflect "reflect"
 
-	clustermanager "github.com/Stackdome/stackdome/pkg/clustermanager"
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
+	clusterresource "github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -117,16 +117,16 @@ func (mr *MockStackResourceServiceMockRecorder) GetByStackIDAndResourceName(ctx,
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByStackIDAndResourceName", reflect.TypeOf((*MockStackResourceService)(nil).GetByStackIDAndResourceName), ctx, stackID, resourceName)
 }
 
-// InjectClusterManager mocks base method.
-func (m *MockStackResourceService) InjectClusterManager(clusterManager clustermanager.ClusterManager) {
+// InjectBackgroundJobEnqueuer mocks base method.
+func (m *MockStackResourceService) InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "InjectClusterManager", clusterManager)
+	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
 }
 
-// InjectClusterManager indicates an expected call of InjectClusterManager.
-func (mr *MockStackResourceServiceMockRecorder) InjectClusterManager(clusterManager any) *gomock.Call {
+// InjectBackgroundJobEnqueuer indicates an expected call of InjectBackgroundJobEnqueuer.
+func (mr *MockStackResourceServiceMockRecorder) InjectBackgroundJobEnqueuer(dep any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectClusterManager", reflect.TypeOf((*MockStackResourceService)(nil).InjectClusterManager), clusterManager)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectBackgroundJobEnqueuer", reflect.TypeOf((*MockStackResourceService)(nil).InjectBackgroundJobEnqueuer), dep)
 }
 
 // InternalCreateWithTx mocks base method.
