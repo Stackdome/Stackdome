@@ -58,6 +58,15 @@ const (
 
 	// InternalServerError
 	ErrorInternalServerError ServiceErrorCode = 27
+
+	// ComputeAccessInactive occurs when an organisation's compute entitlement or lease is inactive.
+	ErrorComputeAccessInactive ServiceErrorCode = 28
+
+	// SharedComputeCapacityReached occurs when all shared-compute leases are reserved.
+	ErrorSharedComputeCapacityReached ServiceErrorCode = 29
+
+	// ComputeQuotaExceeded occurs when a configured managed-compute limit is exceeded.
+	ErrorComputeQuotaExceeded ServiceErrorCode = 30
 )
 
 type ServiceErrorCode int
@@ -90,6 +99,9 @@ func Errors() ServiceErrors {
 		ServiceError{ErrorTooManyRequests, "Too many requests", http.StatusTooManyRequests, nil},
 		ServiceError{ErrorUnprocessableEntity, "Unable to process request entity", http.StatusUnprocessableEntity, nil},
 		ServiceError{ErrorInternalServerError, "Internal server error", http.StatusInternalServerError, nil},
+		ServiceError{ErrorComputeAccessInactive, "Compute access is inactive", http.StatusGone, nil},
+		ServiceError{ErrorSharedComputeCapacityReached, "Shared compute capacity reached", http.StatusTooManyRequests, nil},
+		ServiceError{ErrorComputeQuotaExceeded, "Compute quota exceeded", http.StatusBadRequest, nil},
 	}
 }
 
@@ -279,6 +291,18 @@ func Gone(reason string, values ...interface{}) *ServiceError {
 
 func TooManyRequests(reason string, values ...interface{}) *ServiceError {
 	return New(ErrorTooManyRequests, reason, values...)
+}
+
+func ComputeAccessInactive() *ServiceError {
+	return New(ErrorComputeAccessInactive, "")
+}
+
+func SharedComputeCapacityReached() *ServiceError {
+	return New(ErrorSharedComputeCapacityReached, "")
+}
+
+func ComputeQuotaExceeded(reason string, values ...interface{}) *ServiceError {
+	return New(ErrorComputeQuotaExceeded, reason, values...)
 }
 
 func UnprocessableEntity(reason string, values ...interface{}) *ServiceError {
