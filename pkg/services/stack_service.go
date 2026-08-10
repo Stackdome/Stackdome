@@ -73,6 +73,7 @@ type StackServiceSpec struct {
 	CredentialResolver    CredentialResolver
 	GitIntegrationService GitIntegrationService
 	PlatformBaseDomain    string
+	RuntimePolicy         RuntimePolicy
 }
 
 type stackService struct {
@@ -94,9 +95,13 @@ type stackService struct {
 	defaultingService    DefaultingService[*models.Stack]
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
+	runtimePolicy RuntimePolicy
 }
 
 func NewStackService(spec StackServiceSpec) StackService {
+	if spec.RuntimePolicy == nil {
+		panic("services.NewStackService: RuntimePolicy is required")
+	}
 	organisationDomainService := NewOrganisationDomainsService(OrganisationDomainsServiceSpec{
 		SessionFactory: spec.SessionFactory,
 		Logger:         spec.Logger,
@@ -148,6 +153,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
 		defaultingService:    NewStackDefaultingService(),
+		runtimePolicy:        spec.RuntimePolicy,
 	}
 }
 
@@ -235,11 +241,13 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	if err != nil {
 		return nil, err
 	}
-	if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.StackOperand{ID: createdStack.ID}); err != nil {
-		return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
-	}
-	for _, v := range createdStack.Volumes {
-		_ = s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.VolumeOperand{ID: v.ID})
+	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeEager {
+		if err := s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.StackOperand{ID: createdStack.ID}); err != nil {
+			return nil, errors.GeneralError("failed to enqueue background job for stack '%s': %s", spec.Name, err.Error())
+		}
+		for _, v := range createdStack.Volumes {
+			_ = s.BackgroundJobEnqueuer.EnqueueAfterCommit(ctx, models.VolumeOperand{ID: v.ID})
+		}
 	}
 	s.logger.WithFields(map[string]interface{}{
 		logger.FieldStackID:   createdStack.ID,
@@ -341,10 +349,12 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	for _, v := range existingStack.Volumes {
 		existingVolumeIDs[v.ID] = struct{}{}
 	}
-	for _, v := range updatedStack.Volumes {
-		if _, existed := existingVolumeIDs[v.ID]; !existed {
-			if enqErr := s.BackgroundJobEnqueuer.Enqueue(models.VolumeOperand{ID: v.ID}); enqErr != nil {
-				return nil, errors.GeneralError("failed to enqueue volume '%s': %s", v.ID, enqErr.Error())
+	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeEager {
+		for _, v := range updatedStack.Volumes {
+			if _, existed := existingVolumeIDs[v.ID]; !existed {
+				if enqErr := s.BackgroundJobEnqueuer.Enqueue(models.VolumeOperand{ID: v.ID}); enqErr != nil {
+					return nil, errors.GeneralError("failed to enqueue volume '%s': %s", v.ID, enqErr.Error())
+				}
 			}
 		}
 	}
@@ -504,8 +514,10 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 		return nil, txErr
 	}
 
-	if enqErr := s.BackgroundJobEnqueuer.Enqueue(models.VolumeOperand{ID: created.ID}); enqErr != nil {
-		return nil, errors.GeneralError("failed to enqueue volume '%s': %s", created.ID, enqErr.Error())
+	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeEager {
+		if enqErr := s.BackgroundJobEnqueuer.Enqueue(models.VolumeOperand{ID: created.ID}); enqErr != nil {
+			return nil, errors.GeneralError("failed to enqueue volume '%s': %s", created.ID, enqErr.Error())
+		}
 	}
 	return created, nil
 }

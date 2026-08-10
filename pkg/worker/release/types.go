@@ -7,6 +7,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 )
 
 type subReconcilerResult struct {
@@ -50,6 +51,15 @@ type eventRecorder interface {
 	RecordReleaseChecksPassed(ctx context.Context, release *models.StackRelease) *errors.ServiceError
 }
 
+type runtimePolicy interface {
+	DraftProvisioningMode() services.ProvisioningMode
+	RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError
+}
+
+type namespaceService interface {
+	Get(ctx context.Context, id string) (*models.Namespace, *errors.ServiceError)
+}
+
 type imageBuildService interface {
 	ListByStackID(ctx context.Context, stackID string) ([]*models.ImageBuild, *errors.ServiceError)
 }
@@ -64,6 +74,7 @@ type secretService interface {
 }
 
 type postgresAddonService interface {
+	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 	InternalGetCredentials(ctx context.Context, addonID, database string, superuser bool) (*models.PostgresCredentials, *errors.ServiceError)
 }
 

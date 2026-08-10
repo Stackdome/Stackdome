@@ -461,6 +461,18 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 	customDomainsDisabled := stackdomeCloudRuntime && !e.Config.CustomDomainsEnabled()
 	externalPostgresImportDisabled := stackdomeCloudRuntime && !e.Config.ExternalPostgresImportEnabled()
 
+	e.RuntimePolicy = services.NewSelfHostedRuntimePolicy()
+	if stackdomeCloudRuntime {
+		cloudTrials := services.NewCloudTrialService(services.CloudTrialServiceSpec{
+			Store: pgstore.NewTrialAllocationStore(pgstore.TrialAllocationStoreSpec{
+				SessionFactory: e.DBSession,
+			}),
+			Capacity: e.Config.StackdomeCloud.Capacity.MaxActiveTrialAllocations,
+			TTL:      e.Config.StackdomeCloud.Capacity.AllocationTTL.Duration(),
+		})
+		e.RuntimePolicy = services.NewStackdomeCloudRuntimePolicy(cloudTrials)
+	}
+
 	encryptionService, err := services.NewAESEncryptionService(services.EncryptionServiceSpec{
 		Masterkey: e.Config.EncryptionKey,
 	})
@@ -505,6 +517,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:               e.PermissionService,
 		Logger:                    e.Logger,
 		CustomDomainsDisabled:     customDomainsDisabled,
+		RuntimePolicy:             e.RuntimePolicy,
 	})
 
 	stackStore := pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: e.DBSession})
@@ -690,6 +703,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		CredentialResolver:    credentialResolver,
 		GitIntegrationService: gitIntegrationService,
 		PlatformBaseDomain:    e.PlatformConfig.BaseDomain,
+		RuntimePolicy:         e.RuntimePolicy,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -754,6 +768,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ReferenceService:   referenceService,
 		EventStore:         releaseEventStore,
 		EventRecorder:      releaseEventRecorder,
+		RuntimePolicy:      e.RuntimePolicy,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -851,6 +866,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		VolumeService:    e.Services.VolumeService,
 		NamespaceService: e.Services.NamespaceService,
 		Env:              e.Name,
+		RuntimePolicy:    e.RuntimePolicy,
 	})
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
@@ -865,6 +881,8 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		CredentialResolver:   e.Services.CredentialResolver,
 		PostgresAddonService: e.Services.PostgresAddonService,
 		VolumeService:        e.Services.VolumeService,
+		NamespaceService:     e.Services.NamespaceService,
+		RuntimePolicy:        e.RuntimePolicy,
 		CRBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{
 			CredentialResolver: e.Services.CredentialResolver,
 			ComputeMode:        e.Config.ComputeMode,
@@ -901,6 +919,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		}),
 		VolumeCrBuilder: builders.NewClusterResourceBuilder(builders.ClusterResourceBuilderSpec{}),
 		Env:             e.Name,
+		RuntimePolicy:   e.RuntimePolicy,
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
@@ -930,6 +949,7 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		ClusterManager:       e.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
 		Env:                  e.Name,
+		RuntimePolicy:        e.RuntimePolicy,
 	})
 	e.WorkerManager.RegisterWorker(pgAddonWorker, models.PostgresAddonOperand{})
 

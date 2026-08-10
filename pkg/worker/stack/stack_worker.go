@@ -8,6 +8,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
@@ -19,6 +20,7 @@ type stackWorker struct {
 	stackService   stackService
 	clusterManager clustermanager.ClusterManager
 	subReconcilers []subReconciler
+	runtimePolicy  services.RuntimePolicy
 	worker.BaseWorker
 }
 
@@ -29,12 +31,17 @@ type StackWorkerSpec struct {
 	NamespaceService namespaceService
 	Env              string
 	ClusterManager   clustermanager.ClusterManager
+	RuntimePolicy    services.RuntimePolicy
 }
 
 func NewStackWorker(spec StackWorkerSpec) worker.Worker {
+	if spec.RuntimePolicy == nil {
+		panic("stack.NewStackWorker: RuntimePolicy is required")
+	}
 	return &stackWorker{
 		stackService:   spec.StackService,
 		clusterManager: spec.ClusterManager,
+		runtimePolicy:  spec.RuntimePolicy,
 		BaseWorker:     worker.NewBaseWorker(StackWorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			NewDeprovisionReconciler(DeprovisionReconcilerSpec{
@@ -71,6 +78,15 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 		return worker.Result{}, err
 	}
 	log.Info(ctx, "processing stack")
+	if stack.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+				log.Debug(ctx, "skipping draft provisioning without an active trial allocation")
+				return worker.Result{}, nil
+			}
+			return worker.Result{}, admissionErr
+		}
+	}
 
 	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil && w.Env == config.EnvironmentTest {
 		log.Info(ctx, "skipping cluster provisioning due to annotation")

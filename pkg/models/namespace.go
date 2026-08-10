@@ -3,14 +3,20 @@ package models
 import "time"
 
 const (
-	ManagedByLabelKey      = "stackdome.io/managed-by"
-	ManagedByLabelValue    = "stackdome"
-	CloudTenantLabelKey    = "stackdome.io/cloud-tenant"
-	CloudTenantLabelValue  = "true"
-	OrganizationIDLabelKey = "stackdome.io/organization-id"
-	NamespaceRoleLabelKey  = "stackdome.io/namespace-role"
-	NamespaceRoleStack     = "stack"
-	NamespaceRoleAddon     = "addon"
+	ManagedByLabelKey     = "stackdome.io/managed-by"
+	ManagedByLabelValue   = "stackdome"
+	CloudTenantLabelKey   = "stackdome.io/cloud-tenant"
+	CloudTenantLabelValue = "true"
+	// CloudPolicyReadyLabelKey is set by the private cloud guard only after it
+	// verifies the namespace's exact quota, limit range, and network policies.
+	CloudPolicyReadyLabelKey = "stackdome.io/cloud-policy-ready"
+	// CloudPolicyReadyVersion must match the policy version in the deployed
+	// stackdome-cloud-guard chart. A mismatch keeps releases from applying.
+	CloudPolicyReadyVersion = "v1"
+	OrganizationIDLabelKey  = "stackdome.io/organization-id"
+	NamespaceRoleLabelKey   = "stackdome.io/namespace-role"
+	NamespaceRoleStack      = "stack"
+	NamespaceRoleAddon      = "addon"
 )
 
 // Stack namespaces are generated as "<stack-name>-<uuid>" and then truncated

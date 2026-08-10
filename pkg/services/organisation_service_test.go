@@ -112,6 +112,7 @@ var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 			imageRegistryService: registrySvc,
 			orgRegistryDefaults:  models.OrgRegistryDefaults{StorageSize: storageSize, StorageClass: storageClass},
 			logger:               logger.NewLogger(),
+			runtimePolicy:        NewSelfHostedRuntimePolicy(),
 		}
 	})
 
@@ -164,6 +165,16 @@ var _ = Describe("OrganisationService shared-compute registry seeding", func() {
 		org, serr := svc.InternalCreate(ctx, tenantOrg())
 		Expect(serr).To(BeNil())
 		Expect(org).ToNot(BeNil())
+	})
+
+	It("keeps Stackdome Cloud organisation creation database-only", func() {
+		svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(&fakeCloudTrialService{})
+		expectOrgCreated()
+		expectOrgFetched()
+
+		org, serr := svc.InternalCreate(ctx, tenantOrg())
+		Expect(serr).To(BeNil())
+		Expect(org.ID).To(Equal(orgID))
 	})
 
 	It("fails org creation when seed-registry creation fails", func() {

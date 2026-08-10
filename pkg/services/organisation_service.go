@@ -72,9 +72,13 @@ type organisationService struct {
 	permissions               auth.PermissionService
 	logger                    logger.Logger
 	customDomainsDisabled     bool
+	runtimePolicy             RuntimePolicy
 }
 
 func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
+	if spec.RuntimePolicy == nil {
+		panic("services.NewOrganisationService: RuntimePolicy is required")
+	}
 	return &organisationService{
 		organisationStore: pgstore.NewOrganisationStore(pgstore.OrganisationStoreSpec{
 			SessionFactory: spec.SessionFactory,
@@ -95,6 +99,7 @@ func NewOrganisationService(spec OrganisationServiceSpec) OrganisationService {
 		permissions:               spec.Permissions,
 		logger:                    spec.Logger,
 		customDomainsDisabled:     spec.CustomDomainsDisabled,
+		runtimePolicy:             spec.RuntimePolicy,
 	}
 }
 
@@ -109,6 +114,7 @@ type OrganisationServiceSpec struct {
 	Permissions               auth.PermissionService
 	Logger                    logger.Logger
 	CustomDomainsDisabled     bool
+	RuntimePolicy             RuntimePolicy
 }
 
 func (s *organisationService) InternalCreate(ctx context.Context, spec *models.Organisation) (*models.Organisation, *errors.ServiceError) {
@@ -133,7 +139,7 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 		}
 	}
 
-	if !org.Platform {
+	if !org.Platform && s.runtimePolicy.OrganisationProvisioningMode() == ProvisioningModeEager {
 		if seedErr := s.seedSharedComputeRegistry(ctx, org.ID, org.Name); seedErr != nil {
 			return nil, seedErr
 		}

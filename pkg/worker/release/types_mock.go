@@ -16,6 +16,7 @@ import (
 
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
+	services "github.com/Stackdome/stackdome/pkg/services"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -325,6 +326,97 @@ func (mr *MockeventRecorderMockRecorder) RecordReleaseStarted(ctx, release any) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecordReleaseStarted", reflect.TypeOf((*MockeventRecorder)(nil).RecordReleaseStarted), ctx, release)
 }
 
+// MockruntimePolicy is a mock of runtimePolicy interface.
+type MockruntimePolicy struct {
+	ctrl     *gomock.Controller
+	recorder *MockruntimePolicyMockRecorder
+	isgomock struct{}
+}
+
+// MockruntimePolicyMockRecorder is the mock recorder for MockruntimePolicy.
+type MockruntimePolicyMockRecorder struct {
+	mock *MockruntimePolicy
+}
+
+// NewMockruntimePolicy creates a new mock instance.
+func NewMockruntimePolicy(ctrl *gomock.Controller) *MockruntimePolicy {
+	mock := &MockruntimePolicy{ctrl: ctrl}
+	mock.recorder = &MockruntimePolicyMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockruntimePolicy) EXPECT() *MockruntimePolicyMockRecorder {
+	return m.recorder
+}
+
+// DraftProvisioningMode mocks base method.
+func (m *MockruntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DraftProvisioningMode")
+	ret0, _ := ret[0].(services.ProvisioningMode)
+	return ret0
+}
+
+// DraftProvisioningMode indicates an expected call of DraftProvisioningMode.
+func (mr *MockruntimePolicyMockRecorder) DraftProvisioningMode() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DraftProvisioningMode", reflect.TypeOf((*MockruntimePolicy)(nil).DraftProvisioningMode))
+}
+
+// RequireActiveAllocation mocks base method.
+func (m *MockruntimePolicy) RequireActiveAllocation(ctx context.Context, organisationID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RequireActiveAllocation", ctx, organisationID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// RequireActiveAllocation indicates an expected call of RequireActiveAllocation.
+func (mr *MockruntimePolicyMockRecorder) RequireActiveAllocation(ctx, organisationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RequireActiveAllocation", reflect.TypeOf((*MockruntimePolicy)(nil).RequireActiveAllocation), ctx, organisationID)
+}
+
+// MocknamespaceService is a mock of namespaceService interface.
+type MocknamespaceService struct {
+	ctrl     *gomock.Controller
+	recorder *MocknamespaceServiceMockRecorder
+	isgomock struct{}
+}
+
+// MocknamespaceServiceMockRecorder is the mock recorder for MocknamespaceService.
+type MocknamespaceServiceMockRecorder struct {
+	mock *MocknamespaceService
+}
+
+// NewMocknamespaceService creates a new mock instance.
+func NewMocknamespaceService(ctrl *gomock.Controller) *MocknamespaceService {
+	mock := &MocknamespaceService{ctrl: ctrl}
+	mock.recorder = &MocknamespaceServiceMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MocknamespaceService) EXPECT() *MocknamespaceServiceMockRecorder {
+	return m.recorder
+}
+
+// Get mocks base method.
+func (m *MocknamespaceService) Get(ctx context.Context, id string) (*models.Namespace, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Get", ctx, id)
+	ret0, _ := ret[0].(*models.Namespace)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// Get indicates an expected call of Get.
+func (mr *MocknamespaceServiceMockRecorder) Get(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MocknamespaceService)(nil).Get), ctx, id)
+}
+
 // MockimageBuildService is a mock of imageBuildService interface.
 type MockimageBuildService struct {
 	ctrl     *gomock.Controller
@@ -493,6 +585,21 @@ func (m *MockpostgresAddonService) InternalGetCredentials(ctx context.Context, a
 func (mr *MockpostgresAddonServiceMockRecorder) InternalGetCredentials(ctx, addonID, database, superuser any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetCredentials", reflect.TypeOf((*MockpostgresAddonService)(nil).InternalGetCredentials), ctx, addonID, database, superuser)
+}
+
+// InternalGetPostgresAddon mocks base method.
+func (m *MockpostgresAddonService) InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGetPostgresAddon", ctx, id)
+	ret0, _ := ret[0].(*models.PostgresAddon)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGetPostgresAddon indicates an expected call of InternalGetPostgresAddon.
+func (mr *MockpostgresAddonServiceMockRecorder) InternalGetPostgresAddon(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetPostgresAddon", reflect.TypeOf((*MockpostgresAddonService)(nil).InternalGetPostgresAddon), ctx, id)
 }
 
 // MockvolumeService is a mock of volumeService interface.

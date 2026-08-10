@@ -3,7 +3,9 @@ package postgresaddon
 import (
 	"context"
 
+	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -52,4 +54,30 @@ var _ = Describe("PostgresAddonWorker", func() {
 			Expect(operands[0]).To(Equal(worker.Operand(models.PostgresAddonOperand{ID: "addon-1"})))
 		})
 	})
+
+	It("does not reconcile a pending cloud addon without an active allocation", func() {
+		addonSvc.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", OrganisationID: "org-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}, nil)
+		w.runtimePolicy = &inactiveAddonRuntimePolicy{}
+		result, serr := w.Execute(ctx, models.PostgresAddonOperand{ID: "addon-1"})
+		Expect(serr).To(BeNil())
+		Expect(result).To(Equal(worker.Result{}))
+	})
 })
+
+type inactiveAddonRuntimePolicy struct{}
+
+func (*inactiveAddonRuntimePolicy) OrganisationProvisioningMode() services.ProvisioningMode {
+	return services.ProvisioningModeDatabaseOnly
+}
+func (*inactiveAddonRuntimePolicy) DraftProvisioningMode() services.ProvisioningMode {
+	return services.ProvisioningModeDatabaseOnly
+}
+func (*inactiveAddonRuntimePolicy) AdmitFirstReleaseWithTx(context.Context, string) *errors.ServiceError {
+	return nil
+}
+func (*inactiveAddonRuntimePolicy) AdmitRollbackWithTx(context.Context, string) *errors.ServiceError {
+	return nil
+}
+func (*inactiveAddonRuntimePolicy) RequireActiveAllocation(context.Context, string) *errors.ServiceError {
+	return errors.TrialInactive()
+}

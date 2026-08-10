@@ -84,6 +84,7 @@ func newProductionWiredStackValidator(t testContext, sf db.SessionFactory, platf
 	t.Cleanup(ctrl.Finish)
 
 	svc := NewStackService(StackServiceSpec{
+		RuntimePolicy:         NewSelfHostedRuntimePolicy(),
 		SessionFactory:        sf,
 		CredentialResolver:    mocks.NewMockCredentialResolver(ctrl),
 		GitIntegrationService: mocks.NewMockGitIntegrationService(ctrl),

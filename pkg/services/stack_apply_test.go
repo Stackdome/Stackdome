@@ -49,11 +49,43 @@ func newApplyStackTestEnv(ctrl *gomock.Controller) *applyStackTestEnv {
 		referenceService:     env.referenceService,
 		defaultingService:    NewStackDefaultingService(),
 		logger:               logger.NewLogger(),
+		runtimePolicy:        NewSelfHostedRuntimePolicy(),
 		BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 			BackgroundJobEnqueuer: env.backgroundEnqueue,
 		},
 	}
 	return env
+}
+
+func TestApplyStack_CloudDraftDoesNotEnqueueCompute(t *testing.T) {
+	ctx := context.Background()
+	spec := &models.Stack{Name: "demo", ProjectID: "project-1", OrganisationID: "org-1", UserID: "user-1"}
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	env := newApplyStackTestEnv(ctrl)
+	env.svc.runtimePolicy = NewStackdomeCloudRuntimePolicy(&fakeCloudTrialService{})
+
+	env.stackStore.EXPECT().GetByNameAndProjectID(ctx, "demo", "project-1").Return(nil, errors.NotFound("missing")).Times(2)
+	env.permissions.EXPECT().Check(ctx, "project-1", auth.ResourceStacks, "", auth.ActionCreate).Return(nil)
+	env.validator.EXPECT().ValidateForCreate(ctx, spec).Return(nil)
+	namespace := &models.Namespace{Name: "ns-demo"}
+	env.namespaceService.EXPECT().PrepareNamespaceForStack(ctx, spec).Return(namespace, nil)
+	env.clusterService.EXPECT().GetClusterForOrg(ctx, "org-1").Return(&models.Cluster{ID: "cluster-1"}, nil)
+	env.stackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+		func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+			return fn(ctx)
+		})
+	env.namespaceService.EXPECT().CreateInDBWithTx(ctx, namespace).Return(&models.Namespace{ID: "ns-1", Name: "ns-demo"}, nil)
+	createdShell := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: "project-1"}
+	env.stackStore.EXPECT().CreateWithTx(ctx, gomock.Any()).Return(createdShell, nil)
+	env.referenceService.EXPECT().ReprojectSpec(ctx, "stack-1").Return(nil)
+	created := &models.Stack{ID: "stack-1", Name: "demo", ProjectID: "project-1"}
+	env.stackStore.EXPECT().GetByID(ctx, "stack-1").Return(created, nil)
+
+	got, wasCreated, serr := env.svc.ApplyStack(ctx, spec)
+	assert.Nil(t, serr)
+	assert.True(t, wasCreated)
+	assert.Equal(t, created, got)
 }
 
 // TestApplyStack_CreatesWhenMissing: no stack with the spec's name exists in

@@ -47,6 +47,8 @@ type ReleaseWorkerSpec struct {
 	ReleaseWorkerEnqueuer workermanager.BackgroundJobEnqueuer
 	ValidationRecords     stores.ResourceValidationRecordStore
 	RegistryClients       registryClientProvider
+	RuntimePolicy         runtimePolicy
+	NamespaceService      namespaceService
 	Env                   string
 }
 
@@ -64,6 +66,7 @@ func NewReleaseWorker(spec ReleaseWorkerSpec) worker.Worker {
 		releaseService:        spec.ReleaseService,
 		releaseWorkerEnqueuer: spec.ReleaseWorkerEnqueuer,
 		subReconcilers: []subReconciler{
+			newProvisioningPrerequisiteReconciler(spec),
 			newGatekeeperReconciler(spec),
 			newDeadlineReconciler(spec),
 			newSimulatorReconciler(spec),

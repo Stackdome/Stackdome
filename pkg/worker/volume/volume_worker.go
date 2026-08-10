@@ -10,6 +10,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 	k8sapierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,6 +27,7 @@ type VolumeWorkerSpec struct {
 	ClusterManager   clustermanager.ClusterManager
 	VolumeCrBuilder  builders.ClusterResourceBuilder
 	Env              string
+	RuntimePolicy    services.RuntimePolicy
 }
 
 type volumeWorker struct {
@@ -34,18 +36,23 @@ type volumeWorker struct {
 	stackVolumeStore stackVolumeStore
 	clusterManager   clustermanager.ClusterManager
 	volumeCRbuilder  builders.ClusterResourceBuilder
+	runtimePolicy    services.RuntimePolicy
 	worker.BaseWorker
 }
 
 var _ worker.Worker = (*volumeWorker)(nil)
 
 func NewVolumeWorker(spec VolumeWorkerSpec) worker.Worker {
+	if spec.RuntimePolicy == nil {
+		panic("volume.NewVolumeWorker: RuntimePolicy is required")
+	}
 	return &volumeWorker{
 		volumeService:    spec.VolumeService,
 		stackService:     spec.StackService,
 		stackVolumeStore: spec.StackVolumeStore,
 		clusterManager:   spec.ClusterManager,
 		volumeCRbuilder:  spec.VolumeCrBuilder,
+		runtimePolicy:    spec.RuntimePolicy,
 		BaseWorker:       worker.NewBaseWorker(VolumeWorkerName, spec.Env),
 	}
 }
@@ -66,18 +73,35 @@ func (w *volumeWorker) Execute(ctx context.Context, operand worker.Operand) (wor
 	}
 
 	w.Logger().Info(ctx, "processing volume: %s", vol.ID)
+	var stack *models.Stack
+	if w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		var stackErr error
+		stack, stackErr = w.resolveStack(ctx, vol.ID)
+		if stackErr != nil {
+			return worker.Result{}, w.WorkerError.NewError("failed to resolve stack for volume '%s': %v", vol.ID, stackErr)
+		}
+		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, stack.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+				return worker.Result{}, nil
+			}
+			return worker.Result{}, admissionErr
+		}
+	}
 
 	if err := w.resolveGitRevision(ctx, vol); err != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to resolve git revision for volume '%s': %v", vol.ID, err)
 	}
 
 	// Resolve cluster ID through the stack-volume association.
-	clusterID, err := w.resolveClusterID(ctx, vol.ID)
-	if err != nil {
-		return worker.Result{}, w.WorkerError.NewError("failed to resolve cluster for volume '%s': %v", vol.ID, err)
+	if stack == nil {
+		resolvedStack, stackErr := w.resolveStack(ctx, vol.ID)
+		if stackErr != nil {
+			return worker.Result{}, w.WorkerError.NewError("failed to resolve cluster for volume '%s': %v", vol.ID, stackErr)
+		}
+		stack = resolvedStack
 	}
 
-	clusterClient, cerr := w.clusterManager.GetClient(clusterID)
+	clusterClient, cerr := w.clusterManager.GetClient(stack.ClusterID)
 	if cerr != nil {
 		return worker.Result{}, w.WorkerError.NewError("failed to get cluster client for volume '%s': %v", vol.ID, cerr)
 	}
@@ -143,16 +167,16 @@ func (w *volumeWorker) GetInput(ctx context.Context) ([]worker.Operand, *errors.
 	return operands, nil
 }
 
-func (w *volumeWorker) resolveClusterID(ctx context.Context, volumeID string) (string, error) {
+func (w *volumeWorker) resolveStack(ctx context.Context, volumeID string) (*models.Stack, error) {
 	sv, serr := w.stackVolumeStore.GetByVolumeID(ctx, volumeID)
 	if serr != nil {
-		return "", fmt.Errorf("failed to find stack for volume '%s': %w", volumeID, serr)
+		return nil, fmt.Errorf("failed to find stack for volume '%s': %w", volumeID, serr)
 	}
 	stack, serr := w.stackService.InternalGetStack(ctx, sv.StackID)
 	if serr != nil {
-		return "", fmt.Errorf("failed to get stack '%s': %w", sv.StackID, serr)
+		return nil, fmt.Errorf("failed to get stack '%s': %w", sv.StackID, serr)
 	}
-	return stack.ClusterID, nil
+	return stack, nil
 }
 
 func (w *volumeWorker) resolveGitRevision(ctx context.Context, vol *models.Volume) error {

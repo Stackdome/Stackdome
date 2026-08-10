@@ -41,6 +41,7 @@ type Env struct {
 	EmailService                emailpkg.EmailService
 	LeadershipFlag              *leadership.Flag
 	EncryptionService           services.EncryptionService
+	RuntimePolicy               services.RuntimePolicy
 	Logger                      applogger.Logger
 	Observability               *observability.Metrics
 }

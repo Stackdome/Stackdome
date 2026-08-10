@@ -29,6 +29,7 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		mockEnqueuer := mocks.NewMockBackgroundJobEnqueuer(ctrl)
 
 		svc := &stackService{
+			runtimePolicy: NewSelfHostedRuntimePolicy(),
 			stackStore:    mockStackStore,
 			volumeService: mockVolumeService,
 			permissions:   mockPermissions,
@@ -77,5 +78,32 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 		_, serr := svc.CreateStackVolume(ctx, stackID, &models.Volume{Name: "existing-data"})
 		assert.NotNil(t, serr)
 		assert.Equal(t, errors.ErrorConflict, serr.Code)
+	})
+
+	t.Run("keeps a cloud draft volume database-only", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+		mockStackStore := mocks.NewMockStackStore(ctrl)
+		mockVolumeService := mocks.NewMockVolumeService(ctrl)
+		mockPermissions := mocks.NewMockPermissionService(ctrl)
+		svc := &stackService{
+			runtimePolicy: NewStackdomeCloudRuntimePolicy(&fakeCloudTrialService{}),
+			stackStore:    mockStackStore, volumeService: mockVolumeService, permissions: mockPermissions,
+		}
+		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
+		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionWrite).Return(nil)
+		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(ctx)
+			})
+		mockStackStore.EXPECT().LockByID(ctx, stackID).Return(nil)
+		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
+		created := &models.Volume{ID: "v-1", Name: "web-data"}
+		mockVolumeService.EXPECT().InternalCreateWithTx(ctx, stack, newVolume).Return(created, nil)
+
+		got, serr := svc.CreateStackVolume(ctx, stackID, newVolume)
+		assert.Nil(t, serr)
+		assert.Equal(t, created, got)
 	})
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/models"
+	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/worker"
 )
 
@@ -17,6 +18,7 @@ type postgresAddonWorker struct {
 	postgresAddonService postgresAddonService
 	clusterManager       clustermanager.ClusterManager
 	subReconcilers       []subReconciler
+	runtimePolicy        services.RuntimePolicy
 	worker.BaseWorker
 }
 
@@ -29,12 +31,17 @@ type PostgresAddonWorkerSpec struct {
 	ClusterManager       clustermanager.ClusterManager
 	CRBuilder            builders.PostgresClusterBuilder
 	Env                  string
+	RuntimePolicy        services.RuntimePolicy
 }
 
 func NewPostgresAddonWorker(spec PostgresAddonWorkerSpec) worker.Worker {
+	if spec.RuntimePolicy == nil {
+		panic("postgresaddon.NewPostgresAddonWorker: RuntimePolicy is required")
+	}
 	return &postgresAddonWorker{
 		postgresAddonService: spec.PostgresAddonService,
 		clusterManager:       spec.ClusterManager,
+		runtimePolicy:        spec.RuntimePolicy,
 		BaseWorker:           worker.NewBaseWorker(WorkerName, spec.Env),
 		subReconcilers: []subReconciler{
 			newDeprovisionReconciler(spec),
@@ -67,6 +74,14 @@ func (w *postgresAddonWorker) Execute(ctx context.Context, operand worker.Operan
 	}
 
 	w.Logger().Info(ctx, "Processing postgres addon: %s (%s)", addon.Name, addon.ID)
+	if addon.DeletionTimestamp == nil && w.runtimePolicy.DraftProvisioningMode() == services.ProvisioningModeDatabaseOnly {
+		if admissionErr := w.runtimePolicy.RequireActiveAllocation(ctx, addon.OrganisationID); admissionErr != nil {
+			if admissionErr.Reason == errors.ErrorCodeTrialInactive {
+				return worker.Result{}, nil
+			}
+			return worker.Result{}, admissionErr
+		}
+	}
 
 	res, reconcileErr := w.reconcile(ctx, addon)
 	if reconcileErr != nil {

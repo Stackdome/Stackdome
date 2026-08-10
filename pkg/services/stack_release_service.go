@@ -70,7 +70,8 @@ type StackReleaseServiceSpec struct {
 	EventStore         stores.ReleaseEventStore
 	EventRecorder      ReleaseEventRecorder
 	// GitClients is optional; it defaults to real git clients.
-	GitClients sourceGitClientProvider
+	GitClients    sourceGitClientProvider
+	RuntimePolicy RuntimePolicy
 }
 
 type stackReleaseService struct {
@@ -82,11 +83,15 @@ type stackReleaseService struct {
 	eventStore         stores.ReleaseEventStore
 	eventRecorder      ReleaseEventRecorder
 	gitClients         sourceGitClientProvider
+	runtimePolicy      RuntimePolicy
 	logger             logger.Logger
 	BackgroundJobEnqueuerDep
 }
 
 func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
+	if spec.RuntimePolicy == nil {
+		panic("services.NewStackReleaseService: RuntimePolicy is required")
+	}
 	gitClients := spec.GitClients
 	if gitClients == nil {
 		gitClients = defaultSourceGitClientProvider{}
@@ -100,6 +105,7 @@ func NewStackReleaseService(spec StackReleaseServiceSpec) StackReleaseService {
 		eventStore:         spec.EventStore,
 		eventRecorder:      spec.EventRecorder,
 		gitClients:         gitClients,
+		runtimePolicy:      spec.RuntimePolicy,
 		logger:             logger.NewLoggerWithPrefix(context.Background(), "stack-release-service"),
 	}
 }
@@ -168,6 +174,9 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if admissionErr := s.runtimePolicy.AdmitFirstReleaseWithTx(txCtx, stack.OrganisationID); admissionErr != nil {
+			return admissionErr
+		}
 		var e *errors.ServiceError
 		created, e = s.store.Create(txCtx, release)
 		if e != nil {
@@ -244,6 +253,9 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if admissionErr := s.runtimePolicy.AdmitRollbackWithTx(txCtx, stack.OrganisationID); admissionErr != nil {
+			return admissionErr
+		}
 		var e *errors.ServiceError
 		created, e = s.store.Create(txCtx, release)
 		if e != nil {
