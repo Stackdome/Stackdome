@@ -3,18 +3,19 @@ package config
 import "github.com/Stackdome/stackdome/pkg/models"
 
 var (
-	ErrIncompleteSharedComputeClusterConfig = &ConfigError{"SHARED_COMPUTE_CLUSTER_API_URL, SHARED_COMPUTE_CLUSTER_CA_DATA and SHARED_COMPUTE_CLUSTER_TOKEN must all be set together"}
-	ErrUnsupportedComputeMode               = &ConfigError{"COMPUTE_MODE must be bring_your_own or shared"}
-	ErrSharedComputeProvisioningRequired    = &ConfigError{"shared compute provisioning is required in shared compute mode"}
-	ErrSharedComputeProvisioningNotAllowed  = &ConfigError{"shared compute provisioning is not allowed in bring_your_own compute mode"}
-	ErrPlatformRoutingNotAllowed            = &ConfigError{"platform routing is not allowed in bring_your_own compute mode"}
-	ErrPlatformBaseDomainRequired           = &ConfigError{"PLATFORM_BASE_DOMAIN is required in shared compute mode"}
-	ErrPlatformTLSRequired                  = &ConfigError{"PLATFORM_TLS_ENABLED is required in stackdome_cloud runtime mode"}
-	ErrPlatformTLSConfigNotAllowed          = &ConfigError{"platform TLS configuration requires PLATFORM_TLS_ENABLED=true"}
-	ErrPlatformEmailRequired                = &ConfigError{"PLATFORM_EMAIL is required when platform TLS is enabled"}
-	ErrPlatformCloudflareTokenRequired      = &ConfigError{"PLATFORM_DNS_CLOUDFLARE_API_TOKEN is required when platform TLS is enabled"}
-	ErrPlatformACMEEnvironmentInvalid       = &ConfigError{"PLATFORM_ACME_ENVIRONMENT must be production or staging"}
-	ErrPlatformTLSNamespaceRequired         = &ConfigError{"PLATFORM_TLS_NAMESPACE is required when platform TLS is enabled"}
+	ErrIncompleteSharedComputeClusterConfig  = &ConfigError{"SHARED_COMPUTE_CLUSTER_API_URL, SHARED_COMPUTE_CLUSTER_CA_DATA and SHARED_COMPUTE_CLUSTER_TOKEN must all be set together"}
+	ErrConflictingSharedComputeClusterConfig = &ConfigError{"SHARED_COMPUTE_CLUSTER_* and deprecated PLATFORM_CLUSTER_* values conflict; configure only one set or make both sets identical"}
+	ErrUnsupportedComputeMode                = &ConfigError{"COMPUTE_MODE must be bring_your_own or shared"}
+	ErrSharedComputeProvisioningRequired     = &ConfigError{"shared compute provisioning is required in shared compute mode"}
+	ErrSharedComputeProvisioningNotAllowed   = &ConfigError{"shared compute provisioning is not allowed in bring_your_own compute mode"}
+	ErrPlatformRoutingNotAllowed             = &ConfigError{"platform routing is not allowed in bring_your_own compute mode"}
+	ErrPlatformBaseDomainRequired            = &ConfigError{"PLATFORM_BASE_DOMAIN is required in shared compute mode"}
+	ErrPlatformTLSRequired                   = &ConfigError{"PLATFORM_TLS_ENABLED is required in stackdome_cloud runtime mode"}
+	ErrPlatformTLSConfigNotAllowed           = &ConfigError{"platform TLS configuration requires PLATFORM_TLS_ENABLED=true"}
+	ErrPlatformEmailRequired                 = &ConfigError{"PLATFORM_EMAIL is required when platform TLS is enabled"}
+	ErrPlatformCloudflareTokenRequired       = &ConfigError{"PLATFORM_DNS_CLOUDFLARE_API_TOKEN is required when platform TLS is enabled"}
+	ErrPlatformACMEEnvironmentInvalid        = &ConfigError{"PLATFORM_ACME_ENVIRONMENT must be production or staging"}
+	ErrPlatformTLSNamespaceRequired          = &ConfigError{"PLATFORM_TLS_NAMESPACE is required when platform TLS is enabled"}
 )
 
 const (
@@ -131,19 +132,27 @@ func (b *BootstrapConfig) LoadEnvVariables() error {
 	if val, ok := EnvPlatformDNSCloudflareAPIToken.Lookup(); ok {
 		b.DNSCloudflareAPIToken = val
 	}
+	tlsEnabledWasSet := false
 	if val, ok := EnvPlatformTLSEnabled.Lookup(); ok {
 		b.PlatformTLSEnabled = val
+		tlsEnabledWasSet = true
 	}
 
 	if val, ok := EnvPlatformACMEEnvironment.Lookup(); ok {
 		b.ACMEEnvironment = val
-	} else if b.PlatformTLSEnabled {
-		b.ACMEEnvironment = ACMEEnvironmentProduction
 	}
 
 	if val, ok := EnvPlatformTLSNamespace.Lookup(); ok {
 		b.TLSNamespace = val
-	} else if b.PlatformTLSEnabled {
+	}
+
+	if !tlsEnabledWasSet && b.anyPlatformTLSConfigSet() {
+		b.PlatformTLSEnabled = true
+	}
+	if b.PlatformTLSEnabled && b.ACMEEnvironment == "" {
+		b.ACMEEnvironment = ACMEEnvironmentProduction
+	}
+	if b.PlatformTLSEnabled && b.TLSNamespace == "" {
 		b.TLSNamespace = DefaultPlatformTLSNamespace
 	}
 

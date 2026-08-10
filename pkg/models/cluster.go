@@ -25,8 +25,9 @@ type Cluster struct {
 	Name                   string `gorm:"not null;check:name <> ''"`
 	CreatedAt              time.Time
 	UpdatedAt              time.Time
+	DeletionTimestamp      *time.Time `json:"deletion_timestamp,omitempty"`
 	SharedCompute          bool
-	ClusterURL             string `gorm:"not null;check:cluster_url <> ''"`
+	ClusterURL             string `gorm:"not null;check:cluster_url <> '';uniqueIndex:idx_clusters_cluster_url_unique"`
 	EncryptedClusterCAData string `gorm:"not null"`
 	EncryptedToken         string `gorm:"not null"`
 	ManagerRunning         bool

@@ -7896,6 +7896,11 @@ export interface components {
             name: string;
             organisation_id?: string;
             readonly shared_compute?: boolean;
+            /**
+             * @deprecated
+             * @description Deprecated alias for shared_compute. Both fields have the same value.
+             */
+            readonly platform?: boolean;
             cluster_url: string;
             cluster_ca_data: string;
             cluster_sa_token: string;
@@ -8392,7 +8397,7 @@ export interface components {
             conditions?: components["schemas"]["Condition"][];
         };
         /** @enum {string} */
-        ClusterImageRegistryState: "ImageRegistryPending" | "ImageRegistryError" | "ImageRegistryRunning";
+        ClusterImageRegistryState: "ImageRegistryPending" | "ImageRegistryError" | "ImageRegistryRunning" | "ImageRegistryDeleting";
         StackResourceStatus: {
             public_ingress?: components["schemas"]["Ingress"][];
             internal_service_name?: string;

@@ -17,6 +17,7 @@ import (
 	clustermanager "github.com/Stackdome/stackdome/pkg/clustermanager"
 	errors "github.com/Stackdome/stackdome/pkg/errors"
 	models "github.com/Stackdome/stackdome/pkg/models"
+	clusterresource "github.com/Stackdome/stackdome/pkg/services/clusterresource"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -131,6 +132,18 @@ func (m *MockClusterService) GetOwnedClusterForOrg(ctx context.Context, orgID st
 func (mr *MockClusterServiceMockRecorder) GetOwnedClusterForOrg(ctx, orgID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnedClusterForOrg", reflect.TypeOf((*MockClusterService)(nil).GetOwnedClusterForOrg), ctx, orgID)
+}
+
+// InjectBackgroundJobEnqueuer mocks base method.
+func (m *MockClusterService) InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
+}
+
+// InjectBackgroundJobEnqueuer indicates an expected call of InjectBackgroundJobEnqueuer.
+func (mr *MockClusterServiceMockRecorder) InjectBackgroundJobEnqueuer(dep any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InjectBackgroundJobEnqueuer", reflect.TypeOf((*MockClusterService)(nil).InjectBackgroundJobEnqueuer), dep)
 }
 
 // InjectClusterManager mocks base method.

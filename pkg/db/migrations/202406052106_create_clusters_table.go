@@ -16,7 +16,7 @@ func createClustersTable() *gormigrate.Migration {
 		CreatedAt      time.Time
 		UpdatedAt      time.Time
 		Default        bool
-		ClusterURL     string `gorm:"not null;check:cluster_url <> ''"`
+		ClusterURL     string `gorm:"not null;check:cluster_url <> '';uniqueIndex:idx_clusters_cluster_url_unique"`
 		ClusterCAData  string `gorm:"not null;check:cluster_ca_data <> ''"`
 		Token          string `gorm:"not null;check:token <> ''"`
 	}

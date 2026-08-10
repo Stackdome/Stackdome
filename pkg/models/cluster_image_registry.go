@@ -12,9 +12,10 @@ const (
 type RegistryState string
 
 const (
-	RegistryStatePending RegistryState = "Pending"
-	RegistryStateRunning RegistryState = "Running"
-	RegistryStateError   RegistryState = "Error"
+	RegistryStatePending  RegistryState = "Pending"
+	RegistryStateRunning  RegistryState = "Running"
+	RegistryStateError    RegistryState = "Error"
+	RegistryStateDeleting RegistryState = "Deleting"
 )
 
 const (

@@ -26,20 +26,24 @@ features:
   workspaceUsers: false
 
 signup:
+  # cloudflare requires the origin to accept requests only from Cloudflare.
+  clientIPSource: cloudflare
   turnstile:
     enabled: true
     siteKey: 0x4AAAAAAELBwbqXF7OVIrmv
     expectedHostname: stackdome.com
     expectedAction: turnstile-spin-v2
-    # Only valid when origin access is restricted to Cloudflare or Tunnel.
-    trustCloudflareProxy: true
+    verificationTimeout: 10s
   # Signup throttling is always enforced in the stackdome_cloud runtime.
   throttle:
-    maxTrackedKeys: 10000
-    ipAttempts: 5
-    ipWindow: 10m
-    emailAttempts: 3
-    emailWindow: 1h
+    ip:
+      maxTrackedClients: 10000
+      maxAttempts: 5
+      window: 10m
+    email:
+      maxTrackedAddresses: 10000
+      maxAttempts: 3
+      window: 1h
 
 # TURNSTILE_SECRET is intentionally not stored here. Set it in the environment
 # when Turnstile is enabled.

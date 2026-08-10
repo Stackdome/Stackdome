@@ -71,7 +71,9 @@ func (c *ApplicationConfig) LoadEnvVariables() error {
 
 	c.GitHubOAuth.LoadEnvVariables()
 	c.GitHubApp.LoadEnvVariables()
-	c.SharedComputeCluster.LoadEnvVariables()
+	if err := c.SharedComputeCluster.LoadEnvVariables(); err != nil {
+		return err
+	}
 
 	if val, ok := EnvServerExternalURL.Lookup(); ok {
 		c.ServerExternalURL = val
@@ -177,18 +179,41 @@ func (c *ClusterConfig) Validate() error {
 	return nil
 }
 
-func (c *ClusterConfig) LoadEnvVariables() {
-	if val, ok := EnvSharedComputeClusterAPIURL.Lookup(); ok {
-		c.ClusterURL = val
-	}
+func (c *ClusterConfig) LoadEnvVariables() error {
+	shared := clusterConfigFromEnv(
+		EnvSharedComputeClusterAPIURL,
+		EnvSharedComputeClusterCAData,
+		EnvSharedComputeClusterToken,
+	)
+	legacy := clusterConfigFromEnv(
+		EnvPlatformClusterAPIURL,
+		EnvPlatformClusterCAData,
+		EnvPlatformClusterToken,
+	)
 
-	if val, ok := EnvSharedComputeClusterCAData.Lookup(); ok {
-		c.ClusterCAData = val
+	switch {
+	case shared.AnySet() && legacy.AnySet() && shared != legacy:
+		return ErrConflictingSharedComputeClusterConfig
+	case shared.AnySet():
+		*c = shared
+	case legacy.AnySet():
+		*c = legacy
 	}
+	return nil
+}
 
-	if val, ok := EnvSharedComputeClusterToken.Lookup(); ok {
-		c.Token = val
+func clusterConfigFromEnv(apiURL, caData, token EnvVar[string]) ClusterConfig {
+	config := ClusterConfig{}
+	if val, ok := apiURL.Lookup(); ok {
+		config.ClusterURL = val
 	}
+	if val, ok := caData.Lookup(); ok {
+		config.ClusterCAData = val
+	}
+	if val, ok := token.Lookup(); ok {
+		config.Token = val
+	}
+	return config
 }
 
 func (c *ClusterConfig) IsSet() bool {

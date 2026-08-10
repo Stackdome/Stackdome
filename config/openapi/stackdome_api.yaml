@@ -4636,6 +4636,11 @@ components:
         shared_compute:
           type: boolean
           readOnly: true
+        platform:
+          type: boolean
+          readOnly: true
+          deprecated: true
+          description: Deprecated alias for shared_compute. Both fields have the same value.
         cluster_url:
           type: string
         cluster_ca_data:
@@ -5730,6 +5735,7 @@ components:
       - ImageRegistryPending
       - ImageRegistryError
       - ImageRegistryRunning
+      - ImageRegistryDeleting
     StackResourceStatus:
       type: object
       properties:

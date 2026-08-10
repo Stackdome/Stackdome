@@ -248,7 +248,7 @@ func (w *stackStore) GetByID(ctx context.Context, id string) (*models.Stack, *er
 func (w *stackStore) LockByID(ctx context.Context, id string) *errors.ServiceError {
 	var stack models.Stack
 	if err := w.sessionFactory.New(ctx).
-		Clauses(clause.Locking{Strength: "UPDATE"}).
+		Clauses(clause.Locking{Strength: rowLockStrengthUpdate}).
 		Select("id").
 		First(&stack, "id = ?", id).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {

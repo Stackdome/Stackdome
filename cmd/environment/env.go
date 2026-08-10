@@ -33,6 +33,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
 	stackresourcevalidator "github.com/Stackdome/stackdome/pkg/validator/stackresource"
+	clusterimageregistryworker "github.com/Stackdome/stackdome/pkg/worker/clusterimageregistry"
 	inviteworker "github.com/Stackdome/stackdome/pkg/worker/invite"
 	postgresaddonworker "github.com/Stackdome/stackdome/pkg/worker/postgresaddon"
 	previewworker "github.com/Stackdome/stackdome/pkg/worker/preview"
@@ -198,7 +199,9 @@ func (e *environmentImpl) validatePlatformRouting() error {
 // platform-routing configuration stays opt-in: unset in unit runs, set by the
 // integration bootstrap.
 func (e *environmentImpl) loadTestDefaults() error {
-	e.Config.SharedComputeCluster.LoadEnvVariables()
+	if err := e.Config.SharedComputeCluster.LoadEnvVariables(); err != nil {
+		return fmt.Errorf("load shared compute config: %w", err)
+	}
 	if err := e.BootstrapConfig.LoadEnvVariables(); err != nil {
 		return fmt.Errorf("load bootstrap config: %w", err)
 	}
@@ -921,6 +924,23 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
+	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
+		ClusterManager: e.ClusterManager,
+		Logger:         e.Logger,
+	})
+	clusterImageRegistryWorker := clusterimageregistryworker.NewClusterImageRegistryWorker(clusterimageregistryworker.ClusterImageRegistryWorkerSpec{
+		ClusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
+			SessionFactory: e.DBSession,
+		}),
+		ImageRegistryStore: pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
+			SessionFactory: e.DBSession,
+		}),
+		ClusterManager:  e.ClusterManager,
+		ClusterResource: clusterImageRegistryResource,
+		Env:             e.Name,
+	})
+	e.WorkerManager.RegisterWorker(clusterImageRegistryWorker, models.ClusterImageRegistryOperand{})
+
 	pgAddonWorker := postgresaddonworker.NewPostgresAddonWorker(postgresaddonworker.PostgresAddonWorkerSpec{
 		PostgresAddonService: e.Services.PostgresAddonService,
 		ObjectStoreService:   e.Services.ObjectStoreService,
@@ -989,12 +1009,6 @@ func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) err
 		WorkspaceUserService: e.Services.WorkspaceUserService,
 	})
 
-	clusterImageRegistryService := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
-		ClusterManager: e.ClusterManager,
-		Logger:         e.Logger,
-		ClusterService: e.Services.ClusterService,
-	})
-
 	clusterNamespaceService := clusterresource.NewNamespaceClusterResourceService(clusterresource.NamespaceClusterResourceServiceSpec{
 		ClusterManager: e.ClusterManager,
 		Logger:         e.Logger,
@@ -1030,7 +1044,8 @@ func (e *environmentImpl) injectClusterResourceServices(ctx context.Context) err
 	e.Services.NamespaceService.InjectClusterResourceServiceDeps(deps)
 	e.Services.LoggingService.InjectClusterResourceServiceDeps(deps)
 	e.Services.MetricsService.InjectClusterResourceServiceDeps(deps)
-	e.Services.ClusterImageRegistryService.InjectClusterResourceService(clusterImageRegistryService)
+	e.Services.ClusterImageRegistryService.InjectBackgroundJobEnqueuer(dep)
+	e.Services.ClusterService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.StackService.InjectBackgroundJobEnqueuer(dep)
 	e.Services.StackResourceService.InjectClusterManager(e.ClusterManager)
 	e.Services.PostgresAddonService.InjectBackgroundJobEnqueuer(dep)

@@ -16,10 +16,13 @@ import (
 
 // Cluster struct for Cluster
 type Cluster struct {
-	Id                   *string               `json:"id,omitempty"`
-	Name                 string                `json:"name"`
-	OrganisationId       *string               `json:"organisation_id,omitempty"`
-	SharedCompute        *bool                 `json:"shared_compute,omitempty"`
+	Id             *string `json:"id,omitempty"`
+	Name           string  `json:"name"`
+	OrganisationId *string `json:"organisation_id,omitempty"`
+	SharedCompute  *bool   `json:"shared_compute,omitempty"`
+	// Deprecated alias for shared_compute. Both fields have the same value.
+	// Deprecated
+	Platform             *bool                 `json:"platform,omitempty"`
 	ClusterUrl           string                `json:"cluster_url"`
 	ClusterCaData        string                `json:"cluster_ca_data"`
 	ClusterSaToken       string                `json:"cluster_sa_token"`
@@ -167,6 +170,41 @@ func (o *Cluster) SetSharedCompute(v bool) {
 	o.SharedCompute = &v
 }
 
+// GetPlatform returns the Platform field value if set, zero value otherwise.
+// Deprecated
+func (o *Cluster) GetPlatform() bool {
+	if o == nil || o.Platform == nil {
+		var ret bool
+		return ret
+	}
+	return *o.Platform
+}
+
+// GetPlatformOk returns a tuple with the Platform field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+// Deprecated
+func (o *Cluster) GetPlatformOk() (*bool, bool) {
+	if o == nil || o.Platform == nil {
+		return nil, false
+	}
+	return o.Platform, true
+}
+
+// HasPlatform returns a boolean if a field has been set.
+func (o *Cluster) HasPlatform() bool {
+	if o != nil && o.Platform != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetPlatform gets a reference to the given bool and assigns it to the Platform field.
+// Deprecated
+func (o *Cluster) SetPlatform(v bool) {
+	o.Platform = &v
+}
+
 // GetClusterUrl returns the ClusterUrl field value
 func (o *Cluster) GetClusterUrl() string {
 	if o == nil {
@@ -284,6 +322,9 @@ func (o Cluster) MarshalJSON() ([]byte, error) {
 	}
 	if o.SharedCompute != nil {
 		toSerialize["shared_compute"] = o.SharedCompute
+	}
+	if o.Platform != nil {
+		toSerialize["platform"] = o.Platform
 	}
 	if true {
 		toSerialize["cluster_url"] = o.ClusterUrl

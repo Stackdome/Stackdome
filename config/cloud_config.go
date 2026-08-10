@@ -67,26 +67,43 @@ type StackdomeCloudFeaturesConfig struct {
 	WorkspaceUsers         bool `yaml:"workspaceUsers" json:"workspace_users"`
 }
 
+type StackdomeCloudClientIPSource string
+
+const (
+	StackdomeCloudClientIPSourceCloudflare StackdomeCloudClientIPSource = "cloudflare"
+	StackdomeCloudClientIPSourceRemoteAddr StackdomeCloudClientIPSource = "remote_addr"
+)
+
 type StackdomeCloudSignupConfig struct {
-	Turnstile StackdomeCloudTurnstileConfig `yaml:"turnstile" json:"turnstile"`
+	ClientIPSource StackdomeCloudClientIPSource  `yaml:"clientIPSource" json:"client_ip_source"`
+	Turnstile      StackdomeCloudTurnstileConfig `yaml:"turnstile" json:"turnstile"`
 	// Throttle is always enforced in the Stackdome Cloud runtime.
 	Throttle StackdomeCloudThrottleConfig `yaml:"throttle" json:"throttle"`
 }
 
 type StackdomeCloudTurnstileConfig struct {
-	Enabled              bool   `yaml:"enabled" json:"enabled"`
-	SiteKey              string `yaml:"siteKey" json:"site_key"`
-	ExpectedHostname     string `yaml:"expectedHostname" json:"expected_hostname"`
-	ExpectedAction       string `yaml:"expectedAction" json:"expected_action"`
-	TrustCloudflareProxy bool   `yaml:"trustCloudflareProxy" json:"trust_cloudflare_proxy"`
+	Enabled             bool           `yaml:"enabled" json:"enabled"`
+	SiteKey             string         `yaml:"siteKey" json:"site_key"`
+	ExpectedHostname    string         `yaml:"expectedHostname" json:"expected_hostname"`
+	ExpectedAction      string         `yaml:"expectedAction" json:"expected_action"`
+	VerificationTimeout ConfigDuration `yaml:"verificationTimeout" json:"verification_timeout"`
 }
 
 type StackdomeCloudThrottleConfig struct {
-	MaxTrackedKeys int            `yaml:"maxTrackedKeys" json:"max_tracked_keys"`
-	IPAttempts     int            `yaml:"ipAttempts" json:"ip_attempts"`
-	IPWindow       ConfigDuration `yaml:"ipWindow" json:"ip_window"`
-	EmailAttempts  int            `yaml:"emailAttempts" json:"email_attempts"`
-	EmailWindow    ConfigDuration `yaml:"emailWindow" json:"email_window"`
+	IP    StackdomeCloudIPThrottleConfig    `yaml:"ip" json:"ip"`
+	Email StackdomeCloudEmailThrottleConfig `yaml:"email" json:"email"`
+}
+
+type StackdomeCloudIPThrottleConfig struct {
+	MaxTrackedClients int            `yaml:"maxTrackedClients" json:"max_tracked_clients"`
+	MaxAttempts       int            `yaml:"maxAttempts" json:"max_attempts"`
+	Window            ConfigDuration `yaml:"window" json:"window"`
+}
+
+type StackdomeCloudEmailThrottleConfig struct {
+	MaxTrackedAddresses int            `yaml:"maxTrackedAddresses" json:"max_tracked_addresses"`
+	MaxAttempts         int            `yaml:"maxAttempts" json:"max_attempts"`
+	Window              ConfigDuration `yaml:"window" json:"window"`
 }
 
 func (c *StackdomeCloudConfig) Validate() error {
@@ -127,31 +144,43 @@ func (c *StackdomeCloudConfig) Validate() error {
 	if storageSize.Sign() <= 0 {
 		return fmt.Errorf("registry.storageSize must be greater than zero")
 	}
-	if c.Signup.Turnstile.Enabled {
-		if c.Signup.Turnstile.SiteKey == "" {
-			return fmt.Errorf("signup.turnstile.siteKey is required when Turnstile is enabled")
-		}
-		if c.Signup.Turnstile.ExpectedHostname == "" {
-			return fmt.Errorf("signup.turnstile.expectedHostname is required when Turnstile is enabled")
-		}
-		if c.Signup.Turnstile.ExpectedAction == "" {
-			return fmt.Errorf("signup.turnstile.expectedAction is required when Turnstile is enabled")
-		}
+	switch c.Signup.ClientIPSource {
+	case StackdomeCloudClientIPSourceCloudflare, StackdomeCloudClientIPSourceRemoteAddr:
+	default:
+		return fmt.Errorf("signup.clientIPSource must be %q or %q", StackdomeCloudClientIPSourceCloudflare, StackdomeCloudClientIPSourceRemoteAddr)
 	}
-	if c.Signup.Throttle.MaxTrackedKeys <= 0 {
-		return fmt.Errorf("signup.throttle.maxTrackedKeys must be greater than zero")
+	if !c.Signup.Turnstile.Enabled {
+		return fmt.Errorf("signup.turnstile.enabled must be true")
 	}
-	if c.Signup.Throttle.IPAttempts <= 0 {
-		return fmt.Errorf("signup.throttle.ipAttempts must be greater than zero")
+	if c.Signup.Turnstile.SiteKey == "" {
+		return fmt.Errorf("signup.turnstile.siteKey is required")
 	}
-	if c.Signup.Throttle.IPWindow.Duration() <= 0 {
-		return fmt.Errorf("signup.throttle.ipWindow must be greater than zero")
+	if c.Signup.Turnstile.ExpectedHostname == "" {
+		return fmt.Errorf("signup.turnstile.expectedHostname is required")
 	}
-	if c.Signup.Throttle.EmailAttempts <= 0 {
-		return fmt.Errorf("signup.throttle.emailAttempts must be greater than zero")
+	if c.Signup.Turnstile.ExpectedAction == "" {
+		return fmt.Errorf("signup.turnstile.expectedAction is required")
 	}
-	if c.Signup.Throttle.EmailWindow.Duration() <= 0 {
-		return fmt.Errorf("signup.throttle.emailWindow must be greater than zero")
+	if c.Signup.Turnstile.VerificationTimeout.Duration() <= 0 {
+		return fmt.Errorf("signup.turnstile.verificationTimeout must be greater than zero")
+	}
+	if c.Signup.Throttle.IP.MaxTrackedClients <= 0 {
+		return fmt.Errorf("signup.throttle.ip.maxTrackedClients must be greater than zero")
+	}
+	if c.Signup.Throttle.IP.MaxAttempts <= 0 {
+		return fmt.Errorf("signup.throttle.ip.maxAttempts must be greater than zero")
+	}
+	if c.Signup.Throttle.IP.Window.Duration() <= 0 {
+		return fmt.Errorf("signup.throttle.ip.window must be greater than zero")
+	}
+	if c.Signup.Throttle.Email.MaxTrackedAddresses <= 0 {
+		return fmt.Errorf("signup.throttle.email.maxTrackedAddresses must be greater than zero")
+	}
+	if c.Signup.Throttle.Email.MaxAttempts <= 0 {
+		return fmt.Errorf("signup.throttle.email.maxAttempts must be greater than zero")
+	}
+	if c.Signup.Throttle.Email.Window.Duration() <= 0 {
+		return fmt.Errorf("signup.throttle.email.window must be greater than zero")
 	}
 	return nil
 }

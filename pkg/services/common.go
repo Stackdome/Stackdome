@@ -1,9 +1,6 @@
 package services
 
-import (
-	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
-	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
-)
+import "github.com/Stackdome/stackdome/pkg/services/clusterresource"
 
 // Aliases: the deps type and injectable interface are defined in the
 // clusterresource leaf package so that generated mocks of services
@@ -15,14 +12,6 @@ type ClusterResourceServiceInjectable = clusterresource.ClusterResourceServiceIn
 
 type ClusterResourceServiceDeps = clusterresource.ClusterResourceServiceDeps
 
-type BackgroundJobEnqueuerDep struct {
-	BackgroundJobEnqueuer workermanager.BackgroundJobEnqueuer
-}
+type BackgroundJobEnqueuerDep = clusterresource.BackgroundJobEnqueuerDep
 
-type BackgroundJobEnqueuerInjectable interface {
-	InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep)
-}
-
-func (s *BackgroundJobEnqueuerDep) InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep) {
-	s.BackgroundJobEnqueuer = dep.BackgroundJobEnqueuer
-}
+type BackgroundJobEnqueuerInjectable = clusterresource.BackgroundJobEnqueuerInjectable

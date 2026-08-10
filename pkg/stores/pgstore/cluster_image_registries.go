@@ -83,6 +83,14 @@ func (c *clusterImageRegistryStore) ListByClusterID(ctx context.Context, orgID, 
 	return registries, nil
 }
 
+func (c *clusterImageRegistryStore) ListByClusterIDInternal(ctx context.Context, clusterID string) ([]*models.ClusterImageRegistry, *errors.ServiceError) {
+	var registries []*models.ClusterImageRegistry
+	if err := c.sessionFactory.New(ctx).Where("cluster_id = ?", clusterID).Find(&registries).Error; err != nil {
+		return nil, errors.GeneralError("failed to list cluster image registries: %s", err.Error())
+	}
+	return registries, nil
+}
+
 func (c *clusterImageRegistryStore) UpdateStatus(ctx context.Context, ID string, status *models.ClusterImageRegistryStatus) *errors.ServiceError {
 	if err := c.sessionFactory.New(ctx).Model(&models.ClusterImageRegistry{}).Where("id = ?", ID).UpdateColumn("status", status).Error; err != nil {
 		return errors.GeneralError("failed to update cluster image registry status: %s", err.Error())
@@ -104,6 +112,30 @@ func (c *clusterImageRegistryStore) DeleteWithTx(ctx context.Context, ID string)
 	}
 	if err := tx.Where("id = ?", ID).Delete(&models.ClusterImageRegistry{}).Error; err != nil {
 		return errors.GeneralError("failed to delete cluster image registry: %s", err.Error())
+	}
+	return nil
+}
+
+func (c *clusterImageRegistryStore) MarkDeletingWithTx(ctx context.Context, ID string) *errors.ServiceError {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return errors.GeneralError("transaction not found in context")
+	}
+	status := &models.ClusterImageRegistryStatus{State: models.RegistryStateDeleting, Conditions: []models.Condition{}}
+	if err := tx.Model(&models.ClusterImageRegistry{}).Where("id = ?", ID).UpdateColumn("status", status).Error; err != nil {
+		return errors.GeneralError("failed to mark cluster image registry for deletion: %s", err.Error())
+	}
+	return nil
+}
+
+func (c *clusterImageRegistryStore) MarkAllDeletingByClusterIDWithTx(ctx context.Context, clusterID string) *errors.ServiceError {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return errors.GeneralError("transaction not found in context")
+	}
+	status := &models.ClusterImageRegistryStatus{State: models.RegistryStateDeleting, Conditions: []models.Condition{}}
+	if err := tx.Model(&models.ClusterImageRegistry{}).Where("cluster_id = ?", clusterID).UpdateColumn("status", status).Error; err != nil {
+		return errors.GeneralError("failed to mark cluster image registries for deletion: %s", err.Error())
 	}
 	return nil
 }

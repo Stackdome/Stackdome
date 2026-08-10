@@ -194,7 +194,7 @@ func (mr *MockStackServiceMockRecorder) GetStacksByProjectID(ctx, projectID any)
 }
 
 // InjectBackgroundJobEnqueuer mocks base method.
-func (m *MockStackService) InjectBackgroundJobEnqueuer(dep BackgroundJobEnqueuerDep) {
+func (m *MockStackService) InjectBackgroundJobEnqueuer(dep clusterresource.BackgroundJobEnqueuerDep) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "InjectBackgroundJobEnqueuer", dep)
 }

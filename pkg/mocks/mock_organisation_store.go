@@ -101,6 +101,20 @@ func (mr *MockOrganisationStoreMockRecorder) GetPlatformOrg(ctx any) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPlatformOrg", reflect.TypeOf((*MockOrganisationStore)(nil).GetPlatformOrg), ctx)
 }
 
+// LockByID mocks base method.
+func (m *MockOrganisationStore) LockByID(ctx context.Context, ID string) *errors.ServiceError {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LockByID", ctx, ID)
+	ret0, _ := ret[0].(*errors.ServiceError)
+	return ret0
+}
+
+// LockByID indicates an expected call of LockByID.
+func (mr *MockOrganisationStoreMockRecorder) LockByID(ctx, ID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LockByID", reflect.TypeOf((*MockOrganisationStore)(nil).LockByID), ctx, ID)
+}
+
 // OrganisationNameExists mocks base method.
 func (m *MockOrganisationStore) OrganisationNameExists(ctx context.Context, name string) (bool, *errors.ServiceError) {
 	m.ctrl.T.Helper()

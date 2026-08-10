@@ -11025,6 +11025,7 @@ components:
       - ImageRegistryPending
       - ImageRegistryError
       - ImageRegistryRunning
+      - ImageRegistryDeleting
       type: string
     StackResourceStatus:
       example:

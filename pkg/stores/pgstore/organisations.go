@@ -58,6 +58,25 @@ func (d dbOrganisationStore) Get(ctx context.Context, id string) (*models.Organi
 	return &org, nil
 }
 
+func (d dbOrganisationStore) LockByID(ctx context.Context, id string) *errors.ServiceError {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return errors.GeneralError("transaction not found in context")
+	}
+
+	var org models.Organisation
+	if err := tx.
+		Clauses(clause.Locking{Strength: rowLockStrengthUpdate}).
+		Select("id").
+		First(&org, "id = ?", id).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.NotFound("organisation with id '%s' not found", id)
+		}
+		return errors.GeneralError("failed to lock organisation: %s", err.Error())
+	}
+	return nil
+}
+
 func (d dbOrganisationStore) GetPlatformOrg(ctx context.Context) (*models.Organisation, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	var org models.Organisation

@@ -3,6 +3,7 @@ package pgstore
 import (
 	"context"
 	stderrors "errors"
+	"time"
 
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
@@ -51,10 +52,52 @@ func (d dbClusterStore) ListAll(ctx context.Context) ([]*models.Cluster, *errors
 	return res, nil
 }
 
+func (d dbClusterStore) FindAnyClusterIDBySharedCompute(ctx context.Context, sharedCompute bool) (string, *errors.ServiceError) {
+	grm := d.sessionFactory.New(ctx)
+	var cluster struct {
+		ID string
+	}
+	err := grm.Model(&models.Cluster{}).
+		Select("id").
+		Where("shared_compute = ?", sharedCompute).
+		Take(&cluster).Error
+	if err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return "", nil
+		}
+		return "", errors.GeneralError("failed to find cluster by shared-compute ownership: %s", err.Error())
+	}
+	return cluster.ID, nil
+}
+
+func (d dbClusterStore) ListIDsForImageRegistryReconciliation(ctx context.Context) ([]string, *errors.ServiceError) {
+	var ids []string
+	err := d.sessionFactory.New(ctx).
+		Model(&models.Cluster{}).
+		Distinct("clusters.id").
+		Joins("LEFT JOIN cluster_image_registries ON cluster_image_registries.cluster_id = clusters.id").
+		Where(
+			"clusters.deletion_timestamp IS NOT NULL OR cluster_image_registries.status ->> 'state' IN ?",
+			[]string{
+				string(models.RegistryStatePending),
+				string(models.RegistryStateError),
+				string(models.RegistryStateDeleting),
+			},
+		).
+		Pluck("clusters.id", &ids).Error
+	if err != nil {
+		return nil, errors.GeneralError("failed to list clusters requiring image-registry reconciliation: %s", err.Error())
+	}
+	return ids, nil
+}
+
 func (d dbClusterStore) Create(ctx context.Context, cluster *models.Cluster) (*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
 	err := grm.Omit(clause.Associations).Create(&cluster).Error
 	if err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("cluster with this api URL already exists")
+		}
 		return nil, errors.GeneralError("failed to add cluster: %s", err.Error())
 	}
 	return d.Get(ctx, cluster.ID)
@@ -67,6 +110,9 @@ func (d dbClusterStore) CreateWithTx(ctx context.Context, cluster *models.Cluste
 	}
 	err := tx.Omit(clause.Associations).Create(&cluster).Error
 	if err != nil {
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return nil, errors.Conflict("cluster with this api URL already exists")
+		}
 		return nil, errors.GeneralError("failed to add cluster: %s", err.Error())
 	}
 	return d.Get(ctx, cluster.ID)
@@ -117,26 +163,33 @@ func (d dbClusterStore) ListSharedComputeClusters(ctx context.Context) ([]*model
 	return res, nil
 }
 
-func (d dbClusterStore) UpdateNameAndSharedCompute(ctx context.Context, id, name string) *errors.ServiceError {
+func (d dbClusterStore) ListSharedComputeClustersForOrg(ctx context.Context, orgID string) ([]*models.Cluster, *errors.ServiceError) {
 	grm := d.sessionFactory.New(ctx)
-	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"name":           name,
-		"shared_compute": true,
-	}).Error
+	var res []*models.Cluster
+	err := grm.Model(&models.Cluster{}).
+		Where("organisation_id = ? AND shared_compute = true", orgID).
+		Preload(clause.Associations).
+		Find(&res).Error
 	if err != nil {
-		return errors.GeneralError("failed to update cluster name/shared-compute flag: %s", err.Error())
+		return nil, errors.GeneralError("failed to fetch shared-compute clusters for organisation: %s", err.Error())
 	}
-	return nil
+	return res, nil
 }
 
-func (d dbClusterStore) UpdateCredentials(ctx context.Context, id, encToken, encCAData string) *errors.ServiceError {
+func (d dbClusterStore) UpdateSharedComputeCluster(ctx context.Context, cluster *models.Cluster) *errors.ServiceError {
 	grm := d.sessionFactory.New(ctx)
-	err := grm.Model(&models.Cluster{}).Where("id = ?", id).Updates(map[string]interface{}{
-		"encrypted_token":           encToken,
-		"encrypted_cluster_ca_data": encCAData,
+	err := grm.Model(&models.Cluster{}).Where("id = ?", cluster.ID).Updates(map[string]interface{}{
+		"name":                      cluster.Name,
+		"shared_compute":            true,
+		"cluster_url":               cluster.ClusterURL,
+		"encrypted_token":           cluster.EncryptedToken,
+		"encrypted_cluster_ca_data": cluster.EncryptedClusterCAData,
 	}).Error
 	if err != nil {
-		return errors.GeneralError("failed to update cluster credentials: %s", err.Error())
+		if stderrors.Is(err, gorm.ErrDuplicatedKey) {
+			return errors.Conflict("cluster with this api URL already exists")
+		}
+		return errors.GeneralError("failed to update shared-compute cluster: %s", err.Error())
 	}
 	return nil
 }
@@ -158,6 +211,28 @@ func (d dbClusterStore) Delete(ctx context.Context, id string) *errors.ServiceEr
 			return errors.NotFound("cluster with id '%s' not found", id)
 		}
 		return errors.GeneralError("failed to delete cluster: %s", err.Error())
+	}
+	return nil
+}
+
+func (d dbClusterStore) DeleteWithTx(ctx context.Context, id string) *errors.ServiceError {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return errors.GeneralError("transaction not found in context")
+	}
+	if err := tx.Where("id = ?", id).Delete(&models.Cluster{}).Error; err != nil {
+		return errors.GeneralError("failed to delete cluster: %s", err.Error())
+	}
+	return nil
+}
+
+func (d dbClusterStore) MarkDeletingWithTx(ctx context.Context, id string, at time.Time) *errors.ServiceError {
+	tx := db.TxFromContext(ctx)
+	if tx == nil {
+		return errors.GeneralError("transaction not found in context")
+	}
+	if err := tx.Model(&models.Cluster{}).Where("id = ?", id).Update("deletion_timestamp", at).Error; err != nil {
+		return errors.GeneralError("failed to mark cluster for deletion: %s", err.Error())
 	}
 	return nil
 }

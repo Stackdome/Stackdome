@@ -16,6 +16,7 @@ func PresentCluster(cluster *models.Cluster) *openapi.Cluster {
 		Name:           cluster.Name,
 		OrganisationId: &cluster.OrganisationID,
 		SharedCompute:  &cluster.SharedCompute,
+		Platform:       &cluster.SharedCompute,
 		ClusterUrl:     cluster.ClusterURL,
 	}
 

@@ -5,28 +5,14 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestUpgradePreservesPlatformTLSStateFromBootstrapSecret(t *testing.T) {
-	tests := []struct {
-		name           string
-		storedTLS      *string
-		wantTLSEnabled bool
-	}{
-		{
-			name:           "legacy secret without TLS key",
-			wantTLSEnabled: true,
-		},
-		{
-			name:           "explicitly disabled TLS",
-			storedTLS:      stringPtr("false"),
-			wantTLSEnabled: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+var _ = Describe("Installer bootstrap secrets", func() {
+	DescribeTable("preserves the stored TLS state during upgrade",
+		func(storedTLS *string, expected bool) {
 			data := map[string]string{
 				"db-password":                    encodeSecretValue("db-password"),
 				"jwt-secret":                     encodeSecretValue("jwt-secret"),
@@ -39,44 +25,37 @@ func TestUpgradePreservesPlatformTLSStateFromBootstrapSecret(t *testing.T) {
 				"shared-compute-cluster-ca-data": encodeSecretValue("ca-data"),
 				"shared-compute-cluster-token":   encodeSecretValue("cluster-token"),
 			}
-			if tt.storedTLS != nil {
-				data["platform-tls-enabled"] = encodeSecretValue(*tt.storedTLS)
+			if storedTLS != nil {
+				data["platform-tls-enabled"] = encodeSecretValue(*storedTLS)
 			}
-			installFakeKubectl(t, data)
+			installFakeKubectl(data)
 
 			secrets, err := readExistingSecrets()
-			if err != nil {
-				t.Fatalf("read existing secrets: %v", err)
-			}
-			resolved, err := parsePlatformFlags(t).resolvePlatformConfig(secrets.Platform)
-			if err != nil {
-				t.Fatalf("resolve platform config: %v", err)
-			}
-			if resolved.TLSEnabled != tt.wantTLSEnabled {
-				t.Fatalf("TLS enabled = %t, want %t", resolved.TLSEnabled, tt.wantTLSEnabled)
-			}
-		})
-	}
-}
+			Expect(err).NotTo(HaveOccurred())
+			flags, err := parsePlatformFlags()
+			Expect(err).NotTo(HaveOccurred())
+			resolved, err := flags.resolvePlatformConfig(secrets.Platform)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(resolved.TLSEnabled).To(Equal(expected))
+		},
+		Entry("legacy secret without TLS key", nil, true),
+		Entry("explicitly disabled TLS", stringPtr("false"), false),
+	)
+})
 
 func encodeSecretValue(value string) string {
 	return base64.StdEncoding.EncodeToString([]byte(value))
 }
 
-func installFakeKubectl(t *testing.T, data map[string]string) {
-	t.Helper()
+func installFakeKubectl(data map[string]string) {
 	payload, err := json.Marshal(map[string]any{"data": data})
-	if err != nil {
-		t.Fatalf("marshal Secret fixture: %v", err)
-	}
+	Expect(err).NotTo(HaveOccurred())
 
-	binDir := t.TempDir()
+	binDir := GinkgoT().TempDir()
 	kubectlPath := filepath.Join(binDir, "kubectl")
 	script := "#!/bin/sh\nprintf '%s' '" + string(payload) + "'\n"
-	if err := os.WriteFile(kubectlPath, []byte(script), 0o755); err != nil {
-		t.Fatalf("write fake kubectl: %v", err)
-	}
-	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	Expect(os.WriteFile(kubectlPath, []byte(script), 0o755)).To(Succeed())
+	GinkgoT().Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
 }
 
 func stringPtr(value string) *string {

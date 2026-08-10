@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -65,17 +66,26 @@ features:
   externalPostgresImport: false
   workspaceUsers: false
 signup:
+  clientIPSource: cloudflare
   turnstile:
-    enabled: false
+    enabled: true
+    siteKey: test-site-key
+    expectedHostname: stackdome.example.com
+    expectedAction: turnstile-spin-v2
+    verificationTimeout: 10s
   throttle:
-    maxTrackedKeys: 10000
-    ipAttempts: 5
-    ipWindow: 1h
-    emailAttempts: 3
-    emailWindow: 1h
+    ip:
+      maxTrackedClients: 10000
+      maxAttempts: 5
+      window: 1h
+    email:
+      maxTrackedAddresses: 10000
+      maxAttempts: 3
+      window: 1h
 `), 0o600)).To(Succeed())
 		GinkgoT().Setenv(EnvRuntimeMode.Name, string(RuntimeModeStackdomeCloud))
 		GinkgoT().Setenv(EnvStackdomeCloudConfig.Name, path)
+		GinkgoT().Setenv(EnvTurnstileSecret.Name, "test-secret")
 
 		cfg := NewApplicationConfig()
 		Expect(cfg.LoadEnvVariables()).To(Succeed())
@@ -113,8 +123,13 @@ signup:
 		Expect(err).NotTo(HaveOccurred())
 		Expect(cloudConfig.Capacity.MaxActiveTrialAllocations).To(Equal(200))
 		Expect(cloudConfig.Registry.MaxActiveRegistries).To(Equal(200))
-		Expect(cloudConfig.Signup.Throttle.IPWindow.Duration()).To(Equal(10 * time.Minute))
+		Expect(cloudConfig.Signup.ClientIPSource).To(Equal(StackdomeCloudClientIPSourceCloudflare))
+		Expect(cloudConfig.Signup.Throttle.IP.MaxTrackedClients).To(Equal(10_000))
+		Expect(cloudConfig.Signup.Throttle.IP.Window.Duration()).To(Equal(10 * time.Minute))
+		Expect(cloudConfig.Signup.Throttle.Email.MaxTrackedAddresses).To(Equal(10_000))
+		Expect(cloudConfig.Signup.Throttle.Email.Window.Duration()).To(Equal(time.Hour))
 		Expect(cloudConfig.Signup.Turnstile.Enabled).To(BeTrue())
+		Expect(cloudConfig.Signup.Turnstile.VerificationTimeout.Duration()).To(Equal(10 * time.Second))
 	})
 
 	It("requires the Turnstile secret env value while loading enabled cloud signup", func() {
@@ -125,19 +140,84 @@ signup:
 		Expect(cfg.LoadStackdomeCloudConfig()).To(MatchError(ContainSubstring("TURNSTILE_SECRET is required")))
 	})
 
-	It("requires Turnstile public fields when Turnstile is enabled", func() {
+	It("requires Turnstile to be enabled", func() {
 		cloudConfig := validStackdomeCloudConfigForTest()
-		cloudConfig.Signup.Turnstile.Enabled = true
+		cloudConfig.Signup.Turnstile.Enabled = false
 
-		Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring("signup.turnstile.siteKey is required")))
+		Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring("signup.turnstile.enabled must be true")))
 	})
 
-	It("always requires positive signup throttle limits in Stackdome Cloud", func() {
-		cloudConfig := validStackdomeCloudConfigForTest()
-		cloudConfig.Signup.Throttle.IPAttempts = 0
+	DescribeTable("validates the client IP source",
+		func(source StackdomeCloudClientIPSource, expectedError string) {
+			cloudConfig := validStackdomeCloudConfigForTest()
+			cloudConfig.Signup.ClientIPSource = source
 
-		Expect(cloudConfig.Validate()).To(MatchError(ContainSubstring("signup.throttle.ipAttempts must be greater than zero")))
-	})
+			err := cloudConfig.Validate()
+			if expectedError == "" {
+				Expect(err).NotTo(HaveOccurred())
+				return
+			}
+			Expect(err).To(MatchError(expectedError))
+		},
+		Entry("Cloudflare", StackdomeCloudClientIPSourceCloudflare, ""),
+		Entry("direct peer", StackdomeCloudClientIPSourceRemoteAddr, ""),
+		Entry("empty", StackdomeCloudClientIPSource(""), `signup.clientIPSource must be "cloudflare" or "remote_addr"`),
+		Entry("unknown", StackdomeCloudClientIPSource("forwarded_for"), `signup.clientIPSource must be "cloudflare" or "remote_addr"`),
+	)
+
+	DescribeTable("requires complete Turnstile configuration",
+		func(mutate func(*StackdomeCloudTurnstileConfig), expectedError string) {
+			cloudConfig := validStackdomeCloudConfigForTest()
+			mutate(&cloudConfig.Signup.Turnstile)
+
+			Expect(cloudConfig.Validate()).To(MatchError(expectedError))
+		},
+		Entry("site key", func(c *StackdomeCloudTurnstileConfig) { c.SiteKey = "" }, "signup.turnstile.siteKey is required"),
+		Entry("hostname", func(c *StackdomeCloudTurnstileConfig) { c.ExpectedHostname = "" }, "signup.turnstile.expectedHostname is required"),
+		Entry("action", func(c *StackdomeCloudTurnstileConfig) { c.ExpectedAction = "" }, "signup.turnstile.expectedAction is required"),
+		Entry("verification timeout", func(c *StackdomeCloudTurnstileConfig) { c.VerificationTimeout = 0 }, "signup.turnstile.verificationTimeout must be greater than zero"),
+	)
+
+	DescribeTable("requires positive IP throttle limits",
+		func(mutate func(*StackdomeCloudIPThrottleConfig), expectedError string) {
+			cloudConfig := validStackdomeCloudConfigForTest()
+			mutate(&cloudConfig.Signup.Throttle.IP)
+
+			Expect(cloudConfig.Validate()).To(MatchError(expectedError))
+		},
+		Entry("tracked clients", func(c *StackdomeCloudIPThrottleConfig) { c.MaxTrackedClients = 0 }, "signup.throttle.ip.maxTrackedClients must be greater than zero"),
+		Entry("attempts", func(c *StackdomeCloudIPThrottleConfig) { c.MaxAttempts = 0 }, "signup.throttle.ip.maxAttempts must be greater than zero"),
+		Entry("window", func(c *StackdomeCloudIPThrottleConfig) { c.Window = 0 }, "signup.throttle.ip.window must be greater than zero"),
+	)
+
+	DescribeTable("requires positive email throttle limits",
+		func(mutate func(*StackdomeCloudEmailThrottleConfig), expectedError string) {
+			cloudConfig := validStackdomeCloudConfigForTest()
+			mutate(&cloudConfig.Signup.Throttle.Email)
+
+			Expect(cloudConfig.Validate()).To(MatchError(expectedError))
+		},
+		Entry("tracked addresses", func(c *StackdomeCloudEmailThrottleConfig) { c.MaxTrackedAddresses = 0 }, "signup.throttle.email.maxTrackedAddresses must be greater than zero"),
+		Entry("attempts", func(c *StackdomeCloudEmailThrottleConfig) { c.MaxAttempts = 0 }, "signup.throttle.email.maxAttempts must be greater than zero"),
+		Entry("window", func(c *StackdomeCloudEmailThrottleConfig) { c.Window = 0 }, "signup.throttle.email.window must be greater than zero"),
+	)
+
+	DescribeTable("rejects legacy signup fields",
+		func(existing, legacyField string) {
+			path := filepath.Join(GinkgoT().TempDir(), "cloud.yaml")
+			raw, err := os.ReadFile("stackdome_cloud.example.yaml")
+			Expect(err).NotTo(HaveOccurred())
+			configText := string(raw)
+			Expect(configText).To(ContainSubstring(existing))
+			raw = []byte(strings.Replace(configText, existing, existing+legacyField, 1))
+			Expect(os.WriteFile(path, raw, 0o600)).To(Succeed())
+
+			_, err = LoadStackdomeCloudConfig(path)
+			Expect(err).To(MatchError(ContainSubstring("field")))
+		},
+		Entry("trustCloudflareProxy", "    expectedAction: turnstile-spin-v2\n", "    trustCloudflareProxy: true\n"),
+		Entry("flat maxTrackedKeys", "  throttle:\n", "    maxTrackedKeys: 10000\n"),
+	)
 
 	It("requires a positive registry capacity", func() {
 		cloudConfig := validStackdomeCloudConfigForTest()
@@ -238,6 +318,59 @@ var _ = Describe("Compute mode configuration", func() {
 	})
 })
 
+var _ = Describe("Shared compute environment compatibility", func() {
+	BeforeEach(func() {
+		for _, name := range []string{
+			EnvSharedComputeClusterAPIURL.Name,
+			EnvSharedComputeClusterCAData.Name,
+			EnvSharedComputeClusterToken.Name,
+			EnvPlatformClusterAPIURL.Name,
+			EnvPlatformClusterCAData.Name,
+			EnvPlatformClusterToken.Name,
+		} {
+			Expect(os.Unsetenv(name)).To(Succeed())
+		}
+	})
+
+	It("loads the legacy platform cluster variables when the new variables are absent", func() {
+		GinkgoT().Setenv(EnvPlatformClusterAPIURL.Name, "https://legacy.example.com")
+		GinkgoT().Setenv(EnvPlatformClusterCAData.Name, "legacy-ca")
+		GinkgoT().Setenv(EnvPlatformClusterToken.Name, "legacy-token")
+
+		cfg := NewApplicationConfig()
+		Expect(cfg.LoadEnvVariables()).To(Succeed())
+		Expect(cfg.SharedComputeCluster).To(Equal(&ClusterConfig{
+			ClusterURL:    "https://legacy.example.com",
+			ClusterCAData: "legacy-ca",
+			Token:         "legacy-token",
+		}))
+	})
+
+	It("accepts matching legacy and new variables during the transition", func() {
+		for _, envVar := range []EnvVar[string]{EnvSharedComputeClusterAPIURL, EnvPlatformClusterAPIURL} {
+			GinkgoT().Setenv(envVar.Name, "https://shared.example.com")
+		}
+		for _, envVar := range []EnvVar[string]{EnvSharedComputeClusterCAData, EnvPlatformClusterCAData} {
+			GinkgoT().Setenv(envVar.Name, "shared-ca")
+		}
+		for _, envVar := range []EnvVar[string]{EnvSharedComputeClusterToken, EnvPlatformClusterToken} {
+			GinkgoT().Setenv(envVar.Name, "shared-token")
+		}
+
+		cfg := NewApplicationConfig()
+		Expect(cfg.LoadEnvVariables()).To(Succeed())
+		Expect(cfg.SharedComputeCluster.ClusterURL).To(Equal("https://shared.example.com"))
+	})
+
+	It("rejects conflicting legacy and new variables", func() {
+		GinkgoT().Setenv(EnvSharedComputeClusterAPIURL.Name, "https://new.example.com")
+		GinkgoT().Setenv(EnvPlatformClusterAPIURL.Name, "https://legacy.example.com")
+
+		cfg := NewApplicationConfig()
+		Expect(cfg.LoadEnvVariables()).To(MatchError(ErrConflictingSharedComputeClusterConfig))
+	})
+})
+
 func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 	return StackdomeCloudConfig{
 		Capacity: StackdomeCloudCapacityConfig{
@@ -256,12 +389,25 @@ func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 			StorageSize:         "10Gi",
 		},
 		Signup: StackdomeCloudSignupConfig{
+			ClientIPSource: StackdomeCloudClientIPSourceCloudflare,
+			Turnstile: StackdomeCloudTurnstileConfig{
+				Enabled:             true,
+				SiteKey:             "test-site-key",
+				ExpectedHostname:    "stackdome.example.com",
+				ExpectedAction:      "turnstile-spin-v2",
+				VerificationTimeout: ConfigDuration(10 * time.Second),
+			},
 			Throttle: StackdomeCloudThrottleConfig{
-				MaxTrackedKeys: 10_000,
-				IPAttempts:     5,
-				IPWindow:       ConfigDuration(time.Hour),
-				EmailAttempts:  3,
-				EmailWindow:    ConfigDuration(time.Hour),
+				IP: StackdomeCloudIPThrottleConfig{
+					MaxTrackedClients: 10_000,
+					MaxAttempts:       5,
+					Window:            ConfigDuration(time.Hour),
+				},
+				Email: StackdomeCloudEmailThrottleConfig{
+					MaxTrackedAddresses: 10_000,
+					MaxAttempts:         3,
+					Window:              ConfigDuration(time.Hour),
+				},
 			},
 		},
 	}

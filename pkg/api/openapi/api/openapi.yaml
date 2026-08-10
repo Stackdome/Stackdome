@@ -7110,6 +7110,7 @@ components:
                 observed_generation: 1
                 status: status
           id: id
+          platform: true
         - cluster_url: cluster_url
           cluster_ca_data: cluster_ca_data
           organisation_id: organisation_id
@@ -7142,6 +7143,7 @@ components:
                 observed_generation: 1
                 status: status
           id: id
+          platform: true
       properties:
         items:
           items:
@@ -7184,6 +7186,7 @@ components:
               observed_generation: 1
               status: status
         id: id
+        platform: true
       properties:
         id:
           type: string
@@ -7192,6 +7195,12 @@ components:
         organisation_id:
           type: string
         shared_compute:
+          readOnly: true
+          type: boolean
+        platform:
+          deprecated: true
+          description: Deprecated alias for shared_compute. Both fields have the same
+            value.
           readOnly: true
           type: boolean
         cluster_url:
@@ -11184,6 +11193,7 @@ components:
       - ImageRegistryPending
       - ImageRegistryError
       - ImageRegistryRunning
+      - ImageRegistryDeleting
       type: string
     StackResourceStatus:
       example:

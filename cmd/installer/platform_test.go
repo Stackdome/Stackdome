@@ -2,89 +2,70 @@ package main
 
 import (
 	"flag"
-	"strings"
-	"testing"
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/install"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func parsePlatformFlags(t *testing.T, args ...string) *platformFlags {
-	t.Helper()
+func parsePlatformFlags(args ...string) (*platformFlags, error) {
 	fs := flag.NewFlagSet("platform-test", flag.ContinueOnError)
 	flags := registerPlatformFlags(fs)
 	if err := fs.Parse(args); err != nil {
-		t.Fatalf("parse platform flags: %v", err)
+		return nil, err
 	}
-	return flags
+	return flags, nil
 }
 
-func TestResolvePlatformConfigPreservesStoredTLSWhenFlagOmitted(t *testing.T) {
-	stored := install.PlatformConfig{
-		BaseDomain:         "apps.example.com",
-		TLSEnabled:         true,
-		CloudflareAPIToken: "cloudflare-token",
-		ACMEEnvironment:    config.ACMEEnvironmentStaging,
-	}
+var _ = Describe("Platform installer flags", func() {
+	It("preserves stored TLS when the flag is omitted", func() {
+		stored := install.PlatformConfig{
+			BaseDomain:         "apps.example.com",
+			TLSEnabled:         true,
+			CloudflareAPIToken: "cloudflare-token",
+			ACMEEnvironment:    config.ACMEEnvironmentStaging,
+		}
+		flags, err := parsePlatformFlags()
+		Expect(err).NotTo(HaveOccurred())
 
-	got, err := parsePlatformFlags(t).resolvePlatformConfig(stored)
-	if err != nil {
-		t.Fatalf("resolve platform config: %v", err)
-	}
-	if got != stored {
-		t.Fatalf("resolved config = %#v, want %#v", got, stored)
-	}
-}
+		resolved, err := flags.resolvePlatformConfig(stored)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resolved).To(Equal(stored))
+	})
 
-func TestResolvePlatformConfigAllowsSharedComputeWithoutTLS(t *testing.T) {
-	got, err := parsePlatformFlags(t,
-		"--platform-base-domain", "apps.example.com",
-	).resolvePlatformConfig(install.PlatformConfig{})
-	if err != nil {
-		t.Fatalf("resolve platform config: %v", err)
-	}
-	if !got.Enabled() {
-		t.Fatal("platform routing is disabled")
-	}
-	if got.TLSEnabled {
-		t.Fatal("platform TLS is enabled")
-	}
-	if got.CloudflareAPIToken != "" || got.ACMEEnvironment != "" {
-		t.Fatalf("TLS-only config was populated: %#v", got)
-	}
-}
+	It("allows shared compute routing without TLS", func() {
+		flags, err := parsePlatformFlags("--platform-base-domain", "apps.example.com")
+		Expect(err).NotTo(HaveOccurred())
 
-func TestResolvePlatformConfigRequiresCloudflareTokenWhenTLSEnabled(t *testing.T) {
-	_, err := parsePlatformFlags(t,
-		"--platform-base-domain", "apps.example.com",
-		"--platform-tls",
-	).resolvePlatformConfig(install.PlatformConfig{})
-	if err == nil || !strings.Contains(err.Error(), "--platform-cloudflare-token-file is required") {
-		t.Fatalf("error = %v, want missing Cloudflare token error", err)
-	}
-}
+		resolved, err := flags.resolvePlatformConfig(install.PlatformConfig{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(resolved.Enabled()).To(BeTrue())
+		Expect(resolved.TLSEnabled).To(BeFalse())
+		Expect(resolved.CloudflareAPIToken).To(BeEmpty())
+		Expect(resolved.ACMEEnvironment).To(BeEmpty())
+	})
 
-func TestResolvePlatformConfigRejectsTLSOnlyFlagsWhenDisabled(t *testing.T) {
-	tests := []struct {
-		name string
-		args []string
-	}{
-		{
-			name: "Cloudflare token",
-			args: []string{"--platform-base-domain", "apps.example.com", "--platform-cloudflare-token-file", "token.txt"},
+	It("requires a Cloudflare token when TLS is enabled", func() {
+		flags, err := parsePlatformFlags(
+			"--platform-base-domain", "apps.example.com",
+			"--platform-tls",
+		)
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = flags.resolvePlatformConfig(install.PlatformConfig{})
+		Expect(err).To(MatchError(ContainSubstring("--platform-cloudflare-token-file is required")))
+	})
+
+	DescribeTable("rejects TLS-only flags when TLS is disabled",
+		func(args ...string) {
+			flags, err := parsePlatformFlags(args...)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = flags.resolvePlatformConfig(install.PlatformConfig{})
+			Expect(err).To(MatchError(ContainSubstring("require --platform-tls=true")))
 		},
-		{
-			name: "ACME environment",
-			args: []string{"--platform-base-domain", "apps.example.com", "--platform-acme-environment", "staging"},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, err := parsePlatformFlags(t, tt.args...).resolvePlatformConfig(install.PlatformConfig{})
-			if err == nil || !strings.Contains(err.Error(), "require --platform-tls=true") {
-				t.Fatalf("error = %v, want TLS-disabled validation error", err)
-			}
-		})
-	}
-}
+		Entry("Cloudflare token", "--platform-base-domain", "apps.example.com", "--platform-cloudflare-token-file", "token.txt"),
+		Entry("ACME environment", "--platform-base-domain", "apps.example.com", "--platform-acme-environment", "staging"),
+	)
+})

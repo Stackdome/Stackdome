@@ -52,7 +52,7 @@ func (s *releaseEventStore) InsertWithTx(ctx context.Context, event *models.Rele
 	// collide on the (release_id, sequence) unique index. The lock also
 	// guarantees the parent release still exists for the FK insert below.
 	var release models.StackRelease
-	if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+	if err := tx.Clauses(clause.Locking{Strength: rowLockStrengthUpdate}).
 		Select("id").
 		First(&release, "id = ?", event.ReleaseID).Error; err != nil {
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {

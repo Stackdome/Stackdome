@@ -9,6 +9,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/db"
 	apperrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -18,6 +19,7 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,6 +27,17 @@ import (
 )
 
 // Suite bootstrapped by TestServices in services_suite_test.go.
+
+type assigningUIDClient struct {
+	client.Client
+}
+
+func (c *assigningUIDClient) Create(ctx context.Context, object client.Object, opts ...client.CreateOption) error {
+	if object.GetUID() == "" {
+		object.SetUID(types.UID("test-" + object.GetName()))
+	}
+	return c.Client.Create(ctx, object, opts...)
+}
 
 var _ = Describe("ClusterService", func() {
 	const masterKey = "this-is-a-very-secure-master-key-that-is-at-least-64-characters-long-for-security-validation"
@@ -76,6 +89,29 @@ var _ = Describe("ClusterService", func() {
 
 	encryptCluster := func(cluster *models.Cluster) {
 		Expect(svc.encryptClusterCredentials(cluster)).To(BeNil())
+	}
+	runTransactionWithOutcome := func(outcome *apperrors.ServiceError) {
+		clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+			DoAndReturn(func(parent context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
+				txCtx, hooks := db.CtxWithPostCommitHooks(parent)
+				err := fn(txCtx)
+				if err != nil {
+					Expect(hooks.RunRollback(db.ContextAfterTransaction(parent))).To(BeEmpty())
+					return err
+				}
+				if outcome != nil {
+					Expect(hooks.RunRollback(db.ContextAfterTransaction(parent))).To(BeEmpty())
+					return outcome
+				}
+				hooks.Run()
+				return nil
+			})
+	}
+	runTransaction := func() {
+		runTransactionWithOutcome(nil)
+	}
+	expectTopologyLock := func(orgID string) {
+		orgStore.EXPECT().LockByID(gomock.Any(), orgID).Return(nil)
 	}
 
 	Describe("GetClusterForOrg mode-directed resolution", func() {
@@ -189,6 +225,8 @@ var _ = Describe("ClusterService", func() {
 		})
 
 		It("rejects a second BYOC cluster as a service policy", func() {
+			runTransaction()
+			expectTopologyLock(tenantOrgID)
 			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), tenantOrgID).
 				Return([]*models.Cluster{{ID: "existing-cluster"}}, nil)
 
@@ -199,14 +237,23 @@ var _ = Describe("ClusterService", func() {
 			Expect(err.Code).To(Equal(apperrors.ErrorConflict))
 		})
 
+		It("propagates an organisation-lock failure before reading topology", func() {
+			lockErr := apperrors.GeneralError("failed to lock organisation")
+			runTransaction()
+			orgStore.EXPECT().LockByID(gomock.Any(), tenantOrgID).Return(lockErr)
+
+			result, err := svc.AddCluster(ctx, newClusterSpec())
+
+			Expect(result).To(BeNil())
+			Expect(err).To(BeIdenticalTo(lockErr))
+		})
+
 		expectClusterCreated := func(created *models.Cluster) {
+			runTransaction()
+			expectTopologyLock(tenantOrgID)
 			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), tenantOrgID).Return(nil, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), gomock.Any()).
 				Return(nil, apperrors.NotFound("not found")).AnyTimes()
-			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
-					return fn(ctx)
-				})
 			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
 			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
 			clusterManager.EXPECT().GetClient(created.ID).Return(nil, stderrors.New("no client in test"))
@@ -218,15 +265,13 @@ var _ = Describe("ClusterService", func() {
 			spec.OrganisationID = orgID
 			created := &models.Cluster{ID: "cluster-owned", OrganisationID: orgID}
 
+			runTransaction()
+			expectTopologyLock(orgID)
 			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), orgID).Return(nil, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), gomock.Any()).
 				Return(nil, apperrors.NotFound("not found")).AnyTimes()
 			orgStore.EXPECT().Get(gomock.Any(), orgID).
 				Return(&models.Organisation{ID: orgID, Name: "Acme Inc"}, nil)
-			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
-					return fn(ctx)
-				})
 			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
 			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
 			registrySvc.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
@@ -275,6 +320,69 @@ var _ = Describe("ClusterService", func() {
 			Expect(err).To(BeNil())
 			Expect(result.ImageRegistries).To(BeEmpty())
 		})
+
+		It("unregisters a cluster when registry persistence rolls back", func() {
+			spec := newClusterSpec()
+			created := &models.Cluster{ID: "cluster-rolled-back", OrganisationID: tenantOrgID}
+			registryErr := apperrors.GeneralError("registry persistence failed")
+
+			runTransaction()
+			expectTopologyLock(tenantOrgID)
+			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), tenantOrgID).Return(nil, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), spec.ClusterURL).
+				Return(nil, apperrors.NotFound("not found"))
+			orgStore.EXPECT().Get(gomock.Any(), tenantOrgID).
+				Return(&models.Organisation{ID: tenantOrgID, Name: "Tenant Org"}, nil)
+			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
+			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
+			registrySvc.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(nil, registryErr)
+			clusterManager.EXPECT().UnregisterCluster(created.ID).Return(nil)
+
+			result, err := svc.AddCluster(ctx, spec)
+
+			Expect(result).To(BeNil())
+			Expect(err).To(BeIdenticalTo(registryErr))
+		})
+
+		It("fails before registry creation when manager registration fails", func() {
+			spec := newClusterSpec()
+			created := &models.Cluster{ID: "cluster-registration-failed", OrganisationID: tenantOrgID}
+			registrationErr := stderrors.New("manager registration failed")
+
+			runTransaction()
+			expectTopologyLock(tenantOrgID)
+			clusterStore.EXPECT().ListBYOCClustersForOrg(gomock.Any(), tenantOrgID).Return(nil, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), spec.ClusterURL).
+				Return(nil, apperrors.NotFound("not found"))
+			orgStore.EXPECT().Get(gomock.Any(), tenantOrgID).
+				Return(&models.Organisation{ID: tenantOrgID, Name: "Tenant Org"}, nil)
+			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
+			clusterManager.EXPECT().RegisterCluster(created).Return(registrationErr)
+			clusterManager.EXPECT().UnregisterCluster(created.ID).Return(nil)
+
+			result, serr := svc.AddCluster(ctx, spec)
+
+			Expect(result).To(BeNil())
+			Expect(serr).To(MatchError("error: failed to register cluster with manager: manager registration failed"))
+		})
+	})
+
+	Describe("Delete", func() {
+		It("persists cluster and registry deletion intent before enqueueing after commit", func() {
+			cluster := &models.Cluster{ID: "cluster-delete", OrganisationID: "org-delete"}
+			enqueuer := mocks.NewMockBackgroundJobEnqueuer(ctrl)
+			svc.BackgroundJobEnqueuer = enqueuer
+
+			clusterStore.EXPECT().Get(ctx, cluster.ID).Return(cluster, nil)
+			runTransaction()
+			orgStore.EXPECT().LockByID(gomock.Any(), cluster.OrganisationID).Return(nil)
+			clusterStore.EXPECT().Get(gomock.Any(), cluster.ID).Return(cluster, nil)
+			clusterStore.EXPECT().MarkDeletingWithTx(gomock.Any(), cluster.ID, gomock.Any()).Return(nil)
+			registrySvc.EXPECT().InternalMarkAllDeletingByClusterIDWithTx(gomock.Any(), cluster.ID).Return(nil)
+			enqueuer.EXPECT().EnqueueAfterCommit(gomock.Any(), models.ClusterImageRegistryOperand{ClusterID: cluster.ID}).Return(nil)
+
+			Expect(svc.Delete(ctx, cluster.ID)).To(BeNil())
+		})
 	})
 
 	Describe("InternalUpsertSharedComputeCluster", func() {
@@ -293,14 +401,13 @@ var _ = Describe("ClusterService", func() {
 			}
 			created := &models.Cluster{ID: "cluster-new", OrganisationID: "org-platform", SharedCompute: true}
 
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return(nil, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), spec.ClusterURL).
 				Return(nil, apperrors.NotFound("cluster with this api URL not found")).AnyTimes()
 			orgStore.EXPECT().Get(gomock.Any(), "org-platform").
 				Return(&models.Organisation{ID: "org-platform", Name: "platform", Platform: true}, nil)
-			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
-					return fn(ctx)
-				})
 			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
 			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
 			clusterManager.EXPECT().GetClient(created.ID).Return(nil, stderrors.New("no client in test"))
@@ -321,14 +428,13 @@ var _ = Describe("ClusterService", func() {
 			}
 			created := &models.Cluster{ID: "cluster-new", OrganisationID: "org-platform", SharedCompute: true}
 
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return(nil, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), spec.ClusterURL).
 				Return(nil, apperrors.NotFound("cluster with this api URL not found")).AnyTimes()
 			orgStore.EXPECT().Get(gomock.Any(), "org-platform").
 				Return(&models.Organisation{ID: "org-platform", Name: "platform", Platform: true}, nil)
-			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
-				DoAndReturn(func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
-					return fn(ctx)
-				})
 			clusterStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).Return(created, nil)
 			clusterManager.EXPECT().RegisterCluster(created).Return(nil)
 
@@ -347,17 +453,107 @@ var _ = Describe("ClusterService", func() {
 			Expect(err.Code).To(Equal(apperrors.ErrorBadRequest))
 		})
 
+		It("updates the single organisation-owned shared cluster when its URL changes", func() {
+			token := base64.StdEncoding.EncodeToString([]byte("token-v1"))
+			existing := &models.Cluster{
+				ID:             "cluster-1",
+				OrganisationID: "org-platform",
+				Name:           models.SharedComputeClusterName,
+				ClusterURL:     "https://old.example.com:6443",
+				SharedCompute:  true,
+				Token:          token,
+				ClusterCAData:  caData,
+			}
+			encryptCluster(existing)
+			fresh := &models.Cluster{
+				ID:             existing.ID,
+				OrganisationID: existing.OrganisationID,
+				Name:           existing.Name,
+				ClusterURL:     "https://new.example.com:6443",
+				SharedCompute:  true,
+				Token:          token,
+				ClusterCAData:  caData,
+			}
+			encryptCluster(fresh)
+			fresh.Token, fresh.ClusterCAData = "", ""
+
+			runTransaction()
+			expectTopologyLock(existing.OrganisationID)
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), existing.OrganisationID).
+				Return([]*models.Cluster{existing}, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), fresh.ClusterURL).
+				Return(nil, apperrors.NotFound("not found"))
+			clusterStore.EXPECT().UpdateSharedComputeCluster(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, updated *models.Cluster) *apperrors.ServiceError {
+					Expect(updated.ID).To(Equal(existing.ID))
+					Expect(updated.ClusterURL).To(Equal(fresh.ClusterURL))
+					return nil
+				})
+			clusterStore.EXPECT().Get(gomock.Any(), existing.ID).Return(fresh, nil)
+			clusterManager.EXPECT().ReRegisterCluster(fresh).Return(nil)
+
+			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: existing.OrganisationID,
+				ClusterURL:     fresh.ClusterURL,
+				Token:          token,
+				ClusterCAData:  caData,
+			})
+
+			Expect(err).To(BeNil())
+			Expect(result.ID).To(Equal(existing.ID))
+			Expect(result.ClusterURL).To(Equal(fresh.ClusterURL))
+		})
+
+		It("never adopts a URL owned by another organisation", func() {
+			foreign := &models.Cluster{ID: "cluster-other", OrganisationID: "org-other", ClusterURL: "https://example.com:6443"}
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return(nil, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), foreign.ClusterURL).Return(foreign, nil)
+
+			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     foreign.ClusterURL,
+				Token:          "token",
+				ClusterCAData:  caData,
+			})
+
+			Expect(result).To(BeNil())
+			Expect(err.IsConflict()).To(BeTrue())
+		})
+
+		It("fails closed when the organisation already owns multiple shared clusters", func() {
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").
+				Return([]*models.Cluster{{ID: "cluster-1"}, {ID: "cluster-2"}}, nil)
+
+			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
+				OrganisationID: "org-platform",
+			})
+
+			Expect(result).To(BeNil())
+			Expect(err).To(MatchError("error: multiple shared-compute clusters found for organisation 'org-platform'"))
+		})
+
 		It("is a no-op when the stored credentials already match", func() {
 			token := base64.StdEncoding.EncodeToString([]byte("token-v1"))
-			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", SharedCompute: true, Token: token, ClusterCAData: caData}
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: token, ClusterCAData: caData}
 			encryptCluster(existing)
 
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return([]*models.Cluster{existing}, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
 
 			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
-				ClusterURL:    "https://example.com:6443",
-				Token:         token,
-				ClusterCAData: caData,
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     "https://example.com:6443",
+				Token:          token,
+				ClusterCAData:  caData,
 			})
 			Expect(err).To(BeNil())
 			Expect(result.ID).To(Equal("cluster-1"))
@@ -366,15 +562,20 @@ var _ = Describe("ClusterService", func() {
 		It("normalizes raw credentials before comparing, so a raw env token is not a rotation", func() {
 			raw := "token-v1"
 			stored := base64.StdEncoding.EncodeToString([]byte(raw))
-			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", SharedCompute: true, Token: stored, ClusterCAData: caData}
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: stored, ClusterCAData: caData}
 			encryptCluster(existing)
 
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return([]*models.Cluster{existing}, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
 
 			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
-				ClusterURL:    "https://example.com:6443",
-				Token:         raw,
-				ClusterCAData: caData,
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     "https://example.com:6443",
+				Token:          raw,
+				ClusterCAData:  caData,
 			})
 			Expect(err).To(BeNil())
 			Expect(result.ID).To(Equal("cluster-1"))
@@ -385,43 +586,150 @@ var _ = Describe("ClusterService", func() {
 			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", Name: "old-name", SharedCompute: false, Token: token, ClusterCAData: caData}
 			encryptCluster(existing)
 
-			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
-			clusterStore.EXPECT().UpdateNameAndSharedCompute(gomock.Any(), "cluster-1", "shared-compute-cluster").Return(nil)
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return(nil, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil).Times(2)
+			clusterStore.EXPECT().UpdateSharedComputeCluster(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(_ context.Context, updated *models.Cluster) *apperrors.ServiceError {
+					Expect(updated.ID).To(Equal("cluster-1"))
+					Expect(updated.Name).To(Equal(models.SharedComputeClusterName))
+					Expect(updated.SharedCompute).To(BeTrue())
+					return nil
+				})
+			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: token, ClusterCAData: caData}
+			encryptCluster(fresh)
+			fresh.Token, fresh.ClusterCAData = "", ""
+			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(fresh, nil)
 
 			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
-				Name:          "shared-compute-cluster",
-				ClusterURL:    "https://example.com:6443",
-				Token:         token,
-				ClusterCAData: caData,
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     "https://example.com:6443",
+				Token:          token,
+				ClusterCAData:  caData,
 			})
 			Expect(err).To(BeNil())
-			Expect(result.Name).To(Equal("shared-compute-cluster"))
+			Expect(result.Name).To(Equal(models.SharedComputeClusterName))
 			Expect(result.SharedCompute).To(BeTrue())
 		})
 
 		It("rotates credentials, re-registers the cluster, and returns decrypted credentials", func() {
 			oldToken := base64.StdEncoding.EncodeToString([]byte("token-v1"))
 			newToken := base64.StdEncoding.EncodeToString([]byte("token-v2"))
-			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", ClusterURL: "https://example.com:6443", SharedCompute: true, Token: oldToken, ClusterCAData: caData}
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: oldToken, ClusterCAData: caData}
 			encryptCluster(existing)
-			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", SharedCompute: true, Token: newToken, ClusterCAData: caData}
+			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: newToken, ClusterCAData: caData}
 			encryptCluster(fresh)
 			fresh.Token, fresh.ClusterCAData = "", ""
 
+			transactionOpen := false
+			clusterStore.EXPECT().WithTransaction(gomock.Any(), gomock.Any()).
+				DoAndReturn(func(parent context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
+					transactionOpen = true
+					txCtx, hooks := db.CtxWithPostCommitHooks(parent)
+					err := fn(txCtx)
+					transactionOpen = false
+					if err == nil {
+						hooks.Run()
+					}
+					return err
+				})
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return([]*models.Cluster{existing}, nil)
 			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), "https://example.com:6443").Return(existing, nil)
-			clusterStore.EXPECT().UpdateCredentials(gomock.Any(), "cluster-1", gomock.Not(""), gomock.Not("")).Return(nil)
+			clusterStore.EXPECT().UpdateSharedComputeCluster(gomock.Any(), gomock.Any()).Return(nil)
 			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(fresh, nil)
-			clusterManager.EXPECT().ReRegisterCluster(fresh).Return(nil)
+			clusterManager.EXPECT().ReRegisterCluster(fresh).
+				DoAndReturn(func(_ *models.Cluster) error {
+					Expect(transactionOpen).To(BeTrue())
+					return nil
+				})
 
 			result, err := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
-				ClusterURL:    "https://example.com:6443",
-				Token:         newToken,
-				ClusterCAData: caData,
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     "https://example.com:6443",
+				Token:          newToken,
+				ClusterCAData:  caData,
 			})
 			Expect(err).To(BeNil())
 			Expect(result.ID).To(Equal("cluster-1"))
 			Expect(result.Token).To(Equal(newToken))
 			Expect(result.ClusterCAData).To(Equal(caData))
+		})
+
+		It("restores the prior manager configuration after commit failure", func() {
+			oldToken := base64.StdEncoding.EncodeToString([]byte("token-v1"))
+			newToken := base64.StdEncoding.EncodeToString([]byte("token-v2"))
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://old.example.com:6443", SharedCompute: true, Token: oldToken, ClusterCAData: caData}
+			encryptCluster(existing)
+			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://new.example.com:6443", SharedCompute: true, Token: newToken, ClusterCAData: caData}
+			encryptCluster(fresh)
+			fresh.Token, fresh.ClusterCAData = "", ""
+			commitErr := apperrors.GeneralError("commit failed")
+
+			runTransactionWithOutcome(commitErr)
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return([]*models.Cluster{existing}, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), fresh.ClusterURL).Return(nil, apperrors.NotFound("not found"))
+			clusterStore.EXPECT().UpdateSharedComputeCluster(gomock.Any(), gomock.Any()).Return(nil)
+			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(fresh, nil)
+			clusterManager.EXPECT().ReRegisterCluster(fresh).Return(nil)
+			clusterManager.EXPECT().ReRegisterCluster(gomock.Any()).
+				DoAndReturn(func(previous *models.Cluster) error {
+					Expect(previous.ID).To(Equal(existing.ID))
+					Expect(previous.ClusterURL).To(Equal("https://old.example.com:6443"))
+					Expect(previous.Token).To(Equal(oldToken))
+					Expect(previous.ClusterCAData).To(Equal(caData))
+					return nil
+				})
+
+			result, serr := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     fresh.ClusterURL,
+				Token:          newToken,
+				ClusterCAData:  caData,
+			})
+
+			Expect(result).To(BeNil())
+			Expect(serr).To(BeIdenticalTo(commitErr))
+		})
+
+		It("fails the update and restores the prior manager configuration when re-registration fails", func() {
+			oldToken := base64.StdEncoding.EncodeToString([]byte("token-v1"))
+			newToken := base64.StdEncoding.EncodeToString([]byte("token-v2"))
+			existing := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: oldToken, ClusterCAData: caData}
+			encryptCluster(existing)
+			fresh := &models.Cluster{ID: "cluster-1", OrganisationID: "org-platform", Name: models.SharedComputeClusterName, ClusterURL: "https://example.com:6443", SharedCompute: true, Token: newToken, ClusterCAData: caData}
+			encryptCluster(fresh)
+			fresh.Token, fresh.ClusterCAData = "", ""
+
+			runTransaction()
+			expectTopologyLock("org-platform")
+			clusterStore.EXPECT().ListSharedComputeClustersForOrg(gomock.Any(), "org-platform").Return([]*models.Cluster{existing}, nil)
+			clusterStore.EXPECT().GetByClusterUrl(gomock.Any(), existing.ClusterURL).Return(existing, nil)
+			clusterStore.EXPECT().UpdateSharedComputeCluster(gomock.Any(), gomock.Any()).Return(nil)
+			clusterStore.EXPECT().Get(gomock.Any(), "cluster-1").Return(fresh, nil)
+			clusterManager.EXPECT().ReRegisterCluster(fresh).Return(stderrors.New("new manager configuration rejected"))
+			clusterManager.EXPECT().ReRegisterCluster(gomock.Any()).
+				DoAndReturn(func(previous *models.Cluster) error {
+					Expect(previous.Token).To(Equal(oldToken))
+					Expect(previous.ClusterCAData).To(Equal(caData))
+					return nil
+				})
+
+			result, serr := svc.InternalUpsertSharedComputeCluster(ctx, &models.Cluster{
+				Name:           models.SharedComputeClusterName,
+				OrganisationID: "org-platform",
+				ClusterURL:     existing.ClusterURL,
+				Token:          newToken,
+				ClusterCAData:  caData,
+			})
+
+			Expect(result).To(BeNil())
+			Expect(serr).To(MatchError("error: failed to re-register cluster with manager: new manager configuration rejected"))
 		})
 	})
 
