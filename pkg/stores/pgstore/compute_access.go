@@ -71,12 +71,13 @@ func (s *computeAccessStore) ActivateWithTx(ctx context.Context, activation stor
 		return nil, errors.GeneralError("failed to get compute access: %s", err.Error())
 	}
 
-	_, err = findComputeEntitlementBySourceForUpdate(tx, activation.OrganisationID, activation.EntitlementSource)
-	if err == nil {
-		return nil, errors.ComputeAccessInactive()
-	}
-	if !stderrors.Is(err, gorm.ErrRecordNotFound) {
+	// With no current lease, an existing entitlement is a previously consumed grant.
+	entitlementPreviouslyGranted, err := hasComputeEntitlementForUpdate(tx, activation.OrganisationID, activation.EntitlementSource)
+	if err != nil {
 		return nil, errors.GeneralError("failed to get compute entitlement: %s", err.Error())
+	}
+	if entitlementPreviouslyGranted {
+		return nil, errors.ComputeAccessInactive()
 	}
 
 	// Capacity remains reserved until runtime cleanup marks the lease cleaned.
@@ -194,13 +195,17 @@ func findCurrentComputeAccess(tx *gorm.DB, organisationID string, lock bool) (*m
 	return &models.ComputeAccess{Entitlement: &entitlement, Lease: &lease}, nil
 }
 
-func findComputeEntitlementBySourceForUpdate(tx *gorm.DB, organisationID string, source models.ComputeEntitlementSource) (*models.ComputeEntitlement, error) {
+func hasComputeEntitlementForUpdate(tx *gorm.DB, organisationID string, source models.ComputeEntitlementSource) (bool, error) {
 	query := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	var entitlement models.ComputeEntitlement
-	if err := query.Where("organisation_id = ? AND source = ?", organisationID, source).First(&entitlement).Error; err != nil {
-		return nil, err
+	err := query.Select("id").Where("organisation_id = ? AND source = ?", organisationID, source).First(&entitlement).Error
+	if stderrors.Is(err, gorm.ErrRecordNotFound) {
+		return false, nil
 	}
-	return &entitlement, nil
+	if err != nil {
+		return false, err
+	}
+	return true, nil
 }
 
 func validateComputeAccess(access *models.ComputeAccess, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
