@@ -21,6 +21,8 @@ type OrgInviteStoreSpec struct {
 	SessionFactory db.SessionFactory
 }
 
+const orgInviteStatusField = "status"
+
 func NewOrgInviteStore(spec OrgInviteStoreSpec) stores.OrgInviteStore {
 	return &orgInviteStore{
 		sessionFactory: spec.SessionFactory,
@@ -87,7 +89,7 @@ func (s *orgInviteStore) ListByOrgID(ctx context.Context, orgID string, params s
 
 func (s *orgInviteStore) UpdateStatus(ctx context.Context, id string, status models.InviteStatus) *errors.ServiceError {
 	session := s.sessionFactory.New(ctx)
-	result := session.Model(&models.OrgInvite{}).Where("id = ?", id).Update("status", status)
+	result := session.Model(&models.OrgInvite{}).Where("id = ?", id).Update(orgInviteStatusField, status)
 	if result.Error != nil {
 		return errors.GeneralError("failed to update invite status: %s", result.Error.Error())
 	}
@@ -101,8 +103,8 @@ func (s *orgInviteStore) MarkAccepted(ctx context.Context, id string) *errors.Se
 	session := s.sessionFactory.New(ctx)
 	now := time.Now().UTC()
 	result := session.Model(&models.OrgInvite{}).Where("id = ? AND status = ?", id, models.InviteStatusPending).Updates(map[string]any{
-		"status":      models.InviteStatusAccepted,
-		"accepted_at": now,
+		orgInviteStatusField: models.InviteStatusAccepted,
+		"accepted_at":        now,
 	})
 	if result.Error != nil {
 		return errors.GeneralError("failed to mark invite accepted: %s", result.Error.Error())

@@ -28,7 +28,10 @@ var mutableFields = []string{
 	"Configuration", "BackupConfig", "UpdatedAt",
 }
 
-const postgresConfigurationPendingMessage = "Configuration change pending"
+const (
+	postgresAddonStatusField            = "status"
+	postgresConfigurationPendingMessage = "Configuration change pending"
+)
 
 func NewPostgresAddonStore(spec PostgresAddonStoreSpec) stores.PostgresAddonStore {
 	return &postgresAddonStore{
@@ -180,15 +183,15 @@ func (s *postgresAddonStore) UpdateWithTx(ctx context.Context, addon *models.Pos
 		Select("Labels", "Annotations", "Instances", "Resources", "Storage", "Configuration", "BackupConfig", "Status", "UpdatedAt").
 		Omit(clause.Associations).
 		Updates(map[string]interface{}{
-			"labels":        addon.Labels,
-			"annotations":   addon.Annotations,
-			"instances":     addon.Instances,
-			"resources":     addon.Resources,
-			"storage":       addon.Storage,
-			"configuration": addon.Configuration,
-			"backup_config": addon.BackupConfig,
-			"status":        status,
-			"updated_at":    updatedAt,
+			"labels":                 addon.Labels,
+			"annotations":            addon.Annotations,
+			"instances":              addon.Instances,
+			"resources":              addon.Resources,
+			"storage":                addon.Storage,
+			"configuration":          addon.Configuration,
+			"backup_config":          addon.BackupConfig,
+			postgresAddonStatusField: status,
+			"updated_at":             updatedAt,
 		}).Error; err != nil {
 		return nil, errors.GeneralError("failed to update postgres addon: %s", err.Error())
 	}
@@ -334,7 +337,7 @@ func (s *postgresAddonStore) ValidateAddonNameUnique(ctx context.Context, organi
 func (s *postgresAddonStore) UpdateStatus(ctx context.Context, id string, status *models.PostgresAddonStatus) *errors.ServiceError {
 	result := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).
 		Where("id = ?", id).
-		Update("status", status)
+		Update(postgresAddonStatusField, status)
 
 	if result.Error != nil {
 		return errors.GeneralError("failed to update postgres addon status: %s", result.Error.Error())
@@ -356,8 +359,8 @@ func (s *postgresAddonStore) UpdateStatusIfUnchanged(
 	result := s.sessionFactory.New(ctx).Model(&models.PostgresAddon{}).
 		Where("id = ? AND updated_at = ?", id, observedUpdatedAt).
 		Updates(map[string]interface{}{
-			"status":     status,
-			"updated_at": nextPostgresAddonUpdatedAt(observedUpdatedAt),
+			postgresAddonStatusField: status,
+			"updated_at":             nextPostgresAddonUpdatedAt(observedUpdatedAt),
 		})
 	if result.Error != nil {
 		return false, errors.GeneralError("failed to conditionally update postgres addon status: %s", result.Error.Error())
