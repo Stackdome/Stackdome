@@ -25,6 +25,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
 
 		svc := &stackResourceService{
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
@@ -69,12 +70,17 @@ func TestStackResourceService_Restart(t *testing.T) {
 			Return(resource, nil)
 
 		mockResourceStore.EXPECT().
-			Update(ctx, resource.ID, gomock.Any(), stack).
+			UpdateWithTx(ctx, resource.ID, gomock.Any(), stack).
 			DoAndReturn(func(ctx context.Context, id string, res *models.StackResource, stk *models.Stack) (*models.StackResource, *errors.ServiceError) {
 				assert.NotNil(t, res.LifecycleConfig)
 				assert.NotNil(t, res.LifecycleConfig.RestartRequestTime)
 				return updatedResource, nil
 			})
+		mockStackStore.EXPECT().WithTransaction(ctx, gomock.Any()).DoAndReturn(
+			func(txCtx context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+				return fn(txCtx)
+			},
+		)
 
 		result, err := svc.Restart(ctx, stackID, resourceName)
 
@@ -94,6 +100,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
 
 		svc := &stackResourceService{
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
@@ -133,6 +140,7 @@ func TestStackResourceService_Restart(t *testing.T) {
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
 
 		svc := &stackResourceService{
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 			stackStore:         mockStackStore,
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,

@@ -618,6 +618,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Logger:           e.Logger,
 		Permissions:      e.PermissionService,
 		ReferenceService: referenceService,
+		RuntimePolicy:    e.RuntimePolicy,
 	})
 
 	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
@@ -693,6 +694,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:            e.PermissionService,
 		ReferenceService:       referenceService,
 		ExternalImportDisabled: externalPostgresImportDisabled,
+		RuntimePolicy:          e.RuntimePolicy,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{

@@ -48,6 +48,7 @@ func TestInternalUpdateShellStack_RejectsInvalidSettings(t *testing.T) {
 	mockValidator := mocks.NewMockStackValidator(ctrl)
 
 	svc := &stackService{
+		runtimePolicy:  NewSelfHostedRuntimePolicy(),
 		stackStore:     mockStackStore,
 		stackValidator: mockValidator,
 	}
@@ -86,6 +87,7 @@ func TestInternalUpdateShellStack_ValidSettings_Updates(t *testing.T) {
 	mockValidator := mocks.NewMockStackValidator(ctrl)
 
 	svc := &stackService{
+		runtimePolicy:  NewSelfHostedRuntimePolicy(),
 		stackStore:     mockStackStore,
 		stackValidator: mockValidator,
 	}
@@ -128,6 +130,7 @@ func TestInternalUpdateShellStack_RenameRejected(t *testing.T) {
 	mockValidator := mocks.NewMockStackValidator(ctrl)
 
 	svc := &stackService{
+		runtimePolicy:  NewSelfHostedRuntimePolicy(),
 		stackStore:     mockStackStore,
 		stackValidator: mockValidator,
 	}

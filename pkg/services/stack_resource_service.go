@@ -70,9 +70,6 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 	if spec.ResourceValidator == nil {
 		panic("services.NewStackResourceService: ResourceValidator is required")
 	}
-	if spec.RuntimePolicy == nil {
-		panic("services.NewStackResourceService: RuntimePolicy is required")
-	}
 	stackResourceStore := spec.StackResourceStore
 	if stackResourceStore == nil {
 		stackResourceStore = pgstore.NewStackResourceStore(pgstore.StackResourceStoreSpec{
@@ -214,6 +211,10 @@ func (s *stackResourceService) prepareResource(ctx context.Context, stack *model
 
 func (s *stackResourceService) populateRegistryUrlForResource(ctx context.Context, stack *models.Stack, resource *models.StackResource) *errors.ServiceError {
 	if resource.BuildConfig == nil || !resource.BuildConfig.BuildImageRepository.UseInClusterRegistry {
+		return nil
+	}
+	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeDatabaseOnly {
+		resource.BuildConfig.BuildImageRepository.ClusterRegistryName = ""
 		return nil
 	}
 	if s.clusterRegistryService == nil {
@@ -384,9 +385,16 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 	}
 	resource.LifecycleConfig.RestartRequestTime = &now
 
-	updated, updateErr := s.stackResourceStore.Update(ctx, resource.ID, resource, stack)
-	if updateErr != nil {
-		return nil, updateErr
+	var updated *models.StackResource
+	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, stack.OrganisationID); policyErr != nil {
+			return policyErr
+		}
+		var updateErr *errors.ServiceError
+		updated, updateErr = s.stackResourceStore.UpdateWithTx(txCtx, resource.ID, resource, stack)
+		return updateErr
+	}); txErr != nil {
+		return nil, txErr
 	}
 
 	// Patch the StackResource CR in the cluster directly with the new restart timestamp.

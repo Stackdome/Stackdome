@@ -43,6 +43,7 @@ func TestCreateStackConnection_UsesConnectionScopedValidation(t *testing.T) {
 	mockReferenceService := mocks.NewMockReferenceService(ctrl)
 
 	svc := &stackService{
+		runtimePolicy:    NewSelfHostedRuntimePolicy(),
 		stackStore:       mockStackStore,
 		permissions:      mockPermissions,
 		stackValidator:   mockValidator,

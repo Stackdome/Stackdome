@@ -43,6 +43,7 @@ type VolumeServiceSpec struct {
 	ReferenceService ReferenceService
 	Logger           logger.Logger
 	Permissions      auth.PermissionService
+	RuntimePolicy    RuntimePolicy
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -56,6 +57,7 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		referenceService: spec.ReferenceService,
 		logger:           spec.Logger,
 		permissions:      spec.Permissions,
+		runtimePolicy:    spec.RuntimePolicy,
 	}
 }
 
@@ -66,6 +68,7 @@ type volumeService struct {
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
+	runtimePolicy          RuntimePolicy
 }
 
 func (s *volumeService) InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService) {
@@ -184,6 +187,13 @@ func (s *volumeService) UpdateGitRepoSourceRevision(ctx context.Context, ID stri
 		return nil, errors.BadRequest("invalid git repo revision")
 	}
 	updateErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		volume, getErr := s.volumeStore.GetByID(ctx, ID)
+		if getErr != nil {
+			return getErr
+		}
+		if policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID); policyErr != nil {
+			return policyErr
+		}
 		updatedVolume, err = s.volumeStore.UpdateGitRepoSourceRevisionWithTx(ctx, ID, revision)
 		if err != nil {
 			s.logger.Error(ctx, "failed to update volume git repo source revision: %v", err)
@@ -210,6 +220,13 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 	}
 
 	updateErr := s.volumeStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		volume, getErr := s.volumeStore.GetByID(ctx, ID)
+		if getErr != nil {
+			return getErr
+		}
+		if policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, volume.OrganisationID); policyErr != nil {
+			return policyErr
+		}
 		updatedVolume, err = s.volumeStore.UpdateRemoteDirSourceHashWithTx(ctx, ID, revision.CurrentDirectoryHash)
 		if err != nil {
 			s.logger.Error(ctx, "failed to update volume remote source revision: %v", err)

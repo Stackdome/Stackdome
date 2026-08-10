@@ -26,6 +26,7 @@ var _ = Describe("PostgresAddonService cloud validation", func() {
 		service := NewPostgresAddonService(PostgresAddonServiceSpec{
 			Permissions:            permissions,
 			ExternalImportDisabled: true,
+			RuntimePolicy:          NewSelfHostedRuntimePolicy(),
 		})
 		spec := &models.PostgresAddon{
 			Name:            addonType,
@@ -80,6 +81,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 			postgresAddonStore: addonStore,
 			referenceService:   refs,
 			permissions:        permissions,
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 				BackgroundJobEnqueuer: enqueuer,
 			},
@@ -189,6 +191,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 			logger:             logger.NewLogger(),
 			postgresAddonStore: addonStore,
 			permissions:        permissions,
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 			namespaceService:   namespaceSvc,
 			clusterService:     clusterService,
 			databaseService:    databaseService,
@@ -290,6 +293,7 @@ var _ = Describe("UpdatePostgresAddon storage class carry-forward", func() {
 			logger:             logger.NewLogger(),
 			postgresAddonStore: addonStore,
 			permissions:        permissions,
+			runtimePolicy:      NewSelfHostedRuntimePolicy(),
 			validator:          postgresaddon.NewPostgresAddonValidator(postgresaddon.PostgresAddonValidatorSpec{}),
 			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 				BackgroundJobEnqueuer: enqueuer,

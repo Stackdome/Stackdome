@@ -99,9 +99,6 @@ type stackService struct {
 }
 
 func NewStackService(spec StackServiceSpec) StackService {
-	if spec.RuntimePolicy == nil {
-		panic("services.NewStackService: RuntimePolicy is required")
-	}
 	organisationDomainService := NewOrganisationDomainsService(OrganisationDomainsServiceSpec{
 		SessionFactory: spec.SessionFactory,
 		Logger:         spec.Logger,
@@ -429,6 +426,9 @@ func (s *stackService) InternalUpdateShellStack(ctx context.Context, ID string, 
 }
 
 func (s *stackService) InternalUpdateShellWithTx(ctx context.Context, spec *models.Stack, existingStack *models.Stack) (*models.Stack, *errors.ServiceError) {
+	if policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, existingStack.OrganisationID); policyErr != nil {
+		return nil, policyErr
+	}
 	updatedStack, updateErr := s.stackStore.UpdateShellWithTx(ctx, existingStack.ID, spec)
 	if updateErr != nil {
 		return nil, updateErr
@@ -526,6 +526,9 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 		lockedStack, serr := s.stackStore.GetByID(ctx, stackID)
 		if serr != nil {
 			return serr
+		}
+		if policyErr := s.runtimePolicy.AdmitMutationWithTx(ctx, lockedStack.OrganisationID); policyErr != nil {
+			return policyErr
 		}
 		for _, existing := range lockedStack.Volumes {
 			if existing.Name == volume.Name {
@@ -664,6 +667,9 @@ func (s *stackService) prepareDesiredStackWithConnectionMutation(
 func (s *stackService) createStackConnection(ctx context.Context, existingStack *models.Stack, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	var createdConnection *models.StackConnection
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, existingStack.OrganisationID); policyErr != nil {
+			return policyErr
+		}
 		var serr *errors.ServiceError
 		createdConnection, serr = s.stackStore.CreateConnectionWithTx(txCtx, existingStack.ID, connection)
 		if serr != nil {
@@ -680,6 +686,9 @@ func (s *stackService) createStackConnection(ctx context.Context, existingStack 
 func (s *stackService) updateSingleStackConnection(ctx context.Context, existingStack *models.Stack, connectionID string, connection *models.StackConnection) (*models.StackConnection, *errors.ServiceError) {
 	var updatedConnection *models.StackConnection
 	if err := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, existingStack.OrganisationID); policyErr != nil {
+			return policyErr
+		}
 		var serr *errors.ServiceError
 		updatedConnection, serr = s.stackStore.UpdateConnectionWithTx(txCtx, existingStack.ID, connectionID, connection)
 		if serr != nil {

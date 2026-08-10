@@ -63,7 +63,7 @@ func TestStackService_CreateStackVolume(t *testing.T) {
 
 		mockStackStore := mocks.NewMockStackStore(ctrl)
 		mockPermissions := mocks.NewMockPermissionService(ctrl)
-		svc := &stackService{stackStore: mockStackStore, permissions: mockPermissions}
+		svc := &stackService{stackStore: mockStackStore, permissions: mockPermissions, runtimePolicy: NewSelfHostedRuntimePolicy()}
 
 		mockStackStore.EXPECT().GetByID(ctx, stackID).Return(stack, nil)
 		mockPermissions.EXPECT().Check(ctx, projectID, auth.ResourceStacks, stackID, auth.ActionRead).Return(nil)
