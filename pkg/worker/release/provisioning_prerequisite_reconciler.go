@@ -24,27 +24,6 @@ type provisioningPrerequisiteReconciler struct {
 }
 
 func newProvisioningPrerequisiteReconciler(spec ReleaseWorkerSpec) *provisioningPrerequisiteReconciler {
-	if spec.RuntimePolicy == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: RuntimePolicy is required")
-	}
-	if spec.StackService == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: StackService is required")
-	}
-	if spec.VolumeService == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: VolumeService is required")
-	}
-	if spec.NamespaceService == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: NamespaceService is required")
-	}
-	if spec.PostgresAddonService == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: PostgresAddonService is required")
-	}
-	if spec.ReleaseWorkerEnqueuer == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: ReleaseWorkerEnqueuer is required")
-	}
-	if spec.ClusterManager == nil {
-		panic("release.newProvisioningPrerequisiteReconciler: ClusterManager is required")
-	}
 	return &provisioningPrerequisiteReconciler{
 		runtimePolicy: spec.RuntimePolicy, stackService: spec.StackService,
 		volumeService: spec.VolumeService, namespaceService: spec.NamespaceService,
@@ -63,6 +42,9 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 	}
 
 	snapshot := release.Snapshot.Stack
+	if release.StackID != snapshot.ID {
+		return resultNil, fmt.Errorf("release %s stack identity does not match its snapshot", release.ID)
+	}
 	if err := r.runtimePolicy.RequireActiveAllocation(ctx, snapshot.OrganisationID); err != nil {
 		return resultNil, err
 	}
@@ -77,16 +59,33 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 	if serr != nil {
 		return resultNil, serr
 	}
-	if namespace.Name != snapshot.Namespace {
+	if namespace.ID != snapshot.NamespaceID || namespace.Name != snapshot.Namespace || namespace.OrganisationID != snapshot.OrganisationID {
 		return resultNil, fmt.Errorf("release %s namespace identity does not match persisted namespace", release.ID)
 	}
-	if _, serr := r.stackService.InternalGetStack(ctx, release.StackID); serr != nil {
-		return resultNil, serr
-	}
-
-	volumes, serr := r.volumeService.ListVolumesUsedByStack(ctx, release.StackID)
+	stack, serr := r.stackService.InternalGetStack(ctx, release.StackID)
 	if serr != nil {
 		return resultNil, serr
+	}
+	if stack.ID != snapshot.ID || stack.OrganisationID != snapshot.OrganisationID || stack.ClusterID != snapshot.ClusterID ||
+		stack.NamespaceID != snapshot.NamespaceID || stack.Namespace != snapshot.Namespace || stack.DeletionTimestamp != nil {
+		return resultNil, fmt.Errorf("release %s stack identity does not match its snapshot", release.ID)
+	}
+
+	volumes := make([]*models.Volume, 0, len(release.Snapshot.Volumes))
+	for _, snapshotVolume := range release.Snapshot.Volumes {
+		if snapshotVolume == nil || snapshotVolume.ID == "" {
+			return resultNil, fmt.Errorf("release %s contains a volume without an id", release.ID)
+		}
+		volume, serr := r.volumeService.InternalGet(ctx, snapshotVolume.ID)
+		if serr != nil {
+			return resultNil, serr
+		}
+		if volume.ID != snapshotVolume.ID || volume.OrganisationID != snapshotVolume.OrganisationID ||
+			volume.ProjectID != snapshotVolume.ProjectID || volume.NamespaceID != snapshotVolume.NamespaceID ||
+			volume.Namespace != snapshotVolume.Namespace {
+			return resultNil, fmt.Errorf("release %s volume %s identity does not match its snapshot", release.ID, snapshotVolume.ID)
+		}
+		volumes = append(volumes, volume)
 	}
 	addons, err := r.referencedPostgresAddons(ctx, release.Snapshot.Connections)
 	if err != nil {

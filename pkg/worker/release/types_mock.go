@@ -640,6 +640,21 @@ func (m *MockvolumeService) EXPECT() *MockvolumeServiceMockRecorder {
 	return m.recorder
 }
 
+// InternalGet mocks base method.
+func (m *MockvolumeService) InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "InternalGet", ctx, ID)
+	ret0, _ := ret[0].(*models.Volume)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// InternalGet indicates an expected call of InternalGet.
+func (mr *MockvolumeServiceMockRecorder) InternalGet(ctx, ID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockvolumeService)(nil).InternalGet), ctx, ID)
+}
+
 // ListVolumesUsedByStack mocks base method.
 func (m *MockvolumeService) ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError) {
 	m.ctrl.T.Helper()

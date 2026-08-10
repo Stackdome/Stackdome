@@ -80,5 +80,6 @@ type postgresAddonService interface {
 }
 
 type volumeService interface {
+	InternalGet(ctx context.Context, ID string) (*models.Volume, *errors.ServiceError)
 	ListVolumesUsedByStack(ctx context.Context, stackID string) ([]*models.Volume, *errors.ServiceError)
 }
