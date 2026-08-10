@@ -1,15 +1,21 @@
 # Stackdome Cloud alpha runtime policy. Set RUNTIME_MODE=stackdome_cloud and
 # STACKDOME_CLOUD_CONFIG to this file's deployed path.
-capacity:
-  # An allocation starts when an organization first deploys, not at signup.
-  # Expired allocations continue consuming capacity until cleanup changes state.
-  maxActiveTrialAllocations: 200
-  allocationTTL: 6h
+access:
+  # A trial entitlement starts when an organization first consumes compute.
+  # Expired entitlements retain their lease until cleanup changes its state.
+  maxActiveSharedComputeLeases: 200
+  trialEntitlementDuration: 6h
 
 limits:
   maxStacksPerOrganization: 2
   maxStackResourcesPerOrganization: 6
   replicasPerStackResource: 1
+  maxVolumesPerOrganization: 2
+  maxVolumeSize: 2Gi
+  volumeStorageClass: longhorn
+  maxPostgresAddonsPerOrganization: 1
+  postgresInstances: 1
+  maxPostgresStorageSize: 2Gi
   # Deployment must set cloud-guard controller.maxConcurrentBuilds from this
   # same value. Hub validates this policy but does not schedule image builds.
   concurrentBuilds: 1
@@ -18,7 +24,7 @@ registry:
   # Registries are created lazily only when an organization starts a build.
   maxActiveRegistries: 200
   storageClass: longhorn
-  storageSize: 10Gi
+  storageSize: 2Gi
 
 features:
   customDomains: false
