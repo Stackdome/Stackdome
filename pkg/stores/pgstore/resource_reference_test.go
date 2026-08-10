@@ -41,6 +41,14 @@ func newRefTestSessionFactory(t *testing.T) *refTestSessionFactory {
 	`).Error; err != nil {
 		t.Fatalf("create stack_releases: %v", err)
 	}
+	if err := gdb.Exec(`
+		CREATE TABLE stacks (
+			id text PRIMARY KEY,
+			status json
+		)
+	`).Error; err != nil {
+		t.Fatalf("create stacks: %v", err)
+	}
 	return &refTestSessionFactory{db: gdb}
 }
 
@@ -174,5 +182,30 @@ func TestResourceReferenceStore_FailedReleaseDoesNotGrip(t *testing.T) {
 	}
 	if gripping["rel-failed"] {
 		t.Fatal("Failed release should NOT grip")
+	}
+}
+
+func TestResourceReferenceStore_LastConvergedSupersededReleaseStillGrips(t *testing.T) {
+	f := newRefTestSessionFactory(t)
+	store := NewResourceReferenceStore(ResourceReferenceStoreSpec{SessionFactory: f})
+	f.seedRelease(t, "rel-superseded", models.ReleaseStateSuperseded)
+	if err := f.db.Exec(`INSERT INTO stacks (id, status) VALUES (?, ?)`,
+		"stack-1", `{"last_converged":{"release_id":"rel-superseded"}}`).Error; err != nil {
+		t.Fatalf("seed stack: %v", err)
+	}
+	f.withTx(t, func(ctx context.Context) {
+		if err := store.InsertReleaseWithTx(ctx, "rel-superseded", "stack-1", []models.ResourceReference{
+			{ReferentType: models.ReferentVolume, ReferentID: "vol-1", RelationKind: models.RelationVolumeDeclaration},
+		}); err != nil {
+			t.Fatalf("InsertReleaseWithTx: %v", err)
+		}
+	})
+
+	got, serr := store.ListByReferent(context.Background(), models.ReferentVolume, "vol-1")
+	if serr != nil {
+		t.Fatalf("ListByReferent: %v", serr)
+	}
+	if len(got) != 1 || got[0].ReleaseID == nil || *got[0].ReleaseID != "rel-superseded" {
+		t.Fatalf("expected authoritative superseded reference, got %+v", got)
 	}
 }

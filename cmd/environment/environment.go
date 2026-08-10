@@ -13,6 +13,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/stores"
+	workerlib "github.com/Stackdome/stackdome/pkg/worker"
 	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,6 +43,7 @@ type Env struct {
 	LeadershipFlag              *leadership.Flag
 	EncryptionService           services.EncryptionService
 	RuntimePolicy               services.RuntimePolicy
+	ClusterWrites               *workerlib.ClusterMutationCoordinator
 	Logger                      applogger.Logger
 	Observability               *observability.Metrics
 }

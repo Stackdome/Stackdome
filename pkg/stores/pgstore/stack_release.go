@@ -10,6 +10,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 const (
@@ -87,6 +88,20 @@ func (s *stackReleaseStore) GetByID(ctx context.Context, id string) (*models.Sta
 		return nil, errors.GeneralError("failed to get release: %s", err.Error())
 	}
 	return &release, nil
+}
+
+func (s *stackReleaseStore) LockByID(ctx context.Context, id string) *errors.ServiceError {
+	var release models.StackRelease
+	if err := s.sessionFactory.New(ctx).
+		Clauses(clause.Locking{Strength: rowLockStrengthUpdate}).
+		Select("id").
+		First(&release, "id = ?", id).Error; err != nil {
+		if stderrors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.NotFound("release with id %s not found", id)
+		}
+		return errors.GeneralError("failed to lock release: %s", err.Error())
+	}
+	return nil
 }
 
 // ListByStackID returns releases for a stack, excluding heavy JSONB columns for performance.

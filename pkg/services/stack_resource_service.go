@@ -49,6 +49,7 @@ type StackResourceServiceSpec struct {
 	ReferenceService       ReferenceService
 	ResourceValidator      stackresourcevalidator.Validator
 	RuntimePolicy          RuntimePolicy
+	ClusterWrites          ClusterMutationCoordinator
 }
 
 type stackResourceService struct {
@@ -64,6 +65,8 @@ type stackResourceService struct {
 	referenceService       ReferenceService
 	resourceValidator      stackresourcevalidator.Validator
 	runtimePolicy          RuntimePolicy
+	releaseStore           stores.StackReleaseStore
+	clusterWrites          ClusterMutationCoordinator
 }
 
 func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService {
@@ -88,6 +91,10 @@ func NewStackResourceService(spec StackResourceServiceSpec) StackResourceService
 		referenceService:       spec.ReferenceService,
 		resourceValidator:      spec.ResourceValidator,
 		runtimePolicy:          spec.RuntimePolicy,
+		releaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
+			SessionFactory: spec.SessionFactory,
+		}),
+		clusterWrites: spec.ClusterWrites,
 	}
 }
 
@@ -384,24 +391,66 @@ func (s *stackResourceService) Restart(ctx context.Context, stackID, resourceNam
 		resource.LifecycleConfig = &models.LifecycleConfig{}
 	}
 	resource.LifecycleConfig.RestartRequestTime = &now
-
 	var updated *models.StackResource
 	if txErr := s.stackStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, stack.OrganisationID); policyErr != nil {
+		admission, policyErr := s.runtimePolicy.AdmitMutationWithTx(txCtx, stack.OrganisationID)
+		if policyErr != nil {
 			return policyErr
 		}
 		var updateErr *errors.ServiceError
 		updated, updateErr = s.stackResourceStore.UpdateWithTx(txCtx, resource.ID, resource, stack)
-		return updateErr
+		if updateErr != nil || s.clusterManager == nil || !admission.ReconcileCluster {
+			return updateErr
+		}
+		unlockCluster := s.clusterWrites.LockClusterNamespace(stack.ClusterID, stack.Namespace)
+		defer unlockCluster()
+		if lockErr := s.stackStore.LockByID(txCtx, stack.ID); lockErr != nil {
+			return lockErr
+		}
+		currentStack, currentErr := s.stackStore.GetByID(txCtx, stack.ID)
+		if currentErr != nil {
+			return currentErr
+		}
+		if currentStack.DeletionTimestamp != nil {
+			return nil
+		}
+		if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeDatabaseOnly {
+			authoritative, authorityErr := resolveAuthoritativeWorkloadRelease(txCtx, s.releaseStore, currentStack)
+			if authorityErr != nil {
+				return authorityErr
+			}
+			if authoritative == nil {
+				return nil
+			}
+			if lockErr := s.releaseStore.LockByID(txCtx, authoritative.ID); lockErr != nil {
+				return lockErr
+			}
+			currentStack, currentErr = s.stackStore.GetByID(txCtx, stack.ID)
+			if currentErr != nil {
+				return currentErr
+			}
+			if currentStack.DeletionTimestamp != nil {
+				return nil
+			}
+			authoritative, authorityErr = resolveAuthoritativeWorkloadRelease(txCtx, s.releaseStore, currentStack)
+			if authorityErr != nil {
+				return authorityErr
+			}
+			if authoritative == nil {
+				return nil
+			}
+			admission, policyErr = s.runtimePolicy.AdmitMutationWithTx(txCtx, currentStack.OrganisationID)
+			if policyErr != nil {
+				return policyErr
+			}
+			if !admission.ReconcileCluster {
+				return nil
+			}
+		}
+		s.patchRestartRequestInCluster(txCtx, currentStack, resource, now)
+		return nil
 	}); txErr != nil {
 		return nil, txErr
-	}
-
-	// Patch the StackResource CR in the cluster directly with the new restart timestamp.
-	// Best-effort: if the cluster is unreachable, the DB is already updated and the
-	// next release apply will set the correct restart time on the CR.
-	if s.clusterManager != nil {
-		s.patchRestartRequestInCluster(ctx, stack, resource, now)
 	}
 
 	return updated, nil

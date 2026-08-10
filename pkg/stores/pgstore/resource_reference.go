@@ -73,8 +73,12 @@ func (s *resourceReferenceStore) ListByReferent(ctx context.Context, referentTyp
 		Model(&models.ResourceReference{}).
 		Select("resource_references.*").
 		Joins("LEFT JOIN stack_releases ON stack_releases.id = resource_references.release_id").
+		Joins("LEFT JOIN stacks ON stacks.id = resource_references.stack_id").
 		Where("resource_references.referent_type = ? AND resource_references.referent_id = ?", referentType, referentID).
-		Where("resource_references.release_id IS NULL OR stack_releases.state NOT IN ?", models.NonGrippingReleaseStates).
+		Where(`resource_references.release_id IS NULL
+			OR stack_releases.state NOT IN ?
+			OR (stack_releases.state = ? AND stacks.status->'last_converged'->>'release_id' = resource_references.release_id)`,
+			models.NonGrippingReleaseStates, models.ReleaseStateSuperseded).
 		Find(&refs).Error; err != nil {
 		return nil, errors.GeneralError("failed to list references: %s", err.Error())
 	}

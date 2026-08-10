@@ -14,6 +14,8 @@ type StackReleaseStore interface {
 	Create(ctx context.Context, release *models.StackRelease) (*models.StackRelease, *errors.ServiceError)
 
 	GetByID(ctx context.Context, id string) (*models.StackRelease, *errors.ServiceError)
+	// LockByID takes a row-level lock on a release inside WithTransaction.
+	LockByID(ctx context.Context, id string) *errors.ServiceError
 
 	ListByStackID(ctx context.Context, stackID string, params ListParams) (*PaginatedResult[*models.StackRelease], *errors.ServiceError)
 

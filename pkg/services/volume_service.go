@@ -44,6 +44,8 @@ type VolumeServiceSpec struct {
 	Logger           logger.Logger
 	Permissions      auth.PermissionService
 	RuntimePolicy    RuntimePolicy
+	ClusterService   ClusterService
+	ClusterWrites    ClusterMutationCoordinator
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -58,10 +60,12 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		releaseStore: pgstore.NewStackReleaseStore(pgstore.StackReleaseStoreSpec{
 			SessionFactory: spec.SessionFactory,
 		}),
-		stackStore:    pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: spec.SessionFactory}),
-		logger:        spec.Logger,
-		permissions:   spec.Permissions,
-		runtimePolicy: spec.RuntimePolicy,
+		stackStore:     pgstore.NewStackStore(&pgstore.StackStoreSpec{SessionFactory: spec.SessionFactory}),
+		logger:         spec.Logger,
+		permissions:    spec.Permissions,
+		runtimePolicy:  spec.RuntimePolicy,
+		clusterService: spec.ClusterService,
+		clusterWrites:  spec.ClusterWrites,
 	}
 }
 
@@ -75,6 +79,8 @@ type volumeService struct {
 	logger                 logger.Logger
 	permissions            auth.PermissionService
 	runtimePolicy          RuntimePolicy
+	clusterService         ClusterService
+	clusterWrites          ClusterMutationCoordinator
 }
 
 func (s *volumeService) InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService) {
@@ -206,11 +212,19 @@ func (s *volumeService) UpdateGitRepoSourceRevision(ctx context.Context, ID stri
 			s.logger.Error(ctx, "failed to update volume git repo source revision: %v", err)
 			return err
 		}
-		reconcileCluster, admissionErr := s.shouldReconcileVolumeRevisionWithCluster(ctx, updatedVolume.ID, admission)
+		reconcileCluster, stack, release, admissionErr := s.resolveVolumeRevisionAuthority(ctx, updatedVolume.ID, admission)
 		if admissionErr != nil {
 			return admissionErr
 		}
 		if !reconcileCluster {
+			return nil
+		}
+		unlockCluster, authorized, authorityErr := s.lockAndRevalidateVolumeRevisionAuthority(ctx, updatedVolume, stack, release)
+		if authorityErr != nil {
+			return authorityErr
+		}
+		defer unlockCluster()
+		if !authorized {
 			return nil
 		}
 		cErr := s.clusterResourceService.UpdateVolumeGitRevisionInCluster(ctx, updatedVolume)
@@ -248,11 +262,19 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 			return err
 		}
 
-		reconcileCluster, admissionErr := s.shouldReconcileVolumeRevisionWithCluster(ctx, updatedVolume.ID, admission)
+		reconcileCluster, stack, release, admissionErr := s.resolveVolumeRevisionAuthority(ctx, updatedVolume.ID, admission)
 		if admissionErr != nil {
 			return admissionErr
 		}
 		if !reconcileCluster {
+			return nil
+		}
+		unlockCluster, authorized, authorityErr := s.lockAndRevalidateVolumeRevisionAuthority(ctx, updatedVolume, stack, release)
+		if authorityErr != nil {
+			return authorityErr
+		}
+		defer unlockCluster()
+		if !authorized {
 			return nil
 		}
 		cErr := s.clusterResourceService.UpdateVolumeRemoteDirRevisionInCluster(ctx, updatedVolume)
@@ -271,40 +293,118 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 // shouldReconcileVolumeRevisionWithCluster keeps cloud draft revisions in the
 // database until the volume is part of a released workload. Self-hosted mode
 // remains eager.
-func (s *volumeService) shouldReconcileVolumeRevisionWithCluster(ctx context.Context, volumeID string, admission MutationAdmission) (bool, *errors.ServiceError) {
+func (s *volumeService) resolveVolumeRevisionAuthority(
+	ctx context.Context,
+	volumeID string,
+	admission MutationAdmission,
+) (bool, *models.Stack, *models.StackRelease, *errors.ServiceError) {
 	if !admission.ReconcileCluster {
-		return false, nil
+		return false, nil, nil, nil
 	}
 	if s.runtimePolicy.DraftProvisioningMode() == ProvisioningModeEager {
-		return true, nil
+		return true, nil, nil, nil
 	}
 
 	inUse, refs, serr := s.referenceService.IsReferentInUse(ctx, models.ReferentVolume, volumeID)
 	if serr != nil {
-		return false, serr
+		return false, nil, nil, serr
 	}
 	if !inUse {
-		return false, nil
+		return false, nil, nil, nil
 	}
 	for _, ref := range refs {
 		if ref.ReleaseID == nil || *ref.ReleaseID == "" {
 			continue
 		}
-		release, releaseErr := s.releaseStore.GetByID(ctx, *ref.ReleaseID)
-		if releaseErr != nil {
-			return false, releaseErr
+		stack, stackErr := s.stackStore.GetByID(ctx, ref.StackID)
+		if stackErr != nil {
+			return false, nil, nil, stackErr
 		}
-		if release.State == models.ReleaseStateReleased {
-			stack, stackErr := s.stackStore.GetByID(ctx, ref.StackID)
-			if stackErr != nil {
-				return false, stackErr
-			}
-			if release.IsAuthoritativeWorkloadRelease(stack, nil) {
-				return true, nil
-			}
+		if stack.DeletionTimestamp != nil {
+			continue
+		}
+		release, releaseErr := resolveAuthoritativeWorkloadRelease(ctx, s.releaseStore, stack)
+		if releaseErr != nil {
+			return false, nil, nil, releaseErr
+		}
+		if release != nil && release.ID == *ref.ReleaseID {
+			return true, stack, release, nil
 		}
 	}
-	return false, nil
+	return false, nil, nil, nil
+}
+
+func (s *volumeService) lockAndRevalidateVolumeRevisionAuthority(
+	ctx context.Context,
+	volume *models.Volume,
+	stack *models.Stack,
+	release *models.StackRelease,
+) (func(), bool, *errors.ServiceError) {
+	clusterID := ""
+	if stack == nil {
+		cluster, serr := s.clusterService.GetClusterForOrg(ctx, volume.OrganisationID)
+		if serr != nil {
+			return nil, false, serr
+		}
+		clusterID = cluster.ID
+	} else {
+		clusterID = stack.ClusterID
+	}
+	unlockCluster := s.clusterWrites.LockClusterNamespace(clusterID, volume.Namespace)
+
+	if stack == nil {
+		return unlockCluster, true, nil
+	}
+	if lockErr := s.stackStore.LockByID(ctx, stack.ID); lockErr != nil {
+		unlockCluster()
+		return nil, false, lockErr
+	}
+	currentStack, serr := s.stackStore.GetByID(ctx, stack.ID)
+	if serr != nil {
+		unlockCluster()
+		return nil, false, serr
+	}
+	if currentStack.DeletionTimestamp != nil {
+		return unlockCluster, false, nil
+	}
+	currentRelease, serr := resolveAuthoritativeWorkloadRelease(ctx, s.releaseStore, currentStack)
+	if serr != nil {
+		unlockCluster()
+		return nil, false, serr
+	}
+	if currentRelease == nil || currentRelease.ID != release.ID {
+		return unlockCluster, false, nil
+	}
+	if lockErr := s.releaseStore.LockByID(ctx, currentRelease.ID); lockErr != nil {
+		unlockCluster()
+		return nil, false, lockErr
+	}
+	currentStack, serr = s.stackStore.GetByID(ctx, stack.ID)
+	if serr != nil {
+		unlockCluster()
+		return nil, false, serr
+	}
+	if currentStack.DeletionTimestamp != nil {
+		return unlockCluster, false, nil
+	}
+	currentRelease, serr = resolveAuthoritativeWorkloadRelease(ctx, s.releaseStore, currentStack)
+	if serr != nil {
+		unlockCluster()
+		return nil, false, serr
+	}
+	if currentRelease == nil || currentRelease.ID != release.ID {
+		return unlockCluster, false, nil
+	}
+	admission, serr := s.runtimePolicy.AdmitMutationWithTx(ctx, currentStack.OrganisationID)
+	if serr != nil {
+		unlockCluster()
+		return nil, false, serr
+	}
+	if !admission.ReconcileCluster {
+		unlockCluster()
+		return nil, false, errors.TrialInactive()
+	}
+	return unlockCluster, true, nil
 }
 
 // Assume ctx already has a transaction

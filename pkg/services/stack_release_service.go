@@ -41,6 +41,30 @@ func selectAuthoritativeWorkloadRelease(latest, converged *models.StackRelease) 
 	return converged
 }
 
+func resolveAuthoritativeWorkloadRelease(ctx context.Context, store stores.StackReleaseStore, stack *models.Stack) (*models.StackRelease, *errors.ServiceError) {
+	latest, serr := store.GetLatestByStackID(ctx, stack.ID)
+	if serr != nil {
+		return nil, serr
+	}
+
+	var converged *models.StackRelease
+	convergedID := stack.GetConvergedReleaseID()
+	if latest == nil || !latest.State.Active() {
+		if convergedID != "" {
+			converged, serr = store.GetByID(ctx, convergedID)
+			if serr != nil {
+				return nil, serr
+			}
+		}
+	}
+
+	selected := selectAuthoritativeWorkloadRelease(latest, converged)
+	if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, latest) {
+		return nil, nil
+	}
+	return selected, nil
+}
+
 type StackReleaseService interface {
 	CreateRelease(ctx context.Context, stackID string, cause models.ReleaseCause) (*models.StackRelease, *errors.ServiceError)
 	RollbackRelease(ctx context.Context, stackID, fromReleaseID string) (*models.StackRelease, *errors.ServiceError)
@@ -563,27 +587,7 @@ func (s *stackReleaseService) InternalGet(ctx context.Context, releaseID string)
 }
 
 func (s *stackReleaseService) InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError) {
-	latest, serr := s.store.GetLatestByStackID(ctx, stack.ID)
-	if serr != nil {
-		return nil, serr
-	}
-
-	var converged *models.StackRelease
-	convergedID := stack.GetConvergedReleaseID()
-	if latest == nil || (latest.State != models.ReleaseStatePending && latest.State != models.ReleaseStateInProgress) {
-		if convergedID != "" {
-			converged, serr = s.store.GetByID(ctx, convergedID)
-			if serr != nil {
-				return nil, serr
-			}
-		}
-	}
-
-	selected := selectAuthoritativeWorkloadRelease(latest, converged)
-	if selected == nil || !selected.IsAuthoritativeWorkloadRelease(stack, latest) {
-		return nil, nil
-	}
-	return selected, nil
+	return resolveAuthoritativeWorkloadRelease(ctx, s.store, stack)
 }
 
 // InternalListAuthoritativeWorkload returns only IDs needed to enqueue cloud
