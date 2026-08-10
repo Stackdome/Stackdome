@@ -12,7 +12,6 @@ import (
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/credentials"
-	serviceerrors "github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/worker"
@@ -209,12 +208,6 @@ func (r *applyReconciler) authorizeMutation(release *models.StackRelease) worker
 			return serr
 		}
 		if latest != nil && latest.ID == release.ID && latest.IsAuthoritativeWorkloadRelease(stack, latest) {
-			if admissionErr := r.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
-				if admissionErr.Reason == serviceerrors.ErrorCodeComputeAccessInactive {
-					return errReleaseSuperseded
-				}
-				return admissionErr
-			}
 			return nil
 		}
 		if latest != nil && latest.Sequence > release.Sequence {

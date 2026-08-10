@@ -36,23 +36,19 @@ var _ = Describe("ComputeAccessService", func() {
 		Expect(access).To(BeIdenticalTo(expected))
 	})
 
-	It("uses the same clock for transactional and worker admission", func() {
+	It("uses the same clock for transactional admission", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		store := mocks.NewMockComputeAccessStore(ctrl)
 		now := time.Date(2026, time.August, 9, 12, 0, 0, 0, time.UTC)
 		expected := &models.ComputeAccess{Lease: &models.SharedComputeLease{ID: "lease-1"}}
 		store.EXPECT().RequireWithTx(gomock.Any(), "org-1", now).Return(expected, nil)
 		store.EXPECT().AdmitComputeMutationWithTx(gomock.Any(), "org-1", now).Return(expected, nil)
-		store.EXPECT().GetActiveByOrganisationID(gomock.Any(), "org-1", now).Return(expected, nil)
 		svc := NewComputeAccessService(ComputeAccessServiceSpec{Store: store, Now: func() time.Time { return now }})
 
 		access, serr := svc.RequireWithTx(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(access).To(BeIdenticalTo(expected))
 		access, serr = svc.AdmitComputeMutationWithTx(context.Background(), "org-1")
-		Expect(serr).To(BeNil())
-		Expect(access).To(BeIdenticalTo(expected))
-		access, serr = svc.RequireAccess(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(access).To(BeIdenticalTo(expected))
 	})

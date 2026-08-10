@@ -83,7 +83,7 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 			SessionFactory: sessionFactory,
 			Logger:         logger.NewLogger(),
 			Permissions:    permissions,
-			RuntimePolicy:  &activeAddonRuntimePolicy{},
+			RuntimePolicy:  services.NewSelfHostedRuntimePolicy(),
 		})
 		service.InjectBackgroundJobEnqueuer(services.BackgroundJobEnqueuerDep{BackgroundJobEnqueuer: enqueuer})
 		addon := &models.PostgresAddon{
@@ -104,37 +104,14 @@ var _ = Describe("Postgres lifecycle restart recovery", func() {
 		Expect(persisted.Status.State).To(Equal(models.PostgresAddonStatePending))
 
 		reconciler := &recordingLifecycleReconciler{}
-		references := NewMockreferenceService(ctrl)
-		releases := NewMockreleaseService(ctrl)
-		stacks := NewMockstackService(ctrl)
-		releaseID := "release-1"
-		release := &models.StackRelease{
-			ID: releaseID, StackID: "stack-1", State: models.ReleaseStateReleased,
-			Snapshot: models.StackSnapshot{
-				Stack:       models.StackShellSnapshot{ID: "stack-1", OrganisationID: "org-1"},
-				Connections: models.StackConnections{{From: models.TopologyNodeRef{Type: models.TopologyNodeTypePostgresAddon, Id: "addon-1"}}},
-			},
-		}
-		releases.EXPECT().InternalListAuthoritativeWorkload(ctx).Return(&models.WorkloadAuthorityScan{Releases: []models.WorkloadReleaseRef{{StackID: release.StackID, ReleaseID: release.ID}}}, nil)
-		references.EXPECT().InternalListReleaseReferents(ctx, []string{release.ID}, models.ReferentPostgresAddon).Return([]models.ResourceReference{{ReleaseID: &releaseID, ReferentID: "addon-1"}}, nil)
-		releases.EXPECT().InternalGet(ctx, releaseID).Return(release, nil).Times(2)
-		stack := &models.Stack{
-			ID: "stack-1", OrganisationID: "org-1", Status: &models.StackStatus{LastConverged: &models.StackConvergenceRecord{ReleaseID: releaseID}},
-		}
-		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(stack, nil).Times(2)
-		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(ctx, stack).Return(release, nil).Times(2)
 		restartedWorker := &postgresAddonWorker{
 			postgresAddonService: service,
-			runtimePolicy:        &activeAddonRuntimePolicy{},
-			referenceService:     references,
-			releaseService:       releases,
-			stackService:         stacks,
 			subReconcilers:       []subReconciler{reconciler},
 			BaseWorker:           worker.NewBaseWorker(WorkerName, "test"),
 		}
 		operands, inputErr := restartedWorker.GetInput(ctx)
 		Expect(inputErr).To(BeNil())
-		Expect(operands).To(ConsistOf(models.PostgresAddonOperand{ID: "addon-1", ReleaseID: releaseID}))
+		Expect(operands).To(ConsistOf(models.PostgresAddonOperand{ID: "addon-1"}))
 
 		_, executeErr := restartedWorker.Execute(ctx, operands[0])
 

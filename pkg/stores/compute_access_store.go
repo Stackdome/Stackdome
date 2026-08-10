@@ -18,13 +18,13 @@ type ComputeAccessActivation struct {
 }
 
 // ComputeAccessStore atomically persists entitlements and shared-compute leases
-// so a failed release cannot consume capacity without being created.
+// so a failed provisioning request cannot consume capacity without its
+// database resource being created.
 //
 //go:generate mockgen -source=compute_access_store.go -destination=../mocks/mock_compute_access_store.go -package=mocks
 type ComputeAccessStore interface {
 	ActivateWithTx(ctx context.Context, activation ComputeAccessActivation) (*models.ComputeAccess, *errors.ServiceError)
 	RequireWithTx(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError)
 	AdmitComputeMutationWithTx(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError)
-	GetActiveByOrganisationID(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError)
 	HasSharedComputeLease(ctx context.Context, organisationID string) (bool, *errors.ServiceError)
 }

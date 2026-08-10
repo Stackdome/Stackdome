@@ -233,7 +233,7 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 
 	var createdPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
-		if _, policyErr := s.runtimePolicy.AdmitComputeMutationWithTx(ctx, postgresAddon.OrganisationID); policyErr != nil {
+		if policyErr := s.runtimePolicy.ActivateComputeAccessWithTx(ctx, postgresAddon.OrganisationID); policyErr != nil {
 			return policyErr
 		}
 		// Create namespace

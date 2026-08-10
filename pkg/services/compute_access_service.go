@@ -9,16 +9,15 @@ import (
 	"github.com/Stackdome/stackdome/pkg/stores"
 )
 
-// ComputeAccessService hides how access was granted from release and worker
-// code. The alpha grants trials; future billing or licence grants can reuse the
-// same admission boundary.
+// ComputeAccessService hides how access was granted from provisioning
+// admission. The alpha grants trials; future billing or licence grants can
+// reuse the same boundary.
 //
 //go:generate mockgen -source=compute_access_service.go -destination=compute_access_service_mock.go -package=services -self_package=github.com/Stackdome/stackdome/pkg/services
 type ComputeAccessService interface {
 	ActivateWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError)
 	RequireWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError)
 	AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError)
-	RequireAccess(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError)
 	EnsureNoLease(ctx context.Context, organisationID string) *errors.ServiceError
 }
 
@@ -72,10 +71,6 @@ func (s *computeAccessService) RequireWithTx(ctx context.Context, organisationID
 
 func (s *computeAccessService) AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError) {
 	return s.store.AdmitComputeMutationWithTx(ctx, organisationID, s.now())
-}
-
-func (s *computeAccessService) RequireAccess(ctx context.Context, organisationID string) (*models.ComputeAccess, *errors.ServiceError) {
-	return s.store.GetActiveByOrganisationID(ctx, organisationID, s.now())
 }
 
 func (s *computeAccessService) EnsureNoLease(ctx context.Context, organisationID string) *errors.ServiceError {

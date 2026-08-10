@@ -64,6 +64,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 		permissions *mocks.MockPermissionService
 		refs        *mocks.MockReferenceService
 		enqueuer    *mocks.MockBackgroundJobEnqueuer
+		policy      *MockRuntimePolicy
 		svc         *postgresAddonService
 		ctx         context.Context
 	)
@@ -74,6 +75,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 		permissions = mocks.NewMockPermissionService(ctrl)
 		refs = mocks.NewMockReferenceService(ctrl)
 		enqueuer = mocks.NewMockBackgroundJobEnqueuer(ctrl)
+		policy = NewMockRuntimePolicy(ctrl)
 		ctx = context.Background()
 
 		svc = &postgresAddonService{
@@ -81,7 +83,7 @@ var _ = Describe("PostgresAddonService DeletePostgresAddon", func() {
 			postgresAddonStore: addonStore,
 			referenceService:   refs,
 			permissions:        permissions,
-			runtimePolicy:      NewSelfHostedRuntimePolicy(),
+			runtimePolicy:      policy,
 			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 				BackgroundJobEnqueuer: enqueuer,
 			},
@@ -133,6 +135,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 		clusterService  *mocks.MockClusterService
 		databaseService *mocks.MockPostgresAddonDatabaseService
 		enqueuer        *mocks.MockBackgroundJobEnqueuer
+		runtimePolicy   *MockRuntimePolicy
 		svc             *postgresAddonService
 		ctx             context.Context
 		capturedAddon   *models.PostgresAddon
@@ -157,6 +160,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 			func(ctx context.Context, fn func(context.Context) *apperrors.ServiceError) *apperrors.ServiceError {
 				return fn(ctx)
 			})
+		runtimePolicy.EXPECT().ActivateComputeAccessWithTx(gomock.Any(), orgID).Return(nil)
 		namespaceSvc.EXPECT().CreateInDBWithTx(gomock.Any(), gomock.Any()).
 			Return(&models.Namespace{ID: namespaceID, Name: namespaceName}, nil)
 		addonStore.EXPECT().CreateWithTx(gomock.Any(), gomock.Any()).
@@ -184,6 +188,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 		clusterService = mocks.NewMockClusterService(ctrl)
 		databaseService = mocks.NewMockPostgresAddonDatabaseService(ctrl)
 		enqueuer = mocks.NewMockBackgroundJobEnqueuer(ctrl)
+		runtimePolicy = NewMockRuntimePolicy(ctrl)
 		ctx = context.Background()
 		capturedAddon = nil
 
@@ -191,7 +196,7 @@ var _ = Describe("CreatePostgresAddon storage class defaulting", func() {
 			logger:             logger.NewLogger(),
 			postgresAddonStore: addonStore,
 			permissions:        permissions,
-			runtimePolicy:      NewSelfHostedRuntimePolicy(),
+			runtimePolicy:      runtimePolicy,
 			namespaceService:   namespaceSvc,
 			clusterService:     clusterService,
 			databaseService:    databaseService,

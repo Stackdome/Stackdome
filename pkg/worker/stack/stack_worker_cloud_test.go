@@ -129,7 +129,6 @@ var _ = Describe("StackWorker cloud admission", func() {
 			stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(&deleting, nil),
 		)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil)
 		reconciler.EXPECT().Name().Return("write-boundary")
 		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, _ *models.Stack, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
@@ -147,7 +146,7 @@ var _ = Describe("StackWorker cloud admission", func() {
 		Expect(result).To(Equal(worker.Result{}))
 	})
 
-	It("stops a cluster write when the allocation expires after initial authorization", func() {
+	It("continues an admitted cluster write while release authority remains current", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		stacks := NewMockstackService(ctrl)
 		releases := NewMockreleaseService(ctrl)
@@ -163,10 +162,6 @@ var _ = Describe("StackWorker cloud admission", func() {
 		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil).Times(3)
 		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		gomock.InOrder(
-			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil),
-			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(errors.ComputeAccessInactive()),
-		)
 		reconciler.EXPECT().Name().Return("write-boundary")
 		reconciler.EXPECT().Reconcile(gomock.Any(), stack, gomock.Any()).DoAndReturn(
 			func(ctx context.Context, _ *models.Stack, authorize worker.MutationAuthorizer) (subReconcilerResult, error) {
@@ -187,10 +182,6 @@ var _ = Describe("StackWorker cloud admission", func() {
 
 type activeWorkerRuntimePolicy struct{ inactiveWorkerRuntimePolicy }
 
-func (*activeWorkerRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
-	return nil
-}
-
 type inactiveWorkerRuntimePolicy struct{}
 
 func (*inactiveWorkerRuntimePolicy) OrganisationProvisioningMode() services.ProvisioningMode {
@@ -205,9 +196,6 @@ func (*inactiveWorkerRuntimePolicy) ActivateComputeAccessWithTx(context.Context,
 }
 func (*inactiveWorkerRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
-}
-func (*inactiveWorkerRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
-	return errors.ComputeAccessInactive()
 }
 func (*inactiveWorkerRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (services.ComputeMutationAdmission, *errors.ServiceError) {
 	return services.ComputeMutationAdmission{}, nil

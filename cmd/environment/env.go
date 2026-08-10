@@ -970,9 +970,6 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 		ClusterManager:       e.ClusterManager,
 		CRBuilder:            builders.NewPostgresClusterBuilder(),
 		Env:                  e.Name,
-		RuntimePolicy:        e.RuntimePolicy,
-		ReleaseService:       e.Services.StackReleaseService,
-		StackService:         e.Services.StackService,
 		ClusterWrites:        e.ClusterWrites,
 	})
 	e.WorkerManager.RegisterWorker(pgAddonWorker, models.PostgresAddonOperand{})

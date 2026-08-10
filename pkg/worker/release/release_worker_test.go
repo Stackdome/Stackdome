@@ -537,7 +537,7 @@ var _ = Describe("ApplyReconciler", func() {
 		Expect(stderrors.Is(err, errReleaseSuperseded)).To(BeTrue())
 	})
 
-	It("rejects a cluster mutation when allocation expires after apply authorization", func() {
+	It("continues a cluster mutation after its release was admitted", func() {
 		stack := &models.Stack{ID: "stack-1", OrganisationID: "org-1"}
 		release := &models.StackRelease{
 			ID: "release-a", StackID: stack.ID, State: models.ReleaseStateInProgress,
@@ -547,12 +547,10 @@ var _ = Describe("ApplyReconciler", func() {
 		stackSvc.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil)
 		relSvc := NewMockreleaseService(ctrl)
 		relSvc.EXPECT().InternalGetLatestByStackID(gomock.Any(), stack.ID).Return(release, nil)
-		policy := NewMockruntimePolicy(ctrl)
-		policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(errors.ComputeAccessInactive())
-		r := &applyReconciler{releaseService: relSvc, stackService: stackSvc, runtimePolicy: policy}
+		r := &applyReconciler{releaseService: relSvc, stackService: stackSvc}
 
 		err := r.authorizeMutation(release)(context.Background())
 
-		Expect(stderrors.Is(err, errReleaseSuperseded)).To(BeTrue())
+		Expect(err).NotTo(HaveOccurred())
 	})
 })

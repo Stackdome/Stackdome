@@ -50,9 +50,6 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 	if release.StackID != snapshot.ID {
 		return resultNil, fmt.Errorf("release %s stack identity does not match its snapshot", release.ID)
 	}
-	if err := r.runtimePolicy.RequireComputeAccess(ctx, snapshot.OrganisationID); err != nil {
-		return resultNil, err
-	}
 	expectedPolicyVersion := r.runtimePolicy.IsolationPolicyVersion()
 	if expectedPolicyVersion == "" {
 		return resultNil, fmt.Errorf("cloud isolation policy version is not configured")
@@ -107,7 +104,7 @@ func (r *provisioningPrerequisiteReconciler) Reconcile(ctx context.Context, rele
 		}
 	}
 	for _, addon := range addons {
-		if err := r.enqueuer.Enqueue(models.PostgresAddonOperand{ID: addon.ID, ReleaseID: release.ID}); err != nil {
+		if err := r.enqueuer.Enqueue(models.PostgresAddonOperand{ID: addon.ID}); err != nil {
 			return resultNil, fmt.Errorf("enqueue postgres prerequisite %s: %w", addon.ID, err)
 		}
 	}

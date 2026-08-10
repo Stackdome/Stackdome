@@ -25,7 +25,6 @@ type RuntimePolicy interface {
 	IsolationPolicyVersion() string
 	ActivateComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError
 	RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError
-	RequireComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitComputeMutationWithTx(ctx context.Context, organisationID string) (ComputeMutationAdmission, *errors.ServiceError)
 	AdmitOrganisationDeletion(ctx context.Context, organisationID string) *errors.ServiceError
 	AdmitStackMutationWithTx(ctx context.Context, mutation StackMutation) *errors.ServiceError
@@ -77,10 +76,6 @@ func (selfHostedRuntimePolicy) ActivateComputeAccessWithTx(context.Context, stri
 }
 
 func (selfHostedRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
-	return nil
-}
-
-func (selfHostedRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
 	return nil
 }
 
@@ -158,11 +153,6 @@ func (p *stackdomeCloudRuntimePolicy) ActivateComputeAccessWithTx(ctx context.Co
 
 func (p *stackdomeCloudRuntimePolicy) RequireComputeAccessWithTx(ctx context.Context, organisationID string) *errors.ServiceError {
 	_, serr := p.computeAccess.RequireWithTx(ctx, organisationID)
-	return serr
-}
-
-func (p *stackdomeCloudRuntimePolicy) RequireComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError {
-	_, serr := p.computeAccess.RequireAccess(ctx, organisationID)
 	return serr
 }
 

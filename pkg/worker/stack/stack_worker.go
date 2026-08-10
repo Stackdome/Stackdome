@@ -98,13 +98,6 @@ func (w *stackWorker) Execute(ctx context.Context, operand worker.Operand) (work
 			return worker.Result{}, nil
 		}
 		releaseID = authoritativeRelease.ID
-		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
-				log.Debug(ctx, "skipping provisioning without active compute access")
-				return worker.Result{}, nil
-			}
-			return worker.Result{}, admissionErr
-		}
 	}
 
 	if stack.Annotations.ToMap()[models.SkipClusterProvisioningAnnotation] == "true" && stack.DeletionTimestamp == nil && w.Env == config.EnvironmentTest {
@@ -161,12 +154,6 @@ func (w *stackWorker) authorizeMutation(stackID, releaseID string) worker.Mutati
 		}
 		if authoritativeRelease == nil || authoritativeRelease.ID != releaseID {
 			return worker.ErrMutationNotAuthorized
-		}
-		if admissionErr := w.runtimePolicy.RequireComputeAccess(ctx, stack.OrganisationID); admissionErr != nil {
-			if admissionErr.Reason == errors.ErrorCodeComputeAccessInactive {
-				return worker.ErrMutationNotAuthorized
-			}
-			return admissionErr
 		}
 		return nil
 	}

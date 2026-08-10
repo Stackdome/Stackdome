@@ -47,7 +47,7 @@ func (s *computeAccessStore) ActivateWithTx(ctx context.Context, activation stor
 		return nil, errors.GeneralError("maximum active shared compute leases must be greater than zero")
 	}
 
-	// Return the existing grant so retrying first-release admission is safe.
+	// Return the existing grant so retrying first-provisioning admission is safe.
 	access, err := findCurrentComputeAccessForUpdate(tx, activation.OrganisationID)
 	if err == nil {
 		return validateComputeAccess(access, activation.StartsAt)
@@ -147,17 +147,6 @@ func (s *computeAccessStore) AdmitComputeMutationWithTx(ctx context.Context, org
 	return validateComputeAccess(access, now)
 }
 
-func (s *computeAccessStore) GetActiveByOrganisationID(ctx context.Context, organisationID string, now time.Time) (*models.ComputeAccess, *errors.ServiceError) {
-	access, err := findCurrentComputeAccess(s.sessionFactory.New(ctx), organisationID, false)
-	if stderrors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, errors.ComputeAccessInactive()
-	}
-	if err != nil {
-		return nil, errors.GeneralError("failed to get compute access: %s", err.Error())
-	}
-	return validateComputeAccess(access, now)
-}
-
 func (s *computeAccessStore) HasSharedComputeLease(ctx context.Context, organisationID string) (bool, *errors.ServiceError) {
 	var count int64
 	if err := s.sessionFactory.New(ctx).Model(&models.SharedComputeLease{}).
@@ -169,27 +158,17 @@ func (s *computeAccessStore) HasSharedComputeLease(ctx context.Context, organisa
 }
 
 func findCurrentComputeAccessForUpdate(tx *gorm.DB, organisationID string) (*models.ComputeAccess, error) {
-	return findCurrentComputeAccess(tx, organisationID, true)
-}
-
-func findCurrentComputeAccess(tx *gorm.DB, organisationID string, lock bool) (*models.ComputeAccess, error) {
-	leaseQuery := tx
-	if lock {
-		leaseQuery = leaseQuery.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
-	}
 	var lease models.SharedComputeLease
-	if err := leaseQuery.
+	if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
 		Where("organisation_id = ? AND state <> ?", organisationID, models.SharedComputeLeaseStateCleaned).
 		First(&lease).Error; err != nil {
 		return nil, err
 	}
 
-	entitlementQuery := tx
-	if lock {
-		entitlementQuery = entitlementQuery.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
-	}
 	var entitlement models.ComputeEntitlement
-	if err := entitlementQuery.Where("id = ?", lease.EntitlementID).First(&entitlement).Error; err != nil {
+	if err := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate}).
+		Where("id = ?", lease.EntitlementID).
+		First(&entitlement).Error; err != nil {
 		return nil, err
 	}
 	return &models.ComputeAccess{Entitlement: &entitlement, Lease: &lease}, nil

@@ -19,7 +19,6 @@ var _ = Describe("RuntimePolicy", func() {
 		Expect(policy.DraftProvisioningMode()).To(Equal(ProvisioningModeEager))
 		Expect(policy.ActivateComputeAccessWithTx(context.Background(), "org-1")).To(BeNil())
 		Expect(policy.RequireComputeAccessWithTx(context.Background(), "org-1")).To(BeNil())
-		Expect(policy.RequireComputeAccess(context.Background(), "org-1")).To(BeNil())
 		admission, serr := policy.AdmitComputeMutationWithTx(context.Background(), "org-1")
 		Expect(serr).To(BeNil())
 		Expect(admission.ReconcileCluster).To(BeTrue())

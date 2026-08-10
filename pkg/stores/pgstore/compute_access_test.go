@@ -184,18 +184,6 @@ var _ = Describe("ComputeAccessStore", func() {
 		Entry("cleanup pending", func() *time.Time { value := now.Add(time.Hour); return &value }(), models.SharedComputeLeaseStateCleanupPending),
 	)
 
-	It("reads active compute access for worker authorization", func() {
-		expiresAt := now.Add(time.Hour)
-		existing := persistAccess("org-1", models.ComputeEntitlementStatusActive, models.SharedComputeLeaseStateActive, &expiresAt)
-		got, serr := store.GetActiveByOrganisationID(ctx, "org-1", now)
-		Expect(serr).To(BeNil())
-		Expect(got.Entitlement.ID).To(Equal(existing.Entitlement.ID))
-		Expect(got.Lease.ID).To(Equal(existing.Lease.ID))
-
-		_, serr = store.GetActiveByOrganisationID(ctx, "org-1", expiresAt)
-		Expect(serr.Reason).To(Equal(errors.ErrorCodeComputeAccessInactive))
-	})
-
 	DescribeTable("counts every non-cleaned lease state as shared capacity",
 		func(state models.SharedComputeLeaseState, wantCapacityError bool) {
 			expiresAt := now.Add(time.Hour)

@@ -18,10 +18,7 @@ type VolumeOperand struct {
 	ReleaseID string
 }
 
-type PostgresAddonOperand struct {
-	ID        string
-	ReleaseID string
-}
+type PostgresAddonOperand struct{ ID string }
 
 type OrgInviteOperand struct{ ID string }
 

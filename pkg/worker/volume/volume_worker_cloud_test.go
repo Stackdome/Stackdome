@@ -97,7 +97,7 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		Expect(created.Spec.Source.RemoteDir.CurrentDirectoryHash).To(Equal("release-hash"))
 	})
 
-	It("does not create a volume when allocation expires after the Kubernetes read", func() {
+	It("creates a volume after its release was admitted", func() {
 		ctrl := gomock.NewController(GinkgoT())
 		volumes := NewMockvolumeService(ctrl)
 		releases := NewMockreleaseService(ctrl)
@@ -124,11 +124,6 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		stacks.EXPECT().InternalGetStack(gomock.Any(), stack.ID).Return(stack, nil).Times(3)
 		releases.EXPECT().InternalResolveAuthoritativeWorkloadRelease(gomock.Any(), stack).Return(release, nil).Times(3)
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		gomock.InOrder(
-			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil),
-			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(nil),
-			policy.EXPECT().RequireComputeAccess(gomock.Any(), stack.OrganisationID).Return(errors.ComputeAccessInactive()),
-		)
 		clusters.EXPECT().GetClient(stack.ClusterID).Return(clusterClient, nil)
 		w := &volumeWorker{
 			volumeService: volumes, stackService: stacks, releaseService: releases, clusterManager: clusters,
@@ -142,7 +137,7 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 		Expect(result).To(Equal(worker.Result{}))
 		observed := &storagev1alpha1.Volume{}
 		Expect(clusterClient.Get(context.Background(), client.ObjectKey{Name: volume.Name, Namespace: volume.Namespace}, observed)).
-			To(MatchError(ContainSubstring("not found")))
+			To(Succeed())
 	})
 
 	It("does not replay a historical volume after a newer release converges", func() {
@@ -213,10 +208,6 @@ var _ = Describe("VolumeWorker cloud admission", func() {
 
 type activeVolumeRuntimePolicy struct{ inactiveVolumeRuntimePolicy }
 
-func (*activeVolumeRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
-	return nil
-}
-
 type inactiveVolumeRuntimePolicy struct{}
 
 func (*inactiveVolumeRuntimePolicy) OrganisationProvisioningMode() services.ProvisioningMode {
@@ -231,9 +222,6 @@ func (*inactiveVolumeRuntimePolicy) ActivateComputeAccessWithTx(context.Context,
 }
 func (*inactiveVolumeRuntimePolicy) RequireComputeAccessWithTx(context.Context, string) *errors.ServiceError {
 	return nil
-}
-func (*inactiveVolumeRuntimePolicy) RequireComputeAccess(context.Context, string) *errors.ServiceError {
-	return errors.ComputeAccessInactive()
 }
 func (*inactiveVolumeRuntimePolicy) AdmitComputeMutationWithTx(context.Context, string) (services.ComputeMutationAdmission, *errors.ServiceError) {
 	return services.ComputeMutationAdmission{}, nil

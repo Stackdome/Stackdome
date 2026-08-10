@@ -131,26 +131,6 @@ func (mr *MockpostgresAddonServiceMockRecorder) InternalList(ctx, query any, arg
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalList", reflect.TypeOf((*MockpostgresAddonService)(nil).InternalList), varargs...)
 }
 
-// InternalListIDs mocks base method.
-func (m *MockpostgresAddonService) InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	varargs := []any{ctx, query}
-	for _, a := range args {
-		varargs = append(varargs, a)
-	}
-	ret := m.ctrl.Call(m, "InternalListIDs", varargs...)
-	ret0, _ := ret[0].([]string)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalListIDs indicates an expected call of InternalListIDs.
-func (mr *MockpostgresAddonServiceMockRecorder) InternalListIDs(ctx, query any, args ...any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	varargs := append([]any{ctx, query}, args...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListIDs", reflect.TypeOf((*MockpostgresAddonService)(nil).InternalListIDs), varargs...)
-}
-
 // MockobjectStoreService is a mock of objectStoreService interface.
 type MockobjectStoreService struct {
 	ctrl     *gomock.Controller
@@ -306,21 +286,6 @@ func (m *MockreferenceService) EXPECT() *MockreferenceServiceMockRecorder {
 	return m.recorder
 }
 
-// InternalListReleaseReferents mocks base method.
-func (m *MockreferenceService) InternalListReleaseReferents(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalListReleaseReferents", ctx, releaseIDs, referentType)
-	ret0, _ := ret[0].([]models.ResourceReference)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalListReleaseReferents indicates an expected call of InternalListReleaseReferents.
-func (mr *MockreferenceServiceMockRecorder) InternalListReleaseReferents(ctx, releaseIDs, referentType any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListReleaseReferents", reflect.TypeOf((*MockreferenceService)(nil).InternalListReleaseReferents), ctx, releaseIDs, referentType)
-}
-
 // IsReferentInUse mocks base method.
 func (m *MockreferenceService) IsReferentInUse(ctx context.Context, referentType models.ReferentType, referentID string) (bool, []models.ResourceReference, *errors.ServiceError) {
 	m.ctrl.T.Helper()
@@ -335,112 +300,4 @@ func (m *MockreferenceService) IsReferentInUse(ctx context.Context, referentType
 func (mr *MockreferenceServiceMockRecorder) IsReferentInUse(ctx, referentType, referentID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsReferentInUse", reflect.TypeOf((*MockreferenceService)(nil).IsReferentInUse), ctx, referentType, referentID)
-}
-
-// MockreleaseService is a mock of releaseService interface.
-type MockreleaseService struct {
-	ctrl     *gomock.Controller
-	recorder *MockreleaseServiceMockRecorder
-	isgomock struct{}
-}
-
-// MockreleaseServiceMockRecorder is the mock recorder for MockreleaseService.
-type MockreleaseServiceMockRecorder struct {
-	mock *MockreleaseService
-}
-
-// NewMockreleaseService creates a new mock instance.
-func NewMockreleaseService(ctrl *gomock.Controller) *MockreleaseService {
-	mock := &MockreleaseService{ctrl: ctrl}
-	mock.recorder = &MockreleaseServiceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockreleaseService) EXPECT() *MockreleaseServiceMockRecorder {
-	return m.recorder
-}
-
-// InternalGet mocks base method.
-func (m *MockreleaseService) InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalGet", ctx, releaseID)
-	ret0, _ := ret[0].(*models.StackRelease)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalGet indicates an expected call of InternalGet.
-func (mr *MockreleaseServiceMockRecorder) InternalGet(ctx, releaseID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGet", reflect.TypeOf((*MockreleaseService)(nil).InternalGet), ctx, releaseID)
-}
-
-// InternalListAuthoritativeWorkload mocks base method.
-func (m *MockreleaseService) InternalListAuthoritativeWorkload(ctx context.Context) (*models.WorkloadAuthorityScan, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalListAuthoritativeWorkload", ctx)
-	ret0, _ := ret[0].(*models.WorkloadAuthorityScan)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalListAuthoritativeWorkload indicates an expected call of InternalListAuthoritativeWorkload.
-func (mr *MockreleaseServiceMockRecorder) InternalListAuthoritativeWorkload(ctx any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalListAuthoritativeWorkload", reflect.TypeOf((*MockreleaseService)(nil).InternalListAuthoritativeWorkload), ctx)
-}
-
-// InternalResolveAuthoritativeWorkloadRelease mocks base method.
-func (m *MockreleaseService) InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalResolveAuthoritativeWorkloadRelease", ctx, stack)
-	ret0, _ := ret[0].(*models.StackRelease)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalResolveAuthoritativeWorkloadRelease indicates an expected call of InternalResolveAuthoritativeWorkloadRelease.
-func (mr *MockreleaseServiceMockRecorder) InternalResolveAuthoritativeWorkloadRelease(ctx, stack any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalResolveAuthoritativeWorkloadRelease", reflect.TypeOf((*MockreleaseService)(nil).InternalResolveAuthoritativeWorkloadRelease), ctx, stack)
-}
-
-// MockstackService is a mock of stackService interface.
-type MockstackService struct {
-	ctrl     *gomock.Controller
-	recorder *MockstackServiceMockRecorder
-	isgomock struct{}
-}
-
-// MockstackServiceMockRecorder is the mock recorder for MockstackService.
-type MockstackServiceMockRecorder struct {
-	mock *MockstackService
-}
-
-// NewMockstackService creates a new mock instance.
-func NewMockstackService(ctrl *gomock.Controller) *MockstackService {
-	mock := &MockstackService{ctrl: ctrl}
-	mock.recorder = &MockstackServiceMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockstackService) EXPECT() *MockstackServiceMockRecorder {
-	return m.recorder
-}
-
-// InternalGetStack mocks base method.
-func (m *MockstackService) InternalGetStack(ctx context.Context, stackID string) (*models.Stack, *errors.ServiceError) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "InternalGetStack", ctx, stackID)
-	ret0, _ := ret[0].(*models.Stack)
-	ret1, _ := ret[1].(*errors.ServiceError)
-	return ret0, ret1
-}
-
-// InternalGetStack indicates an expected call of InternalGetStack.
-func (mr *MockstackServiceMockRecorder) InternalGetStack(ctx, stackID any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "InternalGetStack", reflect.TypeOf((*MockstackService)(nil).InternalGetStack), ctx, stackID)
 }

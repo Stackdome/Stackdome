@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Stackdome/stackdome/pkg/builders"
-	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/services"
@@ -68,17 +67,8 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		return fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 	}
 
-	It("fails closed before enqueueing when the allocation is inactive", func() {
-		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(errors.ComputeAccessInactive())
-		result, err := newReconciler().Reconcile(ctx, release)
-		Expect(result).To(Equal(resultNil))
-		Expect(err).To(MatchError(ContainSubstring(errors.ErrorCodeComputeAccessInactive)))
-	})
-
 	It("fails closed before enqueueing when the cloud isolation version is absent", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		policy.EXPECT().IsolationPolicyVersion().Return("")
 
 		result, err := newReconciler().Reconcile(ctx, release)
@@ -88,7 +78,6 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("enqueues prerequisites and requeues until all are observed ready", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)
@@ -96,7 +85,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		addons.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStatePending}}, nil)
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1", ReleaseID: "release-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1", ReleaseID: "release-1"}).Return(nil)
-		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1", ReleaseID: "release-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(newClusterClient(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue}}}), nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 
@@ -107,7 +96,6 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("uses only release snapshot volumes after the draft gains another volume", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns", Volumes: []*models.Volume{{ID: "volume-added-after-release"}}}, nil)
@@ -115,7 +103,7 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 		addons.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStateReady}}, nil)
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1", ReleaseID: "release-1"}).Return(nil)
 		enqueuer.EXPECT().Enqueue(models.VolumeOperand{ID: "volume-1", ReleaseID: "release-1"}).Return(nil)
-		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1", ReleaseID: "release-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(newClusterClient(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue, models.CloudPolicyReadyLabelKey: testCloudPolicyVersion}}}), nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 
@@ -126,14 +114,13 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("requeues when tenant identity exists but guard policy readiness is absent", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		release.Snapshot.Volumes = nil
 		ns := &models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1", Labels: models.Labels{{Key: models.CloudTenantLabelKey, Value: models.CloudTenantLabelValue}}}
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(ns, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "org-1", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)
 		addons.EXPECT().InternalGetPostgresAddon(ctx, "addon-1").Return(&models.PostgresAddon{ID: "addon-1", Status: models.PostgresAddonStatus{State: models.PostgresAddonStateReady}}, nil)
 		enqueuer.EXPECT().Enqueue(models.StackOperand{ID: "stack-1", ReleaseID: "release-1"}).Return(nil)
-		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1", ReleaseID: "release-1"}).Return(nil)
+		enqueuer.EXPECT().Enqueue(models.PostgresAddonOperand{ID: "addon-1"}).Return(nil)
 		clusters.EXPECT().GetClient("cluster-1").Return(newClusterClient(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "demo-ns", Labels: map[string]string{models.CloudTenantLabelKey: models.CloudTenantLabelValue}}}), nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 
@@ -144,7 +131,6 @@ var _ = Describe("cloud provisioning prerequisite", func() {
 
 	It("rejects a current stack whose persisted identity differs from the release snapshot", func() {
 		policy.EXPECT().DraftProvisioningMode().Return(services.ProvisioningModeDatabaseOnly)
-		policy.EXPECT().RequireComputeAccess(ctx, "org-1").Return(nil)
 		policy.EXPECT().IsolationPolicyVersion().Return(testCloudPolicyVersion)
 		namespaces.EXPECT().Get(ctx, "namespace-1").Return(&models.Namespace{ID: "namespace-1", Name: "demo-ns", OrganisationID: "org-1"}, nil)
 		stacks.EXPECT().InternalGetStack(ctx, "stack-1").Return(&models.Stack{ID: "stack-1", OrganisationID: "other-org", ClusterID: "cluster-1", NamespaceID: "namespace-1", Namespace: "demo-ns"}, nil)

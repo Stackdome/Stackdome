@@ -16,7 +16,6 @@ type clusterClientGetter interface {
 type postgresAddonService interface {
 	InternalGetPostgresAddon(ctx context.Context, id string) (*models.PostgresAddon, *errors.ServiceError)
 	InternalList(ctx context.Context, query string, args ...any) ([]*models.PostgresAddon, *errors.ServiceError)
-	InternalListIDs(ctx context.Context, query string, args ...any) ([]string, *errors.ServiceError)
 	InternalDeleteFromDB(ctx context.Context, id string) *errors.ServiceError
 }
 
@@ -35,15 +34,4 @@ type secretService interface {
 
 type referenceService interface {
 	IsReferentInUse(ctx context.Context, referentType models.ReferentType, referentID string) (bool, []models.ResourceReference, *errors.ServiceError)
-	InternalListReleaseReferents(ctx context.Context, releaseIDs []string, referentType models.ReferentType) ([]models.ResourceReference, *errors.ServiceError)
-}
-
-type releaseService interface {
-	InternalGet(ctx context.Context, releaseID string) (*models.StackRelease, *errors.ServiceError)
-	InternalResolveAuthoritativeWorkloadRelease(ctx context.Context, stack *models.Stack) (*models.StackRelease, *errors.ServiceError)
-	InternalListAuthoritativeWorkload(ctx context.Context) (*models.WorkloadAuthorityScan, *errors.ServiceError)
-}
-
-type stackService interface {
-	InternalGetStack(ctx context.Context, stackID string) (*models.Stack, *errors.ServiceError)
 }

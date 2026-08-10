@@ -54,7 +54,6 @@ type eventRecorder interface {
 type runtimePolicy interface {
 	DraftProvisioningMode() services.ProvisioningMode
 	IsolationPolicyVersion() string
-	RequireComputeAccess(ctx context.Context, organisationID string) *errors.ServiceError
 }
 
 type namespaceService interface {
