@@ -173,7 +173,7 @@ func findCurrentComputeAccessForUpdate(tx *gorm.DB, organisationID string) (*mod
 
 func findCurrentComputeAccess(tx *gorm.DB, organisationID string, lock bool) (*models.ComputeAccess, error) {
 	leaseQuery := tx
-	if lock && tx.Name() == postgresDialectName {
+	if lock {
 		leaseQuery = leaseQuery.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	}
 	var lease models.SharedComputeLease
@@ -184,7 +184,7 @@ func findCurrentComputeAccess(tx *gorm.DB, organisationID string, lock bool) (*m
 	}
 
 	entitlementQuery := tx
-	if lock && tx.Name() == postgresDialectName {
+	if lock {
 		entitlementQuery = entitlementQuery.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	}
 	var entitlement models.ComputeEntitlement
@@ -195,10 +195,7 @@ func findCurrentComputeAccess(tx *gorm.DB, organisationID string, lock bool) (*m
 }
 
 func findComputeEntitlementBySourceForUpdate(tx *gorm.DB, organisationID string, source models.ComputeEntitlementSource) (*models.ComputeEntitlement, error) {
-	query := tx
-	if tx.Name() == postgresDialectName {
-		query = query.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
-	}
+	query := tx.Clauses(clause.Locking{Strength: clause.LockingStrengthUpdate})
 	var entitlement models.ComputeEntitlement
 	if err := query.Where("organisation_id = ? AND source = ?", organisationID, source).First(&entitlement).Error; err != nil {
 		return nil, err
