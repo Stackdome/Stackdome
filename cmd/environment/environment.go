@@ -6,6 +6,7 @@ import (
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
 	emailpkg "github.com/Stackdome/stackdome/pkg/email"
 	applogger "github.com/Stackdome/stackdome/pkg/logger"
@@ -41,6 +42,7 @@ type Env struct {
 	EmailService                emailpkg.EmailService
 	LeadershipFlag              *leadership.Flag
 	EncryptionService           services.EncryptionService
+	ComputePolicy               computequota.Policy
 	Logger                      applogger.Logger
 	Observability               *observability.Metrics
 }
