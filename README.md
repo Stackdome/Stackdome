@@ -309,7 +309,6 @@ The cluster agent reconciles these CRDs (defined in the [cluster-agent](https://
 | NFSServer | storage.stackdome.io | In-cluster NFS for shared volumes |
 | ImageBuild | builds.stackdome.io | Kaniko-based container image builds |
 | ClusterRegistry | registry.stackdome.io | In-cluster container registry (Zot) |
-| WorkspaceUser | users.stackdome.io | User SSH access for workspaces |
 
 ## Documentation
 

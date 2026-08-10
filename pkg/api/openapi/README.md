@@ -177,11 +177,6 @@ Class | Method | HTTP request | Description
 *DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameStacksPost**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnamestackspost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/stacks | Create a new stack
 *DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnamevolumesiddelete) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id} | Delete a volume
 *DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameVolumesIdGet**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnamevolumesidget) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/volumes/{id} | Get a specific volume
-*DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersCurrentGet**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnameworkspaceuserscurrentget) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/current | Get the workspace user for the current user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnameworkspaceusersiddelete) | **Delete** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id} | Delete a workspace user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdGet**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnameworkspaceusersidget) | **Get** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id} | Get a workspace user by ID
-*DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersIdPut**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnameworkspaceusersidput) | **Put** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users/{id} | Update a workspace user
-*DefaultApi* | [**ApiV1OrganizationsOrgIdProjectsProjectNameWorkspaceUsersPost**](docs/DefaultApi.md#apiv1organizationsorgidprojectsprojectnameworkspaceuserspost) | **Post** /api/v1/organizations/{org_id}/projects/{project_name}/workspace-users | Create a new workspace user
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsGet**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsget) | **Get** /api/v1/organizations/{org_id}/registry-credentials | List registry credentials for the organization
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsIdDelete**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsiddelete) | **Delete** /api/v1/organizations/{org_id}/registry-credentials/{id} | Delete a registry credential
 *DefaultApi* | [**ApiV1OrganizationsOrgIdRegistryCredentialsIdGet**](docs/DefaultApi.md#apiv1organizationsorgidregistrycredentialsidget) | **Get** /api/v1/organizations/{org_id}/registry-credentials/{id} | Get a registry credential
@@ -435,10 +430,6 @@ Class | Method | HTTP request | Description
  - [VolumeSpec](docs/VolumeSpec.md)
  - [VolumeStatus](docs/VolumeStatus.md)
  - [WALConfiguration](docs/WALConfiguration.md)
- - [WorkspaceUser](docs/WorkspaceUser.md)
- - [WorkspaceUserState](docs/WorkspaceUserState.md)
- - [WorkspaceUserStatus](docs/WorkspaceUserStatus.md)
- - [WorkspaceUserStatusProvisionedNamespacesInner](docs/WorkspaceUserStatusProvisionedNamespacesInner.md)
 
 
 ## Documentation For Authorization

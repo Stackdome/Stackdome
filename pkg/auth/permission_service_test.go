@@ -196,13 +196,6 @@ var _ = Describe("PermissionService.Check", func() {
 			Entry("delete object store", permCheck{
 				domain: projectABC, resource: auth.ResourceObjectStores, resourceID: "os-1", action: auth.ActionDelete, shouldAllow: true,
 			}),
-			Entry("create workspace user", permCheck{
-				domain: projectABC, resource: auth.ResourceWorkspaceUsers, action: auth.ActionCreate, shouldAllow: true,
-			}),
-			Entry("write workspace user", permCheck{
-				domain: projectABC, resource: auth.ResourceWorkspaceUsers, resourceID: "wu-1", action: auth.ActionWrite, shouldAllow: true,
-			}),
-
 			// Org-scoped via OrgMember — read only
 			Entry("list clusters via OrgMember", permCheck{
 				domain: orgABC, resource: auth.ResourceClusters, action: auth.ActionList, shouldAllow: true,

@@ -27,25 +27,22 @@ type VolumeClusterResourceService interface {
 }
 
 type VolumeClusterResourceServiceSpec struct {
-	ClusterService       DBClusterService
-	WorkspaceUserService DBWorkspaceUserService
-	ClusterManager       clustermanager.ClusterManager
-	Logger               logger.Logger
+	ClusterService DBClusterService
+	ClusterManager clustermanager.ClusterManager
+	Logger         logger.Logger
 }
 
 type volumeClusterService struct {
-	clusterService       DBClusterService
-	workspaceUserService DBWorkspaceUserService
-	clusterManager       clustermanager.ClusterManager
-	logger               logger.Logger
+	clusterService DBClusterService
+	clusterManager clustermanager.ClusterManager
+	logger         logger.Logger
 }
 
 func NewVolumeClusterResourceService(spec VolumeClusterResourceServiceSpec) VolumeClusterResourceService {
 	return &volumeClusterService{
-		clusterService:       spec.ClusterService,
-		workspaceUserService: spec.WorkspaceUserService,
-		clusterManager:       spec.ClusterManager,
-		logger:               spec.Logger,
+		clusterService: spec.ClusterService,
+		clusterManager: spec.ClusterManager,
+		logger:         spec.Logger,
 	}
 }
 
