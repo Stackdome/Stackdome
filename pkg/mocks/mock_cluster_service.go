@@ -159,7 +159,7 @@ func (mr *MockClusterServiceMockRecorder) InjectClusterManager(clusterManager an
 }
 
 // InternalEnsurePlatformWildcardTLS mocks base method.
-func (m *MockClusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
+func (m *MockClusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.PlatformConfig) *errors.ServiceError {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "InternalEnsurePlatformWildcardTLS", ctx, cluster, cfg)
 	ret0, _ := ret[0].(*errors.ServiceError)

@@ -180,25 +180,11 @@ func (c *ClusterConfig) Validate() error {
 }
 
 func (c *ClusterConfig) LoadEnvVariables() error {
-	shared := clusterConfigFromEnv(
+	*c = clusterConfigFromEnv(
 		EnvSharedComputeClusterAPIURL,
 		EnvSharedComputeClusterCAData,
 		EnvSharedComputeClusterToken,
 	)
-	legacy := clusterConfigFromEnv(
-		EnvPlatformClusterAPIURL,
-		EnvPlatformClusterCAData,
-		EnvPlatformClusterToken,
-	)
-
-	switch {
-	case shared.AnySet() && legacy.AnySet() && shared != legacy:
-		return ErrConflictingSharedComputeClusterConfig
-	case shared.AnySet():
-		*c = shared
-	case legacy.AnySet():
-		*c = legacy
-	}
 	return nil
 }
 

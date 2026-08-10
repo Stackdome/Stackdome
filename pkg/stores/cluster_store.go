@@ -22,6 +22,7 @@ type ClusterStore interface {
 	MarkDeletingWithTx(ctx context.Context, ID string, at time.Time) *errors.ServiceError
 	ListIDsForImageRegistryReconciliation(ctx context.Context) ([]string, *errors.ServiceError)
 	GetByClusterUrl(ctx context.Context, clusterURL string) (*models.Cluster, *errors.ServiceError)
+	FindAnyClusterIDBySharedCompute(ctx context.Context, sharedCompute bool) (string, *errors.ServiceError)
 	UpdateSharedComputeCluster(ctx context.Context, cluster *models.Cluster) *errors.ServiceError
 	UpdateClusterInfo(ctx context.Context, ID string, info *models.ClusterInfo) *errors.ServiceError
 	ListAll(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)

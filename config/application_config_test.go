@@ -318,56 +318,29 @@ var _ = Describe("Compute mode configuration", func() {
 	})
 })
 
-var _ = Describe("Shared compute environment compatibility", func() {
+var _ = Describe("Shared compute environment", func() {
 	BeforeEach(func() {
 		for _, name := range []string{
 			EnvSharedComputeClusterAPIURL.Name,
 			EnvSharedComputeClusterCAData.Name,
 			EnvSharedComputeClusterToken.Name,
-			EnvPlatformClusterAPIURL.Name,
-			EnvPlatformClusterCAData.Name,
-			EnvPlatformClusterToken.Name,
 		} {
 			Expect(os.Unsetenv(name)).To(Succeed())
 		}
 	})
 
-	It("loads the legacy platform cluster variables when the new variables are absent", func() {
-		GinkgoT().Setenv(EnvPlatformClusterAPIURL.Name, "https://legacy.example.com")
-		GinkgoT().Setenv(EnvPlatformClusterCAData.Name, "legacy-ca")
-		GinkgoT().Setenv(EnvPlatformClusterToken.Name, "legacy-token")
+	It("loads the shared compute cluster variables", func() {
+		GinkgoT().Setenv(EnvSharedComputeClusterAPIURL.Name, "https://shared.example.com")
+		GinkgoT().Setenv(EnvSharedComputeClusterCAData.Name, "shared-ca")
+		GinkgoT().Setenv(EnvSharedComputeClusterToken.Name, "shared-token")
 
 		cfg := NewApplicationConfig()
 		Expect(cfg.LoadEnvVariables()).To(Succeed())
 		Expect(cfg.SharedComputeCluster).To(Equal(&ClusterConfig{
-			ClusterURL:    "https://legacy.example.com",
-			ClusterCAData: "legacy-ca",
-			Token:         "legacy-token",
+			ClusterURL:    "https://shared.example.com",
+			ClusterCAData: "shared-ca",
+			Token:         "shared-token",
 		}))
-	})
-
-	It("accepts matching legacy and new variables during the transition", func() {
-		for _, envVar := range []EnvVar[string]{EnvSharedComputeClusterAPIURL, EnvPlatformClusterAPIURL} {
-			GinkgoT().Setenv(envVar.Name, "https://shared.example.com")
-		}
-		for _, envVar := range []EnvVar[string]{EnvSharedComputeClusterCAData, EnvPlatformClusterCAData} {
-			GinkgoT().Setenv(envVar.Name, "shared-ca")
-		}
-		for _, envVar := range []EnvVar[string]{EnvSharedComputeClusterToken, EnvPlatformClusterToken} {
-			GinkgoT().Setenv(envVar.Name, "shared-token")
-		}
-
-		cfg := NewApplicationConfig()
-		Expect(cfg.LoadEnvVariables()).To(Succeed())
-		Expect(cfg.SharedComputeCluster.ClusterURL).To(Equal("https://shared.example.com"))
-	})
-
-	It("rejects conflicting legacy and new variables", func() {
-		GinkgoT().Setenv(EnvSharedComputeClusterAPIURL.Name, "https://new.example.com")
-		GinkgoT().Setenv(EnvPlatformClusterAPIURL.Name, "https://legacy.example.com")
-
-		cfg := NewApplicationConfig()
-		Expect(cfg.LoadEnvVariables()).To(MatchError(ErrConflictingSharedComputeClusterConfig))
 	})
 })
 

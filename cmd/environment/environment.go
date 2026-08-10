@@ -30,7 +30,7 @@ type Env struct {
 	Services                    Services
 	DBSession                   db.SessionFactory
 	Config                      *config.ApplicationConfig
-	BootstrapConfig             *config.BootstrapConfig
+	PlatformConfig              *config.PlatformConfig
 	Clients                     Clients
 	ClusterManager              clustermanager.ClusterManager
 	WorkerManager               workermanager.WorkerManager

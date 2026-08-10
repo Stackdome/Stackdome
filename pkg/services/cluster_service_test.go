@@ -19,7 +19,6 @@ import (
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	certutil "k8s.io/client-go/util/cert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -27,17 +26,6 @@ import (
 )
 
 // Suite bootstrapped by TestServices in services_suite_test.go.
-
-type assigningUIDClient struct {
-	client.Client
-}
-
-func (c *assigningUIDClient) Create(ctx context.Context, object client.Object, opts ...client.CreateOption) error {
-	if object.GetUID() == "" {
-		object.SetUID(types.UID("test-" + object.GetName()))
-	}
-	return c.Client.Create(ctx, object, opts...)
-}
 
 var _ = Describe("ClusterService", func() {
 	const masterKey = "this-is-a-very-secure-master-key-that-is-at-least-64-characters-long-for-security-validation"
@@ -770,8 +758,8 @@ var _ = Describe("ClusterService", func() {
 			tlsCtx               context.Context
 		)
 
-		fullConfig := func() *config.BootstrapConfig {
-			return &config.BootstrapConfig{
+		fullConfig := func() *config.PlatformConfig {
+			return &config.PlatformConfig{
 				BaseDomain:            baseDomain,
 				DNSCloudflareAPIToken: cloudflareToken,
 				ACMEEnvironment:       config.ACMEEnvironmentStaging,

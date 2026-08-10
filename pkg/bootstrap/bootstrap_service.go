@@ -15,7 +15,7 @@ import (
 type Spec struct {
 	OrganisationService services.OrganisationService
 	ClusterService      services.ClusterService
-	BootstrapConfig     *config.BootstrapConfig
+	PlatformConfig      *config.PlatformConfig
 	ClusterConfig       *config.ClusterConfig
 	Logger              logger.Logger
 }
@@ -23,7 +23,7 @@ type Spec struct {
 type Service struct {
 	organisationService services.OrganisationService
 	clusterService      services.ClusterService
-	bootstrapCfg        *config.BootstrapConfig
+	platformCfg         *config.PlatformConfig
 	clusterCfg          *config.ClusterConfig
 	logger              logger.Logger
 }
@@ -32,7 +32,7 @@ func NewService(spec Spec) *Service {
 	return &Service{
 		organisationService: spec.OrganisationService,
 		clusterService:      spec.ClusterService,
-		bootstrapCfg:        spec.BootstrapConfig,
+		platformCfg:         spec.PlatformConfig,
 		clusterCfg:          spec.ClusterConfig,
 		logger:              spec.Logger,
 	}
@@ -53,8 +53,8 @@ func (s *Service) Run(ctx context.Context) error {
 	}
 
 	systemIdentity := &auth.Identity{IsSystem: true, OrgID: org.ID}
-	if s.bootstrapCfg.PlatformTLSEnabled {
-		systemIdentity.ContactEmail = s.bootstrapCfg.Email
+	if s.platformCfg.PlatformTLSEnabled {
+		systemIdentity.ContactEmail = s.platformCfg.Email
 	}
 	sysCtx := auth.SetIdentityInContext(ctx, systemIdentity)
 
@@ -70,8 +70,8 @@ func (s *Service) Run(ctx context.Context) error {
 		return fmt.Errorf("failed to upsert shared-compute cluster: %w", cErr)
 	}
 
-	if s.bootstrapCfg.PlatformTLSEnabled {
-		if err := s.clusterService.InternalEnsurePlatformWildcardTLS(sysCtx, cluster, s.bootstrapCfg); err != nil {
+	if s.platformCfg.PlatformTLSEnabled {
+		if err := s.clusterService.InternalEnsurePlatformWildcardTLS(sysCtx, cluster, s.platformCfg); err != nil {
 			return fmt.Errorf("failed to create or update platform wildcard TLS: %w", err)
 		}
 	}

@@ -101,6 +101,21 @@ func (mr *MockClusterStoreMockRecorder) DeleteWithTx(ctx, ID any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteWithTx", reflect.TypeOf((*MockClusterStore)(nil).DeleteWithTx), ctx, ID)
 }
 
+// FindAnyClusterIDBySharedCompute mocks base method.
+func (m *MockClusterStore) FindAnyClusterIDBySharedCompute(ctx context.Context, sharedCompute bool) (string, *errors.ServiceError) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "FindAnyClusterIDBySharedCompute", ctx, sharedCompute)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(*errors.ServiceError)
+	return ret0, ret1
+}
+
+// FindAnyClusterIDBySharedCompute indicates an expected call of FindAnyClusterIDBySharedCompute.
+func (mr *MockClusterStoreMockRecorder) FindAnyClusterIDBySharedCompute(ctx, sharedCompute any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "FindAnyClusterIDBySharedCompute", reflect.TypeOf((*MockClusterStore)(nil).FindAnyClusterIDBySharedCompute), ctx, sharedCompute)
+}
+
 // Get mocks base method.
 func (m *MockClusterStore) Get(ctx context.Context, ID string) (*models.Cluster, *errors.ServiceError) {
 	m.ctrl.T.Helper()

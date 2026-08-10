@@ -19,16 +19,16 @@ func emptyCluster() *ClusterConfig {
 	return &ClusterConfig{}
 }
 
-func emptyRouting() *BootstrapConfig {
-	return &BootstrapConfig{}
+func emptyRouting() *PlatformConfig {
+	return &PlatformConfig{}
 }
 
-func routingWithoutTLS() *BootstrapConfig {
-	return &BootstrapConfig{BaseDomain: "apps.example.com"}
+func routingWithoutTLS() *PlatformConfig {
+	return &PlatformConfig{BaseDomain: "apps.example.com"}
 }
 
-func routingWithTLS() *BootstrapConfig {
-	return &BootstrapConfig{
+func routingWithTLS() *PlatformConfig {
+	return &PlatformConfig{
 		BaseDomain:            "apps.example.com",
 		PlatformTLSEnabled:    true,
 		Email:                 "ops@example.com",
@@ -90,10 +90,10 @@ var _ = Describe("shared compute provisioning and platform routing", func() {
 	})
 
 	DescribeTable("validates independent shared compute and routing configuration",
-		func(runtime RuntimeMode, mode ComputeMode, cluster *ClusterConfig, bootstrap *BootstrapConfig, expectedError error) {
+		func(runtime RuntimeMode, mode ComputeMode, cluster *ClusterConfig, platform *PlatformConfig, expectedError error) {
 			err := ValidateSharedComputeProvisioning(mode, cluster)
 			if err == nil {
-				err = ValidatePlatformRouting(runtime, mode, bootstrap)
+				err = ValidatePlatformRouting(runtime, mode, platform)
 			}
 			if expectedError == nil {
 				Expect(err).NotTo(HaveOccurred())
@@ -115,10 +115,10 @@ var _ = Describe("shared compute provisioning and platform routing", func() {
 	})
 
 	It("requires platform TLS configuration to be explicitly enabled", func() {
-		bootstrap := routingWithoutTLS()
-		bootstrap.Email = "ops@example.com"
+		platform := routingWithoutTLS()
+		platform.Email = "ops@example.com"
 
-		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, bootstrap)).
+		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, platform)).
 			To(MatchError(ErrPlatformTLSConfigNotAllowed))
 	})
 
@@ -127,40 +127,41 @@ var _ = Describe("shared compute provisioning and platform routing", func() {
 		Expect(os.Unsetenv(EnvPlatformACMEEnvironment.Name)).To(Succeed())
 		Expect(os.Unsetenv(EnvPlatformTLSNamespace.Name)).To(Succeed())
 
-		disabled := NewBootstrapConfig()
+		disabled := NewPlatformConfig()
 		Expect(disabled.LoadEnvVariables()).To(Succeed())
 		Expect(disabled.ACMEEnvironment).To(BeEmpty())
 		Expect(disabled.TLSNamespace).To(BeEmpty())
 
 		GinkgoT().Setenv(EnvPlatformTLSEnabled.Name, "true")
-		enabled := NewBootstrapConfig()
+		enabled := NewPlatformConfig()
 		Expect(enabled.LoadEnvVariables()).To(Succeed())
 		Expect(enabled.ACMEEnvironment).To(Equal(ACMEEnvironmentProduction))
 		Expect(enabled.TLSNamespace).To(Equal(DefaultPlatformTLSNamespace))
 	})
 
-	It("preserves legacy TLS configuration when the enable flag is absent", func() {
+	It("does not infer TLS enablement from TLS-only configuration", func() {
 		GinkgoT().Setenv(EnvPlatformEmail.Name, "ops@example.com")
 		GinkgoT().Setenv(EnvPlatformBaseDomain.Name, "apps.example.com")
 		GinkgoT().Setenv(EnvPlatformDNSCloudflareAPIToken.Name, "cloudflare-token")
 
-		bootstrap := NewBootstrapConfig()
-		Expect(bootstrap.LoadEnvVariables()).To(Succeed())
+		platform := NewPlatformConfig()
+		Expect(platform.LoadEnvVariables()).To(Succeed())
 
-		Expect(bootstrap.PlatformTLSEnabled).To(BeTrue())
-		Expect(bootstrap.ACMEEnvironment).To(Equal(ACMEEnvironmentProduction))
-		Expect(bootstrap.TLSNamespace).To(Equal(DefaultPlatformTLSNamespace))
-		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, bootstrap)).To(Succeed())
+		Expect(platform.PlatformTLSEnabled).To(BeFalse())
+		Expect(platform.ACMEEnvironment).To(BeEmpty())
+		Expect(platform.TLSNamespace).To(BeEmpty())
+		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, platform)).
+			To(MatchError(ErrPlatformTLSConfigNotAllowed))
 	})
 
 	It("keeps routing without TLS when no TLS configuration is present", func() {
 		GinkgoT().Setenv(EnvPlatformBaseDomain.Name, "apps.example.com")
 
-		bootstrap := NewBootstrapConfig()
-		Expect(bootstrap.LoadEnvVariables()).To(Succeed())
+		platform := NewPlatformConfig()
+		Expect(platform.LoadEnvVariables()).To(Succeed())
 
-		Expect(bootstrap.PlatformTLSEnabled).To(BeFalse())
-		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, bootstrap)).To(Succeed())
+		Expect(platform.PlatformTLSEnabled).To(BeFalse())
+		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, platform)).To(Succeed())
 	})
 
 	It("retains explicit TLS configuration when TLS is disabled", func() {
@@ -168,13 +169,13 @@ var _ = Describe("shared compute provisioning and platform routing", func() {
 		GinkgoT().Setenv(EnvPlatformACMEEnvironment.Name, ACMEEnvironmentStaging)
 		GinkgoT().Setenv(EnvPlatformTLSNamespace.Name, "custom-tls")
 
-		bootstrap := NewBootstrapConfig()
-		Expect(bootstrap.LoadEnvVariables()).To(Succeed())
-		Expect(bootstrap.ACMEEnvironment).To(Equal(ACMEEnvironmentStaging))
-		Expect(bootstrap.TLSNamespace).To(Equal("custom-tls"))
+		platform := NewPlatformConfig()
+		Expect(platform.LoadEnvVariables()).To(Succeed())
+		Expect(platform.ACMEEnvironment).To(Equal(ACMEEnvironmentStaging))
+		Expect(platform.TLSNamespace).To(Equal("custom-tls"))
 
-		bootstrap.BaseDomain = "apps.example.com"
-		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, bootstrap)).
+		platform.BaseDomain = "apps.example.com"
+		Expect(ValidatePlatformRouting(RuntimeModeSelfHosted, ComputeModeShared, platform)).
 			To(MatchError(ErrPlatformTLSConfigNotAllowed))
 	})
 

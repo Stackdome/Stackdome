@@ -47,7 +47,7 @@ type ClusterService interface {
 	InternalListAllClusters(ctx context.Context) ([]*models.Cluster, *errors.ServiceError)
 	InjectClusterManager(clusterManager clustermanager.ClusterManager)
 	InternalUpdateClusterInfo(ctx context.Context, clusterID string, info *models.ClusterInfo) *errors.ServiceError
-	InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError
+	InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.PlatformConfig) *errors.ServiceError
 	DefaultStorageClass(ctx context.Context, clusterID string) (string, *errors.ServiceError)
 }
 
@@ -527,7 +527,7 @@ func (s *clusterService) ensureClusterIssuer(ctx context.Context, cluster *model
 // InternalEnsurePlatformWildcardTLS creates or reconciles the namespace-scoped
 // DNS-01 resources used to issue a wildcard certificate for the platform apps
 // domain.
-func (s *clusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.BootstrapConfig) *errors.ServiceError {
+func (s *clusterService) InternalEnsurePlatformWildcardTLS(ctx context.Context, cluster *models.Cluster, cfg *config.PlatformConfig) *errors.ServiceError {
 	if cfg.BaseDomain == "" {
 		return nil
 	}
