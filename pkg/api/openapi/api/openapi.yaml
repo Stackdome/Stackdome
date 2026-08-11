@@ -12416,8 +12416,9 @@ components:
         size: size
       properties:
         size:
-          description: "Storage size (e.g., 10Gi, 100Gi)"
-          pattern: "^[0-9]+[KMGTP]i?$"
+          description: "Storage size (e.g., 10Gi, 100Gi). An empty value uses the\
+            \ runtime's configured default."
+          pattern: "^(|[0-9]+[KMGTP]i?)$"
           type: string
         storage_class:
           description: Kubernetes storage class name. Omit to use the cluster's default

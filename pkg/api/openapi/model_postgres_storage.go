@@ -16,7 +16,7 @@ import (
 
 // PostgresStorage struct for PostgresStorage
 type PostgresStorage struct {
-	// Storage size (e.g., 10Gi, 100Gi)
+	// Storage size (e.g., 10Gi, 100Gi). An empty value uses the runtime's configured default.
 	Size string `json:"size"`
 	// Kubernetes storage class name. Omit to use the cluster's default storage class.
 	StorageClass *string `json:"storage_class,omitempty"`

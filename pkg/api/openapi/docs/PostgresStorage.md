@@ -4,7 +4,7 @@
 
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**Size** | **string** | Storage size (e.g., 10Gi, 100Gi) | 
+**Size** | **string** | Storage size (e.g., 10Gi, 100Gi). An empty value uses the runtime&#39;s configured default. |
 **StorageClass** | Pointer to **string** | Kubernetes storage class name. Omit to use the cluster&#39;s default storage class. | [optional] 
 
 ## Methods
@@ -73,5 +73,4 @@ HasStorageClass returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
-
 
