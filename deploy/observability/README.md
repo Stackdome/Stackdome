@@ -16,6 +16,20 @@ To view the dashboard in Grafana:
 3. Select the Prometheus datasource that scrapes `stackdome-api-metrics`.
 4. Select **Import**.
 
+## Reading the dashboard
+
+The first viewport is an operations summary. Start with request rate, 5xx rate,
+failed stacks, worker queue depth, and snapshot collection. The latency strip
+shows the traffic-weighted average plus p50, p95, and p99 across user-facing
+requests. Health, metrics, and streaming routes are excluded so long-lived or
+internal traffic does not distort the service-level view.
+
+Treat p95 as the primary latency signal: its two-second critical threshold
+matches the `StackdomeAPIHighLatency` alert. Average and p50 describe the common
+case, while p99 exposes rare severe slowness. Use **Slow routes (p95)** in the
+API diagnostics section to identify which route is responsible for a rising
+aggregate percentile.
+
 Example ServiceMonitor endpoint:
 
 ```yaml
@@ -33,7 +47,7 @@ Run:
 make observability-check
 ```
 
-The target installs the pinned Prometheus `v3.13.2` `promtool` binary at `bin/promtool`, validates the alert rules, and parses the Grafana dashboard JSON. The binary stays inside the ignored project `bin/` directory and is reused on later runs. Run `make promtool` when only the tool installation is needed.
+The target installs the pinned Prometheus `v3.13.2` `promtool` binary at `bin/promtool`, validates the alert rules, parses the Grafana dashboard JSON, and checks the dashboard's overview and latency-query contract. The binary stays inside the ignored project `bin/` directory and is reused on later runs. Run `make promtool` when only the tool installation is needed.
 
 ## Five-minute smoke test
 

@@ -104,6 +104,7 @@ observability-check: promtool ## Validate the alpha dashboard and Prometheus rul
 		tail -n +2 | sed 's/^  //' > "$$tmp_rules"; \
 	"$(PROMTOOL)" check rules "$$tmp_rules"; \
 	jq empty deploy/observability/grafana/alpha-overview.json; \
+	sh deploy/observability/grafana/alpha-overview_test.sh; \
 	echo "Observability artifacts are valid"
 .PHONY: observability-check
 
