@@ -18,7 +18,7 @@ func NewComputeUsageStore() computequota.UsageStore {
 	return &computeUsageStore{}
 }
 
-func (*computeUsageStore) LockOrganisationAndGetUsage(ctx context.Context, organisationID, excludeStackID string) (computequota.ComputeUsage, *errors.ServiceError) {
+func (*computeUsageStore) LockOrganisationAndGetUsage(ctx context.Context, organisationID, replacedStackID string) (computequota.ComputeUsage, *errors.ServiceError) {
 	tx := db.TxFromContext(ctx)
 	if tx == nil {
 		return computequota.ComputeUsage{}, errors.GeneralError("transaction not found in context")
@@ -47,8 +47,10 @@ func (*computeUsageStore) LockOrganisationAndGetUsage(ctx context.Context, organ
 	stackResourceQuery := tx.Table("stack_resources AS sr").
 		Joins("JOIN stacks AS s ON s.id = sr.stack_id").
 		Where("s.organisation_id = ?", organisationID)
-	if excludeStackID != "" {
-		stackResourceQuery = stackResourceQuery.Where("s.id <> ?", excludeStackID)
+	if replacedStackID != "" {
+		// A replacement supplies the complete desired resource set, so its old
+		// persisted resources must not contribute to the proposed total.
+		stackResourceQuery = stackResourceQuery.Where("s.id <> ?", replacedStackID)
 	}
 	if err := stackResourceQuery.Count(&usage.StackResourceCount).Error; err != nil {
 		return computequota.ComputeUsage{}, errors.GeneralError("failed to count organisation stack resources: %v", err)

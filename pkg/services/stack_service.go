@@ -351,7 +351,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 		if limitErr := s.computePolicy.ValidateStackLimits(ctx, computequota.StackLimitChange{
 			Operation:            computequota.StackLimitReplaceStack,
 			OrganisationID:       existingStack.OrganisationID,
-			StackID:              existingStack.ID,
+			ReplacedStackID:      existingStack.ID,
 			DesiredResourceCount: int64(len(spec.StackResources)),
 		}); limitErr != nil {
 			return limitErr

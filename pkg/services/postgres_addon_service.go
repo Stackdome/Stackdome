@@ -238,7 +238,11 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 			return accessErr
 		}
 		s.computePolicy.ApplyPostgresAddonDefaults(postgresAddon)
-		if limitErr := s.computePolicy.ValidatePostgresAddonLimits(ctx, postgresAddon.OrganisationID, "", postgresAddon); limitErr != nil {
+		if limitErr := s.computePolicy.ValidatePostgresAddonLimits(ctx, computequota.PostgresAddonLimitChange{
+			OrganisationID: postgresAddon.OrganisationID,
+			CreatesAddon:   true,
+			Addon:          postgresAddon,
+		}); limitErr != nil {
 			return limitErr
 		}
 		// Create namespace
@@ -346,7 +350,11 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 			return accessErr
 		}
 		s.computePolicy.ApplyPostgresAddonDefaults(postgresAddon)
-		if limitErr := s.computePolicy.ValidatePostgresAddonLimits(ctx, existingPostgresAddon.OrganisationID, existingPostgresAddon.ID, postgresAddon); limitErr != nil {
+		if limitErr := s.computePolicy.ValidatePostgresAddonLimits(ctx, computequota.PostgresAddonLimitChange{
+			OrganisationID: existingPostgresAddon.OrganisationID,
+			CreatesAddon:   false,
+			Addon:          postgresAddon,
+		}); limitErr != nil {
 			return limitErr
 		}
 		// Update PostgreSQL addon within transaction

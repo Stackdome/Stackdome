@@ -9,6 +9,9 @@ import (
 
 // Service manages the entitlement and shared-compute lease that back an
 // organisation's use of managed compute.
+// Activate creates the entitlement and shared-compute lease for an organisation on first use.
+// If they already exist, it returns the existing compute access.
+// Policy calls it to ensure access is granted before any compute is used.
 type Service interface {
 	Activate(ctx context.Context, organisationID string) (*ComputeAccess, *errors.ServiceError)
 }

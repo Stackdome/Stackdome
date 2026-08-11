@@ -21,15 +21,15 @@ func (f *fakeComputeAccessService) Activate(_ context.Context, organisationID st
 }
 
 type fakeComputeUsageStore struct {
-	usage          ComputeUsage
-	err            *stackerrors.ServiceError
-	organisationID string
-	excludeStackID string
+	usage           ComputeUsage
+	err             *stackerrors.ServiceError
+	organisationID  string
+	replacedStackID string
 }
 
-func (f *fakeComputeUsageStore) LockOrganisationAndGetUsage(_ context.Context, organisationID, excludeStackID string) (ComputeUsage, *stackerrors.ServiceError) {
+func (f *fakeComputeUsageStore) LockOrganisationAndGetUsage(_ context.Context, organisationID, replacedStackID string) (ComputeUsage, *stackerrors.ServiceError) {
 	f.organisationID = organisationID
-	f.excludeStackID = excludeStackID
+	f.replacedStackID = replacedStackID
 	return f.usage, f.err
 }
 
@@ -47,8 +47,15 @@ var _ = ginkgo.Describe("Compute policy", func() {
 
 			gomega.Expect(policy.EnsureAccess(context.Background(), "org-1")).NotTo(gomega.HaveOccurred())
 			gomega.Expect(policy.ValidateStackLimits(context.Background(), StackLimitChange{Operation: "unknown"})).NotTo(gomega.HaveOccurred())
-			gomega.Expect(policy.ValidateVolumeLimits(context.Background(), "org-1", "not-a-quantity")).NotTo(gomega.HaveOccurred())
-			gomega.Expect(policy.ValidatePostgresAddonLimits(context.Background(), "org-1", "", addon)).NotTo(gomega.HaveOccurred())
+			gomega.Expect(policy.ValidateVolumeLimits(context.Background(), VolumeLimitChange{
+				OrganisationID: "org-1",
+				Size:           "not-a-quantity",
+			})).NotTo(gomega.HaveOccurred())
+			gomega.Expect(policy.ValidatePostgresAddonLimits(context.Background(), PostgresAddonLimitChange{
+				OrganisationID: "org-1",
+				CreatesAddon:   true,
+				Addon:          addon,
+			})).NotTo(gomega.HaveOccurred())
 
 			policy.ApplyStackResourceDefaults(resource)
 			policy.ApplyVolumeDefaults(volume)
@@ -109,25 +116,25 @@ var _ = ginkgo.Describe("Compute policy", func() {
 
 			gomega.Expect(resource.Replicas).NotTo(gomega.BeNil())
 			gomega.Expect(*resource.Replicas).To(gomega.Equal(int32(1)))
-			gomega.Expect(volume.Size).To(gomega.Equal("2Gi"))
+			gomega.Expect(volume.Size).To(gomega.BeEmpty())
 			gomega.Expect(volume.StorageClass).To(gomega.Equal("longhorn"))
 			gomega.Expect(addon.Instances.Count).To(gomega.Equal(1))
 			gomega.Expect(addon.Storage.Size).To(gomega.BeEmpty())
 		})
 
-		ginkgo.It("replaces a stack against usage that excludes its old resources", func() {
+		ginkgo.It("replaces a stack using usage without its old resources", func() {
 			usage.usage = ComputeUsage{StackCount: 2, StackResourceCount: 2}
 
 			err := policy.ValidateStackLimits(context.Background(), StackLimitChange{
 				Operation:            StackLimitReplaceStack,
 				OrganisationID:       "org-1",
-				StackID:              "stack-1",
+				ReplacedStackID:      "stack-1",
 				DesiredResourceCount: 4,
 			})
 
 			gomega.Expect(err).NotTo(gomega.HaveOccurred())
 			gomega.Expect(usage.organisationID).To(gomega.Equal("org-1"))
-			gomega.Expect(usage.excludeStackID).To(gomega.Equal("stack-1"))
+			gomega.Expect(usage.replacedStackID).To(gomega.Equal("stack-1"))
 		})
 
 		ginkgo.DescribeTable("rejects stack usage beyond a configured limit",
@@ -153,7 +160,10 @@ var _ = ginkgo.Describe("Compute policy", func() {
 			func(currentVolumeCount int64, size string, expectedCode stackerrors.ServiceErrorCode) {
 				usage.usage = ComputeUsage{VolumeCount: currentVolumeCount}
 
-				err := policy.ValidateVolumeLimits(context.Background(), "org-1", size)
+				err := policy.ValidateVolumeLimits(context.Background(), VolumeLimitChange{
+					OrganisationID: "org-1",
+					Size:           size,
+				})
 
 				gomega.Expect(err).To(gomega.HaveOccurred())
 				gomega.Expect(err.Code).To(gomega.Equal(expectedCode))
@@ -164,18 +174,22 @@ var _ = ginkgo.Describe("Compute policy", func() {
 		)
 
 		ginkgo.DescribeTable("validates PostgreSQL addon requests",
-			func(currentAddonCount int64, existingAddonID string, addon *models.PostgresAddon, expectedCode stackerrors.ServiceErrorCode) {
+			func(currentAddonCount int64, createsAddon bool, addon *models.PostgresAddon, expectedCode stackerrors.ServiceErrorCode) {
 				usage.usage = ComputeUsage{PostgresAddonCount: currentAddonCount}
 
-				err := policy.ValidatePostgresAddonLimits(context.Background(), "org-1", existingAddonID, addon)
+				err := policy.ValidatePostgresAddonLimits(context.Background(), PostgresAddonLimitChange{
+					OrganisationID: "org-1",
+					CreatesAddon:   createsAddon,
+					Addon:          addon,
+				})
 
 				gomega.Expect(err).To(gomega.HaveOccurred())
 				gomega.Expect(err.Code).To(gomega.Equal(expectedCode))
 			},
-			ginkgo.Entry("addon count exceeds the limit", int64(1), "", postgresAddon(1, "1Gi"), stackerrors.ErrorComputeQuotaExceeded),
-			ginkgo.Entry("instance count differs from the policy", int64(0), "", postgresAddon(2, "1Gi"), stackerrors.ErrorComputeQuotaExceeded),
-			ginkgo.Entry("storage exceeds the limit", int64(0), "", postgresAddon(1, "3Gi"), stackerrors.ErrorComputeQuotaExceeded),
-			ginkgo.Entry("storage size is malformed", int64(0), "", postgresAddon(1, "invalid"), stackerrors.ErrorBadRequest),
+			ginkgo.Entry("addon count exceeds the limit", int64(1), true, postgresAddon(1, "1Gi"), stackerrors.ErrorComputeQuotaExceeded),
+			ginkgo.Entry("instance count differs from the policy", int64(0), true, postgresAddon(2, "1Gi"), stackerrors.ErrorComputeQuotaExceeded),
+			ginkgo.Entry("storage exceeds the limit", int64(0), true, postgresAddon(1, "3Gi"), stackerrors.ErrorComputeQuotaExceeded),
+			ginkgo.Entry("storage size is malformed", int64(0), true, postgresAddon(1, "invalid"), stackerrors.ErrorBadRequest),
 		)
 	})
 })

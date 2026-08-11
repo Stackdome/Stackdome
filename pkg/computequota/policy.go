@@ -15,13 +15,15 @@ import (
 type Policy interface {
 	EnsureAccess(ctx context.Context, organisationID string) *errors.ServiceError
 	ValidateStackLimits(ctx context.Context, change StackLimitChange) *errors.ServiceError
-	ValidateVolumeLimits(ctx context.Context, organisationID, size string) *errors.ServiceError
-	ValidatePostgresAddonLimits(ctx context.Context, organisationID, existingAddonID string, addon *models.PostgresAddon) *errors.ServiceError
+	ValidateVolumeLimits(ctx context.Context, change VolumeLimitChange) *errors.ServiceError
+	ValidatePostgresAddonLimits(ctx context.Context, change PostgresAddonLimitChange) *errors.ServiceError
 	ApplyStackResourceDefaults(resource *models.StackResource)
 	ApplyVolumeDefaults(volume *models.Volume)
 	ApplyPostgresAddonDefaults(addon *models.PostgresAddon)
 }
 
+// --------  SELF-HOSTED POLICY  --------
+// Self hosted policy is a no-op policy for self-hosted environments.
 type selfHostedPolicy struct{}
 
 func NewSelfHostedPolicy() Policy {
@@ -36,11 +38,11 @@ func (selfHostedPolicy) ValidateStackLimits(context.Context, StackLimitChange) *
 	return nil
 }
 
-func (selfHostedPolicy) ValidateVolumeLimits(context.Context, string, string) *errors.ServiceError {
+func (selfHostedPolicy) ValidateVolumeLimits(context.Context, VolumeLimitChange) *errors.ServiceError {
 	return nil
 }
 
-func (selfHostedPolicy) ValidatePostgresAddonLimits(context.Context, string, string, *models.PostgresAddon) *errors.ServiceError {
+func (selfHostedPolicy) ValidatePostgresAddonLimits(context.Context, PostgresAddonLimitChange) *errors.ServiceError {
 	return nil
 }
 
@@ -50,6 +52,7 @@ func (selfHostedPolicy) ApplyVolumeDefaults(*models.Volume) {}
 
 func (selfHostedPolicy) ApplyPostgresAddonDefaults(*models.PostgresAddon) {}
 
+// ---  STACKDOME CLOUD POLICY  ---
 type stackdomeCloudPolicy struct {
 	computeAccess          computeaccess.Service
 	computeUsage           UsageStore
@@ -88,12 +91,19 @@ func (p *stackdomeCloudPolicy) EnsureAccess(ctx context.Context, organisationID 
 }
 
 func (p *stackdomeCloudPolicy) ValidateStackLimits(ctx context.Context, change StackLimitChange) *errors.ServiceError {
-	excludeStackID, serr := stackResourceExclusionFor(change)
-	if serr != nil {
-		return serr
+	replacedStackID := ""
+	switch change.Operation {
+	case StackLimitReplaceStack:
+		if change.ReplacedStackID == "" {
+			return errors.GeneralError("replaced stack ID is required for a whole-stack update")
+		}
+		replacedStackID = change.ReplacedStackID
+	case StackLimitCreateStack, StackLimitAddResource, StackLimitUpdateResource:
+	default:
+		return errors.GeneralError("unsupported stack limit operation %q", change.Operation)
 	}
 
-	currentUsage, serr := p.computeUsage.LockOrganisationAndGetUsage(ctx, change.OrganisationID, excludeStackID)
+	currentUsage, serr := p.computeUsage.LockOrganisationAndGetUsage(ctx, change.OrganisationID, replacedStackID)
 	if serr != nil {
 		return serr
 	}
@@ -111,8 +121,8 @@ func (p *stackdomeCloudPolicy) ValidateStackLimits(ctx context.Context, change S
 	return nil
 }
 
-func (p *stackdomeCloudPolicy) ValidateVolumeLimits(ctx context.Context, organisationID, size string) *errors.ServiceError {
-	usage, serr := p.computeUsage.LockOrganisationAndGetUsage(ctx, organisationID, "")
+func (p *stackdomeCloudPolicy) ValidateVolumeLimits(ctx context.Context, change VolumeLimitChange) *errors.ServiceError {
+	usage, serr := p.computeUsage.LockOrganisationAndGetUsage(ctx, change.OrganisationID, "")
 	if serr != nil {
 		return serr
 	}
@@ -120,7 +130,7 @@ func (p *stackdomeCloudPolicy) ValidateVolumeLimits(ctx context.Context, organis
 		return errors.ComputeQuotaExceeded("Stackdome Cloud allows a maximum of %d volumes per organisation", p.limits.MaxVolumesPerOrganization)
 	}
 
-	requested, err := resource.ParseQuantity(size)
+	requested, err := resource.ParseQuantity(change.Size)
 	if err != nil || requested.Sign() <= 0 {
 		return errors.BadRequest("volume size must be a positive Kubernetes quantity")
 	}
@@ -130,24 +140,24 @@ func (p *stackdomeCloudPolicy) ValidateVolumeLimits(ctx context.Context, organis
 	return nil
 }
 
-func (p *stackdomeCloudPolicy) ValidatePostgresAddonLimits(ctx context.Context, organisationID, existingAddonID string, addon *models.PostgresAddon) *errors.ServiceError {
-	usage, serr := p.computeUsage.LockOrganisationAndGetUsage(ctx, organisationID, "")
+func (p *stackdomeCloudPolicy) ValidatePostgresAddonLimits(ctx context.Context, change PostgresAddonLimitChange) *errors.ServiceError {
+	usage, serr := p.computeUsage.LockOrganisationAndGetUsage(ctx, change.OrganisationID, "")
 	if serr != nil {
 		return serr
 	}
 
 	addonCount := usage.PostgresAddonCount
-	if existingAddonID == "" {
+	if change.CreatesAddon {
 		addonCount++
 	}
 	if addonCount > p.limits.MaxPostgresAddonsPerOrganization {
 		return errors.ComputeQuotaExceeded("Stackdome Cloud allows a maximum of %d PostgreSQL addon per organisation", p.limits.MaxPostgresAddonsPerOrganization)
 	}
-	if addon.Instances.Count != p.limits.PostgresInstances {
+	if change.Addon.Instances.Count != p.limits.PostgresInstances {
 		return errors.ComputeQuotaExceeded("Stackdome Cloud PostgreSQL addons must use exactly %d instance", p.limits.PostgresInstances)
 	}
 
-	requested, err := resource.ParseQuantity(addon.Storage.Size)
+	requested, err := resource.ParseQuantity(change.Addon.Storage.Size)
 	if err != nil || requested.Sign() <= 0 {
 		return errors.BadRequest("PostgreSQL addon storage size must be a positive Kubernetes quantity")
 	}
@@ -163,12 +173,7 @@ func (p *stackdomeCloudPolicy) ApplyStackResourceDefaults(stackResource *models.
 }
 
 func (p *stackdomeCloudPolicy) ApplyVolumeDefaults(volume *models.Volume) {
-	if volume.Size == "" {
-		volume.Size = p.limits.MaxVolumeSize
-	}
-	if volume.StorageClass == "" {
-		volume.StorageClass = p.limits.VolumeStorageClass
-	}
+	volume.StorageClass = p.limits.VolumeStorageClass
 }
 
 func (p *stackdomeCloudPolicy) ApplyPostgresAddonDefaults(addon *models.PostgresAddon) {

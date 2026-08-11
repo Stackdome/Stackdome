@@ -7,44 +7,6 @@ import (
 )
 
 var _ = ginkgo.Describe("Stack limit arithmetic", func() {
-	ginkgo.Describe("stackResourceExclusionFor", func() {
-		ginkgo.It("excludes the replaced stack from persisted resource usage", func() {
-			excludedStackID, err := stackResourceExclusionFor(StackLimitChange{
-				Operation: StackLimitReplaceStack,
-				StackID:   "stack-1",
-			})
-
-			gomega.Expect(err).NotTo(gomega.HaveOccurred())
-			gomega.Expect(excludedStackID).To(gomega.Equal("stack-1"))
-		})
-
-		ginkgo.DescribeTable("counts every persisted resource for non-replacement operations",
-			func(operation StackLimitOperation) {
-				excludedStackID, err := stackResourceExclusionFor(StackLimitChange{Operation: operation})
-
-				gomega.Expect(err).NotTo(gomega.HaveOccurred())
-				gomega.Expect(excludedStackID).To(gomega.BeEmpty())
-			},
-			ginkgo.Entry("stack creation", StackLimitCreateStack),
-			ginkgo.Entry("resource creation", StackLimitAddResource),
-			ginkgo.Entry("resource update", StackLimitUpdateResource),
-		)
-
-		ginkgo.It("rejects a replacement without a stack ID", func() {
-			_, err := stackResourceExclusionFor(StackLimitChange{Operation: StackLimitReplaceStack})
-
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Code).To(gomega.Equal(stackerrors.ErrorGeneral))
-		})
-
-		ginkgo.It("rejects an unsupported operation", func() {
-			_, err := stackResourceExclusionFor(StackLimitChange{Operation: "unknown"})
-
-			gomega.Expect(err).To(gomega.HaveOccurred())
-			gomega.Expect(err.Code).To(gomega.Equal(stackerrors.ErrorGeneral))
-		})
-	})
-
 	ginkgo.Describe("stackUsageAfterChange", func() {
 		current := ComputeUsage{
 			StackCount:         2,
@@ -64,8 +26,8 @@ var _ = ginkgo.Describe("Stack limit arithmetic", func() {
 				StackLimitChange{Operation: StackLimitCreateStack, DesiredResourceCount: 3},
 				ComputeUsage{StackCount: 3, StackResourceCount: 8, VolumeCount: 7, PostgresAddonCount: 11},
 			),
-			ginkgo.Entry("replaces the excluded stack resources without changing the stack count",
-				StackLimitChange{Operation: StackLimitReplaceStack, StackID: "stack-1", DesiredResourceCount: 4},
+			ginkgo.Entry("replaces the old stack resources without changing the stack count",
+				StackLimitChange{Operation: StackLimitReplaceStack, ReplacedStackID: "stack-1", DesiredResourceCount: 4},
 				ComputeUsage{StackCount: 2, StackResourceCount: 9, VolumeCount: 7, PostgresAddonCount: 11},
 			),
 			ginkgo.Entry("adds one resource",
@@ -86,7 +48,7 @@ var _ = ginkgo.Describe("Stack limit arithmetic", func() {
 				})
 
 				gomega.Expect(err).To(gomega.HaveOccurred())
-				gomega.Expect(err.Code).To(gomega.Equal(stackerrors.ErrorGeneral))
+				gomega.Expect(err.Code).To(gomega.Equal(stackerrors.ErrorUnprocessableEntity))
 			},
 			ginkgo.Entry("stack creation", StackLimitCreateStack),
 			ginkgo.Entry("stack replacement", StackLimitReplaceStack),

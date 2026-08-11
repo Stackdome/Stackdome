@@ -13,6 +13,8 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// sharedComputeCapacityAdvisoryLockKey is the stable PostgreSQL advisory-lock
+// namespace key for shared-compute allocation; its eight bytes spell STACKDOM.
 const sharedComputeCapacityAdvisoryLockKey int64 = 0x535441434b444f4d
 
 type ComputeAccessStoreSpec struct {

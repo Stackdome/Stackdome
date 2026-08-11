@@ -16,35 +16,19 @@ const (
 type StackLimitChange struct {
 	Operation      StackLimitOperation
 	OrganisationID string
-	// StackID is required only for StackLimitReplaceStack, where the desired
-	// resources replace every currently persisted resource in this stack.
-	StackID string
+	// ReplacedStackID identifies the stack whose complete persisted resource
+	// set will be replaced by DesiredResourceCount.
+	ReplacedStackID string
 	// DesiredResourceCount is the complete desired count for a whole-stack
 	// create or replacement. Single-resource operations do not use it.
 	DesiredResourceCount int64
-}
-
-// stackResourceExclusionFor identifies the one operation that replaces all of
-// an existing stack's persisted resources. Other operations count every row.
-func stackResourceExclusionFor(change StackLimitChange) (string, *errors.ServiceError) {
-	switch change.Operation {
-	case StackLimitReplaceStack:
-		if change.StackID == "" {
-			return "", errors.GeneralError("stack ID is required for a whole-stack update")
-		}
-		return change.StackID, nil
-	case StackLimitCreateStack, StackLimitAddResource, StackLimitUpdateResource:
-		return "", nil
-	default:
-		return "", errors.GeneralError("unsupported stack limit operation %q", change.Operation)
-	}
 }
 
 // stackUsageAfterChange turns persisted usage into the totals that would exist
 // after the requested mutation commits.
 func stackUsageAfterChange(current ComputeUsage, change StackLimitChange) (ComputeUsage, *errors.ServiceError) {
 	if (change.Operation == StackLimitCreateStack || change.Operation == StackLimitReplaceStack) && change.DesiredResourceCount < 0 {
-		return ComputeUsage{}, errors.GeneralError("desired resource count must be non-negative")
+		return ComputeUsage{}, errors.UnprocessableEntity("desired resource count must be non-negative")
 	}
 
 	proposed := current
@@ -55,9 +39,9 @@ func stackUsageAfterChange(current ComputeUsage, change StackLimitChange) (Compu
 		proposed.StackCount = current.StackCount + 1
 		proposed.StackResourceCount = current.StackResourceCount + change.DesiredResourceCount
 	case StackLimitReplaceStack:
-		// The query excludes the replaced stack's old resources. If the other
-		// stacks have 2 resources and the replacement has 4, the total is 6;
-		// replacing a stack leaves the stack count unchanged.
+		// Current usage already omits this stack's old resources. If the other
+		// stacks have 2 resources and the replacement has 4, the total is 6.
+		// Replacing a stack leaves the stack count unchanged.
 		proposed.StackCount = current.StackCount
 		proposed.StackResourceCount = current.StackResourceCount + change.DesiredResourceCount
 	case StackLimitAddResource:

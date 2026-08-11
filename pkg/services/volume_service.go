@@ -295,7 +295,10 @@ func (s *volumeService) prepareCreate(ctx context.Context, spec *models.Volume) 
 	if spec.Size == "" {
 		return errors.Validation("spec.size is required")
 	}
-	return s.computePolicy.ValidateVolumeLimits(ctx, spec.OrganisationID, spec.Size)
+	return s.computePolicy.ValidateVolumeLimits(ctx, computequota.VolumeLimitChange{
+		OrganisationID: spec.OrganisationID,
+		Size:           spec.Size,
+	})
 }
 
 func (s *volumeService) UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError {

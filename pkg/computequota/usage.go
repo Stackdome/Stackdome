@@ -15,8 +15,8 @@ type ComputeUsage struct {
 
 // UsageStore serializes capacity-changing mutations for one organisation and
 // returns its persisted usage. Implementations require a transaction in ctx.
-// excludeStackID is used only when replacement of a stack's complete desired
-// state makes its persisted resources irrelevant.
+// When replacedStackID is set, the replaced stack remains in StackCount while
+// its old resources are omitted from StackResourceCount.
 type UsageStore interface {
-	LockOrganisationAndGetUsage(ctx context.Context, organisationID, excludeStackID string) (ComputeUsage, *errors.ServiceError)
+	LockOrganisationAndGetUsage(ctx context.Context, organisationID, replacedStackID string) (ComputeUsage, *errors.ServiceError)
 }

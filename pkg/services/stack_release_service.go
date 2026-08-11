@@ -172,13 +172,14 @@ func (s *stackReleaseService) createReleaseForStack(ctx context.Context, stack *
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		// Validate the exact release snapshot before it is persisted and enqueued for cluster reconciliation.
 		if accessErr := s.computePolicy.EnsureAccess(txCtx, stack.OrganisationID); accessErr != nil {
 			return accessErr
 		}
 		if limitErr := s.computePolicy.ValidateStackLimits(txCtx, computequota.StackLimitChange{
 			Operation:            computequota.StackLimitReplaceStack,
 			OrganisationID:       stack.OrganisationID,
-			StackID:              stack.ID,
+			ReplacedStackID:      stack.ID,
 			DesiredResourceCount: int64(len(snapshot.Resources)),
 		}); limitErr != nil {
 			return limitErr
@@ -259,13 +260,14 @@ func (s *stackReleaseService) RollbackRelease(ctx context.Context, stackID, from
 
 	var created *models.StackRelease
 	if txErr := s.store.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		// Validate the exact release snapshot before it is persisted and enqueued for cluster reconciliation.
 		if accessErr := s.computePolicy.EnsureAccess(txCtx, stack.OrganisationID); accessErr != nil {
 			return accessErr
 		}
 		if limitErr := s.computePolicy.ValidateStackLimits(txCtx, computequota.StackLimitChange{
 			Operation:            computequota.StackLimitReplaceStack,
 			OrganisationID:       stack.OrganisationID,
-			StackID:              stack.ID,
+			ReplacedStackID:      stack.ID,
 			DesiredResourceCount: int64(len(src.Snapshot.Resources)),
 		}); limitErr != nil {
 			return limitErr
