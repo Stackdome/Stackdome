@@ -12,6 +12,8 @@ import (
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/computeaccess"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/controllers/clusterimageregistry"
 	clusterinfocontroller "github.com/Stackdome/stackdome/pkg/controllers/clusterinfo"
 	imagebuildcontroller "github.com/Stackdome/stackdome/pkg/controllers/imagebuild"
@@ -117,6 +119,7 @@ func (e *environmentImpl) Init(ctx context.Context) error {
 		e.loadEnvAndConfigs,
 		e.setupLogger,
 		e.setupDatabase,
+		e.initializeComputePolicy,
 		e.auditPersistedComputeTopology,
 		e.setupObservability,
 		e.initializeResourceAccessPolicyManager,
@@ -261,6 +264,32 @@ func (e *environmentImpl) setupDatabase(ctx context.Context) error {
 		return fmt.Errorf("invalid database config: %w", err)
 	}
 	e.DBSession = db.NewSessionFactory(e.Config.Database)
+	return nil
+}
+
+func (e *environmentImpl) initializeComputePolicy(context.Context) error {
+	e.ComputePolicy = computequota.NewSelfHostedPolicy()
+	if !e.Config.IsStackdomeCloud() {
+		return nil
+	}
+
+	cloudConfig := e.Config.StackdomeCloud
+	if cloudConfig == nil {
+		return fmt.Errorf("stackdome Cloud configuration is required")
+	}
+	computeAccess := computeaccess.NewService(computeaccess.ServiceSpec{
+		Store: pgstore.NewComputeAccessStore(pgstore.ComputeAccessStoreSpec{
+			SessionFactory:               e.DBSession,
+			MaxActiveSharedComputeLeases: cloudConfig.Access.MaxActiveSharedComputeLeases,
+		}),
+		DefaultEntitlementSource:   computeaccess.ComputeEntitlementSourceTrial,
+		DefaultEntitlementDuration: cloudConfig.Access.TrialEntitlementDuration.Duration(),
+	})
+	e.ComputePolicy = computequota.NewStackdomeCloudPolicy(computequota.StackdomeCloudPolicySpec{
+		ComputeAccess: computeAccess,
+		ComputeUsage:  pgstore.NewComputeUsageStore(),
+		Limits:        cloudConfig.Limits,
+	})
 	return nil
 }
 
@@ -494,10 +523,18 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:    e.PermissionService,
 	})
 
+	orgRegistryDefaults := e.PlatformConfig.OrgRegistry
+	if e.Config.IsStackdomeCloud() {
+		orgRegistryDefaults = models.OrgRegistryDefaults{
+			StorageSize:  e.Config.StackdomeCloud.Registry.StorageSize,
+			StorageClass: e.Config.StackdomeCloud.Registry.StorageClass,
+		}
+	}
+
 	organisationService := services.NewOrganisationService(services.OrganisationServiceSpec{
 		OrganisationDomainService: organisationDomainService,
 		ImageRegistryService:      imageRegistryService,
-		OrgRegistryDefaults:       e.PlatformConfig.OrgRegistry,
+		OrgRegistryDefaults:       orgRegistryDefaults,
 		StackQueryService:         e.Services.StackService,
 		SessionFactory:            e.DBSession,
 		ProjectService:            projectService,
@@ -598,6 +635,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Logger:           e.Logger,
 		Permissions:      e.PermissionService,
 		ReferenceService: referenceService,
+		ComputePolicy:    e.ComputePolicy,
 	})
 
 	resourceValidator := stackresourcevalidator.NewValidator(stackresourcevalidator.ValidatorSpec{
@@ -622,6 +660,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		StackDomainService:     stackDomainService,
 		ReferenceService:       referenceService,
 		ResourceValidator:      resourceValidator,
+		ComputePolicy:          e.ComputePolicy,
 	})
 
 	imageBuildService := services.NewImageBuildService(services.ImageBuildServiceSpec{
@@ -672,6 +711,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		Permissions:            e.PermissionService,
 		ReferenceService:       referenceService,
 		ExternalImportDisabled: externalPostgresImportDisabled,
+		ComputePolicy:          e.ComputePolicy,
 	})
 
 	stackService := services.NewStackService(services.StackServiceSpec{
@@ -690,6 +730,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		CredentialResolver:    credentialResolver,
 		GitIntegrationService: gitIntegrationService,
 		PlatformBaseDomain:    e.PlatformConfig.BaseDomain,
+		ComputePolicy:         e.ComputePolicy,
 	})
 
 	metricsService := services.NewMetricsService(services.MetricsServiceSpec{
@@ -754,6 +795,7 @@ func (e *environmentImpl) loadServices(ctx context.Context) error {
 		ReferenceService:   referenceService,
 		EventStore:         releaseEventStore,
 		EventRecorder:      releaseEventRecorder,
+		ComputePolicy:      e.ComputePolicy,
 	})
 
 	stackService.SetReleaseService(stackReleaseService)
@@ -855,6 +897,14 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 
 	e.WorkerManager.RegisterWorker(stackWorker, models.StackOperand{})
 
+	clusterImageRegistryStore := pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
+		SessionFactory: e.DBSession,
+	})
+	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
+		ClusterManager: e.ClusterManager,
+		Logger:         e.Logger,
+	})
+
 	releaseWorker := releaseworker.NewReleaseWorker(releaseworker.ReleaseWorkerSpec{
 		ReleaseService:       e.Services.StackReleaseService,
 		EventRecorder:        e.Services.ReleaseEventRecorder,
@@ -881,6 +931,8 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 			SessionFactory: e.DBSession,
 		}),
 		ReleaseWorkerEnqueuer: e.WorkerManager,
+		ImageRegistryStore:    clusterImageRegistryStore,
+		ImageRegistryResource: clusterImageRegistryResource,
 		Env:                   e.Name,
 	})
 	e.WorkerManager.RegisterWorker(releaseWorker, models.StackReleaseOperand{})
@@ -904,20 +956,14 @@ func (e *environmentImpl) initializeWorkerManager(ctx context.Context) error {
 	})
 	e.WorkerManager.RegisterWorker(volumeWorker, models.VolumeOperand{})
 
-	clusterImageRegistryResource := clusterresource.NewClusterImageRegistryService(clusterresource.ClusterImageRegistryServiceSpec{
-		ClusterManager: e.ClusterManager,
-		Logger:         e.Logger,
-	})
 	clusterImageRegistryWorker := clusterimageregistryworker.NewClusterImageRegistryWorker(clusterimageregistryworker.ClusterImageRegistryWorkerSpec{
 		ClusterStore: pgstore.NewClusterStore(pgstore.ClusterStoreSpec{
 			SessionFactory: e.DBSession,
 		}),
-		ImageRegistryStore: pgstore.NewClusterImageRegistryStore(pgstore.ClusterImageRegistryStoreSpec{
-			SessionFactory: e.DBSession,
-		}),
-		ClusterManager:  e.ClusterManager,
-		ClusterResource: clusterImageRegistryResource,
-		Env:             e.Name,
+		ImageRegistryStore: clusterImageRegistryStore,
+		ClusterManager:     e.ClusterManager,
+		ClusterResource:    clusterImageRegistryResource,
+		Env:                e.Name,
 	})
 	e.WorkerManager.RegisterWorker(clusterImageRegistryWorker, models.ClusterImageRegistryOperand{})
 

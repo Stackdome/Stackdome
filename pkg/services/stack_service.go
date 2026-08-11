@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -73,6 +74,7 @@ type StackServiceSpec struct {
 	CredentialResolver    CredentialResolver
 	GitIntegrationService GitIntegrationService
 	PlatformBaseDomain    string
+	ComputePolicy         computequota.Policy
 }
 
 type stackService struct {
@@ -92,6 +94,7 @@ type stackService struct {
 	releaseService       releaseServiceForStack
 	referenceService     ReferenceService
 	defaultingService    DefaultingService[*models.Stack]
+	computePolicy        computequota.Policy
 	ClusterResourceServiceDeps
 	BackgroundJobEnqueuerDep
 }
@@ -148,6 +151,7 @@ func NewStackService(spec StackServiceSpec) StackService {
 		permissions:          spec.Permissions,
 		referenceService:     spec.ReferenceService,
 		defaultingService:    NewStackDefaultingService(),
+		computePolicy:        spec.ComputePolicy,
 	}
 }
 
@@ -199,6 +203,7 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 	}
 
 	s.logger.Info(ctx, "running validation for stack creation: %s", spec.Name)
+	s.applyComputeStackResourceDefaults(spec)
 	if err := s.stackValidator.ValidateForCreate(ctx, spec); err != nil {
 		return nil, err
 	}
@@ -226,6 +231,17 @@ func (s *stackService) InternalCreateStack(ctx context.Context, spec *models.Sta
 
 	var createdStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(ctx, spec.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		s.applyComputeStackResourceDefaults(spec)
+		if limitErr := s.computePolicy.ValidateStackLimits(ctx, computequota.StackLimitChange{
+			Operation:            computequota.StackLimitCreateStack,
+			OrganisationID:       spec.OrganisationID,
+			DesiredResourceCount: int64(len(spec.StackResources)),
+		}); limitErr != nil {
+			return limitErr
+		}
 		createdStack, err = s.InternalCreateWithTx(ctx, spec, namespaceForStack)
 		if err != nil {
 			return err
@@ -318,6 +334,7 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	spec.ProjectID = existingStack.ProjectID
 	spec.UserID = existingStack.UserID
 
+	s.applyComputeStackResourceDefaults(spec)
 	if err := s.stackValidator.ValidateForUpdate(ctx, existingStack, spec); err != nil {
 		return nil, err
 	}
@@ -327,6 +344,18 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 	// Update stack and domains within transaction
 	var updatedStack *models.Stack
 	err = s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(ctx, existingStack.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		s.applyComputeStackResourceDefaults(spec)
+		if limitErr := s.computePolicy.ValidateStackLimits(ctx, computequota.StackLimitChange{
+			Operation:            computequota.StackLimitReplaceStack,
+			OrganisationID:       existingStack.OrganisationID,
+			ReplacedStackID:      existingStack.ID,
+			DesiredResourceCount: int64(len(spec.StackResources)),
+		}); limitErr != nil {
+			return limitErr
+		}
 		updatedStack, err = s.InternalUpdateWithTx(ctx, spec, existingStack)
 		if err != nil {
 			return err
@@ -351,6 +380,12 @@ func (s *stackService) InternalUpdateStack(ctx context.Context, ID string, spec 
 
 	s.logger.WithField(logger.FieldStackID, updatedStack.ID).Info(ctx, "updated stack")
 	return updatedStack, nil
+}
+
+func (s *stackService) applyComputeStackResourceDefaults(stack *models.Stack) {
+	for _, resource := range stack.StackResources {
+		s.computePolicy.ApplyStackResourceDefaults(resource)
+	}
 }
 
 func (s *stackService) UpdateStackShell(ctx context.Context, ID string, spec *models.Stack) (*models.Stack, *errors.ServiceError) {
@@ -481,6 +516,9 @@ func (s *stackService) CreateStackVolume(ctx context.Context, stackID string, vo
 	}
 	var created *models.Volume
 	txErr := s.stackStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(ctx, stack.OrganisationID); accessErr != nil {
+			return accessErr
+		}
 		// Lock the stack row so concurrent creates serialize; the duplicate-name
 		// check below then observes any volume a competing request committed.
 		// There is no DB unique constraint on volume name within a stack (the

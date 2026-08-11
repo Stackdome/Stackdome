@@ -7,6 +7,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/auth"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -68,6 +69,7 @@ type PostgresAddonServiceSpec struct {
 	Logger                 logger.Logger
 	Permissions            auth.PermissionService
 	ExternalImportDisabled bool
+	ComputePolicy          computequota.Policy
 }
 
 type postgresAddonService struct {
@@ -85,6 +87,7 @@ type postgresAddonService struct {
 	logger             logger.Logger
 	sessionFactory     db.SessionFactory
 	permissions        auth.PermissionService
+	computePolicy      computequota.Policy
 
 	BackgroundJobEnqueuerDep
 	ClusterResourceServiceDeps
@@ -117,6 +120,7 @@ func NewPostgresAddonService(spec PostgresAddonServiceSpec) PostgresAddonService
 		logger:         spec.Logger,
 		sessionFactory: spec.SessionFactory,
 		permissions:    spec.Permissions,
+		computePolicy:  spec.ComputePolicy,
 	}
 }
 
@@ -129,6 +133,7 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 		return nil, permErr
 	}
 
+	s.computePolicy.ApplyPostgresAddonDefaults(postgresAddon)
 	if err := s.validator.ValidateForCreate(ctx, postgresAddon); err != nil {
 		return nil, err
 	}
@@ -229,6 +234,17 @@ func (s *postgresAddonService) CreatePostgresAddon(ctx context.Context, postgres
 
 	var createdPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(ctx, postgresAddon.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		s.computePolicy.ApplyPostgresAddonDefaults(postgresAddon)
+		if limitErr := s.computePolicy.ValidatePostgresAddonLimits(ctx, computequota.PostgresAddonLimitChange{
+			OrganisationID: postgresAddon.OrganisationID,
+			CreatesAddon:   true,
+			Addon:          postgresAddon,
+		}); limitErr != nil {
+			return limitErr
+		}
 		// Create namespace
 		createdNamepace, err := s.namespaceService.CreateInDBWithTx(ctx, namespace)
 		if err != nil {
@@ -311,6 +327,7 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 		postgresAddon.Storage.StorageClass = existingPostgresAddon.Storage.StorageClass
 	}
 
+	s.computePolicy.ApplyPostgresAddonDefaults(postgresAddon)
 	// Validate update using validator
 	if err := s.validator.ValidateForUpdate(ctx, existingPostgresAddon, postgresAddon); err != nil {
 		return nil, err
@@ -329,6 +346,17 @@ func (s *postgresAddonService) UpdatePostgresAddon(ctx context.Context, id strin
 
 	var updatedPostgresAddon *models.PostgresAddon
 	err = s.postgresAddonStore.WithTransaction(ctx, func(ctx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(ctx, existingPostgresAddon.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		s.computePolicy.ApplyPostgresAddonDefaults(postgresAddon)
+		if limitErr := s.computePolicy.ValidatePostgresAddonLimits(ctx, computequota.PostgresAddonLimitChange{
+			OrganisationID: existingPostgresAddon.OrganisationID,
+			CreatesAddon:   false,
+			Addon:          postgresAddon,
+		}); limitErr != nil {
+			return limitErr
+		}
 		// Update PostgreSQL addon within transaction
 		var updateErr *errors.ServiceError
 		updatedPostgresAddon, updateErr = s.postgresAddonStore.UpdateWithTx(ctx, postgresAddon)
@@ -548,8 +576,13 @@ func (s *postgresAddonService) TriggerBackup(ctx context.Context, id string) *er
 
 	// Update the backup requested timestamp
 	now := time.Now()
-	if err := s.postgresAddonStore.UpdateBackupRequestedAt(ctx, id, &now); err != nil {
-		return err
+	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(txCtx, addon.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		return s.postgresAddonStore.UpdateBackupRequestedAt(txCtx, id, &now)
+	}); txErr != nil {
+		return txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {
@@ -569,12 +602,16 @@ func (s *postgresAddonService) TriggerHibernate(ctx context.Context, id string, 
 		return permErr
 	}
 
-	// Update lifecycle config
-	postgresAddon.LifecycleConfig.HibernationEnabled = enabled
-
-	_, err = s.postgresAddonStore.Update(ctx, postgresAddon)
-	if err != nil {
-		return err
+	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(txCtx, postgresAddon.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		// Update lifecycle config
+		postgresAddon.LifecycleConfig.HibernationEnabled = enabled
+		_, updateErr := s.postgresAddonStore.UpdateWithTx(txCtx, postgresAddon)
+		return updateErr
+	}); txErr != nil {
+		return txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {
@@ -594,12 +631,16 @@ func (s *postgresAddonService) TriggerFence(ctx context.Context, id string, enab
 		return permErr
 	}
 
-	// Update lifecycle config
-	postgresAddon.LifecycleConfig.FencingEnabled = enabled
-
-	_, err = s.postgresAddonStore.Update(ctx, postgresAddon)
-	if err != nil {
-		return err
+	if txErr := s.postgresAddonStore.WithTransaction(ctx, func(txCtx context.Context) *errors.ServiceError {
+		if accessErr := s.computePolicy.EnsureAccess(txCtx, postgresAddon.OrganisationID); accessErr != nil {
+			return accessErr
+		}
+		// Update lifecycle config
+		postgresAddon.LifecycleConfig.FencingEnabled = enabled
+		_, updateErr := s.postgresAddonStore.UpdateWithTx(txCtx, postgresAddon)
+		return updateErr
+	}); txErr != nil {
+		return txErr
 	}
 
 	if err := s.BackgroundJobEnqueuer.Enqueue(models.PostgresAddonOperand{ID: id}); err != nil {

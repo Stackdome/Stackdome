@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -49,18 +50,28 @@ var _ = Describe("Runtime mode configuration", func() {
 	It("loads and validates the typed Stackdome Cloud YAML", func() {
 		path := filepath.Join(GinkgoT().TempDir(), "cloud.yaml")
 		Expect(os.WriteFile(path, []byte(`
-capacity:
-  maxActiveTrialAllocations: 200
-  allocationTTL: 6h
+access:
+  maxActiveSharedComputeLeases: 200
+  trialEntitlementDuration: 6h
 limits:
   maxStacksPerOrganization: 2
   maxStackResourcesPerOrganization: 6
   replicasPerStackResource: 1
+  maxVolumesPerOrganization: 2
+  maxVolumeSize: 2Gi
+  volumeStorageClass: longhorn
+  maxPostgresAddonsPerOrganization: 1
+  postgresInstances: 1
+  maxPostgresStorageSize: 2Gi
+  postgresCPURequest: 50m
+  postgresCPULimit: 500m
+  postgresMemoryRequest: 128Mi
+  postgresMemoryLimit: 1Gi
   concurrentBuilds: 1
 registry:
   maxActiveRegistries: 200
   storageClass: longhorn
-  storageSize: 10Gi
+  storageSize: 2Gi
 features:
   customDomains: false
   externalPostgresImport: false
@@ -92,12 +103,12 @@ signup:
 		Expect(cfg.LoadStackdomeCloudConfig()).To(Succeed())
 
 		Expect(cfg.IsStackdomeCloud()).To(BeTrue())
-		Expect(cfg.StackdomeCloud.Capacity.MaxActiveTrialAllocations).To(Equal(200))
-		Expect(cfg.StackdomeCloud.Capacity.AllocationTTL.Duration()).To(Equal(6 * time.Hour))
+		Expect(cfg.StackdomeCloud.Access.MaxActiveSharedComputeLeases).To(Equal(200))
+		Expect(cfg.StackdomeCloud.Access.TrialEntitlementDuration.Duration()).To(Equal(6 * time.Hour))
 		Expect(cfg.StackdomeCloud.Limits.MaxStackResourcesPerOrganization).To(Equal(int64(6)))
 		Expect(cfg.StackdomeCloud.Registry.MaxActiveRegistries).To(Equal(200))
 		Expect(cfg.StackdomeCloud.Registry.StorageClass).To(Equal("longhorn"))
-		Expect(cfg.StackdomeCloud.Registry.StorageSize).To(Equal("10Gi"))
+		Expect(cfg.StackdomeCloud.Registry.StorageSize).To(Equal("2Gi"))
 		Expect(cfg.StackdomeCloud.Features.WorkspaceUsers).To(BeFalse())
 	})
 
@@ -122,7 +133,7 @@ signup:
 	It("parses the checked-in Stackdome Cloud example", func() {
 		cloudConfig, err := LoadStackdomeCloudConfig("stackdome_cloud.example.yaml")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(cloudConfig.Capacity.MaxActiveTrialAllocations).To(Equal(200))
+		Expect(cloudConfig.Access.MaxActiveSharedComputeLeases).To(Equal(200))
 		Expect(cloudConfig.Registry.MaxActiveRegistries).To(Equal(200))
 		Expect(cloudConfig.Signup.ClientIPSource).To(Equal(StackdomeCloudClientIPSourceCloudflare))
 		Expect(cloudConfig.Signup.Throttle.IP.MaxTrackedClients).To(Equal(10_000))
@@ -321,7 +332,7 @@ var _ = Describe("Compute mode configuration", func() {
 		cfg.StackdomeCloud = &StackdomeCloudConfig{}
 
 		Expect(cfg.Validate()).To(MatchError(
-			"validate Stackdome Cloud config: capacity.maxActiveTrialAllocations must be greater than zero",
+			"validate Stackdome Cloud config: access.maxActiveSharedComputeLeases must be greater than zero",
 		))
 	})
 })
@@ -354,20 +365,30 @@ var _ = Describe("Shared compute environment", func() {
 
 func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 	return StackdomeCloudConfig{
-		Capacity: StackdomeCloudCapacityConfig{
-			MaxActiveTrialAllocations: 200,
-			AllocationTTL:             ConfigDuration(6 * time.Hour),
+		Access: StackdomeCloudComputeAccessConfig{
+			MaxActiveSharedComputeLeases: 200,
+			TrialEntitlementDuration:     ConfigDuration(6 * time.Hour),
 		},
-		Limits: StackdomeCloudLimitsConfig{
+		Limits: computequota.ComputeLimits{
 			MaxStacksPerOrganization:         2,
 			MaxStackResourcesPerOrganization: 6,
 			ReplicasPerStackResource:         1,
+			MaxVolumesPerOrganization:        2,
+			MaxVolumeSize:                    "2Gi",
+			VolumeStorageClass:               "longhorn",
+			MaxPostgresAddonsPerOrganization: 1,
+			PostgresInstances:                1,
+			MaxPostgresStorageSize:           "2Gi",
+			PostgresCPURequest:               "50m",
+			PostgresCPULimit:                 "500m",
+			PostgresMemoryRequest:            "128Mi",
+			PostgresMemoryLimit:              "1Gi",
 			ConcurrentBuilds:                 1,
 		},
 		Registry: StackdomeCloudRegistryConfig{
 			MaxActiveRegistries: 200,
 			StorageClass:        "longhorn",
-			StorageSize:         "10Gi",
+			StorageSize:         "2Gi",
 		},
 		Signup: StackdomeCloudSignupConfig{
 			ClientIPSource: StackdomeCloudClientIPSourceCloudflare,

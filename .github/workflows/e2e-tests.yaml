@@ -11,7 +11,7 @@ concurrency:
 jobs:
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     services:
       postgres:
@@ -60,10 +60,21 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: testpassword
 
+      - name: Run Stackdome Cloud e2e tests
+        run: make test-cloud-integration
+        env:
+          GOPRIVATE: github.com/ashishmax31/*,stackdome.io/*,github.com/Stackdome/*
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USERNAME: postgres
+          DB_PASSWORD: testpassword
+
       - name: Upload test log
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: e2e-test-log
-          path: test/int/last-run.log
+          path: |
+            test/int/last-run.log
+            test/cloudint/last-run.log
           retention-days: 2

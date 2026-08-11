@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"net/http"
 	"sync"
 	"time"
 
@@ -184,6 +185,50 @@ var _ = Describe("ProvisionReconciler", func() {
 			Expect(result).To(Equal(resultNil))
 		})
 
+		DescribeTable("durably fails when the create transaction returns a recognized compute denial",
+			func(denial *errors.ServiceError, expectedReason string, expectedHTTPStatus int) {
+				stackfileContent := []byte("name: my-app")
+				builtStack := &models.Stack{Name: "my-app"}
+				createdStack := &models.Stack{ID: "stack-1", Name: "my-app"}
+				txCtx, cancelTx := context.WithCancel(ctx)
+				defer cancelTx()
+				transactionExited := false
+				Expect(denial.HttpCode).To(Equal(expectedHTTPStatus))
+
+				cfgStore.EXPECT().GetByID(ctx, "cfg-1").Return(config, nil)
+				previewService.EXPECT().InternalFetchStackfile(ctx, config, preview.CommitSHA).
+					Return(stackfileContent, "hash-abc", nil)
+				previewService.EXPECT().InternalBuildStackFromContent(ctx, config, preview, stackfileContent).
+					Return(builtStack, nil)
+				previewStore.EXPECT().WithTransaction(ctx, gomock.Any()).
+					DoAndReturn(func(_ context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+						txErr := fn(txCtx)
+						Expect(txErr).To(BeIdenticalTo(denial))
+						transactionExited = true
+						return txErr
+					})
+				stackSvc.EXPECT().InternalCreateStack(txCtx, builtStack).Return(createdStack, nil)
+				releaseSvc.EXPECT().InternalCreateRelease(txCtx, "stack-1", gomock.Any()).Return(nil, denial)
+				previewStore.EXPECT().Update(ctx, preview).
+					DoAndReturn(func(_ context.Context, failed *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+						Expect(transactionExited).To(BeTrue())
+						Expect(failed.Status).To(Equal(models.PreviewStackStatus{
+							Phase:   models.PreviewStackPhaseFailed,
+							Reason:  expectedReason,
+							Message: denial.Reason,
+						}))
+						return failed, nil
+					})
+
+				result, err := reconciler.Reconcile(ctx, preview)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(result).To(Equal(resultStop))
+			},
+			Entry("compute access inactive", errors.ComputeAccessInactive(), "ComputeAccessInactive", http.StatusGone),
+			Entry("compute quota exceeded", errors.ComputeQuotaExceeded("stack resource limit exceeded"), "ComputeQuotaExceeded", http.StatusBadRequest),
+			Entry("shared compute capacity reached", errors.SharedComputeCapacityReached(), "SharedComputeCapacityUnavailable", http.StatusTooManyRequests),
+		)
+
 		It("uses inline StackfileContent instead of fetching, creates stack and release", func() {
 			preview.StackfileContent = ptr.To("name: inline-app")
 			inlineContent := []byte("name: inline-app")
@@ -299,6 +344,47 @@ var _ = Describe("ProvisionReconciler", func() {
 			result, err := reconciler.Reconcile(ctx, preview)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(result).To(Equal(resultRequeueAfter(convergePollInterval)))
+		})
+
+		It("durably fails after a recognized compute denial rolls back a sync transaction", func() {
+			stackfileContent := []byte("name: updated-app")
+			builtStack := &models.Stack{Name: "updated-app"}
+			updatedStack := &models.Stack{ID: stackID, Name: "updated-app"}
+			denial := errors.ComputeAccessInactive()
+			txCtx, cancelTx := context.WithCancel(ctx)
+			defer cancelTx()
+			transactionExited := false
+
+			cfgStore.EXPECT().GetByID(ctx, "cfg-1").Return(config, nil)
+			previewService.EXPECT().InternalFetchStackfile(ctx, config, preview.CommitSHA).
+				Return(stackfileContent, "new-hash", nil)
+			previewService.EXPECT().InternalBuildStackFromContent(ctx, config, preview, stackfileContent).
+				Return(builtStack, nil)
+			previewStore.EXPECT().WithTransaction(ctx, gomock.Any()).
+				DoAndReturn(func(_ context.Context, fn func(context.Context) *errors.ServiceError) *errors.ServiceError {
+					txErr := fn(txCtx)
+					Expect(txErr).To(BeIdenticalTo(denial))
+					transactionExited = true
+					return txErr
+				})
+			stackSvc.EXPECT().InternalUpdateStack(txCtx, stackID, builtStack).Return(updatedStack, nil)
+			releaseSvc.EXPECT().InternalCreateRelease(txCtx, stackID, gomock.Any()).Return(nil, denial)
+			previewStore.EXPECT().Update(ctx, preview).
+				DoAndReturn(func(_ context.Context, failed *models.PreviewStack) (*models.PreviewStack, *errors.ServiceError) {
+					Expect(transactionExited).To(BeTrue())
+					Expect(failed.ReconcilerStatus.LastAppliedStackfileHash).To(Equal("old-hash"))
+					Expect(failed.ActiveReleaseID).To(BeNil())
+					Expect(failed.Status).To(Equal(models.PreviewStackStatus{
+						Phase:   models.PreviewStackPhaseFailed,
+						Reason:  "ComputeAccessInactive",
+						Message: denial.Reason,
+					}))
+					return failed, nil
+				})
+
+			result, err := reconciler.Reconcile(ctx, preview)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result).To(Equal(resultStop))
 		})
 
 		It("calls UpdateStack when image overrides are present", func() {

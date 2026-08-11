@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -48,6 +49,7 @@ func newApplyStackTestEnv(ctrl *gomock.Controller) *applyStackTestEnv {
 		stackResourceService: env.resourceService,
 		referenceService:     env.referenceService,
 		defaultingService:    NewStackDefaultingService(),
+		computePolicy:        computequota.NewSelfHostedPolicy(),
 		logger:               logger.NewLogger(),
 		BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 			BackgroundJobEnqueuer: env.backgroundEnqueue,

@@ -117,7 +117,7 @@ func Setup(env *Environment, ctx context.Context) (retErr error) {
 	logger.Info("Bootstrapping client against platform defaults")
 	clientManager := NewClientManager(serverManager.GetBaseURL(), logger)
 	env.clientManager = clientManager
-	if err := clientManager.Bootstrap(ctx, sharedComputeCluster.ID); err != nil {
+	if err := clientManager.Bootstrap(ctx, sharedComputeCluster.ID, dbManager.GetSessionFactory()); err != nil {
 		return fmt.Errorf("client bootstrap failed: %w", err)
 	}
 

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Stackdome/stackdome/pkg/auth"
 	gitclient "github.com/Stackdome/stackdome/pkg/clients/git"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/credentials"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -218,6 +219,7 @@ var _ = Describe("stackReleaseService release creation records release_created",
 			permissions:      perms,
 			referenceService: referenceSvc,
 			eventRecorder:    recorder,
+			computePolicy:    computequota.NewSelfHostedPolicy(),
 			BackgroundJobEnqueuerDep: BackgroundJobEnqueuerDep{
 				BackgroundJobEnqueuer: enqueuer,
 			},

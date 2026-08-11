@@ -128,7 +128,7 @@ func (h *stackHandler) CreateVolume(w http.ResponseWriter, r *http.Request) {
 	var volume openapi.Volume
 	cfg := &handlerConfig{
 		MarshalInto: &volume,
-		Validate:    validation.ValidateVolume(&volume),
+		Validate:    validation.ValidateVolumeWithOptionalSize(&volume),
 		Action: func() (interface{}, *errors.ServiceError) {
 			stackID := mux.Vars(r)["id"]
 			obj, err := h.stackService.CreateStackVolume(r.Context(), stackID, presenters.ConvertVolume(&volume))

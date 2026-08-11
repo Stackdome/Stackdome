@@ -6,6 +6,7 @@ import (
 	"context"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/logger"
@@ -43,6 +44,7 @@ type VolumeServiceSpec struct {
 	ReferenceService ReferenceService
 	Logger           logger.Logger
 	Permissions      auth.PermissionService
+	ComputePolicy    computequota.Policy
 }
 
 func NewVolumeService(spec VolumeServiceSpec) VolumeService {
@@ -56,6 +58,7 @@ func NewVolumeService(spec VolumeServiceSpec) VolumeService {
 		referenceService: spec.ReferenceService,
 		logger:           spec.Logger,
 		permissions:      spec.Permissions,
+		computePolicy:    spec.ComputePolicy,
 	}
 }
 
@@ -66,6 +69,7 @@ type volumeService struct {
 	clusterResourceService clusterresource.VolumeClusterResourceService
 	logger                 logger.Logger
 	permissions            auth.PermissionService
+	computePolicy          computequota.Policy
 }
 
 func (s *volumeService) InjectClusterResourceService(volumeClusterService clusterresource.VolumeClusterResourceService) {
@@ -104,7 +108,10 @@ func (s *volumeService) InternalCreateWithTx(ctx context.Context, stack *models.
 	volume.UserID = stack.UserID
 	volume.Namespace = stack.Namespace
 
-	createdVolume, err := s.CreateInDbWithTx(ctx, volume)
+	if err := s.prepareCreate(ctx, volume); err != nil {
+		return nil, err
+	}
+	createdVolume, err := s.createInDbWithTx(ctx, volume)
 	if err != nil {
 		return nil, errors.GeneralError("failed to create volume '%s': %s", volume.Name, err.Error())
 	}
@@ -231,11 +238,11 @@ func (s *volumeService) UpdateRemoteSourceRevision(ctx context.Context, ID strin
 
 // Assume ctx already has a transaction
 func (s *volumeService) CreateWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	var createdVolume *models.Volume
-	var err *errors.ServiceError
-	createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
+	if err := s.prepareCreate(ctx, spec); err != nil {
+		return nil, err
+	}
+	createdVolume, err := s.createInDbWithTx(ctx, spec)
 	if err != nil {
-		s.logger.Error(ctx, "failed to create volume: %v", err)
 		return nil, err
 	}
 	cerr := s.clusterResourceService.CreateVolumeInCluster(ctx, createdVolume)
@@ -265,14 +272,33 @@ func (s *volumeService) CreateInCluster(ctx context.Context, spec *models.Volume
 }
 
 func (s *volumeService) CreateInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
-	var createdVolume *models.Volume
-	var err *errors.ServiceError
-	createdVolume, err = s.volumeStore.CreateWithTx(ctx, spec)
+	if err := s.prepareCreate(ctx, spec); err != nil {
+		return nil, err
+	}
+	return s.createInDbWithTx(ctx, spec)
+}
+
+func (s *volumeService) createInDbWithTx(ctx context.Context, spec *models.Volume) (*models.Volume, *errors.ServiceError) {
+	createdVolume, err := s.volumeStore.CreateWithTx(ctx, spec)
 	if err != nil {
 		s.logger.Error(ctx, "failed to create volume: %v", err)
 		return nil, err
 	}
 	return createdVolume, nil
+}
+
+func (s *volumeService) prepareCreate(ctx context.Context, spec *models.Volume) *errors.ServiceError {
+	if err := s.computePolicy.EnsureAccess(ctx, spec.OrganisationID); err != nil {
+		return err
+	}
+	s.computePolicy.ApplyVolumeDefaults(spec)
+	if spec.Size == "" {
+		return errors.Validation("spec.size is required")
+	}
+	return s.computePolicy.ValidateVolumeLimits(ctx, computequota.VolumeLimitChange{
+		OrganisationID: spec.OrganisationID,
+		Size:           spec.Size,
+	})
 }
 
 func (s *volumeService) UpdateStatus(ctx context.Context, ID string, status *models.VolumeStatus) *errors.ServiceError {

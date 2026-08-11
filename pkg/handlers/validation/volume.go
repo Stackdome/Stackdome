@@ -7,6 +7,14 @@ import (
 )
 
 func ValidateVolume(in *openapi.Volume) Validate {
+	return validateVolume(in, true)
+}
+
+func ValidateVolumeWithOptionalSize(in *openapi.Volume) Validate {
+	return validateVolume(in, false)
+}
+
+func validateVolume(in *openapi.Volume, sizeRequired bool) Validate {
 	// NOTE: validate only fields that exist on the generated openapi.Volume —
 	// reflect.FieldByName on a missing field yields an invalid Value whose
 	// String() is "<invalid Value>", making validateEmpty fail unconditionally.
@@ -28,11 +36,13 @@ func ValidateVolume(in *openapi.Volume) Validate {
 				return errors.Validation("spec.access_mode is required")
 			}
 
-			if in.Spec.Size == "" {
+			if sizeRequired && in.Spec.Size == "" {
 				return errors.Validation("spec.size is required")
 			}
-			if _, err := k8sresource.ParseQuantity(in.Spec.Size); err != nil {
-				return errors.Validation("spec.size is not a valid quantity")
+			if in.Spec.Size != "" {
+				if _, err := k8sresource.ParseQuantity(in.Spec.Size); err != nil {
+					return errors.Validation("spec.size is not a valid quantity")
+				}
 			}
 			// If source is not nil, validate it
 			if in.Spec.Source != nil {

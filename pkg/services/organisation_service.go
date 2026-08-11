@@ -142,8 +142,8 @@ func (s *organisationService) InternalCreate(ctx context.Context, spec *models.O
 	return s.organisationStore.Get(ctx, org.ID)
 }
 
-// seedSharedComputeRegistry gives a new tenant org a seed registry on the
-// shared-compute cluster. No shared-compute cluster configured → no-op.
+// seedSharedComputeRegistry gives a new tenant org a pending registry row on
+// the shared-compute cluster. No shared-compute cluster configured → no-op.
 func (s *organisationService) seedSharedComputeRegistry(ctx context.Context, orgID, orgName string) *errors.ServiceError {
 	sharedClusters, err := s.clusterStore.ListSharedComputeClusters(ctx)
 	if err != nil {
@@ -155,8 +155,6 @@ func (s *organisationService) seedSharedComputeRegistry(ctx context.Context, org
 	if len(sharedClusters) > 1 {
 		return errors.GeneralError("multiple shared-compute clusters configured")
 	}
-	ctx = auth.SetIdentityInContext(ctx, &auth.Identity{IsSystem: true, OrgID: orgID})
-
 	return s.seedOrgRegistry(ctx, orgID, orgName, sharedClusters[0].ID)
 }
 

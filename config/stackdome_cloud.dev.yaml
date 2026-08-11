@@ -1,0 +1,48 @@
+# Local Stackdome Cloud policy used by hack/run_local.sh.
+access:
+  maxActiveSharedComputeLeases: 200
+  trialEntitlementDuration: 6h
+
+limits:
+  maxStacksPerOrganization: 2
+  maxStackResourcesPerOrganization: 6
+  replicasPerStackResource: 1
+  maxVolumesPerOrganization: 2
+  maxVolumeSize: 2Gi
+  volumeStorageClass: local-path
+  maxPostgresAddonsPerOrganization: 1
+  postgresInstances: 1
+  maxPostgresStorageSize: 2Gi
+  # Basic plan: small scheduling requests with 0.5 CPU / 1Gi runtime limits.
+  postgresCPURequest: 50m
+  postgresCPULimit: 500m
+  postgresMemoryRequest: 128Mi
+  postgresMemoryLimit: 1Gi
+  concurrentBuilds: 1
+
+registry:
+  maxActiveRegistries: 200
+  storageClass: local-path
+  storageSize: 2Gi
+
+features:
+  customDomains: false
+  externalPostgresImport: false
+
+signup:
+  clientIPSource: remote_addr
+  turnstile:
+    enabled: true
+    siteKey: local-development-site-key
+    expectedHostname: localhost
+    expectedAction: signup
+    verificationTimeout: 5s
+  throttle:
+    ip:
+      maxTrackedClients: 100
+      maxAttempts: 20
+      window: 10m
+    email:
+      maxTrackedAddresses: 100
+      maxAttempts: 20
+      window: 1h

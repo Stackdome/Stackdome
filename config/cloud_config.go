@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -36,23 +37,18 @@ func (d ConfigDuration) Duration() time.Duration {
 }
 
 type StackdomeCloudConfig struct {
-	Capacity StackdomeCloudCapacityConfig `yaml:"capacity" json:"capacity"`
-	Limits   StackdomeCloudLimitsConfig   `yaml:"limits" json:"limits"`
-	Registry StackdomeCloudRegistryConfig `yaml:"registry" json:"registry"`
-	Features StackdomeCloudFeaturesConfig `yaml:"features" json:"features"`
-	Signup   StackdomeCloudSignupConfig   `yaml:"signup" json:"signup"`
+	Access   StackdomeCloudComputeAccessConfig `yaml:"access" json:"access"`
+	Limits   computequota.ComputeLimits        `yaml:"limits" json:"limits"`
+	Registry StackdomeCloudRegistryConfig      `yaml:"registry" json:"registry"`
+	Features StackdomeCloudFeaturesConfig      `yaml:"features" json:"features"`
+	Signup   StackdomeCloudSignupConfig        `yaml:"signup" json:"signup"`
 }
 
-type StackdomeCloudCapacityConfig struct {
-	MaxActiveTrialAllocations int            `yaml:"maxActiveTrialAllocations" json:"max_active_trial_allocations"`
-	AllocationTTL             ConfigDuration `yaml:"allocationTTL" json:"allocation_ttl"`
-}
-
-type StackdomeCloudLimitsConfig struct {
-	MaxStacksPerOrganization         int64 `yaml:"maxStacksPerOrganization" json:"max_stacks_per_organization"`
-	MaxStackResourcesPerOrganization int64 `yaml:"maxStackResourcesPerOrganization" json:"max_stack_resources_per_organization"`
-	ReplicasPerStackResource         int32 `yaml:"replicasPerStackResource" json:"replicas_per_stack_resource"`
-	ConcurrentBuilds                 int   `yaml:"concurrentBuilds" json:"concurrent_builds"`
+// StackdomeCloudComputeAccessConfig configures the default trial grant and the
+// platform ceiling enforced when reserving shared compute.
+type StackdomeCloudComputeAccessConfig struct {
+	MaxActiveSharedComputeLeases int            `yaml:"maxActiveSharedComputeLeases" json:"max_active_shared_compute_leases"`
+	TrialEntitlementDuration     ConfigDuration `yaml:"trialEntitlementDuration" json:"trial_entitlement_duration"`
 }
 
 type StackdomeCloudRegistryConfig struct {
@@ -108,11 +104,11 @@ type StackdomeCloudEmailThrottleConfig struct {
 }
 
 func (c *StackdomeCloudConfig) Validate() error {
-	if c.Capacity.MaxActiveTrialAllocations <= 0 {
-		return fmt.Errorf("capacity.maxActiveTrialAllocations must be greater than zero")
+	if c.Access.MaxActiveSharedComputeLeases <= 0 {
+		return fmt.Errorf("access.maxActiveSharedComputeLeases must be greater than zero")
 	}
-	if c.Capacity.AllocationTTL.Duration() <= 0 {
-		return fmt.Errorf("capacity.allocationTTL must be greater than zero")
+	if c.Access.TrialEntitlementDuration.Duration() <= 0 {
+		return fmt.Errorf("access.trialEntitlementDuration must be greater than zero")
 	}
 	if c.Limits.MaxStacksPerOrganization <= 0 {
 		return fmt.Errorf("limits.maxStacksPerOrganization must be greater than zero")
@@ -122,6 +118,39 @@ func (c *StackdomeCloudConfig) Validate() error {
 	}
 	if c.Limits.ReplicasPerStackResource <= 0 {
 		return fmt.Errorf("limits.replicasPerStackResource must be greater than zero")
+	}
+	if c.Limits.MaxVolumesPerOrganization <= 0 {
+		return fmt.Errorf("limits.maxVolumesPerOrganization must be greater than zero")
+	}
+	if err := validatePositiveQuantity("limits.maxVolumeSize", c.Limits.MaxVolumeSize); err != nil {
+		return err
+	}
+	if c.Limits.VolumeStorageClass == "" {
+		return fmt.Errorf("limits.volumeStorageClass is required")
+	}
+	if problems := validation.IsDNS1123Subdomain(c.Limits.VolumeStorageClass); len(problems) > 0 {
+		return fmt.Errorf("limits.volumeStorageClass must be a valid Kubernetes name: %s", problems[0])
+	}
+	if c.Limits.MaxPostgresAddonsPerOrganization <= 0 {
+		return fmt.Errorf("limits.maxPostgresAddonsPerOrganization must be greater than zero")
+	}
+	if c.Limits.PostgresInstances <= 0 {
+		return fmt.Errorf("limits.postgresInstances must be greater than zero")
+	}
+	if err := validatePositiveQuantity("limits.maxPostgresStorageSize", c.Limits.MaxPostgresStorageSize); err != nil {
+		return err
+	}
+	if err := validateResourceRequestAndLimit(
+		"limits.postgresCPURequest", c.Limits.PostgresCPURequest,
+		"limits.postgresCPULimit", c.Limits.PostgresCPULimit,
+	); err != nil {
+		return err
+	}
+	if err := validateResourceRequestAndLimit(
+		"limits.postgresMemoryRequest", c.Limits.PostgresMemoryRequest,
+		"limits.postgresMemoryLimit", c.Limits.PostgresMemoryLimit,
+	); err != nil {
+		return err
 	}
 	if c.Limits.ConcurrentBuilds <= 0 {
 		return fmt.Errorf("limits.concurrentBuilds must be greater than zero")
@@ -141,12 +170,8 @@ func (c *StackdomeCloudConfig) Validate() error {
 	if c.Features.WorkspaceUsers {
 		return fmt.Errorf("features.workspaceUsers has been removed and must be false")
 	}
-	storageSize, err := resource.ParseQuantity(c.Registry.StorageSize)
-	if err != nil {
-		return fmt.Errorf("registry.storageSize must be a valid Kubernetes quantity: %w", err)
-	}
-	if storageSize.Sign() <= 0 {
-		return fmt.Errorf("registry.storageSize must be greater than zero")
+	if err := validatePositiveQuantity("registry.storageSize", c.Registry.StorageSize); err != nil {
+		return err
 	}
 	switch c.Signup.ClientIPSource {
 	case StackdomeCloudClientIPSourceCloudflare, StackdomeCloudClientIPSourceRemoteAddr:
@@ -185,6 +210,32 @@ func (c *StackdomeCloudConfig) Validate() error {
 	}
 	if c.Signup.Throttle.Email.Window.Duration() <= 0 {
 		return fmt.Errorf("signup.throttle.email.window must be greater than zero")
+	}
+	return nil
+}
+
+func validatePositiveQuantity(field, value string) error {
+	quantity, err := resource.ParseQuantity(value)
+	if err != nil {
+		return fmt.Errorf("%s must be a valid Kubernetes quantity: %w", field, err)
+	}
+	if quantity.Sign() <= 0 {
+		return fmt.Errorf("%s must be greater than zero", field)
+	}
+	return nil
+}
+
+func validateResourceRequestAndLimit(requestField, requestValue, limitField, limitValue string) error {
+	if err := validatePositiveQuantity(requestField, requestValue); err != nil {
+		return err
+	}
+	if err := validatePositiveQuantity(limitField, limitValue); err != nil {
+		return err
+	}
+	request := resource.MustParse(requestValue)
+	limit := resource.MustParse(limitValue)
+	if request.Cmp(limit) > 0 {
+		return fmt.Errorf("%s must not exceed %s", requestField, limitField)
 	}
 	return nil
 }

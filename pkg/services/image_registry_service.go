@@ -154,21 +154,27 @@ func (s *clusterImageRegistryService) Create(ctx context.Context, spec *models.C
 	return s.create(ctx, spec)
 }
 
-// InternalCreateSeedRegistry creates the org's seed registry on a shared-compute
-// cluster. Org-provisioning only — the API Create path requires an
-// org-owned target cluster.
+// InternalCreateSeedRegistry persists the org's pending shared-compute registry
+// in the caller's transaction without enqueueing reconciliation. The
+// organisation service resolves the shared-compute cluster before calling this
+// internal persistence path; the API Create path still requires an org-owned
+// target cluster and keeps its existing eager reconciliation behavior.
 func (s *clusterImageRegistryService) InternalCreateSeedRegistry(ctx context.Context, spec *models.ClusterImageRegistry) (*models.ClusterImageRegistry, *errors.ServiceError) {
 	if err := s.validateSpec(spec); err != nil {
 		return nil, err
 	}
-	cluster, err := s.clusterStore.Get(ctx, spec.ClusterID)
+	spec.Status = &models.ClusterImageRegistryStatus{
+		State:      models.RegistryStatePending,
+		Conditions: []models.Condition{},
+	}
+	s.setDefaultValues(spec)
+
+	createdRegistry, err := s.clusterImageRegistryStore.CreateWithTx(ctx, spec)
 	if err != nil {
+		s.logger.Error(ctx, "failed to create shared-compute seed registry: %v", err)
 		return nil, err
 	}
-	if !cluster.SharedCompute {
-		return nil, errors.NotFound("cluster '%s' is not a shared-compute cluster", spec.ClusterID)
-	}
-	return s.create(ctx, spec)
+	return createdRegistry, nil
 }
 
 func (s *clusterImageRegistryService) validateSpec(spec *models.ClusterImageRegistry) *errors.ServiceError {

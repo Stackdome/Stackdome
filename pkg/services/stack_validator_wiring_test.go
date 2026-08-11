@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Stackdome/stackdome/config"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
@@ -88,6 +89,7 @@ func newProductionWiredStackValidator(t testContext, sf db.SessionFactory, platf
 		CredentialResolver:    mocks.NewMockCredentialResolver(ctrl),
 		GitIntegrationService: mocks.NewMockGitIntegrationService(ctrl),
 		PlatformBaseDomain:    platformBaseDomain,
+		ComputePolicy:         computequota.NewSelfHostedPolicy(),
 	}).(*stackService)
 	return svc.stackValidator
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/errors"
 	"github.com/Stackdome/stackdome/pkg/mocks"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -32,6 +33,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
@@ -78,6 +80,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			resourceValidator:  mockValidator,
 			referenceService:   mockReferenceService,
 			domainNameService:  mockDomains,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
@@ -123,6 +126,7 @@ func TestStackResourceService_Create_Validation(t *testing.T) {
 			stackResourceStore: mockResourceStore,
 			permissions:        mockPermissions,
 			resourceValidator:  mockValidator,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		resource := &models.StackResource{StackID: stackID, Name: "web"}
@@ -167,6 +171,7 @@ func TestStackResourceService_Update_Validation(t *testing.T) {
 			resourceValidator:  mockValidator,
 			referenceService:   mockReferenceService,
 			domainNameService:  mockDomains,
+			computePolicy:      computequota.NewSelfHostedPolicy(),
 		}
 
 		existing := &models.StackResource{ID: "resource-1", StackID: stackID, Name: resourceName}

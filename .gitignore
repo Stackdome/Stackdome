@@ -7,6 +7,7 @@ node-compile-cache/
 
 # Integration test cache (clusters, kubeconfigs, CI logs — never commit)
 test/int/.cache/
+test/cloudint/.cache/
 cluster_config.yaml
 database.yaml
 bin/
@@ -40,4 +41,5 @@ pkg/web/dist/*
 
 # Integration test output (Makefile tees here)
 test/int/last-run.log
+test/cloudint/last-run.log
 .pnpm-store

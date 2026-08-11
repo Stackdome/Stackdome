@@ -4,14 +4,16 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/Stackdome/stackdome/install"
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
+	"github.com/Stackdome/stackdome/pkg/db"
+	"github.com/Stackdome/stackdome/pkg/models"
 	"github.com/Stackdome/stackdome/pkg/testutil"
 	"github.com/go-logr/logr"
+	"gorm.io/gorm"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,7 +68,7 @@ func NewClientManager(baseURL string, logger logr.Logger) *ClientManager {
 	}
 }
 
-func (cm *ClientManager) Bootstrap(ctx context.Context, sharedComputeClusterID string) error {
+func (cm *ClientManager) Bootstrap(ctx context.Context, sharedComputeClusterID string, sessionFactory db.SessionFactory) error {
 	cm.logger.Info("Starting client bootstrap")
 
 	// Create context with 10-minute timeout for client bootstrap
@@ -84,10 +86,11 @@ func (cm *ClientManager) Bootstrap(ctx context.Context, sharedComputeClusterID s
 	cm.configureAuthentication()
 	cm.clusterID = sharedComputeClusterID
 
-	cm.logger.Info("Waiting for the seeded org image registry to become Running")
-	if err := cm.waitForRegistryRunning(bootstrapCtx); err != nil {
-		return fmt.Errorf("failed waiting for registry: %w", err)
+	registryName, err := findSeededRegistryName(bootstrapCtx, sessionFactory.New(bootstrapCtx), cm.orgID, cm.clusterID)
+	if err != nil {
+		return fmt.Errorf("failed to discover seeded registry: %w", err)
 	}
+	cm.registryName = registryName
 
 	cm.logger.Info("Client bootstrap completed successfully",
 		"orgID", cm.orgID,
@@ -274,35 +277,13 @@ func ExtractAPIServerClusterCredentials(ctx context.Context, cluster *testutil.T
 	return clusterURL, caData, saToken, nil
 }
 
-func (cm *ClientManager) waitForRegistryRunning(ctx context.Context) error {
-	timeout := 5 * time.Minute
-	deadline := time.Now().Add(timeout)
-
-	for time.Now().Before(deadline) {
-		resp, httpResp, err := cm.client.DefaultApi.ApiV1OrganizationsOrgIdImageRegistriesGet(ctx, cm.orgID).Execute()
-		if err != nil {
-			cm.logger.Info("Registry list request failed, retrying", "error", err.Error())
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		if httpResp.StatusCode != http.StatusOK {
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		for _, reg := range resp.GetItems() {
-			if reg.Status != nil && reg.Status.State != nil && *reg.Status.State == openapi.IMAGE_REGISTRY_RUNNING {
-				cm.logger.Info("Cluster image registry is Running", "name", reg.Name)
-				cm.registryName = reg.GetName()
-				return nil
-			}
-			if reg.Status != nil {
-				cm.logger.Info("Registry not yet Running", "name", reg.Name, "state", string(reg.Status.GetState()))
-			}
-		}
-
-		time.Sleep(5 * time.Second)
+func findSeededRegistryName(ctx context.Context, session *gorm.DB, organisationID, clusterID string) (string, error) {
+	var registry models.ClusterImageRegistry
+	if err := session.WithContext(ctx).
+		Select("name").
+		Where("organisation_id = ? AND cluster_id = ?", organisationID, clusterID).
+		Take(&registry).Error; err != nil {
+		return "", fmt.Errorf("find seeded image registry for organisation %q and cluster %q: %w", organisationID, clusterID, err)
 	}
-
-	return fmt.Errorf("timed out after %v waiting for cluster image registry to become Running", timeout)
+	return registry.Name, nil
 }
