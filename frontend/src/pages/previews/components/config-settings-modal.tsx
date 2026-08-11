@@ -209,10 +209,11 @@ export function ConfigSettingsModal({ open, onOpenChange, config, onSaved, onDel
               Deleting the configuration stops new previews for this repository.
             </p>
             <Button
-              variant="destructive"
+              variant="outline"
               size="sm"
               disabled={deleting}
               onClick={() => void requestDelete()}
+              className="border-danger-border text-danger hover:bg-danger-bg hover:text-danger"
             >
               Delete configuration
             </Button>

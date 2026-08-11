@@ -112,7 +112,7 @@ export function EnvVarsEditor({ value, onChange }: EnvVarsEditorProps) {
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 flex-none hover:bg-danger-bg hover:text-danger"
+              className="flex-none hover:bg-danger-bg hover:text-danger"
               onClick={() => removeRow(index)}
               aria-label="Remove variable"
             >

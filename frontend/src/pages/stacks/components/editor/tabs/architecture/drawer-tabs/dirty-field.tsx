@@ -83,7 +83,7 @@ export function DirtyField({
           variant="ghost"
           size="icon"
           className={cn(
-            "shrink-0 h-7 w-7 text-brand hover:bg-brand-bg-hover hover:text-brand-press",
+            "shrink-0 text-brand hover:bg-brand-bg-hover hover:text-brand-press",
             !showReset && "invisible pointer-events-none",
           )}
           onClick={onReset}

@@ -5,47 +5,54 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-sm text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-[13px] font-medium transition-[background-color,box-shadow] duration-150 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2 aria-invalid:border-destructive",
   {
     variants: {
       variant: {
         default:
-          "bg-brand text-white dark:text-primary-foreground shadow-xs hover:bg-brand-hover active:bg-brand-press",
+          "bg-primary text-primary-foreground shadow-[var(--edge)] hover:bg-primary-hover active:shadow-[var(--press)]",
         destructive:
-          "bg-danger text-white shadow-xs hover:bg-danger/90 focus-visible:ring-danger/30",
+          "bg-danger text-white shadow-[var(--edge)] hover:opacity-90 active:shadow-[var(--press)]",
         outline:
-          "border border-border bg-transparent text-foreground transition-colors hover:border-brand hover:text-brand hover:bg-brand-bg",
+          "bg-control text-foreground border border-border hover:bg-control-hover shadow-[var(--edge)] active:shadow-[var(--press)]",
+        // Same material as `outline`, no border — the two looked doubled up
+        // side by side in stories, so secondary drops the hairline.
         secondary:
-          "bg-secondary text-secondary-foreground shadow-xs hover:bg-secondary/80",
+          "bg-control text-foreground hover:bg-control-hover shadow-[var(--edge)] active:shadow-[var(--press)]",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-brand underline-offset-4 hover:underline",
+          "bg-transparent text-foreground hover:bg-foreground/5 active:shadow-[var(--press)]",
+        link: "text-foreground underline-offset-4 hover:underline",
         // Inverse foreground CTA — used on auth pages to contrast with the cream/navy band.
-        // Default: foreground (white in dark / navy in light). Hover & active flip to brand amber.
+        // Foreground fill at rest; hover is a one-step opacity shift, same as
+        // `destructive` (rubric: black is the only action colour, orange is
+        // never a button fill).
         inverse:
-          "bg-foreground text-background shadow-xs hover:bg-brand hover:text-white dark:hover:text-primary-foreground active:bg-brand-press",
-        // Mono terminal-style CTA per design system.
+          "bg-foreground text-background shadow-[var(--edge)] hover:opacity-90 active:shadow-[var(--press)]",
+        // Quiet neutral text button (D15: buttons are never mono — this used
+        // to be a monospace terminal CTA). Kept for API stability; call sites
+        // should migrate to `ghost` during their page's graphite pass.
         mono:
-          "bg-popover text-foreground border border-border font-mono uppercase tracking-[1.5px] hover:border-brand hover:text-brand",
-        // Console-rail primary — mono caps, brand-solid. ONLY for persistent
+          "bg-transparent text-foreground hover:bg-foreground/5 active:shadow-[var(--press)]",
+        // Console-rail primary — control-fill material, ONLY for persistent
         // action rails (session edit bar, command palette, debug overlays)
         // where the surrounding chrome is already terminal-flavored. Do NOT
         // use for in-page CTAs — use `default` instead.
         railPrimary:
-          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-brand text-white dark:text-primary-foreground hover:bg-brand-hover active:bg-brand-press",
+          "bg-control text-foreground hover:bg-control-hover shadow-[var(--edge)] active:shadow-[var(--press)]",
         // Console-rail secondary — paired with railPrimary (Cancel, Discard).
         railGhost:
-          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-transparent border border-border text-foreground hover:border-foreground",
+          "bg-transparent text-foreground hover:bg-foreground/5 active:shadow-[var(--press)]",
         // Console-rail destructive — paired with railPrimary in destructive flows.
         railDanger:
-          "font-mono text-[11px] font-bold uppercase tracking-[1.5px] bg-danger text-white hover:bg-danger/90",
+          "bg-transparent text-danger hover:bg-danger-bg",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-sm gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
-        icon: "size-8",
-        rail: "h-8 rounded-sm gap-1.5 px-3",
+        // --ctl-h-l ladder (40px height / 15px inline padding)
+        default: "h-10 px-[15px] has-[>svg]:px-3",
+        sm: "h-8 gap-1.5 px-3 has-[>svg]:px-2.5",
+        lg: "h-11 px-8 has-[>svg]:px-6",
+        icon: "size-10",
+        rail: "h-8 gap-1.5 px-3",
       },
     },
     defaultVariants: {

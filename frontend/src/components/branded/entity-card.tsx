@@ -20,14 +20,15 @@ export function StatusRail({ tone }: { tone: RailTone }) {
   if (tone !== "deploying") return null;
   return (
     <div className="h-1 w-full overflow-hidden bg-warn-bg" role="presentation" data-rail="deploying">
-      <div className="h-full w-[34%] bg-brand animate-rail-sweep" />
+      <div className="h-full w-[34%] bg-warn animate-rail-sweep" />
     </div>
   );
 }
 
 function toneTextClass(tone: RailTone | "neutral"): string {
   if (tone === "success") return "text-success";
-  if (tone === "brand" || tone === "deploying") return "text-brand";
+  if (tone === "deploying") return "text-warn";
+  if (tone === "brand") return "text-info";
   if (tone === "danger") return "text-danger";
   return "text-fg-muted";
 }
@@ -55,7 +56,7 @@ export interface EndpointUrl {
 const MAX_VISIBLE_PILLS = 2;
 
 const pillClass =
-  "inline-flex items-center gap-1.5 rounded-sm border border-border px-2.5 py-1 font-mono text-xs text-fg-2 transition-colors duration-120 hover:text-brand hover:border-brand focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40";
+  "inline-flex items-center gap-1.5 rounded-sm border border-border px-2.5 py-1 font-mono text-xs text-fg-2 transition-colors duration-120 hover:text-foreground hover:border-border-strong focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2";
 
 function PillLink({ url }: { url: EndpointUrl }) {
   return (

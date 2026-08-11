@@ -231,7 +231,7 @@ export function EnvRow({
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-brand hover:bg-brand-bg hover:text-brand-press"
+              className="h-6 w-6"
               onClick={onReset}
               aria-label="Reset env var to original value"
               title="Reset to original value"

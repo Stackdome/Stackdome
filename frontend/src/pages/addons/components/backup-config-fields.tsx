@@ -146,7 +146,7 @@ export function BackupConfigFields({
                 to="/object-stores"
                 target="_blank"
                 rel="noreferrer noopener"
-                className="text-brand hover:underline"
+                className="font-medium text-foreground underline-offset-2 hover:underline"
               >
                 Create one
               </Link>{" "}

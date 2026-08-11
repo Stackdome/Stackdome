@@ -66,9 +66,9 @@ export function AddonTypePickerDialog({
               disabled={!option.available}
               onClick={() => option.available && onSelect(option.id as AddonType)}
               className={cn(
-                "text-left rounded-md border border-border bg-card p-4 transition-colors",
+                "text-left rounded-md border border-border bg-card p-4 transition-colors focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2",
                 option.available
-                  ? "hover:bg-muted/40 hover:border-brand-border cursor-pointer"
+                  ? "hover:bg-muted/40 hover:border-border-strong cursor-pointer"
                   : "opacity-60 cursor-not-allowed",
               )}
             >

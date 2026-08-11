@@ -122,9 +122,11 @@ export function CanvasEditor({
       >
         {/* bgColor: the Background SVG paints xyflow's default (#141414 in
             dark) over the pane — pin it to the app token so the canvas
-            matches the sidebar/chrome in both modes. Dot color stays the
-            xyflow default. */}
-        <Background variant={BackgroundVariant.Dots} gap={24} size={1} bgColor="var(--background)" />
+            matches the sidebar/chrome in both modes. Two dot layers give the
+            grid a fine/bold tier from the dedicated canvas tokens instead of
+            xyflow's default dot color. */}
+        <Background variant={BackgroundVariant.Dots} gap={24} size={1} color="var(--grid)" bgColor="var(--background)" />
+        <Background variant={BackgroundVariant.Dots} gap={120} size={1.5} color="var(--grid-bold)" />
         <CanvasControls
           showConnections={showConnections}
           onToggleConnections={onToggleConnections}

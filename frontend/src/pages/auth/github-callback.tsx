@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/api/users";
 import { setAuthSession } from "@/lib/common";
 import { useCurrentUser } from "@/hooks/use-current-user";
 import { getErrorMessage } from "@/api/client";
+import { AlertBanner } from "@/components/branded/alert-banner";
 
 export default function GithubCallbackPage() {
   const [params] = useSearchParams();
@@ -44,9 +45,7 @@ export default function GithubCallbackPage() {
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
       {error ? (
         <>
-          <p className="rounded-sm border border-danger-border bg-danger-bg px-3 py-2 text-sm text-danger">
-            {error}
-          </p>
+          <AlertBanner>{error}</AlertBanner>
           <Link to="/sign-in" className="text-sm underline underline-offset-4">
             Back to sign in
           </Link>

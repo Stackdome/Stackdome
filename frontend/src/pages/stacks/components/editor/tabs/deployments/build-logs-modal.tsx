@@ -19,8 +19,8 @@ export { BuildPhase };
 const REVISION_LENGTH = 7;
 
 const LOG_STYLE = {
-  backgroundColor: "#070a0f",
-  color: "#94a3b8",
+  backgroundColor: "var(--code-bg)",
+  color: "var(--code-fg)",
   fontSize: "12px",
   lineHeight: "1.7",
   fontFamily: "var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace",
@@ -136,7 +136,7 @@ function BuildLogsBody({
         {state && <StatusPill variant={statusVariant("build", state)}>{state}</StatusPill>}
       </DialogHeader>
 
-      <div className="relative min-h-0 flex-1 bg-[#070a0f]">
+      <div className="relative min-h-0 flex-1 bg-code-bg">
         {view === "log" ? (
           <div className="h-full">
             <LazyLog

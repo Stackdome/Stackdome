@@ -25,7 +25,7 @@ function TemplateBadge({
     <div
       className={cn(
         "flex shrink-0 items-center justify-center overflow-hidden rounded-md border border-border bg-muted font-mono font-semibold",
-        active ? "text-brand" : "text-foreground/80",
+        active ? "text-foreground font-medium" : "text-foreground/80",
         className,
       )}
     >
@@ -49,7 +49,7 @@ function ExternalLinkButton({ href, label }: { href: string; label: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground/80 transition-colors hover:border-brand-border hover:text-brand"
+      className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-xs font-medium text-foreground/80 transition-colors hover:border-border-strong hover:text-foreground"
     >
       <ExternalLink className="h-3.5 w-3.5" />
       {label}
@@ -186,7 +186,7 @@ export function TemplatesBrowserPanel({
               <TemplateBadge
                 template={selected}
                 active
-                className="h-[60px] w-[60px] rounded-[10px] border-brand-border bg-brand-bg text-[22px]"
+                className="h-[60px] w-[60px] rounded-md border-brand-border bg-brand-bg text-[22px]"
               />
               <div>
                 <div className="text-2xl font-medium tracking-tight">

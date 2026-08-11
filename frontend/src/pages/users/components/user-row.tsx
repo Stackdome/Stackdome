@@ -1,5 +1,6 @@
 import type React from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import { ProjectChip } from "./project-chip";
 import type { ActiveRow } from "../hooks/use-users";
 import { formatRelative } from "../lib/format-relative";
@@ -42,14 +43,9 @@ export function UserRow({ row, actions, defaultProjectName }: UserRowProps) {
       {/* Org role */}
       <TableCell className="py-3.5">
         {isAdmin ? (
-          <span className="inline-flex items-center gap-1 px-2 py-px rounded border border-brand-border bg-brand-bg text-brand text-[11px] font-mono">
-            <span className="h-1.5 w-1.5 rounded-full bg-brand inline-block shrink-0" />
-            {row.role}
-          </span>
+          <Badge variant="secondary">{row.role}</Badge>
         ) : (
-          <span className="inline-flex items-center px-2 py-px rounded border border-border bg-muted text-muted-foreground text-[11px] font-mono">
-            {row.role ?? "—"}
-          </span>
+          <Badge variant="outline">{row.role ?? "—"}</Badge>
         )}
       </TableCell>
 

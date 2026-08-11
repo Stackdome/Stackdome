@@ -57,13 +57,13 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
   }, [toggleZen]);
 
   const cell =
-    "flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-brand";
+    "flex h-8 w-8 items-center justify-center text-muted-foreground transition-colors hover:text-foreground";
   const square =
-    "flex size-8 items-center justify-center rounded-md border bg-popover shadow-lg transition-colors";
+    "flex size-8 items-center justify-center rounded-md border border-border bg-control shadow-[var(--edge)] transition-colors";
 
   return (
     <Panel position="bottom-left" className="!m-4 flex flex-col gap-2">
-      <div className="flex flex-col overflow-hidden rounded-md border border-border bg-popover shadow-lg">
+      <div className="flex flex-col overflow-hidden rounded-md border border-border bg-control shadow-[var(--edge)]">
         <button type="button" aria-label="Zoom in" className={cell} onClick={() => zoomIn()}>
           <Plus className="size-3.5" />
         </button>
@@ -76,7 +76,7 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
           <Focus className="size-3.5" />
         </button>
       </div>
-      <div className="flex flex-col overflow-hidden rounded-md border border-border bg-popover shadow-lg">
+      <div className="flex flex-col overflow-hidden rounded-md border border-border bg-control shadow-[var(--edge)]">
         <button
           type="button"
           aria-label="Auto layout"
@@ -93,7 +93,7 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
           aria-pressed={zenActive}
           title={zenActive ? "Exit zen mode (⌘.)" : "Zen mode — collapse header and sidebar (⌘.)"}
           onClick={toggleZen}
-          className={cn(cell, zenActive && "text-brand")}
+          className={cn(cell, zenActive && "bg-foreground/[0.06] text-foreground")}
         >
           <Maximize2 className="size-4" />
         </button>
@@ -106,7 +106,9 @@ export function CanvasControls({ showConnections, onToggleConnections, onAutoLay
         onClick={onToggleConnections}
         className={cn(
           square,
-          showConnections ? "border-brand text-brand" : "border-border text-muted-foreground hover:text-foreground",
+          showConnections
+            ? "border-border-strong bg-foreground/[0.06] text-foreground"
+            : "text-muted-foreground hover:text-foreground",
         )}
       >
         <Workflow className="size-4" />

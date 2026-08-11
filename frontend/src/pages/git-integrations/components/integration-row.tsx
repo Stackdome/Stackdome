@@ -40,39 +40,24 @@ function Banner({
             href={banner.ctaHref}
             target="_blank"
             rel="noreferrer"
-            className="whitespace-nowrap rounded-md border border-brand-border px-2.5 py-1 font-medium text-brand hover:bg-brand-bg-hover"
+            className="whitespace-nowrap font-medium text-foreground underline-offset-2 hover:underline"
           >
             {banner.ctaLabel}
           </a>
         ) : (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand"
-            disabled
-          >
+          <Button variant="outline" size="sm" disabled>
             {banner.ctaLabel}
           </Button>
         )
       ) : statusKey === "action_needed" ? (
         // github_app rows can't be PUT-updated: message without a CTA.
         onUpdateCredentials && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-            onClick={onUpdateCredentials}
-          >
+          <Button variant="outline" size="sm" onClick={onUpdateCredentials}>
             {banner.ctaLabel}
           </Button>
         )
       ) : (
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-auto whitespace-nowrap rounded-md border-brand-border px-2.5 py-1 text-brand hover:bg-brand-bg-hover"
-          onClick={onVerify}
-        >
+        <Button variant="outline" size="sm" onClick={onVerify}>
           {banner.ctaLabel}
         </Button>
       )}

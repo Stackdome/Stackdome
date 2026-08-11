@@ -112,7 +112,7 @@ export function PostgresDetailHeader({
               </Link>
               <Button
                 variant="outline"
-                className="text-danger hover:border-danger hover:bg-danger/10 hover:text-danger"
+                className="border-danger-border text-danger hover:bg-danger-bg hover:text-danger"
                 onClick={onDelete}
               >
                 Delete

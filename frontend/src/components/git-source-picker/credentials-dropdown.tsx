@@ -66,7 +66,7 @@ export function CredentialsDropdown({
           <DropdownMenuItem
             key={integration.id}
             onSelect={() => onSelect(integration)}
-            className={cn(integration.id === selectedId && "text-brand")}
+            className={cn(integration.id === selectedId && "bg-foreground/5 font-medium text-foreground")}
           >
             <ProviderLogo providerId={providerIdFor(integration)} className="h-4 w-4" />
             <span className="flex-1 text-sm">{PROVIDER_DISPLAY_NAMES[providerIdFor(integration)]}</span>

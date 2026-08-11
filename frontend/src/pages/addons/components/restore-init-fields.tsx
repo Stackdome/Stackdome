@@ -165,7 +165,7 @@ export function RestoreInitFields({
           </FieldShell>
 
           <FieldShell label="Object store">
-            <div className="text-sm text-muted-foreground h-9 flex items-center">
+            <div className="text-sm text-muted-foreground h-10 flex items-center">
               {resolvedStoreName || "—"}
             </div>
           </FieldShell>

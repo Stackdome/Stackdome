@@ -226,13 +226,10 @@ export default function PreviewConfigDetailPage() {
             <div className="ml-auto flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                  >
-                    Status: <span className="text-foreground">{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
-                    <ChevronDown className="h-3 w-3 flex-none" />
-                  </button>
+                  <Button variant="outline" size="sm">
+                    <span className="text-fg-2">Status:</span> <span>{statusFilter === ALL_STATUSES ? "All" : statusFilter}</span>
+                    <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -242,37 +239,34 @@ export default function PreviewConfigDetailPage() {
                   <DropdownMenuItem
                     onSelect={() => setStatusFilter(ALL_STATUSES)}
                     className={cn(
-                      "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                      statusFilter === ALL_STATUSES && "text-brand"
+                      "justify-between text-[13px]",
+                      statusFilter === ALL_STATUSES && "font-semibold text-foreground"
                     )}
                   >
                     <span>All</span>
-                    <span className="tabular-nums opacity-80">{envs.length}</span>
+                    <span className="tabular-nums text-fg-2">{envs.length}</span>
                   </DropdownMenuItem>
                   {statusOptions.map((o) => (
                     <DropdownMenuItem
                       key={o.word}
                       onSelect={() => setStatusFilter(o.word)}
                       className={cn(
-                        "justify-between font-mono text-[11px] uppercase tracking-[1.5px]",
-                        statusFilter === o.word && "text-brand"
+                        "justify-between text-[13px]",
+                        statusFilter === o.word && "font-semibold text-foreground"
                       )}
                     >
                       <span>{o.word}</span>
-                      <span className="tabular-nums opacity-80">{o.count}</span>
+                      <span className="tabular-nums text-fg-2">{o.count}</span>
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 h-8 font-mono text-[11px] uppercase tracking-[1.5px] text-muted-foreground hover:bg-muted/50"
-                  >
-                    Sort: <span className="text-foreground">{sortLabel}</span>
-                    <ChevronDown className="h-3 w-3 flex-none" />
-                  </button>
+                  <Button variant="outline" size="sm">
+                    <span className="text-fg-2">Sort:</span> <span>{sortLabel}</span>
+                    <ChevronDown className="h-3.5 w-3.5 flex-none text-fg-2" />
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
@@ -284,8 +278,8 @@ export default function PreviewConfigDetailPage() {
                       key={o.key}
                       onSelect={() => setSortKey(o.key)}
                       className={cn(
-                        "font-mono text-[11px] uppercase tracking-[1.5px]",
-                        sortKey === o.key && "text-brand"
+                        "text-[13px]",
+                        sortKey === o.key && "font-semibold text-foreground"
                       )}
                     >
                       {o.label}

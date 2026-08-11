@@ -7,11 +7,7 @@ interface EyebrowLabelProps extends React.HTMLAttributes<HTMLSpanElement> {
 export function EyebrowLabel({ tone = "brand", className, ...props }: EyebrowLabelProps) {
   return (
     <span
-      className={cn(
-        "font-mono text-[11px] font-medium uppercase tracking-[1.5px]",
-        tone === "brand" ? "text-brand" : "text-muted-foreground",
-        className,
-      )}
+      className={cn(tone === "brand" ? "eyebrow" : "eyebrow-muted", className)}
       {...props}
     />
   );

@@ -69,14 +69,14 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
       onKeyDown={(e) => {
         if (e.key === "Enter") navigate(`/stacks/${stack.id}`);
       }}
-      className="group flex h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:border-brand-border hover:bg-muted/20 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-brand/40"
+      className="group flex h-[210px] w-full cursor-pointer flex-col gap-0 overflow-hidden p-0 transition-colors duration-150 hover:bg-foreground/[0.04] focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2"
     >
       {tone !== "neutral" && <StatusRail tone={tone} />}
       <div className="flex flex-1 flex-col gap-3.5 p-5">
         <div className="flex items-center gap-[11px]">
-          <Icon className="h-[18px] w-[18px] flex-none text-brand" strokeWidth={1.6} />
+          <Icon className="h-[18px] w-[18px] flex-none text-fg-2" strokeWidth={1.6} />
           <span
-            className="mr-auto truncate text-base font-medium tracking-[-0.01em] transition-colors group-hover:text-brand"
+            className="mr-auto truncate text-base font-medium tracking-[-0.01em]"
             title={stack.name}
           >
             {stack.name}
@@ -88,7 +88,7 @@ export function DeployStackCard({ stack, onDelete }: { stack: Stack; onDelete?: 
                   variant="ghost"
                   size="icon"
                   aria-label={`Actions for ${stack.name}`}
-                  className="h-7 w-7 flex-none"
+                  className="flex-none"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Ellipsis className="h-4 w-4" />

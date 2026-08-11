@@ -104,7 +104,7 @@ export function WizardChooser({
                 "flex min-h-[76px] items-start gap-3 rounded-md border bg-card p-4 text-left transition-colors",
                 a.disabled
                   ? "cursor-not-allowed opacity-50"
-                  : "hover:border-brand",
+                  : "hover:bg-muted/40 hover:border-border-strong",
               )}
             >
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded border border-brand-border bg-brand-bg text-brand">

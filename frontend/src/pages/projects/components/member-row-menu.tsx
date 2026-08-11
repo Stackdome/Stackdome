@@ -107,8 +107,8 @@ export function MemberRowMenu({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
+          variant="destructive"
           disabled={busy}
-          className="text-destructive focus:text-destructive"
           onSelect={() => void handleRemove()}
         >
           Remove from project
