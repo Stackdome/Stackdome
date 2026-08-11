@@ -175,7 +175,4 @@ func (p *stackdomeCloudPolicy) ApplyPostgresAddonDefaults(addon *models.Postgres
 	if addon.Instances.Count == 0 {
 		addon.Instances.Count = p.limits.PostgresInstances
 	}
-	if addon.Storage.Size == "" {
-		addon.Storage.Size = p.limits.MaxPostgresStorageSize
-	}
 }

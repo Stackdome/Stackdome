@@ -173,18 +173,27 @@ var _ = Describe("Stackdome Cloud compute policy", Ordered, func() {
 		expectServiceError(apiErr, serviceerrors.ErrorComputeQuotaExceeded)
 	})
 
-	It("defaults PostgreSQL storage and rejects instance and quota violations", func() {
+	It("enforces PostgreSQL instance, storage, and addon limits", func() {
+		apiErr := shared.CreatePostgresAddonExpectError(
+			cloudEnv.Client,
+			cloudEnv.OrgID,
+			projectName,
+			postgresAddon("cloud-too-large-postgres", 1, "3Gi"),
+			http.StatusBadRequest,
+		)
+		expectServiceError(apiErr, serviceerrors.ErrorComputeQuotaExceeded)
+
 		postgres = shared.CreatePostgresAddon(
 			cloudEnv.Client,
 			cloudEnv.OrgID,
 			projectName,
-			postgresAddon("cloud-postgres", 1, ""),
+			postgresAddon("cloud-postgres", 1, "1Gi"),
 		)
 		Expect(postgres.Spec.Instances.GetCount()).To(Equal(int32(1)))
-		Expect(postgres.Spec.Storage.GetSize()).To(Equal("2Gi"))
+		Expect(postgres.Spec.Storage.GetSize()).To(Equal("1Gi"))
 		shared.WaitForAddonReady(cloudEnv.Client, cloudEnv.OrgID, projectName, postgres.GetId(), 10*time.Minute)
 
-		apiErr := shared.CreatePostgresAddonExpectError(
+		apiErr = shared.CreatePostgresAddonExpectError(
 			cloudEnv.Client,
 			cloudEnv.OrgID,
 			projectName,
@@ -206,7 +215,7 @@ var _ = Describe("Stackdome Cloud compute policy", Ordered, func() {
 
 		persisted := shared.GetPostgresAddon(cloudEnv.Client, cloudEnv.OrgID, projectName, postgres.GetId())
 		Expect(persisted.Spec.Instances.GetCount()).To(Equal(int32(1)))
-		Expect(persisted.Spec.Storage.GetSize()).To(Equal("2Gi"))
+		Expect(persisted.Spec.Storage.GetSize()).To(Equal("1Gi"))
 	})
 
 	It("creates the pending registry only when a build release needs it", func() {

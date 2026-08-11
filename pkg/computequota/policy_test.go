@@ -112,7 +112,7 @@ var _ = ginkgo.Describe("Compute policy", func() {
 			gomega.Expect(volume.Size).To(gomega.Equal("2Gi"))
 			gomega.Expect(volume.StorageClass).To(gomega.Equal("longhorn"))
 			gomega.Expect(addon.Instances.Count).To(gomega.Equal(1))
-			gomega.Expect(addon.Storage.Size).To(gomega.Equal("2Gi"))
+			gomega.Expect(addon.Storage.Size).To(gomega.BeEmpty())
 		})
 
 		ginkgo.It("replaces a stack against usage that excludes its old resources", func() {
