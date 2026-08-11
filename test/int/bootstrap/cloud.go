@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	CloudTestBaseDomain   = "sd.localhost"
-	CloudTestStorageClass = "standard"
+	CloudTestBaseDomain     = "sd.localhost"
+	CloudTestStorageClass   = "standard"
+	cloudTestMaxStorageSize = "2Gi"
 )
 
 // SetupCloud starts the integration environment with the real Stackdome Cloud
@@ -61,7 +62,7 @@ func SetupCloud(env *Environment, ctx context.Context) (retErr error) {
 	serverManager := NewServerManager(dbManager.GetSessionFactory(), dbManager.GetConfig(), logger)
 	serverManager.config.RuntimeMode = config.RuntimeModeStackdomeCloud
 	serverManager.config.ComputeMode = config.ComputeModeShared
-	serverManager.config.StackdomeCloud = cloudTestConfig()
+	serverManager.config.StackdomeCloud = cloudTestConfig(serverManager.config.Server.Hostname)
 	env.serverManager = serverManager
 	if err := serverManager.Bootstrap(ctx); err != nil {
 		return fmt.Errorf("server bootstrap failed: %w", err)
@@ -93,7 +94,7 @@ func SetupCloud(env *Environment, ctx context.Context) (retErr error) {
 	return nil
 }
 
-func cloudTestConfig() *config.StackdomeCloudConfig {
+func cloudTestConfig(expectedHostname string) *config.StackdomeCloudConfig {
 	return &config.StackdomeCloudConfig{
 		Access: config.StackdomeCloudComputeAccessConfig{
 			MaxActiveSharedComputeLeases: 1,
@@ -104,17 +105,17 @@ func cloudTestConfig() *config.StackdomeCloudConfig {
 			MaxStackResourcesPerOrganization: 3,
 			ReplicasPerStackResource:         1,
 			MaxVolumesPerOrganization:        2,
-			MaxVolumeSize:                    "2Gi",
+			MaxVolumeSize:                    cloudTestMaxStorageSize,
 			VolumeStorageClass:               CloudTestStorageClass,
 			MaxPostgresAddonsPerOrganization: 1,
 			PostgresInstances:                1,
-			MaxPostgresStorageSize:           "2Gi",
+			MaxPostgresStorageSize:           cloudTestMaxStorageSize,
 			ConcurrentBuilds:                 1,
 		},
 		Registry: config.StackdomeCloudRegistryConfig{
 			MaxActiveRegistries: 1,
 			StorageClass:        CloudTestStorageClass,
-			StorageSize:         "2Gi",
+			StorageSize:         cloudTestMaxStorageSize,
 		},
 		Features: config.StackdomeCloudFeaturesConfig{},
 		Signup: config.StackdomeCloudSignupConfig{
@@ -122,7 +123,7 @@ func cloudTestConfig() *config.StackdomeCloudConfig {
 			Turnstile: config.StackdomeCloudTurnstileConfig{
 				Enabled:             true,
 				SiteKey:             "cloud-e2e-site-key",
-				ExpectedHostname:    "localhost",
+				ExpectedHostname:    expectedHostname,
 				ExpectedAction:      "signup",
 				VerificationTimeout: config.ConfigDuration(5 * time.Second),
 			},
