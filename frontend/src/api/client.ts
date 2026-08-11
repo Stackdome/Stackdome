@@ -98,7 +98,11 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers = config.headers || {};
     config.headers['Authorization'] = `Bearer ${token}`;
-    document.cookie = `auth_token=${token}; path=/; secure; samesite=strict`;
+    if (window.location.hostname === 'stackdome.127.0.0.1.nip.io') {
+      document.cookie = `auth_token=${token}; path=/; samesite=strict`;
+    } else {
+      document.cookie = `auth_token=${token}; path=/; secure; samesite=strict`;
+    }
   }
   return config;
 });
