@@ -186,6 +186,7 @@ test-integration: ensure-postgres ## Run integration tests. Optional: FOCUS="My 
 		EXIT_CODE=$$?; rm -f integration.test; exit $$EXIT_CODE
 
 .PHONY: test-cloud-integration
+test-cloud-integration: SHELL := /usr/bin/env bash
 test-cloud-integration: ensure-postgres ## Run the focused Stackdome Cloud/shared integration suite.
 	@go test -tags=cloud_e2e -c -o test/cloudint/cloud-integration.test ./test/cloudint
 	@cd test/cloudint && set -o pipefail && ./cloud-integration.test -test.v -ginkgo.v -test.timeout 1h -test.count 1 \
