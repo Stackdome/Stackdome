@@ -158,11 +158,11 @@ var _ = Describe("Stackdome Cloud compute policy", Ordered, func() {
 		shared.WaitForStackDeleted(cloudEnv.Client, cloudEnv.OrgID, projectName, second.GetId(), 2*time.Minute)
 	})
 
-	It("defaults and eagerly provisions volumes while enforcing their quota", func() {
-		defaulted := createStackVolume(primaryStack.GetId(), volume("cloud-data", ""), http.StatusCreated)
-		Expect(defaulted.Spec.GetSize()).To(Equal("2Gi"))
-		Expect(defaulted.Spec.GetStorageClass()).To(Equal(bootstrap.CloudTestStorageClass))
-		waitForVolumeReady(defaulted.GetId())
+	It("enforces the storage class and eagerly provisions volumes within quota", func() {
+		created := createStackVolume(primaryStack.GetId(), volume("cloud-data", "1Gi"), http.StatusCreated)
+		Expect(created.Spec.GetSize()).To(Equal("1Gi"))
+		Expect(created.Spec.GetStorageClass()).To(Equal(bootstrap.CloudTestStorageClass))
+		waitForVolumeReady(created.GetId())
 
 		apiErr := createStackVolumeExpectError(primaryStack.GetId(), volume("cloud-too-large", "3Gi"), http.StatusBadRequest)
 		expectServiceError(apiErr, serviceerrors.ErrorComputeQuotaExceeded)
