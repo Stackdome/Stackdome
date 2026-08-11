@@ -26,6 +26,12 @@
 #   # Start environment only (no stack)
 #   ./hack/run_local.sh
 #
+#   # Start Stackdome Cloud with the local cluster as shared compute
+#   CLOUD_MODE=true ./hack/run_local.sh
+#
+#   # Recreate PostgreSQL when switching between BYOC and shared compute
+#   CLOUD_MODE=true FORCE_PG_RECREATE=true ./hack/run_local.sh
+#
 #   # Deploy a stack
 #   ./hack/run_local.sh samples/tooljet.json
 #
@@ -34,6 +40,7 @@
 #
 # Environment variables (all optional, defaults provided):
 #   API_PORT                   API server port (default: 8000)
+#   CLOUD_MODE                 Set to "true" for stackdome_cloud + shared compute
 #   ORG_DOMAIN                 Organisation domain (default: stackdome.127.0.0.1.nip.io)
 #   ADDON_FILE                 Postgres addon JSON file (creates addon before stack)
 #   SKIP_INFRA                 Set to "true" to skip mage dev:setup (reuse existing)
@@ -53,6 +60,7 @@ ADMIN_EMAIL="admin@stackdome.io"
 ADMIN_PASS="welcome@123"
 K3D_CLUSTER_NAME="${K3D_CLUSTER_NAME:-stackdome-dev}"
 ORG_DOMAIN="${ORG_DOMAIN:-stackdome.127.0.0.1.nip.io}"
+CLOUD_MODE="${CLOUD_MODE:-false}"
 SKIP_INFRA="${SKIP_INFRA:-false}"
 SKIP_API_SERVER="${SKIP_API_SERVER:-false}"
 FORCE_CLUSTER_RECREATE="${FORCE_CLUSTER_RECREATE:-false}"
@@ -98,6 +106,11 @@ trap 'exit 0' INT TERM
 # ============================================================
 check_prerequisites() {
     log "Checking prerequisites..."
+
+    if [[ "$CLOUD_MODE" != "true" && "$CLOUD_MODE" != "false" ]]; then
+        err "CLOUD_MODE must be either 'true' or 'false'"
+    fi
+
     local missing=()
     for cmd in go docker k3d kubectl jq mage helm; do
         if ! command -v "$cmd" &>/dev/null; then
@@ -206,6 +219,29 @@ DB_PASSWORD="${DB_PASSWORD}"
 DB_DEBUG_MODE="false"
 EOF
 
+    if [[ "$CLOUD_MODE" == "true" ]]; then
+        cat >> "$API_SERVER_DIR/.env" <<EOF
+RUNTIME_MODE="stackdome_cloud"
+COMPUTE_MODE="shared"
+SHARED_COMPUTE_CLUSTER_API_URL="${CLUSTER_URL}"
+SHARED_COMPUTE_CLUSTER_CA_DATA="${CLUSTER_CA}"
+SHARED_COMPUTE_CLUSTER_TOKEN="${SA_TOKEN}"
+PLATFORM_BASE_DOMAIN="${ORG_DOMAIN}"
+PLATFORM_TLS_ENABLED="true"
+PLATFORM_EMAIL="local@stackdome.dev"
+PLATFORM_DNS_CLOUDFLARE_API_TOKEN="local-development-token"
+PLATFORM_ACME_ENVIRONMENT="staging"
+PLATFORM_TLS_NAMESPACE="stackdome-control-plane"
+STACKDOME_CLOUD_CONFIG="${API_SERVER_DIR}/config/stackdome_cloud.dev.yaml"
+TURNSTILE_SECRET="local-development-secret"
+EOF
+    else
+        cat >> "$API_SERVER_DIR/.env" <<EOF
+RUNTIME_MODE="self_hosted"
+COMPUTE_MODE="bring_your_own"
+EOF
+    fi
+
     log "Running database migrations..."
     ./bin/stackdome-server migrate
 
@@ -288,6 +324,11 @@ api() {
 # Step 4: Ensure domain on organisation
 # ============================================================
 ensure_org_domain() {
+    if [[ "$CLOUD_MODE" == "true" ]]; then
+        log "Using Cloud platform domain '${ORG_DOMAIN}'."
+        return
+    fi
+
     log "Ensuring domain '${ORG_DOMAIN}' on organisation..."
     local org_response
     org_response=$(api GET "/api/v1/organizations/${ORG_ID}")
@@ -314,6 +355,20 @@ ensure_org_domain() {
 # Step 5: Ensure cluster is registered
 # ============================================================
 ensure_cluster_registered() {
+    if [[ "$CLOUD_MODE" == "true" ]]; then
+        log "Using the shared-compute cluster bootstrapped by the API server..."
+        CLUSTER_ID=$(docker exec -e PGPASSWORD="$DB_PASSWORD" "$PG_CONTAINER_NAME" \
+            psql -U "$DB_USERNAME" -d "$DB_NAME" -tAc \
+            "SELECT id FROM clusters WHERE shared_compute = TRUE ORDER BY id LIMIT 1" \
+            | tr -d '[:space:]')
+        if [[ -z "$CLUSTER_ID" ]]; then
+            err "Failed to find the bootstrapped shared-compute cluster."
+        fi
+        log "Shared-compute cluster ready. ID: ${CLUSTER_ID}"
+        log "The organisation registry remains pending until a build release needs it."
+        return
+    fi
+
     log "Ensuring cluster is registered..."
 
     # Check if a cluster is already registered
@@ -590,6 +645,11 @@ print_stack_info() {
 # ============================================================
 main() {
     log "Starting local Stackdome environment"
+    if [[ "$CLOUD_MODE" == "true" ]]; then
+        info "Mode: stackdome_cloud + shared"
+    else
+        info "Mode: self_hosted + bring_your_own"
+    fi
     if [[ -n "$STACK_FILE" ]]; then
         info "Stack file: ${STACK_FILE}"
     fi

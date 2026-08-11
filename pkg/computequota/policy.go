@@ -59,6 +59,10 @@ type stackdomeCloudPolicy struct {
 	limits                 ComputeLimits
 	maxVolumeSize          resource.Quantity
 	maxPostgresStorageSize resource.Quantity
+	postgresCPURequest     resource.Quantity
+	postgresCPULimit       resource.Quantity
+	postgresMemoryRequest  resource.Quantity
+	postgresMemoryLimit    resource.Quantity
 }
 
 type StackdomeCloudPolicySpec struct {
@@ -74,6 +78,10 @@ func NewStackdomeCloudPolicy(spec StackdomeCloudPolicySpec) Policy {
 		limits:                 spec.Limits,
 		maxVolumeSize:          mustParsePolicyQuantity("MaxVolumeSize", spec.Limits.MaxVolumeSize),
 		maxPostgresStorageSize: mustParsePolicyQuantity("MaxPostgresStorageSize", spec.Limits.MaxPostgresStorageSize),
+		postgresCPURequest:     mustParsePolicyQuantity("PostgresCPURequest", spec.Limits.PostgresCPURequest),
+		postgresCPULimit:       mustParsePolicyQuantity("PostgresCPULimit", spec.Limits.PostgresCPULimit),
+		postgresMemoryRequest:  mustParsePolicyQuantity("PostgresMemoryRequest", spec.Limits.PostgresMemoryRequest),
+		postgresMemoryLimit:    mustParsePolicyQuantity("PostgresMemoryLimit", spec.Limits.PostgresMemoryLimit),
 	}
 }
 
@@ -164,6 +172,29 @@ func (p *stackdomeCloudPolicy) ValidatePostgresAddonLimits(ctx context.Context, 
 	if requested.Cmp(p.maxPostgresStorageSize) > 0 {
 		return errors.ComputeQuotaExceeded("Stackdome Cloud allows a maximum PostgreSQL addon storage size of %s", p.limits.MaxPostgresStorageSize)
 	}
+	if serr := requireExactPostgresResource("CPU request", change.Addon.Resources.CPU.Request, p.limits.PostgresCPURequest, p.postgresCPURequest); serr != nil {
+		return serr
+	}
+	if serr := requireExactPostgresResource("CPU limit", change.Addon.Resources.CPU.Limit, p.limits.PostgresCPULimit, p.postgresCPULimit); serr != nil {
+		return serr
+	}
+	if serr := requireExactPostgresResource("memory request", change.Addon.Resources.Memory.Request, p.limits.PostgresMemoryRequest, p.postgresMemoryRequest); serr != nil {
+		return serr
+	}
+	if serr := requireExactPostgresResource("memory limit", change.Addon.Resources.Memory.Limit, p.limits.PostgresMemoryLimit, p.postgresMemoryLimit); serr != nil {
+		return serr
+	}
+	return nil
+}
+
+func requireExactPostgresResource(name, value, configured string, expected resource.Quantity) *errors.ServiceError {
+	actual, err := resource.ParseQuantity(value)
+	if err != nil || actual.Sign() <= 0 {
+		return errors.BadRequest("PostgreSQL addon %s must be a positive Kubernetes quantity", name)
+	}
+	if actual.Cmp(expected) != 0 {
+		return errors.ComputeQuotaExceeded("Stackdome Cloud PostgreSQL addons must use %s %s", configured, name)
+	}
 	return nil
 }
 
@@ -180,4 +211,15 @@ func (p *stackdomeCloudPolicy) ApplyPostgresAddonDefaults(addon *models.Postgres
 	if addon.Instances.Count == 0 {
 		addon.Instances.Count = p.limits.PostgresInstances
 	}
+
+	resourcesUnset := addon.Resources.CPU.Request == "" && addon.Resources.CPU.Limit == "" &&
+		addon.Resources.Memory.Request == "" && addon.Resources.Memory.Limit == ""
+	if resourcesUnset {
+		addon.Resources.CPU.Limit = p.limits.PostgresCPULimit
+		addon.Resources.Memory.Limit = p.limits.PostgresMemoryLimit
+	}
+	// Cloud owns scheduling requests so the advertised Basic limits can share
+	// nodes efficiently without trusting client-selected reservations.
+	addon.Resources.CPU.Request = p.limits.PostgresCPURequest
+	addon.Resources.Memory.Request = p.limits.PostgresMemoryRequest
 }

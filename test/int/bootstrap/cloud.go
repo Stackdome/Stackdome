@@ -110,6 +110,10 @@ func cloudTestConfig(expectedHostname string) *config.StackdomeCloudConfig {
 			MaxPostgresAddonsPerOrganization: 1,
 			PostgresInstances:                1,
 			MaxPostgresStorageSize:           cloudTestMaxStorageSize,
+			PostgresCPURequest:               "50m",
+			PostgresCPULimit:                 "500m",
+			PostgresMemoryRequest:            "128Mi",
+			PostgresMemoryLimit:              "1Gi",
 			ConcurrentBuilds:                 1,
 		},
 		Registry: config.StackdomeCloudRegistryConfig{

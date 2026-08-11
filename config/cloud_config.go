@@ -140,6 +140,18 @@ func (c *StackdomeCloudConfig) Validate() error {
 	if err := validatePositiveQuantity("limits.maxPostgresStorageSize", c.Limits.MaxPostgresStorageSize); err != nil {
 		return err
 	}
+	if err := validateResourceRequestAndLimit(
+		"limits.postgresCPURequest", c.Limits.PostgresCPURequest,
+		"limits.postgresCPULimit", c.Limits.PostgresCPULimit,
+	); err != nil {
+		return err
+	}
+	if err := validateResourceRequestAndLimit(
+		"limits.postgresMemoryRequest", c.Limits.PostgresMemoryRequest,
+		"limits.postgresMemoryLimit", c.Limits.PostgresMemoryLimit,
+	); err != nil {
+		return err
+	}
 	if c.Limits.ConcurrentBuilds <= 0 {
 		return fmt.Errorf("limits.concurrentBuilds must be greater than zero")
 	}
@@ -209,6 +221,21 @@ func validatePositiveQuantity(field, value string) error {
 	}
 	if quantity.Sign() <= 0 {
 		return fmt.Errorf("%s must be greater than zero", field)
+	}
+	return nil
+}
+
+func validateResourceRequestAndLimit(requestField, requestValue, limitField, limitValue string) error {
+	if err := validatePositiveQuantity(requestField, requestValue); err != nil {
+		return err
+	}
+	if err := validatePositiveQuantity(limitField, limitValue); err != nil {
+		return err
+	}
+	request := resource.MustParse(requestValue)
+	limit := resource.MustParse(limitValue)
+	if request.Cmp(limit) > 0 {
+		return fmt.Errorf("%s must not exceed %s", requestField, limitField)
 	}
 	return nil
 }

@@ -91,6 +91,10 @@ var _ = ginkgo.Describe("Compute policy", func() {
 					MaxPostgresAddonsPerOrganization: 1,
 					PostgresInstances:                1,
 					MaxPostgresStorageSize:           "2Gi",
+					PostgresCPURequest:               "50m",
+					PostgresCPULimit:                 "500m",
+					PostgresMemoryRequest:            "128Mi",
+					PostgresMemoryLimit:              "1Gi",
 				},
 			})
 		})
@@ -120,6 +124,30 @@ var _ = ginkgo.Describe("Compute policy", func() {
 			gomega.Expect(volume.StorageClass).To(gomega.Equal("longhorn"))
 			gomega.Expect(addon.Instances.Count).To(gomega.Equal(1))
 			gomega.Expect(addon.Storage.Size).To(gomega.BeEmpty())
+		})
+
+		ginkgo.It("normalizes the UI Basic PostgreSQL profile for shared compute", func() {
+			addon := &models.PostgresAddon{
+				Instances: models.PostgresInstances{Count: 1},
+				Storage:   models.PostgresStorage{Size: "1Gi"},
+				Resources: models.PostgresResources{
+					CPU:    models.PostgresCPUResource{Request: "250m", Limit: "500m"},
+					Memory: models.PostgresMemoryResource{Request: "1Gi", Limit: "1Gi"},
+				},
+			}
+
+			policy.ApplyPostgresAddonDefaults(addon)
+			err := policy.ValidatePostgresAddonLimits(context.Background(), PostgresAddonLimitChange{
+				OrganisationID: "org-1",
+				CreatesAddon:   true,
+				Addon:          addon,
+			})
+
+			gomega.Expect(err).NotTo(gomega.HaveOccurred())
+			gomega.Expect(addon.Resources.CPU.Request).To(gomega.Equal("50m"))
+			gomega.Expect(addon.Resources.CPU.Limit).To(gomega.Equal("500m"))
+			gomega.Expect(addon.Resources.Memory.Request).To(gomega.Equal("128Mi"))
+			gomega.Expect(addon.Resources.Memory.Limit).To(gomega.Equal("1Gi"))
 		})
 
 		ginkgo.It("replaces a stack using usage without its old resources", func() {

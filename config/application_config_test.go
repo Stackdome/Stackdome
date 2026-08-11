@@ -63,6 +63,10 @@ limits:
   maxPostgresAddonsPerOrganization: 1
   postgresInstances: 1
   maxPostgresStorageSize: 2Gi
+  postgresCPURequest: 50m
+  postgresCPULimit: 500m
+  postgresMemoryRequest: 128Mi
+  postgresMemoryLimit: 1Gi
   concurrentBuilds: 1
 registry:
   maxActiveRegistries: 200
@@ -375,6 +379,10 @@ func validStackdomeCloudConfigForTest() StackdomeCloudConfig {
 			MaxPostgresAddonsPerOrganization: 1,
 			PostgresInstances:                1,
 			MaxPostgresStorageSize:           "2Gi",
+			PostgresCPURequest:               "50m",
+			PostgresCPULimit:                 "500m",
+			PostgresMemoryRequest:            "128Mi",
+			PostgresMemoryLimit:              "1Gi",
 			ConcurrentBuilds:                 1,
 		},
 		Registry: StackdomeCloudRegistryConfig{

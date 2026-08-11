@@ -12,6 +12,10 @@ type ComputeLimits struct {
 	MaxPostgresAddonsPerOrganization int64  `yaml:"maxPostgresAddonsPerOrganization" json:"max_postgres_addons_per_organization"`
 	PostgresInstances                int    `yaml:"postgresInstances" json:"postgres_instances"`
 	MaxPostgresStorageSize           string `yaml:"maxPostgresStorageSize" json:"max_postgres_storage_size"`
+	PostgresCPURequest               string `yaml:"postgresCPURequest" json:"postgres_cpu_request"`
+	PostgresCPULimit                 string `yaml:"postgresCPULimit" json:"postgres_cpu_limit"`
+	PostgresMemoryRequest            string `yaml:"postgresMemoryRequest" json:"postgres_memory_request"`
+	PostgresMemoryLimit              string `yaml:"postgresMemoryLimit" json:"postgres_memory_limit"`
 	// ConcurrentBuilds is informational here; request quota policy does not
 	// enforce build scheduling.
 	ConcurrentBuilds int `yaml:"concurrentBuilds" json:"concurrent_builds"`

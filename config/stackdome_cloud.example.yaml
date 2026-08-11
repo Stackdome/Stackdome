@@ -16,6 +16,11 @@ limits:
   maxPostgresAddonsPerOrganization: 1
   postgresInstances: 1
   maxPostgresStorageSize: 2Gi
+  # Basic plan: small scheduling requests with 0.5 CPU / 1Gi runtime limits.
+  postgresCPURequest: 50m
+  postgresCPULimit: 500m
+  postgresMemoryRequest: 128Mi
+  postgresMemoryLimit: 1Gi
   # Deployment must set cloud-guard controller.maxConcurrentBuilds from this
   # same value. Hub validates this policy but does not schedule image builds.
   concurrentBuilds: 1
