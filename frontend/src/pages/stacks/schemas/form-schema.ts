@@ -288,7 +288,20 @@ const FormStackSchema = ApiStackSchema.extend({
       .map(r => r?.name)
       .filter((n): n is string => !!n),
   );
+  // Resources are addressed by name everywhere, so two sharing one make every
+  // reference to it ambiguous and a delete of either take both.
+  const seenNames = new Set<string>();
   (stack.spec?.stack_resources ?? []).forEach((r, idx) => {
+    if (r?.name) {
+      if (seenNames.has(r.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["spec", "stack_resources", idx, "name"],
+          message: `Name already in use: "${r.name}"`,
+        });
+      }
+      seenNames.add(r.name);
+    }
     (r?.depends_on ?? []).forEach((dep, depIdx) => {
       if (!dep || !names.has(dep)) {
         ctx.addIssue({

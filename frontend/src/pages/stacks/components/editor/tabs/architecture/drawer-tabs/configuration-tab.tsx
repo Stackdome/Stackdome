@@ -242,6 +242,11 @@ function StackResourceConfigurationTabImpl({
         ? `${exposedCount} exposed`
         : `${ports.length} internal`;
 
+  // Deleting a resource matches siblings by name, so two resources sharing one
+  // would take each other with them.
+  const nameInUse = !!draft.name && (allResources ?? []).filter((r) => r.name === draft.name).length > 1;
+  const nameError = getError(errors, "name") || (nameInUse ? "Name already in use" : undefined);
+
   const mounts = draft.volume_mounts || [];
   const mountsMeta = mountsReadOnly
     ? mounts.length === 0
@@ -257,7 +262,7 @@ function StackResourceConfigurationTabImpl({
           htmlFor={`resource-name-${index}`}
           required
           meta="lowercase · unique in stack"
-          error={getError(errors, "name")}
+          error={nameError}
         >
           <DirtyField
             draft={draft}
@@ -271,9 +276,9 @@ function StackResourceConfigurationTabImpl({
               placeholder="e.g., api, database, frontend"
               value={draft.name || ""}
               onChange={(e) => update({ name: e.target.value })}
-              className={`h-9 text-[13.5px] ${getError(errors, "name") ? "border-danger" : ""}`}
+              className={`h-9 text-[13.5px] ${nameError ? "border-danger" : ""}`}
               required
-              aria-invalid={!!getError(errors, "name")}
+              aria-invalid={!!nameError}
             />
           </DirtyField>
         </LedgerRow>
