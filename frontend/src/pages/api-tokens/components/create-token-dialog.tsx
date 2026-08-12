@@ -198,7 +198,11 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
           <>
             <DialogHeader>
               <DialogTitle>Token created</DialogTitle>
-              <DialogDescription>Copy it now. You won&apos;t be able to see it again.</DialogDescription>
+              <DialogDescription>
+                {rawToken
+                  ? "Copy it now. You won't be able to see it again."
+                  : "The token was created, but the server did not return it. Revoke it and create another."}
+              </DialogDescription>
             </DialogHeader>
             <div className="min-w-0 space-y-4 py-2">
               {rawToken && (
