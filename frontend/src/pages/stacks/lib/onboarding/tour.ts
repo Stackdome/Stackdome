@@ -51,13 +51,23 @@ export function startCanvasStage(): void {
   stage = "canvas";
 }
 
+const WEB_NODE_SELECTOR = '.react-flow__node[data-id="resource:web"]';
+const DRAWER_SELECTOR = '[data-testid="resource-drawer"]';
+
+/** Idempotent — driver.js routes both the card click and the Next button
+    through the same hook, and the card may already be open. */
+export function openWebResource(): void {
+  if (document.querySelector(DRAWER_SELECTOR)) return;
+  document.querySelector<HTMLElement>(WEB_NODE_SELECTOR)?.click();
+}
+
 /** Drawer tabs in render order; the tour drives them by position. */
 const DRAWER_TABS = ["configuration", "deployment", "environment"] as const;
 
 /** Radix tabs activate on mousedown, so a bare click() does nothing. */
 function showDrawerTab(tab: (typeof DRAWER_TABS)[number]): void {
   const tabs = document.querySelectorAll<HTMLButtonElement>(
-    '[data-testid="resource-drawer"] [role="tab"]',
+    `${DRAWER_SELECTOR} [role="tab"]`,
   );
   tabs[DRAWER_TABS.indexOf(tab)]?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
 }
@@ -77,19 +87,22 @@ export function runCanvasTour(): void {
         },
       },
       {
-        element: '.react-flow__node[data-id="resource:web"]',
+        element: WEB_NODE_SELECTOR,
         popover: {
           title: "The web resource",
           description:
             "This one runs a ready-made container image. Click the card to look inside.",
           side: "bottom",
-          showButtons: ["close"],
+          onNextClick: () => {
+            openWebResource();
+            d.moveNext();
+          },
         },
         disableActiveInteraction: false,
         advanceOnClick: true,
       },
       {
-        element: '[data-testid="resource-drawer"]',
+        element: DRAWER_SELECTOR,
         waitForElement: 2000,
         popover: {
           title: "Configuration",
@@ -104,7 +117,7 @@ export function runCanvasTour(): void {
         },
       },
       {
-        element: '[data-testid="resource-drawer"]',
+        element: DRAWER_SELECTOR,
         popover: {
           title: "Deployment",
           description:
@@ -118,7 +131,7 @@ export function runCanvasTour(): void {
         },
       },
       {
-        element: '[data-testid="resource-drawer"]',
+        element: DRAWER_SELECTOR,
         popover: {
           title: "Environment",
           description:
@@ -127,7 +140,7 @@ export function runCanvasTour(): void {
           align: "center",
           onNextClick: () => {
             document
-              .querySelector<HTMLButtonElement>('[data-testid="resource-drawer"] [aria-label="Close"]')
+              .querySelector<HTMLButtonElement>(`${DRAWER_SELECTOR} [aria-label="Close"]`)
               ?.click();
             setTimeout(() => d.moveNext(), 300);
           },
