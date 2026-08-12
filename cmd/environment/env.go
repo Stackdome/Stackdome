@@ -77,28 +77,12 @@ type ApplicationConfigOption func(*config.ApplicationConfig)
 
 type PlatformConfigOption func(*config.PlatformConfig)
 
-type TurnstileVerifierOption struct {
-	verifier turnstile.Verifier
-}
-
-type SignupClientIPResolverOption struct {
-	resolver signupprotection.ClientIPResolver
-}
-
 func (o ApplicationConfigOption) ApplyToEnv(env *Env) {
 	o(env.Config)
 }
 
 func (o PlatformConfigOption) ApplyToEnv(env *Env) {
 	o(env.PlatformConfig)
-}
-
-func (o TurnstileVerifierOption) ApplyToEnv(env *Env) {
-	env.Clients.TurnstileVerifier = o.verifier
-}
-
-func (o SignupClientIPResolverOption) ApplyToEnv(env *Env) {
-	env.SignupClientIPResolver = o.resolver
 }
 
 func WithApplicationConfig(cfg *config.ApplicationConfig) EnvConfigOption {
@@ -111,14 +95,6 @@ func WithPlatformConfig(cfg *config.PlatformConfig) EnvConfigOption {
 	return PlatformConfigOption(func(env *config.PlatformConfig) {
 		*env = *cfg
 	})
-}
-
-func WithTurnstileVerifier(verifier turnstile.Verifier) EnvConfigOption {
-	return TurnstileVerifierOption{verifier: verifier}
-}
-
-func WithSignupClientIPResolver(resolver signupprotection.ClientIPResolver) EnvConfigOption {
-	return SignupClientIPResolverOption{resolver: resolver}
 }
 
 func NewTestEnvironment(sessionFactory db.SessionFactory, opts ...EnvConfigOption) EnvImpl {
