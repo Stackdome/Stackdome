@@ -9,6 +9,7 @@ import { usePostgresAddons } from "@/hooks/use-postgres-addons";
 import { AddonTypeIcon } from "@/components/branded/addon-type-icon";
 import { emptyDraftSeed } from "@/pages/stacks/lib/canvas/draft-seed";
 import type { FormStackResourceData, FormVolumeExtendedData } from "@/pages/stacks/schemas/form-schema";
+import { deleteResourceAndReferences } from "@/pages/stacks/lib/delete-references";
 import { BlockPicker } from "./block-picker";
 import { BlockGlyph } from "./block-glyph";
 import { WizardFooter } from "@/components/wizard-footer";
@@ -41,10 +42,20 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
     blockCatalog.find((b) => b.id === name || name.startsWith(`${b.id}-`))?.icon ?? "box";
 
   const removeResource = (index: number) =>
-    setStack((s) => ({
-      ...s,
-      spec: { ...s.spec, stack_resources: s.spec.stack_resources.filter((_, i) => i !== index) },
-    }));
+    setStack((s) => {
+      const name = s.spec.stack_resources[index]?.name;
+      if (!name) return s;
+      return {
+        ...s,
+        spec: {
+          ...s.spec,
+          stack_resources: deleteResourceAndReferences(
+            s.spec.stack_resources,
+            name,
+          ) as typeof s.spec.stack_resources,
+        },
+      };
+    });
 
   const toggleAddon = (id: string) =>
     setSelectedAddonIds((prev) => {

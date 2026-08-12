@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { renameResourceReferences } from "../rename-references";
+import { renameResourceReferences, renameResourceReferencesByMap } from "../rename-references";
 import type { FormStackResourceData } from "@/pages/stacks/schemas/form-schema";
 
 /**
@@ -69,6 +69,27 @@ describe("renameResourceReferences", () => {
     const resources = [web([resourceRow("other")]), redis()];
     const next = renameResourceReferences(resources, "redis", "cache");
     expect(next[0]).toBe(resources[0]);
+  });
+
+  /** Block de-duplication renames several resources at once. Applying the pair
+   *  form in a loop would rewrite `a` to `a-2` and then catch the sibling that
+   *  was already called `a-2`; every lookup here reads the original name. */
+  it("carries simultaneous renames without a rename catching its own output", () => {
+    const app = { ...web([resourceRow("a")], ["a", "a-2"]) };
+    const next = renameResourceReferencesByMap(
+      [app],
+      new Map([
+        ["a", "a-2"],
+        ["a-2", "a-3"],
+      ]),
+    );
+    expect(envOf(next[0])[0].resourceName).toBe("a-2");
+    expect(next[0].depends_on).toEqual(["a-2", "a-3"]);
+  });
+
+  it("does nothing when given no renames", () => {
+    const resources = [web([resourceRow("redis")]), redis()];
+    expect(renameResourceReferencesByMap(resources, new Map())).toBe(resources);
   });
 
   it("does nothing when the name did not change", () => {

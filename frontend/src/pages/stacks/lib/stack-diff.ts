@@ -14,6 +14,7 @@ import type {
 export type ResourceArr = Partial<FormStackResourceData>[];
 export type VolumeArr = Partial<FormVolumeExtendedData>[];
 
+import { renameResourceReferences } from "@/pages/stacks/lib/rename-references";
 import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-model/equal";
 import { getAtPath } from "@/pages/stacks/lib/stack-model/path";
 import { resourceFingerprint, volumeFingerprint } from "@/pages/stacks/lib/stack-model/diff";
@@ -26,12 +27,24 @@ export function cloneJson<T>(v: T): T {
   return JSON.parse(JSON.stringify(v)) as T;
 }
 
+/**
+ * Siblings point at whatever name the resource carried while it was renamed, so
+ * a revert that restores the old name has to bring them back with it.
+ * Keyed on the name actually changing, not on which field was reverted.
+ */
+function carryNameRevert(resources: ResourceArr, idx: number, nameBefore?: string): ResourceArr {
+  const nameAfter = resources[idx]?.name;
+  if (!nameBefore || !nameAfter || nameBefore === nameAfter) return resources;
+  return renameResourceReferences(resources, nameBefore, nameAfter);
+}
+
 export function revertResource(
   draft: { resources: ResourceArr; volumes: VolumeArr },
   baseline: { resources: ResourceArr; volumes: VolumeArr },
   idx: number,
 ): { resources: ResourceArr; volumes: VolumeArr } {
   const next = { ...draft, resources: draft.resources.slice() };
+  const nameBefore = draft.resources[idx]?.name;
   // A name-aligned baseline can carry nullish holes for draft-only resources
   // (see alignBaselineToDraft) — treat those the same as "past the end".
   const baselineEntry = idx < baseline.resources.length ? baseline.resources[idx] : undefined;
@@ -52,6 +65,7 @@ export function revertResource(
       );
     }
     next.resources[idx] = restored;
+    next.resources = carryNameRevert(next.resources, idx, nameBefore);
   } else {
     // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);
@@ -248,7 +262,10 @@ export function revertResourceField(
   const nextResource = setAtPath(draftResource, path, cloneJson(baselineValue));
   const nextResources = draft.resources.slice();
   nextResources[resourceIdx] = nextResource;
-  return { ...draft, resources: nextResources };
+  return {
+    ...draft,
+    resources: carryNameRevert(nextResources, resourceIdx, draftResource.name),
+  };
 }
 
 export function revertVolume(

@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { alignBaselineToDraft, cloneJson, resourceRenameFingerprint, revertResource } from "../stack-diff";
+import {
+  alignBaselineToDraft,
+  cloneJson,
+  resourceRenameFingerprint,
+  revertResource,
+  revertResourceField,
+} from "../stack-diff";
 import { pairByFingerprint } from "../stack-model/equal";
 
 describe("cloneJson", () => {
@@ -149,5 +155,47 @@ describe("revertResource dangling-mount guard", () => {
     expect(next.resources[0].volume_mounts).toEqual([
       { source_volume_name: "data", source_sub_path: "", target_path: "/data" },
     ]);
+  });
+});
+
+/**
+ * The forward rename carries every sibling to the new name. Undoing the rename
+ * has to bring them back, or the discard leaves the siblings pointing at a name
+ * nothing has any more.
+ */
+describe("reverting a rename carries the references back", () => {
+  const baseline = {
+    resources: [{ name: "redis" }, { name: "web", depends_on: ["redis"] }],
+    volumes: [],
+  };
+  // The rename to "cache" already moved the sibling with it.
+  const draft = {
+    resources: [{ name: "cache" }, { name: "web", depends_on: ["cache"] }],
+    volumes: [],
+  };
+
+  it("repoints siblings when the whole resource is reverted", () => {
+    const next = revertResource(draft as never, baseline as never, 0);
+    expect(next.resources[0].name).toBe("redis");
+    expect(next.resources[1].depends_on).toEqual(["redis"]);
+  });
+
+  it("repoints siblings when only the name field is discarded", () => {
+    const next = revertResourceField(draft as never, baseline as never, 0, "name");
+    expect(next.resources[0].name).toBe("redis");
+    expect(next.resources[1].depends_on).toEqual(["redis"]);
+  });
+
+  it("leaves siblings alone when the reverted field is not the name", () => {
+    const withImage = {
+      resources: [{ name: "cache", source: { image: { ref: "redis:8" } } }, draft.resources[1]],
+      volumes: [],
+    };
+    const withBaseImage = {
+      resources: [{ name: "cache", source: { image: { ref: "redis:7" } } }, baseline.resources[1]],
+      volumes: [],
+    };
+    const next = revertResourceField(withImage as never, withBaseImage as never, 0, "source.image.ref");
+    expect(next.resources[1].depends_on).toEqual(["cache"]);
   });
 });
