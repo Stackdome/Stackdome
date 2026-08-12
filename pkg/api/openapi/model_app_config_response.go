@@ -17,7 +17,8 @@ import (
 // AppConfigResponse struct for AppConfigResponse
 type AppConfigResponse struct {
 	// True when GitHub OAuth login is configured on the server.
-	GithubOauth *bool `json:"github_oauth,omitempty"`
+	GithubOauth *bool                 `json:"github_oauth,omitempty"`
+	Signup      *SignupConfigResponse `json:"signup,omitempty"`
 }
 
 // NewAppConfigResponse instantiates a new AppConfigResponse object
@@ -69,10 +70,45 @@ func (o *AppConfigResponse) SetGithubOauth(v bool) {
 	o.GithubOauth = &v
 }
 
+// GetSignup returns the Signup field value if set, zero value otherwise.
+func (o *AppConfigResponse) GetSignup() SignupConfigResponse {
+	if o == nil || o.Signup == nil {
+		var ret SignupConfigResponse
+		return ret
+	}
+	return *o.Signup
+}
+
+// GetSignupOk returns a tuple with the Signup field value if set, nil otherwise
+// and a boolean to check if the value has been set.
+func (o *AppConfigResponse) GetSignupOk() (*SignupConfigResponse, bool) {
+	if o == nil || o.Signup == nil {
+		return nil, false
+	}
+	return o.Signup, true
+}
+
+// HasSignup returns a boolean if a field has been set.
+func (o *AppConfigResponse) HasSignup() bool {
+	if o != nil && o.Signup != nil {
+		return true
+	}
+
+	return false
+}
+
+// SetSignup gets a reference to the given SignupConfigResponse and assigns it to the Signup field.
+func (o *AppConfigResponse) SetSignup(v SignupConfigResponse) {
+	o.Signup = &v
+}
+
 func (o AppConfigResponse) MarshalJSON() ([]byte, error) {
 	toSerialize := map[string]interface{}{}
 	if o.GithubOauth != nil {
 		toSerialize["github_oauth"] = o.GithubOauth
+	}
+	if o.Signup != nil {
+		toSerialize["signup"] = o.Signup
 	}
 	return json.Marshal(toSerialize)
 }

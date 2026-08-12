@@ -9,6 +9,7 @@ Name | Type | Description | Notes
 **Password** | **string** | Users desired password | 
 **Organisation** | Pointer to [**Organisation**](Organisation.md) |  | [optional] 
 **InviteToken** | Pointer to **string** | Optional invite token for joining an existing organization | [optional] 
+**TurnstileToken** | Pointer to **string** | Turnstile token required for protected public password signup | [optional] 
 
 ## Methods
 
@@ -138,6 +139,31 @@ SetInviteToken sets InviteToken field to given value.
 `func (o *UserSignupRequest) HasInviteToken() bool`
 
 HasInviteToken returns a boolean if a field has been set.
+
+### GetTurnstileToken
+
+`func (o *UserSignupRequest) GetTurnstileToken() string`
+
+GetTurnstileToken returns the TurnstileToken field if non-nil, zero value otherwise.
+
+### GetTurnstileTokenOk
+
+`func (o *UserSignupRequest) GetTurnstileTokenOk() (*string, bool)`
+
+GetTurnstileTokenOk returns a tuple with the TurnstileToken field if it's non-nil, zero value otherwise
+and a boolean to check if the value has been set.
+
+### SetTurnstileToken
+
+`func (o *UserSignupRequest) SetTurnstileToken(v string)`
+
+SetTurnstileToken sets TurnstileToken field to given value.
+
+### HasTurnstileToken
+
+`func (o *UserSignupRequest) HasTurnstileToken() bool`
+
+HasTurnstileToken returns a boolean if a field has been set.
 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

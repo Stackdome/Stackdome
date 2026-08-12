@@ -8,25 +8,47 @@ import (
 	"github.com/Stackdome/stackdome/pkg/handlers/validation"
 	"github.com/Stackdome/stackdome/pkg/presenters"
 	"github.com/Stackdome/stackdome/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/signupprotection"
 	"github.com/gorilla/mux"
 	"k8s.io/utils/ptr"
 )
 
 func NewUserServiceHandler(spec UserServiceHandlerSpec) *usersHandler {
+	if spec.SignupProtectionEnabled {
+		if spec.PasswordSignupProtection == nil {
+			panic("password signup protection is required when signup protection is enabled")
+		}
+		if spec.SignupClientIPResolver == nil {
+			panic("signup client IP resolver is required when signup protection is enabled")
+		}
+	}
+
 	return &usersHandler{
-		userService:   spec.UserService,
-		signupService: spec.SignupService,
+		userService:              spec.UserService,
+		signupService:            spec.SignupService,
+		signupProtectionEnabled:  spec.SignupProtectionEnabled,
+		inviteSignupEnabled:      spec.InviteSignupEnabled,
+		passwordSignupProtection: spec.PasswordSignupProtection,
+		signupClientIPResolver:   spec.SignupClientIPResolver,
 	}
 }
 
 type UserServiceHandlerSpec struct {
-	UserService   services.UserService
-	SignupService services.SignupService
+	UserService              services.UserService
+	SignupService            services.SignupService
+	SignupProtectionEnabled  bool
+	InviteSignupEnabled      bool
+	PasswordSignupProtection signupprotection.PasswordSignupProtection
+	SignupClientIPResolver   signupprotection.ClientIPResolver
 }
 
 type usersHandler struct {
-	userService   services.UserService
-	signupService services.SignupService
+	userService              services.UserService
+	signupService            services.SignupService
+	signupProtectionEnabled  bool
+	inviteSignupEnabled      bool
+	passwordSignupProtection signupprotection.PasswordSignupProtection
+	signupClientIPResolver   signupprotection.ClientIPResolver
 }
 
 func (a usersHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -94,13 +116,33 @@ func (a usersHandler) Signup(w http.ResponseWriter, r *http.Request) {
 		validation.ValidateUserCreate(&req),
 		func() (_ interface{}, returnErr *errors.ServiceError) {
 			ctx := r.Context()
-			convertedUser := presenters.ConvertUser(&req)
 
 			inviteToken := ""
 			if req.InviteToken != nil {
 				inviteToken = *req.InviteToken
 			}
+			if inviteToken != "" && !a.inviteSignupEnabled {
+				return nil, errors.Forbidden("invite signup is unavailable")
+			}
+			if a.signupProtectionEnabled && inviteToken == "" {
+				clientIP, err := a.signupClientIPResolver.Resolve(r)
+				if err != nil {
+					return nil, errors.Forbidden("signup verification failed")
+				}
+				turnstileToken := ""
+				if req.TurnstileToken != nil {
+					turnstileToken = *req.TurnstileToken
+				}
+				if err := a.passwordSignupProtection.Check(ctx, signupprotection.PasswordSignupAttempt{
+					ClientIP:       clientIP,
+					Email:          req.Email,
+					TurnstileToken: turnstileToken,
+				}); err != nil {
+					return nil, err
+				}
+			}
 
+			convertedUser := presenters.ConvertUser(&req)
 			user, err := a.signupService.Signup(ctx, convertedUser, inviteToken)
 			if err != nil {
 				return nil, err

@@ -5,6 +5,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/clients/turnstile"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -13,6 +14,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/observability"
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/signupprotection"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
@@ -43,12 +45,15 @@ type Env struct {
 	LeadershipFlag              *leadership.Flag
 	EncryptionService           services.EncryptionService
 	ComputePolicy               computequota.Policy
+	PasswordSignupProtection    signupprotection.PasswordSignupProtection
+	SignupClientIPResolver      signupprotection.ClientIPResolver
 	Logger                      applogger.Logger
 	Observability               *observability.Metrics
 }
 
 type Clients struct {
 	DefaultClusterClient client.Client
+	TurnstileVerifier    turnstile.Verifier
 }
 
 type Services struct {

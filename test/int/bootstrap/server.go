@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/Stackdome/stackdome/cmd/environment"
@@ -51,8 +52,12 @@ func NewServerManager(sessionFactory db.SessionFactory, dbConfig *config.Databas
 func (sm *ServerManager) Bootstrap(ctx context.Context) error {
 	sm.logger.Info("Starting server bootstrap")
 
-	// Create test environment
-	env := environment.NewTestEnvironment(sm.sessionFactory, environment.WithApplicationConfig(sm.config))
+	env := environment.NewTestEnvironment(
+		sm.sessionFactory,
+		environment.WithApplicationConfig(sm.config),
+	)
+	env.Environment().Clients.TurnstileVerifier = noopTurnstileVerifier{}
+	env.Environment().SignupClientIPResolver = fixedSignupClientIPResolver{}
 
 	// Use a background context for environment init. The environment starts
 	// long-lived goroutines (worker manager, cluster manager) that must outlive
@@ -88,6 +93,18 @@ func (sm *ServerManager) Bootstrap(ctx context.Context) error {
 
 	sm.logger.Info("Server bootstrap completed successfully", "baseURL", sm.baseURL)
 	return nil
+}
+
+type noopTurnstileVerifier struct{}
+
+func (noopTurnstileVerifier) Verify(context.Context, string, netip.Addr) error {
+	return nil
+}
+
+type fixedSignupClientIPResolver struct{}
+
+func (fixedSignupClientIPResolver) Resolve(*http.Request) (netip.Addr, error) {
+	return netip.MustParseAddr("127.0.0.1"), nil
 }
 
 func (sm *ServerManager) GetBaseURL() string {

@@ -23,10 +23,27 @@ func (s apiServer) routes() *mux.Router {
 	}).Methods(http.MethodGet)
 	services := s.environment.Environment().Services
 	logger := s.environment.Environment().Logger
+	applicationConfig := s.environment.Environment().Config
+
+	signupTurnstileEnabled := false
+	signupTurnstileSiteKey := ""
+	signupTurnstileAction := ""
+	if applicationConfig.IsStackdomeCloud() {
+		if applicationConfig.StackdomeCloud == nil {
+			panic("stackdome Cloud configuration is required")
+		}
+		signupTurnstileEnabled = applicationConfig.StackdomeCloud.Signup.Turnstile.Enabled
+		signupTurnstileSiteKey = applicationConfig.StackdomeCloud.Signup.Turnstile.SiteKey
+		signupTurnstileAction = applicationConfig.StackdomeCloud.Signup.Turnstile.ExpectedAction
+	}
 
 	userHandler := handlers.NewUserServiceHandler(handlers.UserServiceHandlerSpec{
-		UserService:   services.UserService,
-		SignupService: services.SignupService,
+		UserService:              services.UserService,
+		SignupService:            services.SignupService,
+		SignupProtectionEnabled:  signupTurnstileEnabled,
+		InviteSignupEnabled:      !applicationConfig.IsStackdomeCloud(),
+		PasswordSignupProtection: s.environment.Environment().PasswordSignupProtection,
+		SignupClientIPResolver:   s.environment.Environment().SignupClientIPResolver,
 	})
 
 	refreshHandler := auth.NewRefreshHandler(auth.RefreshHandlerSpec{
@@ -183,7 +200,10 @@ func (s apiServer) routes() *mux.Router {
 	authenticationRouter.HandleFunc("/refresh", refreshHandler.HandleRefresh).Methods(http.MethodPost)
 
 	configHandler := handlers.NewConfigHandler(handlers.ConfigHandlerSpec{
-		GitHubOAuthEnabled: s.environment.Environment().Config.GitHubOAuth.Enabled(),
+		GitHubOAuthEnabled:     applicationConfig.GitHubOAuth.Enabled(),
+		SignupTurnstileEnabled: signupTurnstileEnabled,
+		SignupTurnstileSiteKey: signupTurnstileSiteKey,
+		SignupTurnstileAction:  signupTurnstileAction,
 	})
 	apiV1Router.HandleFunc("/config", configHandler.Get).Methods(http.MethodGet)
 

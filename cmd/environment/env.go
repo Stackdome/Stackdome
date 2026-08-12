@@ -11,6 +11,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/bootstrap"
 	"github.com/Stackdome/stackdome/pkg/builders"
 	"github.com/Stackdome/stackdome/pkg/clients/githubapp"
+	"github.com/Stackdome/stackdome/pkg/clients/turnstile"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/computeaccess"
 	"github.com/Stackdome/stackdome/pkg/computequota"
@@ -30,6 +31,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
 	"github.com/Stackdome/stackdome/pkg/services/clusterresource"
+	"github.com/Stackdome/stackdome/pkg/signupprotection"
 	"github.com/Stackdome/stackdome/pkg/stackdeploy"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/stores/pgstore"
@@ -119,6 +121,7 @@ func (e *environmentImpl) Init(ctx context.Context) error {
 		e.loadEnvAndConfigs,
 		e.setupLogger,
 		e.setupDatabase,
+		e.initializeSignupProtection,
 		e.initializeComputePolicy,
 		e.auditPersistedComputeTopology,
 		e.setupObservability,
@@ -264,6 +267,72 @@ func (e *environmentImpl) setupDatabase(ctx context.Context) error {
 		return fmt.Errorf("invalid database config: %w", err)
 	}
 	e.DBSession = db.NewSessionFactory(e.Config.Database)
+	return nil
+}
+
+func (e *environmentImpl) initializeSignupProtection(context.Context) error {
+	if !e.Config.IsStackdomeCloud() {
+		e.PasswordSignupProtection = signupprotection.NewDisabledPasswordSignupProtection()
+		return nil
+	}
+
+	cloudConfig := e.Config.StackdomeCloud
+	if cloudConfig == nil {
+		return fmt.Errorf("stackdome Cloud configuration is required")
+	}
+	turnstileVerifier := e.Clients.TurnstileVerifier
+	if e.spec.dependencySource.createsDependencies() {
+		var err error
+		turnstileVerifier, err = turnstile.NewClient(turnstile.ClientSpec{
+			Secret:           e.Config.TurnstileSecret,
+			ExpectedHostname: cloudConfig.Signup.Turnstile.ExpectedHostname,
+			ExpectedAction:   cloudConfig.Signup.Turnstile.ExpectedAction,
+			Timeout:          cloudConfig.Signup.Turnstile.VerificationTimeout.Duration(),
+		})
+		if err != nil {
+			return fmt.Errorf("create Turnstile verifier: %w", err)
+		}
+	} else if turnstileVerifier == nil {
+		return fmt.Errorf("injected Turnstile verifier is required")
+	}
+
+	passwordSignupProtection, err := signupprotection.NewPasswordSignupProtection(
+		signupprotection.PasswordSignupProtectionSpec{
+			Verifier: turnstileVerifier,
+			IPThrottle: signupprotection.ThrottleSpec{
+				MaxTrackedKeys: cloudConfig.Signup.Throttle.IP.MaxTrackedClients,
+				MaxAttempts:    cloudConfig.Signup.Throttle.IP.MaxAttempts,
+				Window:         cloudConfig.Signup.Throttle.IP.Window.Duration(),
+				Now:            time.Now,
+			},
+			EmailThrottle: signupprotection.ThrottleSpec{
+				MaxTrackedKeys: cloudConfig.Signup.Throttle.Email.MaxTrackedAddresses,
+				MaxAttempts:    cloudConfig.Signup.Throttle.Email.MaxAttempts,
+				Window:         cloudConfig.Signup.Throttle.Email.Window.Duration(),
+				Now:            time.Now,
+			},
+		},
+	)
+	if err != nil {
+		return fmt.Errorf("create password signup protection: %w", err)
+	}
+
+	clientIPResolver := e.SignupClientIPResolver
+	if e.spec.dependencySource.createsDependencies() {
+		switch cloudConfig.Signup.ClientIPSource {
+		case config.StackdomeCloudClientIPSourceCloudflare:
+			clientIPResolver = signupprotection.NewCloudflareClientIPResolver()
+		case config.StackdomeCloudClientIPSourceRemoteAddr:
+			clientIPResolver = signupprotection.NewDirectClientIPResolver()
+		default:
+			return fmt.Errorf("unsupported signup client IP source %q", cloudConfig.Signup.ClientIPSource)
+		}
+	} else if clientIPResolver == nil {
+		return fmt.Errorf("injected signup client IP resolver is required")
+	}
+
+	e.PasswordSignupProtection = passwordSignupProtection
+	e.SignupClientIPResolver = clientIPResolver
 	return nil
 }
 

@@ -23,6 +23,7 @@ const UserSignupRequest = z
     password: z.string(),
     organisation: Organisation.optional(),
     invite_token: z.string().optional(),
+    turnstile_token: z.string().optional(),
   })
   .passthrough();
 const UserRole = z.enum(["OrgAdmin", "OrgMember"]);
@@ -67,8 +68,14 @@ const Error = ObjectReference.and(
     .partial()
     .passthrough()
 );
+const TurnstileConfigResponse = z
+  .object({ enabled: z.boolean(), site_key: z.string(), action: z.string() })
+  .passthrough();
+const SignupConfigResponse = z
+  .object({ turnstile: TurnstileConfigResponse })
+  .passthrough();
 const AppConfigResponse = z
-  .object({ github_oauth: z.boolean() })
+  .object({ github_oauth: z.boolean(), signup: SignupConfigResponse })
   .partial()
   .passthrough();
 const Project = z
@@ -1633,6 +1640,8 @@ export const schemas = {
   UserSignupResponse,
   ObjectReference,
   Error,
+  TurnstileConfigResponse,
+  SignupConfigResponse,
   AppConfigResponse,
   Project,
   ProjectList,
@@ -2013,7 +2022,7 @@ const endpoints = makeApi([
     alias: "getApiv1config",
     description: `Returns feature flags the web client needs before authentication, such as whether GitHub OAuth is enabled.`,
     requestFormat: "json",
-    response: z.object({ github_oauth: z.boolean() }).partial().passthrough(),
+    response: AppConfigResponse,
     errors: [
       {
         status: 500,
