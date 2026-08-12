@@ -12,6 +12,11 @@ const turnstileScriptURL =
 export interface TurnstileRenderOptions {
   sitekey: string;
   action: string;
+  /* Default is a fixed 300px, narrower than the form's fields. */
+  size?: "normal" | "flexible" | "compact";
+  /* Default "auto" follows prefers-color-scheme. The app is light-only, so pin
+     it; pass the real theme through when dark mode ships. */
+  theme?: "light" | "dark" | "auto";
   callback: (token: string) => void;
   "expired-callback": () => void;
   "error-callback": () => void;
@@ -106,6 +111,8 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
           widgetIDRef.current = api.render(containerRef.current, {
             sitekey: siteKey,
             action,
+            size: "flexible",
+            theme: "light",
             callback: (token) => onTokenRef.current(token),
             "expired-callback": () => onTokenRef.current(""),
             "error-callback": () => {
@@ -128,9 +135,14 @@ export const TurnstileWidget = forwardRef<TurnstileWidgetHandle, TurnstileWidget
     }, [siteKey, action]);
 
     return (
+      /* min-h reserves the height so the submit button doesn't jump when the
+         iframe paints. Padding, not margin: the form's space-y-3 owns the
+         margins, so py-2 stacks to 20px of air here against the fields' 12px.
+         That air is the only separation available; the plate's fill, border and
+         radius are inside a cross-origin iframe. */
       <div
         ref={containerRef}
-        className="cf-turnstile min-h-[65px]"
+        className="cf-turnstile min-h-[65px] py-2"
         data-sitekey={siteKey}
         data-action={action}
       />
