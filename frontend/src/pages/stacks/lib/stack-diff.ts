@@ -42,8 +42,7 @@ function carryNameRevert(resources: ResourceArr, idx: number, nameBefore?: strin
 
 /**
  * Drop the restored entry's references to resources the draft no longer has.
- * The volume equivalent is the dangling-mount guard in `revertResource`: a
- * baseline that predates a sibling's rename names something now gone.
+ * A baseline that predates a sibling's rename names something now gone.
  */
 function dropUnknownResourceRefs(resources: ResourceArr, idx: number): ResourceArr {
   const entry = resources[idx];

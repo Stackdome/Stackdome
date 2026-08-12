@@ -5,9 +5,11 @@ import { FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { deleteResourceAndReferences, findResourceDependents } from "../delete-references";
 
 /**
- * The reported break: create a stack from the ToolJet template, delete
- * postgrest and otel-stack, and the survivors still name them. The form schema
- * is what surfaces that today, so a clean parse after the deletes is the proof.
+ * The ToolJet template is the fixture that carries all three reference shapes
+ * at once: `depends_on`, whole-value refs, and embedded-template refs.
+ *
+ * A stranded reference surfaces as a form-schema "Unknown resource" issue, so a
+ * clean parse after the deletes is what proves the pruning.
  */
 describe("deleting from the ToolJet template", () => {
   const draft = () => templateToFormData(getTemplateById("tooljet")!).data;
@@ -40,8 +42,8 @@ describe("deleting from the ToolJet template", () => {
     expect(resources.map((r) => r?.name)).not.toContain("otel-stack");
   });
 
-  /** Guards the assertion above: a plain filter, which is what the editor used
-   *  to do, must still produce the errors the user reported. */
+  /** Keeps the assertion above honest: a plain filter must still produce the
+   *  issues, or a clean parse would prove nothing. */
   it("still breaks when the resource is filtered out without pruning references", () => {
     const data = draft();
     const naive = data.spec.stack_resources.filter(

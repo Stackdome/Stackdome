@@ -288,8 +288,8 @@ const FormStackSchema = ApiStackSchema.extend({
       .map(r => r?.name)
       .filter((n): n is string => !!n),
   );
-  // Resources are addressed by name everywhere, so two sharing one make every
-  // reference to it ambiguous and a delete of either take both.
+  // Resources are addressed by name everywhere, so two sharing a name make
+  // every reference to it ambiguous and a delete of either take both.
   const seenNames = new Set<string>();
   (stack.spec?.stack_resources ?? []).forEach((r, idx) => {
     if (r?.name) {

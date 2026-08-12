@@ -6,8 +6,8 @@ import type { EditSessionDraft } from "@/pages/stacks/hooks/use-stack-edit-sessi
 /**
  * A draft-only resource or volume leaves a hole in the aligned baseline, and
  * the JSON clone in `session.start` turns that hole into a null. Every dirt
- * calculation runs the baseline back through `canonicalFromDraft`, so a null
- * there crashed the whole editor.
+ * calculation runs the baseline back through `canonicalFromDraft`, so nulls
+ * reach it on any draft that adds an entry.
  */
 
 const asDraft = (resources: unknown[], volumes: unknown[]) =>

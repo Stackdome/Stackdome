@@ -38,7 +38,6 @@ import {
   type ResourceDependents,
 } from "@/pages/stacks/lib/delete-references";
 
-/** Group the env keys one resource contributes, so each dependent reads as a row. */
 function groupByResource(refs: EnvRef[]): Map<string, string[]> {
   const byResource = new Map<string, string[]>();
   for (const ref of refs) {
@@ -59,13 +58,8 @@ function SummaryRow({ resource, detail }: { resource: string; detail: string }) 
   );
 }
 
-/**
- * What the delete is about to change, grouped by consequence.
- *
- * Structured refs are repaired, so they are stated as a fact. Literal values
- * are the user's own text and only they can judge the replacement, so those are
- * handed back rather than rewritten.
- */
+/** What the delete is about to change, grouped by consequence: repaired,
+ *  handed back, or left unattached. */
 function DeleteResourceSummary({ dependents }: { dependents: ResourceDependents }) {
   const { dependsOn, envRefs, literalRefs, orphanedVolumes } = dependents;
   const consequences = dependsOn.length + envRefs.length + literalRefs.length + orphanedVolumes.length;
@@ -803,9 +797,15 @@ function StackCanvasFlow({
   const removeResource = useCallback(
     (idx: number) => {
       const name = resources[idx]?.name;
-      if (name) void onRequestDeleteResource(name);
+      if (name) {
+        void onRequestDeleteResource(name);
+        return;
+      }
+      // Unnamed: nothing to prune, and nothing to name in a confirm.
+      session.updateResources((prev) => prev.filter((_, i) => i !== idx));
+      setDrawerStack([]);
     },
-    [onRequestDeleteResource, resources],
+    [onRequestDeleteResource, resources, session],
   );
 
   // Drop panels whose target no longer exists in the shown list (deleted

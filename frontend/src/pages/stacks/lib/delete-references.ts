@@ -1,7 +1,7 @@
 import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
 import type { ResourceArr, VolumeArr } from "@/pages/stacks/lib/stack-diff";
 
-/** One env var that names another resource, as `resource.ENV_KEY`. */
+/** An env row: `resource` holds it, `envName` is its key. */
 export interface EnvRef {
   resource: string;
   envName: string;
@@ -25,12 +25,11 @@ const envRowsOf = (r: ResourceArr[number]) =>
   (r.execution_config?.environment_variables ?? []) as FormEnvRow[];
 
 /**
- * What breaks if `name` is deleted.
+ * What breaks if `name` is deleted. Reports only; the pruning itself lives in
+ * `deleteResourceAndReferences`.
  *
- * Structured rows and `depends_on` entries are repaired automatically. A
- * literal row is reported separately: `${web.host}` inside a longer string is
- * the user's own text, and the resolved value only exists server-side, so
- * there is nothing to substitute.
+ * A literal row counts only when `from` is "stack" and the value mentions
+ * `${name.`; such rows are reported for the user to fix, never rewritten.
  */
 export function findResourceDependents(
   resources: ResourceArr,
@@ -62,8 +61,7 @@ export function findResourceDependents(
         .filter((r) => (r.name === name) === keep)
         .flatMap((r) => (r.volume_mounts ?? []).map((m) => m.source_volume_name)),
     );
-  // Only volumes this delete detaches. A volume nothing mounted to begin with
-  // is not this delete's doing.
+  // A volume nothing mounted to begin with is not this delete's doing.
   const mountedByTarget = mountsOf(true);
   const mountedElsewhere = mountsOf(false);
   const orphanedVolumes = volumes
@@ -74,7 +72,8 @@ export function findResourceDependents(
 }
 
 /**
- * Remove a resource and every structured reference to it.
+ * Remove a resource, the `depends_on` entries naming it, and the structured env
+ * rows naming it. Volume mounts are left alone.
  *
  * Untouched resources are returned by identity so the diff keeps pairing them.
  */
