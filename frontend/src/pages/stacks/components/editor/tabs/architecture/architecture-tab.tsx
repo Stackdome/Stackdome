@@ -797,11 +797,13 @@ function StackCanvasFlow({
   const removeResource = useCallback(
     (idx: number) => {
       const name = resources[idx]?.name;
-      if (name) {
+      const shared = !!name && resources.filter((r) => r.name === name).length > 1;
+      if (name && !shared) {
         void onRequestDeleteResource(name);
         return;
       }
-      // Unnamed: nothing to prune, and nothing to name in a confirm.
+      // Unnamed, or one of several holding the same name: the index is the only
+      // identity, and a reference to a name a sibling still holds stays valid.
       session.updateResources((prev) => prev.filter((_, i) => i !== idx));
       setDrawerStack([]);
     },

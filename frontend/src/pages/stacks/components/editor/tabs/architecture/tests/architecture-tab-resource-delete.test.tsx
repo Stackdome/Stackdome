@@ -16,8 +16,8 @@ vi.mock("../canvas-editor", () => ({
     onNodeClick?: (e: unknown, n: unknown) => void;
   }) => (
     <div>
-      {props.nodes.map((n) => (
-        <button key={n.id} type="button" onClick={(e) => props.onNodeClick?.(e, n)}>
+      {props.nodes.map((n, i) => (
+        <button key={`${n.id}-${i}`} type="button" onClick={(e) => props.onNodeClick?.(e, n)}>
           {n.id}
         </button>
       ))}
@@ -47,6 +47,8 @@ const NO_ERRORS = {};
 const NAMED = [{ name: "api" }, { name: "web", depends_on: ["api"] }];
 // A resource whose name the user has cleared mid-edit.
 const UNNAMED = [{ name: "" }];
+// Invalid, but the draft can hold it while the user is still typing.
+const DUPLICATED = [{ name: "dup" }, { name: "dup" }, { name: "web" }];
 
 function Harness({ resources }: { resources: { name: string; depends_on?: string[] }[] }) {
   const session = useStackEditSession();
@@ -71,8 +73,9 @@ function Harness({ resources }: { resources: { name: string; depends_on?: string
   );
 }
 
+/** Clicks the first node with this id — duplicate names render two. */
 const openDrawerAndRemove = async (nodeId: string) => {
-  fireEvent.click(await screen.findByRole("button", { name: nodeId }));
+  fireEvent.click((await screen.findAllByRole("button", { name: nodeId }))[0]);
   fireEvent.click(await screen.findByText("Remove resource"));
 };
 
@@ -85,6 +88,20 @@ describe("ArchitectureTab resource delete from the drawer", () => {
     expect(within(dialog).getByRole("heading", { name: "Delete service “api”?" })).toBeInTheDocument();
     expect(within(dialog).getByText("web")).toBeInTheDocument();
     expect(within(dialog).getByText("depends_on")).toBeInTheDocument();
+  });
+
+  /** Regression: a name-keyed delete takes every resource holding that name,
+   *  and this path used to delete by index. */
+  it("removes only the clicked one when two resources share a name", async () => {
+    render(<Harness resources={DUPLICATED} />);
+    expect(await screen.findAllByRole("button", { name: "resource:dup" })).toHaveLength(2);
+
+    await openDrawerAndRemove("resource:dup");
+
+    await waitFor(() =>
+      expect(screen.getAllByRole("button", { name: "resource:dup" })).toHaveLength(1),
+    );
+    expect(screen.getByRole("button", { name: "resource:web" })).toBeInTheDocument();
   });
 
   /** Regression: routing this path through the name-keyed handler made an
