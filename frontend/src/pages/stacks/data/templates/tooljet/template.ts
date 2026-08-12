@@ -11,7 +11,7 @@ export const tooljet: Template = {
   shortDescription:
     "Low-code platform for building internal tools and dashboards.",
   longDescription:
-    "Build enterprise apps, AI agents, and workflows in minutes, not months. Ships with workflow workers, the built-in ToolJet Database, and an observability stack (Grafana, Tempo, Prometheus) with a ready-made monitoring dashboard.",
+    "Build enterprise apps, AI agents, and workflows in minutes, not months. Ships with the built-in ToolJet Database and workflow processing, backed by Postgres and Redis.",
   website: "https://tooljet.com/",
   docs: "https://docs.tooljet.com/",
   version: "v3.20.189-lts",
