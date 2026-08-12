@@ -44,17 +44,11 @@ export function BlockComposer({ onBack, onClose }: BlockComposerProps) {
   const removeResource = (index: number) =>
     setStack((s) => {
       const name = s.spec.stack_resources[index]?.name;
-      if (!name) return s;
-      return {
-        ...s,
-        spec: {
-          ...s.spec,
-          stack_resources: deleteResourceAndReferences(
-            s.spec.stack_resources,
-            name,
-          ) as typeof s.spec.stack_resources,
-        },
-      };
+      // An unnamed resource has no references to prune, but must still delete.
+      const stack_resources = name
+        ? (deleteResourceAndReferences(s.spec.stack_resources, name) as typeof s.spec.stack_resources)
+        : s.spec.stack_resources.filter((_, i) => i !== index);
+      return { ...s, spec: { ...s.spec, stack_resources } };
     });
 
   const toggleAddon = (id: string) =>

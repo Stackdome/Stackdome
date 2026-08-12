@@ -14,6 +14,8 @@ import type {
 export type ResourceArr = Partial<FormStackResourceData>[];
 export type VolumeArr = Partial<FormVolumeExtendedData>[];
 
+import type { FormEnvRow } from "@/pages/stacks/lib/connection-mapping";
+import { deleteResourceAndReferences } from "@/pages/stacks/lib/delete-references";
 import { renameResourceReferences } from "@/pages/stacks/lib/rename-references";
 import { deepEqual, pairByFingerprint } from "@/pages/stacks/lib/stack-model/equal";
 import { getAtPath } from "@/pages/stacks/lib/stack-model/path";
@@ -36,6 +38,39 @@ function carryNameRevert(resources: ResourceArr, idx: number, nameBefore?: strin
   const nameAfter = resources[idx]?.name;
   if (!nameBefore || !nameAfter || nameBefore === nameAfter) return resources;
   return renameResourceReferences(resources, nameBefore, nameAfter);
+}
+
+/**
+ * Drop the restored entry's references to resources the draft no longer has.
+ * The volume equivalent is the dangling-mount guard in `revertResource`: a
+ * baseline that predates a sibling's rename names something now gone.
+ */
+function dropUnknownResourceRefs(resources: ResourceArr, idx: number): ResourceArr {
+  const entry = resources[idx];
+  if (!entry) return resources;
+
+  const known = new Set(resources.map((r) => r.name).filter(Boolean));
+  const deps = entry.depends_on ?? [];
+  const keptDeps = deps.filter((d) => known.has(d));
+  const rows = (entry.execution_config?.environment_variables ?? []) as FormEnvRow[];
+  const keptRows = rows.filter(
+    (row) =>
+      (row.from !== "resource" && row.from !== "resourceTemplate") || known.has(row.resourceName),
+  );
+
+  const depsChanged = keptDeps.length !== deps.length;
+  const rowsChanged = keptRows.length !== rows.length;
+  if (!depsChanged && !rowsChanged) return resources;
+
+  const next = resources.slice();
+  next[idx] = {
+    ...entry,
+    ...(depsChanged ? { depends_on: keptDeps } : {}),
+    ...(rowsChanged
+      ? { execution_config: { ...entry.execution_config, environment_variables: keptRows } }
+      : {}),
+  };
+  return next;
 }
 
 export function revertResource(
@@ -65,9 +100,12 @@ export function revertResource(
       );
     }
     next.resources[idx] = restored;
-    next.resources = carryNameRevert(next.resources, idx, nameBefore);
+    next.resources = dropUnknownResourceRefs(carryNameRevert(next.resources, idx, nameBefore), idx);
+  } else if (nameBefore) {
+    // The resource only exists in the draft, so dropping it is a delete and
+    // has to take its references with it.
+    next.resources = deleteResourceAndReferences(next.resources, nameBefore);
   } else {
-    // The resource only exists in the draft — drop it.
     next.resources.splice(idx, 1);
   }
   return next;
@@ -264,7 +302,10 @@ export function revertResourceField(
   nextResources[resourceIdx] = nextResource;
   return {
     ...draft,
-    resources: carryNameRevert(nextResources, resourceIdx, draftResource.name),
+    resources: dropUnknownResourceRefs(
+      carryNameRevert(nextResources, resourceIdx, draftResource.name),
+      resourceIdx,
+    ),
   };
 }
 

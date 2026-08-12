@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  deleteResourceAndReferences,
-  findResourceDependents,
-  hasDependents,
-} from "../delete-references";
+import { deleteResourceAndReferences, findResourceDependents } from "../delete-references";
 import type { ResourceArr, VolumeArr } from "../stack-diff";
 
 /**
@@ -129,8 +125,17 @@ describe("findResourceDependents", () => {
     expect(found.orphanedVolumes).toEqual([]);
   });
 
+  /** Only volumes this delete detaches. One that was already sitting unmounted
+   *  is not the delete's doing, and saying so makes the dialog lie. */
+  it("omits a volume that was already mounted by nothing", () => {
+    const found = findResourceDependents([web(), redis()], volumes("stray"), "redis");
+    expect(found.orphanedVolumes).toEqual([]);
+  });
+
   it("reports nothing when no one references the resource", () => {
     const found = findResourceDependents([web(), redis()], [], "redis");
-    expect(hasDependents(found)).toBe(false);
+    expect(found.dependsOn).toEqual([]);
+    expect(found.envRefs).toEqual([]);
+    expect(found.literalRefs).toEqual([]);
   });
 });

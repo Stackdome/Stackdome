@@ -186,6 +186,34 @@ describe("reverting a rename carries the references back", () => {
     expect(next.resources[1].depends_on).toEqual(["redis"]);
   });
 
+  /** Reverting an added resource is a delete, so it has to prune like one. */
+  it("prunes references when reverting a resource that only exists in the draft", () => {
+    const emptyBaseline = { resources: [], volumes: [] };
+    const withAdded = {
+      resources: [{ name: "cache" }, { name: "web", depends_on: ["cache"] }],
+      volumes: [],
+    };
+    const next = revertResource(withAdded as never, emptyBaseline as never, 0);
+    expect(next.resources.map((r) => r?.name)).toEqual(["web"]);
+    expect(next.resources[0].depends_on).toEqual([]);
+  });
+
+  /** The sibling's baseline predates the rename, so restoring it names a
+   *  resource that no longer exists. Same shape as the dangling-mount guard. */
+  it("drops a restored reference to a sibling that has since been renamed", () => {
+    const next = revertResource(draft as never, baseline as never, 1);
+    expect(next.resources[1].depends_on).toEqual([]);
+  });
+
+  it("keeps a restored reference when the sibling still exists", () => {
+    const stillThere = {
+      resources: [{ name: "redis" }, { name: "web", depends_on: [] }],
+      volumes: [],
+    };
+    const next = revertResource(stillThere as never, baseline as never, 1);
+    expect(next.resources[1].depends_on).toEqual(["redis"]);
+  });
+
   it("leaves siblings alone when the reverted field is not the name", () => {
     const withImage = {
       resources: [{ name: "cache", source: { image: { ref: "redis:8" } } }, draft.resources[1]],

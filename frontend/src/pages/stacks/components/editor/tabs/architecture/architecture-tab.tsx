@@ -34,7 +34,6 @@ import { carryPositions } from "@/pages/stacks/lib/canvas/carry-positions";
 import {
   deleteResourceAndReferences,
   findResourceDependents,
-  hasDependents,
   type EnvRef,
   type ResourceDependents,
 } from "@/pages/stacks/lib/delete-references";
@@ -69,7 +68,8 @@ function SummaryRow({ resource, detail }: { resource: string; detail: string }) 
  */
 function DeleteResourceSummary({ dependents }: { dependents: ResourceDependents }) {
   const { dependsOn, envRefs, literalRefs, orphanedVolumes } = dependents;
-  if (!hasDependents(dependents) && orphanedVolumes.length === 0) {
+  const consequences = dependsOn.length + envRefs.length + literalRefs.length + orphanedVolumes.length;
+  if (consequences === 0) {
     return <>The service and its configuration are removed when the stack deploys. This cannot be undone after deploy.</>;
   }
 
@@ -98,8 +98,8 @@ function DeleteResourceSummary({ dependents }: { dependents: ResourceDependents 
       {literalRefs.length > 0 && (
         <span className="flex flex-col gap-1">
           <span className="text-[11px] font-medium tracking-wide text-warn uppercase">Left for you to fix</span>
-          {literalRefs.map((ref) => (
-            <SummaryRow key={`${ref.resource}.${ref.envName}`} resource={ref.resource} detail={ref.envName} />
+          {literalRefs.map((ref, i) => (
+            <SummaryRow key={i} resource={ref.resource} detail={ref.envName} />
           ))}
         </span>
       )}
@@ -712,7 +712,7 @@ function StackCanvasFlow({
 
   const onRequestDeleteResource = useCallback(
     async (resourceName: string) => {
-      if (!resourceName) return;
+      // Read the same draft applyDraft will mutate, not the liveMode view.
       const shown = session.isActive ? session.draft : { resources: draftResources, volumes: draftVolumes };
       const dependents = findResourceDependents(shown.resources, shown.volumes, resourceName);
 
@@ -799,11 +799,11 @@ function StackCanvasFlow({
     },
     [session, draftVolumes],
   );
-  // The drawer deletes by index; everything else deletes by name. Resolve here
-  // so both routes share one handler, and the drawer keeps its own prop shape.
+  // The drawer deletes by index; everything else deletes by name.
   const removeResource = useCallback(
     (idx: number) => {
-      void onRequestDeleteResource(resources[idx]?.name ?? "");
+      const name = resources[idx]?.name;
+      if (name) void onRequestDeleteResource(name);
     },
     [onRequestDeleteResource, resources],
   );

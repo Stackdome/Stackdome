@@ -97,16 +97,9 @@ describe("block-to-form", () => {
     expect(mount?.source_volume_name).toBe("pgdata-2");
   });
 
-  /**
-   * A block is self-contained: when de-duplication renames its resources, its
-   * own references must follow the copy. Otherwise the added block binds to the
-   * same-named resource already in the stack, which validates cleanly and
-   * deploys wrong.
-   *
-   * Catalog blocks are single-service today (`BlockPreset.compose`), so nothing
-   * shipped can trigger this. The multi-service preset here is what makes the
-   * wiring testable, and it fails the day the carry is removed.
-   */
+  /** Catalog blocks are single-service today, so the multi-service preset here
+   *  is what makes the carry testable. Without it a de-duplicated block binds to
+   *  the same-named resource already in the stack, which validates and deploys wrong. */
   it("repoints a de-duplicated block's own references at its copy", () => {
     const pair = {
       id: "pair",

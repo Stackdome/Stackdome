@@ -51,10 +51,17 @@ describe("deleting from the ToolJet template", () => {
     expect(unknownResourceIssues(after).length).toBeGreaterThan(0);
   });
 
-  it("reports otel-stack-data as unattached once otel-stack goes", () => {
+  /** Asked before the delete, the way the dialog asks it. Asking afterwards
+   *  passes on the "nobody mounts it" path even with the lookup removed. */
+  it("reports otel-stack-data as unattached when otel-stack goes", () => {
     const data = draft();
-    const resources = deleteResourceAndReferences(data.spec.stack_resources, "otel-stack");
-    const found = findResourceDependents(resources, data.spec.volumes ?? [], "otel-stack");
-    expect(found.orphanedVolumes).toContain("otel-stack-data");
+    const found = findResourceDependents(data.spec.stack_resources, data.spec.volumes ?? [], "otel-stack");
+    expect(found.orphanedVolumes).toEqual(["otel-stack-data"]);
+  });
+
+  it("does not blame an unrelated delete for the volumes it never mounted", () => {
+    const data = draft();
+    const found = findResourceDependents(data.spec.stack_resources, data.spec.volumes ?? [], "postgrest");
+    expect(found.orphanedVolumes).toEqual([]);
   });
 });

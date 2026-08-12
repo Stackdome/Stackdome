@@ -114,9 +114,8 @@ export function addBlockToStack(stack: WorkingStack, block: BlockPreset): Workin
   const takenResources = new Set((stack.spec.stack_resources ?? []).map((r) => r.name));
   const takenVolumes = new Set((stack.spec.volumes ?? []).map((v) => v.name));
 
-  // Build oldName → newName for resources renamed during de-duplication, so the
-  // block's own depends_on and env refs follow its copy instead of silently
-  // binding to the same-named resource already in the stack.
+  // oldName → newName for resources renamed by de-duplication, so the block's
+  // own refs follow its copy rather than binding to the stack's same-named one.
   const resourceNameMap = new Map<string, string>();
   const renamedResources = resources.map((r) => {
     const name = uniqueName(r.name, takenResources);
