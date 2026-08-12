@@ -20,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { PageHeader, EmptyState } from "@/components/branded";
+import { PageHeader, EmptyState, CloudAlphaBanner } from "@/components/branded";
 import { StackCreateWizard } from "@/pages/stacks/components/wizard/stack-create-wizard";
 import type { Stack } from "@/api/stack-types";
 import { DeployStackCard, headerStatus } from "./stack-card";
@@ -228,6 +228,7 @@ export default function StacksPage() {
 
   return (
     <div className="flex flex-1 flex-col p-8 space-y-6 h-full">
+      <CloudAlphaBanner />
       <PageHeader
         eyebrow="Platform"
         title="Stacks"
