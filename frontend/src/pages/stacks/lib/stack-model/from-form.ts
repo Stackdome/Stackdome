@@ -104,6 +104,9 @@ export function canonicalVolumeFromForm(raw: FormVolumeExtendedData): CanonicalV
 export function canonicalFromDraft(draft: EditSessionDraft): CanonicalDraft {
   const volumes: CanonicalVolume[] = [];
   for (const raw of draft.volumes) {
+    // A name-aligned baseline carries holes for draft-only entries, and the
+    // JSON clone in session.start turns those into nulls.
+    if (!raw) continue;
     const name = (raw as Partial<FormVolumeExtendedData>).name?.trim();
     if (!name) continue;
     volumes.push(canonicalVolumeFromForm(raw as FormVolumeExtendedData));
@@ -116,6 +119,7 @@ export function canonicalFromDraft(draft: EditSessionDraft): CanonicalDraft {
   const indexByName = new Map<string, number>();
 
   draft.resources.forEach((raw, idx) => {
+    if (!raw) return;
     // Validate user intent only. `status` and `outputs` ride along on form data
     // for display; validating them treats server writes as user input, and one
     // unrecognized subfield would hold the whole resource out of every sync.
