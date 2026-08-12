@@ -8,11 +8,14 @@ import (
 	stderrors "errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/Stackdome/stackdome/pkg/api/openapi"
@@ -218,6 +221,28 @@ var _ = Describe("Stackdome Cloud compute policy", Ordered, func() {
 		Expect(persisted.Spec.Storage.GetSize()).To(Equal("1Gi"))
 	})
 
+	It("connects a stack workload to its PostgreSQL addon", func() {
+		const database = "cloudapp"
+		shared.WaitForConditionTrue(
+			cloudEnv.Client,
+			cloudEnv.OrgID,
+			projectName,
+			postgres.GetId(),
+			string(models.PostgresAddonConditionDatabasesApplied),
+			2*time.Minute,
+		)
+
+		stack := postgresConnectivityStack("cloud-postgres-client", postgres.GetId(), database)
+		created, _ := shared.CreateStackAndDeploy(cloudEnv.Client, cloudEnv.OrgID, projectName, stack)
+		DeferCleanup(func() {
+			shared.DeleteStack(cloudEnv.Client, cloudEnv.OrgID, projectName, created.GetId())
+			shared.WaitForStackDeleted(cloudEnv.Client, cloudEnv.OrgID, projectName, created.GetId(), 2*time.Minute)
+		})
+
+		shared.WaitForStackReady(cloudEnv.Client, cloudEnv.OrgID, projectName, created.GetId(), 5*time.Minute)
+		waitForPostgresQuerySuccess(created.GetNamespace(), "app", 2*time.Minute)
+	})
+
 	It("creates the pending registry only when a build release needs it", func() {
 		ctx := context.Background()
 		clusterRegistry := &registryv1alpha1.ClusterRegistry{}
@@ -408,5 +433,51 @@ func postgresAddon(name string, instances int32, storageSize string) *openapi.Po
 		*openapi.NewPostgresInstances(instances),
 		*openapi.NewPostgresStorage(storageSize),
 	)
+	spec.SetDatabases([]openapi.PostgresDatabase{*openapi.NewPostgresDatabase("cloudapp")})
 	return openapi.NewPostgresAddon(name, *spec)
+}
+
+func postgresConnectivityStack(name, addonID, database string) *openapi.Stack {
+	stack := shared.CreateStackWithPostgresAddon(name, addonID, database)
+	resource := &stack.Spec.StackResources[0]
+	resource.SetSource(openapi.SourceSpec{Image: openapi.NewImageSource("postgres:16-alpine")})
+	resource.SetPorts([]openapi.Port{})
+
+	execution := openapi.NewExecutionConfig()
+	execution.SetCommand([]string{
+		"sh",
+		"-ec",
+		`until result="$(PGPASSWORD="$PG_PASSWORD" psql --host "$PG_HOST" --port "$PG_PORT" --username "$PG_USER" --dbname "$PG_DATABASE" --tuples-only --no-align --command 'SELECT 1' 2>/dev/null)" && [ "$result" = "1" ]; do sleep 2; done
+echo stackdome-postgres-select-1=1
+exec sleep 3600`,
+	})
+	resource.SetExecutionConfig(*execution)
+	return stack
+}
+
+func waitForPostgresQuerySuccess(namespace, resourceName string, timeout time.Duration) {
+	ctx := context.Background()
+	clientset, err := cloudEnv.Cluster.GetKubeClient()
+	Expect(err).NotTo(HaveOccurred())
+
+	Eventually(func(g Gomega) {
+		pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+			LabelSelector: "resource=" + resourceName,
+		})
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(pods.Items).NotTo(BeEmpty())
+
+		var logs strings.Builder
+		for i := range pods.Items {
+			for _, container := range pods.Items[i].Spec.Containers {
+				output, logErr := clientset.CoreV1().Pods(namespace).
+					GetLogs(pods.Items[i].Name, &corev1.PodLogOptions{Container: container.Name}).
+					DoRaw(ctx)
+				if logErr == nil {
+					logs.Write(output)
+				}
+			}
+		}
+		g.Expect(logs.String()).To(ContainSubstring("stackdome-postgres-select-1=1"))
+	}, timeout, 2*time.Second).Should(Succeed())
 }
