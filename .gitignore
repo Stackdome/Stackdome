@@ -37,6 +37,8 @@ pkg/web/dist/*
 !docs/images/**/*.png
 # Docs favicons, copied from frontend/public — same reason.
 !docs/favicon-*.png
+# README launch assets (banners, screenshots) — must be committed.
+!.github/assets/**/*.png
 .vite/
 
 # Integration test output (Makefile tees here)
