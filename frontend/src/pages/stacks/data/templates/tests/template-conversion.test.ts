@@ -11,6 +11,28 @@ describe("template conversion round-trip", () => {
     },
   );
 
+  it("keeps every bundled PostgreSQL resource below the mounted filesystem root", () => {
+    const postgresResources = templates.flatMap((template) => {
+      const { data } = templateToFormData(template);
+      return data.spec.stack_resources.filter(
+        (resource) =>
+          /(^|\/)postgres(?=:|$)/.test(resource.source?.image?.ref ?? "") &&
+          resource.volume_mounts?.some(
+            (mount) => mount.target_path === "/var/lib/postgresql/data",
+          ),
+      );
+    });
+
+    expect(postgresResources.length).toBeGreaterThan(0);
+    for (const postgres of postgresResources) {
+      expect(envByName(postgres).PGDATA).toEqual({
+        from: "stack",
+        name: "PGDATA",
+        value: "/var/lib/postgresql/data/pgdata",
+      });
+    }
+  });
+
   it("tooljet template produces the full 6-service stack", () => {
     const tooljet = getTemplateById("tooljet")!;
     const { data } = templateToFormData(tooljet);

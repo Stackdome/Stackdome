@@ -109,6 +109,7 @@ services:
       POSTGRES_DB: "tooljet_production"
       POSTGRES_USER: "postgres"
       POSTGRES_PASSWORD: "REPLACE_POSTGRES_PASSWORD_VALUE_HERE"
+      PGDATA: /var/lib/postgresql/data/pgdata
 
   postgrest:
     image: postgrest/postgrest:v12.2.0

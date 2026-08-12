@@ -32,6 +32,7 @@ export const blockCatalog: BlockPreset[] = [
       '    volumes: ["pgdata:/var/lib/postgresql/data"]',
       "    environment:",
       `      POSTGRES_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
+      '      PGDATA: "/var/lib/postgresql/data/pgdata"',
       "volumes:",
       "  pgdata: {}",
       "",
@@ -46,6 +47,7 @@ export const blockCatalog: BlockPreset[] = [
   },
   {
     id: BlockId.Mysql, name: "MySQL", category: "databases", icon: "mysql", summary: "mysql:8 · :3306",
+    args: "--datadir=/var/lib/mysql/data",
     compose: [
       "services:", "  mysql:", "    image: mysql:8", '    ports: ["3306:3306"]',
       '    volumes: ["mysql-data:/var/lib/mysql"]', "    environment:", `      MYSQL_ROOT_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,
@@ -61,6 +63,7 @@ export const blockCatalog: BlockPreset[] = [
   },
   {
     id: BlockId.Mariadb, name: "MariaDB", category: "databases", icon: "mariadb", summary: "mariadb:11.4 · :3306",
+    args: "--datadir=/var/lib/mysql/data",
     compose: [
       "services:", "  mariadb:", "    image: mariadb:11.4", '    ports: ["3306:3306"]',
       '    volumes: ["mariadb-data:/var/lib/mysql"]', "    environment:", `      MARIADB_ROOT_PASSWORD: "${PLACEHOLDER_PASSWORD}"`,

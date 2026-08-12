@@ -22,6 +22,30 @@ describe("block-to-form", () => {
     expect(volumes[0].name).toBe("pgdata");
   });
 
+  it("places postgres data below the volume root so filesystem metadata does not block initdb", () => {
+    const { resources } = blockToResources(getBlockById(BlockId.Postgres)!);
+    const env = (resources[0].execution_config?.environment_variables ?? []) as {
+      name?: string;
+      value?: string;
+    }[];
+
+    expect(env).toContainEqual({
+      from: "stack",
+      name: "PGDATA",
+      value: "/var/lib/postgresql/data/pgdata",
+    });
+  });
+
+  it.each([BlockId.Mysql, BlockId.Mariadb])(
+    "%s uses a child data directory without replacing the image entrypoint",
+    (id) => {
+      const { resources } = blockToResources(getBlockById(id)!);
+
+      expect(resources[0].execution_config?.command).toBeUndefined();
+      expect(resources[0].execution_config?.args).toBe("--datadir=/var/lib/mysql/data");
+    },
+  );
+
   it("converts a generic web block into an empty-image resource and no volumes", () => {
     const { resources, volumes } = blockToResources(getBlockById(BlockId.Web)!);
     expect(resources).toHaveLength(1);

@@ -78,6 +78,17 @@ function fillPlaceholderPasswords(resource: FormStackResourceData): FormStackRes
   } as FormStackResourceData;
 }
 
+function applyPresetArgs(resource: FormStackResourceData, args?: string): FormStackResourceData {
+  if (!args) return resource;
+  return {
+    ...resource,
+    execution_config: {
+      ...resource.execution_config,
+      args,
+    },
+  } as FormStackResourceData;
+}
+
 export function blockToResources(block: BlockPreset): {
   resources: FormStackResourceData[];
   volumes: FormVolumeData[];
@@ -92,9 +103,12 @@ export function blockToResources(block: BlockPreset): {
       `Block "${block.id}" failed to convert: ${result.errors?.[0]?.message ?? "unknown"}`
     );
   }
-  const resources = (result.data.spec.stack_resources ?? []).map((r) =>
-    DATA_BLOCK_CATEGORIES.has(block.category) ? fillPlaceholderPasswords(internalizePorts(r)) : r,
-  );
+  const resources = (result.data.spec.stack_resources ?? []).map((r) => {
+    const configured = applyPresetArgs(r, block.args);
+    return DATA_BLOCK_CATEGORIES.has(block.category)
+      ? fillPlaceholderPasswords(internalizePorts(configured))
+      : configured;
+  });
   return {
     resources,
     volumes: (result.data.spec.volumes ?? []) as FormVolumeData[],

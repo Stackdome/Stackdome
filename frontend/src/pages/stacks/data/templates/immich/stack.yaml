@@ -33,6 +33,7 @@ services:
       POSTGRES_PASSWORD: "REPLACE_DB_PASSWORD_VALUE_HERE"
       POSTGRES_DB: immich
       POSTGRES_INITDB_ARGS: "--data-checksums"
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - immich-db:/var/lib/postgresql/data
 
