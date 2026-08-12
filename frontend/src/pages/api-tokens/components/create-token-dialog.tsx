@@ -39,13 +39,13 @@ interface CreateTokenDialogProps {
   onCreated: () => void;
 }
 
-// Native <input type="date"> only carries a calendar day — treat it as the
+// Native <input type="date"> only carries a calendar day, so treat it as the
 // end of that day in the user's local time so "expires on this date" reads
 // naturally, then hand the API an RFC3339 timestamp.
 //
 // Built from numeric y/m/d rather than parsing a "YYYY-MM-DDTHH:mm:ss" string:
 // a date-time string with no timezone offset is local time in every current
-// engine, but some older engines read it as UTC — the numeric constructor
+// engine, but some older engines read it as UTC. The numeric constructor
 // can't be ambiguous either way.
 function endOfDayRFC3339(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
@@ -61,6 +61,41 @@ function todayLocal(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+const cliLoginCommand = (token: string) => `stackdome login --url ${SERVER_URL} --token ${token}`;
+
+function CopyBlock({
+  label,
+  copyLabel,
+  value,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  copyLabel: string;
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <span className="text-[12px] text-muted-foreground select-none">{label}</span>
+      <div className="relative rounded-md border border-border bg-muted/40 py-2 pr-11 pl-3">
+        <p className="min-w-0 font-mono text-[13px] leading-5 break-all text-foreground">{value}</p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="absolute top-1.5 right-1.5 size-7 text-muted-foreground transition-transform hover:text-foreground active:scale-95"
+          onClick={onCopy}
+          aria-label={copied ? "Copied" : copyLabel}
+        >
+          {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateTokenDialogProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -71,7 +106,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<APITokenCreateResponse | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
@@ -84,7 +119,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     setError(null);
     setScopes(null);
     setScopesError(null);
-    setCopied(false);
+    setCopied(null);
     getApiTokenScopes()
       .then((res) => {
         setScopes(res);
@@ -109,7 +144,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
       setError("Expiry must be in the future.");
       return;
     }
-    // Scopes come from the server contract — never guess a full-access scope
+    // Scopes come from the server contract. Never guess a full-access scope
     // when that contract couldn't be read.
     if (!scopes) {
       setError("Scopes haven't loaded yet.");
@@ -135,18 +170,19 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     }
   }
 
-  async function handleCopy() {
-    if (!created?.token) return;
+  async function handleCopy(field: string, value: string) {
     try {
-      await copyText(created.token);
+      await copyText(value);
     } catch (e) {
       toast({ title: "Copy failed", description: getErrorMessage(e), variant: "destructive" });
       return;
     }
-    setCopied(true);
+    setCopied(field);
     if (copyTimer.current) clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopied(false), COPY_FLASH_MS);
+    copyTimer.current = setTimeout(() => setCopied(null), COPY_FLASH_MS);
   }
+
+  const rawToken = created?.token;
 
   function handleClose() {
     const wasCreated = created !== null;
@@ -162,36 +198,31 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
           <>
             <DialogHeader>
               <DialogTitle>Token created</DialogTitle>
-              <DialogDescription>You won&apos;t see this again — copy it now.</DialogDescription>
+              <DialogDescription>
+                {rawToken
+                  ? "Copy it now. You won't be able to see it again."
+                  : "The token was created, but the server did not return it. Revoke it and create another."}
+              </DialogDescription>
             </DialogHeader>
             <div className="min-w-0 space-y-4 py-2">
-              <div className="min-w-0 space-y-1.5">
-                <span className="flex items-center gap-2 text-sm leading-none font-medium select-none">Token</span>
-                <div className="flex items-center gap-2">
-                  <pre className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs">
-                    {created.token}
-                  </pre>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopy}
-                    aria-label={copied ? "Copied" : "Copy token"}
-                  >
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="token-quickstart">Quick start</Label>
-                <Input
-                  id="token-quickstart"
-                  readOnly
-                  value={`stackdome login --url ${SERVER_URL} --token ${created.token}`}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="font-mono text-xs"
-                />
-              </div>
+              {rawToken && (
+                <>
+                  <CopyBlock
+                    label="Token"
+                    copyLabel="Copy token"
+                    value={rawToken}
+                    copied={copied === "token"}
+                    onCopy={() => handleCopy("token", rawToken)}
+                  />
+                  <CopyBlock
+                    label="Log in with the CLI"
+                    copyLabel="Copy CLI login command"
+                    value={cliLoginCommand(rawToken)}
+                    copied={copied === "cli"}
+                    onCopy={() => handleCopy("cli", cliLoginCommand(rawToken))}
+                  />
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button onClick={handleClose}>Done</Button>
