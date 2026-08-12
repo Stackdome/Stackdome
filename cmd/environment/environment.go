@@ -5,6 +5,7 @@ import (
 
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/auth"
+	"github.com/Stackdome/stackdome/pkg/clients/turnstile"
 	"github.com/Stackdome/stackdome/pkg/clustermanager"
 	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/db"
@@ -52,6 +53,7 @@ type Env struct {
 
 type Clients struct {
 	DefaultClusterClient client.Client
+	TurnstileVerifier    turnstile.Verifier
 }
 
 type Services struct {

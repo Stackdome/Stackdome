@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"net/netip"
 	"os"
 	"time"
 
+	"github.com/Stackdome/stackdome/cmd/environment"
 	"github.com/Stackdome/stackdome/config"
 	"github.com/Stackdome/stackdome/pkg/computequota"
 	"github.com/Stackdome/stackdome/pkg/models"
@@ -18,6 +21,18 @@ const (
 	CloudTestStorageClass   = "standard"
 	cloudTestMaxStorageSize = "2Gi"
 )
+
+type noopTurnstileVerifier struct{}
+
+func (noopTurnstileVerifier) Verify(context.Context, string, netip.Addr) error {
+	return nil
+}
+
+type fixedSignupClientIPResolver struct{}
+
+func (fixedSignupClientIPResolver) Resolve(*http.Request) (netip.Addr, error) {
+	return netip.MustParseAddr("127.0.0.1"), nil
+}
 
 // SetupCloud starts the integration environment with the real Stackdome Cloud
 // runtime wiring and deliberately small limits. It is separate from Setup so
@@ -64,7 +79,11 @@ func SetupCloud(env *Environment, ctx context.Context) (retErr error) {
 	serverManager.config.ComputeMode = config.ComputeModeShared
 	serverManager.config.StackdomeCloud = cloudTestConfig(serverManager.config.Server.Hostname)
 	env.serverManager = serverManager
-	if err := serverManager.Bootstrap(ctx); err != nil {
+	if err := serverManager.Bootstrap(
+		ctx,
+		environment.WithTurnstileVerifier(noopTurnstileVerifier{}),
+		environment.WithSignupClientIPResolver(fixedSignupClientIPResolver{}),
+	); err != nil {
 		return fmt.Errorf("server bootstrap failed: %w", err)
 	}
 

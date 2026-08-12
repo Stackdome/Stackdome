@@ -13,7 +13,7 @@ import (
 
 var _ = Describe("Signup protection wiring", func() {
 	It("uses explicit disabled protection in self-hosted mode", func() {
-		environment := newEnvironment(testSpec)
+		environment := newEnvironment(developmentSpec)
 
 		Expect(environment.initializeSignupProtection(context.Background())).To(Succeed())
 		Expect(environment.PasswordSignupProtection).NotTo(BeNil())
@@ -25,7 +25,7 @@ var _ = Describe("Signup protection wiring", func() {
 	})
 
 	It("uses the configured Cloudflare client IP source in cloud mode", func() {
-		environment := newEnvironment(testSpec)
+		environment := newEnvironment(developmentSpec)
 		environment.Config.RuntimeMode = config.RuntimeModeStackdomeCloud
 		environment.Config.TurnstileSecret = "test-secret"
 		environment.Config.StackdomeCloud = cloudConfigForSignup(config.StackdomeCloudClientIPSourceCloudflare)

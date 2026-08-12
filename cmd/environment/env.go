@@ -77,12 +77,28 @@ type ApplicationConfigOption func(*config.ApplicationConfig)
 
 type PlatformConfigOption func(*config.PlatformConfig)
 
+type TurnstileVerifierOption struct {
+	verifier turnstile.Verifier
+}
+
+type SignupClientIPResolverOption struct {
+	resolver signupprotection.ClientIPResolver
+}
+
 func (o ApplicationConfigOption) ApplyToEnv(env *Env) {
 	o(env.Config)
 }
 
 func (o PlatformConfigOption) ApplyToEnv(env *Env) {
 	o(env.PlatformConfig)
+}
+
+func (o TurnstileVerifierOption) ApplyToEnv(env *Env) {
+	env.Clients.TurnstileVerifier = o.verifier
+}
+
+func (o SignupClientIPResolverOption) ApplyToEnv(env *Env) {
+	env.SignupClientIPResolver = o.resolver
 }
 
 func WithApplicationConfig(cfg *config.ApplicationConfig) EnvConfigOption {
@@ -97,11 +113,17 @@ func WithPlatformConfig(cfg *config.PlatformConfig) EnvConfigOption {
 	})
 }
 
+func WithTurnstileVerifier(verifier turnstile.Verifier) EnvConfigOption {
+	return TurnstileVerifierOption{verifier: verifier}
+}
+
+func WithSignupClientIPResolver(resolver signupprotection.ClientIPResolver) EnvConfigOption {
+	return SignupClientIPResolverOption{resolver: resolver}
+}
+
 func NewTestEnvironment(sessionFactory db.SessionFactory, opts ...EnvConfigOption) EnvImpl {
 	res := newEnvironment(testSpec)
 	res.DBSession = sessionFactory
-	res.PasswordSignupProtection = signupprotection.NewDisabledPasswordSignupProtection()
-	res.SignupClientIPResolver = signupprotection.NewDirectClientIPResolver()
 
 	for _, opt := range opts {
 		opt.ApplyToEnv(res.Env)
@@ -282,14 +304,20 @@ func (e *environmentImpl) initializeSignupProtection(context.Context) error {
 	if cloudConfig == nil {
 		return fmt.Errorf("stackdome Cloud configuration is required")
 	}
-	turnstileVerifier, err := turnstile.NewClient(turnstile.ClientSpec{
-		Secret:           e.Config.TurnstileSecret,
-		ExpectedHostname: cloudConfig.Signup.Turnstile.ExpectedHostname,
-		ExpectedAction:   cloudConfig.Signup.Turnstile.ExpectedAction,
-		Timeout:          cloudConfig.Signup.Turnstile.VerificationTimeout.Duration(),
-	})
-	if err != nil {
-		return fmt.Errorf("create Turnstile verifier: %w", err)
+	turnstileVerifier := e.Clients.TurnstileVerifier
+	if e.spec.dependencySource.createsDependencies() {
+		var err error
+		turnstileVerifier, err = turnstile.NewClient(turnstile.ClientSpec{
+			Secret:           e.Config.TurnstileSecret,
+			ExpectedHostname: cloudConfig.Signup.Turnstile.ExpectedHostname,
+			ExpectedAction:   cloudConfig.Signup.Turnstile.ExpectedAction,
+			Timeout:          cloudConfig.Signup.Turnstile.VerificationTimeout.Duration(),
+		})
+		if err != nil {
+			return fmt.Errorf("create Turnstile verifier: %w", err)
+		}
+	} else if turnstileVerifier == nil {
+		return fmt.Errorf("injected Turnstile verifier is required")
 	}
 
 	passwordSignupProtection, err := signupprotection.NewPasswordSignupProtection(
@@ -313,14 +341,18 @@ func (e *environmentImpl) initializeSignupProtection(context.Context) error {
 		return fmt.Errorf("create password signup protection: %w", err)
 	}
 
-	var clientIPResolver signupprotection.ClientIPResolver
-	switch cloudConfig.Signup.ClientIPSource {
-	case config.StackdomeCloudClientIPSourceCloudflare:
-		clientIPResolver = signupprotection.NewCloudflareClientIPResolver()
-	case config.StackdomeCloudClientIPSourceRemoteAddr:
-		clientIPResolver = signupprotection.NewDirectClientIPResolver()
-	default:
-		return fmt.Errorf("unsupported signup client IP source %q", cloudConfig.Signup.ClientIPSource)
+	clientIPResolver := e.SignupClientIPResolver
+	if e.spec.dependencySource.createsDependencies() {
+		switch cloudConfig.Signup.ClientIPSource {
+		case config.StackdomeCloudClientIPSourceCloudflare:
+			clientIPResolver = signupprotection.NewCloudflareClientIPResolver()
+		case config.StackdomeCloudClientIPSourceRemoteAddr:
+			clientIPResolver = signupprotection.NewDirectClientIPResolver()
+		default:
+			return fmt.Errorf("unsupported signup client IP source %q", cloudConfig.Signup.ClientIPSource)
+		}
+	} else if clientIPResolver == nil {
+		return fmt.Errorf("injected signup client IP resolver is required")
 	}
 
 	e.PasswordSignupProtection = passwordSignupProtection
