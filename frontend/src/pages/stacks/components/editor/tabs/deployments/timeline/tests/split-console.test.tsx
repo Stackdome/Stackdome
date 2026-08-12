@@ -10,10 +10,14 @@ vi.mock("../../build-logs-modal", () => ({
   ),
 }));
 import { SplitConsole, type ResourceRowVM } from "../split-console";
+import { fetchLogSnapshot } from "@/api/observability";
 import { BuildLogsLinkTarget, ReleaseEventLinkKind, ReleaseEventType, type ReleaseEvent } from "@/api/releases";
 import { ResourceFailureType, compactEventMessage } from "../../derive";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.mocked(fetchLogSnapshot).mockReset().mockResolvedValue([]);
+});
 
 const ev = (over: Partial<ReleaseEvent> = {}): ReleaseEvent => ({
   sequence: over.sequence ?? 1,
@@ -70,7 +74,7 @@ describe("SplitConsole", () => {
     // Release-scoped event carries the "release" column tag.
     expect(screen.getByText("release")).toBeInTheDocument();
     expect(screen.getByText("Release created")).toBeInTheDocument();
-    expect(screen.getByText("Failed to start — image pull failed")).toBeInTheDocument();
+    expect(screen.getByText("Failed to start — CrashLoopBackOff")).toBeInTheDocument();
   });
 
   it("badges the all-resources row with the resource count, not the event count", () => {
@@ -98,7 +102,122 @@ describe("SplitConsole", () => {
     expect(screen.getByText("3 restarts")).toBeInTheDocument();
     // Console filtered to worker's events only.
     expect(screen.queryByText("Release created")).not.toBeInTheDocument();
-    expect(screen.getByText("Failed to start — image pull failed")).toBeInTheDocument();
+    expect(screen.getByText("Failed to start — CrashLoopBackOff")).toBeInTheDocument();
+  });
+
+  it("shows an OOM diagnosis first and keeps captured termination output out of the activity line", async () => {
+    const terminationOutput = "allocation failed\nprocess shutting down";
+    const oomRows: ResourceRowVM[] = [{
+      name: "tooljet",
+      phase: "CrashLoopBackOff",
+      failure: {
+        name: "tooljet",
+        type: ResourceFailureType.Runtime,
+        stage: "runtime",
+        failureType: "out_of_memory",
+        reason: "OOMKilled",
+        message: terminationOutput,
+        exitCode: 137,
+        restartCount: 1,
+      },
+    }];
+    const oomEvents = [ev({
+      type: ReleaseEventType.ResourceFailed,
+      resource_name: "tooljet",
+      message: `tooljet failed to start: ${terminationOutput}`,
+      level: "error",
+    })];
+
+    render(<SplitConsole rows={oomRows} events={oomEvents} streaming={false} logContext={logContext} />);
+    expect(screen.getByText("Failed to start — Out of memory (OOMKilled), exit 137")).not.toHaveTextContent("allocation failed");
+
+    await userEvent.click(screen.getByRole("button", { name: /tooljet/ }));
+    expect(screen.getByText("Out of memory (OOMKilled)")).toBeInTheDocument();
+    expect(screen.getByText("exit 137")).toBeInTheDocument();
+    expect(screen.getByText("1 restart")).toBeInTheDocument();
+    expect(screen.getByText("Termination output")).toBeInTheDocument();
+    expect(screen.getByText((_, element) => element?.tagName === "PRE" && element.textContent === terminationOutput)).toBeInTheDocument();
+  });
+
+  it("fetches the crash-log snapshot only when captured termination output is absent", async () => {
+    vi.mocked(fetchLogSnapshot).mockResolvedValueOnce(["fallback crash log"]);
+    const crashRows: ResourceRowVM[] = [{
+      name: "worker",
+      phase: "CrashLoopBackOff",
+      failure: {
+        name: "worker",
+        type: ResourceFailureType.Runtime,
+        stage: "runtime",
+        failureType: "crash_loop",
+        reason: "CrashLoopBackOff",
+      },
+    }];
+
+    render(<SplitConsole rows={crashRows} events={[]} streaming logContext={logContext} />);
+    await userEvent.click(screen.getByRole("button", { name: /worker/ }));
+
+    expect(await screen.findByText("fallback crash log")).toBeInTheDocument();
+    expect(screen.queryByText("Termination output")).not.toBeInTheDocument();
+  });
+
+  it("uses captured output as the primary fallback when structured fields are absent", async () => {
+    const messageRows: ResourceRowVM[] = [{
+      name: "worker",
+      phase: "Error",
+      failure: {
+        name: "worker",
+        type: ResourceFailureType.Runtime,
+        stage: "runtime",
+        reason: undefined,
+        message: "captured termination output",
+      },
+    }];
+
+    render(<SplitConsole rows={messageRows} events={[]} streaming logContext={logContext} />);
+    await userEvent.click(screen.getByRole("button", { name: /worker/ }));
+
+    expect(screen.getByText("captured termination output")).toBeInTheDocument();
+    expect(screen.queryByText("Termination output")).not.toBeInTheDocument();
+  });
+
+  it("keeps historical failure events tied to their own recorded reason", () => {
+    const currentRows: ResourceRowVM[] = [{
+      name: "worker",
+      phase: "CrashLoopBackOff",
+      failure: {
+        name: "worker",
+        type: ResourceFailureType.Runtime,
+        stage: "runtime",
+        failureType: "out_of_memory",
+        reason: "OOMKilled",
+        exitCode: 137,
+      },
+    }];
+    const failureEvents = [
+      ev({
+        sequence: 1,
+        type: ReleaseEventType.ResourceFailed,
+        resource_name: "worker",
+        message: "worker failed to start: old image pull log tail",
+        metadata: { reason: "ImagePullBackOff" },
+        level: "error",
+      }),
+      ev({
+        sequence: 2,
+        type: ReleaseEventType.ResourceFailed,
+        resource_name: "worker",
+        message: "worker failed to start: current OOM log tail",
+        metadata: { reason: "OOMKilled" },
+        level: "error",
+      }),
+    ];
+
+    render(<SplitConsole rows={currentRows} events={failureEvents} streaming={false} />);
+
+    expect(screen.getByText("Failed to start — ImagePullBackOff")).toBeInTheDocument();
+    expect(screen.getByText("Failed to start — Out of memory (OOMKilled), exit 137")).toBeInTheDocument();
+    expect(screen.queryByText(/old image pull log tail/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/current OOM log tail/)).not.toBeInTheDocument();
   });
 
   it("clicking all resources zooms back out", async () => {
