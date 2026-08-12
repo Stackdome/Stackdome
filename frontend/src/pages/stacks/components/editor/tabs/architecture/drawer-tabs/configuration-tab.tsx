@@ -242,8 +242,8 @@ function StackResourceConfigurationTabImpl({
         ? `${exposedCount} exposed`
         : `${ports.length} internal`;
 
-  // Deleting a resource matches siblings by name, so two resources sharing one
-  // would take each other with them.
+  // Both entries are flagged, not just the later one: whichever drawer is open,
+  // that field is the one the user can fix. Matches `volume-fields.tsx`.
   const nameInUse = !!draft.name && (allResources ?? []).filter((r) => r.name === draft.name).length > 1;
   const nameError = getError(errors, "name") || (nameInUse ? "Name already in use" : undefined);
 
