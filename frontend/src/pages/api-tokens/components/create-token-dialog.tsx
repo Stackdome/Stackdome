@@ -39,13 +39,13 @@ interface CreateTokenDialogProps {
   onCreated: () => void;
 }
 
-// Native <input type="date"> only carries a calendar day — treat it as the
+// Native <input type="date"> only carries a calendar day, so treat it as the
 // end of that day in the user's local time so "expires on this date" reads
 // naturally, then hand the API an RFC3339 timestamp.
 //
 // Built from numeric y/m/d rather than parsing a "YYYY-MM-DDTHH:mm:ss" string:
 // a date-time string with no timezone offset is local time in every current
-// engine, but some older engines read it as UTC — the numeric constructor
+// engine, but some older engines read it as UTC. The numeric constructor
 // can't be ambiguous either way.
 function endOfDayRFC3339(date: string): string {
   const [year, month, day] = date.split("-").map(Number);
@@ -61,35 +61,35 @@ function todayLocal(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-const quickStartCommand = (token: string) => `stackdome login --url ${SERVER_URL} --token ${token}`;
+const cliLoginCommand = (token: string) => `stackdome login --url ${SERVER_URL} --token ${token}`;
 
 function CopyBlock({
   label,
+  copyLabel,
   value,
   copied,
   onCopy,
 }: {
   label: string;
+  copyLabel: string;
   value: string;
   copied: boolean;
   onCopy: () => void;
 }) {
   return (
     <div className="min-w-0 space-y-1.5">
-      <span className="flex items-center gap-2 text-sm leading-none font-medium select-none">{label}</span>
-      <div className="flex items-start gap-2">
-        <pre className="min-w-0 flex-1 rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs break-all whitespace-pre-wrap">
-          {value}
-        </pre>
+      <span className="text-[12px] text-muted-foreground select-none">{label}</span>
+      <div className="relative rounded-md border border-border bg-muted/40 py-2 pr-11 pl-3">
+        <p className="min-w-0 font-mono text-[13px] leading-5 break-all text-foreground">{value}</p>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
-          className="shrink-0"
+          className="absolute top-1.5 right-1.5 size-7 text-muted-foreground transition-transform hover:text-foreground active:scale-95"
           onClick={onCopy}
-          aria-label={copied ? "Copied" : `Copy ${label.toLowerCase()}`}
+          aria-label={copied ? "Copied" : copyLabel}
         >
-          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+          {copied ? <Check className="size-3.5 text-success" /> : <Copy className="size-3.5" />}
         </Button>
       </div>
     </div>
@@ -144,7 +144,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
       setError("Expiry must be in the future.");
       return;
     }
-    // Scopes come from the server contract — never guess a full-access scope
+    // Scopes come from the server contract. Never guess a full-access scope
     // when that contract couldn't be read.
     if (!scopes) {
       setError("Scopes haven't loaded yet.");
@@ -198,22 +198,24 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
           <>
             <DialogHeader>
               <DialogTitle>Token created</DialogTitle>
-              <DialogDescription>You won&apos;t see this again — copy it now.</DialogDescription>
+              <DialogDescription>Copy it now. You won&apos;t be able to see it again.</DialogDescription>
             </DialogHeader>
             <div className="min-w-0 space-y-4 py-2">
               {rawToken && (
                 <>
                   <CopyBlock
                     label="Token"
+                    copyLabel="Copy token"
                     value={rawToken}
                     copied={copied === "token"}
                     onCopy={() => handleCopy("token", rawToken)}
                   />
                   <CopyBlock
-                    label="Quick start"
-                    value={quickStartCommand(rawToken)}
-                    copied={copied === "quickstart"}
-                    onCopy={() => handleCopy("quickstart", quickStartCommand(rawToken))}
+                    label="Log in with the CLI"
+                    copyLabel="Copy CLI login command"
+                    value={cliLoginCommand(rawToken)}
+                    copied={copied === "cli"}
+                    onCopy={() => handleCopy("cli", cliLoginCommand(rawToken))}
                   />
                 </>
               )}

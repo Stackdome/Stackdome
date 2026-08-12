@@ -76,9 +76,9 @@ describe("ApiTokensPage", () => {
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
-    // Shown twice: on its own, and inside the quick-start command.
+    // Shown twice: on its own, and inside the CLI login command.
     expect(await screen.findAllByText(/sd_raw_secret/)).toHaveLength(2);
-    expect(screen.getByText(/won't see this again/i)).toBeInTheDocument();
+    expect(screen.getByText(/won't be able to see it again/i)).toBeInTheDocument();
 
     // Dismissing the show-once view must drop the secret from state entirely.
     await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
@@ -106,7 +106,7 @@ describe("ApiTokensPage", () => {
     expect(toastMock).not.toHaveBeenCalled();
   });
 
-  it("copies the quick-start command with the token embedded", async () => {
+  it("copies the CLI login command with the token embedded", async () => {
     Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
     vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
     renderPage();
@@ -116,7 +116,7 @@ describe("ApiTokensPage", () => {
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
     await screen.findAllByText(/sd_raw_secret/);
 
-    await userEvent.click(screen.getByRole("button", { name: "Copy quick start" }));
+    await userEvent.click(screen.getByRole("button", { name: "Copy CLI login command" }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       expect.stringContaining("stackdome login --url "),
     );
