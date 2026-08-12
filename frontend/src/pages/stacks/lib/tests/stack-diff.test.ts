@@ -214,6 +214,18 @@ describe("reverting a rename carries the references back", () => {
     expect(next.resources[1].depends_on).toEqual(["redis"]);
   });
 
+  /** A draft-only resource has no baseline name, so discarding the field
+   *  clears it and leaves siblings naming something that is gone. */
+  it("prunes references when the name field is discarded on a draft-only resource", () => {
+    const holedBaseline = { resources: [undefined, { name: "web", depends_on: [] }], volumes: [] };
+    const withAdded = {
+      resources: [{ name: "cache" }, { name: "web", depends_on: ["cache"] }],
+      volumes: [],
+    };
+    const next = revertResourceField(withAdded as never, holedBaseline as never, 0, "name");
+    expect(next.resources[1].depends_on).toEqual([]);
+  });
+
   it("leaves siblings alone when the reverted field is not the name", () => {
     const withImage = {
       resources: [{ name: "cache", source: { image: { ref: "redis:8" } } }, draft.resources[1]],

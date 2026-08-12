@@ -36,7 +36,10 @@ export function cloneJson<T>(v: T): T {
  */
 function carryNameRevert(resources: ResourceArr, idx: number, nameBefore?: string): ResourceArr {
   const nameAfter = resources[idx]?.name;
-  if (!nameBefore || !nameAfter || nameBefore === nameAfter) return resources;
+  if (!nameBefore || nameBefore === nameAfter) return resources;
+  // A draft-only resource has no baseline name to restore, so reverting the
+  // field clears it. Siblings then have nothing to point at.
+  if (!nameAfter) return deleteResourceAndReferences(resources, nameBefore);
   return renameResourceReferences(resources, nameBefore, nameAfter);
 }
 
