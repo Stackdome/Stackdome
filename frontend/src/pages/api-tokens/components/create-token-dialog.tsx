@@ -61,6 +61,41 @@ function todayLocal(): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
+const quickStartCommand = (token: string) => `stackdome login --url ${SERVER_URL} --token ${token}`;
+
+function CopyBlock({
+  label,
+  value,
+  copied,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <span className="flex items-center gap-2 text-sm leading-none font-medium select-none">{label}</span>
+      <div className="flex items-start gap-2">
+        <pre className="min-w-0 flex-1 rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs break-all whitespace-pre-wrap">
+          {value}
+        </pre>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="shrink-0"
+          onClick={onCopy}
+          aria-label={copied ? "Copied" : `Copy ${label.toLowerCase()}`}
+        >
+          {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateTokenDialogProps) {
   const { toast } = useToast();
   const [name, setName] = useState("");
@@ -71,7 +106,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<APITokenCreateResponse | null>(null);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState<string | null>(null);
   const copyTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
   useEffect(() => () => { if (copyTimer.current) clearTimeout(copyTimer.current); }, []);
@@ -84,7 +119,7 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     setError(null);
     setScopes(null);
     setScopesError(null);
-    setCopied(false);
+    setCopied(null);
     getApiTokenScopes()
       .then((res) => {
         setScopes(res);
@@ -135,18 +170,19 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
     }
   }
 
-  async function handleCopy() {
-    if (!created?.token) return;
+  async function handleCopy(field: string, value: string) {
     try {
-      await copyText(created.token);
+      await copyText(value);
     } catch (e) {
       toast({ title: "Copy failed", description: getErrorMessage(e), variant: "destructive" });
       return;
     }
-    setCopied(true);
+    setCopied(field);
     if (copyTimer.current) clearTimeout(copyTimer.current);
-    copyTimer.current = setTimeout(() => setCopied(false), COPY_FLASH_MS);
+    copyTimer.current = setTimeout(() => setCopied(null), COPY_FLASH_MS);
   }
+
+  const rawToken = created?.token;
 
   function handleClose() {
     const wasCreated = created !== null;
@@ -165,33 +201,22 @@ export function CreateTokenDialog({ open, onOpenChange, onCreated }: CreateToken
               <DialogDescription>You won&apos;t see this again — copy it now.</DialogDescription>
             </DialogHeader>
             <div className="min-w-0 space-y-4 py-2">
-              <div className="min-w-0 space-y-1.5">
-                <span className="flex items-center gap-2 text-sm leading-none font-medium select-none">Token</span>
-                <div className="flex items-center gap-2">
-                  <pre className="min-w-0 flex-1 overflow-x-auto rounded-md border border-border bg-muted/50 px-3 py-2 font-mono text-xs">
-                    {created.token}
-                  </pre>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={handleCopy}
-                    aria-label={copied ? "Copied" : "Copy token"}
-                  >
-                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="token-quickstart">Quick start</Label>
-                <Input
-                  id="token-quickstart"
-                  readOnly
-                  value={`stackdome login --url ${SERVER_URL} --token ${created.token}`}
-                  onFocus={(e) => e.currentTarget.select()}
-                  className="font-mono text-xs"
-                />
-              </div>
+              {rawToken && (
+                <>
+                  <CopyBlock
+                    label="Token"
+                    value={rawToken}
+                    copied={copied === "token"}
+                    onCopy={() => handleCopy("token", rawToken)}
+                  />
+                  <CopyBlock
+                    label="Quick start"
+                    value={quickStartCommand(rawToken)}
+                    copied={copied === "quickstart"}
+                    onCopy={() => handleCopy("quickstart", quickStartCommand(rawToken))}
+                  />
+                </>
+              )}
             </div>
             <DialogFooter>
               <Button onClick={handleClose}>Done</Button>

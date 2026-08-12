@@ -76,17 +76,18 @@ describe("ApiTokensPage", () => {
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
-    expect(await screen.findByText(/sd_raw_secret/)).toBeInTheDocument();
+    // Shown twice: on its own, and inside the quick-start command.
+    expect(await screen.findAllByText(/sd_raw_secret/)).toHaveLength(2);
     expect(screen.getByText(/won't see this again/i)).toBeInTheDocument();
 
     // Dismissing the show-once view must drop the secret from state entirely.
     await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
-    expect(screen.queryByText(/sd_raw_secret/)).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/sd_raw_secret/)).toHaveLength(0);
 
     // Reopening the create dialog must not resurface the previous secret.
     await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
     expect(await screen.findByLabelText(/name/i)).toBeInTheDocument();
-    expect(screen.queryByText(/sd_raw_secret/)).not.toBeInTheDocument();
+    expect(screen.queryAllByText(/sd_raw_secret/)).toHaveLength(0);
   });
 
   it("copies the token via the Clipboard API when available", async () => {
@@ -97,12 +98,32 @@ describe("ApiTokensPage", () => {
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
-    await screen.findByText(/sd_raw_secret/);
+    await screen.findAllByText(/sd_raw_secret/);
 
     await userEvent.click(screen.getByRole("button", { name: "Copy token" }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith("sd_raw_secret");
     expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
     expect(toastMock).not.toHaveBeenCalled();
+  });
+
+  it("copies the quick-start command with the token embedded", async () => {
+    Object.assign(navigator, { clipboard: { writeText: vi.fn().mockResolvedValue(undefined) } });
+    vi.mocked(tokensApi.createApiToken).mockResolvedValue({ id: "t2", name: "ci", token: "sd_raw_secret" });
+    renderPage();
+    await userEvent.click(await screen.findByRole("button", { name: /create token/i }));
+    await userEvent.type(screen.getByLabelText(/name/i), "ci");
+    await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
+    await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
+    await screen.findAllByText(/sd_raw_secret/);
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy quick start" }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining("stackdome login --url "),
+    );
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      expect.stringContaining("--token sd_raw_secret"),
+    );
+    expect(await screen.findByRole("button", { name: "Copied" })).toBeInTheDocument();
   });
 
   it("falls back to a textarea copy when the Clipboard API is unavailable (insecure context)", async () => {
@@ -114,7 +135,7 @@ describe("ApiTokensPage", () => {
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
-    await screen.findByText(/sd_raw_secret/);
+    await screen.findAllByText(/sd_raw_secret/);
 
     // No throw / unhandled rejection from the missing Clipboard API.
     await userEvent.click(screen.getByRole("button", { name: "Copy token" }));
@@ -134,7 +155,7 @@ describe("ApiTokensPage", () => {
     await userEvent.type(screen.getByLabelText(/name/i), "ci");
     await waitFor(() => expect(screen.getByRole("button", { name: /^create$/i })).toBeEnabled());
     await userEvent.click(screen.getByRole("button", { name: /^create$/i }));
-    await screen.findByText(/sd_raw_secret/);
+    await screen.findAllByText(/sd_raw_secret/);
 
     await userEvent.click(screen.getByRole("button", { name: "Copy token" }));
     await waitFor(() =>
