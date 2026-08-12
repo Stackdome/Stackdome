@@ -4112,6 +4112,31 @@ components:
         github_oauth:
           type: boolean
           description: True when GitHub OAuth login is configured on the server.
+        signup:
+          $ref: '#/components/schemas/SignupConfigResponse'
+    SignupConfigResponse:
+      type: object
+      required:
+      - turnstile
+      properties:
+        turnstile:
+          $ref: '#/components/schemas/TurnstileConfigResponse'
+    TurnstileConfigResponse:
+      type: object
+      required:
+      - enabled
+      - site_key
+      - action
+      properties:
+        enabled:
+          type: boolean
+          description: True when password signup requires a Turnstile challenge.
+        site_key:
+          type: string
+          description: Public Turnstile site key used to render the signup widget.
+        action:
+          type: string
+          description: Turnstile action submitted by the signup widget.
     Organisation:
       type: object
       properties:
@@ -4236,6 +4261,9 @@ components:
         invite_token:
           type: string
           description: Optional invite token for joining an existing organization
+        turnstile_token:
+          type: string
+          description: Turnstile token required for protected public password signup
     UserRole:
       type: string
       enum:

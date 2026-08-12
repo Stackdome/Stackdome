@@ -177,6 +177,7 @@ docs/SecretData.md
 docs/SecretList.md
 docs/SecretReference.md
 docs/SecretType.md
+docs/SignupConfigResponse.md
 docs/SourceSpec.md
 docs/Stack.md
 docs/StackConnection.md
@@ -205,6 +206,7 @@ docs/StackTopology.md
 docs/TopologyEdge.md
 docs/TopologyNode.md
 docs/TopologyNodeRef.md
+docs/TurnstileConfigResponse.md
 docs/UpdateProjectMemberRoleRequest.md
 docs/User.md
 docs/UserList.md
@@ -392,6 +394,7 @@ model_secret_data.go
 model_secret_list.go
 model_secret_reference.go
 model_secret_type.go
+model_signup_config_response.go
 model_source_spec.go
 model_ssh_config.go
 model_stack.go
@@ -421,6 +424,7 @@ model_stack_topology.go
 model_topology_edge.go
 model_topology_node.go
 model_topology_node_ref.go
+model_turnstile_config_response.go
 model_update_project_member_role_request.go
 model_user.go
 model_user_list.go

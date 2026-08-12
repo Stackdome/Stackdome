@@ -13,6 +13,7 @@ import (
 	"github.com/Stackdome/stackdome/pkg/observability"
 	"github.com/Stackdome/stackdome/pkg/resourceaccess"
 	"github.com/Stackdome/stackdome/pkg/services"
+	"github.com/Stackdome/stackdome/pkg/signupprotection"
 	"github.com/Stackdome/stackdome/pkg/stores"
 	"github.com/Stackdome/stackdome/pkg/worker/workermanager"
 	"github.com/openshift-online/ocm-sdk-go/leadership"
@@ -43,6 +44,8 @@ type Env struct {
 	LeadershipFlag              *leadership.Flag
 	EncryptionService           services.EncryptionService
 	ComputePolicy               computequota.Policy
+	PasswordSignupProtection    signupprotection.PasswordSignupProtection
+	SignupClientIPResolver      signupprotection.ClientIPResolver
 	Logger                      applogger.Logger
 	Observability               *observability.Metrics
 }
