@@ -42,6 +42,24 @@ describe("parseApiError", () => {
     });
     expect(parsed.topLevel).toBe("validation failed: 2 error(s)");
     expect(parsed.credential).toBeUndefined();
+    expect(parsed.code).toBe("8");
+  });
+
+  it("exposes the envelope code on errors with no details payload", () => {
+    const err = axiosErr(400, {
+      kind: "Error",
+      id: "30",
+      code: "30",
+      reason: "Stackdome Cloud allows a maximum of 6 stack resources per organisation",
+    });
+    const parsed = parseApiError(err);
+    expect(parsed.code).toBe("30");
+    expect(parsed.fieldErrors).toEqual([]);
+    expect(parsed.credential).toBeUndefined();
+  });
+
+  it("leaves code undefined when the body carries none", () => {
+    expect(parseApiError(axiosErr(500, { reason: "boom" })).code).toBeUndefined();
   });
 
   it("falls back to reason with no field errors on a flat reject", () => {

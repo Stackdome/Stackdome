@@ -1,6 +1,8 @@
 import { useParams, useLocation, useNavigate, Link } from "react-router-dom";
 import { getErrorMessage } from "@/api/client";
 import { parseApiError, type ParsedFieldError } from "@/api/errors";
+import { COMPUTE_QUOTA_EXCEEDED_CODE, quotaMessage, type QuotaMessage } from "@/pages/stacks/lib/quota-error";
+import { AlertBanner } from "@/components/branded/alert-banner";
 import { mapFieldErrors } from "@/pages/stacks/lib/map-field-errors";
 import { formatDraftValidationIssues } from "@/pages/stacks/lib/format-draft-validation";
 import { buildBannerItems } from "@/pages/stacks/components/editor/lib/banner-items";
@@ -451,6 +453,8 @@ export default function CanvasEditorPage() {
   // summary banner. Cleared when a deploy is retried or the banner is dismissed.
   const [deployFieldErrors, setDeployFieldErrors] = useState<ParsedFieldError[]>([]);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  // Not cleared on edit: the quota verdict holds until the server re-checks it.
+  const [quotaNotice, setQuotaNotice] = useState<QuotaMessage | null>(null);
   // Bumped to ask the canvas to open a resource drawer (banner "jump to error").
   const [openResourceSignal, setOpenResourceSignal] = useState<
     { index: number; tab: EditSessionTab; nonce: number } | null
@@ -668,9 +672,22 @@ export default function CanvasEditorPage() {
     return true;
   }, [session.draft.resources, toast]);
 
+  // Compute-quota 400s carry no fieldErrors, so applyValidationFailure never consumes them.
+  const applyQuotaFailure = useCallback((err: unknown): boolean => {
+    const parsed = parseApiError(err);
+    if (parsed.code !== COMPUTE_QUOTA_EXCEEDED_CODE) return false;
+    const message = quotaMessage(parsed.topLevel);
+    setQuotaNotice(message);
+    toast({ title: message.title, variant: "destructive" });
+    return true;
+  }, [toast]);
+
   const [deployBusy, setDeployBusy] = useState(false);
   const refetchReleases = releasesResult.refetch;
   const runDeploy = useCallback(async (fn: () => Promise<unknown>, ok: string): Promise<boolean> => {
+    // Clear stale failure state so a retry cannot show two contradictory banners.
+    setQuotaNotice(null);
+    setDeployFieldErrors([]);
     setDeployBusy(true);
     try {
       await fn();
@@ -678,14 +695,14 @@ export default function CanvasEditorPage() {
       refetchReleases();
       return true;
     } catch (e) {
-      if (!applyValidationFailure(e)) {
+      if (!applyQuotaFailure(e) && !applyValidationFailure(e)) {
         toast({ title: "Action failed", description: e instanceof Error ? e.message : "", variant: "destructive" });
       }
       return false;
     } finally {
       setDeployBusy(false);
     }
-  }, [toast, refetchReleases, applyValidationFailure]);
+  }, [toast, refetchReleases, applyQuotaFailure, applyValidationFailure]);
 
   const onDeploy = useCallback(async () => {
     if (!draftSync || !deployIds.stackId) return;
@@ -725,6 +742,7 @@ export default function CanvasEditorPage() {
     // Clear stale validation state from a previous failed attempt.
     setDeployFieldErrors([]);
     setServerFieldErrors({});
+    setQuotaNotice(null);
 
     // A draft needs a name before it can be created. The stack name field is not
     // min-length-constrained in the schema (empty passes zod and only fails at
@@ -828,7 +846,7 @@ export default function CanvasEditorPage() {
       navigate(`/stacks/${created.id}`, { replace: true, state: null });
     } catch (err) {
       console.error('Failed to create stack:', err);
-      if (!applyValidationFailure(err)) {
+      if (!applyQuotaFailure(err) && !applyValidationFailure(err)) {
         toast({
           title: "Failed to create stack",
           description: parseApiError(err).topLevel,
@@ -1047,6 +1065,18 @@ export default function CanvasEditorPage() {
         canDeleteStack={canWriteStack}
         onDelete={() => void performDelete()}
         publicEndpoints={publicEndpoints}
+        notice={
+          quotaNotice && (
+            <div className="mt-3">
+              <AlertBanner variant="danger" onDismiss={() => setQuotaNotice(null)}>
+                <div className="flex flex-col gap-1">
+                  <span className="font-semibold">{quotaNotice.title}</span>
+                  <span className="max-w-[92ch] text-fg-muted">{quotaNotice.description}</span>
+                </div>
+              </AlertBanner>
+            </div>
+          )
+        }
         architecture={
           <>
             {!bannerDismissed && bannerItems.length > 0 && (
