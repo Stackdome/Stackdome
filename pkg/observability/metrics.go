@@ -91,6 +91,10 @@ func (m *Metrics) RegisterStackCollector(source StackSnapshotSource) {
 	m.registry.MustRegister(newStackCollector(source))
 }
 
+func (m *Metrics) RegisterComputeAccessCollector(source ComputeAccessSnapshotSource, capacityLimit int) {
+	m.registry.MustRegister(newComputeAccessCollector(source, capacityLimit))
+}
+
 func (m *Metrics) ObserveHTTPRequest(method, route string, status int, elapsed time.Duration) {
 	method = boundedHTTPMethod(method)
 	m.httpRequests.WithLabelValues(method, route, strconv.Itoa(status)).Inc()

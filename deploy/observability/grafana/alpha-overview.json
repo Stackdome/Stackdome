@@ -700,6 +700,110 @@
       "targets": [{"expr": "workqueue_longest_running_processor_seconds", "legendFormat": "{{name}}", "refId": "A"}],
       "title": "Longest-running work",
       "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 60},
+      "id": 29,
+      "panels": [],
+      "title": "Cloud compute access",
+      "type": "row"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "All retained compute entitlement rows grouped by issuance source. Organization deletion is not supported, so this is the total-issued KPI.",
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 61},
+      "id": 30,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"expr": "sum(max by (source) (stackdome_cloud_compute_entitlements_issued))", "instant": false, "legendFormat": "Issued", "refId": "A"}],
+      "title": "Total entitlements issued",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Retained compute entitlements whose configured expiry time has passed according to PostgreSQL.",
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 1}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 61},
+      "id": 31,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"expr": "sum(max by (source) (stackdome_cloud_compute_entitlements_expired))", "instant": false, "legendFormat": "Expired", "refId": "A"}],
+      "title": "Expired entitlements",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Shared-compute leases currently granting active runtime access.",
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 61},
+      "id": 32,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"expr": "max(stackdome_cloud_shared_compute_leases{state=\"active\"})", "instant": false, "legendFormat": "Active", "refId": "A"}],
+      "title": "Active leases",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Reserved shared-compute capacity compared with the configured ceiling. Every lease except cleaned reserves capacity, matching admission enforcement.",
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "decimals": 0, "min": 0, "unit": "short"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "Reserved"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "Configured limit"}, "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 4, "w": 8, "x": 12, "y": 61},
+      "id": 33,
+      "options": {"displayMode": "gradient", "minVizHeight": 16, "minVizWidth": 8, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "sizing": "auto", "valueMode": "color"},
+      "targets": [
+        {"expr": "sum(max by (state) (stackdome_cloud_shared_compute_leases{state!=\"cleaned\"}))", "instant": false, "legendFormat": "Reserved", "refId": "A"},
+        {"expr": "max(stackdome_cloud_shared_compute_capacity_limit)", "instant": false, "legendFormat": "Configured limit", "refId": "B"}
+      ],
+      "title": "Reserved capacity",
+      "type": "bargauge"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Leases waiting for cleanup, being cleaned, or retained after a cleanup error. A growing value means cleanup is not keeping pace.",
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "thresholds"}, "decimals": 0, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 61},
+      "id": 34,
+      "options": {"colorMode": "background", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"expr": "sum(max by (state) (stackdome_cloud_shared_compute_leases{state=~\"cleanup_pending|cleaning|error\"}))", "instant": false, "legendFormat": "Cleanup backlog", "refId": "A"}],
+      "title": "Cleanup backlog",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "${DS_PROMETHEUS}"},
+      "description": "Current shared-compute leases grouped by lifecycle state, including completed cleanup and cleanup failures.",
+      "fieldConfig": {
+        "defaults": {"color": {"mode": "palette-classic"}, "decimals": 0, "min": 0, "unit": "short"},
+        "overrides": [
+          {"matcher": {"id": "byName", "options": "active"}, "properties": [{"id": "color", "value": {"fixedColor": "green", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "cleanup_pending"}, "properties": [{"id": "color", "value": {"fixedColor": "orange", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "cleaning"}, "properties": [{"id": "color", "value": {"fixedColor": "yellow", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "cleaned"}, "properties": [{"id": "color", "value": {"fixedColor": "blue", "mode": "fixed"}}]},
+          {"matcher": {"id": "byName", "options": "error"}, "properties": [{"id": "color", "value": {"fixedColor": "red", "mode": "fixed"}}]}
+        ]
+      },
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 65},
+      "id": 35,
+      "options": {"displayMode": "gradient", "minVizHeight": 16, "minVizWidth": 8, "namePlacement": "auto", "orientation": "horizontal", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "showUnfilled": true, "sizing": "auto", "valueMode": "color"},
+      "targets": [{"expr": "max by (state) (stackdome_cloud_shared_compute_leases)", "instant": false, "legendFormat": "{{state}}", "refId": "A"}],
+      "title": "Lease breakdown by state",
+      "type": "bargauge"
     }
   ],
   "refresh": "15s",
@@ -721,5 +825,5 @@
   "timezone": "browser",
   "title": "Stackdome Operations Overview",
   "uid": "stackdome-alpha-overview",
-  "version": 2
+  "version": 3
 }
