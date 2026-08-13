@@ -1,19 +1,19 @@
 ---
 title: "Deploy from git"
-description: "Connect a git provider and build your repository into a running resource."
+description: "Connect a git provider and build your repository into a running service."
 keywords: ["deploy from git", "repository deployment", "Dockerfile build", "private repository", "git provider"]
 ---
 
 ## Outcome
 
-Deploy the public [Stackdome demo repository](https://github.com/Stackdome/stackdome-demo) as a three-resource stack. Stackdome builds its web application and worker from separate repository contexts, runs Redis from a published image, provisions persistent Redis storage, and waits until the release is healthy. The web resource produces a public URL you can return to the user.
+Deploy the public [Stackdome demo repository](https://github.com/Stackdome/stackdome-demo) as a three-resource stack. Stackdome builds its web application and worker from separate repository contexts, runs Redis from a published image, provisions persistent Redis storage, and waits until the release is healthy. When deployment finishes, open the web resource's public URL to view the app.
 
 ## Prerequisites
 
 - A local clone of `https://github.com/Stackdome/stackdome-demo.git`. The example application is under `hello-stack`.
 - The URL of Stackdome Cloud or a self-hosted installation, plus an API token. See [authentication and API tokens](/reference/authentication).
-- Stackdome Cloud supplies the registry used for git builds. On self-hosted Stackdome, git builds require [connected compute with an image registry](/self-host/connect-compute).
-- For a private repository, a git provider already connected to the organization. The current public CLI cannot create or manage git-provider credentials; use the dashboard flow below or the API before deploying.
+- Stackdome Cloud is ready for Git builds. On self-hosted Stackdome, Git builds require [connected compute](/self-host/connect-compute).
+- For a private repository, a Git integration that can access it. Stackdome automatically uses an existing matching integration.
 - For the GitHub App flow on a self-hosted installation, an externally reachable `SERVER_EXTERNAL_URL` and a GitHub account allowed to install the app for the repository owner.
 
 ## Agent prompt
@@ -48,7 +48,7 @@ Pushing a commit does not deploy an ordinary stack automatically. Run the deploy
 
 - `stackdome validate` exits successfully for the generated `stackfile.yaml`.
 - `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
 - A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
 - The Stackfile records both demo build contexts, web port `3000`, Redis port `6379`, Redis dependencies, and the persistent `/data` mount found in the repository.
 
@@ -137,7 +137,9 @@ stackdome status -o json
 stackdome open -o json
 ```
 
-For a private repository, configure its provider through the dashboard or API first. The public CLI has no git-provider management command. Do not put provider tokens in `stackfile.yaml`.
+<Note>
+  For a private repository, the organization must have a Git integration that can access it. Stackdome automatically uses an existing matching integration. If none exists, or the GitHub App installation does not cover the repository, configure one through the dashboard or the documented API using `stackdome api`. The CLI currently has no purpose-built Git integration commands. Do not put provider tokens in `stackfile.yaml`.
+</Note>
 
 <Visibility for="humans">
 
@@ -302,7 +304,7 @@ The drawer's **Advanced** disclosure — labelled *"build & push"* — holds the
 
 When you deploy, Stackdome sends the build request to the deployment destination. Its build service clones the repository, builds the image, and pushes it. The resource's node on the canvas is badged `git build` while this is how it gets its image.
 
-By default, Stackdome uses the deployment destination's build registry, under a path derived from the organization, stack, and resource. Stackdome Cloud supplies this registry. On self-hosted Stackdome, connected compute must have **Enable Image Registry** selected; otherwise it can run only resources that reference an image hosted elsewhere. See [Connect compute](/self-host/connect-compute).
+Stackdome automatically configures where built images are stored. You do not need to set this up before deploying.
 
 You can watch it on the stack's **Deployments** tab. Each release in the deploy timeline shows **Build**, **Deploy** and **Ready** as separate phases, and records the revision it actually resolved — a release built from a branch names the commit it landed on, so you always know what is running even when the source said `main`.
 
@@ -328,18 +330,18 @@ Every webhook delivery is HMAC-verified against that provider's webhook secret b
 
 ## Troubleshooting
 
-Start with structured CLI output. Use the release ID returned by `stackdome deploy -o json` and the build ID returned by `stackdome build list`:
+Start with structured CLI output. Use the release ID returned by `stackdome deploy -o json` and the build ID returned by `stackdome list builds`:
 
 ```bash
-stackdome build list
-stackdome build info <build-id>
-stackdome build logs <build-id>
-stackdome release events <release-id> --follow
+stackdome list builds
+stackdome describe build <build-id>
+stackdome logs build <build-id>
+stackdome list release-events <release-id> --follow
 stackdome status -o json
 stackdome logs <resource> --tail 100
 ```
 
-Check the build definition before retrying: a private repository needs a configured provider, the selected revision must exist, and `dockerfile` is relative to `context`. On self-hosted Stackdome, also confirm that connected compute has an image registry. A failed `stackdome deploy --wait -o json` is not a successful deployment even if the stack document was applied.
+Check the build definition before retrying: a private repository needs a configured provider, the selected revision must exist, and `dockerfile` is relative to `context`. A failed `stackdome deploy --wait -o json` is not a successful deployment even if the stack document was applied.
 
 <Visibility for="humans">
 

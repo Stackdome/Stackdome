@@ -4,23 +4,15 @@ description: "Ask a coding agent to deploy your repository and return its live S
 keywords: ["coding agent quickstart", "AI deployment", "deploy repository", "Stackdome Cloud", "live URL"]
 ---
 
-Use the Stackdome agent plugin to turn a repository into a validated Stackfile, deploy it, and return the public URL. The same workflow targets Stackdome Cloud or a self-hosted installation.
+Use the Stackdome deploy skill to turn a repository into a validated Stackfile, deploy it, and return the public URL. The same workflow targets Stackdome Cloud or a self-hosted installation.
 
-## Install the plugin
+## Install the skill
 
-At alpha release, the plugin installer is:
+Install the Stackdome deploy skill with:
 
 ```bash
-stackdome plugin install
+npx skills add stackdome/skills
 ```
-
-<Warning>
-  `stackdome plugin install` is the alpha-release installer. Until that command is present in the installed CLI, install the current deploy skill with `npx skills add stackdome/skills`.
-</Warning>
-
-<Prompt description="Install the Stackdome deploy skill." actions={["copy", "cursor"]}>
-  npx skills add stackdome/skills
-</Prompt>
 
 The current deploy skill is available to Agent Skills-compatible coding tools, including Claude Code, Codex, Cursor, and GitHub Copilot.
 
@@ -43,17 +35,6 @@ If you already have a self-hosted installation, give the agent its URL instead. 
 <Warning>
   Share an API token with the agent when authentication is required. Never give an agent your Stackdome account password. See [API-token authentication](/reference/authentication).
 </Warning>
-
-## Verify the release
-
-Successful completion requires all four checks:
-
-1. `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id`, and returns `release.state` as `Released`. The agent retains that ID as the deployed release ID.
-2. `stackdome status -o json` reports `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
-3. Before claiming this is still the newest release, the agent also requires `latest_release.id` to equal the deployed release ID and `latest_release.state` to be `Released`. A different latest ID means another deployment raced with this one.
-4. For a public service, the agent returns at least one public URL. `stackdome open -o json` returns the URL list without opening a browser.
-
-Do not treat a submitted release, an in-progress release, or a process that is only listening locally as a completed deployment.
 
 ## If Cloud is at capacity
 

@@ -47,7 +47,7 @@ Deploy this container image to Stackdome: <image-reference>. Use the supplied re
 
 - `stackdome validate` exits successfully for the generated `stackfile.yaml`.
 - `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
 - A public service returns at least one entry in the `urls` array from `stackdome open -o json`.
 - No registry password or token appears in the Stackfile, shell history captured for support, screenshots, tickets, or chat messages.
 
@@ -258,7 +258,7 @@ Start with the release and resource data returned by the CLI:
 
 ```bash
 stackdome status -o json
-stackdome release events <release-id> --follow
+stackdome list release-events <release-id> --follow
 stackdome logs <resource> --tail 100
 ```
 

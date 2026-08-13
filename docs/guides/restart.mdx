@@ -32,7 +32,7 @@ A restart asks Stackdome to replace the running instance of one resource.
 - It does not select an older release or roll back code or configuration.
 - It does not change persistent volume or addon data.
 
-Use a deployment for configuration or source changes. Use the dashboard-only [release rollback](/concepts/releases#rolling-back) when you need to redeploy a previous released snapshot.
+Use a deployment for configuration or source changes. Use [release rollback](/concepts/releases#roll-back-a-release) when you need to redeploy a previous released snapshot.
 
 ## Verify the restart
 
@@ -52,7 +52,7 @@ Wait for the resource to return to its ready state and check the new startup lin
 stackdome status -o json
 ```
 
-Require `converged_release.state` to remain `Released` and `converged_release.health` to return to `ok`. If a newer release exists, also confirm that its ID matches `converged_release.id` before describing the current deployment as successful.
+Require `stack.converged_release.state` to remain `Released` and `stack.converged_release.health` to return to `ok`. If a newer release exists, also confirm that its ID matches `stack.converged_release.id` before describing the current deployment as successful.
 
 <Visibility for="agents">
   A zero exit from `stackdome restart` proves only that the API accepted the request. Do not report recovery until status is healthy again and the resource's startup logs show the expected behavior.

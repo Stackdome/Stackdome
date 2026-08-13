@@ -44,7 +44,7 @@ Expose this service at a public Stackdome URL. Confirm the application port from
 
 - `stackdome validate` exits successfully with an HTTP port whose `public` field is `true`.
 - `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
 - `stackdome open -o json` returns at least one entry in `urls` for the public resource.
 - For a TLS-eligible hostname, `stackdome status --conditions` reports `TLSConfigured=True` with reason `TLSReady` for the resource.
 - `curl --head --max-time 15 <url>` reaches the application without `--insecure`.
@@ -78,9 +78,9 @@ Do not construct the generated hostname yourself. Use the current value from `st
 
 <Visibility for="agents">
   - Exact Stackfile fields: `resources.<resource>.ports[]` requires `name` and `port`; set `protocol: HTTP` and `public: true`. `subdomain` is optional.
-  - Retain `release.id` as the deployed release ID. Require a successful deploy exit, `release.state == "Released"`, `converged_release.id` equal to that ID, `converged_release.state == "Released"`, `converged_release.health == "ok"`, and at least one `urls` entry before returning a public endpoint.
+  - Retain `release.id` as the deployed release ID. Require a successful deploy exit, `release.state == "Released"`, `stack.converged_release.id` equal to that ID, `stack.converged_release.state == "Released"`, `stack.converged_release.health == "ok"`, and at least one `urls` entry before returning a public endpoint.
   - TLS verification: use the human-readable `stackdome status --conditions` view and require `TLSConfigured=True` with reason `TLSReady`. The current CLI does not include condition history in JSON or YAML output; do not claim this check is machine-readable until that CLI limitation is fixed.
-  - Recovery: rerun `stackdome open -o json`, resolve the returned host with `dig +short <hostname>`, and use `stackdome status --conditions` plus `stackdome release events <release-id> --follow` for deployment or TLS failures.
+  - Recovery: rerun `stackdome open -o json`, resolve the returned host with `dig +short <hostname>`, and use `stackdome status --conditions` plus `stackdome list release-events <release-id> --follow` for deployment or TLS failures.
   - There is no supported public CLI command for adding or removing domains or configuring DNS. Do not guess one.
 </Visibility>
 

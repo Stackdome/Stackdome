@@ -1,0 +1,135 @@
+---
+title: "Deploy n8n with PostgreSQL"
+description: "Create an n8n stack from prebuilt blocks, connect it to PostgreSQL, deploy it, and open the live app."
+sidebarTitle: "n8n with PostgreSQL"
+keywords: ["n8n", "PostgreSQL", "dashboard quickstart", "container image", "Stackdome"]
+---
+
+Create an n8n service and its PostgreSQL database from the dashboard. This guide uses **Build from blocks**. Do not choose **From template**.
+
+## Before you start
+
+- You need a Stackdome account and an organization with connected compute.
+- Choose one strong PostgreSQL password. Enter the same value for `POSTGRES_PASSWORD` on PostgreSQL and `DB_POSTGRESDB_PASSWORD` on n8n.
+
+<Warning>
+  The screenshots use `REPLACE_POSTGRES_PASSWORD_VALUE_HERE` to hide the password. Replace that text in both resources. Do not deploy the placeholder.
+</Warning>
+
+<Steps>
+  <Step title="Sign in">
+    Open your Stackdome dashboard and sign in.
+
+    ![The Stackdome sign-in page with email and password fields and a Continue button.](/images/quickstart-sign-in.png)
+  </Step>
+
+  <Step title="Start with blocks">
+    From **Stacks**, select **New Stack**. Choose **Build from blocks**.
+
+    ![The New Stack dialog with Build from blocks selected among the available starting paths.](/images/quickstart-n8n-01-start.png)
+
+    This path lets you add the service and database as separate resources. Do not choose **From template** for this guide.
+  </Step>
+
+  <Step title="Add the service and database">
+    Add **Web service** and **Postgres**, then select **Continue** to open the canvas editor.
+
+    ![The block picker with Web service and Postgres selected and listed in Your stack so far.](/images/quickstart-n8n-02-blocks.png)
+  </Step>
+
+  <Step title="Configure n8n">
+    Open the web resource and enter these values on **Configuration**:
+
+    | Field | Value |
+    | --- | --- |
+    | Name | `n8n` |
+    | Depends on | `postgres` |
+    | Build from | **Container image** |
+    | Registry | **Public / Docker Hub** |
+    | Image reference | `n8nio/n8n:2.27.4` |
+    | Port | `5678` |
+    | Protocol | **HTTP** |
+    | Public | On |
+    | Volume | `n8n-data` |
+    | Mount path | `/home/node/.n8n` |
+
+    ![The n8n Configuration tab showing its Docker Hub image, PostgreSQL dependency, public HTTP port 5678, and n8n-data volume mounted at /home/node/.n8n.](/images/quickstart-n8n-03-service-config.png)
+
+    On **Environment**, add these variables:
+
+    | Name | Source | Value |
+    | --- | --- | --- |
+    | `DB_TYPE` | Plain text | `postgresdb` |
+    | `DB_POSTGRESDB_HOST` | Resource | `postgres` → **Host** |
+    | `DB_POSTGRESDB_PORT` | Plain text | `5432` |
+    | `DB_POSTGRESDB_DATABASE` | Plain text | `n8n` |
+    | `DB_POSTGRESDB_USER` | Plain text | `n8n` |
+    | `DB_POSTGRESDB_PASSWORD` | Plain text | Your PostgreSQL password |
+    | `N8N_PROTOCOL` | Plain text | `http` |
+    | `N8N_PORT` | Plain text | `5678` |
+
+    ![The n8n Environment tab with eight variables, including a resource host from postgres and the n8n database settings.](/images/quickstart-n8n-04-service-env.png)
+  </Step>
+
+  <Step title="Configure PostgreSQL">
+    Open the PostgreSQL resource and confirm these values on **Configuration**:
+
+    | Field | Value |
+    | --- | --- |
+    | Name | `postgres` |
+    | Build from | **Container image** |
+    | Registry | **Public / Docker Hub** |
+    | Image reference | `postgres:16` |
+    | Volume | `n8n-db` |
+    | Mount path | `/var/lib/postgresql/data` |
+
+    PostgreSQL does not need a public port. n8n reaches it inside the stack.
+
+    ![The postgres Configuration tab showing image postgres 16 and the n8n-db volume mounted at /var/lib/postgresql/data.](/images/quickstart-n8n-05-postgres-config.png)
+
+    On **Environment**, add:
+
+    | Name | Value |
+    | --- | --- |
+    | `POSTGRES_DB` | `n8n` |
+    | `POSTGRES_USER` | `n8n` |
+    | `POSTGRES_PASSWORD` | The same password used by n8n |
+    | `PGDATA` | `/var/lib/postgresql/data/pgdata` |
+
+    ![The postgres Environment tab with POSTGRES_DB, POSTGRES_USER, POSTGRES_PASSWORD, and PGDATA.](/images/quickstart-n8n-06-postgres-env.png)
+  </Step>
+
+  <Step title="Deploy the stack">
+    Select **Deploy**. Open **Deployments** to watch the release.
+
+    The timeline moves through **Build**, **Deploy**, and **Ready**. This stack uses existing images, so there is no source build to inspect. Wait until both `postgres` and `n8n` are **READY** and the release is **LIVE**.
+
+    ![The n8n deployment timeline with n8n and postgres ready and the release marked live.](/images/quickstart-n8n-07-deployments.png)
+  </Step>
+
+  <Step title="Open n8n">
+    When the stack is healthy, its header shows a **PUBLIC** row. Select the `n8n` URL to open the app over HTTPS.
+
+    ![The live n8n stack header with an OK status and a public n8n link.](/images/quickstart-n8n-08-live-url.png)
+
+    <Check>
+      The quickstart is complete when the release is **LIVE**, both resources are **READY**, and the n8n URL opens.
+    </Check>
+  </Step>
+</Steps>
+
+## What you created
+
+- One public n8n service on port `5678`.
+- One private PostgreSQL resource.
+- Two persistent volumes, one for n8n and one for PostgreSQL.
+- A resource connection that gives n8n the PostgreSQL host at deploy time.
+
+<CardGroup cols={2}>
+  <Card title="Environment variables and secrets" icon="key" href="/guides/environment-variables">
+    Move sensitive settings into a Stackdome secret before using this stack for real work.
+  </Card>
+  <Card title="Releases" icon="rocket" href="/concepts/releases">
+    Learn how the deploy timeline records each release.
+  </Card>
+</CardGroup>

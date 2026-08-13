@@ -1,28 +1,28 @@
 ---
 title: "Diagnose build failures"
 description: "Trace a failed image build from its structured status to condition evidence and build logs."
-keywords: ["build failure", "stackdome build logs", "image build diagnostics", "Dockerfile error", "registry failure"]
+keywords: ["build failure", "stackdome logs build", "image build diagnostics", "Dockerfile error", "registry failure"]
 ---
 
 Diagnose a build in three passes: find its ID, inspect the structured failure evidence, then read the build log for the failing step.
 
 ```bash
-stackdome build list
-stackdome build info <build-id> -o json
-stackdome build logs <build-id>
+stackdome list builds
+stackdome describe build <build-id> -o json
+stackdome logs build <build-id>
 ```
 
 Use the full build ID from structured output when automating. The CLI also accepts an unambiguous ID prefix for interactive use.
 
 ## Read the build record first
 
-`stackdome build list` shows the resource, state, source revision, start time, and duration. Filter a busy stack or select another stack with:
+`stackdome list builds` shows the resource, state, source revision, start time, and duration. Filter a busy stack or select another stack with:
 
 ```bash
-stackdome build list --resource web --stack storefront -o json
+stackdome list builds --resource web --stack storefront -o json
 ```
 
-For the selected build, inspect these fields from `stackdome build info <build-id> -o json`:
+For the selected build, inspect these fields from `stackdome describe build <build-id> -o json`:
 
 | Field | Evidence |
 | --- | --- |
@@ -68,13 +68,13 @@ The current API does **not** assign stable, separate condition reasons for every
 Start with a bounded log request:
 
 ```bash
-stackdome build logs <build-id> --tail 200
+stackdome logs build <build-id> --tail 200
 ```
 
 Add `--since 30m` to narrow the time range or `--follow` while the build is still running:
 
 ```bash
-stackdome build logs <build-id> --since 30m --follow
+stackdome logs build <build-id> --since 30m --follow
 ```
 
 If the server says the build pod is starting, wait for the `BuildJobCreated` condition and retry. If it says logs are no longer available, rely on the retained build record and [release events](/concepts/releases#follow-release-events); build pods and their logs can be pruned.
@@ -89,4 +89,4 @@ stackdome deploy --wait -o json
 stackdome status -o json
 ```
 
-Require the new deployment to exit successfully, retain its non-empty `release.id`, and require its `release.state` to be `Released`. In status, require `converged_release.id` to equal that deployed release ID, `converged_release.state` to be `Released`, and converged health to be `ok`. Do not treat an older successful build or serving release as proof that the new release used the correction.
+Require the new deployment to exit successfully, retain its non-empty `release.id`, and require its `release.state` to be `Released`. In status, require `stack.converged_release.id` to equal that deployed release ID, `stack.converged_release.state` to be `Released`, and converged health to be `ok`. Do not treat an older successful build or serving release as proof that the new release used the correction.

@@ -4,34 +4,79 @@ description: "Authenticate, create a Stackfile, deploy an application, and verif
 keywords: ["Stackdome CLI quickstart", "stackdome deploy", "API token login", "JSON output", "deployment verification"]
 ---
 
-Use the CLI when you want to run the same application-delivery workflow directly. You need the URL of Stackdome Cloud or a self-hosted installation and an API token created for your account.
+Use this guide to deploy a repository from your terminal.
 
-Read [authentication and API tokens](/reference/authentication) before handling credentials. To understand or extend the generated configuration, use the [Stackfile reference](/reference/stackfile).
+Before you start, have:
+
+- The `stackdome` CLI installed.
+- Your Stackdome server URL. This can be Stackdome Cloud or your self-hosted installation.
+- An API token from your Stackdome account.
+
+The commands below sign you in, create a `stackfile.yaml` from the repository, check it, and deploy the application. See [authentication and API tokens](/reference/authentication) for token safety and the [Stackfile reference](/reference/stackfile) when you need to edit the generated file.
 
 ## Deploy the repository
 
 Run these commands from the repository root:
 
-```bash
-stackdome login --url https://<your-stackdome-host> --token <api-token>
-stackdome whoami -o json
-stackdome init
-stackdome validate
-stackdome deploy --wait -o json
-stackdome status -o json
-```
+<Steps>
+  <Step title="Sign in">
+    ```bash
+    stackdome login --url https://<your-stackdome-host> --token <api-token>
+    stackdome whoami
+    ```
 
-`stackdome whoami -o json` verifies the active server, signup-created organization, default project, and authentication method before deployment. Organization and project selection are not part of the alpha workflow. `stackdome init` converts a Compose file when one is present or creates a starter `stackfile.yaml`; edit that generated file from evidence in the repository, then run `stackdome validate` again before deploying.
+    Check that `whoami` shows the server and account you intend to use.
+  </Step>
 
-`stackdome deploy --wait -o json` waits for a terminal release state. It exits non-zero unless the release reaches `Released`. Retain the returned `release.id` as the deployed release ID and require `release.state` to be `Released`. In the status result, require `converged_release.id` to equal that deployed release ID, `converged_release.state` to be `Released`, and `converged_release.health` to be `ok`. If you also claim it is still the newest attempt, require `latest_release.id` to equal the deployed release ID and `latest_release.state` to be `Released`.
+  <Step title="Create the Stackfile">
+    Start with a generated `stackfile.yaml`:
 
-For a public service, return its URL without opening a browser:
+    ```bash
+    stackdome init
+    ```
 
-```bash
-stackdome open -o json
-```
+    If the repository has a Compose file, you can import it instead:
 
-The `urls` array contains the public resource URLs. A service with no public port is not expected to return one.
+    ```bash
+    stackdome init --file docker-compose.yml
+    ```
+
+    <Warning>
+      Compose import is experimental. Relative build paths such as `./app` are not supported.
+    </Warning>
+  </Step>
+
+  <Step title="Review and edit the Stackfile">
+    Open `stackfile.yaml` and match it to the application. Check its image or build source, command, ports, environment variables, dependencies, and storage.
+
+    Use the [Stackfile reference](/reference/stackfile) for available fields and examples.
+  </Step>
+
+  <Step title="Validate">
+    ```bash
+    stackdome validate
+    ```
+
+    Fix every reported problem before deploying.
+  </Step>
+
+  <Step title="Deploy">
+    ```bash
+    stackdome deploy --wait
+    ```
+
+    Wait until the release is marked `Released`.
+  </Step>
+
+  <Step title="Check the stack and open the app">
+    ```bash
+    stackdome status
+    stackdome open
+    ```
+
+    `stackdome open` opens the URL for a service with a public port.
+  </Step>
+</Steps>
 
 ## Structured output
 

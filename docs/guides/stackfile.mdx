@@ -37,7 +37,7 @@ The conversion writes `stackfile.yaml`, lists the resources and volumes it found
 
 - A local Compose build does not identify a Git repository. Set `build.repo` to the repository URL.
 - A service without an image or build configuration needs one before it can deploy.
-- A Compose `env_file` is reported as a warning. Add its path as `env_file` under the converted resource if the deployment should load it.
+- Add required non-sensitive environment variables under `env`. For passwords, API keys, and other sensitive values, create a Stackdome secret and map its keys under `secrets`. See [secret outputs](/reference/stackfile#secret-outputs).
 
 The converter may write the file even when the generated configuration does not pass validation. Treat the generated file as a draft and correct every reported problem.
 
@@ -53,9 +53,15 @@ For agent workflows, the Compose file is input evidence rather than the final co
 
 ## Complete the demo Stackfile
 
-The demo's Compose file gives the initializer the three resources, Redis command, environment values, dependencies, port `3000`, and `/data` volume mount. Its `./web` and `./worker` build contexts are local paths, so the generated file warns that both resources need `build.repo`. Because the Git clone starts at the repository root, those contexts also need to become `hello-stack/web` and `hello-stack/worker`.
+`stackdome init` creates a draft. Make these changes before deploying:
 
-Use the repository as the build source and change the contexts from local `./web` and `./worker` paths to paths relative to the Git repository root. Replace Compose substitutions with the application's documented defaults, declare Redis's private TCP port, and use Stackdome output references for the public URL and Redis hostname:
+- Set `build.repo` for `web` and `worker` to `https://github.com/Stackdome/stackdome-demo.git`.
+- Change the `web` context from `./web` to `hello-stack/web`.
+- Change the `worker` context from `./worker` to `hello-stack/worker`.
+- Add the environment variables used by the application.
+- Keep Redis private on port `6379` and mount its data at `/data`.
+
+Your Stackfile should look like this:
 
 ```yaml
 name: hello-stack
@@ -105,7 +111,6 @@ resources:
     volumes:
       - name: redis
         path: /data
-    workload_type: StatefulService
 
 volumes:
   redis:
@@ -113,7 +118,10 @@ volumes:
     access_mode: ReadWriteOnce
 ```
 
-`web` and `worker` build different contexts from the same repository. `redis` uses a published image and stays private. Both application resources receive Redis's deployment hostname through `{{ redis.host }}` rather than assuming that a Compose service name will resolve. The named volume preserves Redis's append-only data under `/data`.
+- `web` builds from `hello-stack/web` and exposes port `3000`.
+- `worker` builds from `hello-stack/worker` and has no public port.
+- Both application resources connect to Redis through `{{ redis.host }}`.
+- Redis stays private on port `6379` and stores its data in the `redis` volume.
 
 Use the [Stackfile reference](/reference/stackfile) when you add build settings, environment variables, secrets, addons, dependencies, or storage.
 
@@ -132,3 +140,11 @@ stackdome validate --file deploy/stackfile.yaml
 ```
 
 Do not deploy until validation succeeds. If this guide and the installed release candidate disagree, `stackdome validate` is the authority for that CLI version.
+
+## Deploy the Stackfile
+
+After validation passes, deploy the Stackfile and wait for the release to finish:
+
+```bash
+stackdome deploy --file stackfile.yaml --wait
+```

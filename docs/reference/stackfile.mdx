@@ -214,13 +214,27 @@ Typical pattern: the app connects plain (owner credentials); a dedicated `Job` r
 Each key of a secret in the default project is an output. Consumption is a plain map — no `{{ }}`, no templating:
 
 ```yaml
+name: my-app
+
+resources:
   api:
+    image: ghcr.io/example/api:latest
+
     secrets:
-      jwt-secret:                    # secret name in the default project
-        JWT_SECRET: jwt_signing_key  # ENV_VAR: secret_key
-      smtp-creds:
-        SMTP_USER: username
-        SMTP_PASS: password
+      app-secrets:                  # Stackdome secret name
+        DATABASE_PASSWORD: db_pass  # Environment variable: secret key
+        API_KEY: api_key
+```
+
+Here, `api` receives:
+
+- `DATABASE_PASSWORD` from the `db_pass` key
+- `API_KEY` from the `api_key` key
+
+The `app-secrets` secret must already exist in the selected project. Keep its values out of the Stackfile. Create it from a local file that is not committed to Git:
+
+```bash
+stackdome create secret app-secrets --from-file .stackdome-secrets.env
 ```
 
 ### Cheat sheet

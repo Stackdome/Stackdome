@@ -27,10 +27,10 @@ Add managed PostgreSQL to this application, connect it through environment varia
     Determine the database name, supported PostgreSQL version, migration command, and whether the application expects one connection URL or separate host, port, database, username, and password variables.
   </Step>
   <Step title="Create the addon">
-    Run `stackdome addon postgres create <addon-name>` with explicit database, version, instance count, and storage values. Use `-o json` and retain only non-secret metadata.
+    Run `stackdome create postgres-addon <addon-name>` with explicit database, version, instance count, and storage values. Use `-o json` and retain only non-secret metadata.
   </Step>
   <Step title="Wait for credentials to be ready">
-    Poll `stackdome addon postgres info <addon-name> -o json` with a bounded retry interval. Do not deploy the application until `status.state` is `Ready`.
+    Poll `stackdome describe postgres-addon <addon-name> -o json` with a bounded retry interval. Do not deploy the application until `status.state` is `Ready`.
   </Step>
   <Step title="Connect the Stackfile">
     Add an `addons` mapping to the application resource. Map `DATABASE_URL` to `{{ url }}`, or map only the individual outputs the application needs. Do not call the credentials command merely to copy a password into the Stackfile.
@@ -42,10 +42,10 @@ Add managed PostgreSQL to this application, connect it through environment varia
 
 ## Success criteria
 
-- `stackdome addon postgres info <name> -o json` returns the expected addon and `status.state` as `Ready`.
+- `stackdome describe postgres-addon <name> -o json` returns the expected addon and `status.state` as `Ready`.
 - `stackdome validate` exits successfully with the addon mapping in place.
 - `stackdome deploy --wait -o json` exits successfully, returns a non-empty `release.id` that is retained as the deployed release ID, and returns `release.state` as `Released`.
-- `stackdome status -o json` returns `converged_release.id` equal to the deployed release ID, `converged_release.state` as `Released`, and `converged_release.health` as `ok`.
+- `stackdome status -o json` returns `stack.converged_release.id` equal to the deployed release ID, `stack.converged_release.state` as `Released`, and `stack.converged_release.health` as `ok`.
 - The application completes its database readiness check or migrations without authentication or connection errors, and no credential value appears in the Stackfile or agent response.
 
 ## CLI and Stackfile workflow
@@ -53,13 +53,13 @@ Add managed PostgreSQL to this application, connect it through environment varia
 The current CLI supports creating, listing, inspecting, backing up, reading backup history, retrieving credentials, and deleting PostgreSQL addons. Create an instance with explicit values so CLI defaults do not silently choose an incompatible version or database name:
 
 ```bash
-stackdome addon postgres create storefront-db \
+stackdome create postgres-addon storefront-db \
   --database app \
   --version 16 \
   --instances 1 \
   --storage 10Gi \
   -o json
-stackdome addon postgres info storefront-db -o json
+stackdome describe postgres-addon storefront-db -o json
 ```
 
 After the addon reports `Ready`, connect it by name in the application resource:
@@ -88,15 +88,15 @@ stackdome status -o json
 Scheduled backup configuration, restore, custom object-store selection, advanced placement, hibernation, and fencing remain dashboard/API capabilities. The CLI can trigger an immediate backup after an object store is already configured:
 
 ```bash
-stackdome addon postgres backup storefront-db -o json
-stackdome addon postgres backups storefront-db -o json
+stackdome backup postgres-addon storefront-db -o json
+stackdome list postgres-backups storefront-db -o json
 ```
 
 <Visibility for="agents">
   - Exact Stackfile fields: `resources.<resource>.addons.<addon-name>.type` must be `postgres`; `database` selects the database; `env.<ENV_NAME>` contains an addon output reference such as `"{{ url }}"`.
-  - Treat `stackdome addon postgres credentials` output as secret material. Use it only when a user-authorized migration tool needs direct credentials, keep structured output out of logs, and never copy it into `stackfile.yaml`.
-  - Parse `status.state` from `addon postgres info`, retain `release.id` as the deployed release ID, then require a successful deploy exit, `release.state == "Released"`, `converged_release.id` equal to that ID, `converged_release.state == "Released"`, and `converged_release.health == "ok"`.
-  - Recovery: inspect `stackdome addon postgres info <name> -o json`, `stackdome release events <release-id> --follow`, and `stackdome logs <resource> --tail 100`. Correct the addon/database name or output mapping, validate, and redeploy. Do not delete the addon as a retry strategy; `stackdome addon postgres delete <name> --yes` permanently destroys its database and storage.
+  - Treat `stackdome get postgres-credentials` output as secret material. Use it only when a user-authorized migration tool needs direct credentials, keep structured output out of logs, and never copy it into `stackfile.yaml`.
+  - Parse `status.state` from `stackdome describe postgres-addon <name> -o json`, retain `release.id` as the deployed release ID, then require a successful deploy exit, `release.state == "Released"`, `stack.converged_release.id` equal to that ID, `stack.converged_release.state == "Released"`, and `stack.converged_release.health == "ok"`.
+  - Recovery: inspect `stackdome describe postgres-addon <name> -o json`, `stackdome list release-events <release-id> --follow`, and `stackdome logs <resource> --tail 100`. Correct the addon/database name or output mapping, validate, and redeploy. Do not delete the addon as a retry strategy; `stackdome delete postgres-addon <name> --yes` permanently destroys its database and storage.
 </Visibility>
 
 <Visibility for="humans">

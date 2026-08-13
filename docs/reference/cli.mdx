@@ -8,31 +8,18 @@ The `stackdome` CLI deploys, inspects, and operates stacks. Run `stackdome --hel
 
 ## Command inventory
 
-| Command | Purpose | Subcommands or arguments |
+The CLI groups commands by action. Use a plural resource name for a list and a singular resource name for one item.
+
+| Group | Commands | Examples |
 | --- | --- | --- |
-| `addon` | Manage addons | `postgres`; then `backup`, `backups`, `create`, `credentials`, `delete`, `info`, `list` |
-| `build` | View build history | `info`, `list`, `logs` |
-| `completion` | Generate shell completion | `bash`, `zsh`, `fish` |
-| `config` | Manage CLI configuration | `set-context`, `set-stack`, `view` |
-| `deploy` | Deploy a stack from a Stackfile or stack JSON | — |
-| `destroy` | Delete the current stack | — |
-| `help` | Show help for a command | `[command]` |
-| `init` | Scaffold a new Stackfile | — |
-| `login` | Authenticate with a Stackdome server | — |
-| `logout` | Clear stored credentials | — |
-| `logs` | Stream logs from a stack or resource | — |
-| `open` | Open a resource's public URL, or return URLs in structured mode | — |
-| `release` | Inspect and cancel stack releases | `cancel`, `events`, `info`, `list` |
-| `restart` | Restart a stack resource | — |
-| `secret` | Manage secrets | `create`, `delete`, `info`, `list`, `set` |
-| `signup` | Create a Stackdome account | — |
-| `stack` | Manage stacks | `delete`, `info`, `list` |
-| `status` | Show stack and resource status | `[resource]` |
-| `token` | Manage API tokens | `create`, `delete`, `list`, `scopes` |
-| `validate` | Validate a Stackfile | — |
-| `version` | Print the CLI version | — |
-| `volume` | Manage volumes | `create`, `delete`, `list` |
-| `whoami` | Show the authenticated user, signup-created organization, default project, and auth method | — |
+| Read resources | `get`, `list`, `describe` | `stackdome list builds`, `stackdome describe release <id>` |
+| Change resources | `create`, `update`, `delete` | `stackdome create secret app-secrets`, `stackdome delete volume data --yes` |
+| Deploy and release | `apply`, `deploy`, `cancel`, `rollback` | `stackdome deploy --wait`, `stackdome rollback release <id> --wait` |
+| Observe and operate | `backup`, `logs`, `open`, `restart`, `status` | `stackdome logs build <id>`, `stackdome status web` |
+| Authentication and context | `ctx`, `login`, `logout`, `signup`, `use`, `whoami` | `stackdome whoami -o json` |
+| Local tools | `api`, `completion`, `doctor`, `export`, `init`, `validate`, `version` | `stackdome doctor -o json`, `stackdome validate` |
+
+Run the action's help to see its resource names. For example, `stackdome list --help` shows `builds`, `releases`, `secrets`, `stacks`, `tokens`, and `volumes`.
 
 ## Global flags
 
@@ -62,7 +49,7 @@ For agent and CI workflows:
 
 With `-o json` or `-o yaml`, `stdout` contains only the structured result. Prompts, progress, warnings, and other prose go to `stderr`. Parse `stdout`; retain `stderr` for diagnostics.
 
-Some commands stream results. For example, `stackdome status --watch -o json` emits one structured object per refresh rather than one JSON array.
+Some commands stream results. For example, `stackdome status --watch -o json` emits one object with `stack` and `live_status` per refresh rather than one JSON array.
 
 <Warning>
   `stackdome status --conditions` affects human-readable table rendering only in the current release candidate. With `-o json` or `-o yaml`, it returns the same structured stack object as `stackdome status` and does not add condition history.
@@ -94,4 +81,4 @@ Set both `STACKDOME_ORG` and `STACKDOME_PROJECT=default` for a narrowly scoped t
 | `5` | Conflict |
 | `130` | Canceled |
 
-Exit code `130` applies to canceled command paths that return the CLI's cancellation error, including a declined confirmation. It is not a universal interrupt result in the current release: interrupting `stackdome status --watch` exits `0`, while other paths that return a raw cancellation may fall back to the general-error behavior and exit `1`. A bad flag or wrong argument count exits with code `4`.
+Exit code `130` applies when you interrupt a running command or decline a confirmation. A bad flag or wrong argument count exits with code `4`.
