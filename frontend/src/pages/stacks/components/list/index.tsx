@@ -86,10 +86,15 @@ export default function StacksPage() {
     }
   }, [setStacks]);
 
-  // The demo exposes a public port, which used to be gated on the org having a
-  // domain. It is not: the backend waives that requirement whenever a platform
-  // base domain is configured, which is the case on Cloud, where a fresh org
-  // has no domain of its own and never would.
+  // The demo exposes a public port, and the org's own domain list has no
+  // bearing on whether that is allowed: the backend waives the requirement
+  // whenever a platform base domain is configured. Cloud configures one and
+  // adds the domain internally, so a Cloud org's list is empty by design.
+  //
+  // A self-hosted install with neither a base domain nor an org domain is the
+  // one case left where the tour is offered and Deploy then fails validation
+  // with "organisation has no domain configured". Gating that needs the base
+  // domain exposed on /api/v1/config, which the frontend cannot see today.
   const navigate = useNavigate();
   const tourOffered = useRef(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);

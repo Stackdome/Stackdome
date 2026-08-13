@@ -47,9 +47,9 @@ describe("first-run tour offer", () => {
     vi.clearAllMocks();
   });
 
-  // The org this runs against has no domain, which is every org on Cloud: the
-  // platform base domain covers the demo's public port, so the offer stands.
-  it("offers the tour to an org with no stacks and no domain", async () => {
+  // Nothing here describes a domain, and that is the point: the offer no
+  // longer consults the organisation at all.
+  it("offers the tour on an empty dashboard", async () => {
     renderPage();
     await waitFor(() =>
       expect(document.querySelectorAll('[role="dialog"]').length).toBe(1),
