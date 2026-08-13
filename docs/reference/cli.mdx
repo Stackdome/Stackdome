@@ -43,7 +43,7 @@ For agent and CI workflows:
 - Do not depend on interactive login or signup prompts.
 - Run `stackdome whoami -o json` before making changes to confirm the server and scope in use.
 
-`stackdome login` specifically requires `--token`, or both `--email` and `--password`, when standard input is not a terminal. Agents and CI should use token authentication. See [authentication](/reference/authentication).
+`stackdome login` uses a Full access API token. Without `--token`, it prints links for signing in and creating one. Agents and CI should pass a token directly or use environment authentication. See [authentication](/reference/authentication) and [CLI workflows](/reference/cli-workflows).
 
 ## Standard output and standard error
 
@@ -51,9 +51,7 @@ With `-o json` or `-o yaml`, `stdout` contains only the structured result. Promp
 
 Some commands stream results. For example, `stackdome status --watch -o json` emits one object with `stack` and `live_status` per refresh rather than one JSON array.
 
-<Warning>
-  `stackdome status --conditions` affects human-readable table rendering only in the current release candidate. With `-o json` or `-o yaml`, it returns the same structured stack object as `stackdome status` and does not add condition history.
-</Warning>
+`stackdome status -o json` includes current resource conditions under `live_status.resources.<resource>.conditions`. The `--conditions` flag expands the human-readable table; it does not change the structured object.
 
 ## Environment variables
 

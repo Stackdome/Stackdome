@@ -1,0 +1,330 @@
+---
+title: "CLI workflows"
+description: "Use the Stackdome CLI to prepare, deploy, check, and operate applications."
+keywords: ["Stackdome CLI workflows", "deploy with CLI", "agent deployment", "Stackfile workflow"]
+---
+
+Use this page when you want to deploy from a terminal, coding agent, or CI job. The dashboard guides show the same tasks in the UI.
+
+## Before you start
+
+You need:
+
+- The Stackdome CLI.
+- The URL of Stackdome Cloud or your self-hosted installation.
+- A Full access API token created in the dashboard.
+- The application files or image details needed to write a Stackfile.
+
+Stackdome Cloud manages compute, builds, platform domains, DNS, and TLS. A self-hosted administrator must set those up before application deployment.
+
+## Authenticate once
+
+Save a token in the CLI configuration:
+
+```bash
+stackdome login --url https://<your-stackdome-host> --token <api-token>
+stackdome whoami -o json
+```
+
+For a short-lived agent or CI session, use environment variables instead:
+
+```bash
+export STACKDOME_URL="https://<your-stackdome-host>"
+export STACKDOME_TOKEN="<api-token>"
+stackdome whoami -o json
+```
+
+Keep the token out of the Stackfile, repository, logs, screenshots, and chat messages. See [Authentication and API tokens](/reference/authentication).
+
+## Standard deploy flow
+
+### 1. Create the Stackfile
+
+Run the initializer from the repository root:
+
+```bash
+stackdome init
+```
+
+Open `stackfile.yaml` and match it to the application. Check the source, build context, command, ports, environment variables, dependencies, and storage. Use the [Stackfile reference](/reference/stackfile) for field details.
+
+If the repository has a Compose file, you can use it as experimental scaffolding:
+
+```bash
+stackdome init --file docker-compose.yml
+```
+
+Review the result before using it. Local build paths such as `./web` do not become remote Git build sources. Replace them with a repository URL and a context relative to the repository root.
+
+### 2. Validate
+
+```bash
+stackdome validate --file stackfile.yaml
+```
+
+Fix every reported problem before deploying.
+
+### 3. Deploy with a time limit
+
+```bash
+stackdome deploy --file stackfile.yaml --wait --timeout 15m -o json
+```
+
+A successful result contains a non-empty `release.id` and `release.state` set to `Released`. Keep that release ID for later checks.
+
+### 4. Check the running stack
+
+```bash
+stackdome status -o json
+```
+
+Before you report success, check:
+
+- `stack.converged_release.id` matches the release ID returned by deploy.
+- `stack.converged_release.state` is `Released`.
+- `live_status.health` is `ok`.
+- If you also claim this is the newest attempt, `stack.latest_release.id` matches the deployed release ID and `stack.latest_release.state` is `Released`.
+
+For a public resource, get its URL without opening a browser:
+
+```bash
+stackdome open -o json
+```
+
+### 5. Check a failure
+
+Use point-in-time commands first:
+
+```bash
+stackdome list release-events <release-id> -o json
+stackdome logs <resource> --since 15m --tail 100
+```
+
+For a Git build, find and inspect the build:
+
+```bash
+stackdome list builds -o json
+stackdome describe build <build-id> -o json
+stackdome logs build <build-id> --since 30m --tail 200
+```
+
+Do not leave `--follow` or `status --watch` running in an unattended agent or CI job. Use them only while a person is watching and can stop the command.
+
+## Deploy from Git
+
+Public repositories need no provider setup. Put the repository URL and build context in the Stackfile:
+
+```yaml
+name: hello-stack
+
+resources:
+  web:
+    build:
+      repo: https://github.com/Stackdome/stackdome-demo.git
+      branch: main
+      context: hello-stack/web
+    ports:
+      - name: http
+        port: 3000
+        protocol: HTTP
+        public: true
+```
+
+For a private repository, first connect the GitHub App or another Git provider in the dashboard. The integration must cover the repository. The CLI then uses the matching integration automatically; it has no separate Git-integration command.
+
+Run the [standard deploy flow](#standard-deploy-flow), then follow [Deploy from Git](/guides/deploy-from-git) for the dashboard setup and source rules.
+
+## Deploy an image
+
+Use one `image` source and the port the container listens on:
+
+```yaml
+name: storefront
+
+resources:
+  web:
+    image: ghcr.io/acme/storefront:1.4.0
+    ports:
+      - name: http
+        port: 8080
+        protocol: HTTP
+        public: true
+```
+
+A resource can use `image` or `build`, not both. For an external private image, add credentials for that registry in the dashboard or API before deployment. Stackdome Cloud's managed build service does not remove the need for credentials to your private external registry.
+
+Run the [standard deploy flow](#standard-deploy-flow). See [Deploy from an image](/guides/deploy-from-image) for the dashboard path.
+
+## Environment variables and secrets
+
+Put ordinary settings and generated resource values under `env`. Put secret-key mappings under `secrets`.
+
+Create a secret from an untracked local file:
+
+```bash
+stackdome create secret app-secrets \
+  --from-file .stackdome-secrets.env \
+  -o json
+stackdome describe secret app-secrets -o json
+```
+
+Reference its keys without putting their values in the Stackfile:
+
+```yaml
+name: my-app
+
+resources:
+  api:
+    image: ghcr.io/example/api:latest
+    env:
+      APP_ENV: production
+      CACHE_HOST: "{{ cache.host }}"
+    secrets:
+      app-secrets:
+        DATABASE_PASSWORD: db_pass
+        API_KEY: api_key
+
+  cache:
+    image: redis:7-alpine
+    ports:
+      - name: redis
+        port: 6379
+        protocol: TCP
+```
+
+`DATABASE_PASSWORD` receives the `db_pass` key. `API_KEY` receives the `api_key` key.
+
+`stackdome update secret` replaces the whole secret. Use it only when the input contains every key that must remain.
+
+Run the [standard deploy flow](#standard-deploy-flow). See [Environment variables and secrets](/guides/environment-variables) for the dashboard path.
+
+## Postgres
+
+Create a managed Postgres addon with explicit settings:
+
+```bash
+stackdome create postgres-addon storefront-db \
+  --database app \
+  --version 16 \
+  --instances 1 \
+  --storage 10Gi \
+  -o json
+stackdome describe postgres-addon storefront-db -o json
+```
+
+Wait for `status.state` to become `Ready`. Set a time limit in the caller; do not poll forever.
+
+Connect the addon to a resource:
+
+```yaml
+resources:
+  api:
+    image: ghcr.io/acme/storefront-api:1.4.0
+    addons:
+      storefront-db:
+        type: postgres
+        database: app
+        env:
+          DATABASE_URL: "{{ url }}"
+```
+
+Run the [standard deploy flow](#standard-deploy-flow).
+
+To request an immediate backup:
+
+```bash
+stackdome backup postgres-addon storefront-db -o json
+stackdome list postgres-backups storefront-db -o json
+```
+
+The first command only requests the backup. Keep its backup ID. Check that same ID until its phase is `completed`. Stop and report failure if its phase is `failed`, or if it does not finish within your chosen time limit.
+
+Scheduled backups need an object store configured in the dashboard or API. See [Postgres](/guides/postgres).
+
+## Volumes and object stores
+
+Declare a volume and mount it at the application's real data path:
+
+```yaml
+name: storefront
+
+resources:
+  api:
+    image: ghcr.io/acme/storefront-api:1.4.0
+    volumes:
+      - name: app-data
+        path: /var/lib/storefront
+
+volumes:
+  app-data:
+    size: 10Gi
+    access_mode: ReadWriteOnce
+```
+
+Run the [standard deploy flow](#standard-deploy-flow), then check the named volume:
+
+```bash
+stackdome list volumes --stack storefront -o json
+```
+
+Require that volume's `status.phase` to be `Ready`. Use a time-limited retry only for `Pending`. Do not delete an existing volume as an automatic fix.
+
+Object stores hold Postgres addon backups. They are not Stackfile mounts. Register them in the dashboard or through the API. See [Volumes and object stores](/guides/volumes-and-object-stores).
+
+## Domains and TLS
+
+Stackdome Cloud supplies the platform domain, DNS, and TLS. On self-hosted Stackdome, finish the installation domain and wildcard DNS setup first.
+
+Expose an HTTP port:
+
+```yaml
+resources:
+  web:
+    image: ghcr.io/acme/storefront-web:1.4.0
+    ports:
+      - name: http
+        port: 8080
+        protocol: HTTP
+        public: true
+```
+
+Run the [standard deploy flow](#standard-deploy-flow), then inspect the URL and conditions:
+
+```bash
+stackdome open -o json
+stackdome status --conditions -o json
+```
+
+Structured status includes resource conditions under `live_status.resources.<resource>.conditions`. For a TLS-ready public resource, find `TLSConfigured` with status `True` and reason `TLSReady`.
+
+Do not construct a generated hostname yourself. Use the URL returned by `stackdome open`. See [Domains and TLS](/guides/domains-and-tls).
+
+## Preview environments
+
+Commit a valid `stackfile.yaml` to every branch that should receive previews:
+
+```bash
+stackdome validate --file stackfile.yaml
+```
+
+The dashboard is the simplest way to enable a repository and inspect its preview environments. Pull-request automation needs a GitHub App installation that covers the repository.
+
+There is no dedicated preview command, but the documented API is available through `stackdome api`. For example:
+
+```bash
+stackdome api \
+  /api/v1/organizations/<org-id>/projects/default/stack-preview-configs \
+  -o json
+
+stackdome api \
+  /api/v1/organizations/<org-id>/projects/default/preview-stacks \
+  -o json
+```
+
+Use `-X POST --data-file <file> --yes` for a documented create request. Open the **API reference** tab for the Preview Configs and Preview Stacks request bodies and states, or inspect the [OpenAPI specification](/openapi.yaml). Do not run an ordinary stack deploy and call it a preview repair.
+
+See [Preview environments](/guides/preview-environments) for the dashboard flow and lifecycle.
+
+## Command details
+
+Use [CLI reference](/reference/cli) for the command tree, output formats, environment variables, and exit codes. Run `stackdome <command> --help` before adding flags to automation.

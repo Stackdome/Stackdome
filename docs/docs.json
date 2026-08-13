@@ -93,6 +93,7 @@
             "group": "CLI and configuration",
             "pages": [
               "reference/cli",
+              "reference/cli-workflows",
               "reference/authentication",
               "reference/stackfile",
               "reference/alpha-limitations"
