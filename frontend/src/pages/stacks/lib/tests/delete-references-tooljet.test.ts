@@ -5,8 +5,8 @@ import { FormStackSchema } from "@/pages/stacks/schemas/form-schema";
 import { deleteResourceAndReferences, findResourceDependents } from "../delete-references";
 
 /**
- * The ToolJet template is the fixture that carries all three reference shapes
- * at once: `depends_on`, whole-value refs, and embedded-template refs.
+ * The ToolJet template carries every reference shape at once: `depends_on`,
+ * structured env refs, and a mounted volume.
  *
  * A stranded reference surfaces as a form-schema "Unknown resource" issue, so a
  * clean parse after the deletes is what proves the pruning.
@@ -23,23 +23,21 @@ describe("deleting from the ToolJet template", () => {
   it("names the resources that depend on postgrest before deleting it", () => {
     const data = draft();
     const found = findResourceDependents(data.spec.stack_resources, data.spec.volumes ?? [], "postgrest");
-    expect(found.dependsOn).toContain("tooljet");
-    expect(found.envRefs.map((r) => r.resource)).toEqual(
-      expect.arrayContaining(["tooljet", "tooljet-worker"]),
-    );
+    expect(found.dependsOn).toEqual(["tooljet"]);
+    expect(found.envRefs.map((r) => `${r.resource}.${r.envName}`)).toEqual(["tooljet.PGRST_HOST"]);
   });
 
-  it("leaves no unknown-resource issues after deleting postgrest and otel-stack", () => {
+  it("leaves no unknown-resource issues after deleting postgrest and redis", () => {
     const data = draft();
     expect(unknownResourceIssues(data)).toEqual([]);
 
     let resources = deleteResourceAndReferences(data.spec.stack_resources, "postgrest");
-    resources = deleteResourceAndReferences(resources, "otel-stack");
+    resources = deleteResourceAndReferences(resources, "redis");
 
     const after = { ...data, spec: { ...data.spec, stack_resources: resources } };
     expect(unknownResourceIssues(after)).toEqual([]);
     expect(resources.map((r) => r?.name)).not.toContain("postgrest");
-    expect(resources.map((r) => r?.name)).not.toContain("otel-stack");
+    expect(resources.map((r) => r?.name)).not.toContain("redis");
   });
 
   /** Keeps the assertion above honest: a plain filter must still produce the
@@ -47,7 +45,7 @@ describe("deleting from the ToolJet template", () => {
   it("still breaks when the resource is filtered out without pruning references", () => {
     const data = draft();
     const naive = data.spec.stack_resources.filter(
-      (r) => r.name !== "postgrest" && r.name !== "otel-stack",
+      (r) => r.name !== "postgrest" && r.name !== "redis",
     );
     const after = { ...data, spec: { ...data.spec, stack_resources: naive } };
     expect(unknownResourceIssues(after).length).toBeGreaterThan(0);
@@ -55,10 +53,10 @@ describe("deleting from the ToolJet template", () => {
 
   /** Asked before the delete, the way the dialog asks it. Asking afterwards
    *  passes on the "nobody mounts it" path even with the lookup removed. */
-  it("reports otel-stack-data as unattached when otel-stack goes", () => {
+  it("reports postgres-data as unattached when postgresql goes", () => {
     const data = draft();
-    const found = findResourceDependents(data.spec.stack_resources, data.spec.volumes ?? [], "otel-stack");
-    expect(found.orphanedVolumes).toEqual(["otel-stack-data"]);
+    const found = findResourceDependents(data.spec.stack_resources, data.spec.volumes ?? [], "postgresql");
+    expect(found.orphanedVolumes).toEqual(["postgres-data"]);
   });
 
   it("does not blame an unrelated delete for the volumes it never mounted", () => {
