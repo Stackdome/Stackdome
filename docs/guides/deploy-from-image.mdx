@@ -187,8 +187,8 @@ Start with the release and resource data returned by the CLI:
 
 ```bash
 stackdome status -o json
-stackdome list release-events <release-id> --follow
-stackdome logs <resource> --tail 100
+stackdome list release-events <release-id> -o json
+stackdome logs <resource> --since 15m --tail 100
 ```
 
 Use the release ID returned by `stackdome deploy -o json`. An image release validates its source against the registry before rendering the workload.

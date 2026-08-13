@@ -28,7 +28,7 @@ A release is terminal when `state` is `Released`, `Failed`, `Superseded`, or `Ca
 stackdome status -o json
 ```
 
-Require `stack.converged_release.id` to match the release ID, `stack.converged_release.state` to be `Released`, and `stack.converged_release.health` to be `ok`. Before claiming that release is also the newest attempt, require `stack.latest_release.id` to match it and `stack.latest_release.state` to be `Released`. See [inspect stack status](/guides/status#prove-convergence-and-health) for the full check.
+Require `stack.converged_release.id` to match the release ID, `stack.converged_release.state` to be `Released`, and `live_status.health` to be `ok`. Before claiming that release is also the newest attempt, require `stack.latest_release.id` to match it and `stack.latest_release.state` to be `Released`. See [inspect stack status](/guides/status#prove-convergence-and-health) for the full check.
 
 Every release command accepts `--stack <name>` to override the current stack context.
 
@@ -36,7 +36,7 @@ Every release command accepts `--stack <name>` to override the current stack con
   Preserve the full `release.id` returned by `stackdome deploy -o json`. Use it with `describe release`, `list release-events`, and both status-ID comparisons; do not claim the newest attempt succeeded unless both `stack.converged_release.id` and `stack.latest_release.id` match it.
 </Visibility>
 
-## Follow release events
+## Read release events
 
 Read the recorded events once:
 
@@ -44,13 +44,15 @@ Read the recorded events once:
 stackdome list release-events <release-id>
 ```
 
-Or follow new events while a deployment progresses:
+While a person is actively watching a deployment, the CLI can keep the stream open:
 
 ```bash
 stackdome list release-events <release-id> --follow
 ```
 
-Without `--follow`, structured output is an array of release events. With `--follow -o json`, the CLI emits newline-delimited envelopes containing `event` and `data`; process one line at a time.
+Without `--follow`, structured output is an array of release events. With `--follow -o json`, the CLI emits newline-delimited envelopes containing `event` and `data`; stop it when you have the needed event.
+
+Agents and CI jobs should use `deploy --wait --timeout <duration>` and the one-time event list. Do not leave `--follow` running unattended.
 
 Events include timestamped stack or resource messages, levels, and links such as a build ID. Use a build ID with the [build-failure guide](/guides/build-failures) instead of searching runtime logs for build output.
 

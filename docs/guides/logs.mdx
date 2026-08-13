@@ -78,11 +78,11 @@ stackdome status --conditions
 stackdome logs web --since 15m --tail 200
 ```
 
-After a restart, begin following logs before checking whether the resource returned to a ready state:
+After a restart, read a bounded log window and check whether the resource returned to a ready state:
 
 ```bash
-stackdome logs web --tail 100 --follow
-stackdome status --watch
+stackdome logs web --since 15m --tail 100
+stackdome status -o json
 ```
 
-Run those commands in separate terminals. See [restart a resource](/guides/restart) for the full verification sequence.
+Retry the status command for a limited time if the restart is still in progress. See [restart a resource](/guides/restart) for the full verification sequence.

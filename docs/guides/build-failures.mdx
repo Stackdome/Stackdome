@@ -71,11 +71,13 @@ Start with a bounded log request:
 stackdome logs build <build-id> --tail 200
 ```
 
-Add `--since 30m` to narrow the time range or `--follow` while the build is still running:
+Add `--since 30m` to narrow the time range:
 
 ```bash
-stackdome logs build <build-id> --since 30m --follow
+stackdome logs build <build-id> --since 30m --tail 200
 ```
+
+Use `--follow` only while a person is actively watching and can stop the command. Do not use it as an unattended wait.
 
 If the server says the build pod is starting, wait for the `BuildJobCreated` condition and retry. If it says logs are no longer available, rely on the retained build record and [release events](/concepts/releases#follow-release-events); build pods and their logs can be pruned.
 
@@ -89,4 +91,4 @@ stackdome deploy --wait -o json
 stackdome status -o json
 ```
 
-Require the new deployment to exit successfully, retain its non-empty `release.id`, and require its `release.state` to be `Released`. In status, require `stack.converged_release.id` to equal that deployed release ID, `stack.converged_release.state` to be `Released`, and converged health to be `ok`. Do not treat an older successful build or serving release as proof that the new release used the correction.
+Require the new deployment to exit successfully, retain its non-empty `release.id`, and require its `release.state` to be `Released`. In status, require `stack.converged_release.id` to equal that deployed release ID, `stack.converged_release.state` to be `Released`, and `live_status.health` to be `ok`. Do not treat an older successful build or serving release as proof that the new release used the correction.

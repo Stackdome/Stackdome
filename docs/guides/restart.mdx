@@ -36,23 +36,20 @@ Use a deployment for configuration or source changes. Use [release rollback](/co
 
 ## Verify the restart
 
-Observe logs and status immediately after the request. Use separate terminals if you want both streams live:
+Read recent logs and status after the request:
 
 ```bash
-stackdome logs web --tail 100 --follow
+stackdome logs web --since 15m --tail 100
+stackdome status -o json
 ```
 
-```bash
-stackdome status --watch
-```
-
-Wait for the resource to return to its ready state and check the new startup lines for the expected initialization. Then capture a final structured status result:
+Retry the status command for a limited time while the resource restarts. Check the new startup lines for the expected initialization.
 
 ```bash
 stackdome status -o json
 ```
 
-Require `stack.converged_release.state` to remain `Released` and `stack.converged_release.health` to return to `ok`. If a newer release exists, also confirm that its ID matches `stack.converged_release.id` before describing the current deployment as successful.
+Require `stack.converged_release.state` to remain `Released` and `live_status.health` to return to `ok`. If a newer release exists, also confirm that its ID matches `stack.converged_release.id` before describing the current deployment as successful.
 
 <Visibility for="agents">
   A zero exit from `stackdome restart` proves only that the API accepted the request. Do not report recovery until status is healthy again and the resource's startup logs show the expected behavior.
