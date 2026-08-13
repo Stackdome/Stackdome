@@ -24,7 +24,7 @@
       "Verify commands and flags with stackdome --help. Run stackdome init before authoring stackfile.yaml and stackdome validate before deploying.",
       "Use -o json for automation and verify documented terminal states before claiming success.",
       "Never request a user's account password. Use API-token authentication.",
-      "During alpha, Stackdome Cloud is ephemeral and capacity-limited, and each organization can connect one cluster.",
+      "During alpha, Stackdome Cloud is an ephemeral playground with limited capacity. Cloud uses managed compute. A self-hosted organization can connect one cluster.",
       "Do not expose Kubernetes as a user concern unless the task is self-hosting or infrastructure architecture."
     ]
   },
