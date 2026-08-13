@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getStacksByOrg, deleteStack } from "@/api/stacks";
-import { getOrganization } from "@/api/organizations";
 import { buildHelloStackSeed } from "@/pages/stacks/lib/onboarding/hello-stack-seed";
 import { startCanvasStage, isTourDone, markTourDone } from "@/pages/stacks/lib/onboarding/tour";
 import { WelcomeDialog } from "@/pages/stacks/components/onboarding/welcome-dialog";
@@ -87,25 +86,18 @@ export default function StacksPage() {
     }
   }, [setStacks]);
 
-  // The demo exposes a public port, so an org without a domain cannot finish
-  // the tour.
+  // The demo exposes a public port, which used to be gated on the org having a
+  // domain. It is not: the backend waives that requirement whenever a platform
+  // base domain is configured, which is the case on Cloud, where a fresh org
+  // has no domain of its own and never would.
   const navigate = useNavigate();
   const tourOffered = useRef(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   useEffect(() => {
     if (isLoading || error || stacks.length > 0 || tourOffered.current) return;
     if (!canWriteAnyProject || isTourDone()) return;
-    const orgId = getCurrentOrganizationId();
-    if (!orgId) return;
     tourOffered.current = true;
-    getOrganization(orgId)
-      .then((org) => {
-        if ((org.domains ?? []).length === 0) return;
-        setWelcomeOpen(true);
-      })
-      .catch(() => {
-        // No tour on a failed lookup — the normal empty state still shows.
-      });
+    setWelcomeOpen(true);
   }, [isLoading, error, stacks, canWriteAnyProject]);
 
   const acceptTour = () => {
