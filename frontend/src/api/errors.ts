@@ -23,6 +23,8 @@ export type CredentialErrorInfo = {
 
 export type ParsedApiError = {
   status: number | undefined;
+  // Numeric ServiceError code from the envelope, sent as a string ("30" = compute quota exceeded).
+  code?: string;
   topLevel: string;
   fieldErrors: ParsedFieldError[];
   credential?: CredentialErrorInfo;
@@ -77,6 +79,7 @@ export function parseApiError(error: unknown): ParsedApiError {
   const reason = typeof primary?.reason === "string" ? primary.reason : undefined;
   return {
     status: getErrorStatus(error),
+    code: typeof primary?.code === "string" ? primary.code : undefined,
     topLevel: reason || getErrorMessage(error),
     fieldErrors: extractFieldErrors(details),
     credential: extractCredential(details),
